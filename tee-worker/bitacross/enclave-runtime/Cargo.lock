@@ -40,7 +40,7 @@ dependencies = [
  "scale-encode",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -57,7 +57,7 @@ dependencies = [
  "primitive-types",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-application-crypto",
  "sp-core",
  "sp-core-hashing",
@@ -353,7 +353,7 @@ dependencies = [
  "itp-utils",
  "log 0.4.21",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "tungstenite",
  "url 2.5.0",
@@ -371,7 +371,7 @@ dependencies = [
  "jsonrpc-core",
  "log 0.4.21",
  "parity-scale-codec",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "sp-runtime",
  "thiserror",
@@ -986,7 +986,7 @@ dependencies = [
  "rustls-webpki",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -2397,7 +2397,7 @@ dependencies = [
  "itp-types",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
 ]
 
@@ -2654,7 +2654,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 dependencies = [
- "spin",
+ "spin 0.5.2",
 ]
 
 [[package]]
@@ -3567,7 +3567,7 @@ source = "git+https://github.com/mesalock-linux/ring-sgx?tag=v0.16.5#844efe271ed
 dependencies = [
  "cc",
  "sgx_tstd",
- "spin",
+ "spin 0.5.2",
  "untrusted 0.7.1",
 ]
 
@@ -3581,12 +3581,27 @@ dependencies = [
  "log 0.4.21",
  "once_cell 1.18.0",
  "rkyv",
- "spin",
+ "spin 0.5.2",
  "untrusted 0.7.1",
  "winapi",
  "xous",
  "xous-api-names",
  "xous-ipc",
+]
+
+[[package]]
+name = "ring"
+version = "0.17.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c17fa4cb658e3583423e915b9f3acc01cceaee1860e33d59ebae66adc3a2dc0d"
+dependencies = [
+ "cc",
+ "cfg-if 1.0.0",
+ "getrandom 0.2.12",
+ "libc",
+ "spin 0.9.8",
+ "untrusted 0.9.0",
+ "windows-sys",
 ]
 
 [[package]]
@@ -3685,16 +3700,16 @@ dependencies = [
 
 [[package]]
 name = "rustls-pki-types"
-version = "0.2.1"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a47003264dea418db67060fa420ad16d0d2f8f0a0360d825c00e177ac52cb5d8"
+checksum = "16f1201b3c9a7ee8039bcadc17b7e605e2945b27eee7631788c1bd2b0643674b"
 
 [[package]]
 name = "rustls-webpki"
-version = "0.102.0-alpha.3"
-source = "git+https://github.com/rustls/webpki?rev=da923ed#da923edaab56f599971e58773617fb574cd019dc"
+version = "0.102.2"
+source = "git+https://github.com/rustls/webpki?rev=049e9d5#049e9d5da0bdea64cf1d2e32f30855cfa77a3353"
 dependencies = [
- "ring 0.16.20",
+ "ring 0.17.8",
  "rustls-pki-types",
  "untrusted 0.9.0",
 ]
@@ -3980,11 +3995,12 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.120"
+version = "1.0.128"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
+checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
 dependencies = [
  "itoa 1.0.9",
+ "memchr 2.6.3",
  "ryu",
  "serde 1.0.204",
 ]
@@ -4644,6 +4660,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "spin"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+
+[[package]]
 name = "spki"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4672,7 +4694,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.36",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "unicode-xid 0.2.4",
 ]
 
@@ -4723,7 +4745,7 @@ dependencies = [
  "maybe-async",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
@@ -5168,6 +5190,79 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "windows-sys"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-targets"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
+dependencies = [
+ "windows_aarch64_gnullvm",
+ "windows_aarch64_msvc",
+ "windows_i686_gnu",
+ "windows_i686_gnullvm",
+ "windows_i686_msvc",
+ "windows_x86_64_gnu",
+ "windows_x86_64_gnullvm",
+ "windows_x86_64_msvc",
+]
+
+[[package]]
+name = "windows_aarch64_gnullvm"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
+
+[[package]]
+name = "windows_aarch64_msvc"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
+
+[[package]]
+name = "windows_i686_gnu"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e9b5ad5ab802e97eb8e295ac6720e509ee4c243f69d781394014ebfe8bbfa0b"
+
+[[package]]
+name = "windows_i686_gnullvm"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eee52d38c090b3caa76c563b86c3a4bd71ef1a819287c19d586d7334ae8ed66"
+
+[[package]]
+name = "windows_i686_msvc"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
+
+[[package]]
+name = "windows_x86_64_gnu"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "147a5c80aabfbf0c7d901cb5895d1de30ef2907eb21fbbab29ca94c5b08b1a78"
+
+[[package]]
+name = "windows_x86_64_gnullvm"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
+
+[[package]]
+name = "windows_x86_64_msvc"
+version = "0.52.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"

@@ -40,7 +40,7 @@ dependencies = [
  "scale-encode",
  "scale-info",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -60,7 +60,7 @@ dependencies = [
  "primitive-types",
  "scale-info",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-application-crypto",
  "sp-core",
  "sp-core-hashing",
@@ -476,7 +476,7 @@ dependencies = [
  "log 0.4.20",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
  "rustls 0.19.1",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "tungstenite 0.14.0",
  "tungstenite 0.15.0",
@@ -497,7 +497,7 @@ dependencies = [
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.20",
  "parity-scale-codec",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "sp-runtime",
  "thiserror 1.0.44",
@@ -621,7 +621,7 @@ dependencies = [
  "itp-types",
  "log 0.4.20",
  "parity-scale-codec",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
@@ -928,7 +928,7 @@ dependencies = [
  "regex 1.9.5",
  "reqwest",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
@@ -987,7 +987,7 @@ dependencies = [
  "scale-info",
  "serde 1.0.210",
  "serde_derive 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sgx_types",
  "sp-consensus-grandpa",
@@ -1406,7 +1406,7 @@ dependencies = [
  "ron",
  "rust-ini",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "toml 0.5.11",
  "yaml-rust 0.4.5",
 ]
@@ -1471,7 +1471,7 @@ dependencies = [
  "rustls-webpki",
  "scale-info",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -3356,7 +3356,7 @@ dependencies = [
  "log 0.4.20",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
  "rustls 0.19.1",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "tungstenite 0.14.0",
  "tungstenite 0.15.0",
@@ -3377,7 +3377,7 @@ dependencies = [
  "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
  "log 0.4.20",
  "parity-scale-codec",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "sp-runtime",
  "thiserror 1.0.44",
@@ -3501,7 +3501,7 @@ dependencies = [
  "itp-types",
  "log 0.4.20",
  "parity-scale-codec",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sgx_types",
  "sgx_urts",
@@ -3769,7 +3769,7 @@ dependencies = [
  "hyper-tls",
  "parity-multiaddr",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "serde_urlencoded",
  "tokio",
  "tokio-util 0.6.10",
@@ -3851,7 +3851,7 @@ dependencies = [
  "http_req 0.8.1 (git+https://github.com/integritee-network/http_req)",
  "log 0.4.20",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "thiserror 1.0.44",
  "thiserror 1.0.9",
@@ -3878,7 +3878,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.12.1",
  "rustls 0.19.1",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sp-core",
  "thiserror 1.0.44",
@@ -4004,7 +4004,7 @@ dependencies = [
  "parity-scale-codec",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
  "rustls 0.19.1",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "sgx_rand",
  "sgx_tcrypto",
@@ -4173,7 +4173,7 @@ dependencies = [
  "itp-types",
  "parity-scale-codec",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
 ]
 
@@ -4201,7 +4201,7 @@ dependencies = [
  "rand 0.7.3 (git+https://github.com/mesalock-linux/rand-sgx?tag=sgx_1.1.3)",
  "ring 0.16.20",
  "secp256k1 0.28.0",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "sgx_crypto_helper",
  "sgx_rand",
@@ -4561,7 +4561,7 @@ dependencies = [
  "jsonrpsee",
  "log 0.4.20",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "thiserror 1.0.44",
  "tokio",
 ]
@@ -4724,7 +4724,7 @@ dependencies = [
  "log 0.4.20",
  "serde 1.0.210",
  "serde_derive 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
 ]
 
 [[package]]
@@ -4768,7 +4768,7 @@ dependencies = [
  "jsonrpsee-utils",
  "log 0.4.20",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "thiserror 1.0.44",
  "url 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4788,7 +4788,7 @@ dependencies = [
  "lazy_static",
  "log 0.4.20",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "socket2",
  "thiserror 1.0.44",
  "tokio",
@@ -4821,7 +4821,7 @@ dependencies = [
  "hyper",
  "log 0.4.20",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "soketto",
  "thiserror 1.0.44",
 ]
@@ -4841,7 +4841,7 @@ dependencies = [
  "rand 0.8.5",
  "rustc-hash",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "thiserror 1.0.44",
 ]
 
@@ -4860,7 +4860,7 @@ dependencies = [
  "rustls 0.19.1",
  "rustls-native-certs",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "soketto",
  "thiserror 1.0.44",
  "tokio",
@@ -4882,7 +4882,7 @@ dependencies = [
  "log 0.4.20",
  "rustc-hash",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "soketto",
  "thiserror 1.0.44",
  "tokio",
@@ -4972,7 +4972,7 @@ dependencies = [
  "rust-base58 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx)",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "sp-core",
  "ss58-registry",
@@ -5032,7 +5032,7 @@ dependencies = [
  "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx)",
  "scale-info",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "sgx_tstd",
  "sp-core",
@@ -5071,7 +5071,7 @@ dependencies = [
  "log 0.4.20",
  "parity-scale-codec",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "thiserror 1.0.44",
  "thiserror 1.0.9",
@@ -5134,7 +5134,7 @@ dependencies = [
  "log 0.4.20",
  "parity-scale-codec",
  "rust_decimal",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_tstd",
  "ss58-registry",
  "thiserror 1.0.44",
@@ -5165,7 +5165,7 @@ dependencies = [
  "parity-scale-codec",
  "rand 0.8.5",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_rand",
  "sgx_tstd",
  "sp-core",
@@ -5183,7 +5183,7 @@ dependencies = [
  "lc-data-providers",
  "litentry-primitives",
  "log 0.4.20",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-core",
  "tokio",
  "warp",
@@ -5563,7 +5563,7 @@ dependencies = [
  "reqwest",
  "scale-value",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sp-application-crypto",
  "sp-core",
@@ -5677,7 +5677,7 @@ dependencies = [
  "scale-info",
  "serde 1.0.210",
  "serde_derive 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sgx_crypto_helper",
  "sgx_types",
  "sp-consensus-grandpa",
@@ -7447,7 +7447,7 @@ dependencies = [
  "percent-encoding 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project-lite",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "serde_urlencoded",
  "tokio",
  "tokio-native-tls",
@@ -7493,6 +7493,20 @@ dependencies = [
  "untrusted 0.7.1",
  "web-sys",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "ring"
+version = "0.17.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9babe80d5c16becf6594aa32ad2be8fe08498e7ae60b77de8df700e67f191d7e"
+dependencies = [
+ "cc",
+ "getrandom 0.2.10",
+ "libc",
+ "spin 0.9.8",
+ "untrusted 0.9.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -7715,16 +7729,16 @@ dependencies = [
 
 [[package]]
 name = "rustls-pki-types"
-version = "0.2.1"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a47003264dea418db67060fa420ad16d0d2f8f0a0360d825c00e177ac52cb5d8"
+checksum = "16f1201b3c9a7ee8039bcadc17b7e605e2945b27eee7631788c1bd2b0643674b"
 
 [[package]]
 name = "rustls-webpki"
-version = "0.102.0-alpha.3"
-source = "git+https://github.com/rustls/webpki?rev=da923ed#da923edaab56f599971e58773617fb574cd019dc"
+version = "0.102.2"
+source = "git+https://github.com/rustls/webpki?rev=049e9d5#049e9d5da0bdea64cf1d2e32f30855cfa77a3353"
 dependencies = [
- "ring 0.16.20",
+ "ring 0.17.3",
  "rustls-pki-types",
  "untrusted 0.9.0",
 ]
@@ -7773,7 +7787,7 @@ dependencies = [
  "array-bytes 4.2.0",
  "async-trait",
  "parking_lot 0.12.1",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-application-crypto",
  "sp-core",
  "sp-keystore",
@@ -8179,12 +8193,13 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.120"
+version = "1.0.128"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
+checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
 dependencies = [
  "indexmap 2.6.0",
  "itoa 1.0.9",
+ "memchr 2.6.3",
  "ryu",
  "serde 1.0.210",
 ]
@@ -9095,7 +9110,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "unicode-xid",
 ]
 
@@ -9181,7 +9196,7 @@ dependencies = [
  "maybe-async",
  "parity-scale-codec",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",
@@ -9211,7 +9226,7 @@ dependencies = [
  "async-trait",
  "parking_lot 0.12.1",
  "sc-keystore",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sp-application-crypto",
  "sp-core",
  "sp-keyring",
@@ -9672,7 +9687,7 @@ dependencies = [
  "matchers",
  "regex 1.9.5",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "sharded-slab",
  "smallvec 1.11.0",
  "thread_local",
@@ -10046,7 +10061,7 @@ dependencies = [
  "rustls-pemfile",
  "scoped-tls",
  "serde 1.0.210",
- "serde_json 1.0.120",
+ "serde_json 1.0.128",
  "serde_urlencoded",
  "tokio",
  "tokio-stream",

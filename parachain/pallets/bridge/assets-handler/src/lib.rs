@@ -217,7 +217,7 @@ where
 		+ Debug
 		+ FullCodec
 		+ 'static,
-	A: Clone,
+	A: Clone + std::cmp::Eq,
 {
 	fn prepare_token_bridge_in(
 		resource_id: ResourceId,
