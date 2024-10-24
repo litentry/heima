@@ -3,7 +3,7 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-SELF_EXE = target/release/omni-executor
+SELF_EXE = target/release/executor-worker
 
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
@@ -23,7 +23,7 @@ endif
 # of the DEBUG setting is to control Gramine's loglevel.
 -include $(SELF_EXE).d # See also: .cargo/config.toml
 $(SELF_EXE): Cargo.toml
-	cargo build --release
+	cargo build --release --features=gramine-quote
 
 omni-executor.manifest: omni-executor.manifest.template
 	gramine-manifest \
@@ -51,7 +51,7 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) tee-bridge
+	$(GRAMINE) omni-executor
 
 .PHONY: clean
 clean:
@@ -75,4 +75,4 @@ stop-local:
 
 .PHONY: get-omni-pallet-metadata
 get-omni-pallet-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount > parentchain/artifacts/rococo-omni-account.scale
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/artifacts/rococo-omni-account.scale

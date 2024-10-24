@@ -62,7 +62,7 @@ impl LinkIdentityCommand {
 			.map(|n| n.as_str().try_into().expect("cannot convert to Web3Network"))
 			.collect();
 
-		let (mrenclave, shard) = get_identifiers(trusted_cli, cli);
+		let (mrenclave, qushard) = get_identifiers(trusted_cli, cli);
 		let nonce = get_layer_two_nonce!(alice, cli, trusted_cli);
 
 		let top = TrustedCall::link_identity_callback(

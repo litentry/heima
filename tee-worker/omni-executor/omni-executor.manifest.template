@@ -43,3 +43,9 @@ sgx.trusted_files = [
 # - helper threads internal to Gramine — see:
 #   https://gramine.readthedocs.io/en/stable/manifest-syntax.html#number-of-threads
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '64' }}
+
+sgx.remote_attestation = "dcap"
+
+# for easy demo setup
+loader.insecure__use_cmdline_argv = true
+loader.insecure__use_host_env = true
