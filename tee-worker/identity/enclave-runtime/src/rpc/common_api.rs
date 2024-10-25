@@ -36,6 +36,7 @@ use lc_identity_verification::{
 	web2::{email, twitter},
 	VerificationCodeStore,
 };
+use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_macros::{if_development, if_development_or};
 use litentry_primitives::{aes_decrypt, AesRequest, DecryptableRequest, Identity};
 use log::debug;
@@ -516,9 +517,8 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		}
 	});
 
-	io_handler.add_sync_method(
-		"omni_account_requestEmailVerificationCode",
-		move |params: Params| match params.parse::<(String, String)>() {
+	io_handler.add_sync_method("omni_requestEmailVerificationCode", move |params: Params| {
+		match params.parse::<(String, String)>() {
 			Ok((encoded_omni_account, encoded_identity)) => {
 				let omni_account = match AccountId::from_hex(encoded_omni_account.as_str()) {
 					Ok(account_id) => account_id,
@@ -527,6 +527,13 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 							"Could not parse omni account"
 						))),
 				};
+
+				match OmniAccountStore::get_member_accounts(omni_account) {
+					Ok(Some(member_accounts)) => {},
+					_ =>
+						return Ok(json!(compute_hex_encoded_return_error("Omni account not found"))),
+				}
+
 				let member_identity = match Identity::from_hex(encoded_identity.as_str()) {
 					Ok(identity) => identity,
 					Err(_) =>
@@ -542,11 +549,15 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 					verification_code.clone(),
 				) {
 					Ok(_) => {
-						let json_value = RpcReturnValue::new(
-							verification_code.encode(),
-							false,
-							DirectRequestStatus::Ok,
-						);
+						if email::send_verification_email(&mut mailer, email, verification_code)
+							.is_err()
+						{
+							return Ok(json!(compute_hex_encoded_return_error(
+								"Could not send verification email"
+							)))
+						}
+						let json_value =
+							RpcReturnValue::new(vec![], false, DirectRequestStatus::Ok);
 						Ok(json!(json_value.to_hex()))
 					},
 					Err(_) => Ok(json!(compute_hex_encoded_return_error(
@@ -555,8 +566,8 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 				}
 			},
 			Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not parse params"))),
-		},
-	);
+		}
+	});
 }
 
 #[deprecated(note = "`state_executeAesGetter` should be preferred")]

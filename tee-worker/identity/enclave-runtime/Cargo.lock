@@ -953,6 +953,7 @@ dependencies = [
  "lc-evm-dynamic-assertions",
  "lc-identity-verification",
  "lc-native-task-receiver",
+ "lc-omni-account",
  "lc-parachain-extrinsic-task-receiver",
  "lc-parachain-extrinsic-task-sender",
  "lc-stf-task-receiver",
