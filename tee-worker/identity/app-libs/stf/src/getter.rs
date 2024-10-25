@@ -103,6 +103,8 @@ pub enum PublicGetter {
 	nonce(Identity),
 	#[codec(index = 2)]
 	id_graph_hash(Identity),
+	#[codec(index = 3)]
+	omniaccount(Identity),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -289,6 +291,7 @@ impl ExecuteGetter for PublicGetter {
 				},
 			PublicGetter::id_graph_hash(identity) =>
 				IdentityManagement::id_graph_hash(&identity).map(|h| h.encode()),
+			PublicGetter::omniaccount(identity) => identity.to_native_account().map(|h| h.encode()),
 		}
 	}
 

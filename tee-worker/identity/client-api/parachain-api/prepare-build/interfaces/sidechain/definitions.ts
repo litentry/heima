@@ -38,6 +38,7 @@ export default {
                 some_value: "u32",
                 nonce: "(LitentryIdentity)",
                 id_graph_hash: "(LitentryIdentity)",
+                omniaccount: "(LitentryIdentity)",
             },
         },
 
