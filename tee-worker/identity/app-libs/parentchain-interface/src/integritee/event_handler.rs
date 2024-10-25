@@ -235,7 +235,7 @@ where
 		if block_number <= last_block_number {
 			return Ok(())
 		}
-		OmniAccountStore::insert(account_id.clone(), members).map_err(|e| {
+		OmniAccountStore::insert_account_store(account_id.clone(), members).map_err(|e| {
 			Error::AccountStoreError(format!(
 				"Could not update account store for account_id: {:?}, reason: {:?}",
 				account_id, e

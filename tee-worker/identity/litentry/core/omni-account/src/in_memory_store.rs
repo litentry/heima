@@ -61,7 +61,10 @@ impl InMemoryStore {
 		Ok(account_id)
 	}
 
-	pub fn insert(account_id: AccountId, members: Vec<MemberAccount>) -> Result<(), Error> {
+	pub fn insert_account_store(
+		account_id: AccountId,
+		members: Vec<MemberAccount>,
+	) -> Result<(), Error> {
 		let mut member_account_hash = MEMBER_ACCOUNT_HASH.write().map_err(|_| {
 			log::error!("[InMemoryStore] Lock poisoning");
 			Error::LockPoisoning
@@ -80,19 +83,7 @@ impl InMemoryStore {
 		Ok(())
 	}
 
-	pub fn remove(account_id: AccountId) -> Result<(), Error> {
-		ACCCOUNT_STORE
-			.write()
-			.map_err(|_| {
-				log::error!("[InMemoryStore] Lock poisoning");
-				Error::LockPoisoning
-			})?
-			.remove(&account_id);
-
-		Ok(())
-	}
-
-	pub fn load(accounts: OmniAccounts) -> Result<(), Error> {
+	pub fn load_account_stores(accounts: OmniAccounts) -> Result<(), Error> {
 		for (account_id, members) in &accounts {
 			let mut member_account_hash = MEMBER_ACCOUNT_HASH.write().map_err(|_| {
 				log::error!("[InMemoryStore] Lock poisoning");

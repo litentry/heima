@@ -56,7 +56,8 @@ where
 	let block_number: BlockNumber = header.number;
 	let repository = OmniAccountRepository::new(ocall_api, header);
 	let account_stores = repository.get_all().map_err(|_| "Failed to get all account stores")?;
-	InMemoryStore::load(account_stores).map_err(|_| "Failed to load account stores")?;
+	InMemoryStore::load_account_stores(account_stores)
+		.map_err(|_| "Failed to load account stores")?;
 	InMemoryStore::set_block_height(block_number).map_err(|_| "Failed to set block number")?;
 	log::info!("In-memory store initialized successfully");
 
