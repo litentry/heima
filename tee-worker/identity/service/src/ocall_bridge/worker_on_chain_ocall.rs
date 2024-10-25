@@ -120,7 +120,7 @@ where
 						start_key.map(StorageKey),
 						hash,
 					) {
-						Ok(keys) => keys.iter().map(|k| k.as_ref().encode()).collect(),
+						Ok(keys) => keys.iter().map(|k| k.0.to_vec()).collect(),
 						_ => Default::default(),
 					};
 					WorkerResponse::ChainStorageKeys(keys)
