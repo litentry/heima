@@ -2605,7 +2605,6 @@ dependencies = [
  "frame-support",
  "hash-db 0.15.2",
  "itp-types",
- "litentry-hex-utils",
  "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
