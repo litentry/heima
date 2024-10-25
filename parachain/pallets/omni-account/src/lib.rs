@@ -159,7 +159,6 @@ pub mod pallet {
 		AccountStoreLenLimitReached,
 		AccountNotFound,
 		InvalidAccount,
-		InvalidNonce,
 		UnknownAccountStore,
 		EmptyAccount,
 		RequireOmniExecutor,
@@ -174,13 +173,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
-			nonce: <T as frame_system::Config>::Nonce,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
 				.ok_or(Error::<T>::AccountNotFound)?;
-			let account_nonce = system::Pallet::<T>::account_nonce(&omni_account);
-			ensure!(nonce == account_nonce, Error::<T>::InvalidNonce);
 			let result = call.dispatch(RawOrigin::OmniAccount(omni_account.clone()).into());
 			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsOmniAccount {
