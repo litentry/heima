@@ -57,7 +57,17 @@ fn create_account_store_works() {
 			alice().identity,
 		));
 
-		System::assert_last_event(Event::AccountStoreCreated { who: alice().omni_account }.into());
+		let member_accounts: MemberAccounts<TestRuntime> =
+			vec![public_member_account(alice())].try_into().unwrap();
+
+		System::assert_has_event(Event::AccountStoreCreated { who: alice().omni_account }.into());
+		System::assert_last_event(
+			Event::AccountStoreUpdated {
+				who: alice().omni_account,
+				account_store: member_accounts,
+			}
+			.into(),
+		);
 
 		// create it the second time will fail
 		assert_noop!(
@@ -114,6 +124,13 @@ fn add_account_works() {
 			}
 			.into(),
 		);
+		System::assert_has_event(
+			Event::AccountStoreUpdated {
+				who: alice().omni_account.clone(),
+				account_store: expected_member_accounts.clone(),
+			}
+			.into(),
+		);
 
 		assert_eq!(
 			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
@@ -126,20 +143,23 @@ fn add_account_works() {
 			alice().identity.hash(),
 			call,
 		));
+		let expected_member_accounts: MemberAccounts<TestRuntime> =
+			BoundedVec::truncate_from(vec![
+				public_member_account(alice()),
+				bob.clone(),
+				charlie.clone(),
+			]);
 
 		System::assert_has_event(
 			Event::AccountAdded { who: alice().omni_account, member_account_hash: charlie.hash() }
 				.into(),
 		);
-
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
-			vec![public_member_account(alice()), bob.clone(), charlie.clone()]
-				.try_into()
-				.unwrap();
-
-		assert_eq!(
-			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
-			expected_member_accounts
+		System::assert_has_event(
+			Event::AccountStoreUpdated {
+				who: alice().omni_account,
+				account_store: expected_member_accounts.clone(),
+			}
+			.into(),
 		);
 
 		assert!(MemberAccountHash::<TestRuntime>::contains_key(bob.hash()));
@@ -324,6 +344,9 @@ fn remove_account_works() {
 			.into(),
 		);
 
+		let expected_member_accounts: MemberAccounts<TestRuntime> =
+			BoundedVec::truncate_from(vec![public_member_account(alice())]);
+
 		System::assert_has_event(
 			Event::AccountRemoved {
 				who: alice().omni_account,
@@ -331,9 +354,13 @@ fn remove_account_works() {
 			}
 			.into(),
 		);
-
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
-			vec![public_member_account(alice())].try_into().unwrap();
+		System::assert_has_event(
+			Event::AccountStoreUpdated {
+				who: alice().omni_account,
+				account_store: expected_member_accounts.clone(),
+			}
+			.into(),
+		);
 
 		assert_eq!(
 			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
@@ -432,16 +459,24 @@ fn publicize_account_works() {
 			.into(),
 		);
 
+		let expected_member_accounts: MemberAccounts<TestRuntime> =
+			BoundedVec::truncate_from(vec![public_member_account(alice()), public_bob]);
+
 		System::assert_has_event(
 			Event::AccountMadePublic {
 				who: alice().omni_account,
-				member_account_hash: public_bob.hash(),
+				member_account_hash: bob().identity.hash(),
+			}
+			.into(),
+		);
+		System::assert_has_event(
+			Event::AccountStoreUpdated {
+				who: alice().omni_account,
+				account_store: expected_member_accounts.clone(),
 			}
 			.into(),
 		);
 
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
-			vec![public_member_account(alice()), public_bob].try_into().unwrap();
 		assert_eq!(
 			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
 			expected_member_accounts

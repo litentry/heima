@@ -32,6 +32,7 @@ use itp_types::{
 use litentry_primitives::{Address32, Identity};
 use log::*;
 use sp_core::{blake2_256, H256};
+use sp_runtime::traits::{Block as ParentchainBlock, Header as ParentchainHeader};
 use sp_std::vec::Vec;
 use std::string::ToString;
 
@@ -129,11 +130,15 @@ where
 {
 	type Output = Vec<H256>;
 
-	fn handle_events(
+	fn handle_events<Block>(
 		&self,
 		executor: &Executor,
 		events: impl FilterEvents,
-	) -> Result<Vec<H256>, Error> {
+		_block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
+	) -> Result<Vec<H256>, Error>
+	where
+		Block: ParentchainBlock,
+	{
 		let mut handled_events: Vec<H256> = Vec::new();
 
 		if let Ok(events) = events.get_relayer_added_events() {
