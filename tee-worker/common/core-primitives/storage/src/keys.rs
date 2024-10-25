@@ -15,7 +15,7 @@
 
 */
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use codec::{Decode, Encode};
 use frame_metadata::v14::StorageHasher;
 use frame_support::{Blake2_128Concat, ReversibleStorageHasher};
