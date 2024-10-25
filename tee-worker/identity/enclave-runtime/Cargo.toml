@@ -148,11 +148,11 @@ lc-data-providers = { path = "../litentry/core/data-providers", default-features
 lc-evm-dynamic-assertions = { path = "../litentry/core/evm-dynamic-assertions", default-features = false, features = ["sgx"] }
 lc-identity-verification = { path = "../litentry/core/identity-verification", default-features = false, features = ["sgx"] }
 lc-native-task-receiver = { path = "../litentry/core/native-task/receiver", default-features = false, features = ["sgx"] }
+lc-omni-account = { path = "../litentry/core/omni-account", default-features = false, features = ["sgx"] }
 lc-parachain-extrinsic-task-receiver = { path = "../../common/litentry/core/parachain-extrinsic-task/receiver", default-features = false, features = ["sgx"] }
 lc-parachain-extrinsic-task-sender = { path = "../../common/litentry/core/parachain-extrinsic-task/sender", default-features = false, features = ["sgx"] }
 lc-stf-task-receiver = { path = "../litentry/core/stf-task/receiver", default-features = false, features = ["sgx"] }
 lc-vc-task-receiver = { path = "../litentry/core/vc-task/receiver", default-features = false, features = ["sgx"] }
-lc-omni-account = { path = "../litentry/core/omni-account", default-features = false, features = ["sgx"] }
 litentry-hex-utils = { path = "../../../common/utils/hex", default-features = false }
 litentry-macros = { path = "../../../common/primitives/core/macros", default-features = false }
 litentry-primitives = { path = "../../common/litentry/primitives", default-features = false, features = ["sgx"] }
