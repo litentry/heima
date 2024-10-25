@@ -467,6 +467,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		}
 	});
 
+	let data_provider_config_cloned = data_provider_config.clone();
 	// TODO: deprecate
 	io_handler.add_sync_method("identity_requestEmailVerification", move |params: Params| {
 		match params.parse::<(String, String)>() {
@@ -484,11 +485,11 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 						))),
 				};
 				let mut mailer = email::sendgrid_mailer::SendGridMailer::new(
-					data_provider_config.sendgrid_api_key.clone(),
-					data_provider_config.sendgrid_from_email.clone(),
+					data_provider_config_cloned.sendgrid_api_key.clone(),
+					data_provider_config_cloned.sendgrid_from_email.clone(),
 				);
-				let verification_code = generate_verification_code();
 
+				let verification_code = generate_verification_code();
 				let email_identity = Identity::from_email(&email);
 
 				match VerificationCodeStore::insert(
@@ -519,7 +520,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 
 	io_handler.add_sync_method("omni_requestEmailVerificationCode", move |params: Params| {
 		match params.parse::<(String, String)>() {
-			Ok((encoded_omni_account, encoded_identity)) => {
+			Ok((encoded_omni_account, email)) => {
 				let omni_account = match AccountId::from_hex(encoded_omni_account.as_str()) {
 					Ok(account_id) => account_id,
 					Err(_) =>
@@ -527,25 +528,21 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 							"Could not parse omni account"
 						))),
 				};
-
-				match OmniAccountStore::get_member_accounts(omni_account) {
-					Ok(Some(member_accounts)) => {},
+				match OmniAccountStore::get_member_accounts(&omni_account) {
+					Ok(Some(_member_accounts)) => {},
 					_ =>
 						return Ok(json!(compute_hex_encoded_return_error("Omni account not found"))),
 				}
-
-				let member_identity = match Identity::from_hex(encoded_identity.as_str()) {
-					Ok(identity) => identity,
-					Err(_) =>
-						return Ok(json!(compute_hex_encoded_return_error(
-							"Could not parse member identity"
-						))),
-				};
+				let mut mailer = email::sendgrid_mailer::SendGridMailer::new(
+					data_provider_config.sendgrid_api_key.clone(),
+					data_provider_config.sendgrid_from_email.clone(),
+				);
 				let verification_code = generate_verification_code();
+				let email_identity = Identity::from_email(&email);
 
 				match VerificationCodeStore::insert(
 					omni_account,
-					member_identity.hash(),
+					email_identity.hash(),
 					verification_code.clone(),
 				) {
 					Ok(_) => {
