@@ -589,7 +589,7 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 			alice().identity,
 		));
 
-		assert_eq!(System::account_nonce(&alice().omni_account), 0);
+		assert_eq!(System::account_nonce(alice().omni_account), 0);
 
 		let call = add_account_call(bob.clone());
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
@@ -597,6 +597,6 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 			alice().identity.hash(),
 			call,
 		));
-		assert_eq!(System::account_nonce(&alice().omni_account), 1);
+		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
 }
