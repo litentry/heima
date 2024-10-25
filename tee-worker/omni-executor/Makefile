@@ -3,7 +3,7 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-SELF_EXE = target/release/omni-executor
+SELF_EXE = target/release/executor-worker
 
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
@@ -51,7 +51,7 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) tee-bridge
+	$(GRAMINE) omni-executor
 
 .PHONY: clean
 clean:
