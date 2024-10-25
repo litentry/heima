@@ -32,14 +32,16 @@ lazy_static! {
 pub struct InMemoryStore;
 
 impl InMemoryStore {
-	pub fn get_member_accounts(account_id: AccountId) -> Result<Option<Vec<MemberAccount>>, Error> {
+	pub fn get_member_accounts(
+		account_id: &AccountId,
+	) -> Result<Option<Vec<MemberAccount>>, Error> {
 		let omni_account_members = ACCCOUNT_STORE
 			.read()
 			.map_err(|_| {
 				log::error!("[InMemoryStore] Lock poisoning");
 				Error::LockPoisoning
 			})?
-			.get(&account_id)
+			.get(account_id)
 			.cloned();
 
 		Ok(omni_account_members)
