@@ -124,7 +124,7 @@ where
 		&self,
 		extrinsics_encoded: Vec<u8>,
 		parentchain_id: Vec<u8>,
-		await_each_inlcusion: bool,
+		await_each_inclusion: bool,
 	) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
@@ -145,12 +145,12 @@ where
 			debug!(
 				"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
 				extrinsics.len(),
-				parentchain_id, await_each_inlcusion
+				parentchain_id, await_each_inclusion
 			);
 			let api = self.create_api(parentchain_id)?;
 			let mut send_extrinsic_failed = false;
 			for call in extrinsics.into_iter() {
-				if await_each_inlcusion {
+				if await_each_inclusion {
 					if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
 						&call.encode().into(),
 						XtStatus::InBlock,

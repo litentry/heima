@@ -53,8 +53,8 @@ use itp_utils::stringify::account_id_to_string;
 use litentry_hex_utils::hex_encode;
 pub use litentry_primitives::{
 	aes_encrypt_default, all_evm_web3networks, all_substrate_web3networks, AesOutput, Assertion,
-	ErrorDetail, IMPError, Identity, LitentryMultiSignature, ParentchainBlockNumber, RequestAesKey,
-	VCMPError, ValidationData, Web3Network,
+	ErrorDetail, IMPError, Identity, Intent, LitentryMultiSignature, ParentchainBlockNumber,
+	RequestAesKey, VCMPError, ValidationData, Web3Network,
 };
 use log::*;
 use sp_core::{
@@ -139,6 +139,8 @@ pub enum TrustedCall {
 	#[cfg(feature = "development")]
 	#[codec(index = 25)]
 	clean_id_graphs(Identity),
+	#[codec(index = 26)]
+	request_intent(Identity, Intent),
 
 	// original integritee trusted calls, starting from index 50
 	#[codec(index = 50)]
@@ -229,6 +231,7 @@ impl TrustedCall {
 			Self::request_batch_vc(sender_identity, ..) => sender_identity,
 			#[cfg(feature = "development")]
 			Self::clean_id_graphs(sender_identity) => sender_identity,
+			Self::request_intent(sender_identity, ..) => sender_identity,
 		}
 	}
 
@@ -242,6 +245,7 @@ impl TrustedCall {
 			Self::deactivate_identity(..) => "deactivate_identity",
 			Self::activate_identity(..) => "activate_identity",
 			Self::maybe_create_id_graph(..) => "maybe_create_id_graph",
+			Self::request_intent(..) => "request_intent",
 			_ => "unsupported_trusted_call",
 		}
 	}
@@ -894,6 +898,10 @@ where
 					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 					.map_err(|e| StfError::CleanIDGraphsFailed(e.into()))?;
 
+				Ok(TrustedCallResult::Empty)
+			},
+			TrustedCall::request_intent(..) => {
+				error!("please use author_submitNativeRequest instead");
 				Ok(TrustedCallResult::Empty)
 			},
 		}

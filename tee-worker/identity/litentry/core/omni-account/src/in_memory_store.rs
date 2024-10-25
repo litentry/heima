@@ -16,6 +16,7 @@
 
 use crate::{AccountId, BTreeMap, Error, MemberAccount, OmniAccounts, Vec};
 use lazy_static::lazy_static;
+use sp_core::H256;
 
 #[cfg(feature = "std")]
 use std::sync::RwLock;
@@ -23,27 +24,51 @@ use std::sync::RwLock;
 use std::sync::SgxRwLock as RwLock;
 
 lazy_static! {
-	static ref STORE: RwLock<OmniAccounts> = RwLock::new(BTreeMap::new());
+	static ref ACCCOUNT_STORE: RwLock<OmniAccounts> = RwLock::new(BTreeMap::new());
+	static ref MEMBER_ACCOUNT_HASH: RwLock<BTreeMap<H256, AccountId>> =
+		RwLock::new(BTreeMap::new());
 }
 
 pub struct InMemoryStore;
 
 impl InMemoryStore {
-	pub fn get(&self, owner: AccountId) -> Result<Option<Vec<MemberAccount>>, Error> {
-		let omni_account_members = STORE
+	pub fn get_member_accounts(
+		account_id: &AccountId,
+	) -> Result<Option<Vec<MemberAccount>>, Error> {
+		let omni_account_members = ACCCOUNT_STORE
 			.read()
 			.map_err(|_| {
 				log::error!("[InMemoryStore] Lock poisoning");
 				Error::LockPoisoning
 			})?
-			.get(&owner)
+			.get(account_id)
 			.cloned();
 
 		Ok(omni_account_members)
 	}
 
-	pub fn insert(&self, account_id: AccountId, members: Vec<MemberAccount>) -> Result<(), Error> {
-		STORE
+	pub fn get_omni_account(member_account_hash: H256) -> Result<Option<AccountId>, Error> {
+		let account_id = MEMBER_ACCOUNT_HASH
+			.read()
+			.map_err(|_| {
+				log::error!("[InMemoryStore] Lock poisoning");
+				Error::LockPoisoning
+			})?
+			.get(&member_account_hash)
+			.cloned();
+
+		Ok(account_id)
+	}
+
+	pub fn insert(account_id: AccountId, members: Vec<MemberAccount>) -> Result<(), Error> {
+		let mut member_account_hash = MEMBER_ACCOUNT_HASH.write().map_err(|_| {
+			log::error!("[InMemoryStore] Lock poisoning");
+			Error::LockPoisoning
+		})?;
+		for member in &members {
+			member_account_hash.insert(member.hash(), account_id.clone());
+		}
+		ACCCOUNT_STORE
 			.write()
 			.map_err(|_| {
 				log::error!("[InMemoryStore] Lock poisoning");
@@ -54,8 +79,8 @@ impl InMemoryStore {
 		Ok(())
 	}
 
-	pub fn remove(&self, account_id: AccountId) -> Result<(), Error> {
-		STORE
+	pub fn remove(account_id: AccountId) -> Result<(), Error> {
+		ACCCOUNT_STORE
 			.write()
 			.map_err(|_| {
 				log::error!("[InMemoryStore] Lock poisoning");
@@ -66,8 +91,17 @@ impl InMemoryStore {
 		Ok(())
 	}
 
-	pub fn load(&self, accounts: OmniAccounts) -> Result<(), Error> {
-		*STORE.write().map_err(|_| {
+	pub fn load(accounts: OmniAccounts) -> Result<(), Error> {
+		for (account_id, members) in &accounts {
+			let mut member_account_hash = MEMBER_ACCOUNT_HASH.write().map_err(|_| {
+				log::error!("[InMemoryStore] Lock poisoning");
+				Error::LockPoisoning
+			})?;
+			for member in members {
+				member_account_hash.insert(member.hash(), account_id.clone());
+			}
+		}
+		*ACCCOUNT_STORE.write().map_err(|_| {
 			log::error!("[InMemoryStore] Lock poisoning");
 			Error::LockPoisoning
 		})? = accounts;

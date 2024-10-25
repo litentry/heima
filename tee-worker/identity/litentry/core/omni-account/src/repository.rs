@@ -18,13 +18,9 @@ use crate::{AccountId, Error, Header, MemberAccount, OmniAccounts, ParentchainId
 use alloc::vec::Vec;
 use frame_support::storage::storage_prefix;
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_storage::{
-	decode_storage_key, extract_blake2_128concat_key, storage_map_key, StorageHasher,
-};
+use itp_storage::{decode_storage_key, extract_blake2_128concat_key};
 
 pub trait GetAccountStoresRepository {
-	fn get_by_account_id(&self, account_id: AccountId)
-		-> Result<Option<Vec<MemberAccount>>, Error>;
 	fn get_all(&self) -> Result<OmniAccounts, Error>;
 }
 
@@ -46,22 +42,6 @@ impl<OCallApi: EnclaveOnChainOCallApi> OmniAccountRepository<OCallApi> {
 impl<OCallApi: EnclaveOnChainOCallApi> GetAccountStoresRepository
 	for OmniAccountRepository<OCallApi>
 {
-	fn get_by_account_id(&self, owner: AccountId) -> Result<Option<Vec<MemberAccount>>, Error> {
-		let storage_key = storage_map_key(
-			"OmniAccount",
-			"AccountStore",
-			&owner,
-			&StorageHasher::Blake2_128Concat,
-		);
-		let storage_entry = self
-			.ocall_api
-			.get_storage_verified(storage_key, &self.header, &ParentchainId::Litentry)
-			.map_err(|_| Error::OCallApiError("Failed to get storage"))?;
-		let member_accounts = storage_entry.value().to_owned();
-
-		Ok(member_accounts)
-	}
-
 	fn get_all(&self) -> Result<OmniAccounts, Error> {
 		let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
 		let account_store_storage_keys_response = self

@@ -77,7 +77,7 @@ fn add_account_without_creating_store_fails() {
 			OmniAccount::dispatch_as_omni_account(
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
-				call
+				call,
 			),
 			Error::<TestRuntime>::AccountNotFound
 		);
@@ -104,7 +104,7 @@ fn add_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -124,7 +124,7 @@ fn add_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -180,13 +180,13 @@ fn add_account_with_already_linked_account_fails() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call.clone()
+			call.clone(),
 		));
 
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -211,7 +211,7 @@ fn add_account_with_already_linked_account_fails() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			charlie().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -256,7 +256,7 @@ fn add_account_store_len_limit_reached_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -288,7 +288,7 @@ fn remove_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		// normal signed origin should give `BadOrigin`, no matter
@@ -313,7 +313,7 @@ fn remove_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -345,7 +345,7 @@ fn remove_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		assert!(!AccountStore::<TestRuntime>::contains_key(alice().omni_account));
@@ -367,7 +367,7 @@ fn remove_account_empty_account_check_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		let call = remove_accounts_call(vec![]);
@@ -375,7 +375,7 @@ fn remove_account_empty_account_check_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
@@ -407,7 +407,7 @@ fn publicize_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		let expected_member_accounts: MemberAccounts<TestRuntime> =
@@ -421,7 +421,7 @@ fn publicize_account_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -460,7 +460,7 @@ fn publicize_account_identity_not_found_works() {
 			OmniAccount::dispatch_as_omni_account(
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
-				call
+				call,
 			),
 			Error::<TestRuntime>::AccountNotFound
 		);
@@ -474,14 +474,14 @@ fn publicize_account_identity_not_found_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		let call = publicize_account_call(charlie().identity);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
@@ -512,7 +512,7 @@ fn request_intent_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		let intent =
@@ -522,7 +522,7 @@ fn request_intent_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		System::assert_has_event(
@@ -559,7 +559,7 @@ fn dispatch_as_signed_works() {
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
-			call
+			call,
 		));
 
 		let call = make_balance_transfer_call(bob().native_account, 5);
@@ -574,5 +574,29 @@ fn dispatch_as_signed_works() {
 		);
 
 		assert_eq!(Balances::free_balance(bob().native_account), 5);
+	});
+}
+
+#[test]
+fn dispatch_as_omni_account_increments_omni_account_nonce() {
+	new_test_ext().execute_with(|| {
+		let tee_signer = get_tee_signer();
+
+		let bob = private_member_account(bob());
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		assert_eq!(System::account_nonce(alice().omni_account), 0);
+
+		let call = add_account_call(bob.clone());
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+		));
+		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
 }
