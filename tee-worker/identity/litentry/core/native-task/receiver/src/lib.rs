@@ -54,7 +54,7 @@ use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
 use lc_native_task_sender::init_native_task_sender;
-use litentry_primitives::{AesRequest, DecryptableRequest, Intent, ParentchainIndex};
+use litentry_primitives::{AesRequest, DecryptableRequest, Intent};
 use sp_core::{blake2_256, H256};
 use std::{
 	borrow::ToOwned,
@@ -126,10 +126,9 @@ pub fn run_native_task_receiver<
 			let request = &mut req.request;
 			let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 			match handle_request(request, context_pool.clone()) {
-				Ok((call, nonce)) => handle_trusted_call(
+				Ok(trusted_call) => handle_trusted_call(
 					context_pool.clone(),
-					call,
-					nonce,
+					trusted_call,
 					connection_hash,
 					task_sender_pool,
 				),
@@ -163,7 +162,6 @@ fn handle_trusted_call<
 		>,
 	>,
 	call: TrustedCall,
-	nonce: ParentchainIndex,
 	connection_hash: H256,
 	_tc_sender: Sender<NativeRequest>,
 ) where
@@ -227,8 +225,7 @@ fn handle_trusted_call<
 		"OmniAccount",
 		"dispatch_as_omni_account",
 		who.hash(),
-		intent_call,
-		nonce
+		intent_call
 	));
 
 	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[omni_account_call], None) {
@@ -275,7 +272,7 @@ fn handle_request<
 			NodeMetadataRepo,
 		>,
 	>,
-) -> Result<(TrustedCall, ParentchainIndex), &'static str>
+) -> Result<TrustedCall, &'static str>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -340,5 +337,5 @@ where
 		return Err("Authentication verification failed")
 	}
 
-	Ok((tca.call, tca.nonce))
+	Ok(tca.call)
 }
