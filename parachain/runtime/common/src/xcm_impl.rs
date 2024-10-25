@@ -20,13 +20,16 @@ use parachain_info::pallet::Pallet as ParachainInfo;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::traits::{Convert, MaybeEquivalence, Zero};
-use sp_std::{boxed::Box, cmp::Ordering, marker::PhantomData, prelude::*};
+use sp_std::{boxed::Box, cmp::Ordering, marker::PhantomData, prelude::*, sync::Arc};
 use xcm::{
 	latest::{
-		prelude::{Fungibility, Junction, Junctions, MultiAsset, MultiLocation, XcmError},
-		AssetId as xcmAssetId, Weight, XcmContext,
+		prelude::{
+			Asset as MultiAsset, Fungibility, Junction, Junctions, Location as MultiLocation,
+			XcmError,
+		},
+		Weight, XcmContext,
 	},
-	prelude::{Parachain, X1},
+	v4::{AssetId as xcmAssetId, Junction::*, Junctions::*}
 };
 use xcm_builder::TakeRevenue;
 use xcm_executor::traits::{ConvertLocation, MatchesFungibles, WeightTrader};
@@ -57,16 +60,16 @@ impl<
 	fn buy_weight(
 		&mut self,
 		weight: Weight,
-		payment: xcm_executor::Assets,
+		payment: xcm_executor::AssetsInHolding,
 		_context: &XcmContext,
-	) -> Result<xcm_executor::Assets, XcmError> {
+	) -> Result<xcm_executor::AssetsInHolding, XcmError> {
 		let first_asset = payment.fungible_assets_iter().next().ok_or(XcmError::TooExpensive)?;
 
 		// We are only going to check first asset for now. This should be sufficient for simple
 		// token transfers. We will see later if we change this.
 		match (first_asset.id, first_asset.fun) {
-			(xcmAssetId::Concrete(id), Fungibility::Fungible(_)) => {
-				let asset_type: AssetType = id.into();
+			(xcmAssetId(id), Fungibility::Fungible(_)) => {
+				let asset_type: AssetType = id.clone().into();
 				// Shortcut if we know the asset is not supported
 				// This involves the same db read per block, mitigating any attack based on
 				// non-supported assets
@@ -87,7 +90,7 @@ impl<
 
 					let required = MultiAsset {
 						fun: Fungibility::Fungible(amount),
-						id: xcmAssetId::Concrete(id),
+						id: xcmAssetId(id.clone()),
 					};
 					let unused =
 						payment.checked_sub(required).map_err(|_| XcmError::TooExpensive)?;
@@ -101,7 +104,7 @@ impl<
 
 					// In short, we only refund on the asset the trader first succesfully was able
 					// to pay for an execution
-					let new_asset = match self.1 {
+					let new_asset = match self.1.clone() {
 						Some((prev_id, prev_amount, units_per_second)) => {
 							if prev_id == id {
 								Some((id, prev_amount.saturating_add(amount), units_per_second))
@@ -127,13 +130,13 @@ impl<
 	}
 
 	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<MultiAsset> {
-		if let Some((id, prev_amount, units_per_second)) = self.1 {
+		if let Some((id, prev_amount, units_per_second)) = self.1.clone() {
 			let ref_time = weight.ref_time().min(self.0);
 			self.0 -= ref_time;
 			let amount =
 				units_per_second * (ref_time as u128) / (WEIGHT_REF_TIME_PER_SECOND as u128);
-			self.1 = Some((id, prev_amount.saturating_sub(amount), units_per_second));
-			Some(MultiAsset { fun: Fungibility::Fungible(amount), id: xcmAssetId::Concrete(id) })
+			self.1 = Some((id.clone(), prev_amount.saturating_sub(amount), units_per_second));
+			Some(MultiAsset { fun: Fungibility::Fungible(amount), id: xcmAssetId(id) })
 		} else {
 			None
 		}
@@ -148,7 +151,7 @@ impl<
 	> Drop for FirstAssetTrader<AssetType, AssetIdInfoGetter, R>
 {
 	fn drop(&mut self) {
-		if let Some((id, amount, _)) = self.1 {
+		if let Some((id, amount, _)) = self.1.clone() {
 			R::take_revenue((id, amount).into());
 		}
 	}
@@ -163,7 +166,7 @@ pub struct XcmFeesToAccount<Assets, Matcher, AccountId, ReceiverAccount>(
 impl<
 		Assets: Mutate<AccountId>,
 		Matcher: MatchesFungibles<Assets::AssetId, Assets::Balance>,
-		AccountId: Clone,
+		AccountId: Clone + std::cmp::Eq,
 		ReceiverAccount: Get<AccountId>,
 	> TakeRevenue for XcmFeesToAccount<Assets, Matcher, AccountId, ReceiverAccount>
 {
@@ -191,21 +194,18 @@ pub trait Reserve {
 // Takes the chain part of a MultiAsset
 impl Reserve for MultiAsset {
 	fn reserve(&self) -> Option<MultiLocation> {
-		if let xcmAssetId::Concrete(location) = self.id {
-			let first_interior = location.first_interior();
-			let parents = location.parent_count();
-			match (parents, first_interior) {
-				// The only case for non-relay chain will be the chain itself.
-				(0, Some(Parachain(id))) => Some(MultiLocation::new(0, X1(Parachain(*id)))),
-				// Only Sibling parachain is recognized.
-				(1, Some(Parachain(id))) => Some(MultiLocation::new(1, X1(Parachain(*id)))),
-				// The Relay chain.
-				(1, _) => Some(MultiLocation::parent()),
-				// No other case is allowed for now.
-				_ => None,
-			}
-		} else {
-			None
+		let xcmAssetId(location) = self.id.clone();
+		let first_interior = location.first_interior();
+		let parents = location.parent_count();
+		match (parents, first_interior) {
+			// The only case for non-relay chain will be the chain itself.
+			(0, Some(Parachain(id))) => Some(MultiLocation::new(0, X1(Arc::new([Parachain(*id)])))),
+			// Only Sibling parachain is recognized.
+			(1, Some(Parachain(id))) => Some(MultiLocation::new(1, X1(Arc::new([Parachain(*id)])))),
+			// The Relay chain.
+			(1, _) => Some(MultiLocation::parent()),
+			// No other case is allowed for now.
+			_ => None,
 		}
 	}
 }
@@ -276,7 +276,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
 		MultiLocation {
 			parents: 0,
-			interior: X1(Junction::AccountId32 { network: None, id: account.into() }),
+			interior: X1(Arc::new([Junction::AccountId32 { network: None, id: account.into() }])),
 		}
 	}
 }
@@ -287,10 +287,10 @@ impl<R: BaseRuntimeRequirements> OldAnchoringSelfReserve<R> {
 	pub fn get() -> MultiLocation {
 		MultiLocation {
 			parents: 1,
-			interior: Junctions::X2(
+			interior: Junctions::X2(Arc::new([
 				Parachain(ParachainInfo::<R>::parachain_id().into()),
 				Junction::PalletInstance(<RuntimeBalances<R> as PalletInfoAccess>::index() as u8),
-			),
+			])),
 		}
 	}
 }
@@ -308,9 +308,9 @@ impl<R: BaseRuntimeRequirements> NewAnchoringSelfReserve<R> {
 	pub fn get() -> MultiLocation {
 		MultiLocation {
 			parents: 0,
-			interior: Junctions::X1(Junction::PalletInstance(
+			interior: Junctions::X1(Arc::new([Junction::PalletInstance(
 				<RuntimeBalances<R> as PalletInfoAccess>::index() as u8,
-			)),
+			)])),
 		}
 	}
 }
@@ -423,7 +423,7 @@ where
 		if let Some(currency_id) = <CurrencyIdMultiLocationConvert<R> as Convert<
 			MultiLocation,
 			Option<CurrencyId<R>>,
-		>>::convert(*multi)
+		>>::convert(multi.clone())
 		{
 			<AssetManager<R> as AssetTypeGetter<AssetId, CurrencyId<R>>>::get_asset_id(currency_id)
 		} else {
