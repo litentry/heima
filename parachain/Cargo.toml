@@ -19,6 +19,7 @@ members = [
     'pallets/vc-management',
     'pallets/xcm-asset-manager',
     'pallets/omni-account',
+    'pallets/omni-account/runtime-api',
     'precompiles/*',
     'runtime/litentry',
     'runtime/rococo',
