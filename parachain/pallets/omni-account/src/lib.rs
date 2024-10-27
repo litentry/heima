@@ -140,7 +140,7 @@ pub mod pallet {
 		/// Some member account is made public
 		AccountMadePublic { who: T::AccountId, member_account_hash: H256 },
 		/// An account store is updated
-		AccountStoreUpdated { who: T::AccountId },
+		AccountStoreUpdated { who: T::AccountId, account_store: MemberAccounts<T> },
 		/// Some call is dispatched as omni-account origin
 		DispatchedAsOmniAccount { who: T::AccountId, result: DispatchResult },
 		/// Some call is dispatched as signed origin
@@ -245,7 +245,11 @@ pub mod pallet {
 			MemberAccountHash::<T>::insert(hash, who.clone());
 			AccountStore::<T>::insert(who.clone(), member_accounts.clone());
 
-			Self::deposit_event(Event::AccountAdded { who, member_account_hash: hash });
+			Self::deposit_event(Event::AccountAdded {
+				who: who.clone(),
+				member_account_hash: hash,
+			});
+			Self::deposit_event(Event::AccountStoreUpdated { who, account_store: member_accounts });
 
 			Ok(())
 		}
@@ -276,10 +280,11 @@ pub mod pallet {
 			if member_accounts.is_empty() {
 				AccountStore::<T>::remove(&who);
 			} else {
-				AccountStore::<T>::insert(who.clone(), member_accounts);
+				AccountStore::<T>::insert(who.clone(), member_accounts.clone());
 			}
 
-			Self::deposit_event(Event::AccountRemoved { who, member_account_hashes });
+			Self::deposit_event(Event::AccountRemoved { who: who.clone(), member_account_hashes });
+			Self::deposit_event(Event::AccountStoreUpdated { who, account_store: member_accounts });
 
 			Ok(())
 		}
@@ -300,9 +305,13 @@ pub mod pallet {
 				.ok_or(Error::<T>::AccountNotFound)?;
 			*m = member_account.into();
 
-			AccountStore::<T>::insert(who.clone(), member_accounts);
+			AccountStore::<T>::insert(who.clone(), member_accounts.clone());
 
-			Self::deposit_event(Event::AccountMadePublic { who, member_account_hash: hash });
+			Self::deposit_event(Event::AccountMadePublic {
+				who: who.clone(),
+				member_account_hash: hash,
+			});
+			Self::deposit_event(Event::AccountStoreUpdated { who, account_store: member_accounts });
 
 			Ok(())
 		}
@@ -339,8 +348,11 @@ pub mod pallet {
 			}
 
 			MemberAccountHash::<T>::insert(member_account.hash(), who_account.clone());
-			AccountStore::<T>::insert(who_account.clone(), member_accounts);
-			Self::deposit_event(Event::AccountStoreUpdated { who: who_account });
+			AccountStore::<T>::insert(who_account.clone(), member_accounts.clone());
+			Self::deposit_event(Event::AccountStoreUpdated {
+				who: who_account,
+				account_store: member_accounts,
+			});
 
 			Ok(Pays::No.into())
 		}
@@ -386,7 +398,11 @@ pub mod pallet {
 			MemberAccountHash::<T>::insert(hash, omni_account.clone());
 			AccountStore::<T>::insert(omni_account.clone(), member_accounts.clone());
 
-			Self::deposit_event(Event::AccountStoreCreated { who: omni_account });
+			Self::deposit_event(Event::AccountStoreCreated { who: omni_account.clone() });
+			Self::deposit_event(Event::AccountStoreUpdated {
+				who: omni_account,
+				account_store: member_accounts.clone(),
+			});
 
 			Ok(member_accounts)
 		}

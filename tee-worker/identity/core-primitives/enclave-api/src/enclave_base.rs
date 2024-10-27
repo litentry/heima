@@ -83,6 +83,8 @@ pub trait EnclaveBase: Send + Sync + 'static {
 	// litentry
 	fn migrate_shard(&self, new_shard: Vec<u8>) -> EnclaveResult<()>;
 
+	fn init_in_memory_state(&self) -> EnclaveResult<()>;
+
 	fn upload_id_graph(&self) -> EnclaveResult<()>;
 }
 
@@ -384,6 +386,17 @@ mod impl_ffi {
 					new_shard.len() as u32,
 				)
 			};
+
+			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
+			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
+
+			Ok(())
+		}
+
+		fn init_in_memory_state(&self) -> EnclaveResult<()> {
+			let mut retval = sgx_status_t::SGX_SUCCESS;
+
+			let result = unsafe { ffi::init_in_memory_state(self.eid, &mut retval) };
 
 			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
 			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));

@@ -28,6 +28,7 @@ use itp_types::{
 	H256,
 };
 use log::*;
+use sp_runtime::traits::{Block as ParentchainBlock, Header as ParentchainHeader};
 use std::vec::Vec;
 
 pub struct ParentchainEventHandler {}
@@ -52,11 +53,15 @@ where
 {
 	type Output = Vec<H256>;
 
-	fn handle_events(
+	fn handle_events<Block>(
 		&self,
 		_executor: &Executor,
 		_events: impl FilterEvents,
-	) -> Result<Vec<H256>, Error> {
+		_block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
+	) -> Result<Vec<H256>, Error>
+	where
+		Block: ParentchainBlock,
+	{
 		debug!("not handling any events for target a");
 		Ok(Vec::new())
 	}

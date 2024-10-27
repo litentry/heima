@@ -26,7 +26,8 @@ use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, thread, vec::Vec};
 use substrate_api_client::{
-	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	ac_primitives::serde_impls::StorageKey, GetChainInfo, GetStorage, SubmitAndWatch,
+	SubmitExtrinsic, XtStatus,
 };
 
 #[cfg(feature = "link-binary")]
@@ -111,6 +112,25 @@ where
 						_ => Default::default(),
 					};
 					WorkerResponse::ChainStorageKeys(keys)
+				},
+				WorkerRequest::ChainStorageKeysPaged(prefix, count, start_key, hash) => {
+					let keys: Vec<Vec<u8>> = match api.get_storage_keys_paged(
+						Some(StorageKey(prefix)),
+						count,
+						start_key.map(StorageKey),
+						hash,
+					) {
+						Ok(keys) => keys.iter().map(|k| k.0.to_vec()).collect(),
+						_ => Default::default(),
+					};
+					WorkerResponse::ChainStorageKeys(keys)
+				},
+				WorkerRequest::ChainHeader(block_hash) => {
+					let header = match api.get_header(block_hash) {
+						Ok(Some(header)) => Some(header.encode()),
+						_ => None,
+					};
+					WorkerResponse::ChainHeader(header)
 				},
 			})
 			.collect();
