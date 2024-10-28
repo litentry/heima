@@ -180,6 +180,7 @@ pub mod pallet {
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type AssetIdOf<T> = <<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -246,13 +247,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn aiusd_asset_id)]
 	pub type AIUSDAssetId<T: Config> =
-		StorageValue<_, <T::Fungibles as FsInspect<T::AccountId>>::AssetId, OptionQuery>;
+		StorageValue<_, AssetIdOf<T>, OptionQuery>;
 	
 	// Asset id of CAN
 	#[pallet::storage]
 	#[pallet::getter(fn aiusd_asset_id)]
 	pub type CANAssetId<T: Config> =
-		StorageValue<_, <T::Fungibles as FsInspect<T::AccountId>>::AssetId, OptionQuery>;
+		StorageValue<_, AssetIdOf<T>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -428,12 +429,15 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pool_id: InvestingPoolIndex,
 			epoch: u128,
-			amount: AssetBalanceOf<T>,
+			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let source = ensure_signed(origin)?;
 
 			Self::do_can_claim(source, asset_id, amount)?;
-			Self::do_stable_claim(source, asset_id, amount)
+			Self::do_stable_claim(source, asset_id, amount)?;
+
+			//destroy/create corresponding pool token category
+			???
 		}
 
 		// Registing AIUSD asset id
@@ -442,7 +446,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn regist_aiusd(
 			origin: OriginFor<T>,
-			asset_id: <T::Fungibles as FsInspect<T::AccountId>>::AssetId,
+			asset_id: AssetIdOf<T>,
 		) -> DispatchResult {
 			T::InvestingPoolCommitteeOrigin::ensure_origin(origin)?;
 			<AIUSDAssetId<T>>::put(asset_id.clone());
@@ -456,7 +460,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn regist_can(
 			origin: OriginFor<T>,
-			asset_id: <T::Fungibles as FsInspect<T::AccountId>>::AssetId,
+			asset_id: AssetIdOf<T>,
 		) -> DispatchResult {
 			T::InvestingPoolCommitteeOrigin::ensure_origin(origin)?;
 			<AIUSDAssetId<T>>::put(asset_id.clone());
@@ -467,6 +471,7 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		// Epoch starting from 1
+		// The undergoing epoch index if at "time"
 		// return setting.epoch if time >= pool end_time
 		fn get_epoch_index(
 			pool_id: InvestingPoolIndex,
@@ -490,7 +495,7 @@ pub mod pallet {
 
 		// return pool ending time if epoch > setting.epoch
 		// Epoch starting from 1
-		fn get_epoch_begin_time(
+		fn get_epoch_start_time(
 			pool_id: InvestingPoolIndex,
 			epoch: u128,
 		) -> Result<BlockNumberFor<T>, sp_runtime::DispatchError> {
@@ -540,7 +545,6 @@ pub mod pallet {
 
 		// For can_investing
 		fn do_can_add(
-			who: T::AccountId,
 			amount: BalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
@@ -558,13 +562,40 @@ pub mod pallet {
 		}
 
 		// No category token effected
-		fn do_can_claim(who: T::AccountId, until_time: BlockNumberFor<T>) -> DispatchResult {
+		fn do_can_claim(who: T::AccountId, asset_id: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
 			let beneficiary_account: T::AccountId = Self::can_token_beneficiary_account();
 			let current_block = frame_system::Pallet::<T>::block_number();
-			ensure!(until_time <= current_block, Error::<T>::CannotClaimFuture);
 			let can_asset_id = <CANAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			// BalanceOf
-			let reward_pool = T::Fungible::balance(&beneficiary_account);
+			let reward_pool = T::Fungibles::balance(can_asset_id, &beneficiary_account);
+			let pool_id = InvestingPoolAssetIdGenerator::get_token_pool_index(asset_id);
+			// Current latest end epoch
+			let latest_ended_epoch = self::get_epoch_index(pool_id, current_block).checed_sub(1u128).ok_or(ArithmeticError::Overflow)?;
+			let token_start_epoch = InvestingPoolAssetIdGenerator::get_token_start_epoch(asset_id);
+
+			if token_start_epoch > latest_ended_epoch {
+				// Nothing to claim
+				// Do nothing
+				return Ok(())
+			} else {
+				// Claim until the latest_ended_epoch
+				let until_time = get_epoch_end_time(pool_id, latest_ended_epoch);
+				let claim_duration = until_time - get_epoch_start_time(pool_id, token_start_epoch);
+				let claim_weight = claim_duration.checked_mul(amount).ok_or(ArithmeticError::Overflow)?;
+
+				if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
+					let proportion = Perquintill::from_rational(
+						claim_weight,
+						ncp.weight_force(until_time)
+							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
+					);
+				}
+
+				
+
+
+				...
+			}
 
 			if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
 				if let Some(mut user_ncp) = <UserCANCheckpoint<T>>::get(who.clone()) {
@@ -597,7 +628,6 @@ pub mod pallet {
 					)?;
 					// Adjust checkpoint
 					<CANCheckpoint<T>>::put(ncp);
-					<UserCANCheckpoint<T>>::insert(&who, user_ncp);
 					Self::deposit_event(Event::<T>::NativeRewardClaimed {
 						who,
 						until_time,
@@ -611,8 +641,8 @@ pub mod pallet {
 		// Category token effected
 		fn do_stable_claim(
 			who: T::AccountId,
-			asset_id: InvestingPoolIndex,
-			amount: BlockNumberFor<T>,
+			asset_id: AssetIdOf<T>,
+			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			ensure!(until_time <= current_block, Error::<T>::CannotClaimFuture);
@@ -654,8 +684,8 @@ pub mod pallet {
 					i.1,
 				)?;
 
-				// Add CAN token checkpoint
-				Self::do_can_add(i.0, i.1, effective_time)
+				// Add CAN token global checkpoint
+				Self::do_can_add(i.1, effective_time)
 				
 			}
 		}

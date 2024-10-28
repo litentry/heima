@@ -198,7 +198,11 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A motion has been proposed by a public account.
-		PoolProposed { proposer: T::AccountId, pool_proposal_index: PoolProposalIndex },
+		PoolProposed {
+			proposer: T::AccountId,
+			pool_proposal_index: PoolProposalIndex,
+			info_hash: InfoHash,
+		},
 		/// A pre investing becomes valid
 		PoolPreInvested {
 			user: T::AccountId,
@@ -293,7 +297,7 @@ pub mod pallet {
 
 			let new_proposal_info = PoolProposalInfo {
 				proposer: who.clone(),
-				pool_info_hash,
+				pool_info_hash: pool_info_hash.clone(),
 				max_pool_size,
 				pool_start_time,
 				pool_end_time: pool_start_time
@@ -355,6 +359,7 @@ pub mod pallet {
 			Self::deposit_event(Event::PoolProposed {
 				proposer: who,
 				pool_proposal_index: next_proposal_index,
+				info_hash: pool_info_hash,
 			});
 			Ok(())
 		}

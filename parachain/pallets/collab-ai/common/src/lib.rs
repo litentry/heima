@@ -170,7 +170,7 @@ pub const INVESTING_POOL_START_EPOCH_SHIFTER: u128 = 1_000;
 pub const INVESTING_POOL_END_EPOCH_SHIFTER: u128 = 1;
 
 pub struct InvestingPoolAssetIdGenerator<AssetId>(PhantomData<AssetId>);
-impl<AssetId: From<u128>> InvestingPoolAssetIdGenerator<AssetId> {
+impl<AssetId: From<u128> + Into<u128>> InvestingPoolAssetIdGenerator<AssetId> {
 	/// Create a series of new asset id based on pool index and reward epoch
 	/// Return None if impossible to generate. e.g. overflow
 	pub fn get_all_pool_token(pool_index: InvestingPoolIndex, epoch: u128) -> Option<Vec<AssetId>> {
@@ -198,6 +198,22 @@ impl<AssetId: From<u128>> InvestingPoolAssetIdGenerator<AssetId> {
 
 		let end_epoch_suffix = epoch.checked_mul(INVESTING_POOL_END_EPOCH_SHIFTER)?;
 		Some(pool_index_prefix.checked_add(end_epoch_suffix)?.into())
+	}
+
+	pub fn get_token_pool_index(asset_id: AssetId) -> u128 {
+		let asset_id_u128: u128 = asset_id.into();
+		asset_id_u128 / INVESTING_POOL_INDEX_SHIFTER
+	}
+
+	pub fn get_token_start_epoch(asset_id: AssetId) -> u128 {
+		let asset_id_u128: u128 = asset_id.into();
+		(asset_id_u128 % INVESTING_POOL_INDEX_SHIFTER) / INVESTING_POOL_START_EPOCH_SHIFTER
+	}
+
+	pub fn get_token_end_epoch(asset_id: AssetId) -> u128 {
+		let asset_id_u128: u128 = asset_id.into();
+		((asset_id_u128 % INVESTING_POOL_INDEX_SHIFTER) % INVESTING_POOL_START_EPOCH_SHIFTER)
+			/ INVESTING_POOL_END_EPOCH_SHIFTER
 	}
 }
 
