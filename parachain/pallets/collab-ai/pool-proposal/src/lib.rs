@@ -297,7 +297,7 @@ pub mod pallet {
 
 			let new_proposal_info = PoolProposalInfo {
 				proposer: who.clone(),
-				pool_info_hash: pool_info_hash.clone(),
+				pool_info_hash,
 				max_pool_size,
 				pool_start_time,
 				pool_end_time: pool_start_time
