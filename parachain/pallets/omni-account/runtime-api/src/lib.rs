@@ -26,5 +26,4 @@ sp_api::decl_runtime_apis! {
 	{
 		fn omni_account(id: Identity) -> AccountId;
 	}
-
 }
