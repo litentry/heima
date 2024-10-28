@@ -14,7 +14,7 @@
         "-h",
         "4545",
         "-u",
-        "wss://rpc.rococo-parachain.litentry.io",
+        "wss://rpc.litentry-parachain.litentry.io",
         "-p",
         "443",
         "--parentchain-start-block",

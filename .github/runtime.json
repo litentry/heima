@@ -3,7 +3,7 @@
       "name": "rococo",
       "package": "rococo-parachain-runtime",
       "path": "runtime/rococo",
-      "uri": "wss://rpc.rococo-parachain.litentry.io:443"
+      "uri": "wss://rpc.litentry-parachain.litentry.io:443"
     },
     {
       "name": "litentry",
