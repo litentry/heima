@@ -19,7 +19,7 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
+use itp_ocall_api::{EnclaveOnChainOCallApi, Error, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
 use itp_types::{
 	parentchain::ParentchainId, storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256,
@@ -145,5 +145,45 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		// we should only have one response as we only sent one request
 		let first_response = responses.get(0).ok_or(StorageError::WrongValue)?;
 		Ok(first_response.clone())
+	}
+
+	fn get_storage_keys_paged<H: Header<Hash = H256>>(
+		&self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+		header: Option<&H>,
+	) -> Result<Vec<Vec<u8>>> {
+		let header_hash = header.map(|h| h.hash());
+		let requests =
+			vec![WorkerRequest::ChainStorageKeysPaged(key_prefix, count, start_key, header_hash)];
+
+		let responses: Vec<Vec<Vec<u8>>> = self
+			.worker_request::<Vec<u8>>(requests, &ParentchainId::Litentry)?
+			.iter()
+			.filter_map(|r| match r {
+				WorkerResponse::ChainStorageKeys(k) => Some(k.clone()),
+				_ => None,
+			})
+			.collect();
+
+		// we should only have one response as we only sent one request
+		let first_response = responses.get(0).ok_or(StorageError::WrongValue)?;
+		Ok(first_response.clone())
+	}
+
+	fn get_header<H: Header<Hash = H256>>(&self, parentchain_id: &ParentchainId) -> Result<H> {
+		let request = vec![WorkerRequest::ChainHeader(None)];
+		let responses: Vec<H> = self
+			.worker_request::<Vec<u8>>(request, parentchain_id)?
+			.iter()
+			.filter_map(|r| match r {
+				WorkerResponse::ChainHeader(Some(h)) =>
+					Some(Decode::decode(&mut h.as_slice()).ok()?),
+				_ => None,
+			})
+			.collect();
+
+		responses.first().cloned().ok_or(Error::ChainCallFailed)
 	}
 }

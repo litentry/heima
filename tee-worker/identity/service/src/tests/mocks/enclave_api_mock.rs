@@ -104,6 +104,10 @@ impl EnclaveBase for EnclaveMock {
 		unimplemented!()
 	}
 
+	fn init_in_memory_state(&self) -> EnclaveResult<()> {
+		unimplemented!()
+	}
+
 	fn upload_id_graph(&self) -> EnclaveResult<()> {
 		unimplemented!()
 	}

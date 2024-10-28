@@ -486,6 +486,10 @@ impl Identity {
     pub fn hash(&self) -> H256 {
         self.using_encoded(blake2_256).into()
     }
+
+    pub fn from_email(email: &str) -> Self {
+        Identity::Email(IdentityString::new(email.as_bytes().to_vec()))
+    }
 }
 
 impl From<ed25519::Public> for Identity {
