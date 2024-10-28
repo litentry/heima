@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Added
 
--   Type definitions for the new OmniAccount Pallet.
+-   Type definitions for the new OmniAccount Pallet under the name of `omniAccount`.
 -   Expose getter to get the derived `omniaccount` address from a given identity
 -   Expose the OmniAccount `request_intent`'s trusted call.
 -   Add `TrustedCallAuthenticated` and `TCAuthentication` trusted call structs.
