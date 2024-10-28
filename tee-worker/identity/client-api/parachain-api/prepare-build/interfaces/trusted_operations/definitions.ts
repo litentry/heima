@@ -17,6 +17,18 @@ export default {
             signature: "LitentryMultiSignature",
         },
 
+        TCAuthentication: {
+            _enum: {
+                Web3: "LitentryMultiSignature",
+                Email: "Text",
+            },
+        },
+        TrustedCallAuthenticated: {
+            call: "TrustedCall",
+            nonce: "Index",
+            authentication: "TCAuthentication",
+        },
+
         //important
         TrustedGetter: {
             _enum: {
