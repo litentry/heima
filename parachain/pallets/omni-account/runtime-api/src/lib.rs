@@ -22,7 +22,7 @@ use parity_scale_codec::{Decode, Encode};
 sp_api::decl_runtime_apis! {
 	pub trait OmniAccountApi<AccountId>
 	where
-		AccountId: Encode + Decode,
+		AccountId: Codec,
 	{
 		fn omni_account(id: Identity) -> AccountId;
 	}
