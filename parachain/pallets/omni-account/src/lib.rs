@@ -389,7 +389,7 @@ pub mod pallet {
 		/// - directly derive it otherwise
 		pub fn omni_account(identity: Identity) -> T::AccountId {
 			let hash = identity.hash();
-			if let Some(account) = MemberAccountHash::<T>::get(&hash) {
+			if let Some(account) = MemberAccountHash::<T>::get(hash) {
 				account
 			} else {
 				T::OmniAccountConverter::convert(&identity)
