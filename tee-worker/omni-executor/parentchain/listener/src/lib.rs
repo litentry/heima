@@ -148,7 +148,7 @@ pub async fn create_listener<EthereumIntentExecutorT: IntentExecutor + Send + Sy
 	)
 }
 
-#[allow(unused_assignments, unused_mut, unused_variables)]
+#[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]
 async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
