@@ -192,7 +192,7 @@ checksum = "bc00ceb34980c03614e35a3a4e218276a0a824e911d07651cd0d858a51e8c0f0"
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -562,7 +562,7 @@ version = "0.4.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
  "serde 1.0.204",
 ]
 
@@ -953,6 +953,7 @@ dependencies = [
  "lc-evm-dynamic-assertions",
  "lc-identity-verification",
  "lc-native-task-receiver",
+ "lc-omni-account",
  "lc-parachain-extrinsic-task-receiver",
  "lc-parachain-extrinsic-task-sender",
  "lc-stf-task-receiver",
@@ -1235,7 +1236,7 @@ checksum = "36530797b9bf31cd4ff126dcfee8170f86b00cfdcea3269d73133cc0415945c3"
 dependencies = [
  "either",
  "futures 0.3.28",
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
  "parity-scale-codec",
  "scale-info",
 ]
@@ -1380,7 +1381,7 @@ dependencies = [
  "proc-macro-warning",
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -1392,7 +1393,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -1402,7 +1403,7 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -1810,6 +1811,7 @@ dependencies = [
  "itp-types",
  "lc-dynamic-assertion",
  "lc-evm-dynamic-assertions",
+ "lc-omni-account",
  "litentry-primitives",
  "log",
  "parity-scale-codec",
@@ -2168,7 +2170,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
 dependencies = [
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
 ]
 
 [[package]]
@@ -2603,7 +2605,6 @@ dependencies = [
  "frame-support",
  "hash-db 0.15.2",
  "itp-types",
- "litentry-hex-utils",
  "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
@@ -3121,6 +3122,7 @@ dependencies = [
  "id-ita-stf",
  "id-itp-stf-executor",
  "id-itp-top-pool-author",
+ "itp-api-client-types",
  "itp-enclave-metrics",
  "itp-extrinsics-factory",
  "itp-node-api",
@@ -3132,7 +3134,10 @@ dependencies = [
  "itp-types",
  "lc-data-providers",
  "lc-dynamic-assertion",
+ "lc-identity-verification",
  "lc-native-task-sender",
+ "lc-omni-account",
+ "litentry-hex-utils",
  "litentry-macros",
  "litentry-primitives",
  "log",
@@ -3149,6 +3154,21 @@ dependencies = [
  "litentry-primitives",
  "log",
  "sgx_tstd",
+]
+
+[[package]]
+name = "lc-omni-account"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "itp-ocall-api",
+ "itp-storage",
+ "itp-types",
+ "lazy_static",
+ "litentry-primitives",
+ "log",
+ "sgx_tstd",
+ "sp-core",
 ]
 
 [[package]]
@@ -3387,7 +3407,7 @@ dependencies = [
  "cargo_toml",
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -3631,9 +3651,9 @@ dependencies = [
 
 [[package]]
 name = "num-traits"
-version = "0.2.16"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f30b0abd723be7e2ffca1272140fac1a2f084c77ec3e123c192b66af1ee9e6c2"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg 1.1.0",
 ]
@@ -3957,7 +3977,7 @@ checksum = "0e99670bafb56b9a106419397343bdbc8b8742c3cc449fec6345f86173f47cd4"
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -4104,7 +4124,7 @@ checksum = "7f7473c2cfcf90008193dd0e3e16599455cb601a9fce322b5bb55de799664925"
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -4264,7 +4284,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1790d1c4c0ca81211399e0e0af16333276f375209e71a37b67698a373db5b47a"
 dependencies = [
  "arrayvec 0.7.4",
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
 ]
 
 [[package]]
@@ -4577,7 +4597,7 @@ checksum = "e0cd7e117be63d3c3678776753929474f3b04a43a080c744d6b0ae2a8c28e222"
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -4949,7 +4969,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -4970,7 +4990,7 @@ version = "6.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
 dependencies = [
  "integer-sqrt",
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
  "parity-scale-codec",
  "scale-info",
  "sp-std",
@@ -5057,7 +5077,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.36",
  "sp-core-hashing",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -5067,7 +5087,7 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -5163,7 +5183,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -5252,7 +5272,7 @@ dependencies = [
  "parity-scale-codec",
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -5346,7 +5366,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.36",
  "rustversion",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]
 
 [[package]]
@@ -5401,9 +5421,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.72"
+version = "2.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc4b9b9bf2add8093d3f2c0204471e951b2285580335de42f9d2534f3ae7a8af"
+checksum = "83540f837a8afc019423a8edb95b52a8effe46957ee402287f4292fae35be021"
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
@@ -5851,7 +5871,7 @@ checksum = "941f7fd7c114e1e0c401bbbe8222e8adbb4bc8ebeb782f7812d8f1678a578934"
 dependencies = [
  "log",
  "num-derive",
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
  "xous",
  "xous-ipc",
 ]
@@ -5864,7 +5884,7 @@ checksum = "471502d9379d198738ec55dec7cd688ce21e1cfe7d93af6dad25e38c1c404d1c"
 dependencies = [
  "log",
  "num-derive",
- "num-traits 0.2.16",
+ "num-traits 0.2.19",
  "rkyv",
  "xous",
  "xous-api-log",
@@ -5910,5 +5930,5 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote 1.0.36",
- "syn 2.0.72",
+ "syn 2.0.82",
 ]

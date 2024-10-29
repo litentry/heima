@@ -38,6 +38,7 @@ pub enum Error {
 	Storage(StorageError),
 	Codec(codec::Error),
 	Sgx(sgx_types::sgx_status_t),
+	ChainCallFailed,
 }
 
 pub type Result<T> = StdResult<T, Error>;
@@ -123,6 +124,16 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		key_prefix: Vec<u8>,
 		header: Option<&H>,
 	) -> Result<Vec<Vec<u8>>>;
+
+	fn get_storage_keys_paged<H: Header<Hash = H256>>(
+		&self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+		header: Option<&H>,
+	) -> Result<Vec<Vec<u8>>>;
+
+	fn get_header<H: Header<Hash = H256>>(&self, parentchain_id: &ParentchainId) -> Result<H>;
 }
 
 /// Trait for sending metric updates.

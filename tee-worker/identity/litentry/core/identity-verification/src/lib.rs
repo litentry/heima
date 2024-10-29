@@ -33,15 +33,22 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
-use frame_support::pallet_prelude::*;
-use litentry_primitives::Web2IdentityVerificationRequest;
-
-pub mod web2;
-
 mod error;
+mod helpers;
+mod verification_code_store;
+pub mod web2;
+pub use verification_code_store::VerificationCodeStore;
+
+use alloc::string::String;
 use error::{Error, Result};
+use frame_support::pallet_prelude::*;
 use lc_data_providers::DataProviderConfig;
+use litentry_primitives::Web2IdentityVerificationRequest;
 
 pub fn verify(r: &Web2IdentityVerificationRequest, config: &DataProviderConfig) -> Result<()> {
 	web2::verify(&r.who, &r.identity, &r.raw_msg, &r.validation_data, config)
+}
+
+pub fn generate_verification_code() -> String {
+	helpers::get_random_string(32)
 }

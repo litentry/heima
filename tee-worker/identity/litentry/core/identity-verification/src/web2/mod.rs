@@ -22,10 +22,9 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 
 mod discord;
 pub mod email;
-mod helpers;
 pub mod twitter;
 
-use crate::{ensure, Error, Result};
+use crate::{ensure, Error, Result, VerificationCodeStore};
 use itp_sgx_crypto::ShieldingCryptoDecrypt;
 use itp_utils::stringify::account_id_to_string;
 use lc_data_providers::{
@@ -210,8 +209,9 @@ pub fn verify(
 			let Some(account_id) = who.to_native_account() else {
 					return Err(Error::LinkIdentityFailed(ErrorDetail::ParseError));
 				};
+			let email_identity = Identity::from_email(&email);
 			let stored_verification_code =
-				match email::VerificationCodeStore::get(&account_id, &email) {
+				match VerificationCodeStore::get(&account_id, email_identity.hash()) {
 					Ok(data) => data.ok_or_else(|| {
 						Error::LinkIdentityFailed(ErrorDetail::StfError(
 							ErrorString::truncate_from(

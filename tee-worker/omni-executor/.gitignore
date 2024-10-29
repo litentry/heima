@@ -4,4 +4,4 @@ target/
 **/*.bin
 
 cache
-
+omni-executor.manifest

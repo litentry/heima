@@ -162,6 +162,11 @@ pub(crate) fn main() {
 		enclave_metrics_receiver,
 	)));
 
+	// init in-memory store, it should be done after the o-call bridge is initialized
+	if let Err(e) = enclave.init_in_memory_state() {
+		error!("Failed to initialize in-memory state: {:?}", e);
+	}
+
 	#[cfg(feature = "dcap")]
 	let quoting_enclave_target_info = match enclave.qe_get_target_info() {
 		Ok(target_info) => Some(target_info),

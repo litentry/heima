@@ -22,6 +22,8 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
+extern crate alloc;
+
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
@@ -31,6 +33,9 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use crate::sgx_reexport_prelude::*;
 
+mod trusted_call_authenticated;
+pub use trusted_call_authenticated::*;
+
 mod types;
 pub use types::NativeTaskContext;
 use types::*;
@@ -39,19 +44,23 @@ use codec::{Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+use itp_api_client_types::compose_call;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
+use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
-use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperation};
+use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
+use itp_types::{parentchain::ParentchainId, OpaqueCall};
 use lc_native_task_sender::init_native_task_sender;
-use litentry_primitives::{AesRequest, DecryptableRequest};
+use litentry_primitives::{AesRequest, DecryptableRequest, Intent};
 use sp_core::{blake2_256, H256};
 use std::{
+	borrow::ToOwned,
 	boxed::Box,
 	format,
+	string::ToString,
 	sync::{
 		mpsc::{channel, Sender},
 		Arc,
@@ -88,8 +97,7 @@ pub fn run_native_task_receiver<
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata + Send + Sync + 'static,
-	NodeMetadataRepo::MetadataType: NodeMetadataTrait,
+	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -117,15 +125,17 @@ pub fn run_native_task_receiver<
 		thread_pool.spawn_ok(async move {
 			let request = &mut req.request;
 			let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
-			match get_trusted_call_from_request(request, context_pool.clone()) {
-				Ok(call) => process_trusted_call(
+			match handle_request(request, context_pool.clone()) {
+				Ok(trusted_call) => handle_trusted_call(
 					context_pool.clone(),
-					call,
+					trusted_call,
 					connection_hash,
 					task_sender_pool,
 				),
 				Err(e) => {
 					log::error!("Failed to get trusted call from request: {:?}", e);
+					let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
+					context_pool.author_api.send_rpc_response(connection_hash, res.encode(), false);
 				},
 			};
 		});
@@ -133,7 +143,7 @@ pub fn run_native_task_receiver<
 	log::warn!("Native task receiver stopped");
 }
 
-fn process_trusted_call<
+fn handle_trusted_call<
 	ShieldingKeyRepository,
 	AuthorApi,
 	StfEnclaveSigning,
@@ -162,22 +172,88 @@ fn process_trusted_call<
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata + Send + Sync + 'static,
-	NodeMetadataRepo::MetadataType: NodeMetadataTrait,
+	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 {
-	match call {
-		// TODO: handle AccountStore related calls
-		TrustedCall::noop(_) => log::info!("Received noop call"),
+	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
+	{
+		Ok(Some(metadata)) => metadata,
+		_ => {
+			log::error!("Failed to get node metadata");
+			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MetadataRetrievalFailed(
+				"Failed to get node metadata".to_string(),
+			));
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return
+		},
+	};
+
+	let (who, intent_call) = match call {
+		TrustedCall::request_intent(who, intent) => match intent {
+			Intent::SystemRemark(remark) =>
+				(who, OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark))),
+			Intent::TransferNative(transfer) => (
+				who,
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"Balances",
+					"transfer_allow_death",
+					transfer.to,
+					transfer.value
+				)),
+			),
+			Intent::CallEthereum(_) | Intent::TransferEthereum(_) => (
+				who,
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"OmniAccount",
+					"request_intent",
+					intent
+				)),
+			),
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let res: Result<(), NativeTaskError> =
 				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return
+		},
+	};
+
+	let omni_account_call = OpaqueCall::from_tuple(&compose_call!(
+		&metadata,
+		"OmniAccount",
+		"dispatch_as_omni_account",
+		who.hash(),
+		intent_call
+	));
+
+	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[omni_account_call], None) {
+		Ok(extrinsic) => extrinsic,
+		Err(e) => {
+			log::error!("Failed to create extrinsic: {:?}", e);
+			let res: Result<(), NativeTaskError> =
+				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return
+		},
+	};
+
+	match context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, true) {
+		Ok(_) => {
+			let res: Result<(), NativeTaskError> = Ok(());
+			context.author_api.send_rpc_response(connection_hash, res.encode(), true);
+		},
+		Err(e) => {
+			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
+			let res: Result<(), NativeTaskError> =
+				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 		},
 	}
 }
 
-fn get_trusted_call_from_request<
+fn handle_request<
 	ShieldingKeyRepository,
 	AuthorApi,
 	StfEnclaveSigning,
@@ -205,8 +281,7 @@ where
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata + Send + Sync + 'static,
-	NodeMetadataRepo::MetadataType: NodeMetadataTrait,
+	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
@@ -218,13 +293,15 @@ where
 			return Err("Shielding key retrieval failed")
 		},
 	};
-	let tcs: TrustedCallSigned = match request
+	let tca: TrustedCallAuthenticated = match request
 		.decrypt(Box::new(enclave_shielding_key))
 		.ok()
-		.and_then(|v| TrustedOperation::<TrustedCallSigned, Getter>::decode(&mut v.as_slice()).ok())
+		.and_then(|v| {
+			TrustedOperation::<TrustedCallAuthenticated, Getter>::decode(&mut v.as_slice()).ok()
+		})
 		.and_then(|top| top.to_call().cloned())
 	{
-		Some(tcs) => tcs,
+		Some(tca) => tca,
 		None => {
 			let res: Result<(), NativeTaskError> =
 				Err(NativeTaskError::RequestPayloadDecodingFailed);
@@ -240,11 +317,25 @@ where
 			return Err("MrEnclave retrieval failed")
 		},
 	};
-	if !tcs.verify_signature(&mrenclave, &request.shard) {
-		let res: Result<(), NativeTaskError> = Err(NativeTaskError::SignatureVerificationFailed);
+
+	let authentication_valid = match tca.authentication {
+		TCAuthentication::Web3(signature) => verify_tca_web3_authentication(
+			&signature,
+			&tca.call,
+			tca.nonce,
+			&mrenclave,
+			&request.shard,
+		),
+		TCAuthentication::Email(verification_code) =>
+			verify_tca_email_authentication(&tca.call, verification_code),
+	};
+
+	if !authentication_valid {
+		let res: Result<(), NativeTaskError> =
+			Err(NativeTaskError::AuthenticationVerificationFailed);
 		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-		return Err("Signature verification failed")
+		return Err("Authentication verification failed")
 	}
 
-	Ok(tcs.call)
+	Ok(tca.call)
 }
