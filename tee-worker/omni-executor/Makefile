@@ -73,6 +73,6 @@ start-local:
 stop-local:
 	docker compose down
 
-.PHONY: get-omni-pallet-metadata
-get-omni-pallet-metadata:
+.PHONY: get-pallet-metadata
+get-pallet-metadata:
 	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/artifacts/rococo-omni-account.scale
