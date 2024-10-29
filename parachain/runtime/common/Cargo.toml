@@ -5,6 +5,7 @@ name = 'runtime-common'
 version = '0.1.0'
 
 [dependencies]
+getrandom = { workspace = true, features = ["js"] }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
