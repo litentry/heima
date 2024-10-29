@@ -242,14 +242,14 @@ fn handle_trusted_call<
 				ValidationData::Web2(data) => {
 					todo!()
 				},
-				ValidationData::Web3(data) => {
+				ValidationData::Web3(validation_data) => {
 					if !identity.is_web3() {
 						let res: Result<(), NativeTaskError> =
 							Err(NativeTaskError::InvalidMemberIdentity);
 						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 						return
 					}
-					match verify_web3_identity(&identity, &raw_msg, &data) {
+					match verify_web3_identity(&identity, &raw_msg, &validation_data) {
 						Ok(_) => true,
 						Err(e) => {
 							log::error!("Failed to verify web3 identity: {:?}", e);
@@ -265,6 +265,12 @@ fn handle_trusted_call<
 					}
 				},
 			};
+
+			if !verification_done {
+				let res: Result<(), NativeTaskError> = Ok(());
+				context.author_api.send_rpc_response(connection_hash, res.encode(), true);
+				return
+			}
 
 			let member_account = match public {
 				true => MemberAccount::Public(identity),
