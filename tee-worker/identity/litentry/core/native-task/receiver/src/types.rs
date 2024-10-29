@@ -20,7 +20,9 @@ use ita_stf::{Getter, TrustedCallSigned};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
-use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
+use itp_sgx_crypto::{
+	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
+};
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use lc_data_providers::DataProviderConfig;
@@ -34,6 +36,7 @@ pub struct NativeTaskContext<
 	OCallApi,
 	ExtrinsicFactory,
 	NodeMetadataRepo,
+	Aes256KeyRepository,
 > where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -43,6 +46,7 @@ pub struct NativeTaskContext<
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	pub shielding_key: Arc<ShieldingKeyRepository>,
 	pub author_api: Arc<AuthorApi>,
@@ -52,6 +56,7 @@ pub struct NativeTaskContext<
 	pub data_provider_config: Arc<DataProviderConfig>,
 	pub extrinsic_factory: Arc<ExtrinsicFactory>,
 	pub node_metadata_repo: Arc<NodeMetadataRepo>,
+	pub aes256_key_repository: Arc<Aes256KeyRepository>,
 }
 
 impl<
@@ -61,6 +66,7 @@ impl<
 		OCallApi,
 		ExtrinsicFactory,
 		NodeMetadataRepo,
+		Aes256KeyRepository,
 	>
 	NativeTaskContext<
 		ShieldingKeyRepository,
@@ -69,6 +75,7 @@ impl<
 		OCallApi,
 		ExtrinsicFactory,
 		NodeMetadataRepo,
+		Aes256KeyRepository,
 	> where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -78,6 +85,7 @@ impl<
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -89,6 +97,7 @@ impl<
 		data_provider_config: Arc<DataProviderConfig>,
 		extrinsic_factory: Arc<ExtrinsicFactory>,
 		node_metadata_repo: Arc<NodeMetadataRepo>,
+		aes256_key_repository: Arc<Aes256KeyRepository>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -99,6 +108,7 @@ impl<
 			data_provider_config,
 			extrinsic_factory,
 			node_metadata_repo,
+			aes256_key_repository,
 		}
 	}
 }

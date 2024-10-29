@@ -48,7 +48,9 @@ use itp_api_client_types::compose_call;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
-use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
+use itp_sgx_crypto::{
+	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
+};
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
@@ -78,6 +80,7 @@ pub fn run_native_task_receiver<
 	OCallApi,
 	ExtrinsicFactory,
 	NodeMetadataRepo,
+	Aes256KeyRepository,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -87,6 +90,7 @@ pub fn run_native_task_receiver<
 			OCallApi,
 			ExtrinsicFactory,
 			NodeMetadataRepo,
+			Aes256KeyRepository,
 		>,
 	>,
 ) where
@@ -98,6 +102,7 @@ pub fn run_native_task_receiver<
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -150,6 +155,7 @@ fn handle_trusted_call<
 	OCallApi,
 	ExtrinsicFactory,
 	NodeMetadataRepo,
+	Aes256KeyRepository,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -159,6 +165,7 @@ fn handle_trusted_call<
 			OCallApi,
 			ExtrinsicFactory,
 			NodeMetadataRepo,
+			Aes256KeyRepository,
 		>,
 	>,
 	call: TrustedCall,
@@ -173,6 +180,7 @@ fn handle_trusted_call<
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
 	{
@@ -260,6 +268,7 @@ fn handle_request<
 	OCallApi,
 	ExtrinsicFactory,
 	NodeMetadataRepo,
+	Aes256KeyRepository,
 >(
 	request: &mut AesRequest,
 	context: Arc<
@@ -270,6 +279,7 @@ fn handle_request<
 			OCallApi,
 			ExtrinsicFactory,
 			NodeMetadataRepo,
+			Aes256KeyRepository,
 		>,
 	>,
 ) -> Result<TrustedCall, &'static str>
@@ -282,6 +292,7 @@ where
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {

@@ -361,6 +361,7 @@ fn run_native_task_handler() -> Result<(), Error> {
 	let enclave_account = Arc::new(GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?);
 	let extrinsic_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+	let aes256_key_repository = GLOBAL_ACCOUNT_STORE_KEY_REPOSITORY_COMPONENT.get()?;
 
 	let context = NativeTaskContext::new(
 		shielding_key_repository,
@@ -371,6 +372,7 @@ fn run_native_task_handler() -> Result<(), Error> {
 		data_provider_config,
 		extrinsic_factory,
 		node_metadata_repo,
+		aes256_key_repository,
 	);
 
 	run_native_task_receiver(Arc::new(context));
