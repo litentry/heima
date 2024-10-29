@@ -253,6 +253,13 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 	) -> itp_ocall_api::Result<H> {
 		todo!()
 	}
+
+	fn get_account_nonce(
+		&self,
+		_account_id: itp_types::parentchain::AccountId,
+	) -> itp_ocall_api::Result<itp_types::parentchain::Index> {
+		todo!()
+	}
 }
 
 pub fn validateer_set() -> Vec<AccountId> {

@@ -25,8 +25,9 @@ use core::result::Result as StdResult;
 use derive_more::{Display, From};
 use itp_storage::Error as StorageError;
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, ShardIdentifier,
-	TrustedOperationStatus, WorkerRequest, WorkerResponse,
+	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
+	storage::StorageEntryVerified,
+	BlockHash, ShardIdentifier, TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
 use sp_core::H256;
@@ -134,6 +135,8 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 	) -> Result<Vec<Vec<u8>>>;
 
 	fn get_header<H: Header<Hash = H256>>(&self, parentchain_id: &ParentchainId) -> Result<H>;
+
+	fn get_account_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex>;
 }
 
 /// Trait for sending metric updates.

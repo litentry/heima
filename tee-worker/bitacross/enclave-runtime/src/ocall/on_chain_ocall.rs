@@ -22,7 +22,9 @@ use frame_support::ensure;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Error, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256,
+	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
+	storage::StorageEntryVerified,
+	WorkerRequest, WorkerResponse, H256,
 };
 use log::*;
 use sgx_types::*;
@@ -180,6 +182,20 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.filter_map(|r| match r {
 				WorkerResponse::ChainHeader(Some(h)) =>
 					Some(Decode::decode(&mut h.as_slice()).ok()?),
+				_ => None,
+			})
+			.collect();
+
+		responses.first().cloned().ok_or(Error::ChainCallFailed)
+	}
+
+	fn get_account_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex> {
+		let request = vec![WorkerRequest::ChainAccountNonce(account_id.encode())];
+		let responses: Vec<ParentchainIndex> = self
+			.worker_request::<Vec<ParentchainIndex>>(request, &ParentchainId::Litentry)?
+			.iter()
+			.filter_map(|r| match r {
+				WorkerResponse::ChainAccountNonce(Some(index)) => Some(*index),
 				_ => None,
 			})
 			.collect();

@@ -22,8 +22,9 @@ use itp_ocall_api::{
 	EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
 };
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash,
-	Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse, H256,
+	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
+	storage::StorageEntryVerified,
+	BlockHash, Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse, H256,
 };
 use its_primitives::types::block::SignedBlock as SignedSidechainBlockType;
 use its_sidechain::consensus_common::BlockImport;
@@ -106,6 +107,10 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		_start_key: Option<Vec<u8>>,
 		_header: Option<&H>,
 	) -> Result<Vec<Vec<u8>>> {
+		todo!()
+	}
+
+	fn get_account_nonce(&self, _account_id: AccountId) -> Result<ParentchainIndex> {
 		todo!()
 	}
 }

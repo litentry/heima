@@ -21,13 +21,16 @@ use codec::{Decode, Encode};
 use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::enclave_base::EnclaveBase;
 use itp_node_api::{api_client::AccountApi, node_api_factory::CreateNodeApi};
-use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
+use itp_types::{
+	parentchain::{AccountId, ParentchainId},
+	WorkerRequest, WorkerResponse,
+};
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, thread, vec::Vec};
 use substrate_api_client::{
-	ac_primitives::serde_impls::StorageKey, GetChainInfo, GetStorage, SubmitAndWatch,
-	SubmitExtrinsic, XtStatus,
+	ac_primitives::serde_impls::StorageKey, GetAccountInformation, GetChainInfo, GetStorage,
+	SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
 #[cfg(feature = "link-binary")]
@@ -131,6 +134,16 @@ where
 						_ => None,
 					};
 					WorkerResponse::ChainHeader(header)
+				},
+				WorkerRequest::ChainAccountNonce(encoded_account_id) => {
+					let maybe_nonce = match AccountId::decode(&mut encoded_account_id.as_slice()) {
+						Ok(account_id) => api.get_account_nonce(&account_id).ok(),
+						_ => {
+							error!("[ChainAccountNonce] account_id could not be decoded");
+							None
+						},
+					};
+					WorkerResponse::ChainAccountNonce(maybe_nonce)
 				},
 			})
 			.collect();
