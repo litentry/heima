@@ -121,6 +121,7 @@ pub enum NativeTaskError {
 	ParentchainDataRetrievalFailed(String), // Stringified itp_stf_state_handler::Error
 	InvalidSignerAccount,
 	UnauthorizedSigner,
+	InvalidMemberIdentity,
 	MissingAesKey,
 	MrEnclaveRetrievalFailed,
 	EnclaveSignerRetrievalFailed,
