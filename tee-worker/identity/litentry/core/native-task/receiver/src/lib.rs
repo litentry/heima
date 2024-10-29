@@ -36,6 +36,9 @@ pub use crate::sgx_reexport_prelude::*;
 mod trusted_call_authenticated;
 pub use trusted_call_authenticated::*;
 
+mod helpers;
+use helpers::*;
+
 mod types;
 pub use types::NativeTaskContext;
 use types::*;
