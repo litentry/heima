@@ -225,14 +225,7 @@ fn handle_trusted_call<
 				)),
 			),
 		},
-		TrustedCall::add_account(
-			who,
-			identity,
-			validation_data,
-			public,
-			maybe_key,
-			req_ext_hash,
-		) => {
+		TrustedCall::add_account(who, identity, validation_data, public) => {
 			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
 			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 				Ok(Some(account)) => account,

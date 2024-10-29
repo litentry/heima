@@ -142,7 +142,7 @@ pub enum TrustedCall {
 	#[codec(index = 26)]
 	request_intent(Identity, Intent),
 	#[codec(index = 27)]
-	add_account(Identity, Identity, ValidationData, bool, Option<RequestAesKey>, H256),
+	add_account(Identity, Identity, ValidationData, bool),
 
 	// original integritee trusted calls, starting from index 50
 	#[codec(index = 50)]
