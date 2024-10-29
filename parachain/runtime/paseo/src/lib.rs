@@ -1865,6 +1865,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl pallet_omni_account_runtime_api::OmniAccountApi<Block, AccountId> for Runtime {
+		fn omni_account(identity: Identity) -> AccountId {
+			OmniAccount::omni_account(identity)
+		}
+	}
+
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
 		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
