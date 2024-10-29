@@ -13,6 +13,7 @@ parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 
 sp-api = { workspace = true }
+sp-api-proc-macro = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
@@ -177,6 +178,7 @@ std = [
     "parity-scale-codec/std",
     "log/std",
     "sp-api/std",
+    "sp-api-proc-macro/std",
     "sp-block-builder/std",
     "sp-consensus-aura/std",
     "sp-core/std",

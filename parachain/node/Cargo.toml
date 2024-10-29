@@ -19,6 +19,7 @@ targets = ['x86_64-unknown-linux-gnu']
 async-trait = { workspace = true }
 clap = { workspace = true }
 futures = { workspace = true }
+getrandom = { workspace = true, features = ["js"] }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
@@ -43,6 +44,7 @@ sc-tracing = { workspace = true }
 sc-transaction-pool = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
 sp-api = { workspace = true, features = ["std"] }
+sp-api-proc-macro = { workspace = true, features = ["std"] }
 sp-block-builder = { workspace = true, features = ["std"] }
 sp-blockchain = { workspace = true }
 sp-consensus-aura = { workspace = true, features = ["std"] }
@@ -53,6 +55,7 @@ sp-offchain = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 sp-session = { workspace = true, features = ["std"] }
 sp-timestamp = { workspace = true, features = ["std"] }
+sp-trie = { workspace = true, features = ["std"] }
 sp-transaction-pool = { workspace = true, features = ["std"] }
 substrate-frame-rpc-system = { workspace = true }
 substrate-prometheus-endpoint = { workspace = true }
