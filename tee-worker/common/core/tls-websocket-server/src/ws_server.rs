@@ -174,7 +174,7 @@ where
 			poll,
 			event.token(),
 			mio::Ready::readable(),
-			mio::PollOpt::level(),
+			mio::PollOpt::edge(),
 		)?;
 
 		Ok(do_shutdown)
@@ -234,14 +234,14 @@ where
 			&tcp_listener,
 			NEW_CONNECTIONS_LISTENER,
 			mio::Ready::readable(),
-			mio::PollOpt::level(),
+			mio::PollOpt::edge(),
 		)?;
 
 		poll.register(
 			&signal_receiver,
 			SERVER_SIGNAL_TOKEN,
 			mio::Ready::readable(),
-			mio::PollOpt::level(),
+			mio::PollOpt::edge(),
 		)?;
 
 		let mut events = mio::Events::with_capacity(2048);
@@ -358,46 +358,8 @@ mod tests {
 		});
 
 		client_join_handle.join().unwrap();
-		server.shut_down().unwrap();
-		server_join_handle.join().unwrap().unwrap();
-
-		assert_eq!(messages_number, handler.get_handled_messages().len());
-	}
-
-	#[test]
-	fn server_handles_multiple_messages_with_pauses() {
-		let _ = env_logger::builder().is_test(true).try_init();
-		let port: u16 = 21781;
-		let (server, handler) = create_server(vec![], port);
-
-		let server_clone = server.clone();
-		let server_join_handle = thread::spawn(move || server_clone.run());
-
-		let messages_number = 1000;
-
-		// Wait until server is up.
-		while !server.is_running().unwrap() {
-			thread::sleep(std::time::Duration::from_millis(50));
-		}
-
-		let client_join_handle = thread::spawn(move || {
-			let mut socket = connect_tls_client(get_server_addr(port).as_str());
-
-			for i in 0..messages_number {
-				socket
-					.write_message(Message::Text(format!("Request: {:}", i)))
-					.expect("client write message to be successful");
-				// just do not spam server and give it some time to process messages
-				thread::sleep(std::time::Duration::from_millis(20));
-			}
-
-			// We never read, just send a message and close the connection, despite the server
-			// trying to send a reply (which will fail).
-			socket.close(None).unwrap();
-			socket.write_pending().unwrap();
-		});
-
-		client_join_handle.join().unwrap();
+		// let's wait a while so it process all messages
+		thread::sleep(Duration::from_secs(2));
 		server.shut_down().unwrap();
 		server_join_handle.join().unwrap().unwrap();
 

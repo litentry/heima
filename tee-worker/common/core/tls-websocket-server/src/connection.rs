@@ -27,7 +27,8 @@ use log::*;
 use mio::{event::Event, net::TcpStream, Poll, Ready, Token};
 use rustls::{ServerSession, Session};
 use std::{
-	format, io,
+	format,
+	io::ErrorKind,
 	string::{String, ToString},
 	sync::Arc,
 	time::Instant,
@@ -138,29 +139,44 @@ where
 				self.connection_token.0,
 				web_socket.can_read()
 			);
-			match web_socket.read_message() {
-				Ok(m) =>
-					if let Err(e) = self.handle_message(m) {
-						error!(
-							"Failed to handle web-socket message (connection {}): {:?}",
-							self.connection_token.0, e
-						);
+
+			let mut messages = vec![];
+			let mut is_closing = false;
+
+			// Looping over 'read_message' is merely a workaround for the unexpected behavior of mio event triggering.
+			// Final solution will be applied in P-907.
+			loop {
+				match web_socket.read_message() {
+					Ok(m) => messages.push(m),
+					Err(e) => {
+						match e {
+							tungstenite::Error::Io(e)
+								if matches!(e.kind(), ErrorKind::WouldBlock) => {}, // no message to read
+							_ => {
+								trace!(
+									"Failed to read message from web-socket (connection {}): {:?}",
+									self.connection_token.0,
+									e
+								);
+								is_closing = true;
+							},
+						}
+						break
 					},
-				Err(e) =>
-					return match e {
-						tungstenite::Error::Io(e) if e.kind() == io::ErrorKind::WouldBlock =>
-							Ok(false),
-						_ => {
-							trace!(
-								"Error while reading web-socket message (connection {}): {:?}",
-								self.connection_token.0,
-								e
-							);
-							Ok(true)
-						},
-					},
+				}
 			}
+
+			messages.into_iter().for_each(|m| {
+				if let Err(e) = self.handle_message(m) {
+					error!(
+						"Failed to handle web-socket message (connection {}): {:?}",
+						self.connection_token.0, e
+					);
+				}
+			});
+
 			trace!("Read successful for connection {}", self.connection_token.0);
+			Ok(is_closing)
 		} else {
 			trace!("Initialize connection {}", self.connection_token.0);
 			self.stream_state = std::mem::take(&mut self.stream_state).attempt_handshake();
@@ -169,9 +185,8 @@ where
 				return Ok(true)
 			}
 			debug!("Initialized connection {} successfully", self.connection_token.0);
+			Ok(false)
 		}
-
-		Ok(false)
 	}
 
 	fn handle_message(&mut self, message: Message) -> WebSocketResult<()> {

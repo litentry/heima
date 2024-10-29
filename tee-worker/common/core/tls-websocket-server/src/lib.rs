@@ -129,7 +129,7 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 					s,
 					self.token(),
 					self.get_session_readiness(),
-					mio::PollOpt::level() | mio::PollOpt::oneshot(),
+					mio::PollOpt::edge() | mio::PollOpt::oneshot(),
 				)?;
 				Ok(())
 			},
@@ -145,7 +145,7 @@ pub(crate) trait WebSocketConnection: Send + Sync {
 					s,
 					self.token(),
 					self.get_session_readiness(),
-					mio::PollOpt::level() | mio::PollOpt::oneshot(),
+					mio::PollOpt::edge() | mio::PollOpt::oneshot(),
 				)?;
 
 				Ok(())
