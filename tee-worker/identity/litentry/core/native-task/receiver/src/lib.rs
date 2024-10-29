@@ -46,7 +46,7 @@ use types::*;
 use codec::{Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+use ita_stf::{aes_encrypt_default, Getter, TrustedCall, TrustedCallSigned};
 use itp_api_client_types::compose_call;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
@@ -59,7 +59,10 @@ use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
 use lc_native_task_sender::init_native_task_sender;
-use litentry_primitives::{AesRequest, DecryptableRequest, Intent};
+use lc_omni_account::{
+	GetOmniAccountInfo, InMemoryStore as OmniAccountStore, OmniAccountRepository,
+};
+use litentry_primitives::{AesRequest, DecryptableRequest, Intent, MemberAccount, ValidationData};
 use sp_core::{blake2_256, H256};
 use std::{
 	borrow::ToOwned,
@@ -198,7 +201,7 @@ fn handle_trusted_call<
 		},
 	};
 
-	let (who, intent_call) = match call {
+	let (who, opaque_call) = match call {
 		TrustedCall::request_intent(who, intent) => match intent {
 			Intent::SystemRemark(remark) =>
 				(who, OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark))),
@@ -222,6 +225,86 @@ fn handle_trusted_call<
 				)),
 			),
 		},
+		TrustedCall::add_account(
+			who,
+			identity,
+			validation_data,
+			public,
+			maybe_key,
+			req_ext_hash,
+		) => {
+			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
+			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
+				Ok(Some(account)) => account,
+				_ => {
+					let res: Result<(), NativeTaskError> = Err(NativeTaskError::UnauthorizedSigner);
+					context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+					return
+				},
+			};
+			let nonce = omni_account_repository.get_nonce(omni_account.clone()).unwrap_or(0);
+			let raw_msg = get_expected_raw_message(&omni_account, &identity, nonce);
+
+			let verification_done = match validation_data {
+				ValidationData::Web2(data) => {
+					todo!()
+				},
+				ValidationData::Web3(data) => {
+					if !identity.is_web3() {
+						let res: Result<(), NativeTaskError> =
+							Err(NativeTaskError::InvalidMemberIdentity);
+						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+						return
+					}
+					match verify_web3_identity(&identity, &raw_msg, &data) {
+						Ok(_) => true,
+						Err(e) => {
+							log::error!("Failed to verify web3 identity: {:?}", e);
+							let res: Result<(), NativeTaskError> =
+								Err(NativeTaskError::AuthenticationVerificationFailed);
+							context.author_api.send_rpc_response(
+								connection_hash,
+								res.encode(),
+								false,
+							);
+							return
+						},
+					}
+				},
+			};
+
+			let member_account = match public {
+				true => MemberAccount::Public(identity),
+				false => {
+					let aes_key = match context.aes256_key_repository.retrieve_key() {
+						Ok(key) => key,
+						Err(e) => {
+							let res: Result<(), NativeTaskError> =
+								Err(NativeTaskError::MissingAesKey);
+							context.author_api.send_rpc_response(
+								connection_hash,
+								res.encode(),
+								false,
+							);
+							return
+						},
+					};
+					MemberAccount::Private(
+						aes_encrypt_default(&aes_key, &identity.encode()).encode(),
+						identity.hash(),
+					)
+				},
+			};
+
+			let add_account_call = OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"add_account",
+				member_account
+			));
+
+			(who, add_account_call)
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let res: Result<(), NativeTaskError> =
@@ -236,7 +319,7 @@ fn handle_trusted_call<
 		"OmniAccount",
 		"dispatch_as_omni_account",
 		who.hash(),
-		intent_call
+		opaque_call
 	));
 
 	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[omni_account_call], None) {
