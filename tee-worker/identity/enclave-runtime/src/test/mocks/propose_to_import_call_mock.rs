@@ -93,10 +93,7 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		todo!()
 	}
 
-	fn get_header<H: ParentchainHeaderTrait<Hash = H256>>(
-		&self,
-		_parentchain_id: &ParentchainId,
-	) -> Result<H> {
+	fn get_header<H: ParentchainHeaderTrait<Hash = H256>>(&self) -> Result<H> {
 		todo!()
 	}
 

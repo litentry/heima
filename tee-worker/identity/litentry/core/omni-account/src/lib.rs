@@ -32,7 +32,7 @@ mod in_memory_store;
 pub use in_memory_store::InMemoryStore;
 
 use alloc::{collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
-use itp_types::parentchain::{AccountId, BlockNumber, Header, ParentchainId};
+use itp_types::parentchain::{AccountId, BlockNumber, Header, Index as ParentchainIndex};
 use litentry_primitives::MemberAccount;
 
 pub type OmniAccounts = BTreeMap<AccountId, Vec<MemberAccount>>;
@@ -49,7 +49,7 @@ pub fn init_in_memory_omni_account_store<OCallApi>(
 where
 	OCallApi: EnclaveOnChainOCallApi,
 {
-	let header: Header = ocall_api.get_header(&ParentchainId::Litentry).map_err(|e| {
+	let header: Header = ocall_api.get_header().map_err(|e| {
 		log::error!("Failed to get header: {:?}", e);
 		"Failed to get header"
 	})?;

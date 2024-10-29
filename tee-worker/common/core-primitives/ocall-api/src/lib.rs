@@ -134,7 +134,7 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		header: Option<&H>,
 	) -> Result<Vec<Vec<u8>>>;
 
-	fn get_header<H: Header<Hash = H256>>(&self, parentchain_id: &ParentchainId) -> Result<H>;
+	fn get_header<H: Header<Hash = H256>>(&self) -> Result<H>;
 
 	fn get_account_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex>;
 }

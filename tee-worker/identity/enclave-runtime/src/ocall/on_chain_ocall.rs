@@ -174,10 +174,10 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		Ok(first_response.clone())
 	}
 
-	fn get_header<H: Header<Hash = H256>>(&self, parentchain_id: &ParentchainId) -> Result<H> {
+	fn get_header<H: Header<Hash = H256>>(&self) -> Result<H> {
 		let request = vec![WorkerRequest::ChainHeader(None)];
 		let responses: Vec<H> = self
-			.worker_request::<Vec<u8>>(request, parentchain_id)?
+			.worker_request::<Vec<u8>>(request, &ParentchainId::Litentry)?
 			.iter()
 			.filter_map(|r| match r {
 				WorkerResponse::ChainHeader(Some(h)) =>

@@ -247,10 +247,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		Ok(Default::default())
 	}
 
-	fn get_header<H: HeaderTrait<Hash = H256>>(
-		&self,
-		_: &ParentchainId,
-	) -> itp_ocall_api::Result<H> {
+	fn get_header<H: HeaderTrait<Hash = H256>>(&self) -> itp_ocall_api::Result<H> {
 		todo!()
 	}
 
