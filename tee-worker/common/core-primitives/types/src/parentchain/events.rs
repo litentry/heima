@@ -1,12 +1,12 @@
-use super::alloc::{format, vec::Vec};
 use crate::{
 	AccountId, Assertion, Balance, BlockNumber, Hash, MrEnclave, RsaRequest, ShardIdentifier,
 	WorkerType,
 };
+use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_utils::{hex::ToHexPrefixed, stringify::account_id_to_string};
-use litentry_primitives::{Address32, Identity};
+use litentry_primitives::{Address32, Identity, MemberAccount};
 use sp_core::H160;
 use substrate_api_client::ac_node_api::StaticEvent;
 
@@ -137,6 +137,29 @@ impl core::fmt::Display for EnclaveRemoved {
 impl StaticEvent for EnclaveRemoved {
 	const PALLET: &'static str = "Teebag";
 	const EVENT: &'static str = "EnclaveRemoved";
+}
+
+// omni-account pallet events
+#[derive(Encode, Decode, Debug)]
+pub struct AccountStoreUpdated {
+	pub who: AccountId,
+	pub account_store: Vec<MemberAccount>,
+}
+
+impl core::fmt::Display for AccountStoreUpdated {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"AccountStoreCreated :: who: {}, account_store: {:?}",
+			account_id_to_string::<AccountId>(&self.who),
+			self.account_store
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl StaticEvent for AccountStoreUpdated {
+	const PALLET: &'static str = "OmniAccount";
+	const EVENT: &'static str = "AccountStoreUpdated";
 }
 
 // Identity-worker events

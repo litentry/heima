@@ -19,6 +19,7 @@ use itp_types::{
 	Address, RsaRequest, ShardIdentifier, H256,
 };
 use log::*;
+use sp_runtime::traits::{Block as ParentchainBlock, Header as ParentchainHeader};
 use std::vec::Vec;
 
 pub struct ExtrinsicParser<SignedExtra> {
@@ -196,6 +197,10 @@ impl FilterEvents for MockEvents {
 	) -> Result<Vec<itp_types::parentchain::events::BtcWalletGenerated>, Self::Error> {
 		Ok(Vec::new())
 	}
+
+	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error> {
+		Ok(Vec::new())
+	}
 }
 
 pub struct MockParentchainEventHandler {}
@@ -220,11 +225,15 @@ where
 {
 	type Output = Vec<H256>;
 
-	fn handle_events(
+	fn handle_events<Block>(
 		&self,
 		_: &Executor,
 		_: impl itp_types::parentchain::FilterEvents,
-	) -> core::result::Result<Vec<H256>, Error> {
+		_block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
+	) -> core::result::Result<Vec<H256>, Error>
+	where
+		Block: ParentchainBlock,
+	{
 		Ok(Vec::from([H256::default()]))
 	}
 }

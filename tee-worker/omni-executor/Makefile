@@ -51,7 +51,7 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) omni-executor
+	$(GRAMINE) omni-executor ${ARGS}
 
 .PHONY: clean
 clean:
@@ -67,11 +67,11 @@ build-docker:
 
 .PHONY: start-local
 start-local:
-	docker-compose up
+	docker compose up
 
 .PHONY: stop-local
 stop-local:
-	docker-compose down
+	docker compose down
 
 .PHONY: get-omni-pallet-metadata
 get-omni-pallet-metadata:

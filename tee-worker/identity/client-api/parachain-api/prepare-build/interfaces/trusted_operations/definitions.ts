@@ -65,6 +65,7 @@ export default {
                 __Unused_24: "Null",
 
                 clean_id_graphs: "(LitentryIdentity)",
+                request_intent: "(LitentryIdentity, Intent)",
             },
         },
         TrustedOperationStatus: {
