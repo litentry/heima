@@ -32,7 +32,9 @@ mod in_memory_store;
 pub use in_memory_store::InMemoryStore;
 
 use alloc::{collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
-use itp_types::parentchain::{AccountId, BlockNumber, Header, Index as ParentchainIndex};
+use itp_types::parentchain::{
+	AccountId, BlockNumber, Header, Index as ParentchainIndex, ParentchainId,
+};
 use litentry_primitives::MemberAccount;
 
 pub type OmniAccounts = BTreeMap<AccountId, Vec<MemberAccount>>;
@@ -54,7 +56,7 @@ where
 		"Failed to get header"
 	})?;
 	let block_number: BlockNumber = header.number;
-	let repository = OmniAccountRepository::new(ocall_api, header);
+	let repository = OmniAccountRepository::new(ocall_api).with_header(header);
 	let account_stores = repository.get_all().map_err(|_| "Failed to get all account stores")?;
 	InMemoryStore::load_account_stores(account_stores)
 		.map_err(|_| "Failed to load account stores")?;
