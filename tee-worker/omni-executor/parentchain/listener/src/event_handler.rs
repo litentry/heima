@@ -154,106 +154,110 @@ impl<
 				Error::NonRecoverableError
 			})?;
 
-		let intent = match decoded.intent {
+		let maybe_intent = match decoded.intent {
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::CallEthereum(call_ethereum) => {
-				Intent::CallEthereum(call_ethereum.address.to_fixed_bytes(), call_ethereum.input.0)
+				Some(Intent::CallEthereum(call_ethereum.address.to_fixed_bytes(), call_ethereum.input.0))
 			},
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferEthereum(transfer) => {
-				Intent::TransferEthereum(transfer.to.to_fixed_bytes(), transfer.value)
+				Some(Intent::TransferEthereum(transfer.to.to_fixed_bytes(), transfer.value))
+			},
+			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::SystemRemark(_) => None,
+			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferNative(_) => None,
+		};
+
+		if let Some(intent) = maybe_intent {
+			// to explicitly handle all intent variants
+			match intent {
+				Intent::CallEthereum(_, _) => {
+					self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
+						// assume for now we can easily recover
+						log::error!("Error executing intent");
+						Error::RecoverableError
+					})?;
+				},
+				Intent::TransferEthereum(_, _) => {
+					self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
+						// assume for now we can easily recover
+						log::error!("Error executing intent");
+						Error::RecoverableError
+					})?;
+				},
 			}
-		};
 
-		//to explicitly handle all intent variants
-		match intent {
-			Intent::CallEthereum(_, _) => {
-				self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
-					// assume for now we can easily recover
-					log::error!("Error executing intent");
-					Error::RecoverableError
+			log::debug!("Intent executed, publishing result");
+
+			// todo: the whole signing part should be encapsulated in separate component like `TransactionSigner`
+			//we need to report back to parachain intent result
+			let decoded =
+				crate::litentry_rococo::omni_account::events::IntentRequested::decode_as_fields(
+					&mut event.field_bytes.as_slice(),
+					&mut fields,
+					metadata.types(),
+				)
+				.map_err(|_| {
+					log::error!("Could not decode event {:?}", event.id);
+					Error::NonRecoverableError
 				})?;
-			},
-			Intent::TransferEthereum(_, _) => {
-				self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
-					// assume for now we can easily recover
-					log::error!("Error executing intent");
-					Error::RecoverableError
-				})?;
-			},
-		}
 
-		log::debug!("Intent executed, publishing result");
+			let execution_result =
+				crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
 
-		// todo: the whole signing part should be encapsulated in separate component like `TransactionSigner`
-		//we need to report back to parachain intent result
-		let decoded =
-			crate::litentry_rococo::omni_account::events::IntentRequested::decode_as_fields(
-				&mut event.field_bytes.as_slice(),
-				&mut fields,
-				metadata.types(),
-			)
-			.map_err(|_| {
-				log::error!("Could not decode event {:?}", event.id);
-				Error::NonRecoverableError
+			let call = crate::litentry_rococo::tx().omni_account().intent_executed(
+				decoded.who,
+				decoded.intent,
+				execution_result,
+			);
+
+			let secret_key_bytes = self
+				.key_store
+				.read()
+				.map_err(|e| {
+					error!("Could not unseal key: {:?}", e);
+				})
+				.unwrap();
+			let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
+				.map_err(|e| {
+					error!("Could not create secret key: {:?}", e);
+				})
+				.unwrap();
+
+			let mut client = self.rpc_client_factory.new_client().await.map_err(|e| {
+				error!("Could not create RPC client: {:?}", e);
+				RecoverableError
 			})?;
+			let runtime_version = client.runtime_version().await.map_err(|e| {
+				error!("Could not get runtime version: {:?}", e);
+				RecoverableError
+			})?;
+			let genesis_hash = client.get_genesis_hash().await.map_err(|e| {
+				error!("Could not get genesis hash: {:?}", e);
+				RecoverableError
+			})?;
+			let nonce = *self.nonce.read().map_err(|e| {
+				error!("Could not read nonce: {:?}", e);
+				RecoverableError
+			})?;
+			let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
+			*self.nonce.write().map_err(|e| {
+				error!("Could not write nonce: {:?}", e);
+				RecoverableError
+			})? = nonce + 1;
 
-		let execution_result =
-			crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
-
-		let call = crate::litentry_rococo::tx().omni_account().intent_executed(
-			decoded.who,
-			decoded.intent,
-			execution_result,
-		);
-
-		let secret_key_bytes = self
-			.key_store
-			.read()
-			.map_err(|e| {
-				error!("Could not unseal key: {:?}", e);
-			})
-			.unwrap();
-		let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
-			.map_err(|e| {
-				error!("Could not create secret key: {:?}", e);
-			})
-			.unwrap();
-
-		let mut client = self.rpc_client_factory.new_client().await.map_err(|e| {
-			error!("Could not create RPC client: {:?}", e);
-			RecoverableError
-		})?;
-		let runtime_version = client.runtime_version().await.map_err(|e| {
-			error!("Could not get runtime version: {:?}", e);
-			RecoverableError
-		})?;
-		let genesis_hash = client.get_genesis_hash().await.map_err(|e| {
-			error!("Could not get genesis hash: {:?}", e);
-			RecoverableError
-		})?;
-		let nonce = *self.nonce.read().map_err(|e| {
-			error!("Could not read nonce: {:?}", e);
-			RecoverableError
-		})?;
-		let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
-		*self.nonce.write().map_err(|e| {
-			error!("Could not write nonce: {:?}", e);
-			RecoverableError
-		})? = nonce + 1;
-
-		let state = tx::ClientState::<ChainConfig> {
-			metadata: { metadata },
-			genesis_hash: ChainConfig::Hash::decode(&mut genesis_hash.as_slice()).unwrap(),
-			runtime_version: tx::RuntimeVersion {
-				spec_version: runtime_version.spec_version,
-				transaction_version: runtime_version.transaction_version,
-			},
-		};
-		let signed_call = tx::create_signed(&call, &state, &signer, params).unwrap();
-		client.submit_tx(signed_call.encoded()).await.map_err(|e| {
-			error!("Error while submitting tx: {:?}", e);
-			RecoverableError
-		})?;
-		log::debug!("Result published");
+			let state = tx::ClientState::<ChainConfig> {
+				metadata: { metadata },
+				genesis_hash: ChainConfig::Hash::decode(&mut genesis_hash.as_slice()).unwrap(),
+				runtime_version: tx::RuntimeVersion {
+					spec_version: runtime_version.spec_version,
+					transaction_version: runtime_version.transaction_version,
+				},
+			};
+			let signed_call = tx::create_signed(&call, &state, &signer, params).unwrap();
+			client.submit_tx(signed_call.encoded()).await.map_err(|e| {
+				error!("Error while submitting tx: {:?}", e);
+				RecoverableError
+			})?;
+			log::debug!("Result published");
+		}
 		Ok(())
 	}
 }
