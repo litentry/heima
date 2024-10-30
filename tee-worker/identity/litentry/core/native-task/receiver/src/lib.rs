@@ -58,6 +58,7 @@ use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
+use lc_identity_verification::web2::verify;
 use lc_native_task_sender::init_native_task_sender;
 use lc_omni_account::{
 	GetOmniAccountInfo, InMemoryStore as OmniAccountStore, OmniAccountRepository,
@@ -238,9 +239,27 @@ fn handle_trusted_call<
 			let nonce = omni_account_repository.get_nonce(omni_account.clone()).unwrap_or(0);
 			let raw_msg = get_expected_raw_message(&omni_account, &identity, nonce);
 
-			let verification_done = match validation_data {
-				ValidationData::Web2(data) => {
-					todo!()
+			match validation_data {
+				ValidationData::Web2(validation_data) => {
+					if !identity.is_web2() {
+						let res: Result<(), NativeTaskError> =
+							Err(NativeTaskError::InvalidMemberIdentity);
+						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+						return
+					}
+					if let Err(e) = verify(
+						&who,
+						&identity,
+						&raw_msg,
+						&validation_data,
+						&context.data_provider_config,
+					) {
+						log::error!("Failed to verify web2 identity: {:?}", e);
+						let res: Result<(), NativeTaskError> =
+							Err(NativeTaskError::ValidationDataVerificationFailed);
+						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+						return
+					}
 				},
 				ValidationData::Web3(validation_data) => {
 					if !identity.is_web3() {
@@ -249,28 +268,15 @@ fn handle_trusted_call<
 						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 						return
 					}
-					match verify_web3_identity(&identity, &raw_msg, &validation_data) {
-						Ok(_) => true,
-						Err(e) => {
-							log::error!("Failed to verify web3 identity: {:?}", e);
-							let res: Result<(), NativeTaskError> =
-								Err(NativeTaskError::AuthenticationVerificationFailed);
-							context.author_api.send_rpc_response(
-								connection_hash,
-								res.encode(),
-								false,
-							);
-							return
-						},
+					if let Err(e) = verify_web3_identity(&identity, &raw_msg, &validation_data) {
+						log::error!("Failed to verify web3 identity: {:?}", e);
+						let res: Result<(), NativeTaskError> =
+							Err(NativeTaskError::ValidationDataVerificationFailed);
+						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+						return
 					}
 				},
 			};
-
-			if !verification_done {
-				let res: Result<(), NativeTaskError> = Ok(());
-				context.author_api.send_rpc_response(connection_hash, res.encode(), true);
-				return
-			}
 
 			let member_account = match public {
 				true => MemberAccount::Public(identity),
