@@ -1,4 +1,3 @@
-use crate::NativeTaskError;
 use alloc::vec::Vec;
 use codec::Encode;
 use itp_types::AccountId;
