@@ -126,6 +126,7 @@ pub enum NativeTaskError {
 	MrEnclaveRetrievalFailed,
 	EnclaveSignerRetrievalFailed,
 	AuthenticationVerificationFailed,
+	ValidationDataVerificationFailed,
 	ConnectionHashNotFound(String),
 	MetadataRetrievalFailed(String), // Stringified itp_node_api_metadata_provider::Error
 	InvalidMetadata(String),         // Stringified itp_node_api_metadata::Error
@@ -134,8 +135,5 @@ pub enum NativeTaskError {
 	ExtrinsicConstructionFailed(String), // Stringified itp_extrinsics_factory::Error
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
 	InvalidRequest,
-}
-
-pub enum NativeRequest {
-	// TODO: Define the tasks
+	NativeRequestSendFailed,
 }

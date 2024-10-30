@@ -65,17 +65,7 @@ use lc_omni_account::{
 };
 use litentry_primitives::{AesRequest, DecryptableRequest, Intent, MemberAccount, ValidationData};
 use sp_core::{blake2_256, H256};
-use std::{
-	borrow::ToOwned,
-	boxed::Box,
-	format,
-	string::ToString,
-	sync::{
-		mpsc::{channel, Sender},
-		Arc,
-	},
-	thread,
-};
+use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc};
 
 // TODO: move to config
 const THREAD_POOL_SIZE: usize = 10;
@@ -117,33 +107,14 @@ pub fn run_native_task_receiver<
 		.create()
 		.expect("Failed to create thread pool");
 
-	let (native_req_sender, native_req_receiver) = channel::<NativeRequest>();
-	let t_pool = thread_pool.clone();
-
-	thread::spawn(move || {
-		if let Ok(native_request) = native_req_receiver.recv() {
-			t_pool.spawn_ok(async move {
-				match native_request {
-					// TODO: handle native_request: e.g: Identity verification
-				}
-			});
-		}
-	});
-
 	while let Ok(mut req) = request_receiver.recv() {
 		let context_pool = context.clone();
-		let task_sender_pool = native_req_sender.clone();
-
 		thread_pool.spawn_ok(async move {
 			let request = &mut req.request;
 			let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 			match handle_request(request, context_pool.clone()) {
-				Ok(trusted_call) => handle_trusted_call(
-					context_pool.clone(),
-					trusted_call,
-					connection_hash,
-					task_sender_pool,
-				),
+				Ok(trusted_call) =>
+					handle_trusted_call(context_pool.clone(), trusted_call, connection_hash),
 				Err(e) => {
 					log::error!("Failed to get trusted call from request: {:?}", e);
 					let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
@@ -177,7 +148,6 @@ fn handle_trusted_call<
 	>,
 	call: TrustedCall,
 	connection_hash: H256,
-	_tc_sender: Sender<NativeRequest>,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -284,6 +254,7 @@ fn handle_trusted_call<
 					let aes_key = match context.aes256_key_repository.retrieve_key() {
 						Ok(key) => key,
 						Err(e) => {
+							log::error!("Failed to retrieve aes key: {:?}", e);
 							let res: Result<(), NativeTaskError> =
 								Err(NativeTaskError::MissingAesKey);
 							context.author_api.send_rpc_response(
