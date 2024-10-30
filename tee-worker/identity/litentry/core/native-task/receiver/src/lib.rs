@@ -58,12 +58,14 @@ use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
-use lc_identity_verification::web2::verify;
+use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
 use lc_omni_account::{
 	GetOmniAccountInfo, InMemoryStore as OmniAccountStore, OmniAccountRepository,
 };
-use litentry_primitives::{AesRequest, DecryptableRequest, Intent, MemberAccount, ValidationData};
+use litentry_primitives::{
+	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
+};
 use sp_core::{blake2_256, H256};
 use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc};
 
@@ -196,7 +198,7 @@ fn handle_trusted_call<
 				)),
 			),
 		},
-		TrustedCall::add_account(who, identity, validation_data, public) => {
+		TrustedCall::add_account(who, identity, validation_data, public_account) => {
 			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
 			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 				Ok(Some(account)) => account,
@@ -209,66 +211,51 @@ fn handle_trusted_call<
 			let nonce = omni_account_repository.get_nonce(omni_account.clone()).unwrap_or(0);
 			let raw_msg = get_expected_raw_message(&omni_account, &identity, nonce);
 
-			match validation_data {
-				ValidationData::Web2(validation_data) => {
+			let validation_result = match validation_data {
+				ValidationData::Web2(validation_data) =>
 					if !identity.is_web2() {
-						let res: Result<(), NativeTaskError> =
-							Err(NativeTaskError::InvalidMemberIdentity);
-						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-						return
-					}
-					if let Err(e) = verify(
-						&who,
-						&identity,
-						&raw_msg,
-						&validation_data,
-						&context.data_provider_config,
-					) {
-						log::error!("Failed to verify web2 identity: {:?}", e);
-						let res: Result<(), NativeTaskError> =
-							Err(NativeTaskError::ValidationDataVerificationFailed);
-						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-						return
-					}
-				},
-				ValidationData::Web3(validation_data) => {
+						Err(NativeTaskError::InvalidMemberIdentity)
+					} else {
+						verify_web2_identity(
+							&who,
+							&identity,
+							&raw_msg,
+							&validation_data,
+							&context.data_provider_config,
+						)
+						.map_err(|e| {
+							log::error!("Failed to verify web2 identity: {:?}", e);
+							NativeTaskError::ValidationDataVerificationFailed
+						})
+					},
+				ValidationData::Web3(validation_data) =>
 					if !identity.is_web3() {
-						let res: Result<(), NativeTaskError> =
-							Err(NativeTaskError::InvalidMemberIdentity);
-						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-						return
-					}
-					if let Err(e) = verify_web3_identity(&identity, &raw_msg, &validation_data) {
-						log::error!("Failed to verify web3 identity: {:?}", e);
-						let res: Result<(), NativeTaskError> =
-							Err(NativeTaskError::ValidationDataVerificationFailed);
-						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-						return
-					}
-				},
+						Err(NativeTaskError::InvalidMemberIdentity)
+					} else {
+						verify_web3_identity(&identity, &raw_msg, &validation_data).map_err(|e| {
+							log::error!("Failed to verify web3 identity: {:?}", e);
+							NativeTaskError::ValidationDataVerificationFailed
+						})
+					},
 			};
 
-			let member_account = match public {
-				true => MemberAccount::Public(identity),
-				false => {
-					let aes_key = match context.aes256_key_repository.retrieve_key() {
-						Ok(key) => key,
-						Err(e) => {
-							log::error!("Failed to retrieve aes key: {:?}", e);
-							let res: Result<(), NativeTaskError> =
-								Err(NativeTaskError::MissingAesKey);
-							context.author_api.send_rpc_response(
-								connection_hash,
-								res.encode(),
-								false,
-							);
-							return
-						},
-					};
-					MemberAccount::Private(
-						aes_encrypt_default(&aes_key, &identity.encode()).encode(),
-						identity.hash(),
-					)
+			if let Err(e) = validation_result {
+				let res: Result<(), NativeTaskError> = Err(e);
+				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				return
+			}
+
+			let member_account = match create_member_account(
+				context.aes256_key_repository.clone(),
+				&identity,
+				public_account,
+			) {
+				Ok(account) => account,
+				Err(e) => {
+					log::error!("Failed to create member account: {:?}", e);
+					let res: Result<(), NativeTaskError> = Err(e);
+					context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+					return
 				},
 			};
 
@@ -411,4 +398,30 @@ where
 	}
 
 	Ok(tca.call)
+}
+
+fn create_member_account<Aes256KeyRepository>(
+	aes256_key_repository: Arc<Aes256KeyRepository>,
+	identity: &Identity,
+	is_public: bool,
+) -> Result<MemberAccount, NativeTaskError>
+where
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key>,
+{
+	if is_public {
+		return Ok(MemberAccount::Public(identity.clone()))
+	}
+
+	let aes_key = match aes256_key_repository.retrieve_key() {
+		Ok(key) => Ok(key),
+		Err(e) => {
+			log::error!("Failed to retrieve aes key: {:?}", e);
+			Err(NativeTaskError::MissingAesKey)
+		},
+	}?;
+
+	Ok(MemberAccount::Private(
+		aes_encrypt_default(&aes_key, &identity.encode()).encode(),
+		identity.hash(),
+	))
 }
