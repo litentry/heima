@@ -1197,7 +1197,7 @@ construct_runtime! {
 		PolkadotXcm: pallet_xcm = 51,
 		CumulusXcm: cumulus_pallet_xcm = 52,
 		DmpQueue: cumulus_pallet_dmp_queue = 53,
-		XTokens: orml_xtokens = 54,
+		// XTokens: orml_xtokens = 54,
 		// 55 is saved for old pallet: Tokens: orml_tokens
 		Assets: pallet_assets = 56,
 
