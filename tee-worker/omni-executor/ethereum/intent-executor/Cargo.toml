@@ -11,7 +11,7 @@ executor-core = { path = "../../executor-core" }
 log = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true}
+tokio = { workspace = true }
 
 [lints]
 workspace = true
