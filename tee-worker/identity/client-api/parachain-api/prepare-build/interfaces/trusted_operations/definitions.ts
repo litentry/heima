@@ -78,6 +78,7 @@ export default {
 
                 clean_id_graphs: "(LitentryIdentity)",
                 request_intent: "(LitentryIdentity, Intent)",
+                create_account_store: "(LitentryIdentity)",
             },
         },
         TrustedOperationStatus: {
