@@ -467,57 +467,6 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		}
 	});
 
-	let data_provider_config_cloned = data_provider_config.clone();
-	// TODO: deprecate
-	io_handler.add_sync_method("identity_requestEmailVerification", move |params: Params| {
-		match params.parse::<(String, String)>() {
-			Ok((did, email)) => {
-				let account_id = match Identity::from_did(did.as_str()) {
-					Ok(identity) =>
-						if let Some(account_id) = identity.to_native_account() {
-							account_id
-						} else {
-							return Ok(json!(compute_hex_encoded_return_error("Invalid identity")))
-						},
-					Err(_) =>
-						return Ok(json!(compute_hex_encoded_return_error(
-							"Could not parse identity"
-						))),
-				};
-				let mut mailer = email::sendgrid_mailer::SendGridMailer::new(
-					data_provider_config_cloned.sendgrid_api_key.clone(),
-					data_provider_config_cloned.sendgrid_from_email.clone(),
-				);
-
-				let verification_code = generate_verification_code();
-				let email_identity = Identity::from_email(&email);
-
-				match VerificationCodeStore::insert(
-					account_id,
-					email_identity.hash(),
-					verification_code.clone(),
-				) {
-					Ok(_) => {
-						if email::send_verification_email(&mut mailer, email, verification_code)
-							.is_err()
-						{
-							return Ok(json!(compute_hex_encoded_return_error(
-								"Could not send verification email"
-							)))
-						}
-						let json_value =
-							RpcReturnValue::new(vec![], false, DirectRequestStatus::Ok);
-						Ok(json!(json_value.to_hex()))
-					},
-					Err(_) => Ok(json!(compute_hex_encoded_return_error(
-						"Could not save verification code"
-					))),
-				}
-			},
-			Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not parse params"))),
-		}
-	});
-
 	io_handler.add_sync_method("omni_requestEmailVerificationCode", move |params: Params| {
 		match params.parse::<(String, String)>() {
 			Ok((encoded_omni_account, email)) => {
