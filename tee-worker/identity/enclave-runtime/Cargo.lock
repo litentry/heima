@@ -3099,6 +3099,7 @@ dependencies = [
  "itp-utils",
  "lazy_static",
  "lc-data-providers",
+ "lc-omni-account",
  "litentry-primitives",
  "log",
  "lru",
