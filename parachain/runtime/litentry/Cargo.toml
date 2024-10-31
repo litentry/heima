@@ -88,6 +88,7 @@ pallet-extrinsic-filter = { workspace = true }
 pallet-group = { workspace = true }
 pallet-identity-management = { workspace = true }
 pallet-omni-account = { workspace = true }
+pallet-omni-account-runtime-api = { workspace = true }
 pallet-parachain-staking = { workspace = true }
 pallet-score-staking = { workspace = true }
 pallet-teebag = { workspace = true }
@@ -257,6 +258,7 @@ std = [
     "pallet-extrinsic-filter/std",
     "pallet-bitacross/std",
     "pallet-omni-account/std",
+    "pallet-omni-account-runtime-api/std",
     "pallet-identity-management/std",
     "pallet-score-staking/std",
     "pallet-teebag/std",

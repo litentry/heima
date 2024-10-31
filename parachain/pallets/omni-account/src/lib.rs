@@ -384,6 +384,18 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Given an `Identity`, get its derived OmniAccount:
+		/// - if the given Identity is a member Identity of some AccountStore, get its belonged OmniAccount
+		/// - directly derive it otherwise
+		pub fn omni_account(identity: Identity) -> T::AccountId {
+			let hash = identity.hash();
+			if let Some(account) = MemberAccountHash::<T>::get(hash) {
+				account
+			} else {
+				T::OmniAccountConverter::convert(&identity)
+			}
+		}
+
 		fn do_create_account_store(identity: Identity) -> Result<MemberAccounts<T>, Error<T>> {
 			let hash = identity.hash();
 			let omni_account = T::OmniAccountConverter::convert(&identity);

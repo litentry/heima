@@ -142,6 +142,8 @@ pub enum TrustedCall {
 	#[codec(index = 26)]
 	request_intent(Identity, Intent),
 	#[codec(index = 27)]
+	create_account_store(Identity),
+	#[codec(index = 28)]
 	add_account(Identity, Identity, ValidationData, bool),
 
 	// original integritee trusted calls, starting from index 50
@@ -234,6 +236,7 @@ impl TrustedCall {
 			#[cfg(feature = "development")]
 			Self::clean_id_graphs(sender_identity) => sender_identity,
 			Self::request_intent(sender_identity, ..) => sender_identity,
+			Self::create_account_store(sender_identity) => sender_identity,
 			Self::add_account(sender_identity, ..) => sender_identity,
 		}
 	}
@@ -249,6 +252,7 @@ impl TrustedCall {
 			Self::activate_identity(..) => "activate_identity",
 			Self::maybe_create_id_graph(..) => "maybe_create_id_graph",
 			Self::request_intent(..) => "request_intent",
+			Self::create_account_store(..) => "create_account_store",
 			Self::add_account(..) => "add_account",
 			_ => "unsupported_trusted_call",
 		}
@@ -905,6 +909,10 @@ where
 				Ok(TrustedCallResult::Empty)
 			},
 			TrustedCall::request_intent(..) => {
+				error!("please use author_submitNativeRequest instead");
+				Ok(TrustedCallResult::Empty)
+			},
+			TrustedCall::create_account_store(..) => {
 				error!("please use author_submitNativeRequest instead");
 				Ok(TrustedCallResult::Empty)
 			},

@@ -174,12 +174,24 @@ fn handle_trusted_call<
 		},
 	};
 
-	let (who, opaque_call) = match call {
+	let create_dispatch_as_omni_account_call = |member_identity_hash: H256, call: OpaqueCall| {
+		OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"dispatch_as_omni_account",
+			member_identity_hash,
+			call
+		))
+	};
+
+	let opaque_call = match call {
 		TrustedCall::request_intent(who, intent) => match intent {
-			Intent::SystemRemark(remark) =>
-				(who, OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark))),
-			Intent::TransferNative(transfer) => (
-				who,
+			Intent::SystemRemark(remark) => create_dispatch_as_omni_account_call(
+				who.hash(),
+				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark)),
+			),
+			Intent::TransferNative(transfer) => create_dispatch_as_omni_account_call(
+				who.hash(),
 				OpaqueCall::from_tuple(&compose_call!(
 					&metadata,
 					"Balances",
@@ -188,15 +200,26 @@ fn handle_trusted_call<
 					transfer.value
 				)),
 			),
-			Intent::CallEthereum(_) | Intent::TransferEthereum(_) => (
-				who,
-				OpaqueCall::from_tuple(&compose_call!(
-					&metadata,
-					"OmniAccount",
-					"request_intent",
-					intent
-				)),
-			),
+			Intent::CallEthereum(_) | Intent::TransferEthereum(_) =>
+				create_dispatch_as_omni_account_call(
+					who.hash(),
+					OpaqueCall::from_tuple(&compose_call!(
+						&metadata,
+						"OmniAccount",
+						"request_intent",
+						intent
+					)),
+				),
+		},
+		TrustedCall::create_account_store(who) => {
+			let create_account_store_call = OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"create_account_store",
+				who
+			));
+
+			create_account_store_call
 		},
 		TrustedCall::add_account(who, identity, validation_data, public_account) => {
 			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
@@ -259,14 +282,15 @@ fn handle_trusted_call<
 				},
 			};
 
-			let add_account_call = OpaqueCall::from_tuple(&compose_call!(
-				&metadata,
-				"OmniAccount",
-				"add_account",
-				member_account
-			));
-
-			(who, add_account_call)
+			create_dispatch_as_omni_account_call(
+				who.hash(),
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"OmniAccount",
+					"add_account",
+					member_account
+				)),
+			)
 		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
@@ -277,15 +301,7 @@ fn handle_trusted_call<
 		},
 	};
 
-	let omni_account_call = OpaqueCall::from_tuple(&compose_call!(
-		&metadata,
-		"OmniAccount",
-		"dispatch_as_omni_account",
-		who.hash(),
-		opaque_call
-	));
-
-	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[omni_account_call], None) {
+	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[opaque_call], None) {
 		Ok(extrinsic) => extrinsic,
 		Err(e) => {
 			log::error!("Failed to create extrinsic: {:?}", e);
