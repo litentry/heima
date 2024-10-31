@@ -220,6 +220,8 @@ where
 	Ok(tca.call)
 }
 
+type TrustedCallResult = Result<ExtrinsicReport<H256>, NativeTaskError>;
+
 fn handle_trusted_call<
 	ShieldingKeyRepository,
 	AuthorApi,
@@ -258,10 +260,10 @@ fn handle_trusted_call<
 		Ok(Some(metadata)) => metadata,
 		_ => {
 			log::error!("Failed to get node metadata");
-			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MetadataRetrievalFailed(
+			let result: TrustedCallResult = Err(NativeTaskError::MetadataRetrievalFailed(
 				"Failed to get node metadata".to_string(),
 			));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
 	};
@@ -318,8 +320,8 @@ fn handle_trusted_call<
 			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 				Ok(Some(account)) => account,
 				_ => {
-					let res: Result<(), NativeTaskError> = Err(NativeTaskError::UnauthorizedSigner);
-					context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+					let result: TrustedCallResult = Err(NativeTaskError::UnauthorizedSigner);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
 			};
@@ -355,8 +357,8 @@ fn handle_trusted_call<
 			};
 
 			if let Err(e) = validation_result {
-				let res: Result<(), NativeTaskError> = Err(e);
-				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				let result: TrustedCallResult = Err(e);
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 				return
 			}
 
@@ -368,8 +370,8 @@ fn handle_trusted_call<
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to create member account: {:?}", e);
-					let res: Result<(), NativeTaskError> = Err(e);
-					context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+					let result: TrustedCallResult = Err(e);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
 			};
@@ -386,9 +388,9 @@ fn handle_trusted_call<
 		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
-			let res: Result<(), NativeTaskError> =
+			let result: TrustedCallResult =
 				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
 	};
@@ -397,9 +399,9 @@ fn handle_trusted_call<
 		Ok(extrinsic) => extrinsic,
 		Err(e) => {
 			log::error!("Failed to create extrinsic: {:?}", e);
-			let res: Result<(), NativeTaskError> =
+			let result: TrustedCallResult =
 				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
 	};
@@ -411,21 +413,20 @@ fn handle_trusted_call<
 	) {
 		Ok(extrinsic_reports) =>
 			if let Some(report) = extrinsic_reports.first() {
-				let res: Result<ExtrinsicReport<H256>, NativeTaskError> = Ok(report.clone());
-				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				let result: TrustedCallResult = Ok(report.clone());
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			} else {
 				log::error!("Failed to get extrinsic report");
-				let res: Result<(), NativeTaskError> =
-					Err(NativeTaskError::ExtrinsicSendingFailed(
-						"Failed to get extrinsic report".to_string(),
-					));
-				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				let result: TrustedCallResult = Err(NativeTaskError::ExtrinsicSendingFailed(
+					"Failed to get extrinsic report".to_string(),
+				));
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			},
 		Err(e) => {
 			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
-			let res: Result<(), NativeTaskError> =
+			let result: TrustedCallResult =
 				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 		},
 	}
 }
