@@ -27,6 +27,7 @@ pub(crate) struct Email {
 
 #[derive(Serialize)]
 pub(crate) struct Content {
+	#[serde(rename(serialize = "type"))]
 	content_type: String,
 	value: String,
 }
