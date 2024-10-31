@@ -173,7 +173,7 @@ pub struct PoolSetting<AccountId, BlockNumber, Balance> {
 	pub admin: AccountId,
 }
 
-impl<BlockNumber, Balance> PoolSetting<AccountId, BlockNumber, Balance>
+impl<AccountId, BlockNumber, Balance> PoolSetting<AccountId, BlockNumber, Balance>
 where
 	Balance: AtLeast32BitUnsigned + Copy,
 	BlockNumber: AtLeast32BitUnsigned + Copy,
@@ -536,7 +536,7 @@ pub mod pallet {
 		}
 
 		// Registing CAN asset id
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn regist_can(origin: OriginFor<T>, asset_id: AssetIdOf<T>) -> DispatchResult {
@@ -866,13 +866,13 @@ pub mod pallet {
 			}
 		}
 	}
-}
 
-impl<T: Config> InvestmentInjector<T::AccountId, BalanceOf<T>> for Pallet<T> {
-	fn inject_investment(
-		pool_id: InvestingPoolIndex,
-		investments: Vec<(T::AccountId, BalanceOf<T>)>,
-	) {
-		Self::inject_investment(pool_id, investments);
+	impl<T: Config> InvestmentInjector<T::AccountId, BalanceOf<T>> for Pallet<T> {
+		fn inject_investment(
+			pool_id: InvestingPoolIndex,
+			investments: Vec<(T::AccountId, BalanceOf<T>)>,
+		) {
+			Self::inject_investment(pool_id, investments);
+		}
 	}
 }

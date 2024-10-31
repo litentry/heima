@@ -67,6 +67,11 @@ pub type AssetBalanceOf<T> =
 pub type AssetIdOf<T> =
 	<InspectFungibles<T> as FsInspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::OptionQuery};
@@ -86,9 +91,6 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_assets::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
-		/// The Make pool mature.
-		// type Scheduler: ScheduleNamed<BlockNumberFor<Self>, CallOf<Self>, Self::PalletsOrigin>;
 
 		/// Currency type for this pallet.
 		type Currency: ReservableCurrency<Self::AccountId>
