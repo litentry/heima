@@ -21,8 +21,6 @@ export async function remark(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
-    /** The signer's account.  Use `createLitentryIdentityType` helper to create this struct */
-    signer?: LitentryIdentity;
     /** The user's account.  Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
     /** the message to be sent */
@@ -42,10 +40,7 @@ export async function remark(
   const shardU8 = hexToU8a(shard);
   const txHash = randomAsHex();
 
-  // identity to sign the requests
-  const signer = data.signer || who;
-
-  const { call, key } = await createTrustedCallType(api.registry, {
+  const { call } = await createTrustedCallType(api.registry, {
     method: 'request_intent',
     params: {
       who,
