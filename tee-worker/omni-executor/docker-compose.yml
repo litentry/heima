@@ -7,6 +7,7 @@ services:
       - ethereum-node
       - litentry-node
     command: ["executor-worker", "ws://litentry-node:9944", "http://ethereum-node:8545"]
+    restart: always
   ethereum-node:
     image: ghcr.io/foundry-rs/foundry
     command:

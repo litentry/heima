@@ -20,20 +20,21 @@ use crate::rpc_client::SubstrateRpcClientFactory;
 use async_trait::async_trait;
 use executor_core::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
 use log::error;
+use std::sync::Arc;
 
 /// Used for fetching data from parentchain
 pub struct Fetcher<
 	RpcClient: SubstrateRpcClient,
 	RpcClientFactory: SubstrateRpcClientFactory<RpcClient>,
 > {
-	client_factory: RpcClientFactory,
+	client_factory: Arc<RpcClientFactory>,
 	client: Option<RpcClient>,
 }
 
 impl<RpcClient: SubstrateRpcClient, RpcClientFactory: SubstrateRpcClientFactory<RpcClient>>
 	Fetcher<RpcClient, RpcClientFactory>
 {
-	pub fn new(client_factory: RpcClientFactory) -> Self {
+	pub fn new(client_factory: Arc<RpcClientFactory>) -> Self {
 		Self { client: None, client_factory }
 	}
 

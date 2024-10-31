@@ -10,5 +10,8 @@ async-trait = { workspace = true }
 executor-core = { path = "../../executor-core" }
 log = { workspace = true }
 
+[dev-dependencies]
+tokio = { workspace = true }
+
 [lints]
 workspace = true

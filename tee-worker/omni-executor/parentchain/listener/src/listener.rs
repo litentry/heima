@@ -38,6 +38,7 @@ pub type ParentchainListener<
 	IntentEventId,
 	BlockEvent,
 	IntentEventHandler<
+		ChainConfig,
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,
 		EthereumIntentExecutor,
