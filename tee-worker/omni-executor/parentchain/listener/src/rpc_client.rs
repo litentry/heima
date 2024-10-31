@@ -20,6 +20,8 @@ use log::error;
 use parity_scale_codec::Encode;
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::thread;
+use std::time::Duration;
 use subxt::backend::legacy::LegacyRpcMethods;
 use subxt::backend::BlockRef;
 use subxt::config::Header;
@@ -156,6 +158,24 @@ pub struct SubxtClientFactory<ChainConfig: Config> {
 impl<ChainConfig: Config> SubxtClientFactory<ChainConfig> {
 	pub fn new(url: &str) -> Self {
 		Self { url: url.to_string(), _phantom: PhantomData }
+	}
+	pub async fn new_client_until_connected(&self) -> SubxtClient<ChainConfig> {
+		let mut client: Option<SubxtClient<ChainConfig>> = None;
+		loop {
+			if client.is_some() {
+				break;
+			}
+			match self.new_client().await {
+				Ok(c) => {
+					client = Some(c);
+				},
+				Err(e) => {
+					error!("Error creating client: {:?}", e);
+				},
+			};
+			thread::sleep(Duration::from_secs(1))
+		}
+		client.unwrap()
 	}
 }
 
