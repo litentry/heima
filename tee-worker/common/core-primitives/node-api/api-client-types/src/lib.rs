@@ -22,6 +22,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+use alloc::{string::String, vec::Vec};
+
+use codec::{Decode, Encode};
+
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
@@ -73,6 +78,115 @@ pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
+
+/// Simplified TransactionStatus to allow the user to choose until when to watch
+/// an extrinsic.
+// Indexes must match the substrate_api_client::TransactionStatus::as_u8
+#[derive(Encode, Decode, Debug, PartialEq, PartialOrd, Eq, Copy, Clone)]
+pub enum XtStatus {
+	Ready = 1,
+	Broadcast = 2,
+	InBlock = 3,
+	Finalized = 6,
+}
+
+impl From<XtStatus> for substrate_api_client::XtStatus {
+	fn from(status: XtStatus) -> Self {
+		match status {
+			XtStatus::Ready => substrate_api_client::XtStatus::Ready,
+			XtStatus::Broadcast => substrate_api_client::XtStatus::Broadcast,
+			XtStatus::InBlock => substrate_api_client::XtStatus::InBlock,
+			XtStatus::Finalized => substrate_api_client::XtStatus::Finalized,
+		}
+	}
+}
+
+/// Extrinsic report returned upon a submit_and_watch request.
+/// Holds as much information as available.
+#[derive(Encode, Decode, Debug, Clone)]
+pub struct ExtrinsicReport<Hash: Decode> {
+	// Hash of the extrinsic.
+	pub extrinsic_hash: Hash,
+	// Block hash of the block the extrinsic was included in.
+	// Only available if watched until at least `InBlock`.
+	pub block_hash: Option<Hash>,
+	// Last known Transaction Status.
+	pub status: TransactionStatus<Hash, Hash>,
+}
+
+impl<Hash: Decode> From<substrate_api_client::ExtrinsicReport<Hash>> for ExtrinsicReport<Hash> {
+	fn from(report: substrate_api_client::ExtrinsicReport<Hash>) -> Self {
+		Self {
+			extrinsic_hash: report.extrinsic_hash,
+			block_hash: report.block_hash,
+			status: report.status.into(),
+		}
+	}
+}
+
+/// Possible transaction status events.
+#[derive(Encode, Decode, Debug, Clone, PartialEq)]
+pub enum TransactionStatus<Hash, BlockHash> {
+	/// Transaction is part of the future queue.
+	Future,
+	/// Transaction is part of the ready queue.
+	Ready,
+	/// The transaction has been broadcast to the given peers.
+	Broadcast(Vec<String>),
+	/// Transaction has been included in block with given hash.
+	InBlock(BlockHash),
+	/// The block this transaction was included in has been retracted.
+	Retracted(BlockHash),
+	/// Maximum number of finality watchers has been reached,
+	/// old watchers are being removed.
+	FinalityTimeout(BlockHash),
+	/// Transaction has been finalized by a finality-gadget, e.g GRANDPA
+	Finalized(BlockHash),
+	/// Transaction has been replaced in the pool, by another transaction
+	/// that provides the same tags. (e.g. same (sender, nonce)).
+	Usurped(Hash),
+	/// Transaction has been dropped from the pool because of the limit.
+	Dropped,
+	/// Transaction is no longer valid in the current state.
+	Invalid,
+}
+
+impl<Hash, BlockHash> TransactionStatus<Hash, BlockHash> {
+	pub fn get_maybe_block_hash(&self) -> Option<&BlockHash> {
+		match self {
+			TransactionStatus::InBlock(block_hash) => Some(block_hash),
+			TransactionStatus::Retracted(block_hash) => Some(block_hash),
+			TransactionStatus::FinalityTimeout(block_hash) => Some(block_hash),
+			TransactionStatus::Finalized(block_hash) => Some(block_hash),
+			_ => None,
+		}
+	}
+}
+
+impl<Hash, BlockHash> From<substrate_api_client::TransactionStatus<Hash, BlockHash>>
+	for TransactionStatus<Hash, BlockHash>
+{
+	fn from(status: substrate_api_client::TransactionStatus<Hash, BlockHash>) -> Self {
+		match status {
+			substrate_api_client::TransactionStatus::Future => TransactionStatus::Future,
+			substrate_api_client::TransactionStatus::Ready => TransactionStatus::Ready,
+			substrate_api_client::TransactionStatus::Broadcast(peers) =>
+				TransactionStatus::Broadcast(peers),
+			substrate_api_client::TransactionStatus::InBlock(block_hash) =>
+				TransactionStatus::InBlock(block_hash),
+			substrate_api_client::TransactionStatus::Retracted(block_hash) =>
+				TransactionStatus::Retracted(block_hash),
+			substrate_api_client::TransactionStatus::FinalityTimeout(block_hash) =>
+				TransactionStatus::FinalityTimeout(block_hash),
+			substrate_api_client::TransactionStatus::Finalized(block_hash) =>
+				TransactionStatus::Finalized(block_hash),
+			substrate_api_client::TransactionStatus::Usurped(hash) =>
+				TransactionStatus::Usurped(hash),
+			substrate_api_client::TransactionStatus::Dropped => TransactionStatus::Dropped,
+			substrate_api_client::TransactionStatus::Invalid => TransactionStatus::Invalid,
+		}
+	}
+}
 
 #[cfg(feature = "std")]
 pub use api::*;
