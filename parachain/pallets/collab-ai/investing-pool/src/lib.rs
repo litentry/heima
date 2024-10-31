@@ -207,7 +207,9 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_assets::Config {
+	pub trait Config:
+		frame_system::Config + pallet_assets::Config<AssetId: From<u128> + Into<u128>>
+	{
 		/// Overarching event type
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -387,7 +389,7 @@ pub mod pallet {
 			T::PoolProposalPalletOrigin::ensure_origin(origin)?;
 
 			// Create all asset token categories
-			let asset_id_vec =
+			let asset_id_vec: Vec<AssetIdOf<T>> =
 				InvestingPoolAssetIdGenerator::get_all_pool_token(pool_id, setting.epoch)
 					.ok_or(ArithmeticError::Overflow)?;
 			for i in asset_id_vec.iter() {
@@ -567,7 +569,7 @@ pub mod pallet {
 			if index >= setting.epoch {
 				return Ok(setting.epoch);
 			} else {
-				return index.checked_add(1u128).ok_or(ArithmeticError::Overflow)?;
+				return Ok(index.checked_add(1u128).ok_or(ArithmeticError::Overflow)?);
 			}
 		}
 
@@ -814,7 +816,7 @@ pub mod pallet {
 								.try_into()
 								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 						total_distributed_reward = total_distributed_reward
-							.checked_add(distributed_reward)
+							.checked_add(&distributed_reward)
 							.ok_or(ArithmeticError::Overflow)?;
 
 						Self::deposit_event(Event::<T>::StableRewardClaimed {
@@ -855,7 +857,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let setting =
 				<InvestingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
-			let effective_time = Self::get_epoch_start_time(pool_id, One::one());
+			let effective_time = Self::get_epoch_start_time(pool_id, One::one())?;
 
 			let debt_asset_id =
 				InvestingPoolAssetIdGenerator::get_debt_token(pool_id, setting.epoch)
@@ -871,7 +873,7 @@ pub mod pallet {
 
 				// Add CAN token global checkpoint
 				Self::do_can_add(i.1, effective_time)?;
-				Self::do_stable_add(pool_id, i.1, effective_time)
+				Self::do_stable_add(pool_id, i.1, effective_time)?;
 			}
 			Ok(())
 		}
