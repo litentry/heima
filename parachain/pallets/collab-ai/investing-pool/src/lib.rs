@@ -220,9 +220,7 @@ pub mod pallet {
 		/// Origin used to administer the investing pool
 		type InvestingPoolAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-		type Fungibles: FsMutate<Self::AccountId> + FsCreate<Self::AccountId>
-		where
-			FsMutate<Self::AccountId>::AssetId = u128;
+		type Fungibles: FsMutate<Self::AccountId, AssetId = u128> + FsCreate<Self::AccountId>;
 
 		/// The beneficiary PalletId, used fro deriving its sovereign account to hold assets of reward
 		#[pallet::constant]
