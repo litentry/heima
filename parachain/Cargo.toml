@@ -25,14 +25,8 @@ members = [
     'pallets/vc-management',
     'pallets/xcm-asset-manager',
     'pallets/omni-account',
-    'precompiles/assets-erc20',
-    'precompiles/bridge-transfer',
-    'precompiles/collab-ai/aiusd-convertor',
-    'precompiles/collab-ai/curator',
-    'precompiles/collab-ai/guardian',
-    'precompiles/collab-ai/pool-proposal',
-    'precompiles/parachain-staking',
-    'precompiles/score-staking',
+    'pallets/omni-account/runtime-api',
+    'precompiles/*',
     'runtime/litentry',
     'runtime/rococo',
     'runtime/paseo',
@@ -274,6 +268,7 @@ pallet-extrinsic-filter = { path = "pallets/extrinsic-filter", default-features 
 pallet-group = { path = "pallets/group", default-features = false }
 pallet-identity-management = { path = "pallets/identity-management", default-features = false }
 pallet-omni-account = { path = "pallets/omni-account", default-features = false }
+pallet-omni-account-runtime-api = { path = "pallets/omni-account/runtime-api", default-features = false }
 pallet-parachain-staking = { path = "pallets/parachain-staking", default-features = false }
 pallet-score-staking = { path = "pallets/score-staking", default-features = false }
 pallet-teebag = { path = "pallets/teebag", default-features = false }
