@@ -47,9 +47,11 @@ use codec::{Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
 use ita_stf::{aes_encrypt_default, Getter, TrustedCall, TrustedCallSigned};
-use itp_api_client_types::compose_call;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
+use itp_node_api::{
+	api_client::{compose_call, ExtrinsicReport, XtStatus},
+	metadata::{provider::AccessNodeMetadata, NodeMetadata},
+};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{
 	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,

@@ -15,7 +15,6 @@ sp-core = { workspace = true, features = ["full_crypto"] }
 
 ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../../../../app-libs/sgx-runtime", default-features = false }
 ita-stf = { package = "id-ita-stf", path = "../../../../app-libs/stf", default-features = false }
-itp-api-client-types = { workspace = true }
 itp-enclave-metrics = { workspace = true }
 itp-extrinsics-factory = { workspace = true }
 itp-node-api = { workspace = true }
@@ -69,7 +68,6 @@ std = [
     "lc-native-task-sender/std",
     "lc-identity-verification/std",
     "lc-omni-account/std",
-    "itp-api-client-types/std",
 ]
 development = [
     "litentry-macros/development",

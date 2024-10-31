@@ -3125,7 +3125,6 @@ dependencies = [
  "id-ita-stf",
  "id-itp-stf-executor",
  "id-itp-top-pool-author",
- "itp-api-client-types",
  "itp-enclave-metrics",
  "itp-extrinsics-factory",
  "itp-node-api",
