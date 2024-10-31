@@ -14,9 +14,9 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
+itp-api-client-types = { workspace = true }
 itp-storage = { workspace = true }
 itp-types = { workspace = true }
-itp-api-client-types = { workspace = true }
 
 [features]
 default = ["std"]
