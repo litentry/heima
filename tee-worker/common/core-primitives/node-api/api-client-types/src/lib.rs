@@ -151,18 +151,6 @@ pub enum TransactionStatus<Hash, BlockHash> {
 	Invalid,
 }
 
-impl<Hash, BlockHash> TransactionStatus<Hash, BlockHash> {
-	pub fn get_maybe_block_hash(&self) -> Option<&BlockHash> {
-		match self {
-			TransactionStatus::InBlock(block_hash) => Some(block_hash),
-			TransactionStatus::Retracted(block_hash) => Some(block_hash),
-			TransactionStatus::FinalityTimeout(block_hash) => Some(block_hash),
-			TransactionStatus::Finalized(block_hash) => Some(block_hash),
-			_ => None,
-		}
-	}
-}
-
 impl<Hash, BlockHash> From<substrate_api_client::TransactionStatus<Hash, BlockHash>>
 	for TransactionStatus<Hash, BlockHash>
 {
