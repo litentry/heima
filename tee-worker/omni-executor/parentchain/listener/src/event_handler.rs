@@ -172,68 +172,72 @@ impl<
 				Error::NonRecoverableError
 			})?;
 
-		let intent = match decoded.intent {
+		let maybe_intent = match decoded.intent {
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::CallEthereum(call_ethereum) => {
-				Intent::CallEthereum(call_ethereum.address.to_fixed_bytes(), call_ethereum.input.0)
+				Some(Intent::CallEthereum(call_ethereum.address.to_fixed_bytes(), call_ethereum.input.0))
 			},
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferEthereum(transfer) => {
-				Intent::TransferEthereum(transfer.to.to_fixed_bytes(), transfer.value)
-			}
+				Some(Intent::TransferEthereum(transfer.to.to_fixed_bytes(), transfer.value))
+			},
+			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::SystemRemark(_) => None,
+			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferNative(_) => None,
 		};
 
-		//to explicitly handle all intent variants
-		match intent {
-			Intent::CallEthereum(_, _) => {
-				self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
-					// assume for now we can easily recover
-					log::error!("Error executing intent");
-					Error::RecoverableError
-				})?;
-			},
-			Intent::TransferEthereum(_, _) => {
-				self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
-					// assume for now we can easily recover
-					log::error!("Error executing intent");
-					Error::RecoverableError
-				})?;
-			},
-		}
+		if let Some(intent) = maybe_intent {
+			// to explicitly handle all intent variants
+			match intent {
+				Intent::CallEthereum(_, _) => {
+					self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
+						// assume for now we can easily recover
+						log::error!("Error executing intent");
+						Error::RecoverableError
+					})?;
+				},
+				Intent::TransferEthereum(_, _) => {
+					self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
+						// assume for now we can easily recover
+						log::error!("Error executing intent");
+						Error::RecoverableError
+					})?;
+				},
+			}
 
-		log::debug!("Intent executed, publishing result");
+			log::debug!("Intent executed, publishing result");
 
-		// todo: the whole signing part should be encapsulated in separate component like `TransactionSigner`
-		//we need to report back to parachain intent result
-		let decoded =
-			crate::litentry_rococo::omni_account::events::IntentRequested::decode_as_fields(
-				&mut event.field_bytes.as_slice(),
-				&mut fields,
-				metadata.types(),
-			)
-			.map_err(|_| {
-				log::error!("Could not decode event {:?}", event.id);
-				Error::NonRecoverableError
+			// todo: the whole signing part should be encapsulated in separate component like `TransactionSigner`
+			//we need to report back to parachain intent result
+			let decoded =
+				crate::litentry_rococo::omni_account::events::IntentRequested::decode_as_fields(
+					&mut event.field_bytes.as_slice(),
+					&mut fields,
+					metadata.types(),
+				)
+				.map_err(|_| {
+					log::error!("Could not decode event {:?}", event.id);
+					Error::NonRecoverableError
+				})?;
+
+			let execution_result =
+				crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
+
+			let call = crate::litentry_rococo::tx().omni_account().intent_executed(
+				decoded.who,
+				decoded.intent,
+				execution_result,
+			);
+
+			let mut client = self.rpc_client_factory.new_client().await.map_err(|e| {
+				error!("Could not create RPC client: {:?}", e);
+				RecoverableError
 			})?;
 
-		let execution_result =
-			crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
-
-		let call = crate::litentry_rococo::tx().omni_account().intent_executed(
-			decoded.who,
-			decoded.intent,
-			execution_result,
-		);
-
-		let mut client = self.rpc_client_factory.new_client().await.map_err(|e| {
-			error!("Could not create RPC client: {:?}", e);
-			RecoverableError
-		})?;
-
-		let signed_call = self.transaction_signer.sign(call).await;
-		client.submit_tx(&signed_call).await.map_err(|e| {
-			error!("Error while submitting tx: {:?}", e);
-			RecoverableError
-		})?;
-		log::debug!("Result published");
+			let signed_call = self.transaction_signer.sign(call).await;
+			client.submit_tx(&signed_call).await.map_err(|e| {
+				error!("Error while submitting tx: {:?}", e);
+				RecoverableError
+			})?;
+			log::debug!("Result published");
+		}
 		Ok(())
 	}
 }
