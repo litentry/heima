@@ -162,26 +162,17 @@ where
 		parentchain_id: Vec<u8>,
 		watch_until: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>> {
-		let maybe_watch_until: Option<XtStatus> = match Decode::decode(&mut watch_until.as_slice())
-		{
-			Ok(maybe_xt_status) => maybe_xt_status,
-			Err(_) =>
-				return Err(OCallBridgeError::SendExtrinsicsToParentchain(
+		let maybe_watch_until: Option<XtStatus> = Decode::decode(&mut watch_until.as_slice())
+			.map_err(|_| {
+				OCallBridgeError::SendExtrinsicsToParentchain(
 					"Could not decode watch_until".to_string(),
-				)),
-		};
-
-		let extrinsics: Vec<OpaqueExtrinsic> =
-			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
-				Ok(calls) => calls,
-				Err(_) =>
-					return Err(OCallBridgeError::SendExtrinsicsToParentchain(
-						"Could not decode extrinsics".to_string(),
-					)),
-			};
-
+				)
+			})?;
+		let extrinsics: Vec<OpaqueExtrinsic> = Decode::decode(&mut extrinsics_encoded.as_slice())
+			.map_err(|_| {
+			OCallBridgeError::SendExtrinsicsToParentchain("Could not decode extrinsics".to_string())
+		})?;
 		let mut extrinsic_reports: Vec<ExtrinsicReport<H256>> = Vec::new();
-
 		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
 		debug!(
 			"Enclave wants to send {} extrinsics to parentchain: {:?}. watch_until: {:?}",
