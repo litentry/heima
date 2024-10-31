@@ -207,9 +207,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + pallet_assets::Config<AssetId: From<u128> + Into<u128>>
-	{
+	pub trait Config: frame_system::Config + pallet_assets::Config<AssetId = u128> {
 		/// Overarching event type
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -370,7 +368,9 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
-		fn on_initialize(n: BlockNumberFor<T>) -> Weight {}
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			Weight::zero()
+		}
 	}
 
 	#[pallet::call]
@@ -477,7 +477,7 @@ pub mod pallet {
 			let pool_id = InvestingPoolAssetIdGenerator::get_token_pool_index(asset_id);
 			// Epoch reward may update before epoch ends, which is also fine to claim early
 			let mut claimed_until_epoch =
-				Self::get_epoch_index_with_reward_updated_before(pool_id, current_block);
+				Self::get_epoch_index_with_reward_updated_before(pool_id, current_block)?;
 			let token_start_epoch = InvestingPoolAssetIdGenerator::get_token_start_epoch(asset_id);
 			let token_end_epoch = InvestingPoolAssetIdGenerator::get_token_end_epoch(asset_id);
 
@@ -520,7 +520,7 @@ pub mod pallet {
 				Self::get_epoch_end_time(pool_id, claimed_until_epoch)?,
 				terminated,
 			)?;
-			Self::do_stable_claim(source, pool_id, amount, token_start_epoch, claimed_until_epoch)?
+			Self::do_stable_claim(source, pool_id, amount, token_start_epoch, claimed_until_epoch)
 		}
 
 		// Registing AIUSD asset id
