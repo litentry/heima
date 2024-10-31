@@ -3,7 +3,7 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-SELF_EXE = target/release/omni-executor
+SELF_EXE = target/release/executor-worker
 
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
@@ -51,7 +51,7 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) tee-bridge
+	$(GRAMINE) omni-executor ${ARGS}
 
 .PHONY: clean
 clean:
@@ -67,11 +67,11 @@ build-docker:
 
 .PHONY: start-local
 start-local:
-	docker-compose up
+	docker compose up
 
 .PHONY: stop-local
 stop-local:
-	docker-compose down
+	docker compose down
 
 .PHONY: get-omni-pallet-metadata
 get-omni-pallet-metadata:

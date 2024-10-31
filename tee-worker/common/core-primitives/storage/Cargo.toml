@@ -23,8 +23,6 @@ sp-trie = { workspace = true }
 
 itp-types = { workspace = true }
 
-litentry-hex-utils = { workspace = true }
-
 [dev-dependencies]
 sp-state-machine = { workspace = true, features = ["std"] }
 

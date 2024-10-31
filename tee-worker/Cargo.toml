@@ -301,7 +301,7 @@ lc-stf-task-sender = { path = "identity/litentry/core/stf-task/sender", default-
 lc-stf-task-receiver = { path = "identity/litentry/core/stf-task/receiver", default-features = false }
 lc-vc-task-sender = { path = "identity/litentry/core/vc-task/sender", default-features = false }
 lc-vc-task-receiver = { path = "identity/litentry/core/vc-task/receiver", default-features = false }
-lc-omni-account = { path = "identity/app-libs/omni-account", default-features = false }
+lc-omni-account = { path = "identity/litentry/core/omni-account", default-features = false }
 lc-native-task-sender = { path = "identity/litentry/core/native-task/sender", default-features = false }
 lc-native-task-receiver = { path = "identity/litentry/core/native-task/receiver", default-features = false }
 

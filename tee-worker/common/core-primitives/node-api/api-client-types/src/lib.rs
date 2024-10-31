@@ -26,6 +26,7 @@ pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
 pub use substrate_api_client::{
+	ac_compose_macros::{compose_call, compose_extrinsic_offline},
 	ac_node_api::{
 		metadata::{InvalidMetadataError, Metadata, MetadataError},
 		EventDetails, Events, StaticEvent,

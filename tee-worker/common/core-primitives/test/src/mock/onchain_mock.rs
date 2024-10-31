@@ -30,9 +30,15 @@ use itp_types::{
 use lc_teebag_storage::{TeebagStorage, TeebagStorageKeys};
 use sgx_types::*;
 use sp_core::H256;
-use sp_runtime::{traits::Header as HeaderTrait, OpaqueExtrinsic};
+use sp_runtime::{
+	traits::{BlakeTwo256, Header as HeaderTrait},
+	OpaqueExtrinsic,
+};
 use sp_std::prelude::*;
 use std::{collections::HashMap, string::String};
+
+type BlockNumber = u32;
+pub type GenericHeader = sp_runtime::generic::Header<BlockNumber, BlakeTwo256>;
 
 #[derive(Default, Clone, Debug)]
 pub struct OnchainMock {
@@ -229,6 +235,23 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		_header: Option<&H>,
 	) -> Result<Vec<Vec<u8>>, itp_ocall_api::Error> {
 		Ok(Default::default())
+	}
+
+	fn get_storage_keys_paged<H: HeaderTrait<Hash = H256>>(
+		&self,
+		_key_prefix: Vec<u8>,
+		_count: u32,
+		_start_key: Option<Vec<u8>>,
+		_header: Option<&H>,
+	) -> itp_ocall_api::Result<Vec<Vec<u8>>> {
+		Ok(Default::default())
+	}
+
+	fn get_header<H: HeaderTrait<Hash = H256>>(
+		&self,
+		_: &ParentchainId,
+	) -> itp_ocall_api::Result<H> {
+		todo!()
 	}
 }
 

@@ -96,6 +96,7 @@ use jsonrpc_core::IoHandler;
 use lc_data_providers::DataProviderConfig;
 use lc_evm_dynamic_assertions::repository::EvmAssertionRepository;
 use lc_native_task_receiver::{run_native_task_receiver, NativeTaskContext};
+use lc_omni_account::init_in_memory_omni_account_store;
 use lc_parachain_extrinsic_task_receiver::run_parachain_extrinsic_task_receiver;
 use lc_stf_task_receiver::{run_stf_task_receiver, StfTaskContext};
 use lc_vc_task_receiver::run_vc_handler_runner;
@@ -514,6 +515,12 @@ pub(crate) fn init_direct_invocation_server(server_addr: String) -> EnclaveResul
 pub(crate) fn init_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let _ = state_handler.initialize_shard(shard)?;
+	Ok(())
+}
+
+pub(crate) fn init_in_memory_state() -> EnclaveResult<()> {
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	init_in_memory_omni_account_store(ocall_api).map_err(|e| Error::Other(e.into()))?;
 	Ok(())
 }
 

@@ -26,7 +26,11 @@ use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_core::{bounded::alloc, H160, H256};
-use sp_runtime::{generic::Header as HeaderG, traits::BlakeTwo256, MultiAddress, MultiSignature};
+use sp_runtime::{
+	generic::Header as HeaderG,
+	traits::{BlakeTwo256, Block as ParentchainBlock, Header as ParentchainHeader},
+	MultiAddress, MultiSignature,
+};
 
 use self::events::ParentchainBlockProcessed;
 
@@ -123,6 +127,8 @@ pub trait FilterEvents {
 	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error>;
 
 	fn get_btc_wallet_generated_events(&self) -> Result<Vec<BtcWalletGenerated>, Self::Error>;
+
+	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error>;
 }
 
 #[derive(Debug)]
@@ -140,11 +146,14 @@ where
 {
 	type Output;
 
-	fn handle_events(
+	fn handle_events<Block>(
 		&self,
 		executor: &Executor,
 		events: impl FilterEvents,
-	) -> Result<Self::Output, Error>;
+		block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
+	) -> Result<Self::Output, Error>
+	where
+		Block: ParentchainBlock;
 }
 
 #[derive(Debug)]
@@ -163,6 +172,7 @@ pub enum ParentchainEventProcessingError {
 	EnclaveAddFailure,
 	EnclaveRemoveFailure,
 	BtcWalletGeneratedFailure,
+	AccountStoreUpdatedFailure,
 }
 
 impl core::fmt::Display for ParentchainEventProcessingError {
@@ -196,6 +206,8 @@ impl core::fmt::Display for ParentchainEventProcessingError {
 				"Parentchain Event Processing Error: EnclaveRemoveFailure",
 			ParentchainEventProcessingError::BtcWalletGeneratedFailure =>
 				"Parentchain Event Processing Error: BtcWalletGeneratedFailure",
+			ParentchainEventProcessingError::AccountStoreUpdatedFailure =>
+				"Parentchain Event Processing Error: AccountStoreUpdatedFailure",
 		};
 		write!(f, "{}", message)
 	}

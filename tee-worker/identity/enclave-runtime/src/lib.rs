@@ -446,6 +446,15 @@ pub unsafe extern "C" fn migrate_shard(new_shard: *const u8, shard_size: u32) ->
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn init_in_memory_state() -> sgx_status_t {
+	if let Err(e) = initialization::init_in_memory_state() {
+		error!("Failed to initialize in-memory state: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn upload_id_graph() -> sgx_status_t {
 	if let Err(e) = initialization::upload_id_graph() {
 		error!("Failed to upload IDGraph: {:?}", e);

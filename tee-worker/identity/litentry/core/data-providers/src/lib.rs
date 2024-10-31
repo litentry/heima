@@ -235,7 +235,7 @@ impl DataProviderConfig {
 			discord_auth_token: "".to_string(),
 			achainable_url: "https://label-production.litentry.io/".to_string(),
 			achainable_auth_key: "".to_string(),
-			credential_endpoint: "wss://rpc.rococo-parachain.litentry.io".to_string(),
+			credential_endpoint: "wss://rpc.litentry-parachain.litentry.io".to_string(),
 			oneblock_notion_key: "".to_string(),
 			oneblock_notion_url: "https://api.notion.com/".to_string(),
 			sora_quiz_master_id: "1164463721989554218".to_string(),
