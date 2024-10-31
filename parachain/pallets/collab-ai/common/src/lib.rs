@@ -20,7 +20,10 @@ use scale_info::TypeInfo;
 use sp_core::{RuntimeDebug, H256};
 use sp_std::marker::PhantomData;
 
-use frame_support::{pallet_prelude::EnsureOrigin, traits::EitherOfDiverse};
+use frame_support::{
+	pallet_prelude::{DispatchResult, EnsureOrigin},
+	traits::EitherOfDiverse,
+};
 use frame_system::{EnsureRoot, RawOrigin};
 
 pub type InfoHash = H256;
@@ -243,5 +246,8 @@ pub trait GuardianQuery<AccountId> {
 
 /// Inject investment into pool
 pub trait InvestmentInjector<AccountId, Balance> {
-	fn inject_investment(pool_id: InvestingPoolIndex, investments: Vec<(AccountId, Balance)>);
+	fn inject_investment(
+		pool_id: InvestingPoolIndex,
+		investments: Vec<(AccountId, Balance)>,
+	) -> DispatchResult;
 }

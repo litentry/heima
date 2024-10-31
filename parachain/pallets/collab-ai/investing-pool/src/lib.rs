@@ -21,7 +21,7 @@ use frame_support::{
 		tokens::{
 			fungible::{Inspect as FInspect, Mutate as FMutate},
 			fungibles::{Create as FsCreate, Inspect as FsInspect, Mutate as FsMutate},
-			Preservation,
+			Fortitude, Precision, Preservation,
 		},
 		StorageVersion,
 	},
@@ -32,7 +32,7 @@ pub use pallet::*;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
-		One,
+		One, Zero,
 	},
 	ArithmeticError, Perquintill, Saturating,
 };
@@ -261,10 +261,10 @@ pub mod pallet {
 	// For stable token reward distribution
 	#[pallet::storage]
 	#[pallet::getter(fn stable_investing_pool_checkpoint)]
-	pub type StableIvestingPoolCheckpoint<T: Config> = StorageMap<
+	pub type StableInvestingPoolCheckpoint<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		T::PoolId,
+		InvestingPoolIndex,
 		InvestingWeightInfo<BlockNumberFor<T>, BalanceOf<T>>,
 		OptionQuery,
 	>;
@@ -272,7 +272,7 @@ pub mod pallet {
 	// Checkpoint of overall investing condition synthetic by tracking all investing pools
 	// For CAN token reward distribution
 	#[pallet::storage]
-	#[pallet::getter(fn native_checkpoint)]
+	#[pallet::getter(fn can_checkpoint)]
 	pub type CANCheckpoint<T: Config> =
 		StorageValue<_, InvestingWeightInfo<BlockNumberFor<T>, BalanceOf<T>>, OptionQuery>;
 
@@ -283,7 +283,7 @@ pub mod pallet {
 
 	// Asset id of CAN
 	#[pallet::storage]
-	#[pallet::getter(fn aiusd_asset_id)]
+	#[pallet::getter(fn can_asset_id)]
 	pub type CANAssetId<T: Config> = StorageValue<_, AssetIdOf<T>, OptionQuery>;
 
 	#[pallet::event]
@@ -295,7 +295,6 @@ pub mod pallet {
 			start_time: BlockNumberFor<T>,
 			epoch: u128,
 			epoch_range: BlockNumberFor<T>,
-			setup_time: BlockNumberFor<T>,
 			pool_cap: BalanceOf<T>,
 		},
 		/// New metadata has been set for a investing pool.
@@ -369,9 +368,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
-		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			Self::begin_block(n)
-		}
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {}
 	}
 
 	#[pallet::call]
@@ -395,8 +392,8 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 			for i in asset_id_vec.iter() {
 				<T::Fungibles as FsCreate<<T as frame_system::Config>::AccountId>>::create(
-					i,
-					mutisig,
+					i.clone(),
+					admin,
 					true,
 					One::one(),
 				);
@@ -417,7 +414,6 @@ pub mod pallet {
 				start_time: setting.start_time,
 				epoch: setting.epoch,
 				epoch_range: setting.epoch_range,
-				setup_time: setting.setup_time,
 				pool_cap: setting.pool_cap,
 			});
 			Ok(())
@@ -459,7 +455,7 @@ pub mod pallet {
 			// Mint AIUSD into reward pool
 			let aiusd_asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			let beneficiary_account: T::AccountId = Self::stable_token_beneficiary_account();
-			let _ = T::Fungibles::mint_into(aiusd_asset_id, beneficiary_account, reward)?;
+			let _ = T::Fungibles::mint_into(aiusd_asset_id, &beneficiary_account, reward)?;
 
 			Ok(())
 		}
@@ -470,16 +466,16 @@ pub mod pallet {
 		#[transactional]
 		pub fn claim(
 			origin: OriginFor<T>,
-			asset_id: InvestingPoolIndex,
+			asset_id: AssetIdOf<T>,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let source = ensure_signed(origin)?;
 
 			let current_block = frame_system::Pallet::<T>::block_number();
+			let pool_id = InvestingPoolAssetIdGenerator::get_token_pool_index(asset_id);
 			// Epoch reward may update before epoch ends, which is also fine to claim early
 			let mut claimed_until_epoch =
-				self::get_epoch_index_with_reward_updated_before(pool_id, current_block);
-			let pool_id = InvestingPoolAssetIdGenerator::get_token_pool_index(asset_id);
+				Self::get_epoch_index_with_reward_updated_before(pool_id, current_block);
 			let token_start_epoch = InvestingPoolAssetIdGenerator::get_token_start_epoch(asset_id);
 			let token_end_epoch = InvestingPoolAssetIdGenerator::get_token_end_epoch(asset_id);
 
@@ -508,20 +504,21 @@ pub mod pallet {
 				// Mint new category token
 				let new_asset_id = InvestingPoolAssetIdGenerator::get_intermediate_epoch_token(
 					pool_id,
-					(claimed_until_epoch + 1),
+					claimed_until_epoch + 1,
 					token_end_epoch,
-				);
+				)
+				.ok_or(ArithmeticError::Overflow)?;
 				T::Fungibles::mint_into(new_asset_id, &source, amount)?;
 			}
 			Self::do_can_claim(
 				source,
 				pool_id,
 				amount,
-				Self::get_epoch_start_time(token_start_epoch)?,
-				Self::get_epoch_end_time(claimed_until_epoch)?,
+				Self::get_epoch_start_time(pool_id, token_start_epoch)?,
+				Self::get_epoch_end_time(pool_id, claimed_until_epoch)?,
 				terminated,
 			)?;
-			Self::do_stable_claim(source, pool_id, amount, token_start_epoch, claimed_until_epoch)?;
+			Self::do_stable_claim(source, pool_id, amount, token_start_epoch, claimed_until_epoch)?
 		}
 
 		// Registing AIUSD asset id
@@ -529,7 +526,7 @@ pub mod pallet {
 		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn regist_aiusd(origin: OriginFor<T>, asset_id: AssetIdOf<T>) -> DispatchResult {
-			T::InvestingPoolCommitteeOrigin::ensure_origin(origin)?;
+			T::InvestingPoolAdminOrigin::ensure_origin(origin)?;
 			<AIUSDAssetId<T>>::put(asset_id.clone());
 			Self::deposit_event(Event::<T>::AIUSDRegisted { asset_id });
 			Ok(())
@@ -540,7 +537,7 @@ pub mod pallet {
 		#[pallet::weight({1000})]
 		#[transactional]
 		pub fn regist_can(origin: OriginFor<T>, asset_id: AssetIdOf<T>) -> DispatchResult {
-			T::InvestingPoolCommitteeOrigin::ensure_origin(origin)?;
+			T::InvestingPoolAdminOrigin::ensure_origin(origin)?;
 			<AIUSDAssetId<T>>::put(asset_id.clone());
 			Self::deposit_event(Event::<T>::AIUSDRegisted { asset_id });
 			Ok(())
@@ -570,7 +567,7 @@ pub mod pallet {
 			if index >= setting.epoch {
 				return Ok(setting.epoch);
 			} else {
-				return index.checked_add(1u128).ok_or(ArithmeticError::Overflow);
+				return index.checked_add(1u128).ok_or(ArithmeticError::Overflow)?;
 			}
 		}
 
@@ -581,7 +578,7 @@ pub mod pallet {
 			pool_id: InvestingPoolIndex,
 			time: BlockNumberFor<T>,
 		) -> Result<u128, sp_runtime::DispatchError> {
-			let epoch_index: u128 = self::get_epoch_index(pool_id, time)?;
+			let epoch_index: u128 = Self::get_epoch_index(pool_id, time)?;
 
 			for i in 1u128..(epoch_index + 1u128) {
 				if <StableInvestingPoolEpochReward<T>>::get(pool_id, i).is_none() {
@@ -664,7 +661,7 @@ pub mod pallet {
 
 		// For stable_investing
 		fn do_stable_add(
-			pool_id: T::PoolId,
+			pool_id: InvestingPoolIndex,
 			amount: BalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
@@ -674,8 +671,11 @@ pub mod pallet {
 						.add(effective_time, amount)
 						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 				} else {
-					*maybe_checkpoint =
-						Some(StakingInfo { effective_time, amount, last_add_time: effective_time });
+					*maybe_checkpoint = Some(InvestingWeightInfo {
+						effective_time,
+						amount,
+						last_add_time: effective_time,
+					});
 				}
 				Ok::<(), DispatchError>(())
 			})?;
@@ -704,19 +704,28 @@ pub mod pallet {
 				return Ok(());
 			} else {
 				if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
-					let mut claim_duration: BlockNumberFor<T>;
+					let mut claim_duration: u128;
 					if terminated {
 						// This means the effective investing duration is beyond the pool lifespan
 						// i.e. users who do not claim reward after the pool end are still considering as in-pool contributing their weights
-						claim_duration = current_block - start_time;
+						claim_duration = (current_block - start_time)
+							.try_into()
+							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 					} else {
 						// Only counting the investing weight during the epoch
 						// Claim from start_time until the end_time
-						claim_duration = end_time - start_time;
+						claim_duration = (end_time - start_time)
+							.try_into()
+							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 					}
 
-					let claim_weight =
-						claim_duration.checked_mul(amount).ok_or(ArithmeticError::Overflow)?;
+					let claim_weight: u128 = claim_duration
+						.checked_mul(
+							&amount
+								.try_into()
+								.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
+						)
+						.ok_or(ArithmeticError::Overflow)?;
 					let proportion = Perquintill::from_rational(
 						claim_weight,
 						ncp.weight_force(current_block)
@@ -785,7 +794,7 @@ pub mod pallet {
 				// Do nothing
 				return Ok(());
 			} else {
-				if let Some(mut scp) = <StableIvestingPoolCheckpoint<T>>::get(pool_id) {
+				if let Some(mut scp) = <StableInvestingPoolCheckpoint<T>>::get(pool_id) {
 					// Must exist
 					let total_investing = scp.amount;
 					// Claim until the claimed_until_epoch
@@ -843,7 +852,7 @@ pub mod pallet {
 		pub fn inject_investment(
 			pool_id: InvestingPoolIndex,
 			investments: Vec<(T::AccountId, BalanceOf<T>)>,
-		) {
+		) -> DispatchResult {
 			let setting =
 				<InvestingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			let effective_time = Self::get_epoch_start_time(pool_id, One::one());
@@ -864,6 +873,7 @@ pub mod pallet {
 				Self::do_can_add(i.1, effective_time)?;
 				Self::do_stable_add(pool_id, i.1, effective_time)
 			}
+			Ok(())
 		}
 	}
 
@@ -871,8 +881,8 @@ pub mod pallet {
 		fn inject_investment(
 			pool_id: InvestingPoolIndex,
 			investments: Vec<(T::AccountId, BalanceOf<T>)>,
-		) {
-			Self::inject_investment(pool_id, investments);
+		) -> DispatchResult {
+			Self::inject_investment(pool_id, investments)
 		}
 	}
 }
