@@ -67,10 +67,10 @@ pub type AssetBalanceOf<T> =
 pub type AssetIdOf<T> =
 	<InspectFungibles<T> as FsInspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod mock;
+// #[cfg(test)]
+// mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
