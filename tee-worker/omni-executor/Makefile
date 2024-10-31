@@ -23,7 +23,7 @@ endif
 # of the DEBUG setting is to control Gramine's loglevel.
 -include $(SELF_EXE).d # See also: .cargo/config.toml
 $(SELF_EXE): Cargo.toml
-	cargo build --release
+	cargo build --release --features=gramine-quote
 
 omni-executor.manifest: omni-executor.manifest.template
 	gramine-manifest \
@@ -73,6 +73,6 @@ start-local:
 stop-local:
 	docker compose down
 
-.PHONY: get-omni-pallet-metadata
-get-omni-pallet-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount > parentchain/artifacts/rococo-omni-account.scale
+.PHONY: get-pallet-metadata
+get-pallet-metadata:
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/artifacts/rococo-omni-account.scale

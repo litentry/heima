@@ -72,6 +72,7 @@ pub enum WorkerType {
     #[default]
     Identity,
     BitAcross,
+    OmniExecutor,
 }
 
 #[derive(Encode, Decode, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
