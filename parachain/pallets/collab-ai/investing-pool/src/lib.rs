@@ -325,9 +325,12 @@ pub mod pallet {
 			target_effective_time: BlockNumberFor<T>,
 			amount: BalanceOf<T>,
 		},
-		NativeRewardClaimed {
+		CANRewardClaimed {
 			who: T::AccountId,
-			until_time: BlockNumberFor<T>,
+			claim_duration: BlockNumberFor<T>,
+			// Investing amount related of claim
+			invest_amount: BalanceOf<T>,
+			// Amount of reward
 			reward_amount: BalanceOf<T>,
 		},
 		StableRewardClaimed {
@@ -395,7 +398,7 @@ pub mod pallet {
 			for i in asset_id_vec.iter() {
 				<T::Fungibles as FsCreate<<T as frame_system::Config>::AccountId>>::create(
 					i.clone(),
-					admin,
+					admin.clone(),
 					true,
 					One::one(),
 				);
@@ -513,7 +516,7 @@ pub mod pallet {
 				T::Fungibles::mint_into(new_asset_id, &source, amount)?;
 			}
 			Self::do_can_claim(
-				source,
+				source.clone(),
 				pool_id,
 				amount,
 				Self::get_epoch_start_time(pool_id, token_start_epoch)?,
@@ -659,6 +662,7 @@ pub mod pallet {
 				}
 				Ok::<(), DispatchError>(())
 			})?;
+			Ok(())
 		}
 
 		// For stable_investing
@@ -706,26 +710,22 @@ pub mod pallet {
 				return Ok(());
 			} else {
 				if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
-					let mut claim_duration: u128;
+					let mut claim_duration: BlockNumberFor<T>;
 					if terminated {
 						// This means the effective investing duration is beyond the pool lifespan
 						// i.e. users who do not claim reward after the pool end are still considering as in-pool contributing their weights
-						claim_duration = (current_block - start_time)
-							.try_into()
-							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+						claim_duration = current_block - start_time;
 					} else {
 						// Only counting the investing weight during the epoch
 						// Claim from start_time until the end_time
-						claim_duration = (end_time - start_time)
-							.try_into()
-							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+						claim_duration = end_time - start_time;
 					}
 
 					let claim_weight: u128 = claim_duration
+						.try_into()
+						.or(Error::<T>::TypeIncompatibleOrArithmeticError)?
 						.checked_mul(
-							&amount
-								.try_into()
-								.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
+							&amount.try_into().or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
 						)
 						.ok_or(ArithmeticError::Overflow)?;
 					let proportion = Perquintill::from_rational(
@@ -767,7 +767,7 @@ pub mod pallet {
 					Self::deposit_event(Event::<T>::CANRewardClaimed {
 						who,
 						claim_duration,
-						amount,
+						invest_amount: amount,
 						reward_amount: distributed_reward,
 					});
 				}
@@ -788,6 +788,8 @@ pub mod pallet {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let beneficiary_account: T::AccountId = Self::stable_token_beneficiary_account();
 			let aiusd_asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
+			let amount_u128 =
+				amount.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 
 			let total_distributed_reward: BalanceOf<T> = Zero::zero();
 
@@ -798,14 +800,17 @@ pub mod pallet {
 			} else {
 				if let Some(mut scp) = <StableInvestingPoolCheckpoint<T>>::get(pool_id) {
 					// Must exist
-					let total_investing = scp.amount;
+					let total_investing: u128 = scp
+						.amount
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					// Claim until the claimed_until_epoch
 					// loop through each epoch
 					for i in start_epoch..(end_epoch + 1) {
 						let reward_pool = <StableInvestingPoolEpochReward<T>>::get(pool_id, i)
 							.ok_or(Error::<T>::EpochRewardNotUpdated)?;
 
-						let proportion = Perquintill::from_rational(amount, total_investing);
+						let proportion = Perquintill::from_rational(amount_u128, total_investing);
 
 						let reward_pool_u128: u128 = reward_pool
 							.try_into()
