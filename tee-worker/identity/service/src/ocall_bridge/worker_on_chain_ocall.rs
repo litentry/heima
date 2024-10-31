@@ -18,9 +18,11 @@
 
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
-use itp_api_client_types::{ExtrinsicReport, ParentchainApi, XtStatus};
 use itp_enclave_api::enclave_base::EnclaveBase;
-use itp_node_api::{api_client::AccountApi, node_api_factory::CreateNodeApi};
+use itp_node_api::{
+	api_client::{AccountApi, ExtrinsicReport, ParentchainApi, XtStatus},
+	node_api_factory::CreateNodeApi,
+};
 use itp_types::{
 	parentchain::{AccountId, ParentchainId},
 	WorkerRequest, WorkerResponse,

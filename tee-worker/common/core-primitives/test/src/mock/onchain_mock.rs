@@ -18,7 +18,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_api_client_types::{ExtrinsicReport, XtStatus};
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
 	EnclaveSidechainOCallApi,

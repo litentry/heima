@@ -71,7 +71,6 @@ fn send_to_parentchain(
 
 	match oc_api.send_to_parentchain(extrinsics_encoded_vec, parentchain_id, watch_until) {
 		Ok(r) => {
-			log::info!(">>> send_to_parentchain response size: {:?}", r.len());
 			let resp_slice = unsafe { slice::from_raw_parts_mut(response, resp_size as usize) };
 			if let Err(e) = write_slice_and_whitespace_pad(resp_slice, r) {
 				error!("Failed to transfer send_to_parentchain response to o-call buffer: {:?}", e);

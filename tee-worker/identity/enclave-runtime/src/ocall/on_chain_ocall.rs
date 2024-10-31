@@ -19,7 +19,7 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
-use itp_api_client_types::{ExtrinsicReport, XtStatus};
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{EnclaveOnChainOCallApi, Error, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
 use itp_types::{
@@ -44,7 +44,10 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		let parentchain_id_encoded = parentchain_id.encode();
 		let watch_until_encoded = watch_until.encode();
 		let response_size = match watch_until {
-			Some(_) => extrinsics.len() * size_of::<ExtrinsicReport<H256>>(),
+			Some(_) => extrinsics
+				.len()
+				.checked_mul(size_of::<ExtrinsicReport<H256>>())
+				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?,
 			None => size_of::<Vec<u8>>(),
 		};
 		let mut response: Vec<u8> = vec![0; response_size];

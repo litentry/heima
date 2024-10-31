@@ -18,7 +18,7 @@
 
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
-use itp_api_client_types::{ExtrinsicReport, XtStatus};
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{
 	EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
 };

@@ -64,12 +64,12 @@ use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 	WebSocketServer,
 };
-use itp_api_client_types::XtStatus;
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{
-	pallet_omni_account::OmniAccountCallIndexes, provider::AccessNodeMetadata,
+use itp_node_api::{
+	api_client::XtStatus,
+	metadata::{pallet_omni_account::OmniAccountCallIndexes, provider::AccessNodeMetadata},
 };
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
