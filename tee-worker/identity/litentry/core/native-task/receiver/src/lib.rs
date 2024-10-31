@@ -128,6 +128,96 @@ pub fn run_native_task_receiver<
 	log::warn!("Native task receiver stopped");
 }
 
+fn handle_request<
+	ShieldingKeyRepository,
+	AuthorApi,
+	StfEnclaveSigning,
+	OCallApi,
+	ExtrinsicFactory,
+	NodeMetadataRepo,
+	Aes256KeyRepository,
+>(
+	request: &mut AesRequest,
+	context: Arc<
+		NativeTaskContext<
+			ShieldingKeyRepository,
+			AuthorApi,
+			StfEnclaveSigning,
+			OCallApi,
+			ExtrinsicFactory,
+			NodeMetadataRepo,
+			Aes256KeyRepository,
+		>,
+	>,
+) -> Result<TrustedCall, &'static str>
+where
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OCallApi:
+		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
+	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
+	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+{
+	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
+	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
+		Ok(value) => value,
+		Err(e) => {
+			let res: Result<(), NativeTaskError> =
+				Err(NativeTaskError::ShieldingKeyRetrievalFailed(format!("{}", e)));
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return Err("Shielding key retrieval failed")
+		},
+	};
+	let tca: TrustedCallAuthenticated = match request
+		.decrypt(Box::new(enclave_shielding_key))
+		.ok()
+		.and_then(|v| {
+			TrustedOperation::<TrustedCallAuthenticated, Getter>::decode(&mut v.as_slice()).ok()
+		})
+		.and_then(|top| top.to_call().cloned())
+	{
+		Some(tca) => tca,
+		None => {
+			let res: Result<(), NativeTaskError> =
+				Err(NativeTaskError::RequestPayloadDecodingFailed);
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return Err("Request payload decoding failed")
+		},
+	};
+	let mrenclave = match context.ocall_api.get_mrenclave_of_self() {
+		Ok(m) => m.m,
+		Err(_) => {
+			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MrEnclaveRetrievalFailed);
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return Err("MrEnclave retrieval failed")
+		},
+	};
+
+	let authentication_valid = match tca.authentication {
+		TCAuthentication::Web3(signature) => verify_tca_web3_authentication(
+			&signature,
+			&tca.call,
+			tca.nonce,
+			&mrenclave,
+			&request.shard,
+		),
+		TCAuthentication::Email(verification_code) =>
+			verify_tca_email_authentication(&tca.call, verification_code),
+	};
+
+	if !authentication_valid {
+		let res: Result<(), NativeTaskError> =
+			Err(NativeTaskError::AuthenticationVerificationFailed);
+		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+		return Err("Authentication verification failed")
+	}
+
+	Ok(tca.call)
+}
+
 fn handle_trusted_call<
 	ShieldingKeyRepository,
 	AuthorApi,
@@ -324,96 +414,6 @@ fn handle_trusted_call<
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 		},
 	}
-}
-
-fn handle_request<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
->(
-	request: &mut AesRequest,
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-		>,
-	>,
-) -> Result<TrustedCall, &'static str>
-where
-	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-{
-	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
-	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
-		Ok(value) => value,
-		Err(e) => {
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::ShieldingKeyRetrievalFailed(format!("{}", e)));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("Shielding key retrieval failed")
-		},
-	};
-	let tca: TrustedCallAuthenticated = match request
-		.decrypt(Box::new(enclave_shielding_key))
-		.ok()
-		.and_then(|v| {
-			TrustedOperation::<TrustedCallAuthenticated, Getter>::decode(&mut v.as_slice()).ok()
-		})
-		.and_then(|top| top.to_call().cloned())
-	{
-		Some(tca) => tca,
-		None => {
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::RequestPayloadDecodingFailed);
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("Request payload decoding failed")
-		},
-	};
-	let mrenclave = match context.ocall_api.get_mrenclave_of_self() {
-		Ok(m) => m.m,
-		Err(_) => {
-			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MrEnclaveRetrievalFailed);
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("MrEnclave retrieval failed")
-		},
-	};
-
-	let authentication_valid = match tca.authentication {
-		TCAuthentication::Web3(signature) => verify_tca_web3_authentication(
-			&signature,
-			&tca.call,
-			tca.nonce,
-			&mrenclave,
-			&request.shard,
-		),
-		TCAuthentication::Email(verification_code) =>
-			verify_tca_email_authentication(&tca.call, verification_code),
-	};
-
-	if !authentication_valid {
-		let res: Result<(), NativeTaskError> =
-			Err(NativeTaskError::AuthenticationVerificationFailed);
-		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-		return Err("Authentication verification failed")
-	}
-
-	Ok(tca.call)
 }
 
 fn create_member_account<Aes256KeyRepository>(
