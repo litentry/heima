@@ -40,12 +40,6 @@ use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
 
 use pallet_collab_ai_common::*;
 
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
-
 #[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
 pub struct InvestingWeightInfo<BlockNumber, Balance> {
 	// For a single position or
