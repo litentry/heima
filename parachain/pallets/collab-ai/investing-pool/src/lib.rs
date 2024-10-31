@@ -19,7 +19,6 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		tokens::{
-			fungible::{Inspect as FInspect, Mutate as FMutate},
 			fungibles::{Create as FsCreate, Inspect as FsInspect, Mutate as FsMutate},
 			Fortitude, Precision, Preservation,
 		},
@@ -31,12 +30,11 @@ use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub,
-		One, Zero,
+		AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, One, Zero,
 	},
 	ArithmeticError, Perquintill, Saturating,
 };
-use sp_std::{collections::vec_deque::VecDeque, fmt::Debug, prelude::*};
+use sp_std::{fmt::Debug, prelude::*};
 
 use pallet_collab_ai_common::*;
 
@@ -371,7 +369,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		/// Weight: see `begin_block`
-		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			Weight::zero()
 		}
 	}
@@ -721,12 +719,15 @@ pub mod pallet {
 						claim_duration = end_time - start_time;
 					}
 
-					let claim_weight: u128 = claim_duration
+					let claim_duration_u128 = claim_duration
 						.try_into()
-						.or(Error::<T>::TypeIncompatibleOrArithmeticError)?
-						.checked_mul(
-							&amount.try_into().or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
-						)
+						.or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+					let amount_u128 = amount
+						.clone()
+						.try_into()
+						.or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+					let claim_weight: u128 = claim_duration_u128
+						.checked_mul(amount_u128)
 						.ok_or(ArithmeticError::Overflow)?;
 					let proportion = Perquintill::from_rational(
 						claim_weight,
