@@ -4338,7 +4338,6 @@ name = "itp-test"
 version = "0.1.0"
 dependencies = [
  "hex",
- "itp-api-client-types",
  "itp-node-api",
  "itp-node-api-metadata-provider",
  "itp-ocall-api",

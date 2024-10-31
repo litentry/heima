@@ -19,6 +19,7 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{EnclaveOnChainOCallApi, Error, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
 use itp_types::{
@@ -29,18 +30,27 @@ use itp_types::{
 use log::*;
 use sgx_types::*;
 use sp_runtime::{traits::Header, OpaqueExtrinsic};
-use std::vec::Vec;
+use std::{mem::size_of, vec::Vec};
 
 impl EnclaveOnChainOCallApi for OcallApi {
 	fn send_to_parentchain(
 		&self,
 		extrinsics: Vec<OpaqueExtrinsic>,
 		parentchain_id: &ParentchainId,
-		await_each_inclusion: bool,
-	) -> SgxResult<()> {
+		watch_until: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let extrinsics_encoded = extrinsics.encode();
 		let parentchain_id_encoded = parentchain_id.encode();
+		let watch_until_encoded = watch_until.encode();
+		let response_size = match watch_until {
+			Some(_) => extrinsics
+				.len()
+				.checked_mul(size_of::<ExtrinsicReport<H256>>())
+				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?,
+			None => size_of::<Vec<u8>>(),
+		};
+		let mut response: Vec<u8> = vec![0; response_size];
 
 		let res = unsafe {
 			ffi::ocall_send_to_parentchain(
@@ -49,14 +59,23 @@ impl EnclaveOnChainOCallApi for OcallApi {
 				extrinsics_encoded.len() as u32,
 				parentchain_id_encoded.as_ptr(),
 				parentchain_id_encoded.len() as u32,
-				await_each_inclusion.into(),
+				watch_until_encoded.as_ptr(),
+				watch_until_encoded.len() as u32,
+				response.as_mut_ptr(),
+				response_size as u32,
 			)
 		};
 
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 
-		Ok(())
+		let decoded_response: Vec<ExtrinsicReport<H256>> = Decode::decode(&mut response.as_slice())
+			.map_err(|e| {
+				error!("Failed to decode ExtrinsicReport: {}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			})?;
+
+		Ok(decoded_response)
 	}
 
 	fn worker_request<V: Encode + Decode>(
