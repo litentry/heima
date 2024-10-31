@@ -185,11 +185,23 @@ impl<AssetId: From<u128> + Into<u128>> InvestingPoolAssetIdGenerator<AssetId> {
 		Some(vec)
 	}
 
-	pub fn get_epoch_token(pool_index: InvestingPoolIndex, epoch: u128) -> Option<AssetId> {
+	pub fn get_initial_epoch_token(pool_index: InvestingPoolIndex, epoch: u128) -> Option<AssetId> {
 		let pool_index_prefix = pool_index.checked_mul(INVESTING_POOL_INDEX_SHIFTER)?;
 
 		let end_epoch_suffix = epoch.checked_mul(INVESTING_POOL_END_EPOCH_SHIFTER)?;
 		let infix = 1u128.checked_mul(INVESTING_POOL_START_EPOCH_SHIFTER)?;
+		Some(pool_index_prefix.checked_add(infix)?.checked_add(end_epoch_suffix)?.into())
+	}
+
+	pub fn get_intermediate_epoch_token(
+		pool_index: InvestingPoolIndex,
+		start_epoch: u128,
+		end_epoch: u128,
+	) -> Option<AssetId> {
+		let pool_index_prefix = pool_index.checked_mul(INVESTING_POOL_INDEX_SHIFTER)?;
+
+		let end_epoch_suffix = end_epoch.checked_mul(INVESTING_POOL_END_EPOCH_SHIFTER)?;
+		let infix = start_epoch.checked_mul(INVESTING_POOL_START_EPOCH_SHIFTER)?;
 		Some(pool_index_prefix.checked_add(infix)?.checked_add(end_epoch_suffix)?.into())
 	}
 

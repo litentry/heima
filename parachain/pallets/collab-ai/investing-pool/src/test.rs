@@ -176,12 +176,12 @@ fn stake_successful_and_failed() {
 		let global_investing_info = InvestingPool::native_checkpoint().unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 301u64, amount: 2000u64, last_add_time: 301u64 }
+			InvestingWeightInfo { effective_time: 301u64, amount: 2000u64, last_add_time: 301u64 }
 		);
 		let user_a_investing_info = InvestingPool::user_native_checkpoint(USER_A).unwrap();
 		assert_eq!(
 			user_a_investing_info,
-			CANWeightedInfo { effective_time: 301u64, amount: 2000u64, last_add_time: 301u64 }
+			InvestingWeightInfo { effective_time: 301u64, amount: 2000u64, last_add_time: 301u64 }
 		);
 		let pending_set_up = InvestingPool::pending_setup();
 		assert_eq!(pending_set_up.len(), 1);
@@ -191,10 +191,10 @@ fn stake_successful_and_failed() {
 		// investing reward
 		assert_eq!(
 			*pending_set_up_element,
-			CANWeightedInfoWithOwner {
+			InvestingWeightInfoWithOwner {
 				who: USER_A,
 				pool_id: 1u128,
-				investing_info: CANWeightedInfo {
+				investing_info: InvestingWeightInfo {
 					effective_time: 600u64,
 					amount: 2000u64,
 					last_add_time: 600u64
@@ -219,19 +219,19 @@ fn stake_successful_and_failed() {
 		// Synthetic (301, 2000), (411, 1000) = (337.6666, 3000)
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 337u64, amount: 3000u64, last_add_time: 411u64 }
+			InvestingWeightInfo { effective_time: 337u64, amount: 3000u64, last_add_time: 411u64 }
 		);
 		// user a unchanged
 		let user_a_investing_info = InvestingPool::user_native_checkpoint(USER_A).unwrap();
 		assert_eq!(
 			user_a_investing_info,
-			CANWeightedInfo { effective_time: 301u64, amount: 2000u64, last_add_time: 301u64 }
+			InvestingWeightInfo { effective_time: 301u64, amount: 2000u64, last_add_time: 301u64 }
 		);
 		// user b
 		let user_b_investing_info = InvestingPool::user_native_checkpoint(USER_B).unwrap();
 		assert_eq!(
 			user_b_investing_info,
-			CANWeightedInfo { effective_time: 411u64, amount: 1000u64, last_add_time: 411u64 }
+			InvestingWeightInfo { effective_time: 411u64, amount: 1000u64, last_add_time: 411u64 }
 		);
 		// Pending set up storage change
 		let pending_set_up = InvestingPool::pending_setup();
@@ -244,10 +244,10 @@ fn stake_successful_and_failed() {
 		// investing reward
 		assert_eq!(
 			*pending_set_up_element,
-			CANWeightedInfoWithOwner {
+			InvestingWeightInfoWithOwner {
 				who: USER_B,
 				pool_id: 1u128,
-				investing_info: CANWeightedInfo {
+				investing_info: InvestingWeightInfo {
 					effective_time: 700u64,
 					amount: 1000u64,
 					last_add_time: 700u64
@@ -305,13 +305,13 @@ fn solve_pending_stake_and_hook_works() {
 		let global_investing_info = InvestingPool::stable_investing_pool_checkpoint(1u128).unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 600u64, amount: 2000u64, last_add_time: 600u64 }
+			InvestingWeightInfo { effective_time: 600u64, amount: 2000u64, last_add_time: 600u64 }
 		);
 		let user_a_investing_info =
 			InvestingPool::user_stable_investing_pool_checkpoint(USER_A, 1u128).unwrap();
 		assert_eq!(
 			user_a_investing_info,
-			CANWeightedInfo { effective_time: 600u64, amount: 2000u64, last_add_time: 600u64 }
+			InvestingWeightInfo { effective_time: 600u64, amount: 2000u64, last_add_time: 600u64 }
 		);
 
 		// Second user B stake
@@ -331,7 +331,7 @@ fn solve_pending_stake_and_hook_works() {
 		let global_investing_info = InvestingPool::stable_investing_pool_checkpoint(1u128).unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 600u64, amount: 2000u64, last_add_time: 600u64 }
+			InvestingWeightInfo { effective_time: 600u64, amount: 2000u64, last_add_time: 600u64 }
 		);
 		// User b investing is still none
 		assert!(InvestingPool::user_stable_investing_pool_checkpoint(USER_B, 1u128).is_none());
@@ -354,14 +354,14 @@ fn solve_pending_stake_and_hook_works() {
 		// The effective time is delayed accordingly
 		assert_eq!(
 			user_b_investing_info,
-			CANWeightedInfo { effective_time: 910u64, amount: 1000u64, last_add_time: 910u64 }
+			InvestingWeightInfo { effective_time: 910u64, amount: 1000u64, last_add_time: 910u64 }
 		);
 		// Global investing check
 		// (600, 2000), (910, 1000) -> (703.333, 3000)
 		let global_investing_info = InvestingPool::stable_investing_pool_checkpoint(1u128).unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 703u64, amount: 3000u64, last_add_time: 910u64 }
+			InvestingWeightInfo { effective_time: 703u64, amount: 3000u64, last_add_time: 910u64 }
 		);
 	})
 }
@@ -424,19 +424,19 @@ fn claim_native_successful_and_failed() {
 		let user_a_investing_info = InvestingPool::user_native_checkpoint(USER_A).unwrap();
 		assert_eq!(
 			user_a_investing_info,
-			CANWeightedInfo { effective_time: 501u64, amount: 4000u64, last_add_time: 401u64 }
+			InvestingWeightInfo { effective_time: 501u64, amount: 4000u64, last_add_time: 401u64 }
 		);
 		// check global
 		let global_investing_info = InvestingPool::native_checkpoint().unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 481u64, amount: 5000u64, last_add_time: 401u64 }
+			InvestingWeightInfo { effective_time: 481u64, amount: 5000u64, last_add_time: 401u64 }
 		);
 
 		// Can not claim future
 		assert_noop!(
 			InvestingPool::claim_native(RuntimeOrigin::signed(USER_A), 602u64),
-			Error::<Test>::CannotClaimFuture
+			Error::<Test>::EpochRewardNotUpdated
 		);
 	})
 }
@@ -496,13 +496,13 @@ fn claim_stable_successful_and_failed() {
 			InvestingPool::user_stable_investing_pool_checkpoint(USER_A, 1u128).unwrap();
 		assert_eq!(
 			user_a_investing_info,
-			CANWeightedInfo { effective_time: 650u64, amount: 2000u64, last_add_time: 600u64 }
+			InvestingWeightInfo { effective_time: 650u64, amount: 2000u64, last_add_time: 600u64 }
 		);
 		// check global
 		let global_investing_info = InvestingPool::stable_investing_pool_checkpoint(1u128).unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 650u64, amount: 2000u64, last_add_time: 600u64 }
+			InvestingWeightInfo { effective_time: 650u64, amount: 2000u64, last_add_time: 600u64 }
 		);
 
 		fast_forward_to(710u64);
@@ -540,13 +540,13 @@ fn claim_stable_successful_and_failed() {
 			InvestingPool::user_stable_investing_pool_checkpoint(USER_A, 1u128).unwrap();
 		assert_eq!(
 			user_a_investing_info,
-			CANWeightedInfo { effective_time: 750u64, amount: 4000u64, last_add_time: 700u64 }
+			InvestingWeightInfo { effective_time: 750u64, amount: 4000u64, last_add_time: 700u64 }
 		);
 		// check global
 		let global_investing_info = InvestingPool::stable_investing_pool_checkpoint(1u128).unwrap();
 		assert_eq!(
 			global_investing_info,
-			CANWeightedInfo { effective_time: 740u64, amount: 5000u64, last_add_time: 700u64 }
+			InvestingWeightInfo { effective_time: 740u64, amount: 5000u64, last_add_time: 700u64 }
 		);
 	})
 }
