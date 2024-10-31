@@ -404,12 +404,23 @@ fn handle_trusted_call<
 		},
 	};
 
-	// TODO: use watch_until
-	match context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, None) {
-		Ok(_) => {
-			let res: Result<(), NativeTaskError> = Ok(());
-			context.author_api.send_rpc_response(connection_hash, res.encode(), true);
-		},
+	match context.ocall_api.send_to_parentchain(
+		extrinsic,
+		&ParentchainId::Litentry,
+		Some(XtStatus::Finalized),
+	) {
+		Ok(extrinsic_reports) =>
+			if let Some(report) = extrinsic_reports.first() {
+				let res: Result<ExtrinsicReport<H256>, NativeTaskError> = Ok(report.clone());
+				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			} else {
+				log::error!("Failed to get extrinsic report");
+				let res: Result<(), NativeTaskError> =
+					Err(NativeTaskError::ExtrinsicSendingFailed(
+						"Failed to get extrinsic report".to_string(),
+					));
+				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			},
 		Err(e) => {
 			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
 			let res: Result<(), NativeTaskError> =
