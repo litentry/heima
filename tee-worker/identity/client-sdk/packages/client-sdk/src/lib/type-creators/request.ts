@@ -50,7 +50,7 @@ export async function createRequestType(
 
   let operationU8a = new Uint8Array();
 
-  if (call.isRequestIntent) {
+  if (isNativeRequest(call)) {
     const callAuthenticated = api.createType('TrustedCallAuthenticated', {
       call,
       nonce,
@@ -105,4 +105,8 @@ export async function createRequestType(
     key: compactAddLength(encryptedKey),
     payload: encryptedPayload,
   });
+}
+
+function isNativeRequest(call: TrustedCall): boolean {
+  return call.isRequestIntent || call.isCreateAccountStore;
 }

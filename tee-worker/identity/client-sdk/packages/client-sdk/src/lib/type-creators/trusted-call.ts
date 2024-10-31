@@ -72,6 +72,11 @@ type RequestIntentParams = {
   intent: Intent;
 };
 
+// LitentryIdentity
+type RequestCreateAccountStoreParams = {
+  who: LitentryIdentity;
+};
+
 /**
  * Creates the TrustedCall for the given method and provide the `param's` types expected for them.
  *
@@ -115,6 +120,13 @@ export async function createTrustedCallType(
   data: {
     method: 'request_intent';
     params: RequestIntentParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'create_account_store';
+    params: RequestCreateAccountStoreParams;
   }
 ): Promise<{ call: TrustedCall; key: CryptoKey }>;
 export async function createTrustedCallType(
@@ -245,6 +257,19 @@ export async function createTrustedCallType(
     return { call, key };
   }
 
+  if (isRequestCreateAccountStoreParams(method, params)) {
+    const { who } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.create_account_store]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.create_account_store,
+        who
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
   throw new Error(`trusted call method: ${data.method} is not supported`);
 }
 
@@ -284,4 +309,10 @@ function isRequestIntentCall(
   params: Record<string, unknown>
 ): params is RequestIntentParams {
   return method === 'request_intent';
+}
+function isRequestCreateAccountStoreParams(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestCreateAccountStoreParams {
+  return method === 'create_account_store';
 }

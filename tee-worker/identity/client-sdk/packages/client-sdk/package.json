@@ -8,8 +8,8 @@
     "@polkadot/rpc-provider": "^10.9.1"
   },
   "peerDependencies": {
-    "@litentry/parachain-api": "0.9.20-next.3",
-    "@litentry/sidechain-api": "0.9.20-next.3",
+    "@litentry/parachain-api": "0.9.20-next.4",
+    "@litentry/sidechain-api": "0.9.20-next.4",
     "@litentry/chaindata": "*",
     "@polkadot/api": "^10.9.1",
     "@polkadot/types": "^10.9.1",
