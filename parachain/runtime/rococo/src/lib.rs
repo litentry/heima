@@ -25,8 +25,10 @@
 extern crate frame_benchmarking;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	construct_runtime, parameter_types,
+	dynamic_params::{dynamic_pallet_params, dynamic_params},
 	traits::{
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
 		EnsureOrigin, Everything, FindAuthor, InstanceFilter, OnFinalize, SortedMembers,
@@ -35,13 +37,15 @@ use frame_support::{
 	weights::{constants::RocksDbWeight, ConstantMultiplier, Weight},
 	ConsensusEngineId, PalletId,
 };
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, pallet_prelude::BlockNumberFor};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 use runtime_common::EnsureEnclaveSigner;
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
+
+use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -74,7 +78,7 @@ pub use core_primitives::{
 pub use runtime_common::currency::*;
 
 use runtime_common::{
-	impl_runtime_transaction_payment_fees, prod_or_fast, BlockHashCount, BlockLength,
+	impl_runtime_transaction_payment_fees, prod_or_fast, BlockHashCount, BlockLength, MessageQueue,
 	CouncilInstance, CouncilMembershipInstance, DeveloperCommitteeInstance,
 	DeveloperCommitteeMembershipInstance, EnsureOmniAccount, EnsureRootOrAllCouncil,
 	EnsureRootOrAllTechnicalCommittee, EnsureRootOrHalfCouncil, EnsureRootOrHalfTechnicalCommittee,
@@ -437,8 +441,18 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRootOrAllCouncil;
-	type BaseDeposit = PreimageBaseDeposit;
-	type ByteDeposit = PreimageByteDeposit;
+	// type BaseDeposit = PreimageBaseDeposit;
+	// type ByteDeposit = PreimageByteDeposit;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<
+			dynamic_params::preimage::BaseDeposit,
+			dynamic_params::preimage::ByteDeposit,
+			Balance,
+		>,
+	>;
 }
 
 parameter_types! {
@@ -458,8 +472,9 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
-	type MaxHolds = ();
+	// type MaxHolds = ();
 	type MaxFreezes = ();
 }
 
@@ -684,6 +699,9 @@ impl pallet_treasury::Config for Runtime {
 	type SpendFunds = Bounties;
 	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
 	type MaxApprovals = ConstU32<100>;
+	type AssetKind = u32;
+	type Beneficiary = AccountId;
+	type BeneficiaryLookup = Indices;
 }
 
 pub struct CouncilProvider;
@@ -735,6 +753,7 @@ impl pallet_tips::Config for Runtime {
 	type TipFindersFee = TipFindersFee;
 	type TipReportDepositBase = TipReportDepositBase;
 	type WeightInfo = ();
+	type MaxTipAmount = ConstU128<{ 500 * DOLLARS }>;
 }
 
 impl pallet_identity::Config for Runtime {
@@ -771,18 +790,21 @@ impl pallet_account_fix::Config for Runtime {
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
+	type WeightInfo = ();
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
-	type DmpMessageHandler = DmpQueue;
+	// type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -791,21 +813,26 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	// type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
 	// We use pallet_xcm to confirm the version of xcm
 	type VersionWrapper = PolkadotXcm;
-	type ExecuteOverweightOrigin = EnsureRootOrAllCouncil;
+	// type ExecuteOverweightOrigin = EnsureRootOrAllCouncil;
 	type ControllerOrigin = EnsureRootOrAllCouncil;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
 	type PriceForSiblingDelivery = ();
+	// Enqueue XCMP messages from siblings for later processing.
+	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ExecuteOverweightOrigin = EnsureRootOrAllCouncil;
+	// type XcmExecutor = XcmExecutor<XcmConfig>;
+	// type ExecuteOverweightOrigin = EnsureRootOrAllCouncil;
+	type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
+	type DmpSink = ();
 }
 
 parameter_types! {
@@ -831,6 +858,7 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	type SlotDuration = pallet_aura::MinimumPeriodTimesTwo<Self>;
 }
 
 parameter_types! {
@@ -905,6 +933,7 @@ impl pallet_vesting::Config for Runtime {
 	// highest number of schedules that encodes less than 2^10.
 	const MAX_VESTING_SCHEDULES: u32 = 28;
 	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
+	type BlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 }
 
 parameter_types! {
@@ -1113,7 +1142,7 @@ where
 	{
 		if let Some(author_index) = pallet_aura::Pallet::<T>::find_author(digests) {
 			let authority_id =
-				<pallet_aura::Pallet<T>>::authorities()[author_index as usize].clone();
+			pallet_aura::Authorities::<Runtime>::get()[author_index as usize].clone();
 			return Some(H160::from_slice(&authority_id.encode()[4..24]));
 		}
 
@@ -1144,6 +1173,7 @@ impl pallet_evm::Config for Runtime {
 	// BlockGasLimit / MAX_POV_SIZE
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
+	type SuicideQuickClearLimit = ConstU32<0>;
 }
 
 parameter_types! {
@@ -1416,7 +1446,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -1489,7 +1519,7 @@ impl_runtime_apis! {
 		}
 
 		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
 
@@ -1779,6 +1809,7 @@ impl_runtime_apis! {
 		fn trace_transaction(
 			extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 			traced_transaction: &pallet_ethereum::Transaction,
+			header: &<Block as BlockT>::Header,
 		) -> Result<
 			(),
 			sp_runtime::DispatchError,
@@ -1808,6 +1839,7 @@ impl_runtime_apis! {
 		fn trace_block(
 			extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 			known_transactions: Vec<H256>,
+			header: &<Block as BlockT>::Header,
 		) -> Result<
 			(),
 			sp_runtime::DispatchError,
@@ -1836,6 +1868,91 @@ impl_runtime_apis! {
 			}
 
 			Ok(())
+		}
+		
+		fn trace_call(
+			header: &<Block as BlockT>::Header,
+			from: H160,
+			to: H160,
+			data: Vec<u8>,
+			value: U256,
+			gas_limit: U256,
+			max_fee_per_gas: Option<U256>,
+			max_priority_fee_per_gas: Option<U256>,
+			nonce: Option<U256>,
+			access_list: Option<Vec<(H160, Vec<H256>)>>,
+		) -> Result<(), sp_runtime::DispatchError> {
+			#[cfg(feature = "evm-tracing")]
+			{
+				use moonbeam_evm_tracer::tracer::EvmTracer;
+
+				// Initialize block: calls the "on_initialize" hook on every pallet
+				// in AllPalletsWithSystem.
+				Executive::initialize_block(header);
+
+				EvmTracer::new().trace(|| {
+					let is_transactional = false;
+					let validate = true;
+					let without_base_extrinsic_weight = true;
+
+
+					// Estimated encoded transaction size must be based on the heaviest transaction
+					// type (EIP1559Transaction) to be compatible with all transaction types.
+					let mut estimated_transaction_len = data.len() +
+					// pallet ethereum index: 1
+					// transact call index: 1
+					// Transaction enum variant: 1
+					// chain_id 8 bytes
+					// nonce: 32
+					// max_priority_fee_per_gas: 32
+					// max_fee_per_gas: 32
+					// gas_limit: 32
+					// action: 21 (enum varianrt + call address)
+					// value: 32
+					// access_list: 1 (empty vec size)
+					// 65 bytes signature
+					258;
+
+					if access_list.is_some() {
+						estimated_transaction_len += access_list.encoded_size();
+					}
+
+					let gas_limit = gas_limit.min(u64::MAX.into()).low_u64();
+
+					let (weight_limit, proof_size_base_cost) =
+						match <Runtime as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
+							gas_limit,
+							without_base_extrinsic_weight
+						) {
+							weight_limit if weight_limit.proof_size() > 0 => {
+								(Some(weight_limit), Some(estimated_transaction_len as u64))
+							}
+							_ => (None, None),
+						};
+
+					let _ = <Runtime as pallet_evm::Config>::Runner::call(
+						from,
+						to,
+						data,
+						value,
+						gas_limit,
+						max_fee_per_gas,
+						max_priority_fee_per_gas,
+						nonce,
+						access_list.unwrap_or_default(),
+						is_transactional,
+						validate,
+						weight_limit,
+						proof_size_base_cost,
+						<Runtime as pallet_evm::Config>::config(),
+					);
+				});
+				Ok(())
+			}
+			#[cfg(not(feature = "evm-tracing"))]
+			Err(sp_runtime::DispatchError::Other(
+				"Missing `evm-tracing` compile time feature flag.",
+			))
 		}
 	}
 

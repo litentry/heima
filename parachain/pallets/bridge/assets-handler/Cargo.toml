@@ -21,7 +21,7 @@ pallet-bridge-common = { workspace = true }
 pallet-chain-bridge = { workspace = true }
 pallet-parachain-staking = { workspace = true }
 sp-core = { workspace = true }
-sp-io = { workspace = true }
+sp-io = { workspace = true, features = ["disable_panic_handler"] }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 

@@ -18,7 +18,7 @@ sp-std = { workspace = true }
 
 [dev-dependencies]
 pallet-balances = { workspace = true, features = ["std"] }
-sp-io = { workspace = true, features = ["std"] }
+sp-io = { workspace = true, features = ["std", "disable_panic_handler"] }
 
 
 [features]

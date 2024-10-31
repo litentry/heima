@@ -20,7 +20,7 @@ core-primitives = { workspace = true }
 [dev-dependencies]
 pallet-balances = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }
-sp-io = { workspace = true, features = ["std"] }
+sp-io = { workspace = true, features = ["std", "disable_panic_handler"] }
 
 [features]
 default = ["std"]
