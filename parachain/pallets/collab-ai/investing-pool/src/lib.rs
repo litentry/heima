@@ -207,7 +207,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_assets::Config<AssetId = u128> {
+	pub trait Config: frame_system::Config {
 		/// Overarching event type
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -220,7 +220,9 @@ pub mod pallet {
 		/// Origin used to administer the investing pool
 		type InvestingPoolAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-		type Fungibles: FsMutate<Self::AccountId> + FsCreate<Self::AccountId>;
+		type Fungibles: FsMutate<Self::AccountId> + FsCreate<Self::AccountId>
+		where
+			FsMutate<Self::AccountId>::AssetId = u128;
 
 		/// The beneficiary PalletId, used fro deriving its sovereign account to hold assets of reward
 		#[pallet::constant]
