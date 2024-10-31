@@ -27,6 +27,7 @@ itp-stf-primitives = { workspace = true }
 itp-stf-state-handler = { workspace = true }
 itp-storage = { workspace = true }
 itp-types = { workspace = true }
+itp-api-client-types = { workspace = true }
 
 hex = { workspace = true }
 lc-teebag-storage = { workspace = true }

@@ -23,6 +23,7 @@ use alloc::{string::String, vec::Vec};
 use codec::{Decode, Encode};
 use core::result::Result as StdResult;
 use derive_more::{Display, From};
+use itp_api_client_types::{ExtrinsicReport, XtStatus};
 use itp_storage::Error as StorageError;
 use itp_types::{
 	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
@@ -95,8 +96,8 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		&self,
 		extrinsics: Vec<OpaqueExtrinsic>,
 		parentchain_id: &ParentchainId,
-		await_each_inclusion: bool,
-	) -> SgxResult<()>;
+		watch_until: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>>;
 
 	fn worker_request<V: Encode + Decode>(
 		&self,

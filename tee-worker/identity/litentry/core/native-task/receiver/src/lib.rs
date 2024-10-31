@@ -402,7 +402,8 @@ fn handle_trusted_call<
 		},
 	};
 
-	match context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, true) {
+	// TODO: use watch_until
+	match context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, None) {
 		Ok(_) => {
 			let res: Result<(), NativeTaskError> = Ok(());
 			context.author_api.send_rpc_response(connection_hash, res.encode(), true);

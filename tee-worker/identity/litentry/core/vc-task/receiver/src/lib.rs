@@ -615,7 +615,7 @@ where
 
 		context
 			.ocall_api
-			.send_to_parentchain(xt, &ParentchainId::Litentry, false)
+			.send_to_parentchain(xt, &ParentchainId::Litentry, None)
 			.map_err(|e| RequestVcErrorDetail::ExtrinsicSendingFailed(e.to_string()))?;
 
 		if let Err(e) = context

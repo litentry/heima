@@ -18,6 +18,7 @@
 
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
+use itp_api_client_types::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{
 	EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
 };
@@ -54,9 +55,9 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		&self,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 		_: &ParentchainId,
-		_: bool,
-	) -> SgxResult<()> {
-		Ok(())
+		_: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>> {
+		Ok(Vec::new())
 	}
 
 	fn worker_request<V: Encode + Decode>(

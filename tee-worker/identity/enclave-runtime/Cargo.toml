@@ -137,6 +137,7 @@ itp-top-pool = { package = "id-itp-top-pool", path = "../core-primitives/top-poo
 itp-top-pool-author = { package = "id-itp-top-pool-author", path = "../core-primitives/top-pool-author", default-features = false, features = ["sgx"] }
 itp-types = { path = "../../common/core-primitives/types", default-features = false }
 itp-utils = { path = "../../common/core-primitives/utils", default-features = false }
+itp-api-client-types = { path = "../../common/core-primitives/node-api/api-client-types", default-features = false }
 
 its-block-verification = { path = "../sidechain/block-verification", default-features = false }
 its-primitives = { path = "../sidechain/primitives", default-features = false }

@@ -64,6 +64,7 @@ use itc_tls_websocket_server::{
 	config_provider::FromFileConfigProvider, ws_server::TungsteniteWsServer, ConnectionToken,
 	WebSocketServer,
 };
+use itp_api_client_types::XtStatus;
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -585,7 +586,11 @@ pub(crate) fn upload_id_graph() -> EnclaveResult<()> {
 				.map_err(|_| Error::Other("failed to create extrinsic".into()))
 				.and_then(|ext| {
 					ocall_api
-						.send_to_parentchain(vec![ext], &ParentchainId::Litentry, true)
+						.send_to_parentchain(
+							vec![ext],
+							&ParentchainId::Litentry,
+							Some(XtStatus::InBlock),
+						)
 						.map_err(|_| Error::Other("failed to send extrinsic".into()))
 				})?;
 		}
@@ -597,7 +602,11 @@ pub(crate) fn upload_id_graph() -> EnclaveResult<()> {
 			.map_err(|_| Error::Other("failed to create extrinsic".into()))
 			.and_then(|ext| {
 				ocall_api
-					.send_to_parentchain(vec![ext], &ParentchainId::Litentry, true)
+					.send_to_parentchain(
+						vec![ext],
+						&ParentchainId::Litentry,
+						Some(XtStatus::InBlock),
+					)
 					.map_err(|_| Error::Other("failed to send extrinsic".into()))
 			})?;
 	}

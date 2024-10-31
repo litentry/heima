@@ -918,6 +918,7 @@ dependencies = [
  "itc-parentchain-test",
  "itc-peer-top-broadcaster",
  "itc-tls-websocket-server",
+ "itp-api-client-types",
  "itp-attestation-handler",
  "itp-component-container",
  "itp-enclave-metrics",
@@ -2308,6 +2309,7 @@ name = "itp-api-client-types"
 version = "0.1.0"
 dependencies = [
  "itp-types",
+ "parity-scale-codec",
  "substrate-api-client",
 ]
 
@@ -2438,6 +2440,7 @@ name = "itp-ocall-api"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "itp-api-client-types",
  "itp-storage",
  "itp-types",
  "parity-scale-codec",
@@ -2619,6 +2622,7 @@ name = "itp-test"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "itp-api-client-types",
  "itp-node-api",
  "itp-node-api-metadata-provider",
  "itp-ocall-api",
