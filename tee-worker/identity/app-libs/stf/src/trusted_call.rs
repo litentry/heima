@@ -143,7 +143,6 @@ pub enum TrustedCall {
 	request_intent(Identity, Intent),
 	#[codec(index = 27)]
 	create_account_store(Identity),
-	
 	#[codec(index = 29)]
 	remove_accounts(Identity, Vec<Identity>),
 
