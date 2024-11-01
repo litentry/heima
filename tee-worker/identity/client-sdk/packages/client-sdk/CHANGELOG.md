@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
--   Add a request method for OmniAccount's `Intent` requests.
+-   Add OmniAccount requestors for `remark`, `transferNative`
 
 ## 2024-10-14
 
