@@ -515,7 +515,6 @@ pub mod pallet {
 			}
 			Self::do_can_claim(
 				source.clone(),
-				pool_id,
 				amount,
 				Self::get_epoch_start_time(pool_id, token_start_epoch)?,
 				Self::get_epoch_end_time(pool_id, claimed_until_epoch)?,
@@ -690,7 +689,6 @@ pub mod pallet {
 		// No category token destroyed/created
 		fn do_can_claim(
 			who: T::AccountId,
-			pool_id: InvestingPoolIndex,
 			amount: BalanceOf<T>,
 			start_time: BlockNumberFor<T>,
 			end_time: BlockNumberFor<T>,
@@ -708,7 +706,7 @@ pub mod pallet {
 				return Ok(());
 			} else {
 				if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
-					let mut claim_duration: BlockNumberFor<T>;
+					let claim_duration: BlockNumberFor<T>;
 					if terminated {
 						// This means the effective investing duration is beyond the pool lifespan
 						// i.e. users who do not claim reward after the pool end are still considering as in-pool contributing their weights
@@ -786,20 +784,19 @@ pub mod pallet {
 			start_epoch: u128,
 			end_epoch: u128,
 		) -> DispatchResult {
-			let current_block = frame_system::Pallet::<T>::block_number();
 			let beneficiary_account: T::AccountId = Self::stable_token_beneficiary_account();
 			let aiusd_asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			let amount_u128 =
 				amount.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 
-			let total_distributed_reward: BalanceOf<T> = Zero::zero();
+			let mut total_distributed_reward: BalanceOf<T> = Zero::zero();
 
 			if start_epoch > end_epoch {
 				// Nothing to claim
 				// Do nothing
 				return Ok(());
 			} else {
-				if let Some(mut scp) = <StableInvestingPoolCheckpoint<T>>::get(pool_id) {
+				if let Some(scp) = <StableInvestingPoolCheckpoint<T>>::get(pool_id) {
 					// Must exist
 					let total_investing: u128 = scp
 						.amount
@@ -826,7 +823,7 @@ pub mod pallet {
 							.ok_or(ArithmeticError::Overflow)?;
 
 						Self::deposit_event(Event::<T>::StableRewardClaimed {
-							who,
+							who: who.clone(),
 							pool_id,
 							epoch: i,
 							reward_amount: distributed_reward,
