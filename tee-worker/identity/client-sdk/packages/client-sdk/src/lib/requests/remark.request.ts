@@ -1,4 +1,4 @@
-import { hexToU8a, stringToHex } from '@polkadot/util';
+import { assert, hexToU8a, stringToHex } from '@polkadot/util';
 import { randomAsHex } from '@polkadot/util-crypto';
 
 import type { ApiPromise } from '@polkadot/api';
@@ -21,6 +21,8 @@ export async function remark(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
+    /** The user's omniAccount.  Use `createLitentryIdentityType` helper to create this struct */
+    omniAccount: LitentryIdentity;
     /** The user's account.  Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
     /** the message to be sent */
@@ -34,7 +36,7 @@ export async function remark(
     txHash: string;
   }>;
 }> {
-  const { who, message } = data;
+  const { who, message, omniAccount } = data;
 
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
@@ -50,8 +52,10 @@ export async function remark(
     },
   });
 
+  assert(omniAccount.isSubstrate, 'OmniAccount must be a Substrate identity');
+
   const nonce = await api.rpc.system.accountNextIndex(
-    who.asSubstrate.toHex() // who is OmniAccount, thus substrate
+    omniAccount.asSubstrate.toHex()
   );
 
   const payloadToSign = createPayloadToSign({

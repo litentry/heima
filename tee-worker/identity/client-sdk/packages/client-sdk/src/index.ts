@@ -19,9 +19,9 @@ export { ID_GRAPH_STRUCT } from './lib/type-creators/id-graph';
 // vc
 export {
   validateVc,
-  VerifiableCredentialLike,
+  type VerifiableCredentialLike,
 } from './lib/vc-validator/validator';
-export {
+export type {
   ValidationResultDetail,
   ValidationResult,
 } from './lib/vc-validator/validator.types';
