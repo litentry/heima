@@ -56,7 +56,7 @@ fn test_propose_investing_pool_ok() {
 
 		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolProposed {
 			proposer: user_a.clone(),
-			pool_proposal_index: 1u128,
+			pool_proposal_index: 0u128,
 			info_hash: pool_info_hash,
 		})]);
 
