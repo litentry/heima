@@ -541,7 +541,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn regist_can(origin: OriginFor<T>, asset_id: AssetIdOf<T>) -> DispatchResult {
 			T::InvestingPoolAdminOrigin::ensure_origin(origin)?;
-			<AIUSDAssetId<T>>::put(asset_id.clone());
+			<AIUSDAssetId<T>>::put(asset_id);
 			Self::deposit_event(Event::<T>::AIUSDRegisted { asset_id });
 			Ok(())
 		}
