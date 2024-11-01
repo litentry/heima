@@ -76,7 +76,7 @@ pub mod pallet {
 
 	#[pallet::type_value]
 	pub(super) fn DefaultForCuratorIndex() -> CuratorIndex {
-		1.into()
+		1u128
 	}
 
 	/// The number of (public) curator that have been made so far.

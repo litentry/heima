@@ -80,7 +80,7 @@ pub mod pallet {
 
 	#[pallet::type_value]
 	pub(super) fn DefaultForGuardianIndex() -> GuardianIndex {
-		1.into()
+		1u128
 	}
 
 	/// The number of (public) guardian that have been made so far.

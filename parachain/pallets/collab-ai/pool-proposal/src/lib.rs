@@ -134,7 +134,7 @@ pub mod pallet {
 
 	#[pallet::type_value]
 	pub(super) fn DefaultForProposalIndex() -> PoolProposalIndex {
-		1.into()
+		1u128
 	}
 
 	/// The next free Pool Proposal index, aka the number of pool proposed so far.
