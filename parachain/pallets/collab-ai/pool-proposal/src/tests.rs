@@ -1,5 +1,6 @@
 use crate::mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
+use pallet_balances::Error as BalanceError;
 use sp_core::H256;
 use sp_runtime::{AccountId32, TokenError};
 
@@ -40,7 +41,7 @@ fn test_propose_investing_pool_ok() {
 				estimated_pool_reward,
 				pool_info_hash
 			),
-			TokenError::FundsUnavailable
+			BalanceError::<Test>::InsufficientBalance
 		);
 
 		// Worked
