@@ -709,11 +709,11 @@ pub mod pallet {
 				let claim_duration: BlockNumberFor<T> = if terminated {
 					// This means the effective investing duration is beyond the pool lifespan
 					// i.e. users who do not claim reward after the pool end are still considering as in-pool contributing their weights
-					claim_duration = current_block - start_time
+					current_block - start_time
 				} else {
 					// Only counting the investing weight during the epoch
 					// Claim from start_time until the end_time
-					claim_duration = end_time - start_time
+					end_time - start_time
 				};
 
 				let claim_duration_u128: u128 = claim_duration
