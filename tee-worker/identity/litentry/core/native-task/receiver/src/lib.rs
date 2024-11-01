@@ -66,6 +66,7 @@ use std::{
 		Arc,
 	},
 	thread,
+	vec::Vec,
 };
 
 // TODO: move to config
