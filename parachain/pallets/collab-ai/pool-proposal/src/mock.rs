@@ -28,6 +28,8 @@ use sp_runtime::{
 	AccountId32, BuildStorage,
 };
 
+use pallet_collab_ai_common::*;
+
 pub type Signature = sp_runtime::MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
@@ -50,7 +52,7 @@ parameter_types! {
 	pub const MinimumProposalLastTime: u32 = 10;
 	pub const MinimumPoolDeposit: Balance = 100;
 	pub const MaxGuardianPerProposal: u32 = 2;
-	pub const MaximumPoolProposed: u32 = 2;
+	pub const MaximumPoolProposed: u32 = 1;
 }
 
 impl frame_system::Config for Test {
@@ -125,17 +127,35 @@ impl Get<AccountId32> for PreInvestingPool {
 	}
 }
 
+pub struct MockGuardianQuery;
+impl GuardianQuery<AccountId> for MockGuardianQuery {
+	/// All guardian but banned ones
+	fn is_guardian(_account: AccountId) -> bool {
+		true
+	}
+
+	/// Only verified one
+	fn is_verified_guardian(_account: AccountId) -> bool {
+		true
+	}
+
+	/// Get vote
+	fn get_vote(voter: AccountId, guardian: AccountId) -> Option<GuardianVote> {
+		Some(GuardianVote::Aye)
+	}
+}
+
 impl pallet_pool_proposal::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type AIUSDAssetId = AIUSDAssetId;
-	tpye OfficialGapPeriod = OfficialGapPeriod;
+	type OfficialGapPeriod = OfficialGapPeriod;
 	type MinimumProposalLastTime = MinimumProposalLastTime;
 	type MinimumPoolDeposit = MinimumPoolDeposit;
 	type MaximumPoolProposed = MaxGuardianPerProposal;
 	type ProposalOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type PublicVotingOrigin = frame_system::EnsureRoot<Self::AccountId>;
-	type GuardianVoteResource = ;
+	type GuardianVoteResource = MockGuardianQuery;
 	type MaxGuardianPerProposal = MaxGuardianPerProposal;
 	type PreInvestingPool = PreInvestingPool;
 }
@@ -147,7 +167,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	ext.execute_with(|| {
 		System::set_block_number(1);
 
-		let owner = AccountId32::from([2u8; 32]);
+		let owner = AccountId32::from([1u8; 32]);
 		let origin = RuntimeOrigin::root();
 
 		// Create the AIUSD asset
@@ -166,8 +186,22 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		assert_ok!(pallet_aiusd::InspectFungibles::<Test>::mint_into(
 			target_asset_id,
 			&owner,
-			1_000_000_000 // 1000 (10^6 * 1000)
+			1_000_000_000_000_000_000_000_000 // 1 000 000 (10^18 * 1000)
 		));
 	});
 	ext
+}
+
+// Checks events against the latest. A contiguous set of events must be provided. They must
+// include the most recent event, but do not have to include every past event.
+pub fn assert_events(mut expected: Vec<RuntimeEvent>) {
+	let mut actual: Vec<RuntimeEvent> =
+		frame_system::Pallet::<Test>::events().iter().map(|e| e.event.clone()).collect();
+
+	expected.reverse();
+
+	for evt in expected {
+		let next = actual.pop().expect("event expected");
+		assert_eq!(next, evt, "Events don't match");
+	}
 }

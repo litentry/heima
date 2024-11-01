@@ -43,7 +43,7 @@ where
 		max_pool_size: U256,
 		proposal_last_time: U256,
 		pool_last_time: U256,
-		estimated_epoch_reward: U256,
+		estimated_pool_reward: U256,
 		pool_info_hash: H256,
 	) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
@@ -63,8 +63,8 @@ where
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("block number type"))
 		})?;
 
-		let estimated_epoch_reward: AssetBalanceOf<Runtime> =
-			estimated_epoch_reward.try_into().map_err(|_| {
+		let estimated_pool_reward: AssetBalanceOf<Runtime> =
+			estimated_pool_reward.try_into().map_err(|_| {
 				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("balance type"))
 			})?;
 
@@ -72,7 +72,7 @@ where
 			max_pool_size,
 			proposal_last_time,
 			pool_last_time,
-			estimated_epoch_reward,
+			estimated_pool_reward,
 			pool_info_hash,
 		};
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
@@ -250,7 +250,7 @@ where
 				max_pool_size: info.max_pool_size.into(),
 				pool_start_time: info.pool_start_time.into(),
 				pool_end_time: info.pool_end_time.into(),
-				estimated_epoch_reward: info.estimated_epoch_reward.into(),
+				estimated_pool_reward: info.estimated_pool_reward.into(),
 				proposal_status_flags: info.proposal_status_flags.bits(),
 			})
 		} else {
@@ -261,7 +261,7 @@ where
 				max_pool_size: Default::default(),
 				pool_start_time: Default::default(),
 				pool_end_time: Default::default(),
-				estimated_epoch_reward: Default::default(),
+				estimated_pool_reward: Default::default(),
 				proposal_status_flags: Default::default(),
 			})
 		}
@@ -312,7 +312,7 @@ where
 						max_pool_size: info.max_pool_size.into(),
 						pool_start_time: info.pool_start_time.into(),
 						pool_end_time: info.pool_end_time.into(),
-						estimated_epoch_reward: info.estimated_epoch_reward.into(),
+						estimated_pool_reward: info.estimated_pool_reward.into(),
 						proposal_status_flags: info.proposal_status_flags.bits(),
 					}
 				} else {
@@ -323,7 +323,7 @@ where
 						max_pool_size: Default::default(),
 						pool_start_time: Default::default(),
 						pool_end_time: Default::default(),
-						estimated_epoch_reward: Default::default(),
+						estimated_pool_reward: Default::default(),
 						proposal_status_flags: Default::default(),
 					}
 				}
@@ -506,6 +506,6 @@ struct PoolProposalInfo {
 	max_pool_size: U256,
 	pool_start_time: U256,
 	pool_end_time: U256,
-	estimated_epoch_reward: U256,
+	estimated_pool_reward: U256,
 	proposal_status_flags: u8,
 }

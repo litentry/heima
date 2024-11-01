@@ -79,7 +79,7 @@ pub struct PoolProposalInfo<InfoHash, Balance, BlockNumber, AccountId> {
 	pub pool_end_time: BlockNumber,
 	// estimated APR, but in percentage form
 	// i.e. 100 => 100%
-	pub estimated_epoch_reward: Balance,
+	pub estimated_pool_reward: Balance,
 	// Proposal status flags
 	pub proposal_status_flags: ProposalStatusFlags,
 }

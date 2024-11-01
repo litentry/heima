@@ -71,11 +71,11 @@ interface IPoolProposal {
     /// @param max_pool_size: At most this amount of raised money curator/investing pool willing to take
     /// @param proposal_last_time: How does the proposal lasts for voting/preinvesting.
     /// @param pool_last_time: How long does the investing pool last if passed
-    /// @param estimated_epoch_reward: This number is only for displaying purpose without any techinical meaning
+    /// @param estimated_pool_reward: This number is only for displaying purpose without any techinical meaning
 	/// @param pool_info_hash: H256 hash of pool info for including pool details
     /// @custom:selector 0x7bc55add
 	/// 				 proposeInvestingPool(uint256,uint256,uint256,uint256,bytes32)
-    function proposeInvestingPool(uint256 max_pool_size, uint256 proposal_last_time, uint256 pool_last_time, uint256 estimated_epoch_reward, bytes32 pool_info_hash) external;
+    function proposeInvestingPool(uint256 max_pool_size, uint256 proposal_last_time, uint256 pool_last_time, uint256 estimated_pool_reward, bytes32 pool_info_hash) external;
 
 	/// @notice Prestake the pool proposal
 	/// @param pool_proposal_index: Index of pool proposal

@@ -67,10 +67,10 @@ pub type AssetBalanceOf<T> =
 pub type AssetIdOf<T> =
 	<InspectFungibles<T> as FsInspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
-// #[cfg(test)]
-// mod mock;
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -268,7 +268,7 @@ pub mod pallet {
 		///                     All ProposalStatusFlags must be satisfied after this period passed, which is also
 		/// 					the approximate date when pool begins.
 		/// pool_last_time: How long does the investing pool last if passed
-		/// estimated_epoch_reward: This number is only for displaying purpose without any techinical meaning
+		/// estimated_pool_reward: This number is only for displaying purpose without any techinical meaning
 		/// pool_info_hash: Hash of pool info for including pool details
 		#[pallet::call_index(0)]
 		#[pallet::weight({195_000_000})]
@@ -278,7 +278,7 @@ pub mod pallet {
 			max_pool_size: AssetBalanceOf<T>,
 			proposal_last_time: BlockNumberFor<T>,
 			pool_last_time: BlockNumberFor<T>,
-			estimated_epoch_reward: AssetBalanceOf<T>,
+			estimated_pool_reward: AssetBalanceOf<T>,
 			pool_info_hash: InfoHash,
 		) -> DispatchResult {
 			let who = T::ProposalOrigin::ensure_origin(origin)?;
@@ -305,7 +305,7 @@ pub mod pallet {
 				pool_end_time: pool_start_time
 					.checked_add(&pool_last_time)
 					.ok_or(ArithmeticError::Overflow)?,
-				estimated_epoch_reward,
+				estimated_pool_reward,
 				proposal_status_flags: ProposalStatusFlags::empty(),
 			};
 
