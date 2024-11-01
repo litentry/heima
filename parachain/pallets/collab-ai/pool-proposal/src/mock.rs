@@ -127,6 +127,19 @@ impl Get<AccountId32> for PreInvestingPool {
 	}
 }
 
+pub struct MockCuratorQuery;
+impl CuratorQuery<AccountId> for MockCuratorQuery {
+	/// All curator but banned ones
+	fn is_curator(account: AccountId) -> bool {
+		true
+	}
+
+	/// Only verified one
+	fn is_verified_curator(account: AccountId) -> bool {
+		true
+	}
+}
+
 pub struct MockGuardianQuery;
 impl GuardianQuery<AccountId> for MockGuardianQuery {
 	/// All guardian but banned ones
@@ -153,7 +166,7 @@ impl pallet_pool_proposal::Config for Test {
 	type MinimumProposalLastTime = MinimumProposalLastTime;
 	type MinimumPoolDeposit = MinimumPoolDeposit;
 	type MaximumPoolProposed = MaxGuardianPerProposal;
-	type ProposalOrigin = frame_system::EnsureRoot<Self::AccountId>;
+	type ProposalOrigin = EnsureSignedAndCurator<Self::AccountId, MockCuratorQuery>;
 	type PublicVotingOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type GuardianVoteResource = MockGuardianQuery;
 	type MaxGuardianPerProposal = MaxGuardianPerProposal;
@@ -181,7 +194,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 		// Set total supply
 		assert_ok!(pallet_assets::Pallet::<Test>::mint(
-			owner.clone(),
+			RuntimeOrigin::signed(owner.clone()),
 			1, // AIUSD asset id
 			owner.clone(),
 			1_000_000_000_000_000_000_000_000, // 1 000 000 (10^18 * 1000)
