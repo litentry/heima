@@ -231,13 +231,16 @@ fn handle_trusted_call<
 			"create_account_store",
 			who
 		)),
-		TrustedCall::remove_accounts(who, identities) => OpaqueCall::from_tuple(&compose_call!(
-			&metadata,
-			"OmniAccount",
-			"remove_accounts",
-			who,
-			identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
-		)),
+		TrustedCall::remove_accounts(who, identities) => create_dispatch_as_omni_account_call(
+			who.hash(),
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"remove_accounts",
+				who,
+				identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
+			)),
+		),
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let res: Result<(), NativeTaskError> =
