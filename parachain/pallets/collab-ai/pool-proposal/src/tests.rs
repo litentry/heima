@@ -1,4 +1,4 @@
-use crate::mock::{Error, *};
+use crate::mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
 use sp_core::H256;
 use sp_runtime::{AccountId32, TokenError};
@@ -39,7 +39,7 @@ fn test_propose_investing_pool_ok() {
 				estimated_pool_reward,
 				pool_info_hash
 			),
-			Error::<Test>::ProposalPublicTimeTooShort
+			crate::Error::<Test>::ProposalPublicTimeTooShort
 		);
 
 		// No enough reserve token
@@ -81,7 +81,7 @@ fn test_propose_investing_pool_ok() {
 				estimated_pool_reward,
 				pool_info_hash
 			),
-			Error::<Test>::ProposalDepositDuplicatedOrOversized
+			crate::Error::<Test>::ProposalDepositDuplicatedOrOversized
 		);
 	})
 }
