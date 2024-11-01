@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(dead_code)]
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -395,11 +396,11 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 			for i in asset_id_vec.iter() {
 				<T::Fungibles as FsCreate<<T as frame_system::Config>::AccountId>>::create(
-					i.clone(),
+					*i,
 					admin.clone(),
 					true,
 					One::one(),
-				);
+				)?;
 			}
 
 			ensure!(
@@ -407,10 +408,10 @@ pub mod pallet {
 				Error::<T>::PoolAlreadyStarted
 			);
 			ensure!(
-				!InvestingPoolSetting::<T>::contains_key(&pool_id),
+				!InvestingPoolSetting::<T>::contains_key(pool_id),
 				Error::<T>::PoolAlreadyExisted
 			);
-			<InvestingPoolSetting<T>>::insert(pool_id.clone(), setting.clone());
+			<InvestingPoolSetting<T>>::insert(pool_id, setting.clone());
 			Self::deposit_event(Event::InvestingPoolCreated {
 				pool_id,
 				admin: setting.admin,
@@ -435,19 +436,19 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::RewardUpdateOrigin::ensure_origin(origin)?;
 
-			let setting = <InvestingPoolSetting<T>>::get(pool_id.clone())
-				.ok_or(Error::<T>::PoolNotExisted)?;
+			let setting =
+				<InvestingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			ensure!(0 < epoch && epoch <= setting.epoch, Error::<T>::EpochNotExist);
 
 			<StableInvestingPoolEpochReward<T>>::try_mutate(
-				&pool_id,
-				&epoch,
+				pool_id,
+				epoch,
 				|maybe_reward| -> DispatchResult {
 					ensure!(maybe_reward.is_none(), Error::<T>::RewardAlreadyExisted);
 
 					*maybe_reward = Some(reward);
 					Self::deposit_event(Event::<T>::RewardUpdated {
-						pool_id: pool_id.clone(),
+						pool_id,
 						epoch,
 						amount: reward,
 					});
@@ -529,7 +530,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn regist_aiusd(origin: OriginFor<T>, asset_id: AssetIdOf<T>) -> DispatchResult {
 			T::InvestingPoolAdminOrigin::ensure_origin(origin)?;
-			<AIUSDAssetId<T>>::put(asset_id.clone());
+			<AIUSDAssetId<T>>::put(asset_id);
 			Self::deposit_event(Event::<T>::AIUSDRegisted { asset_id });
 			Ok(())
 		}
@@ -567,9 +568,9 @@ pub mod pallet {
 			let index: u128 =
 				index_bn.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 			if index >= setting.epoch {
-				return Ok(setting.epoch);
+				Ok(setting.epoch)
 			} else {
-				return Ok(index.checked_add(1u128).ok_or(ArithmeticError::Overflow)?);
+				Ok(index.checked_add(1u128).ok_or(ArithmeticError::Overflow)?)
 			}
 		}
 
@@ -615,7 +616,7 @@ pub mod pallet {
 					&setting.epoch_range.checked_mul(&epoch_bn).ok_or(ArithmeticError::Overflow)?,
 				)
 				.ok_or(ArithmeticError::Overflow)?;
-			return Ok(result);
+			Ok(result)
 		}
 
 		// return pool ending time if epoch >= setting.epoch
@@ -640,7 +641,7 @@ pub mod pallet {
 					&setting.epoch_range.checked_mul(&epoch_bn).ok_or(ArithmeticError::Overflow)?,
 				)
 				.ok_or(ArithmeticError::Overflow)?;
-			return Ok(result);
+			Ok(result)
 		}
 
 		// For can_investing
@@ -668,7 +669,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 			effective_time: BlockNumberFor<T>,
 		) -> DispatchResult {
-			<StableInvestingPoolCheckpoint<T>>::try_mutate(&pool_id, |maybe_checkpoint| {
+			<StableInvestingPoolCheckpoint<T>>::try_mutate(pool_id, |maybe_checkpoint| {
 				if let Some(checkpoint) = maybe_checkpoint {
 					checkpoint
 						.add(effective_time, amount)
@@ -704,72 +705,65 @@ pub mod pallet {
 				// Nothing to claim
 				// Do nothing
 				return Ok(());
-			} else {
-				if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
-					let claim_duration: BlockNumberFor<T>;
-					if terminated {
-						// This means the effective investing duration is beyond the pool lifespan
-						// i.e. users who do not claim reward after the pool end are still considering as in-pool contributing their weights
-						claim_duration = current_block - start_time;
-					} else {
-						// Only counting the investing weight during the epoch
-						// Claim from start_time until the end_time
-						claim_duration = end_time - start_time;
-					}
+			} else if let Some(mut ncp) = <CANCheckpoint<T>>::get() {
+				let claim_duration: BlockNumberFor<T> = if terminated {
+					// This means the effective investing duration is beyond the pool lifespan
+					// i.e. users who do not claim reward after the pool end are still considering as in-pool contributing their weights
+					claim_duration = current_block - start_time
+				} else {
+					// Only counting the investing weight during the epoch
+					// Claim from start_time until the end_time
+					claim_duration = end_time - start_time
+				};
 
-					let claim_duration_u128: u128 = claim_duration
-						.try_into()
-						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-					let amount_u128 = amount
-						.clone()
-						.try_into()
-						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-					let claim_weight: u128 = claim_duration_u128
-						.checked_mul(amount_u128)
-						.ok_or(ArithmeticError::Overflow)?;
-					let proportion = Perquintill::from_rational(
-						claim_weight,
-						ncp.weight_force(current_block)
-							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
-					);
+				let claim_duration_u128: u128 = claim_duration
+					.try_into()
+					.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+				let amount_u128 =
+					amount.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+				let claim_weight: u128 = claim_duration_u128
+					.checked_mul(amount_u128)
+					.ok_or(ArithmeticError::Overflow)?;
+				let proportion = Perquintill::from_rational(
+					claim_weight,
+					ncp.weight_force(current_block)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?,
+				);
 
-					let reward_pool_u128: u128 = reward_pool
-						.try_into()
-						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
-					let distributed_reward: BalanceOf<T> = distributed_reward_u128
-						.try_into()
-						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-					// Transfer CAN reward
-					T::Fungibles::transfer(
-						can_asset_id,
-						&beneficiary_account,
-						&who,
-						distributed_reward,
-						Preservation::Expendable,
-					)?;
+				let reward_pool_u128: u128 = reward_pool
+					.try_into()
+					.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+				let distributed_reward_u128: u128 = proportion * reward_pool_u128;
+				let distributed_reward: BalanceOf<T> = distributed_reward_u128
+					.try_into()
+					.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+				// Transfer CAN reward
+				T::Fungibles::transfer(
+					can_asset_id,
+					&beneficiary_account,
+					&who,
+					distributed_reward,
+					Preservation::Expendable,
+				)?;
 
-					// Update gloabl investing status
-					if terminated {
-						let _ = ncp
-							.remove(start_time, amount)
-							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
-					} else {
-						// Do not care what new Synthetic effective_time of investing pool
-						let _ = ncp
-							.claim_based_on_weight(claim_weight)
-							.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
-					}
-
-					// Adjust checkpoint
-					<CANCheckpoint<T>>::put(ncp);
-					Self::deposit_event(Event::<T>::CANRewardClaimed {
-						who,
-						claim_duration,
-						invest_amount: amount,
-						reward_amount: distributed_reward,
-					});
+				// Update gloabl investing status
+				if terminated {
+					ncp.remove(start_time, amount)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+				} else {
+					// Do not care what new Synthetic effective_time of investing pool
+					ncp.claim_based_on_weight(claim_weight)
+						.ok_or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
 				}
+
+				// Adjust checkpoint
+				<CANCheckpoint<T>>::put(ncp);
+				Self::deposit_event(Event::<T>::CANRewardClaimed {
+					who,
+					claim_duration,
+					invest_amount: amount,
+					reward_amount: distributed_reward,
+				});
 			}
 			Ok(())
 		}
@@ -795,40 +789,35 @@ pub mod pallet {
 				// Nothing to claim
 				// Do nothing
 				return Ok(());
-			} else {
-				if let Some(scp) = <StableInvestingPoolCheckpoint<T>>::get(pool_id) {
-					// Must exist
-					let total_investing: u128 = scp
-						.amount
+			} else if let Some(scp) = <StableInvestingPoolCheckpoint<T>>::get(pool_id) {
+				// Must exist
+				let total_investing: u128 =
+					scp.amount.try_into().or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+				// Claim until the claimed_until_epoch
+				// loop through each epoch
+				for i in start_epoch..(end_epoch + 1) {
+					let reward_pool = <StableInvestingPoolEpochReward<T>>::get(pool_id, i)
+						.ok_or(Error::<T>::EpochRewardNotUpdated)?;
+
+					let proportion = Perquintill::from_rational(amount_u128, total_investing);
+
+					let reward_pool_u128: u128 = reward_pool
 						.try_into()
 						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-					// Claim until the claimed_until_epoch
-					// loop through each epoch
-					for i in start_epoch..(end_epoch + 1) {
-						let reward_pool = <StableInvestingPoolEpochReward<T>>::get(pool_id, i)
-							.ok_or(Error::<T>::EpochRewardNotUpdated)?;
+					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
+					let distributed_reward: BalanceOf<T> = distributed_reward_u128
+						.try_into()
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+					total_distributed_reward = total_distributed_reward
+						.checked_add(&distributed_reward)
+						.ok_or(ArithmeticError::Overflow)?;
 
-						let proportion = Perquintill::from_rational(amount_u128, total_investing);
-
-						let reward_pool_u128: u128 = reward_pool
-							.try_into()
-							.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-						let distributed_reward_u128: u128 = proportion * reward_pool_u128;
-						let distributed_reward: BalanceOf<T> =
-							distributed_reward_u128
-								.try_into()
-								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-						total_distributed_reward = total_distributed_reward
-							.checked_add(&distributed_reward)
-							.ok_or(ArithmeticError::Overflow)?;
-
-						Self::deposit_event(Event::<T>::StableRewardClaimed {
-							who: who.clone(),
-							pool_id,
-							epoch: i,
-							reward_amount: distributed_reward,
-						});
-					}
+					Self::deposit_event(Event::<T>::StableRewardClaimed {
+						who: who.clone(),
+						pool_id,
+						epoch: i,
+						reward_amount: distributed_reward,
+					});
 				}
 			}
 
