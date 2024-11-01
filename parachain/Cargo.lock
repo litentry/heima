@@ -8064,9 +8064,12 @@ dependencies = [
  "frame-system",
  "orml-utilities",
  "pallet-assets",
+ "pallet-balances",
  "pallet-collab-ai-common",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
