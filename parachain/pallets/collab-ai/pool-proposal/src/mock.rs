@@ -179,14 +179,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			1,
 		));
 
-		// Check if these assets exists
-		assert!(pallet_aiusd::InspectFungibles::<Test>::asset_exists(1));
-
 		// Set total supply
-		assert_ok!(pallet_aiusd::InspectFungibles::<Test>::mint_into(
-			target_asset_id,
-			&owner,
-			1_000_000_000_000_000_000_000_000 // 1 000 000 (10^18 * 1000)
+		assert_ok!(pallet_assets::Pallet::<Test>::mint(
+			owner.clone(),
+			1, // AIUSD asset id
+			owner.clone(),
+			1_000_000_000_000_000_000_000_000, // 1 000 000 (10^18 * 1000)
 		));
 	});
 	ext

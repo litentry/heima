@@ -1,5 +1,6 @@
 use crate::mock::{Error, *};
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
+use sp_core::H256;
 use sp_runtime::AccountId32;
 
 #[test]
@@ -13,8 +14,8 @@ fn test_propose_investing_pool_ok() {
 		let proposal_last_time = 100;
 		let pool_last_time = 10000;
 		let estimated_pool_reward = 2_000_000_000_000_000_000_000u128;
-		let pool_info_hash: [u8; 32] = [2; 32];
-		let pool_info_hash_2: [u8; 32] = [3; 32];
+		let pool_info_hash: H256 = H256([2; 32]);
+		let pool_info_hash_2: H256 = H256([3; 32]);
 
 		// Bad origin
 		assert_noop!(
@@ -64,13 +65,11 @@ fn test_propose_investing_pool_ok() {
 			pool_info_hash
 		));
 
-		assert_events(vec![RuntimeEvent::PoolProposal(
-			pallet_pool_proposal::Event::PoolProposed {
-				proposer: user_a.clone(),
-				pool_proposal_index: 1u128,
-				info_hash: pool_info_hash,
-			},
-		)]);
+		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolProposed {
+			proposer: user_a.clone(),
+			pool_proposal_index: 1u128,
+			info_hash: pool_info_hash,
+		})]);
 
 		// Oversized
 		assert_noop!(

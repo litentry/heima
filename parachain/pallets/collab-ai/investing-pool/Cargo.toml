@@ -19,7 +19,6 @@ serde = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
-pallet-assets = { workspace = true }
 sp-runtime = { workspace = true, features = ["serde"] }
 sp-std = { workspace = true }
 
@@ -28,6 +27,7 @@ pallet-collab-ai-common = { workspace = true }
 [dev-dependencies]
 sp-core = { workspace = true }
 sp-io = { workspace = true }
+pallet-assets = { workspace = true }
 pallet-balances = { workspace = true }
 
 [features]
@@ -44,7 +44,6 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "pallet-balances/std",
-    "pallet-assets/std",
     "pallet-collab-ai-common/std",
 ]
 runtime-benchmarks = [
