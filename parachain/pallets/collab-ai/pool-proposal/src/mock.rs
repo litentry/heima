@@ -17,10 +17,7 @@
 use crate as pallet_pool_proposal;
 use frame_support::{
 	assert_ok, construct_runtime, parameter_types,
-	traits::{
-		tokens::fungibles::{Inspect, Mutate},
-		AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, Everything,
-	},
+	traits::{AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, Everything},
 };
 use sp_core::{Get, H256};
 use sp_runtime::{
@@ -130,12 +127,12 @@ impl Get<AccountId32> for PreInvestingPool {
 pub struct MockCuratorQuery;
 impl CuratorQuery<AccountId> for MockCuratorQuery {
 	/// All curator but banned ones
-	fn is_curator(account: AccountId) -> bool {
+	fn is_curator(_account: AccountId) -> bool {
 		true
 	}
 
 	/// Only verified one
-	fn is_verified_curator(account: AccountId) -> bool {
+	fn is_verified_curator(_account: AccountId) -> bool {
 		true
 	}
 }
@@ -153,7 +150,7 @@ impl GuardianQuery<AccountId> for MockGuardianQuery {
 	}
 
 	/// Get vote
-	fn get_vote(voter: AccountId, guardian: AccountId) -> Option<GuardianVote> {
+	fn get_vote(_voter: AccountId, _guardian: AccountId) -> Option<GuardianVote> {
 		Some(GuardianVote::Aye)
 	}
 }

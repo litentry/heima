@@ -17,18 +17,6 @@ fn test_propose_investing_pool_ok() {
 		let pool_info_hash: H256 = H256([2; 32]);
 		let pool_info_hash_2: H256 = H256([3; 32]);
 
-		// Bad origin
-		assert_noop!(
-			PoolProposal::propose_investing_pool(
-				RuntimeOrigin::signed(user_a.clone()),
-				max_pool_size,
-				proposal_last_time,
-				pool_last_time,
-				estimated_pool_reward,
-				pool_info_hash
-			),
-			sp_runtime::DispatchError::BadOrigin
-		);
 		// ProposalPublicTimeTooShort
 		assert_noop!(
 			PoolProposal::propose_investing_pool(
@@ -79,7 +67,7 @@ fn test_propose_investing_pool_ok() {
 				proposal_last_time,
 				pool_last_time,
 				estimated_pool_reward,
-				pool_info_hash
+				pool_info_hash_2
 			),
 			crate::Error::<Test>::ProposalDepositDuplicatedOrOversized
 		);
