@@ -719,13 +719,13 @@ pub mod pallet {
 						claim_duration = end_time - start_time;
 					}
 
-					let claim_duration_u128 = claim_duration
+					let claim_duration_u128: u128 = claim_duration
 						.try_into()
-						.or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					let amount_u128 = amount
 						.clone()
 						.try_into()
-						.or(Error::<T>::TypeIncompatibleOrArithmeticError)?;
+						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					let claim_weight: u128 = claim_duration_u128
 						.checked_mul(amount_u128)
 						.ok_or(ArithmeticError::Overflow)?;
