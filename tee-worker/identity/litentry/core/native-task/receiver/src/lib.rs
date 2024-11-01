@@ -234,6 +234,15 @@ fn handle_trusted_call<
 
 			create_account_store_call
 		},
+		TrustedCall::publicize_account(who, identity) => create_dispatch_as_omni_account_call(
+			who.hash(),
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"publicize_account",
+				identity
+			)),
+		),
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let res: Result<(), NativeTaskError> =
