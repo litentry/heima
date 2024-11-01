@@ -36,7 +36,7 @@ fn test_regist_guardian() {
 		assert_eq!(Guardian::public_guardian_to_index(&guardian), Some(0));
 		System::assert_last_event(RuntimeEvent::Guardian(crate::Event::GuardianRegisted {
 			guardian,
-			guardian_index: 0,
+			guardian_index: 1,
 			info_hash: sp_core::H256(info_hash),
 		}));
 	});
@@ -66,7 +66,7 @@ fn test_update_guardian() {
 		assert_eq!(guardian_info.0, sp_core::H256(updated_hash));
 		System::assert_last_event(RuntimeEvent::Guardian(crate::Event::GuardianUpdated {
 			guardian,
-			guardian_index: 0,
+			guardian_index: 1,
 			info_hash: sp_core::H256(updated_hash),
 		}));
 	});
@@ -89,7 +89,7 @@ fn test_clean_guardian() {
 		assert_eq!(Guardian::public_guardian_to_index(&guardian), None);
 		System::assert_last_event(RuntimeEvent::Guardian(crate::Event::GuardianCleaned {
 			guardian,
-			guardian_index: 0,
+			guardian_index: 1,
 		}));
 	});
 }
@@ -121,7 +121,7 @@ fn test_vote_for_guardian() {
 		);
 		System::assert_last_event(RuntimeEvent::Guardian(crate::Event::VoteGuardian {
 			voter,
-			guardian_index: 0,
+			guardian_index: 1,
 			guardian,
 			status: Some(GuardianVote::Specific(1)),
 		}));

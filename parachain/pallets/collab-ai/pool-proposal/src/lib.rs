@@ -132,10 +132,16 @@ pub mod pallet {
 		type PreInvestingPool: Get<Self::AccountId>;
 	}
 
+	#[pallet::type_value]
+	pub(super) fn DefaultForProposalIndex() -> PoolProposalIndex {
+		1.into()
+	}
+
 	/// The next free Pool Proposal index, aka the number of pool proposed so far.
 	#[pallet::storage]
 	#[pallet::getter(fn pool_proposal_count)]
-	pub type PoolProposalCount<T> = StorageValue<_, PoolProposalIndex, ValueQuery>;
+	pub type PoolProposalCount<T> =
+		StorageValue<_, PoolProposalIndex, ValueQuery, DefaultForProposalIndex>;
 
 	/// Those who have a reserve for his pool proposal.
 	#[pallet::storage]

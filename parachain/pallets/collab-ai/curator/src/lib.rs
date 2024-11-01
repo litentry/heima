@@ -74,10 +74,16 @@ pub mod pallet {
 		type CuratorJudgeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
+	#[pallet::type_value]
+	pub(super) fn DefaultForCuratorIndex() -> CuratorIndex {
+		1.into()
+	}
+
 	/// The number of (public) curator that have been made so far.
 	#[pallet::storage]
 	#[pallet::getter(fn public_curator_count)]
-	pub type PublicCuratorCount<T> = StorageValue<_, CuratorIndex, ValueQuery>;
+	pub type PublicCuratorCount<T> =
+		StorageValue<_, CuratorIndex, ValueQuery, DefaultForCuratorIndex>;
 
 	/// The public curator to index
 	#[pallet::storage]

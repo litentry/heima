@@ -78,10 +78,16 @@ pub mod pallet {
 		type GuardianJudgeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}
 
+	#[pallet::type_value]
+	pub(super) fn DefaultForGuardianIndex() -> GuardianIndex {
+		1.into()
+	}
+
 	/// The number of (public) guardian that have been made so far.
 	#[pallet::storage]
 	#[pallet::getter(fn public_guardian_count)]
-	pub type PublicGuardianCount<T> = StorageValue<_, GuardianIndex, ValueQuery>;
+	pub type PublicGuardianCount<T> =
+		StorageValue<_, GuardianIndex, ValueQuery, DefaultForGuardianIndex>;
 
 	/// The public guardian to index
 	#[pallet::storage]
