@@ -334,7 +334,7 @@ pub mod pallet {
 		StableRewardClaimed {
 			who: T::AccountId,
 			pool_id: InvestingPoolIndex,
-			until_time: BlockNumberFor<T>,
+			epoch: u128,
 			reward_amount: BalanceOf<T>,
 		},
 		Withdraw {
@@ -828,7 +828,7 @@ pub mod pallet {
 						Self::deposit_event(Event::<T>::StableRewardClaimed {
 							who,
 							pool_id,
-							i,
+							epoch: i,
 							reward_amount: distributed_reward,
 						});
 					}
