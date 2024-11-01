@@ -224,16 +224,12 @@ fn handle_trusted_call<
 					)),
 				),
 		},
-		TrustedCall::create_account_store(who) => {
-			let create_account_store_call = OpaqueCall::from_tuple(&compose_call!(
-				&metadata,
-				"OmniAccount",
-				"create_account_store",
-				who
-			));
-
-			create_account_store_call
-		},
+		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"create_account_store",
+			who
+		)),
 		TrustedCall::remove_accounts(who, identities) => OpaqueCall::from_tuple(&compose_call!(
 			&metadata,
 			"OmniAccount",
