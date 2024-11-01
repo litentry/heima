@@ -235,7 +235,7 @@ fn handle_trusted_call<
 			"OmniAccount",
 			"remove_accounts",
 			who,
-			identities.map(|i| i.hash()).collect::<Vec<H256>>()
+			identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
 		)),
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
