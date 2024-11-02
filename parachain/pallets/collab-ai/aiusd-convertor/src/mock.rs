@@ -113,8 +113,8 @@ impl pallet_balances::Config for Test {
 	type RuntimeHoldReason = ();
 }
 
-pub struct ConvertingFeeAccount;
-impl Get<AccountId32> for ConvertingFeeAccount {
+pub struct ConvertingPool;
+impl Get<AccountId32> for ConvertingPool {
 	fn get() -> AccountId32 {
 		AccountId32::new([1u8; 32])
 	}
@@ -122,7 +122,7 @@ impl Get<AccountId32> for ConvertingFeeAccount {
 
 impl pallet_aiusd::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ConvertingFeeAccount = ConvertingFeeAccount;
+	type ConvertingPool = ConvertingPool;
 	type AIUSDAssetId = AIUSDAssetId;
 	type ManagerOrigin = frame_system::EnsureRoot<<Test as frame_system::Config>::AccountId>;
 }

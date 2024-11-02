@@ -62,7 +62,7 @@ pub mod pallet {
 		// This is not a treasury account
 		// Balance of all types in this account record the
 		// available stable coin for AIUSD to switch back
-		type ConvertingFeeAccount: Get<Self::AccountId>;
+		type ConvertingPool: Get<Self::AccountId>;
 
 		// Declare the asset id of AIUSD
 		type AIUSDAssetId: Get<AssetIdOf<Self>>;
@@ -150,7 +150,7 @@ pub mod pallet {
 					<InspectFungibles<T> as FsMutate<<T as frame_system::Config>::AccountId>>::transfer(
 						source_asset_id.clone(),
 						&beneficiary,
-						&T::ConvertingFeeAccount::get(),
+						&T::ConvertingPool::get(),
 						asset_target_transfer_amount,
 						Preservation::Expendable,
 					)?;
@@ -206,7 +206,7 @@ pub mod pallet {
 				let asset_actual_transfer_amount: AssetBalanceOf<T> =
 					<InspectFungibles<T> as FsMutate<<T as frame_system::Config>::AccountId>>::transfer(
 						source_asset_id.clone(),
-						&T::ConvertingFeeAccount::get(),
+						&T::ConvertingPool::get(),
 						&beneficiary,
 						asset_target_transfer_amount,
 						Preservation::Expendable,

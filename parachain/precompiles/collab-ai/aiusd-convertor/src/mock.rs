@@ -119,8 +119,8 @@ impl pallet_balances::Config for Test {
 	type MaxFreezes = ();
 	type RuntimeHoldReason = ();
 }
-pub struct ConvertingFeeAccount;
-impl Get<AccountId32> for ConvertingFeeAccount {
+pub struct ConvertingPool;
+impl Get<AccountId32> for ConvertingPool {
 	fn get() -> AccountId32 {
 		let h160_address: H160 = H160::from_low_u64_be(1000);
 		TruncatedAddressMapping::into_account_id(h160_address)
@@ -129,7 +129,7 @@ impl Get<AccountId32> for ConvertingFeeAccount {
 
 impl pallet_aiusd::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type ConvertingFeeAccount = ConvertingFeeAccount;
+	type ConvertingPool = ConvertingPool;
 	type AIUSDAssetId = AIUSDAssetId;
 	type ManagerOrigin = frame_system::EnsureRoot<<Test as frame_system::Config>::AccountId>;
 }
