@@ -33,7 +33,7 @@ fn test_regist_guardian() {
 		));
 
 		// Check if guardian is stored correctly
-		assert_eq!(Guardian::public_guardian_to_index(&guardian), Some(0));
+		assert_eq!(Guardian::public_guardian_to_index(&guardian), Some(1));
 		System::assert_last_event(RuntimeEvent::Guardian(crate::Event::GuardianRegisted {
 			guardian,
 			guardian_index: 1,
@@ -62,7 +62,7 @@ fn test_update_guardian() {
 		));
 
 		// Check if guardian info is updated correctly
-		let guardian_info = Guardian::guardian_index_to_info(0).unwrap();
+		let guardian_info = Guardian::guardian_index_to_info(1).unwrap();
 		assert_eq!(guardian_info.0, sp_core::H256(updated_hash));
 		System::assert_last_event(RuntimeEvent::Guardian(crate::Event::GuardianUpdated {
 			guardian,
