@@ -133,7 +133,7 @@ pub mod pallet {
 	}
 
 	#[pallet::type_value]
-	pub(super) fn DefaultForProposalIndex() -> PoolProposalIndex {
+	pub fn DefaultForProposalIndex() -> PoolProposalIndex {
 		1u128
 	}
 

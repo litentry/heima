@@ -260,7 +260,7 @@ fn test_public_guardian_to_index() {
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::public_guardian_to_index { guardian: guardian_account },
 			)
-			.execute_returns((true, U256::from(0)));
+			.execute_returns((true, U256::from(1)));
 	});
 }
 
@@ -373,8 +373,8 @@ fn test_batch_guardian_index_to_info() {
 				guardian,
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::batch_guardian_index_to_info {
-					start_id: 0.into(),
-					end_id: 1.into(),
+					start_id: 1.into(),
+					end_id: 2.into(),
 				},
 			)
 			.execute_returns(vec![crate::GuardianQueryResult {

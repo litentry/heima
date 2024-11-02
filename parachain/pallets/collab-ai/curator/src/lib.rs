@@ -75,7 +75,7 @@ pub mod pallet {
 	}
 
 	#[pallet::type_value]
-	pub(super) fn DefaultForCuratorIndex() -> CuratorIndex {
+	pub fn DefaultForCuratorIndex() -> CuratorIndex {
 		1u128
 	}
 

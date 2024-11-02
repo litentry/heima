@@ -79,7 +79,7 @@ pub mod pallet {
 	}
 
 	#[pallet::type_value]
-	pub(super) fn DefaultForGuardianIndex() -> GuardianIndex {
+	pub fn DefaultForGuardianIndex() -> GuardianIndex {
 		1u128
 	}
 
