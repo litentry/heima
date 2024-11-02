@@ -83,7 +83,7 @@ pub mod pallet {
 		1u128
 	}
 
-	/// The number of (public) guardian that have been made so far.
+	/// Next guardian index, the number of (public) guardian that have been made so far + 1.
 	#[pallet::storage]
 	#[pallet::getter(fn public_guardian_count)]
 	pub type PublicGuardianCount<T> =

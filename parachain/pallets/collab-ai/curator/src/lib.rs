@@ -79,7 +79,7 @@ pub mod pallet {
 		1u128
 	}
 
-	/// The number of (public) curator that have been made so far.
+	/// The next curator index, the number of (public) curator that have been made so far + 1.
 	#[pallet::storage]
 	#[pallet::getter(fn public_curator_count)]
 	pub type PublicCuratorCount<T> =

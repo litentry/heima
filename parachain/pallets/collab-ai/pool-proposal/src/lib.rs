@@ -137,7 +137,7 @@ pub mod pallet {
 		1u128
 	}
 
-	/// The next free Pool Proposal index, aka the number of pool proposed so far.
+	/// The next free Pool Proposal index, aka the number of pool proposed so far + 1.
 	#[pallet::storage]
 	#[pallet::getter(fn pool_proposal_count)]
 	pub type PoolProposalCount<T> =

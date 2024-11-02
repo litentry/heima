@@ -114,7 +114,7 @@ fn test_public_curator_count() {
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::public_curator_count {},
 			)
-			.execute_returns(U256::from(0)); // Provide expected result
+			.execute_returns(U256::from(1)); // Provide expected result
 
 		// Register a curator to increase the count
 		let info_hash: H256 = H256::from([1u8; 32]);
@@ -133,7 +133,7 @@ fn test_public_curator_count() {
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::public_curator_count {},
 			)
-			.execute_returns(U256::from(1));
+			.execute_returns(U256::from(2));
 	});
 }
 
@@ -162,7 +162,7 @@ fn test_public_curator_to_index() {
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::public_curator_to_index { curator: curator_account },
 			)
-			.execute_returns((true, U256::from(0)));
+			.execute_returns((true, U256::from(1)));
 	});
 }
 
@@ -225,7 +225,7 @@ fn test_batch_curator_index_to_info() {
 			.prepare_test(
 				curator,
 				H160::from_low_u64_be(1000),
-				PCall::<Test>::batch_curator_index_to_info { start_id: 0.into(), end_id: 1.into() },
+				PCall::<Test>::batch_curator_index_to_info { start_id: 1.into(), end_id: 2.into() },
 			)
 			.execute_returns(vec![crate::CuratorQueryResult {
 				exist: true,

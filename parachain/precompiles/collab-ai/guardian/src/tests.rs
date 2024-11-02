@@ -138,7 +138,7 @@ fn test_vote_for_guardian() {
 				PCall::<Test>::vote {
 					guardian: guardian_account,
 					status: 1,
-					potential_proposal_index: 0.into(),
+					potential_proposal_index: 1.into(),
 				},
 			)
 			.execute_returns(());
@@ -185,7 +185,7 @@ fn test_remove_all_votes() {
 				PCall::<Test>::vote {
 					guardian: guardian_account,
 					status: 1,
-					potential_proposal_index: 0.into(),
+					potential_proposal_index: 1.into(),
 				},
 			)
 			.execute_returns(());
@@ -211,7 +211,7 @@ fn test_public_guardian_count() {
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::public_guardian_count {},
 			)
-			.execute_returns(U256::from(0)); // Provide expected result
+			.execute_returns(U256::from(1)); // Provide expected result
 
 		// Register a guardian to increase the count
 		let info_hash: H256 = H256::from([1u8; 32]);
@@ -223,14 +223,14 @@ fn test_public_guardian_count() {
 			)
 			.execute_returns(());
 
-		// Check the guardian count again, should be 1
+		// Check the guardian count again, should be 2
 		PrecompilesValue::get()
 			.prepare_test(
 				H160::from_low_u64_be(1001),
 				H160::from_low_u64_be(1000),
 				PCall::<Test>::public_guardian_count {},
 			)
-			.execute_returns(U256::from(1));
+			.execute_returns(U256::from(2));
 	});
 }
 
