@@ -42,7 +42,7 @@ fn test_regist_curator() {
 
 		System::assert_last_event(RuntimeEvent::Curator(Event::CuratorRegisted {
 			curator: TruncatedAddressMapping::into_account_id(curator),
-			curator_index: 0,
+			curator_index: 1,
 			info_hash,
 		}));
 	});
@@ -73,7 +73,7 @@ fn test_update_curator() {
 
 		System::assert_last_event(RuntimeEvent::Curator(Event::CuratorUpdated {
 			curator: TruncatedAddressMapping::into_account_id(curator),
-			curator_index: 0,
+			curator_index: 1,
 			info_hash: updated_hash,
 		}));
 	});
@@ -99,7 +99,7 @@ fn test_clean_curator() {
 
 		System::assert_last_event(RuntimeEvent::Curator(Event::CuratorCleaned {
 			curator: TruncatedAddressMapping::into_account_id(curator),
-			curator_index: 0,
+			curator_index: 1,
 		}));
 	});
 }
@@ -189,7 +189,7 @@ fn test_curator_index_to_info() {
 			.prepare_test(
 				curator,
 				H160::from_low_u64_be(1000),
-				PCall::<Test>::curator_index_to_info { index: 0.into() },
+				PCall::<Test>::curator_index_to_info { index: 1.into() },
 			)
 			.execute_returns(crate::CuratorQueryResult {
 				exist: true,

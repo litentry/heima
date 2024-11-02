@@ -43,7 +43,7 @@ fn test_regist_guardian() {
 
 		System::assert_last_event(RuntimeEvent::Guardian(Event::GuardianRegisted {
 			guardian: TruncatedAddressMapping::into_account_id(guardian),
-			guardian_index: 0,
+			guardian_index: 1,
 			info_hash,
 		}));
 	});
@@ -74,7 +74,7 @@ fn test_update_guardian() {
 
 		System::assert_last_event(RuntimeEvent::Guardian(Event::GuardianUpdated {
 			guardian: TruncatedAddressMapping::into_account_id(guardian),
-			guardian_index: 0,
+			guardian_index: 1,
 			info_hash: updated_hash,
 		}));
 	});
@@ -100,7 +100,7 @@ fn test_clean_guardian() {
 
 		System::assert_last_event(RuntimeEvent::Guardian(Event::GuardianCleaned {
 			guardian: TruncatedAddressMapping::into_account_id(guardian),
-			guardian_index: 0,
+			guardian_index: 1,
 		}));
 	});
 }
@@ -145,7 +145,7 @@ fn test_vote_for_guardian() {
 
 		System::assert_last_event(RuntimeEvent::Guardian(Event::VoteGuardian {
 			voter: TruncatedAddressMapping::into_account_id(voter),
-			guardian_index: 0,
+			guardian_index: 1,
 			guardian: TruncatedAddressMapping::into_account_id(guardian),
 			status: Some(GuardianVote::Aye),
 		}));
@@ -288,7 +288,7 @@ fn test_guardian_index_to_info() {
 			.prepare_test(
 				guardian,
 				H160::from_low_u64_be(1000),
-				PCall::<Test>::guardian_index_to_info { index: 0.into() },
+				PCall::<Test>::guardian_index_to_info { index: 1.into() },
 			)
 			.execute_returns(crate::GuardianQueryResult {
 				exist: true,
@@ -341,7 +341,7 @@ fn test_guardian_votes() {
 			.prepare_test(
 				voter,
 				H160::from_low_u64_be(1000),
-				PCall::<Test>::guardian_votes { voter: voter_account, guardian_index: 0.into() },
+				PCall::<Test>::guardian_votes { voter: voter_account, guardian_index: 1.into() },
 			)
 			.execute_returns((1u8, U256::from(0))); // Aye vote
 	});
