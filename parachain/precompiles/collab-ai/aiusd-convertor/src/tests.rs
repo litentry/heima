@@ -25,7 +25,7 @@ use sp_runtime::AccountId32;
 fn test_mint_and_burn_aiusd() {
 	new_test_ext().execute_with(|| {
 		let aiusd_asset_id = 1;
-		let target_asset_id = 2;
+		let source_asset_id = 2;
 		let target_decimal_ratio = 1_000_000;
 		let target_asset_supply_amount: u128 = target_decimal_ratio * 1000;
 		let h160_address: H160 = H160::from_low_u64_be(1001);
@@ -35,7 +35,7 @@ fn test_mint_and_burn_aiusd() {
 		// Check balance
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, 0);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount);
 
 		// mint
@@ -45,7 +45,7 @@ fn test_mint_and_burn_aiusd() {
 				h160_address,
 				precompile_address(),
 				PCall::<Test>::mint_aiusd {
-					asset_id: target_asset_id.into(),
+					asset_id: source_asset_id.into(),
 					amount: mint_amount.into(),
 				},
 			)
@@ -56,12 +56,12 @@ fn test_mint_and_burn_aiusd() {
 		// Check balance after mint
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, mint_amount);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount - mint_asset_amount);
 		System::assert_last_event(RuntimeEvent::AIUSD(Event::AIUSDCreated {
 			beneficiary: beneficiary.clone(),
 			aiusd_amount: mint_amount,
-			asset_id: target_asset_id,
+			asset_id: source_asset_id,
 			asset_amount: mint_asset_amount,
 		}));
 
@@ -72,7 +72,7 @@ fn test_mint_and_burn_aiusd() {
 				h160_address,
 				precompile_address(),
 				PCall::<Test>::burn_aiusd {
-					asset_id: target_asset_id.into(),
+					asset_id: source_asset_id.into(),
 					amount: burn_amount.into(),
 				},
 			)
@@ -83,7 +83,7 @@ fn test_mint_and_burn_aiusd() {
 		// Check balance after burn
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, mint_amount - burn_amount);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(
 			target_balance,
 			target_asset_supply_amount - mint_asset_amount + burn_asset_amount
@@ -91,7 +91,7 @@ fn test_mint_and_burn_aiusd() {
 		System::assert_last_event(RuntimeEvent::AIUSD(Event::AIUSDDestroyed {
 			beneficiary,
 			aiusd_amount: burn_amount,
-			asset_id: target_asset_id,
+			asset_id: source_asset_id,
 			asset_amount: burn_asset_amount,
 		}));
 	});

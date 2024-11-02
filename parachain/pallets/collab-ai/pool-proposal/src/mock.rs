@@ -158,6 +158,7 @@ impl GuardianQuery<AccountId> for MockGuardianQuery {
 impl pallet_pool_proposal::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
+	type Fungibles = Assets;
 	type AIUSDAssetId = AIUSDAssetId;
 	type OfficialGapPeriod = OfficialGapPeriod;
 	type MinimumProposalLastTime = MinimumProposalLastTime;

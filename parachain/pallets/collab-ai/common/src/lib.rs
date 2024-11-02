@@ -32,23 +32,6 @@ pub type GuardianIndex = u128;
 pub type PoolProposalIndex = u128;
 pub type InvestingPoolIndex = PoolProposalIndex;
 
-#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
-pub struct PoolSetting<BlockNumber, Balance> {
-	// The start time of staking pool
-	pub start_time: BlockNumber,
-	// How many epoch will staking pool last, n > 0, valid epoch index :[0..n)
-	pub epoch: u128,
-	// How many blocks each epoch consist
-	pub epoch_range: BlockNumber,
-	// The number of block regarding setup for purchasing hardware which deliver no non-native
-	// token reward
-	pub setup_time: BlockNumber,
-	// Max staked amount of pool
-	pub pool_cap: Balance,
-	// Minimum amount of token required for pool starting
-	pub minimum_cap: Balance,
-}
-
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct PoolMetadata<BoundedString> {
 	/// The user friendly name of this staking pool. Limited in length by `PoolStringLimit`.

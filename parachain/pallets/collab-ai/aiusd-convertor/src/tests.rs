@@ -24,7 +24,7 @@ fn test_mint_aiusd() {
 	new_test_ext().execute_with(|| {
 		let beneficiary: AccountId32 = AccountId32::from([2u8; 32]);
 		let aiusd_asset_id: u32 = 1;
-		let target_asset_id: u32 = 2;
+		let source_asset_id: u32 = 2;
 		let target_decimal_ratio = 1_000_000;
 		let target_asset_supply_amount: u128 = target_decimal_ratio * 1000;
 		let mint_amount: u128 = 2_000_000_000_000_000_000; // 2 AIUSD (10^18 * 2)
@@ -32,12 +32,12 @@ fn test_mint_aiusd() {
 		// Check balance
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, 0);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount);
 
 		assert_ok!(AIUSD::enable_token(
 			RuntimeOrigin::root(),
-			target_asset_id,
+			source_asset_id,
 			target_decimal_ratio
 		));
 
@@ -48,20 +48,20 @@ fn test_mint_aiusd() {
 
 		assert_ok!(AIUSD::mint_aiusd(
 			RuntimeOrigin::signed(beneficiary.clone()),
-			target_asset_id,
+			source_asset_id,
 			mint_amount
 		));
 		// Check balance after mint
 		let asset_amount = target_decimal_ratio * 2;
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, mint_amount);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount - asset_amount);
 
 		System::assert_last_event(RuntimeEvent::AIUSD(Event::AIUSDCreated {
 			beneficiary,
 			aiusd_amount: mint_amount,
-			asset_id: target_asset_id,
+			asset_id: source_asset_id,
 			asset_amount,
 		}));
 	});
@@ -72,7 +72,7 @@ fn test_burn_aiusd() {
 	new_test_ext().execute_with(|| {
 		let beneficiary: AccountId32 = AccountId32::from([2u8; 32]);
 		let aiusd_asset_id: u32 = 1;
-		let target_asset_id: u32 = 2;
+		let source_asset_id: u32 = 2;
 		let target_decimal_ratio = 1_000_000;
 		let target_asset_supply_amount: u128 = target_decimal_ratio * 1000;
 		let aiusd_amount: u128 = 2_000_000_000_000_000_000; // 2 AIUSD (10^18 * 2)
@@ -80,12 +80,12 @@ fn test_burn_aiusd() {
 		// Check balance
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, 0);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount);
 
 		assert_ok!(AIUSD::enable_token(
 			RuntimeOrigin::root(),
-			target_asset_id,
+			source_asset_id,
 			target_decimal_ratio
 		));
 
@@ -93,7 +93,7 @@ fn test_burn_aiusd() {
 		assert_err!(
 			AIUSD::burn_aiusd(
 				RuntimeOrigin::signed(beneficiary.clone()),
-				target_asset_id,
+				source_asset_id,
 				aiusd_amount
 			),
 			TokenError::FundsUnavailable
@@ -101,30 +101,30 @@ fn test_burn_aiusd() {
 
 		assert_ok!(AIUSD::mint_aiusd(
 			RuntimeOrigin::signed(beneficiary.clone()),
-			target_asset_id,
+			source_asset_id,
 			aiusd_amount
 		));
 		// Check balance after mint
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, aiusd_amount);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount - target_decimal_ratio * 2);
 
 		assert_ok!(AIUSD::burn_aiusd(
 			RuntimeOrigin::signed(beneficiary.clone()),
-			target_asset_id,
+			source_asset_id,
 			aiusd_amount
 		));
 		// Check balance after burn
 		let aiusd_balance = InspectFungibles::<Test>::balance(aiusd_asset_id, &beneficiary);
 		assert_eq!(aiusd_balance, 0);
-		let target_balance = InspectFungibles::<Test>::balance(target_asset_id, &beneficiary);
+		let target_balance = InspectFungibles::<Test>::balance(source_asset_id, &beneficiary);
 		assert_eq!(target_balance, target_asset_supply_amount);
 
 		System::assert_last_event(RuntimeEvent::AIUSD(Event::AIUSDDestroyed {
 			beneficiary,
 			aiusd_amount,
-			asset_id: target_asset_id,
+			asset_id: source_asset_id,
 			asset_amount: target_decimal_ratio * 2,
 		}));
 	});
@@ -133,23 +133,23 @@ fn test_burn_aiusd() {
 #[test]
 fn test_enable_disable_token() {
 	new_test_ext().execute_with(|| {
-		let target_asset_id: u32 = 2;
+		let source_asset_id: u32 = 2;
 		let decimal_ratio: u128 = 1_000_000;
 
 		// enable
-		assert_ok!(AIUSD::enable_token(RuntimeOrigin::root(), target_asset_id, decimal_ratio));
-		assert!(AIUSD::enabled_tokens(target_asset_id).is_some());
+		assert_ok!(AIUSD::enable_token(RuntimeOrigin::root(), source_asset_id, decimal_ratio));
+		assert!(AIUSD::enabled_tokens(source_asset_id).is_some());
 		System::assert_last_event(RuntimeEvent::AIUSD(Event::AssetEnabled {
-			asset_id: target_asset_id,
+			asset_id: source_asset_id,
 			decimal_ratio,
 		}));
 
 		// disable
-		assert_ok!(AIUSD::disable_token(RuntimeOrigin::root(), target_asset_id));
-		assert!(AIUSD::enabled_tokens(target_asset_id).is_none());
+		assert_ok!(AIUSD::disable_token(RuntimeOrigin::root(), source_asset_id));
+		assert!(AIUSD::enabled_tokens(source_asset_id).is_none());
 
 		System::assert_last_event(RuntimeEvent::AIUSD(Event::AssetDisabled {
-			asset_id: target_asset_id,
+			asset_id: source_asset_id,
 		}));
 	});
 }

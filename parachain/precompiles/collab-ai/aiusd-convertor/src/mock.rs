@@ -212,10 +212,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			1,
 		));
 		// Create the target asset
-		let target_asset_id = 2;
+		let source_asset_id = 2;
 		assert_ok!(pallet_assets::Pallet::<Test>::force_create(
 			origin,
-			target_asset_id,
+			source_asset_id,
 			owner.clone(),
 			true,
 			1,
@@ -227,13 +227,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 		// Set total supply
 		assert_ok!(pallet_aiusd::InspectFungibles::<Test>::mint_into(
-			target_asset_id,
+			source_asset_id,
 			&owner,
 			1_000_000_000 // 1000 (10^6 * 1000)
 		));
 
 		// Enable assert
-		assert_ok!(AIUSD::enable_token(RuntimeOrigin::root(), target_asset_id, 1_000_000));
+		assert_ok!(AIUSD::enable_token(RuntimeOrigin::root(), source_asset_id, 1_000_000));
 	});
 	ext
 }

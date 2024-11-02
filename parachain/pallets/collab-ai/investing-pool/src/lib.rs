@@ -390,6 +390,15 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::PoolProposalPalletOrigin::ensure_origin(origin)?;
 
+			ensure!(
+				frame_system::Pallet::<T>::block_number() <= setting.start_time,
+				Error::<T>::PoolAlreadyStarted
+			);
+			ensure!(
+				!InvestingPoolSetting::<T>::contains_key(pool_id),
+				Error::<T>::PoolAlreadyExisted
+			);
+
 			// Create all asset token categories
 			let asset_id_vec: Vec<AssetIdOf<T>> =
 				InvestingPoolAssetIdGenerator::get_all_pool_token(pool_id, setting.epoch)
@@ -403,14 +412,6 @@ pub mod pallet {
 				)?;
 			}
 
-			ensure!(
-				frame_system::Pallet::<T>::block_number() <= setting.start_time,
-				Error::<T>::PoolAlreadyStarted
-			);
-			ensure!(
-				!InvestingPoolSetting::<T>::contains_key(pool_id),
-				Error::<T>::PoolAlreadyExisted
-			);
 			<InvestingPoolSetting<T>>::insert(pool_id, setting.clone());
 			Self::deposit_event(Event::InvestingPoolCreated {
 				pool_id,

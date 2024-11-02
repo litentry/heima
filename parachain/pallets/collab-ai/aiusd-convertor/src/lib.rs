@@ -117,28 +117,24 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// Lock target_asset_id token and mint AIUSD
+		// Lock source_asset_id token and mint AIUSD
 		#[pallet::call_index(0)]
 		#[pallet::weight({195_000_000})]
 		#[transactional]
 		pub fn mint_aiusd(
 			origin: OriginFor<T>,
-			target_asset_id: AssetIdOf<T>,
+			source_asset_id: AssetIdOf<T>,
 			aiusd_amount: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let beneficiary = ensure_signed(origin)?;
-			if let Some(ratio) = EnabledTokens::<T>::get(&target_asset_id) {
-				ensure!(
-					EnabledTokens::<T>::contains_key(&target_asset_id),
-					Error::<T>::AssetNotEnabled
-				);
+			if let Some(ratio) = EnabledTokens::<T>::get(&source_asset_id) {
 				let aiusd_id = T::AIUSDAssetId::get();
 				ensure!(
 					InspectFungibles::<T>::asset_exists(aiusd_id.clone())
-						&& InspectFungibles::<T>::asset_exists(target_asset_id.clone()),
+						&& InspectFungibles::<T>::asset_exists(source_asset_id.clone()),
 					Error::<T>::InvalidAssetId
 				);
-				// It will fail if insufficient fund
+
 				let aiusd_minted_amount: AssetBalanceOf<T> =
 					<InspectFungibles<T>>::mint_into(aiusd_id, &beneficiary, aiusd_amount)?;
 
@@ -152,7 +148,7 @@ pub mod pallet {
 					.ok_or(Error::<T>::Overflow)?;
 				let asset_actual_transfer_amount: AssetBalanceOf<T> =
 					<InspectFungibles<T> as FsMutate<<T as frame_system::Config>::AccountId>>::transfer(
-						target_asset_id.clone(),
+						source_asset_id.clone(),
 						&beneficiary,
 						&T::ConvertingFeeAccount::get(),
 						asset_target_transfer_amount,
@@ -162,7 +158,7 @@ pub mod pallet {
 				Self::deposit_event(Event::AIUSDCreated {
 					beneficiary,
 					aiusd_amount: aiusd_minted_amount,
-					asset_id: target_asset_id,
+					asset_id: source_asset_id,
 					asset_amount: asset_actual_transfer_amount,
 				});
 
@@ -172,22 +168,22 @@ pub mod pallet {
 			}
 		}
 
-		// Burn aiusd and get target_asset_id token released
+		// Burn aiusd and get source_asset_id token released
 		// Failed if pool does not have enough token of one type
 		#[pallet::call_index(1)]
 		#[pallet::weight({195_000_000})]
 		#[transactional]
 		pub fn burn_aiusd(
 			origin: OriginFor<T>,
-			target_asset_id: AssetIdOf<T>,
+			source_asset_id: AssetIdOf<T>,
 			aiusd_amount: AssetBalanceOf<T>,
 		) -> DispatchResult {
 			let beneficiary = ensure_signed(origin)?;
-			if let Some(ratio) = EnabledTokens::<T>::get(&target_asset_id) {
+			if let Some(ratio) = EnabledTokens::<T>::get(&source_asset_id) {
 				let aiusd_id = T::AIUSDAssetId::get();
 				ensure!(
 					InspectFungibles::<T>::asset_exists(aiusd_id.clone())
-						&& InspectFungibles::<T>::asset_exists(target_asset_id.clone()),
+						&& InspectFungibles::<T>::asset_exists(source_asset_id.clone()),
 					Error::<T>::InvalidAssetId
 				);
 				// It will fail if insufficient fund
@@ -209,7 +205,7 @@ pub mod pallet {
 					.ok_or(Error::<T>::Overflow)?;
 				let asset_actual_transfer_amount: AssetBalanceOf<T> =
 					<InspectFungibles<T> as FsMutate<<T as frame_system::Config>::AccountId>>::transfer(
-						target_asset_id.clone(),
+						source_asset_id.clone(),
 						&T::ConvertingFeeAccount::get(),
 						&beneficiary,
 						asset_target_transfer_amount,
@@ -219,7 +215,7 @@ pub mod pallet {
 				Self::deposit_event(Event::AIUSDDestroyed {
 					beneficiary,
 					aiusd_amount: aiusd_destroyed_amount,
-					asset_id: target_asset_id,
+					asset_id: source_asset_id,
 					asset_amount: asset_actual_transfer_amount,
 				});
 				Ok(())
@@ -233,12 +229,12 @@ pub mod pallet {
 		#[pallet::weight({195_000_000})]
 		pub fn enable_token(
 			origin: OriginFor<T>,
-			target_asset_id: AssetIdOf<T>,
+			source_asset_id: AssetIdOf<T>,
 			decimal_ratio: AssetBalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
-			EnabledTokens::<T>::insert(&target_asset_id, decimal_ratio);
-			Self::deposit_event(Event::AssetEnabled { asset_id: target_asset_id, decimal_ratio });
+			EnabledTokens::<T>::insert(&source_asset_id, decimal_ratio);
+			Self::deposit_event(Event::AssetEnabled { asset_id: source_asset_id, decimal_ratio });
 			Ok(Pays::No.into())
 		}
 
@@ -247,11 +243,11 @@ pub mod pallet {
 		#[pallet::weight({195_000_000})]
 		pub fn disable_token(
 			origin: OriginFor<T>,
-			target_asset_id: AssetIdOf<T>,
+			source_asset_id: AssetIdOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
-			EnabledTokens::<T>::remove(&target_asset_id);
-			Self::deposit_event(Event::AssetDisabled { asset_id: target_asset_id });
+			EnabledTokens::<T>::remove(&source_asset_id);
+			Self::deposit_event(Event::AssetDisabled { asset_id: source_asset_id });
 			Ok(Pays::No.into())
 		}
 	}

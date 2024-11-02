@@ -41,7 +41,7 @@ where
 		})?;
 
 		let call = pallet_aiusd_convertor::Call::<Runtime>::mint_aiusd {
-			target_asset_id: asset_id,
+			source_asset_id: asset_id,
 			aiusd_amount: amount,
 		};
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
@@ -61,7 +61,7 @@ where
 		})?;
 
 		let call = pallet_aiusd_convertor::Call::<Runtime>::burn_aiusd {
-			target_asset_id: asset_id,
+			source_asset_id: asset_id,
 			aiusd_amount: amount,
 		};
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;

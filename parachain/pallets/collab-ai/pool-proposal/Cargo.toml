@@ -16,7 +16,6 @@ scale-info = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 orml-utilities = { workspace = true }
-pallet-assets = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
@@ -25,6 +24,7 @@ pallet-collab-ai-common = { workspace = true }
 [dev-dependencies]
 sp-core = { workspace = true }
 sp-io = { workspace = true }
+pallet-assets = { workspace = true }
 pallet-balances = { workspace = true }
 
 [features]
@@ -42,7 +42,6 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "orml-utilities/std",
-    "pallet-assets/std",
     "pallet-collab-ai-common/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

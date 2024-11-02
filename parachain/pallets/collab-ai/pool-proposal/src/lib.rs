@@ -56,17 +56,6 @@ use sp_std::collections::vec_deque::VecDeque;
 
 pub use types::*;
 
-pub(crate) type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-pub(crate) type InspectFungibles<T> = pallet_assets::Pallet<T>;
-/// Balance type alias for balances of assets that implement the `fungibles` trait.
-pub type AssetBalanceOf<T> =
-	<InspectFungibles<T> as FsInspect<<T as frame_system::Config>::AccountId>>::Balance;
-/// Type alias for Asset IDs.
-pub type AssetIdOf<T> =
-	<InspectFungibles<T> as FsInspect<<T as frame_system::Config>::AccountId>>::AssetId;
-
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -83,18 +72,28 @@ pub mod pallet {
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+	pub type AssetBalanceOf<T> =
+		<<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::Balance;
+	pub type AssetIdOf<T> =
+		<<T as Config>::Fungibles as FsInspect<<T as frame_system::Config>::AccountId>>::AssetId;
+
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_assets::Config {
+	pub trait Config: frame_system::Config + pallet_investing_pool::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Currency type for this pallet.
 		type Currency: ReservableCurrency<Self::AccountId>
 			+ LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>;
+
+		type Fungibles: FsMutate<Self::AccountId, AssetId = u128> + FsCreate<Self::AccountId>;
 
 		// Declare the asset id of AIUSD
 		type AIUSDAssetId: Get<AssetIdOf<Self>>;
@@ -127,6 +126,10 @@ pub mod pallet {
 		/// The maximum amount of guardian allowed for a proposal
 		#[pallet::constant]
 		type MaxGuardianPerProposal: Get<u32>;
+
+		/// The maximum amount of guardian allowed for a proposal
+		#[pallet::constant]
+		type MaxGuardianSelectedPerProposal: Get<u32>;
 
 		/// System Account holding pre-investing assets
 		type PreInvestingPool: Get<Self::AccountId>;
@@ -255,7 +258,8 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
-			// Check proposal expire by order
+			// Check proposal expire
+			
 
 			// curator must be verified by this time
 			// check epoch number not too large so asset id will not overflow
@@ -382,7 +386,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let asset_actual_transfer_amount: AssetBalanceOf<T> = <InspectFungibles<T> as FsMutate<<T as frame_system::Config>::AccountId>>::transfer(
+			let asset_actual_transfer_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
 				T::AIUSDAssetId::get(),
 				&who,
 				&T::PreInvestingPool::get(),
@@ -527,7 +531,7 @@ pub mod pallet {
 			}
 
 			// Return funds
-			let _asset_actual_transfer_amount: AssetBalanceOf<T> = <InspectFungibles<T> as FsMutate<<T as frame_system::Config>::AccountId>>::transfer(
+			let _asset_actual_transfer_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
 				T::AIUSDAssetId::get(),
 				&T::PreInvestingPool::get(),
 				&who,
@@ -606,6 +610,87 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> Pallet<T> {
+		fn solve_pending(n: BlockNumberFor<T>) -> DispatchResult {
+			let mut pending_setup = <PendingPoolProposalStatus<T>>::take();
+			loop {
+				match pending_setup.pop_front() {
+					// Latest Pending tx effective
+					Some(x) if x.proposal_expire_time <= n => {
+						// Mature the proposal
+						let mut pool_proposal =
+							<PoolProposal<T>>::get(pool_proposal_index).ok_or(Error::<T>::ProposalNotExist)?;
+						pool_proposal.proposal_status_flags |= ProposalStatusFlags::PROPOSAL_EXPIRED;
+						<PoolProposal<T>>::insert(pool_proposal_index, pool_proposal.clone());
+
+						let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =  Default::default();
+						let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> = Default::default();
+
+						// ignored if return none
+						if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(pool_proposal_index) {
+							pre_investments = pool_bonds.pre_investings.into_iter().map(|x| (x.owner, x.amount)).collect(); 
+							queued_investments = pool_bonds.queued_pre_investings.into_iter().map(|x| (x.0.owner, x.0.amount)).collect();
+						}
+
+						// Judege guardian
+						let mut best_guardians: Vec<(T::AccountId, AssetBalanceOf<T>)> = Default::default();
+						if let Some(pool_guardians) = <PoolGuardian<T>>::get(pool_proposal_index) {
+							for guardian_candidate in pool_guardians.0.into_iter() {
+								for investor in pre_investments.iter() {
+									T::GuardianVoteResource::get_vote(investor.0, guardian_candidate)
+								}
+
+							}
+
+						}
+
+						if best_guardians.0.len > 0 {
+							pool_proposal.proposal_status_flags |= ProposalStatusFlags::PUBLIC_VOTE_PASSED;
+						} else {
+							pool_proposal.proposal_status_flags &= !ProposalStatusFlags::PUBLIC_VOTE_PASSED;
+						}
+
+						pool_proposal.proposal_status_flags |= ProposalStatusFlags::PROPOSAL_EXPIRED;
+
+
+
+
+
+
+						
+						// If all satisfied, baked into investing pool
+						if pool_proposal.proposal_status_flags.is_all()
+
+						// Otherwise return bonding 
+						???
+						Self::deposit_event(Event::<T>::??? {
+							who: x.who,
+							pool_id: x.pool_id.clone(),
+							effective_time: n,
+							amount: x.staking_info.amount,
+						});
+						// Loop through investing bond
+						???
+
+						<PoolProposal<T>>::insert(pool_proposal_index, pool_proposal);
+					},
+					// Latest Pending tx not effective
+					Some(x) => {
+						// Put it back
+						pending_setup.push_front(x);
+						break;
+					},
+					// No pending tx
+					_ => {
+						break;
+					},
+				}
+			}
+			<PendingPoolProposalStatus<T>>::put(pending_setup);
+			Ok(())
+		}
+	}
+
 	/// Simple ensure origin from pallet pool proposal
 	pub struct EnsurePoolProposal<T>(sp_std::marker::PhantomData<T>);
 	impl<T: Config> EnsureOrigin<T::RuntimeOrigin> for EnsurePoolProposal<T> {
@@ -633,6 +718,25 @@ pub mod pallet {
 			} else {
 				false
 			}
+		}
+	}
+
+	/// Simple ensure origin for the applet pool proposal 
+	pub struct EnsurePoolProposal<T>(sp_std::marker::PhantomData<T>);
+	impl<T: Config> EnsureOrigin<T::RuntimeOrigin> for EnsureBridge<T> {
+		type Success = T::AccountId;
+		fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
+			let pallet_id = MODULE_ID.into_account_truncating();
+			o.into().and_then(|o| match o {
+				system::RawOrigin::Signed(who) if who == pallet_id => Ok(pallet_id),
+				r => Err(T::RuntimeOrigin::from(r)),
+			})
+		}
+
+		#[cfg(feature = "runtime-benchmarks")]
+		fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
+			let pallet_id = MODULE_ID.into_account_truncating();
+			Ok(T::RuntimeOrigin::from(system::RawOrigin::Signed(pallet_id)))
 		}
 	}
 }
