@@ -28,7 +28,7 @@ export async function transferNative(
     /** Account destination in hex or ss58 formatted address */
     to: string;
     /** Amount to send */
-    value: bigint;
+    amount: bigint;
   }
 ): Promise<{
   payloadToSign: string;
@@ -53,7 +53,7 @@ export async function transferNative(
       intent: api.createType('Intent', {
         TransferNative: api.createType('IntentTransferNative', {
           to: data.to,
-          value: data.value,
+          value: data.amount,
         }),
       }),
     },
