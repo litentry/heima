@@ -162,7 +162,7 @@ impl pallet_pool_proposal::Config for Test {
 	type OfficialGapPeriod = OfficialGapPeriod;
 	type MinimumProposalLastTime = MinimumProposalLastTime;
 	type MinimumPoolDeposit = MinimumPoolDeposit;
-	type MaximumPoolProposed = MaxGuardianPerProposal;
+	type MaximumPoolProposed = MaximumPoolProposed;
 	type ProposalOrigin = EnsureSignedAndCurator<Self::AccountId, MockCuratorQuery>;
 	type PublicVotingOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type GuardianVoteResource = MockGuardianQuery;
