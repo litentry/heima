@@ -3,7 +3,7 @@ use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
 use pallet_assets::Error as AssetError;
 use pallet_balances::Error as BalanceError;
 use sp_core::H256;
-use sp_runtime::AccountId32;
+use sp_runtime::{AccountId32, ArithmeticError};
 
 #[test]
 fn test_propose_investing_pool_ok() {
@@ -108,7 +108,7 @@ fn test_pre_stake_proposal_ok() {
 				1u128,
 				2_000_000_000_000_000_000_000_000,
 			),
-			AssetError::<Test>::BalanceLow
+			ArithmeticError::Underflow
 		);
 
 		// Pool not exist
