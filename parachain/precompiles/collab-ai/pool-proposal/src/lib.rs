@@ -30,9 +30,11 @@ impl<Runtime> PoolProposalPrecompile<Runtime>
 where
 	Runtime: pallet_pool_proposal::Config + pallet_evm::Config,
 	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
-	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	Runtime::RuntimeCall: From<pallet_pool_proposal::Call<Runtime>>,
-	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	<Runtime as frame_system::Config>::RuntimeCall:
+		Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
+	<Runtime as frame_system::Config>::RuntimeCall: From<pallet_pool_proposal::Call<Runtime>>,
+	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<Runtime::AccountId>>,
 	AssetBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 	BlockNumberFor<Runtime>: TryFrom<U256> + Into<U256>,
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
