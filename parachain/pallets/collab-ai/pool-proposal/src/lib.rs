@@ -949,23 +949,21 @@ pub mod pallet {
 									!ProposalStatusFlags::GUARDIAN_SELECTED;
 							}
 
+							let best_guardian_bounded = BoundedVec::<
+								T::AccountId,
+								T::MaxGuardianSelectedPerProposal,
+							>::try_from(
+								best_guardians
+									.into_iter()
+									.map(|b| b.0)
+									.collect::<Vec<T::AccountId>>(),
+							)
+							.or(Err(Error::<T>::GuardianDuplicatedOrOversized))?;
+
 							if pool_proposal.proposal_status_flags.is_all() {
 								<ProposalReadyForBake<T>>::mutate(|proposal_rb| {
-									proposal_rb.push_back(
-										(
-											x.pool_proposal_index,
-											BoundedVec::<
-												T::AccountId,
-												T::MaxGuardianSelectedPerProposal,
-											>::try_from(
-												best_guardians
-													.into_iter()
-													.map(|b| b.0)
-													.collect::<Vec<T::AccountId>>(),
-											)
-											.or(Err(Error::<T>::GuardianDuplicatedOrOversized))?,
-										),
-									);
+									proposal_rb
+										.push_back((x.pool_proposal_index, best_guardian_bounded));
 								});
 								Self::deposit_event(Event::<T>::ProposalReadyForBake {
 									pool_proposal_index: x.pool_proposal_index,
