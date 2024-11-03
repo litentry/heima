@@ -44,6 +44,9 @@ use runtime_common::EnsureEnclaveSigner;
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
 
+// for CollabAI
+use pallet_collab_ai_common::EnsureSignedAndVerifiedCurator;
+
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, RuntimeDebug, H160, H256, U256};
@@ -1042,11 +1045,11 @@ parameter_types! {
 	pub const MinimumGuardianDeposit: Balance = 20 * DOLLARS;
 	// Declare the official AIUSDAssetId
 	pub const AIUSDAssetId: u128 = 1000;
-	pub const OfficialGapPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 10 * MINUTES, "ROCOCO_OFFICIALGAPPERIOD");
-	pub const MinimumProposalLastTime: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_MINIMUMPROPOSALLASTTIME");
+	pub OfficialGapPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 10 * MINUTES, "ROCOCO_OFFICIALGAPPERIOD");
+	pub MinimumProposalLastTime: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_MINIMUMPROPOSALLASTTIME");
 	pub const MinimumPoolDeposit: Balance = 1000 * DOLLARS;
 	pub const MaximumPoolProposed: u128 = 10000;
-	pub const StandardEpoch: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_STANDARDEPOCH");
+	pub StandardEpoch: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_STANDARDEPOCH");
 	pub const MaxGuardianPerProposal: u32 = 1000;
 	pub const MaxGuardianSelectedPerProposal: u32 = 3;
 
@@ -1079,7 +1082,7 @@ impl pallet_pool_proposal::Config for Runtime {
 	type MinimumPoolDeposit = MinimumPoolDeposit;
 	type MaximumPoolProposed = MaximumPoolProposed;
 	type StandardEpoch = StandardEpoch;
-	type ProposalOrigin = Curator;
+	type ProposalOrigin = EnsureSignedAndVerifiedCurator<AccountId, Curator>;
 	type PublicVotingOrigin = EnsureRootOrAllCouncil;
 	type GuardianVoteResource = Guardian;
 	type MaxGuardianPerProposal = MaxGuardianPerProposal;
@@ -1098,9 +1101,9 @@ impl pallet_investing_pool::Config for Runtime {
 	type PoolProposalPalletOrigin = EnsureRoot<AccountId>;
 	type RewardUpdateOrigin = EnsureRootOrAllCouncil;
 	type InvestingPoolAdminOrigin = EnsureRoot<AccountId>;
-	type Fungibles: Assets;
-	type StableTokenBeneficiaryId: StableTokenBeneficiaryId;
-	type CANBenefiicaryId: CANBenefiicaryId;
+	type Fungibles = Assets;
+	type StableTokenBeneficiaryId = StableTokenBeneficiaryId;
+	type CANBenefiicaryId = CANBenefiicaryId;
 }
 
 parameter_types! {
