@@ -957,7 +957,8 @@ pub mod pallet {
 											.into_iter()
 											.map(|b| b.0)
 											.collect::<Vec<T::AccountId>>()
-											.into(),
+											.try_from()
+											.or(Err(Error::<T>::GuardianDuplicatedOrOversized))?,
 									));
 								});
 								Self::deposit_event(Event::<T>::ProposalReadyForBake {
