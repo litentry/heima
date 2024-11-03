@@ -52,7 +52,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, CheckedAdd, CheckedSub, Zero},
 	ArithmeticError,
 };
-use sp_std::collections::vec_deque::VecDeque;
+use sp_std::{collections::vec_deque::VecDeque, vec::Vec};
 
 pub use types::*;
 

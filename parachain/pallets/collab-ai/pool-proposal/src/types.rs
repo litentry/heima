@@ -21,7 +21,7 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub},
 	ArithmeticError, BoundedVec,
 };
-use sp_std::cmp::Ordering;
+use sp_std::{cmp::Ordering, vec::Vec};
 
 bitflags! {
 	/// Flags used to record the status of pool proposal
