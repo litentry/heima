@@ -901,7 +901,7 @@ pub mod pallet {
 									for investor in pre_investments.iter() {
 										match T::GuardianVoteResource::get_vote(
 											investor.0.clone(),
-											guardian_candidat.clone(),
+											guardian_candidate.clone(),
 										) {
 											None => {},
 											Some(GuardianVote::Neutral) => {},
