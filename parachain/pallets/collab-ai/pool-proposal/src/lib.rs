@@ -664,115 +664,106 @@ pub mod pallet {
 		#[transactional]
 		pub fn bake_proposal(_origin: OriginFor<T>) -> DispatchResult {
 			let mut pending = <ProposalReadyForBake<T>>::take();
-			loop {
-				match pending.pop_front() {
-					Some(x) => {
-						if let Some(pool_proposal) = <PoolProposal<T>>::get(x.0) {
-							// Creating investing pool
-							let start_time_u128: u128 = pool_proposal
-								.pool_start_time
-								.try_into()
-								.or(Err(ArithmeticError::Overflow))?;
-							let end_time_u128: u128 = pool_proposal
-								.pool_end_time
-								.try_into()
-								.or(Err(ArithmeticError::Overflow))?;
-							let epoch_range_u128: u128 = T::StandardEpoch::get()
-								.try_into()
-								.or(Err(ArithmeticError::Overflow))?;
 
-							let vec_inner = x.1.into_inner();
-							let signatories: &[T::AccountId] = vec_inner.as_slice();
-							let guardian_multisig = pallet_multisig::Pallet::<T>::multi_account_id(
-								signatories,
-								signatories.len().try_into().or(Err(ArithmeticError::Overflow))?,
-							);
+			while let Some(x) = pending.pop_front() {
+				if let Some(pool_proposal) = <PoolProposal<T>>::get(x.0) {
+					// Creating investing pool
+					let start_time_u128: u128 = pool_proposal
+						.pool_start_time
+						.try_into()
+						.or(Err(ArithmeticError::Overflow))?;
+					let end_time_u128: u128 = pool_proposal
+						.pool_end_time
+						.try_into()
+						.or(Err(ArithmeticError::Overflow))?;
+					let epoch_range_u128: u128 =
+						T::StandardEpoch::get().try_into().or(Err(ArithmeticError::Overflow))?;
 
-							let total_epoch: u128 =
-								((end_time_u128 - start_time_u128) / epoch_range_u128) + 1;
-							let pool_setting: PoolSetting<
-								T::AccountId,
-								BlockNumberFor<T>,
-								AssetBalanceOf<T>,
-							> = PoolSetting {
-								start_time: pool_proposal.pool_start_time,
-								epoch: total_epoch,
-								epoch_range: T::StandardEpoch::get(),
-								pool_cap: pool_proposal.max_pool_size,
-								// Curator
-								admin: pool_proposal.proposer.clone(),
-							};
+					let vec_inner = x.1.into_inner();
+					let signatories: &[T::AccountId] = vec_inner.as_slice();
+					let guardian_multisig = pallet_multisig::Pallet::<T>::multi_account_id(
+						signatories,
+						signatories.len().try_into().or(Err(ArithmeticError::Overflow))?,
+					);
 
-							T::InvestmentInjector::create_investing_pool(
-								x.0,
-								pool_setting,
-								guardian_multisig,
-							)?;
+					let total_epoch: u128 =
+						((end_time_u128 - start_time_u128) / epoch_range_u128) + 1;
+					let pool_setting: PoolSetting<
+						T::AccountId,
+						BlockNumberFor<T>,
+						AssetBalanceOf<T>,
+					> = PoolSetting {
+						start_time: pool_proposal.pool_start_time,
+						epoch: total_epoch,
+						epoch_range: T::StandardEpoch::get(),
+						pool_cap: pool_proposal.max_pool_size,
+						// Curator
+						admin: pool_proposal.proposer.clone(),
+					};
 
-							// Prepare Money related material
-							let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
-								Default::default();
-							let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
-								Default::default();
+					T::InvestmentInjector::create_investing_pool(
+						x.0,
+						pool_setting,
+						guardian_multisig,
+					)?;
 
-							let mut total_investment_amount: AssetBalanceOf<T> = Default::default();
+					// Prepare Money related material
+					let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+						Default::default();
+					let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+						Default::default();
 
-							// ignored if return none, but technically it is impossible
-							if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(x.0) {
-								pre_investments = pool_bonds
-									.pre_investings
-									.into_iter()
-									.map(|b| (b.owner, b.amount))
-									.collect();
-								queued_investments = pool_bonds
-									.queued_pre_investings
-									.into_iter()
-									.map(|b| (b.0.owner, b.0.amount))
-									.collect();
-								total_investment_amount = pool_bonds.total_pre_investing_amount;
-							}
+					let mut total_investment_amount: AssetBalanceOf<T> = Default::default();
 
-							// Inject investment
-							T::InvestmentInjector::inject_investment(x.0, pre_investments)?;
+					// ignored if return none, but technically it is impossible
+					if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(x.0) {
+						pre_investments = pool_bonds
+							.pre_investings
+							.into_iter()
+							.map(|b| (b.owner, b.amount))
+							.collect();
+						queued_investments = pool_bonds
+							.queued_pre_investings
+							.into_iter()
+							.map(|b| (b.0.owner, b.0.amount))
+							.collect();
+						total_investment_amount = pool_bonds.total_pre_investing_amount;
+					}
 
-							// Do refund
-							// Return Queued queued_investments always
-							for investor in queued_investments.iter() {
-								let asset_refund_amount: AssetBalanceOf<T> =
-									T::Fungibles::transfer(
-										T::AIUSDAssetId::get(),
-										&T::PreInvestingPool::get(),
-										&investor.0,
-										investor.1,
-										Preservation::Expendable,
-									)?;
-								Self::deposit_event(Event::<T>::PoolWithdrawed {
-									user: investor.0.clone(),
-									pool_proposal_index: x.0,
-									amount: asset_refund_amount,
-								});
-							}
+					// Inject investment
+					T::InvestmentInjector::inject_investment(x.0, pre_investments)?;
 
-							// Transfer official investment money to curator
-							let proposal_settlement: AssetBalanceOf<T> = T::Fungibles::transfer(
-								T::AIUSDAssetId::get(),
-								&T::PreInvestingPool::get(),
-								&pool_proposal.proposer,
-								total_investment_amount,
-								Preservation::Expendable,
-							)?;
+					// Do refund
+					// Return Queued queued_investments always
+					for investor in queued_investments.iter() {
+						let asset_refund_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
+							T::AIUSDAssetId::get(),
+							&T::PreInvestingPool::get(),
+							&investor.0,
+							investor.1,
+							Preservation::Expendable,
+						)?;
+						Self::deposit_event(Event::<T>::PoolWithdrawed {
+							user: investor.0.clone(),
+							pool_proposal_index: x.0,
+							amount: asset_refund_amount,
+						});
+					}
 
-							Self::deposit_event(Event::<T>::ProposalBaked {
-								pool_proposal_index: x.0,
-								curator: pool_proposal.proposer,
-								proposal_settlement,
-							});
-						}
-					},
-					// Nothing to bake
-					_ => {
-						break;
-					},
+					// Transfer official investment money to curator
+					let proposal_settlement: AssetBalanceOf<T> = T::Fungibles::transfer(
+						T::AIUSDAssetId::get(),
+						&T::PreInvestingPool::get(),
+						&pool_proposal.proposer,
+						total_investment_amount,
+						Preservation::Expendable,
+					)?;
+
+					Self::deposit_event(Event::<T>::ProposalBaked {
+						pool_proposal_index: x.0,
+						curator: pool_proposal.proposer,
+						proposal_settlement,
+					});
 				}
 			}
 			<ProposalReadyForBake<T>>::put(pending);
@@ -785,71 +776,63 @@ pub mod pallet {
 		#[transactional]
 		pub fn dissolve_proposal(_origin: OriginFor<T>) -> DispatchResult {
 			let mut pending = <ProposalReadyForDissolve<T>>::take();
-			loop {
-				match pending.pop_front() {
-					Some(x) => {
-						// Prepare Money related material
-						let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
-							Default::default();
-						let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
-							Default::default();
 
-						// ignored if return none, but technically it is impossible
-						if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(x) {
-							pre_investments = pool_bonds
-								.pre_investings
-								.into_iter()
-								.map(|b| (b.owner, b.amount))
-								.collect();
-							queued_investments = pool_bonds
-								.queued_pre_investings
-								.into_iter()
-								.map(|b| (b.0.owner, b.0.amount))
-								.collect();
-						}
-						// Do Refund
-						// Return bonding
-						for investor in pre_investments.iter() {
-							let asset_refund_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
-								T::AIUSDAssetId::get(),
-								&T::PreInvestingPool::get(),
-								&investor.0,
-								investor.1,
-								Preservation::Expendable,
-							)?;
-							Self::deposit_event(Event::<T>::PoolWithdrawed {
-								user: investor.clone().0,
-								pool_proposal_index: x,
-								amount: asset_refund_amount,
-							});
-						}
+			while let Some(x) = pending.pop_front() {
+				// Prepare Money related material
+				let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+					Default::default();
+				let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+					Default::default();
 
-						// Return Queued queued_investments always
-						for investor in queued_investments.iter() {
-							let asset_refund_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
-								T::AIUSDAssetId::get(),
-								&T::PreInvestingPool::get(),
-								&investor.0,
-								investor.1,
-								Preservation::Expendable,
-							)?;
-							Self::deposit_event(Event::<T>::PoolWithdrawed {
-								user: investor.clone().0,
-								pool_proposal_index: x,
-								amount: asset_refund_amount,
-							});
-						}
-
-						Self::deposit_event(Event::<T>::ProposalDissolved {
-							pool_proposal_index: x,
-						});
-					},
-					// Nothing to dissolve
-					_ => {
-						break;
-					},
+				// ignored if return none, but technically it is impossible
+				if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(x) {
+					pre_investments = pool_bonds
+						.pre_investings
+						.into_iter()
+						.map(|b| (b.owner, b.amount))
+						.collect();
+					queued_investments = pool_bonds
+						.queued_pre_investings
+						.into_iter()
+						.map(|b| (b.0.owner, b.0.amount))
+						.collect();
 				}
+				// Do Refund
+				// Return bonding
+				for investor in pre_investments.iter() {
+					let asset_refund_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
+						T::AIUSDAssetId::get(),
+						&T::PreInvestingPool::get(),
+						&investor.0,
+						investor.1,
+						Preservation::Expendable,
+					)?;
+					Self::deposit_event(Event::<T>::PoolWithdrawed {
+						user: investor.clone().0,
+						pool_proposal_index: x,
+						amount: asset_refund_amount,
+					});
+				}
+
+				// Return Queued queued_investments always
+				for investor in queued_investments.iter() {
+					let asset_refund_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
+						T::AIUSDAssetId::get(),
+						&T::PreInvestingPool::get(),
+						&investor.0,
+						investor.1,
+						Preservation::Expendable,
+					)?;
+					Self::deposit_event(Event::<T>::PoolWithdrawed {
+						user: investor.clone().0,
+						pool_proposal_index: x,
+						amount: asset_refund_amount,
+					});
+				}
+
+				Self::deposit_event(Event::<T>::ProposalDissolved { pool_proposal_index: x });
 			}
+
 			<ProposalReadyForDissolve<T>>::put(pending);
 			Ok(())
 		}
@@ -928,21 +911,19 @@ pub mod pallet {
 							// temp sorted by Aye from largestsmallest to smallest
 							best_guardians.sort_by(|a, b| b.1.cmp(&a.1));
 
-							let split_index: usize;
-
-							match <u32 as TryInto<usize>>::try_into(
+							let split_index: usize = match <u32 as TryInto<usize>>::try_into(
 								T::MaxGuardianSelectedPerProposal::get(),
 							) {
-								Ok(x) => split_index = x,
-								Err(_) => split_index = 0usize,
-							}
+								Ok(x) => x,
+								Err(_) => 0usize,
+							};
 
 							if best_guardians.len() > split_index {
 								let _ = best_guardians.split_off(split_index);
 							}
 
 							// If existing one guardian
-							if best_guardians.len() > 0 {
+							if !best_guardians.is_empty() {
 								pool_proposal.proposal_status_flags |=
 									ProposalStatusFlags::GUARDIAN_SELECTED;
 							} else {
