@@ -70,10 +70,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinimumGuardianDeposit: Get<BalanceOf<Self>>;
 
-		/// The maximum amount of guardian allowed for a proposal
-		#[pallet::constant]
-		type MaxProposalPerGuardian: Get<u32>;
-
 		/// Origin from guardian legal file verified by
 		type GuardianJudgeOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 	}

@@ -104,7 +104,7 @@ fn test_pre_stake_proposal_ok() {
 		// Not enough token
 		assert_noop!(
 			PoolProposal::pre_stake_proposal(
-				RuntimeOrigin::signed(user_a),
+				RuntimeOrigin::signed(user_a.clone()),
 				1u128,
 				2_000_000_000_000_000_000_000_000,
 			),
