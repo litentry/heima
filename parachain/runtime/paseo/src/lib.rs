@@ -1092,8 +1092,8 @@ impl pallet_pool_proposal::Config for Runtime {
 }
 
 parameter_types! {
-	StableTokenBeneficiaryId: PalletId = PalletId(*b"cbai/sid");
-	CANBeneficiaryId: PalletId = PalletId(*b"cbai/nid");
+	pub const StableTokenBeneficiaryId: PalletId = PalletId(*b"cbai/sid");
+	pub const CANBeneficiaryId: PalletId = PalletId(*b"cbai/nid");
 }
 
 impl pallet_investing_pool::Config for Runtime {
