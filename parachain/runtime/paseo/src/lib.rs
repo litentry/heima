@@ -1048,7 +1048,7 @@ parameter_types! {
 	pub OfficialGapPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 10 * MINUTES, "ROCOCO_OFFICIALGAPPERIOD");
 	pub MinimumProposalLastTime: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_MINIMUMPROPOSALLASTTIME");
 	pub const MinimumPoolDeposit: Balance = 1000 * DOLLARS;
-	pub const MaximumPoolProposed: u128 = 10000;
+	pub const MaximumPoolProposed: u32 = 10000;
 	pub StandardEpoch: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_STANDARDEPOCH");
 	pub const MaxGuardianPerProposal: u32 = 1000;
 	pub const MaxGuardianSelectedPerProposal: u32 = 3;
@@ -1093,7 +1093,7 @@ impl pallet_pool_proposal::Config for Runtime {
 
 parameter_types! {
 	StableTokenBeneficiaryId: PalletId = PalletId(*b"cbai/sid");
-	CANBenefiicaryId: PalletId = PalletId(*b"cbai/nid");
+	CANBeneficiaryId: PalletId = PalletId(*b"cbai/nid");
 }
 
 impl pallet_investing_pool::Config for Runtime {
@@ -1103,7 +1103,7 @@ impl pallet_investing_pool::Config for Runtime {
 	type InvestingPoolAdminOrigin = EnsureRoot<AccountId>;
 	type Fungibles = Assets;
 	type StableTokenBeneficiaryId = StableTokenBeneficiaryId;
-	type CANBenefiicaryId = CANBenefiicaryId;
+	type CANBeneficiaryId = CANBeneficiaryId;
 }
 
 parameter_types! {
