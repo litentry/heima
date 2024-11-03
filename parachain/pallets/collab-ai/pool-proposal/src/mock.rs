@@ -22,7 +22,7 @@ use frame_support::{
 use sp_core::{Get, H256};
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	AccountId32, BuildStorage,
+	AccountId32, BuildStorage, DispatchResult,
 };
 
 use pallet_collab_ai_common::*;
@@ -59,7 +59,7 @@ parameter_types! {
 	pub const StandardEpoch: u32 = 10;
 }
 
-impl Config for Test {
+impl pallet_multisig::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type Currency = Balances;
