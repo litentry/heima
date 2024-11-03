@@ -105,7 +105,7 @@ fn test_pre_stake_proposal_ok() {
 		assert_noop!(
 			PoolProposal::pre_stake_proposal(
 				RuntimeOrigin::signed(user_a),
-				1.into(),
+				1u128,
 				2_000_000_000_000_000_000_000_000,
 			),
 			AssetError::<Test>::BalanceLow
@@ -115,7 +115,7 @@ fn test_pre_stake_proposal_ok() {
 		assert_noop!(
 			PoolProposal::pre_stake_proposal(
 				RuntimeOrigin::signed(user_a),
-				2.into(),
+				2u128,
 				500_000_000_000_000_000_000u128,
 			),
 			crate::Error::<Test>::ProposalNotExist

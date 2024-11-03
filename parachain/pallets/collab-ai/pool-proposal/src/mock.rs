@@ -98,7 +98,7 @@ impl frame_system::Config for Test {
 impl pallet_assets::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
-	type AssetId = u32;
+	type AssetId = u128;
 	type AssetIdParameter = u32;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<Self::AccountId>>;
