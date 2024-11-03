@@ -15,17 +15,16 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_core::{RuntimeDebug, H256};
-use sp_runtime::traits::AtLeast32BitUnsigned;
-use sp_std::marker::PhantomData;
-
 use frame_support::{
 	pallet_prelude::{DispatchResult, EnsureOrigin},
 	traits::EitherOfDiverse,
 };
 use frame_system::{EnsureRoot, RawOrigin};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_core::{RuntimeDebug, H256};
+use sp_runtime::traits::AtLeast32BitUnsigned;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 pub type InfoHash = H256;
 pub type CuratorIndex = u128;
