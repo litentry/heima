@@ -15,7 +15,7 @@ use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
 use sp_core::{Get, H256, U256};
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 use pallet_collab_ai_common::PoolProposalIndex;
 
