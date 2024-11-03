@@ -99,8 +99,8 @@ pallet-aiusd-convertor = { workspace = true }
 pallet-collab-ai-common = { workspace = true }
 pallet-curator = { workspace = true }
 pallet-guardian = { workspace = true }
-pallet-pool-proposal = { workspace = true }
 pallet-investing-pool = { workspace = true }
+pallet-pool-proposal = { workspace = true }
 
 fp-evm = { workspace = true }
 fp-rpc = { workspace = true }
