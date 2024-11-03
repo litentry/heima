@@ -17,7 +17,7 @@ fn test_propose_investing_pool_ok() {
 		let pool_last_time = 10000;
 		let estimated_pool_reward = 2_000_000_000_000_000_000_000u128;
 		let pool_info_hash: H256 = H256([2; 32]);
-		let pool_info_hash_2: H256 = H256([3; 32]);
+		let _pool_info_hash_2: H256 = H256([3; 32]);
 
 		// ProposalPublicTimeTooShort
 		assert_noop!(

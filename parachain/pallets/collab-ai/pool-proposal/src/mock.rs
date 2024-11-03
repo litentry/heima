@@ -173,10 +173,10 @@ impl GuardianQuery<AccountId> for MockGuardianQuery {
 }
 
 pub struct MockInvestmentInjector;
-impl InvestmentInjector<AccountId, u32, Balance> for MockInvestmentInjector {
+impl InvestmentInjector<AccountId, u64, Balance> for MockInvestmentInjector {
 	fn create_investing_pool(
 		_pool_id: InvestingPoolIndex,
-		_setting: PoolSetting<AccountId, u32, Balance>,
+		_setting: PoolSetting<AccountId, u64, Balance>,
 		_admin: AccountId,
 	) -> DispatchResult {
 		Ok(())
