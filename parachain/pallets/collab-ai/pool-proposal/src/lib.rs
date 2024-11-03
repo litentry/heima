@@ -911,12 +911,10 @@ pub mod pallet {
 							// temp sorted by Aye from largestsmallest to smallest
 							best_guardians.sort_by(|a, b| b.1.cmp(&a.1));
 
-							let split_index: usize = match <u32 as TryInto<usize>>::try_into(
+							let split_index: usize = <u32 as TryInto<usize>>::try_into(
 								T::MaxGuardianSelectedPerProposal::get(),
-							) {
-								Ok(x) => x,
-								Err(_) => 0usize,
-							};
+							)
+							.unwrap_or(0usize);
 
 							if best_guardians.len() > split_index {
 								let _ = best_guardians.split_off(split_index);
