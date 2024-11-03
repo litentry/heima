@@ -86,7 +86,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_investing_pool::Config {
+	pub trait Config: frame_system::Config + pallet_multisig::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// Currency type for this pallet.
@@ -114,6 +114,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumPoolProposed: Get<u32>;
 
+		/// The maximum amount of allowed pool proposed by a single curator
+		#[pallet::constant]
+		type StandardEpoch: Get<BlockNumberFor<Self>>;
+
 		/// Origin who can make a pool proposal
 		type ProposalOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 
@@ -123,7 +127,7 @@ pub mod pallet {
 		/// Guardian vote resource
 		type GuardianVoteResource: GuardianQuery<Self::AccountId>;
 
-		/// The maximum amount of guardian allowed for a proposal
+		/// The maximum amount of guardian allowed for a proposal before expired
 		#[pallet::constant]
 		type MaxGuardianPerProposal: Get<u32>;
 
@@ -133,6 +137,13 @@ pub mod pallet {
 
 		/// System Account holding pre-investing assets
 		type PreInvestingPool: Get<Self::AccountId>;
+
+		/// Baking the effect proposal into investing pool
+		type InvestmentInjector: InvestmentInjector<
+			Self::AccountId,
+			BlockNumberFor<Self>,
+			AssetBalanceOf<Self>,
+		>;
 	}
 
 	#[pallet::type_value]
@@ -240,6 +251,8 @@ pub mod pallet {
 		},
 		/// A public vote result of proposal get passed
 		ProposalPublicVoted { pool_proposal_index: PoolProposalIndex, vote_result: bool },
+		/// A proposal passed all checking and become a investing pool
+		ProposalBaked { pool_proposal_index: PoolProposalIndex, effective_time: n },
 	}
 
 	#[pallet::error]
@@ -259,7 +272,6 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			// Check proposal expire
-			
 
 			// curator must be verified by this time
 			// check epoch number not too large so asset id will not overflow
@@ -504,6 +516,14 @@ pub mod pallet {
 				Error::<T>::ProposalPreInvestingLocked
 			);
 
+			// If proposal expired, all bondings should already be returned
+			ensure!(
+				!pool_proposal
+					.proposal_status_flags
+					.contains(ProposalStatusFlags::PROPOSAL_EXPIRED),
+				Error::<T>::ProposalExpired
+			);
+
 			pool_proposal_pre_investing.withdraw::<T>(who.clone(), amount)?;
 			Self::deposit_event(Event::PoolWithdrawed {
 				user: who.clone(),
@@ -618,59 +638,166 @@ pub mod pallet {
 					// Latest Pending tx effective
 					Some(x) if x.proposal_expire_time <= n => {
 						// Mature the proposal
-						let mut pool_proposal =
-							<PoolProposal<T>>::get(pool_proposal_index).ok_or(Error::<T>::ProposalNotExist)?;
-						pool_proposal.proposal_status_flags |= ProposalStatusFlags::PROPOSAL_EXPIRED;
-						<PoolProposal<T>>::insert(pool_proposal_index, pool_proposal.clone());
+						let mut pool_proposal = <PoolProposal<T>>::get(x.pool_proposal_index)
+							.ok_or(Error::<T>::ProposalNotExist)?;
+						pool_proposal.proposal_status_flags |=
+							ProposalStatusFlags::PROPOSAL_EXPIRED;
+						<PoolProposal<T>>::insert(x.pool_proposal_index, pool_proposal.clone());
 
-						let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =  Default::default();
-						let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> = Default::default();
+						let mut pre_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+							Default::default();
+						let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+							Default::default();
 
 						// ignored if return none
-						if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(pool_proposal_index) {
-							pre_investments = pool_bonds.pre_investings.into_iter().map(|x| (x.owner, x.amount)).collect(); 
-							queued_investments = pool_bonds.queued_pre_investings.into_iter().map(|x| (x.0.owner, x.0.amount)).collect();
+						if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(x.pool_proposal_index)
+						{
+							pre_investments = pool_bonds
+								.pre_investings
+								.into_iter()
+								.map(|b| (b.owner, b.amount))
+								.collect();
+							queued_investments = pool_bonds
+								.queued_pre_investings
+								.into_iter()
+								.map(|b| (b.0.owner, b.0.amount))
+								.collect();
 						}
 
 						// Judege guardian
-						let mut best_guardians: Vec<(T::AccountId, AssetBalanceOf<T>)> = Default::default();
-						if let Some(pool_guardians) = <PoolGuardian<T>>::get(pool_proposal_index) {
+						// guardian with aye > nye will be selected
+						// And select top N guardians with highest aye
+						let mut best_guardians: Vec<(T::AccountId, AssetBalanceOf<T>)> =
+							Default::default();
+						if let Some(pool_guardians) = <PoolGuardian<T>>::get(x.pool_proposal_index)
+						{
 							for guardian_candidate in pool_guardians.0.into_iter() {
+								// AccountId, Aye, Nye
+								let mut guardian: (T::AccountId, AssetBalanceOf<T>) =
+									(guardian_candidate.clone(), Zero::zero(), Zero::zero());
 								for investor in pre_investments.iter() {
-									T::GuardianVoteResource::get_vote(investor.0, guardian_candidate)
+									match T::GuardianVoteResource::get_vote(
+										investor.0,
+										guardian_candidate,
+									) {
+										None => _,
+										Some(GuardianVote::Neutral) => _,
+										Some(GuardianVote::Aye) => guardian.1 += investor.1,
+										Some(GuardianVote::Nay) => guardian.2 += investor.1,
+									};
 								}
-
+								// As long as Aye > Nye and kyc passed, valid guardian
+								if guardian.1 >= guardian.2
+									&& T::GuardianVoteResource::is_verified_guardian(guardian.0)
+								{
+									best_guardians.push((guardian.0, guardian.1));
+								}
 							}
+						}
+						// Order best_guardians based on Aye
+						// temp sorted by Aye from largestsmallest to smallest
+						best_guardians.sort_by(|a, b| b.1.cmp(&a.1));
 
+						if best_guardians.len > T::MaxGuardianSelectedPerProposal::get() {
+							best_guardians.split_off(T::MaxGuardianSelectedPerProposal::get());
 						}
 
-						if best_guardians.0.len > 0 {
-							pool_proposal.proposal_status_flags |= ProposalStatusFlags::PUBLIC_VOTE_PASSED;
+						// If existing one guardian
+						if best_guardians.len > 0 {
+							pool_proposal.proposal_status_flags |=
+								ProposalStatusFlags::GUARDIAN_SELECTED;
 						} else {
-							pool_proposal.proposal_status_flags &= !ProposalStatusFlags::PUBLIC_VOTE_PASSED;
+							pool_proposal.proposal_status_flags &=
+								!ProposalStatusFlags::GUARDIAN_SELECTED;
 						}
 
-						pool_proposal.proposal_status_flags |= ProposalStatusFlags::PROPOSAL_EXPIRED;
+						pool_proposal.proposal_status_flags |=
+							ProposalStatusFlags::PROPOSAL_EXPIRED;
 
-
-
-
-
-
-						
 						// If all satisfied, baked into investing pool
-						if pool_proposal.proposal_status_flags.is_all()
+						if pool_proposal.proposal_status_flags.is_all() {
+							let signatories: [T::AccountId] =
+								best_guardian.into_iter().map(|b| b.owner).collect();
+							let guardian_multisig = pallet_multisig::Pallet::<T>::multi_account_id(
+								&signatories,
+								signatories.len,
+							);
+							let start_time_u128: u128 = pool_proposal
+								.start_time
+								.try_into()
+								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+							let end_time_u128: u128 = pool_proposal
+								.end_time
+								.try_into()
+								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
+							let epoch_range_u128: u128 = T::StandardEpoch::get()
+								.try_into()
+								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 
-						// Otherwise return bonding 
-						???
-						Self::deposit_event(Event::<T>::??? {
-							who: x.who,
-							pool_id: x.pool_id.clone(),
-							effective_time: n,
-							amount: x.staking_info.amount,
-						});
-						// Loop through investing bond
-						???
+							let total_epoch: u128 =
+								((end_time_u128 - start_time_u128) / epoch_range_u128) + 1;
+							let pool_setting: PoolSetting<
+								T::AccountId,
+								BlockNumberFor<T>,
+								AssetBalanceOf<T>,
+							> = PoolSetting {
+								start_time: pool_proposal.pool_start_time,
+								epoch: total_epoch,
+								epoch_range: T::StandardEpoch::get(),
+								pool_cap: pool_proposal.max_pool_size,
+								// Curator
+								admin: pool_proposal.proposer,
+							};
+
+							T::InvestmentInjector::create_investing_pool(
+								x.pool_proposal_index,
+								pool_setting,
+								guardian_multisig,
+							)?;
+							T::InvestmentInjector::inject_investment(
+								x.pool_proposal_index,
+								pre_investments,
+							)?;
+							Self::deposit_event(Event::<T>::ProposalBaked {
+								pool_proposal_index: x.pool_proposal_index,
+								effective_time: n,
+							});
+						} else {
+							// Otherwise return bonding
+							for investor in pre_investments.iter() {
+								let asset_refund_amount: AssetBalanceOf<T> =
+									T::Fungibles::transfer(
+										T::AIUSDAssetId::get(),
+										&T::PreInvestingPool::get(),
+										&investor.0,
+										investor.1,
+										Preservation::Expendable,
+									)?;
+								Self::deposit_event(Event::<T>::PoolWithdrawed {
+									who: investor.0,
+									pool_id: x.pool_proposal_index,
+									effective_time: n,
+									amount: investor.1,
+								});
+							}
+						}
+
+						// Return Queued queued_investments always
+						for investor in queued_investments.iter() {
+							let asset_refund_amount: AssetBalanceOf<T> = T::Fungibles::transfer(
+								T::AIUSDAssetId::get(),
+								&T::PreInvestingPool::get(),
+								&investor.0,
+								investor.1,
+								Preservation::Expendable,
+							)?;
+							Self::deposit_event(Event::<T>::PoolWithdrawed {
+								who: investor.0,
+								pool_id: x.pool_proposal_index,
+								effective_time: n,
+								amount: investor.1,
+							});
+						}
 
 						<PoolProposal<T>>::insert(pool_proposal_index, pool_proposal);
 					},
@@ -721,7 +848,7 @@ pub mod pallet {
 		}
 	}
 
-	/// Simple ensure origin for the applet pool proposal 
+	/// Simple ensure origin for the applet pool proposal
 	pub struct EnsurePoolProposal<T>(sp_std::marker::PhantomData<T>);
 	impl<T: Config> EnsureOrigin<T::RuntimeOrigin> for EnsureBridge<T> {
 		type Success = T::AccountId;

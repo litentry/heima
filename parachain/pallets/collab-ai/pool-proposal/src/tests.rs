@@ -1,7 +1,7 @@
 use crate::mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
-use pallet_balances::Error as BalanceError;
 use pallet_assets::Error as AssetError;
+use pallet_balances::Error as BalanceError;
 use sp_core::H256;
 use sp_runtime::AccountId32;
 
@@ -130,6 +130,5 @@ fn test_pre_stake_proposal_ok() {
 		// 	),
 		// 	crate::Error::<Test>::ProposalExpired
 		// );
-
 	})
 }

@@ -88,6 +88,34 @@ pub trait ProposerQuery<AccountId> {
 	fn is_proposer(account: AccountId, proposal_index: PoolProposalIndex) -> bool;
 }
 
+#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
+pub struct PoolSetting<AccountId, BlockNumber, Balance> {
+	// The start time of investing pool
+	pub start_time: BlockNumber,
+	// How many epoch will investing pool last, n > 0, valid epoch index :[0..n)
+	pub epoch: u128,
+	// How many blocks each epoch consist
+	pub epoch_range: BlockNumber,
+	// Max staked amount of pool
+	pub pool_cap: Balance,
+	// Curator
+	pub admin: AccountId,
+}
+
+impl<AccountId, BlockNumber, Balance> PoolSetting<AccountId, BlockNumber, Balance>
+where
+	Balance: AtLeast32BitUnsigned + Copy,
+	BlockNumber: AtLeast32BitUnsigned + Copy,
+{
+	// None means TypeIncompatible Or Overflow
+	pub fn end_time(&self) -> Option<BlockNumber> {
+		let er: u128 = self.epoch_range.try_into().ok()?;
+		let st: u128 = self.start_time.try_into().ok()?;
+		let result = st.checked_add(er.checked_mul(self.epoch)?)?;
+		result.try_into().ok()
+	}
+}
+
 pub struct EnsureSignedAndCurator<AccountId, EC>(PhantomData<(AccountId, EC)>);
 impl<
 		O: Into<Result<RawOrigin<AccountId>, O>> + From<RawOrigin<AccountId>>,
@@ -228,7 +256,12 @@ pub trait GuardianQuery<AccountId> {
 }
 
 /// Inject investment into pool
-pub trait InvestmentInjector<AccountId, Balance> {
+pub trait InvestmentInjector<AccountId, BlockNumber, Balance> {
+	fn create_investing_pool(
+		pool_id: InvestingPoolIndex,
+		setting: PoolSetting<AccountId, BlockNumber, Balance>,
+		admin: AccountId,
+	) -> DispatchResult;
 	fn inject_investment(
 		pool_id: InvestingPoolIndex,
 		investments: Vec<(AccountId, Balance)>,

@@ -38,6 +38,7 @@ construct_runtime!(
 		System: frame_system,
 		Assets: pallet_assets,
 		Balances: pallet_balances,
+		Multisig: pallet_multisig,
 		PoolProposal: pallet_pool_proposal,
 	}
 );
@@ -49,7 +50,23 @@ parameter_types! {
 	pub const MinimumProposalLastTime: u32 = 10;
 	pub const MinimumPoolDeposit: Balance = 100;
 	pub const MaxGuardianPerProposal: u32 = 2;
+	pub const MaxGuardianSelectedPerProposal: u32 = 1;
 	pub const MaximumPoolProposed: u32 = 1;
+
+	pub const DepositBase: Balance = 1;
+	pub const DepositFactor: Balance = 1;
+
+	pub const StandardEpoch: u32 = 10;
+}
+
+impl Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = ConstU32<3>;
+	type WeightInfo = ();
 }
 
 impl frame_system::Config for Test {
@@ -155,6 +172,23 @@ impl GuardianQuery<AccountId> for MockGuardianQuery {
 	}
 }
 
+pub struct MockInvestmentInjector;
+impl InvestmentInjector<AccountId, u32, Balance> for MockInvestmentInjector {
+	fn create_investing_pool(
+		_pool_id: InvestingPoolIndex,
+		_setting: PoolSetting<AccountId, u32, Balance>,
+		_admin: AccountId,
+	) -> DispatchResult {
+		Ok(())
+	}
+	fn inject_investment(
+		_pool_id: InvestingPoolIndex,
+		_investments: Vec<(AccountId, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
+
 impl pallet_pool_proposal::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
@@ -164,11 +198,14 @@ impl pallet_pool_proposal::Config for Test {
 	type MinimumProposalLastTime = MinimumProposalLastTime;
 	type MinimumPoolDeposit = MinimumPoolDeposit;
 	type MaximumPoolProposed = MaximumPoolProposed;
+	type StandardEpoch = StandardEpoch;
 	type ProposalOrigin = EnsureSignedAndCurator<Self::AccountId, MockCuratorQuery>;
 	type PublicVotingOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type GuardianVoteResource = MockGuardianQuery;
 	type MaxGuardianPerProposal = MaxGuardianPerProposal;
+	type MaxGuardianSelectedPerProposal = MaxGuardianSelectedPerProposal;
 	type PreInvestingPool = PreInvestingPool;
+	type InvestmentInjector = MockInvestmentInjector;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

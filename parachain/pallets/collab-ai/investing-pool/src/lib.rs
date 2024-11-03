@@ -158,34 +158,6 @@ where
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
-pub struct PoolSetting<AccountId, BlockNumber, Balance> {
-	// The start time of investing pool
-	pub start_time: BlockNumber,
-	// How many epoch will investing pool last, n > 0, valid epoch index :[0..n)
-	pub epoch: u128,
-	// How many blocks each epoch consist
-	pub epoch_range: BlockNumber,
-	// Max staked amount of pool
-	pub pool_cap: Balance,
-	// Curator
-	pub admin: AccountId,
-}
-
-impl<AccountId, BlockNumber, Balance> PoolSetting<AccountId, BlockNumber, Balance>
-where
-	Balance: AtLeast32BitUnsigned + Copy,
-	BlockNumber: AtLeast32BitUnsigned + Copy,
-{
-	// None means TypeIncompatible Or Overflow
-	fn end_time(&self) -> Option<BlockNumber> {
-		let er: u128 = self.epoch_range.try_into().ok()?;
-		let st: u128 = self.start_time.try_into().ok()?;
-		let result = st.checked_add(er.checked_mul(self.epoch)?)?;
-		result.try_into().ok()
-	}
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::transactional;
@@ -243,7 +215,7 @@ pub mod pallet {
 	>;
 
 	// investing pools' stable token reward waiting claiming
-	// Pool id, epcoh index => epoch reward
+	// Pool id, epcoh index => (total epoch reward, claimed reward)
 	#[pallet::storage]
 	#[pallet::getter(fn stable_investing_pool_epoch_reward)]
 	pub type StableInvestingPoolEpochReward<T: Config> = StorageDoubleMap<
@@ -252,7 +224,7 @@ pub mod pallet {
 		InvestingPoolIndex,
 		Twox64Concat,
 		u128,
-		BalanceOf<T>,
+		(BalanceOf<T>, BalanceOf<T>),
 		OptionQuery,
 	>;
 
@@ -356,6 +328,8 @@ pub mod pallet {
 		PoolAlreadyEnded,
 		PoolAlreadyExisted,
 		PoolCapLimit,
+		// If this happens, asset manager might cheat
+		PoolRewardOverflow,
 		PoolNotEnded,
 		PoolNotExisted,
 		PoolNotStarted,
@@ -390,38 +364,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::PoolProposalPalletOrigin::ensure_origin(origin)?;
 
-			ensure!(
-				frame_system::Pallet::<T>::block_number() <= setting.start_time,
-				Error::<T>::PoolAlreadyStarted
-			);
-			ensure!(
-				!InvestingPoolSetting::<T>::contains_key(pool_id),
-				Error::<T>::PoolAlreadyExisted
-			);
-
-			// Create all asset token categories
-			let asset_id_vec: Vec<AssetIdOf<T>> =
-				InvestingPoolAssetIdGenerator::get_all_pool_token(pool_id, setting.epoch)
-					.ok_or(ArithmeticError::Overflow)?;
-			for i in asset_id_vec.iter() {
-				<T::Fungibles as FsCreate<<T as frame_system::Config>::AccountId>>::create(
-					*i,
-					admin.clone(),
-					true,
-					One::one(),
-				)?;
-			}
-
-			<InvestingPoolSetting<T>>::insert(pool_id, setting.clone());
-			Self::deposit_event(Event::InvestingPoolCreated {
-				pool_id,
-				admin: setting.admin,
-				start_time: setting.start_time,
-				epoch: setting.epoch,
-				epoch_range: setting.epoch_range,
-				pool_cap: setting.pool_cap,
-			});
-			Ok(())
+			Self::do_create_investing_pool(pool_id, setting, admin)
 		}
 
 		/// Update a reward for an investing pool of specific epoch
@@ -447,7 +390,7 @@ pub mod pallet {
 				|maybe_reward| -> DispatchResult {
 					ensure!(maybe_reward.is_none(), Error::<T>::RewardAlreadyExisted);
 
-					*maybe_reward = Some(reward);
+					*maybe_reward = Some((reward, Zero::zero()));
 					Self::deposit_event(Event::<T>::RewardUpdated {
 						pool_id,
 						epoch,
@@ -797,12 +740,13 @@ pub mod pallet {
 				// Claim until the claimed_until_epoch
 				// loop through each epoch
 				for i in start_epoch..(end_epoch + 1) {
-					let reward_pool = <StableInvestingPoolEpochReward<T>>::get(pool_id, i)
+					let mut reward_pool = <StableInvestingPoolEpochReward<T>>::get(pool_id, i)
 						.ok_or(Error::<T>::EpochRewardNotUpdated)?;
 
 					let proportion = Perquintill::from_rational(amount_u128, total_investing);
 
 					let reward_pool_u128: u128 = reward_pool
+						.0
 						.try_into()
 						.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 					let distributed_reward_u128: u128 = proportion * reward_pool_u128;
@@ -812,6 +756,14 @@ pub mod pallet {
 					total_distributed_reward = total_distributed_reward
 						.checked_add(&distributed_reward)
 						.ok_or(ArithmeticError::Overflow)?;
+
+					// Make sure no overflow of reward even if asset manager cheating
+					reward_pool.1 = reward_pool
+						.1
+						.checked_add(&distributed_reward)
+						.ok_or(ArithmeticError::Overflow)?;
+					ensure!(reward_pool.1 < reward_pool.0, Error::<T>::PoolRewardOverflow);
+					<StableInvestingPoolEpochReward<T>>::insert(pool_id, i, reward_pool);
 
 					Self::deposit_event(Event::<T>::StableRewardClaimed {
 						who: who.clone(),
@@ -843,6 +795,45 @@ pub mod pallet {
 			T::StableTokenBeneficiaryId::get().into_account_truncating()
 		}
 
+		pub fn do_create_investing_pool(
+			pool_id: InvestingPoolIndex,
+			setting: PoolSetting<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>,
+			admin: T::AccountId,
+		) -> DispatchResult {
+			ensure!(
+				frame_system::Pallet::<T>::block_number() <= setting.start_time,
+				Error::<T>::PoolAlreadyStarted
+			);
+			ensure!(
+				!InvestingPoolSetting::<T>::contains_key(pool_id),
+				Error::<T>::PoolAlreadyExisted
+			);
+
+			// Create all asset token categories
+			let asset_id_vec: Vec<AssetIdOf<T>> =
+				InvestingPoolAssetIdGenerator::get_all_pool_token(pool_id, setting.epoch)
+					.ok_or(ArithmeticError::Overflow)?;
+			for i in asset_id_vec.iter() {
+				<T::Fungibles as FsCreate<<T as frame_system::Config>::AccountId>>::create(
+					*i,
+					admin.clone(),
+					true,
+					One::one(),
+				)?;
+			}
+
+			<InvestingPoolSetting<T>>::insert(pool_id, setting.clone());
+			Self::deposit_event(Event::InvestingPoolCreated {
+				pool_id,
+				admin: setting.admin,
+				start_time: setting.start_time,
+				epoch: setting.epoch,
+				epoch_range: setting.epoch_range,
+				pool_cap: setting.pool_cap,
+			});
+			Ok(())
+		}
+
 		// Mint category token to user, record can token checkpoint accordingly
 		pub fn inject_investment(
 			pool_id: InvestingPoolIndex,
@@ -872,7 +863,14 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> InvestmentInjector<T::AccountId, BalanceOf<T>> for Pallet<T> {
+	impl<T: Config> InvestmentInjector<T::AccountId, BlockNumberFor<T>, BalanceOf<T>> for Pallet<T> {
+		fn create_investing_pool(
+			pool_id: InvestingPoolIndex,
+			setting: PoolSetting<T::AccountId, BlockNumberFor<T>, BalanceOf<T>>,
+			admin: T::AccountId,
+		) -> DispatchResult {
+			Self::do_create_investing_pool(pool_id, setting, admin)
+		}
 		fn inject_investment(
 			pool_id: InvestingPoolIndex,
 			investments: Vec<(T::AccountId, BalanceOf<T>)>,
