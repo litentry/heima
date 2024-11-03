@@ -949,7 +949,7 @@ pub mod pallet {
 									!ProposalStatusFlags::GUARDIAN_SELECTED;
 							}
 
-							let best_guardian_bounded = BoundedVec::<
+							if let Ok(best_guardian_bounded) = BoundedVec::<
 								T::AccountId,
 								T::MaxGuardianSelectedPerProposal,
 							>::try_from(
@@ -957,10 +957,8 @@ pub mod pallet {
 									.into_iter()
 									.map(|b| b.0)
 									.collect::<Vec<T::AccountId>>(),
-							)
-							.or(Err(Error::<T>::GuardianDuplicatedOrOversized))?;
-
-							if pool_proposal.proposal_status_flags.is_all() {
+							) && pool_proposal.proposal_status_flags.is_all()
+							{
 								<ProposalReadyForBake<T>>::mutate(|proposal_rb| {
 									proposal_rb
 										.push_back((x.pool_proposal_index, best_guardian_bounded));
