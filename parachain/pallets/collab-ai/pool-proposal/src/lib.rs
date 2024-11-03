@@ -938,7 +938,7 @@ pub mod pallet {
 							}
 
 							if best_guardians.len() > split_index {
-								best_guardians.split_off(split_index);
+								let _ = best_guardians.split_off(split_index);
 							}
 
 							// If existing one guardian

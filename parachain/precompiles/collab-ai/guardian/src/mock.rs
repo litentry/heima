@@ -44,7 +44,6 @@ construct_runtime!(
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MinimumGuardianDeposit: Balance = 10;
-	pub const MaxProposalPerGuardian: u32 = 10;
 }
 
 impl frame_system::Config for Test {
@@ -94,7 +93,6 @@ impl pallet_guardian::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MinimumGuardianDeposit = MinimumGuardianDeposit;
-	type MaxProposalPerGuardian = MaxProposalPerGuardian;
 	type GuardianJudgeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 }
 
