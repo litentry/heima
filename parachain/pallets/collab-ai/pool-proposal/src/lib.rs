@@ -900,8 +900,8 @@ pub mod pallet {
 									) = (guardian_candidate.clone(), Zero::zero(), Zero::zero());
 									for investor in pre_investments.iter() {
 										match T::GuardianVoteResource::get_vote(
-											investor.0,
-											guardian_candidate,
+											investor.0.clone(),
+											guardian_candidat.clone(),
 										) {
 											None => {},
 											Some(GuardianVote::Neutral) => {},
@@ -917,8 +917,9 @@ pub mod pallet {
 									}
 									// As long as Aye > Nye and kyc passed, valid guardian
 									if guardian.1 >= guardian.2
-										&& T::GuardianVoteResource::is_verified_guardian(guardian.0)
-									{
+										&& T::GuardianVoteResource::is_verified_guardian(
+											guardian.0.clone(),
+										) {
 										best_guardians.push((guardian.0, guardian.1));
 									}
 								}
@@ -949,7 +950,7 @@ pub mod pallet {
 									!ProposalStatusFlags::GUARDIAN_SELECTED;
 							}
 
-							if let Ok(best_guardian_bounded) = BoundedVec::<
+							match BoundedVec::<
 								T::AccountId,
 								T::MaxGuardianSelectedPerProposal,
 							>::try_from(
@@ -957,22 +958,26 @@ pub mod pallet {
 									.into_iter()
 									.map(|b| b.0)
 									.collect::<Vec<T::AccountId>>(),
-							) && pool_proposal.proposal_status_flags.is_all()
-							{
-								<ProposalReadyForBake<T>>::mutate(|proposal_rb| {
-									proposal_rb
-										.push_back((x.pool_proposal_index, best_guardian_bounded));
-								});
-								Self::deposit_event(Event::<T>::ProposalReadyForBake {
-									pool_proposal_index: x.pool_proposal_index,
-								});
-							} else {
-								<ProposalReadyForDissolve<T>>::mutate(|proposal_fb| {
-									proposal_fb.push_back(x.pool_proposal_index);
-								});
-								Self::deposit_event(Event::<T>::ProposalReadyForDissolve {
-									pool_proposal_index: x.pool_proposal_index,
-								});
+							) {
+								// guardian is bounded and status satisfied
+								// guardian bounded is technically for sure
+								Ok(best_guardian_bounded) if pool_proposal.proposal_status_flags.is_all() => {
+									<ProposalReadyForBake<T>>::mutate(|proposal_rb| {
+										proposal_rb
+											.push_back((x.pool_proposal_index, best_guardian_bounded));
+									});
+									Self::deposit_event(Event::<T>::ProposalReadyForBake {
+										pool_proposal_index: x.pool_proposal_index,
+									});
+								},
+								_ => {
+									<ProposalReadyForDissolve<T>>::mutate(|proposal_fb| {
+										proposal_fb.push_back(x.pool_proposal_index);
+									});
+									Self::deposit_event(Event::<T>::ProposalReadyForDissolve {
+										pool_proposal_index: x.pool_proposal_index,
+									});
+								}
 							}
 							// Put status flag updated
 							<PoolProposal<T>>::insert(x.pool_proposal_index, pool_proposal);
