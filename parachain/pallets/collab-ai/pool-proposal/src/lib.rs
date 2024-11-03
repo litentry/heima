@@ -681,7 +681,8 @@ pub mod pallet {
 								.try_into()
 								.or(Err(ArithmeticError::Overflow))?;
 
-							let signatories: &[T::AccountId] = x.1.into_inner().as_slice();
+							let vec_inner = x.1.into_inner();
+							let signatories: &[T::AccountId] = vec_inner.as_slice();
 							let guardian_multisig = pallet_multisig::Pallet::<T>::multi_account_id(
 								signatories,
 								signatories.len().try_into().or(Err(ArithmeticError::Overflow))?,
@@ -699,7 +700,7 @@ pub mod pallet {
 								epoch_range: T::StandardEpoch::get(),
 								pool_cap: pool_proposal.max_pool_size,
 								// Curator
-								admin: pool_proposal.proposer,
+								admin: pool_proposal.proposer.clone(),
 							};
 
 							T::InvestmentInjector::create_investing_pool(
@@ -714,7 +715,7 @@ pub mod pallet {
 							let mut queued_investments: Vec<(T::AccountId, AssetBalanceOf<T>)> =
 								Default::default();
 
-							let total_investment_amount: AssetBalanceOf<T>;
+							let mut total_investment_amount: AssetBalanceOf<T> = Default::default();
 
 							// ignored if return none, but technically it is impossible
 							if let Some(pool_bonds) = <PoolPreInvestings<T>>::get(x.0) {
@@ -746,7 +747,7 @@ pub mod pallet {
 										Preservation::Expendable,
 									)?;
 								Self::deposit_event(Event::<T>::PoolWithdrawed {
-									user: investor.0,
+									user: investor.0.clone(),
 									pool_proposal_index: x.0,
 									amount: asset_refund_amount,
 								});
@@ -911,6 +912,7 @@ pub mod pallet {
 											{
 												guardian.1 += investor.1
 											},
+											_ => {},
 										};
 									}
 									// As long as Aye > Nye and kyc passed, valid guardian
@@ -951,7 +953,11 @@ pub mod pallet {
 								<ProposalReadyForBake<T>>::mutate(|proposal_rb| {
 									proposal_rb.push_back((
 										x.pool_proposal_index,
-										best_guardians.into_iter().map(|b| b.0).collect().into(),
+										best_guardians
+											.into_iter()
+											.map(|b| b.0)
+											.collect::<Vec<T::AccountId>>()
+											.into(),
 									));
 								});
 								Self::deposit_event(Event::<T>::ProposalReadyForBake {
