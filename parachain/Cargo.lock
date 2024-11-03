@@ -8066,6 +8066,7 @@ dependencies = [
  "pallet-assets",
  "pallet-balances",
  "pallet-collab-ai-common",
+ "pallet-multisig",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
