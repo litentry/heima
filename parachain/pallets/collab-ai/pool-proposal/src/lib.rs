@@ -31,7 +31,7 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		tokens::{
-			fungibles::{Inspect as FsInspect, Mutate as FsMutate},
+			fungibles::{Create as FsCreate, Inspect as FsInspect, Mutate as FsMutate},
 			Preservation,
 		},
 		Currency, EnsureOrigin, Get, LockableCurrency, ReservableCurrency,
@@ -49,7 +49,7 @@ use orml_utilities::OrderedSet;
 pub use pallet::*;
 use pallet_collab_ai_common::*;
 use sp_runtime::{
-	traits::{AccountIdConversion, CheckedAdd, CheckedSub},
+	traits::{AccountIdConversion, CheckedAdd, CheckedSub, Zero},
 	ArithmeticError,
 };
 use sp_std::collections::vec_deque::VecDeque;
@@ -252,7 +252,13 @@ pub mod pallet {
 		/// A public vote result of proposal get passed
 		ProposalPublicVoted { pool_proposal_index: PoolProposalIndex, vote_result: bool },
 		/// A proposal passed all checking and become a investing pool
-		ProposalBaked { pool_proposal_index: PoolProposalIndex, effective_time: n },
+		ProposalBaked { pool_proposal_index: PoolProposalIndex, effective_time: BlockNumberFor<T> },
+		/// A proposal failed some checking or type error
+		ProposalFailed {
+			pool_proposal_index: PoolProposalIndex,
+			effective_time: BlockNumberFor<T>,
+			type_error: bool,
+		},
 	}
 
 	#[pallet::error]
@@ -272,10 +278,13 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			// Check proposal expire
+			// Mature the pool by proposal if qualified, refund/transfer all money based on investing pool logic
+			Self::solve_pending(n);
 
 			// curator must be verified by this time
-			// check epoch number not too large so asset id will not overflow
-			// Mature the pool by proposal if qualified, refund/transfer all money based on investing pool logic
+			// TODO::check epoch number not too large so asset id will not overflow
+			// curator must be verified by this time since there is committe vote
+			// TODO::make sure curator is verified by now
 
 			Weight::zero()
 		}
@@ -631,7 +640,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn solve_pending(n: BlockNumberFor<T>) -> DispatchResult {
+		fn solve_pending(n: BlockNumberFor<T>) {
 			let mut pending_setup = <PendingPoolProposalStatus<T>>::take();
 			loop {
 				match pending_setup.pop_front() {
@@ -680,8 +689,8 @@ pub mod pallet {
 										investor.0,
 										guardian_candidate,
 									) {
-										None => _,
-										Some(GuardianVote::Neutral) => _,
+										None => {},
+										Some(GuardianVote::Neutral) => {},
 										Some(GuardianVote::Aye) => guardian.1 += investor.1,
 										Some(GuardianVote::Nay) => guardian.2 += investor.1,
 									};
@@ -714,25 +723,37 @@ pub mod pallet {
 						pool_proposal.proposal_status_flags |=
 							ProposalStatusFlags::PROPOSAL_EXPIRED;
 
+						let type_error: bool = false;
+						let start_time_u128: u128;
+						match <BlockNumberFor<T> as TryInto<u128>>::try_into(
+							pool_proposal.start_time,
+						) {
+							Ok(x) => start_time_u128 = x,
+							Err(_) => type_error = true,
+						}
+
+						let end_time_u128: u128;
+						match <BlockNumberFor<T> as TryInto<u128>>::try_into(pool_proposal.end_time)
+						{
+							Ok(x) => end_time_u128 = x,
+							Error => type_error = true,
+						}
+
+						let epoch_range_u128: u128;
+						match <BlockNumberFor<T> as TryInto<u128>>::try_into(T::StandardEpoch::get())
+						{
+							Ok(x) => end_time_u128 = x,
+							Error => type_error = true,
+						}
+
 						// If all satisfied, baked into investing pool
-						if pool_proposal.proposal_status_flags.is_all() {
+						if !type_error && pool_proposal.proposal_status_flags.is_all() {
 							let signatories: [T::AccountId] =
 								best_guardian.into_iter().map(|b| b.owner).collect();
 							let guardian_multisig = pallet_multisig::Pallet::<T>::multi_account_id(
 								&signatories,
 								signatories.len,
 							);
-							let start_time_u128: u128 = pool_proposal
-								.start_time
-								.try_into()
-								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-							let end_time_u128: u128 = pool_proposal
-								.end_time
-								.try_into()
-								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
-							let epoch_range_u128: u128 = T::StandardEpoch::get()
-								.try_into()
-								.or(Err(Error::<T>::TypeIncompatibleOrArithmeticError))?;
 
 							let total_epoch: u128 =
 								((end_time_u128 - start_time_u128) / epoch_range_u128) + 1;
@@ -780,6 +801,11 @@ pub mod pallet {
 									amount: investor.1,
 								});
 							}
+							Self::deposit_event(Event::<T>::ProposalFailed {
+								pool_proposal_index: x.pool_proposal_index,
+								effective_time: n,
+								type_error,
+							});
 						}
 
 						// Return Queued queued_investments always
@@ -845,25 +871,6 @@ pub mod pallet {
 			} else {
 				false
 			}
-		}
-	}
-
-	/// Simple ensure origin for the applet pool proposal
-	pub struct EnsurePoolProposal<T>(sp_std::marker::PhantomData<T>);
-	impl<T: Config> EnsureOrigin<T::RuntimeOrigin> for EnsureBridge<T> {
-		type Success = T::AccountId;
-		fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
-			let pallet_id = MODULE_ID.into_account_truncating();
-			o.into().and_then(|o| match o {
-				system::RawOrigin::Signed(who) if who == pallet_id => Ok(pallet_id),
-				r => Err(T::RuntimeOrigin::from(r)),
-			})
-		}
-
-		#[cfg(feature = "runtime-benchmarks")]
-		fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
-			let pallet_id = MODULE_ID.into_account_truncating();
-			Ok(T::RuntimeOrigin::from(system::RawOrigin::Signed(pallet_id)))
 		}
 	}
 }
