@@ -1037,6 +1037,84 @@ impl pallet_group::Config<VCMPExtrinsicWhitelistInstance> for Runtime {
 	type GroupManagerOrigin = EnsureRootOrAllCouncil;
 }
 
+parameter_types! {
+	pub const MinimumCuratorDeposit: Balance = 100 * DOLLARS;
+	pub const MinimumGuardianDeposit: Balance = 20 * DOLLARS;
+	// Declare the official AIUSDAssetId
+	pub const AIUSDAssetId: u128 = 1000;
+	pub const OfficialGapPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 10 * MINUTES, "ROCOCO_OFFICIALGAPPERIOD");
+	pub const MinimumProposalLastTime: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_MINIMUMPROPOSALLASTTIME");
+	pub const MinimumPoolDeposit: Balance = 1000 * DOLLARS;
+	pub const MaximumPoolProposed: u128 = 10000;
+	pub const StandardEpoch: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_STANDARDEPOCH");
+	pub const MaxGuardianPerProposal: u32 = 1000;
+	pub const MaxGuardianSelectedPerProposal: u32 = 3;
+
+	pub const PoolProposalPalletId: PalletId = PalletId(*b"cbai/ipp");
+	pub PreInvestingPool: AccountId = PoolProposalPalletId::get().into_account_truncating();
+}
+
+impl pallet_curator::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MinimumCuratorDeposit = MinimumCuratorDeposit;
+	type CuratorJudgeOrigin = EnsureRootOrHalfCouncil;
+}
+
+impl pallet_guardian::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MinimumGuardianDeposit = MinimumGuardianDeposit;
+	type GuardianJudgeOrigin =
+		pallet_collective::EnsureMember<AccountId, CouncilMembershipInstance>;
+}
+
+impl pallet_pool_proposal::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type Fungibles = Assets;
+	type AIUSDAssetId = AIUSDAssetId;
+	type OfficialGapPeriod = OfficialGapPeriod;
+	type MinimumProposalLastTime = MinimumProposalLastTime;
+	type MinimumPoolDeposit = MinimumPoolDeposit;
+	type MaximumPoolProposed = MaximumPoolProposed;
+	type StandardEpoch = StandardEpoch;
+	type ProposalOrigin = Curator;
+	type PublicVotingOrigin = EnsureRootOrAllCouncil;
+	type GuardianVoteResource = Guardian;
+	type MaxGuardianPerProposal = MaxGuardianPerProposal;
+	type MaxGuardianSelectedPerProposal = MaxGuardianSelectedPerProposal;
+	type PreInvestingPool = PreInvestingPool;
+	type InvestmentInjector = InvestingPool;
+}
+
+parameter_types! {
+	StableTokenBeneficiaryId: PalletId = PalletId(*b"cbai/sid");
+	CANBenefiicaryId: PalletId = PalletId(*b"cbai/nid");
+}
+
+impl pallet_investing_pool::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type PoolProposalPalletOrigin = EnsureRoot<AccountId>;
+	type RewardUpdateOrigin = EnsureRootOrAllCouncil;
+	type InvestingPoolAdminOrigin = EnsureRoot<AccountId>;
+	type Fungibles: Assets;
+	type StableTokenBeneficiaryId: StableTokenBeneficiaryId;
+	type CANBenefiicaryId: CANBenefiicaryId;
+}
+
+parameter_types! {
+	pub const AIUSDConvertorPalletId: PalletId = PalletId(*b"cbai/scv");
+	pub ConvertingPool: AccountId = AIUSDConvertorPalletId::get().into_account_truncating();
+}
+
+impl pallet_aiusd_convertor::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type ConvertingPool = ConvertingPool;
+	type AIUSDAssetId = AIUSDAssetId;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+}
+
 // For OnChargeEVMTransaction implementation
 type CurrencyAccountId<T> = <T as frame_system::Config>::AccountId;
 type BalanceFor<T> =
@@ -1274,6 +1352,13 @@ construct_runtime! {
 		EVM: pallet_evm = 120,
 		Ethereum: pallet_ethereum = 121,
 
+		// CollabAI
+		Curator: pallet_curator = 150,
+		Guardian: pallet_guardian = 151,
+		PoolProposal: pallet_pool_proposal = 152,
+		InvestingPool: pallet_investing_pool = 153,
+		AIUSDConvertor: pallet_aiusd_convertor = 154,
+
 		// TMP
 		AccountFix: pallet_account_fix = 254,
 		Sudo: pallet_sudo = 255,
@@ -1374,7 +1459,13 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::Bitacross(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
-			RuntimeCall::OmniAccount(_)
+			RuntimeCall::OmniAccount(_) |
+			// CollabAI
+			RuntimeCall::Curator(_) |
+			RuntimeCall::Guardian(_) |
+			RuntimeCall::PoolProposal(_) |
+			RuntimeCall::InvestingPool(_) |
+			RuntimeCall::AIUSDConvertor(_)
 		)
 	}
 }
