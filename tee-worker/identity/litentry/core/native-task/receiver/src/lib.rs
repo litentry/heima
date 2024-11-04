@@ -305,16 +305,12 @@ fn handle_trusted_call<
 					)),
 				),
 		},
-		TrustedCall::create_account_store(who) => {
-			let create_account_store_call = OpaqueCall::from_tuple(&compose_call!(
-				&metadata,
-				"OmniAccount",
-				"create_account_store",
-				who
-			));
-
-			create_account_store_call
-		},
+		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"create_account_store",
+			who
+		)),
 		TrustedCall::add_account(who, identity, validation_data, public_account) => {
 			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
 			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
@@ -386,6 +382,25 @@ fn handle_trusted_call<
 				)),
 			)
 		},
+		TrustedCall::remove_accounts(who, identities) => create_dispatch_as_omni_account_call(
+			who.hash(),
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"remove_accounts",
+				who,
+				identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
+			)),
+		),
+		TrustedCall::publicize_account(who, identity) => create_dispatch_as_omni_account_call(
+			who.hash(),
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"publicize_account",
+				identity
+			)),
+		),
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =

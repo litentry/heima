@@ -263,8 +263,6 @@ pub mod pallet {
 			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
 			ensure!(!member_account_hashes.is_empty(), Error::<T>::EmptyAccount);
 
-			// TODO: shall we verify if MemberAccountHash's value is actually `who`?
-
 			let mut member_accounts =
 				AccountStore::<T>::get(&who).ok_or(Error::<T>::UnknownAccountStore)?;
 
