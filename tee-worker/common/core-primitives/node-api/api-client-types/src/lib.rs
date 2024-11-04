@@ -23,7 +23,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
-use alloc::{string::String, vec::Vec};
 
 use codec::{Decode, Encode, MaxEncodedLen};
 
@@ -151,6 +150,23 @@ pub enum TransactionStatus<Hash, BlockHash> {
 	Invalid,
 }
 
+impl<Hash, BlockHash> TransactionStatus<Hash, BlockHash> {
+	pub fn as_u8(&self) -> u8 {
+		match self {
+			TransactionStatus::Future => 0,
+			TransactionStatus::Ready => 1,
+			TransactionStatus::Broadcasted => 2,
+			TransactionStatus::InBlock(_) => 3,
+			TransactionStatus::Retracted(_) => 4,
+			TransactionStatus::FinalityTimeout(_) => 5,
+			TransactionStatus::Finalized(_) => 6,
+			TransactionStatus::Usurped(_) => 7,
+			TransactionStatus::Dropped => 8,
+			TransactionStatus::Invalid => 9,
+		}
+	}
+}
+
 impl<Hash, BlockHash> From<substrate_api_client::TransactionStatus<Hash, BlockHash>>
 	for TransactionStatus<Hash, BlockHash>
 {
@@ -190,4 +206,45 @@ mod api {
 	};
 
 	pub type ParentchainApi = Api<ParentchainRuntimeConfig, TungsteniteRpcClient>;
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_xt_status_index() {
+		assert_eq!(1, XtStatus::Ready as u8);
+		assert_eq!(2, XtStatus::Broadcast as u8);
+		assert_eq!(3, XtStatus::InBlock as u8);
+		assert_eq!(6, XtStatus::Finalized as u8);
+	}
+
+	#[test]
+	fn test_transaction_status_as_u8() {
+		assert_eq!(0, TransactionStatus::<Hash, Hash>::Future.as_u8());
+		assert_eq!(1, TransactionStatus::<Hash, Hash>::Ready.as_u8());
+		assert_eq!(2, TransactionStatus::<Hash, Hash>::Broadcasted.as_u8());
+		assert_eq!(3, TransactionStatus::<Hash, Hash>::InBlock(Hash::random()).as_u8());
+		assert_eq!(4, TransactionStatus::<Hash, Hash>::Retracted(Hash::random()).as_u8());
+		assert_eq!(5, TransactionStatus::<Hash, Hash>::FinalityTimeout(Hash::random()).as_u8());
+		assert_eq!(6, TransactionStatus::<Hash, Hash>::Finalized(Hash::random()).as_u8());
+		assert_eq!(7, TransactionStatus::<Hash, Hash>::Usurped(Hash::random()).as_u8());
+		assert_eq!(8, TransactionStatus::<Hash, Hash>::Dropped.as_u8());
+		assert_eq!(9, TransactionStatus::<Hash, Hash>::Invalid.as_u8());
+	}
+
+	#[test]
+	fn test_xt_status_match_transaction_status_index() {
+		assert_eq!(XtStatus::Ready as u8, TransactionStatus::<Hash, Hash>::Ready.as_u8());
+		assert_eq!(XtStatus::Broadcast as u8, TransactionStatus::<Hash, Hash>::Broadcasted.as_u8());
+		assert_eq!(
+			XtStatus::InBlock as u8,
+			TransactionStatus::<Hash, Hash>::InBlock(Hash::random()).as_u8()
+		);
+		assert_eq!(
+			XtStatus::Finalized as u8,
+			TransactionStatus::<Hash, Hash>::Finalized(Hash::random()).as_u8()
+		);
+	}
 }
