@@ -98,7 +98,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	let vc_task_receiver = init_vc_task_sender();
-	let n_workers = 960;
+	let n_workers = 480;
 	let pool = ThreadPoolBuilder::new().pool_size(n_workers).create().unwrap();
 
 	let (tc_sender, tc_receiver) = channel::<(ShardIdentifier, TrustedCall)>();
@@ -615,7 +615,7 @@ where
 
 		context
 			.ocall_api
-			.send_to_parentchain(xt, &ParentchainId::Litentry, false)
+			.send_to_parentchain(xt, &ParentchainId::Litentry, None)
 			.map_err(|e| RequestVcErrorDetail::ExtrinsicSendingFailed(e.to_string()))?;
 
 		if let Err(e) = context

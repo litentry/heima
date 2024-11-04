@@ -34,6 +34,7 @@ frame-support = { workspace = true }
 sp-core = { workspace = true, features = ["full_crypto"] }
 
 lc-data-providers = { workspace = true }
+lc-omni-account = { workspace = true }
 litentry-primitives = { workspace = true }
 
 [features]
@@ -48,6 +49,7 @@ sgx = [
     "itp-sgx-crypto/sgx",
     "lc-data-providers/sgx",
     "litentry-primitives/sgx",
+    "lc-omni-account/sgx",
 ]
 std = [
     "http",
@@ -61,4 +63,5 @@ std = [
     "lc-data-providers/std",
     "litentry-primitives/std",
     "rand",
+    "lc-omni-account/std",
 ]
