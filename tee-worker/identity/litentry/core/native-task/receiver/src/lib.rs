@@ -112,19 +112,21 @@ pub fn run_native_task_receiver<
 		.expect("Failed to create thread pool");
 
 	while let Ok(mut req) = request_receiver.recv() {
-		let context_pool = context.clone();
-		thread_pool.spawn_ok(async move {
-			let request = &mut req.request;
-			let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
-			match handle_request(request, context_pool.clone()) {
-				Ok(trusted_call) =>
-					handle_trusted_call(context_pool.clone(), trusted_call, connection_hash),
-				Err(e) => {
-					log::error!("Failed to get trusted call from request: {:?}", e);
-					let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
-					context_pool.author_api.send_rpc_response(connection_hash, res.encode(), false);
-				},
-			};
+		thread_pool.spawn_ok({
+			let context = context.clone();
+			async move {
+				let request = &mut req.request;
+				let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
+				match handle_request(request, context.clone()) {
+					Ok(trusted_call) =>
+						handle_trusted_call(context.clone(), trusted_call, connection_hash),
+					Err(e) => {
+						log::error!("Failed to get trusted call from request: {:?}", e);
+						let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
+						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+					},
+				};
+			}
 		});
 	}
 	log::warn!("Native task receiver stopped");
