@@ -34,6 +34,7 @@ frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { workspace = true, optional = true }
 
 pallet-assets = { workspace = true }
+pallet-asset-rate = { workspace = true }
 pallet-assets-handler = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }

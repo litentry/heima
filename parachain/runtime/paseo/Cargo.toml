@@ -82,6 +82,7 @@ core-primitives = { workspace = true }
 pallet-account-fix = { workspace = true }
 pallet-asset-manager = { workspace = true }
 pallet-assets = { workspace = true }
+pallet-asset-rate = { workspace = true }
 pallet-assets-handler = { workspace = true }
 pallet-bitacross = { workspace = true }
 pallet-bridge-transfer = { workspace = true }

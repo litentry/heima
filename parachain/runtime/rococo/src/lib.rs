@@ -27,21 +27,14 @@ extern crate frame_benchmarking;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
-	construct_runtime, parameter_types,
-	dynamic_params::{dynamic_pallet_params, dynamic_params},
-	traits::{
-		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
-		EnsureOrigin, Everything, FindAuthor, InstanceFilter, OnFinalize, SortedMembers,
-		WithdrawReasons,
-	},
-	weights::{constants::RocksDbWeight, ConstantMultiplier, Weight},
-	ConsensusEngineId, PalletId,
+	construct_runtime, dynamic_params::{dynamic_pallet_params, dynamic_params}, parameter_types, traits::{
+		tokens::UnityOrOuterConversion, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound, EnsureOrigin, Everything, FindAuthor, FromContains, InstanceFilter, OnFinalize, SortedMembers, WithdrawReasons
+	}, weights::{constants::RocksDbWeight, ConstantMultiplier, Weight}, ConsensusEngineId, PalletId
 };
 use frame_system::{EnsureRoot, pallet_prelude::BlockNumberFor};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
-use runtime_common::EnsureEnclaveSigner;
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
 
@@ -67,6 +60,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 // XCM Imports
+use xcm_builder::PayOverXcm;
 use xcm_executor::XcmExecutor;
 
 pub use constants::currency::deposit;
@@ -80,13 +74,14 @@ pub use runtime_common::currency::*;
 use runtime_common::{
 	impl_runtime_transaction_payment_fees, prod_or_fast, BlockHashCount, BlockLength, MessageQueue,
 	CouncilInstance, CouncilMembershipInstance, DeveloperCommitteeInstance,
-	DeveloperCommitteeMembershipInstance, EnsureOmniAccount, EnsureRootOrAllCouncil,
+	DeveloperCommitteeMembershipInstance, EnsureEnclaveSigner, EnsureOmniAccount, EnsureRootOrAllCouncil,
 	EnsureRootOrAllTechnicalCommittee, EnsureRootOrHalfCouncil, EnsureRootOrHalfTechnicalCommittee,
 	EnsureRootOrTwoThirdsCouncil, EnsureRootOrTwoThirdsTechnicalCommittee,
 	IMPExtrinsicWhitelistInstance, NegativeImbalance, RuntimeBlockWeights, SlowAdjustingFeeUpdate,
 	TechnicalCommitteeInstance, TechnicalCommitteeMembershipInstance,
 	VCMPExtrinsicWhitelistInstance, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, WEIGHT_PER_GAS,
 	WEIGHT_TO_FEE_FACTOR,
+	impls::{ContainsParts, LocatableAssetConverter, VersionedLocationConverter}
 };
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
@@ -277,6 +272,24 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type RuntimeTask = ();
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator= ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
+}
+
+impl pallet_asset_rate::Config for Runtime {
+	type WeightInfo = weights::pallet_asset_rate::WeightInfo<Runtime>;
+	type RuntimeEvent = RuntimeEvent;
+	type CreateOrigin = EnsureRoot<AccountId>;
+	type RemoveOrigin = EnsureRoot<AccountId>;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	type Currency = Balances;
+	type AssetKind = <Runtime as pallet_treasury::Config>::AssetKind;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = runtime_common::impls::benchmarks::AssetRateArguments;
 }
 
 parameter_types! {
@@ -294,6 +307,18 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = ConstU32<100>;
 	type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	pub const IndexDeposit: Balance = 100 * CENTS;
+}
+
+impl pallet_indices::Config for Runtime {
+	type AccountIndex = AccountIndex;
+	type Currency = Balances;
+	type Deposit = IndexDeposit;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = weights::pallet_indices::WeightInfo<Runtime>;
 }
 
 /// The type used to represent the kinds of proxying allowed.
@@ -663,6 +688,8 @@ parameter_types! {
 	pub BountyValueMinimum: Balance = 5 * DOLLARS;
 	pub DataDepositPerByte: Balance = deposit(0, 1);
 	pub const MaximumReasonLength: u32 = 8192;
+	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
+	pub TreasuryInteriorLocation: InteriorLocation = PalletInstance(18).into();
 }
 
 pub struct EnsureRootOrTwoThirdsCouncilWrapper;
@@ -702,6 +729,26 @@ impl pallet_treasury::Config for Runtime {
 	type AssetKind = u32;
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = Indices;
+	type Paymaster = PayOverXcm<
+		TreasuryInteriorLocation,
+		crate::xcm_config::XcmRouter,
+		crate::XcmPallet,
+		ConstU32<{ 6 * HOURS }>,
+		Self::Beneficiary,
+		Self::AssetKind,
+		LocatableAssetConverter,
+		VersionedLocationConverter,
+	>;
+	type BalanceConverter = UnityOrOuterConversion<
+		ContainsParts<
+			FromContains<
+				xcm_builder::IsChildSystemParachain<ParaId>,
+				xcm_builder::IsParentsOnly<ConstU8<1>>,
+			>,
+		>,
+		AssetRate,
+	>;
+	type PayoutPeriod = PayoutSpendPeriod;
 }
 
 pub struct CouncilProvider;
@@ -711,7 +758,7 @@ impl SortedMembers<AccountId> for CouncilProvider {
 	}
 
 	fn sorted_members() -> Vec<AccountId> {
-		Council::members()
+		pallet_collective::pallet::Members::<T, I>::get()
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -756,22 +803,35 @@ impl pallet_tips::Config for Runtime {
 	type MaxTipAmount = ConstU128<{ 500 * DOLLARS }>;
 }
 
+parameter_types! {
+	pub const ByteDeposit: Balance = deposit(0, 1);
+	pub const MaxAdditionalFields: u32 = 100;
+}
+
 impl pallet_identity::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	// Add one item in storage and take 258 bytes
 	type BasicDeposit = ConstU128<{ deposit(1, 258) }>;
 	// Not add any item to the storage but takes 66 bytes
-	type FieldDeposit = ConstU128<{ deposit(0, 66) }>;
+	// type FieldDeposit = ConstU128<{ deposit(0, 66) }>;
 	// Add one item in storage and take 53 bytes
 	type SubAccountDeposit = ConstU128<{ deposit(1, 53) }>;
 	type MaxSubAccounts = ConstU32<100>;
-	type MaxAdditionalFields = ConstU32<100>;
+	// type MaxAdditionalFields = ConstU32<100>;
 	type MaxRegistrars = ConstU32<20>;
 	type Slashed = Treasury;
 	type ForceOrigin = EnsureRootOrHalfCouncil;
 	type RegistrarOrigin = EnsureRootOrHalfCouncil;
 	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
+	type ByteDeposit = ByteDeposit;
+	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
+	type OffchainSignature = Signature;
+	type SigningPublicKey = <Signature as traits::Verify>::Signer;
+	type UsernameAuthorityOrigin = EnsureRoot<Self::AccountId>;
+	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
+	type MaxSuffixLength = ConstU32<7>;
+	type MaxUsernameLength = ConstU32<32>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1224,6 +1284,7 @@ construct_runtime! {
 		Multisig: pallet_multisig = 4,
 		Proxy: pallet_proxy = 5,
 		Preimage: pallet_preimage = 6,
+		Indices: pallet_indices = 7,
 
 		// Token related
 		Balances: pallet_balances = 10,
@@ -1244,6 +1305,8 @@ construct_runtime! {
 		// Parachain
 		ParachainSystem: cumulus_pallet_parachain_system = 30,
 		ParachainInfo: parachain_info = 31,
+
+		AssetRate: pallet_asset_rate = 39,
 
 		// Collator support
 		// About the order of these 5 pallets, the comment in cumulus seems to be outdated.

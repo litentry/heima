@@ -45,12 +45,13 @@ use sp_runtime::traits::AccountIdConversion;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, ParentIsPreset,
+	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungiblesAdapter, IsConcrete, ParentIsPreset,
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
 use xcm_executor::{traits::JustTry, XcmExecutor};
+use sp_std::sync::Arc;
 
 #[cfg(test)]
 use crate::tests::setup::ParachainXcmRouter;
@@ -241,6 +242,10 @@ impl xcm_executor::Config for XcmConfig {
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type Aliasers = ();
+	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -284,9 +289,9 @@ parameter_type_with_key! {
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation {
 		parents:1,
-		interior: Junctions::X1(
+		interior: Junctions::X1(Arc::new([
 			Parachain(ParachainInfo::parachain_id().into())
-		)
+		]))
 	};
 	pub const BaseXcmWeight: Weight = Weight::from_parts(100_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 3;

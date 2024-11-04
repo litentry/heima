@@ -87,8 +87,6 @@ rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
 ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
 webpki = { version = "=0.102.2", git = "https://github.com/rustls/webpki", rev = "049e9d5", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
-orml-traits = { version = "0.8.0", default-features = false }
-orml-xtokens = { version = "0.8.0", default-features = false }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
@@ -189,6 +187,7 @@ frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "r
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
+pallet-asset-rate = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
@@ -236,6 +235,8 @@ pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk"
 parachain-info = { package = "staging-parachain-info", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 
 # benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
