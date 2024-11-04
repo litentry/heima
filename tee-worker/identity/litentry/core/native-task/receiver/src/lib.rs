@@ -71,8 +71,7 @@ use litentry_primitives::{
 use sp_core::{blake2_256, H256};
 use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 
-// TODO: move to config
-const THREAD_POOL_SIZE: usize = 10;
+const THREAD_POOL_SIZE: usize = 480;
 
 pub fn run_native_task_receiver<
 	ShieldingKeyRepository,
