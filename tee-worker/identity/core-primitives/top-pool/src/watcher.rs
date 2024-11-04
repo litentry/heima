@@ -124,7 +124,12 @@ where
 
 	fn send(&mut self, status: TrustedOperationStatus) {
 		if let Err(e) = self.rpc_response_sender.update_status_event(*self.hash(), status) {
-			warn!("failed to send status update to rpc client: {:?}", e);
+			match e {
+				DirectRpcError::InvalidConnectionHash => {
+					warn!("Client connection interrupted while sending status update");
+				},
+				_ => error!("Failed to send status update to RPC client: {:?}", e),
+			}
 		}
 	}
 
