@@ -47,6 +47,8 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			Some(_) => extrinsics
 				.len()
 				.checked_mul(ExtrinsicReport::<H256>::max_encoded_len())
+				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?
+				.checked_add(size_of::<Vec<u8>>())
 				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?,
 			None => size_of::<Vec<u8>>(),
 		};
