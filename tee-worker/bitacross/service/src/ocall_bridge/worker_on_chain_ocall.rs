@@ -176,7 +176,7 @@ where
 		let mut extrinsic_reports: Vec<ExtrinsicReport<H256>> = Vec::new();
 		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
 		debug!(
-			"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
+			"Enclave wants to send {} extrinsics to parentchain: {:?}. watch_until: {:?}",
 			extrinsics.len(),
 			parentchain_id,
 			maybe_watch_until
