@@ -174,7 +174,7 @@ where
 			poll,
 			event.token(),
 			mio::Ready::readable(),
-			mio::PollOpt::edge(),
+			mio::PollOpt::level(),
 		)?;
 
 		Ok(do_shutdown)
@@ -234,14 +234,14 @@ where
 			&tcp_listener,
 			NEW_CONNECTIONS_LISTENER,
 			mio::Ready::readable(),
-			mio::PollOpt::edge(),
+			mio::PollOpt::level(),
 		)?;
 
 		poll.register(
 			&signal_receiver,
 			SERVER_SIGNAL_TOKEN,
 			mio::Ready::readable(),
-			mio::PollOpt::edge(),
+			mio::PollOpt::level(),
 		)?;
 
 		let mut events = mio::Events::with_capacity(2048);
