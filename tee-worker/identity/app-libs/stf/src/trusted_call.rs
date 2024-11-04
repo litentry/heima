@@ -143,6 +143,8 @@ pub enum TrustedCall {
 	request_intent(Identity, Intent),
 	#[codec(index = 27)]
 	create_account_store(Identity),
+	#[codec(index = 29)]
+	remove_accounts(Identity, Vec<Identity>),
 	#[codec(index = 30)]
 	publicize_account(Identity, Identity),
 
@@ -237,6 +239,7 @@ impl TrustedCall {
 			Self::clean_id_graphs(sender_identity) => sender_identity,
 			Self::request_intent(sender_identity, ..) => sender_identity,
 			Self::create_account_store(sender_identity) => sender_identity,
+			Self::remove_accounts(sender_identity, ..) => sender_identity,
 			Self::publicize_account(sender_identity, ..) => sender_identity,
 		}
 	}
@@ -253,6 +256,7 @@ impl TrustedCall {
 			Self::maybe_create_id_graph(..) => "maybe_create_id_graph",
 			Self::request_intent(..) => "request_intent",
 			Self::create_account_store(..) => "create_account_store",
+			Self::remove_accounts(..) => "remove_account",
 			Self::publicize_account(..) => "publicize_account",
 			_ => "unsupported_trusted_call",
 		}
@@ -913,6 +917,10 @@ where
 				Ok(TrustedCallResult::Empty)
 			},
 			TrustedCall::create_account_store(..) => {
+				error!("please use author_submitNativeRequest instead");
+				Ok(TrustedCallResult::Empty)
+			},
+			TrustedCall::remove_accounts(..) => {
 				error!("please use author_submitNativeRequest instead");
 				Ok(TrustedCallResult::Empty)
 			},
