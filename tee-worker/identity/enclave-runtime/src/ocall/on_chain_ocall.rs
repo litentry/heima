@@ -17,7 +17,7 @@
 */
 
 use crate::ocall::{ffi, OcallApi};
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::ensure;
 use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{EnclaveOnChainOCallApi, Error, Result};
@@ -46,7 +46,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		let response_size = match watch_until {
 			Some(_) => extrinsics
 				.len()
-				.checked_mul(size_of::<ExtrinsicReport<H256>>())
+				.checked_mul(ExtrinsicReport::<H256>::max_encoded_len())
 				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?,
 			None => size_of::<Vec<u8>>(),
 		};

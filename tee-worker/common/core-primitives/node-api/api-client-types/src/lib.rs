@@ -25,7 +25,7 @@
 extern crate alloc;
 use alloc::{string::String, vec::Vec};
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
@@ -80,10 +80,9 @@ pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 // The following types are copied from the substrate-api-client crate to be able to encode/decode them
-/// Simplified TransactionStatus to allow the user to choose until when to watch
-/// an extrinsic.
+/// Simplified TransactionStatus to allow the user to choose until when to watch an extrinsic.
 // Indexes must match the substrate_api_client::TransactionStatus::as_u8
-#[derive(Encode, Decode, Debug, PartialEq, PartialOrd, Eq, Copy, Clone)]
+#[derive(Encode, Decode, Debug, PartialEq, PartialOrd, Eq, Copy, Clone, MaxEncodedLen)]
 pub enum XtStatus {
 	Ready = 1,
 	Broadcast = 2,
@@ -104,7 +103,7 @@ impl From<XtStatus> for substrate_api_client::XtStatus {
 
 /// Extrinsic report returned upon a submit_and_watch request.
 /// Holds as much information as available.
-#[derive(Encode, Decode, Debug, Clone)]
+#[derive(Encode, Decode, Debug, Clone, MaxEncodedLen)]
 pub struct ExtrinsicReport<Hash: Decode> {
 	// Hash of the extrinsic.
 	pub extrinsic_hash: Hash,
@@ -126,14 +125,14 @@ impl<Hash: Decode> From<substrate_api_client::ExtrinsicReport<Hash>> for Extrins
 }
 
 /// Possible transaction status events.
-#[derive(Encode, Decode, Debug, Clone, PartialEq)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, MaxEncodedLen)]
 pub enum TransactionStatus<Hash, BlockHash> {
 	/// Transaction is part of the future queue.
 	Future,
 	/// Transaction is part of the ready queue.
 	Ready,
 	/// The transaction has been broadcast to the given peers.
-	Broadcast(Vec<String>),
+	Broadcasted,
 	/// Transaction has been included in block with given hash.
 	InBlock(BlockHash),
 	/// The block this transaction was included in has been retracted.
@@ -159,8 +158,7 @@ impl<Hash, BlockHash> From<substrate_api_client::TransactionStatus<Hash, BlockHa
 		match status {
 			substrate_api_client::TransactionStatus::Future => TransactionStatus::Future,
 			substrate_api_client::TransactionStatus::Ready => TransactionStatus::Ready,
-			substrate_api_client::TransactionStatus::Broadcast(peers) =>
-				TransactionStatus::Broadcast(peers),
+			substrate_api_client::TransactionStatus::Broadcast(_) => TransactionStatus::Broadcasted,
 			substrate_api_client::TransactionStatus::InBlock(block_hash) =>
 				TransactionStatus::InBlock(block_hash),
 			substrate_api_client::TransactionStatus::Retracted(block_hash) =>
