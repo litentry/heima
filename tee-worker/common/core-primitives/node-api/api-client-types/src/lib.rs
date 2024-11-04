@@ -79,6 +79,7 @@ pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
+// The following types are copied from the substrate-api-client crate to be able to encode/decode them
 /// Simplified TransactionStatus to allow the user to choose until when to watch
 /// an extrinsic.
 // Indexes must match the substrate_api_client::TransactionStatus::as_u8
@@ -175,6 +176,7 @@ impl<Hash, BlockHash> From<substrate_api_client::TransactionStatus<Hash, BlockHa
 		}
 	}
 }
+// End of copied types
 
 #[cfg(feature = "std")]
 pub use api::*;
