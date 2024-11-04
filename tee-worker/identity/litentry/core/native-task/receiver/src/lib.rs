@@ -69,7 +69,7 @@ use litentry_primitives::{
 	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
 };
 use sp_core::{blake2_256, H256};
-use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc};
+use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 
 // TODO: move to config
 const THREAD_POOL_SIZE: usize = 10;
