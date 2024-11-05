@@ -17,6 +17,18 @@ export default {
             signature: "LitentryMultiSignature",
         },
 
+        TCAuthentication: {
+            _enum: {
+                Web3: "LitentryMultiSignature",
+                Email: "Text",
+            },
+        },
+        TrustedCallAuthenticated: {
+            call: "TrustedCall",
+            nonce: "Index",
+            authentication: "TCAuthentication",
+        },
+
         //important
         TrustedGetter: {
             _enum: {
@@ -66,6 +78,7 @@ export default {
 
                 clean_id_graphs: "(LitentryIdentity)",
                 request_intent: "(LitentryIdentity, Intent)",
+                create_account_store: "(LitentryIdentity)",
             },
         },
         TrustedOperationStatus: {
