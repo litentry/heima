@@ -22,7 +22,7 @@ extern crate alloc;
 use crate::primitives::TxHash;
 use alloc::{string::String, sync::Arc, vec::Vec};
 
-use itc_direct_rpc_server::SendRpcResponse;
+use itc_direct_rpc_server::{DirectRpcError, SendRpcResponse};
 use itp_types::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 use log::*;
 
