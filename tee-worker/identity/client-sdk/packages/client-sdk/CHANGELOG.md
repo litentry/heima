@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
--   Add OmniAccount requestors for `remark`, `transferNative`
+-   Add OmniAccount requestors for `createAccountStore`, `remark`, `transferNative`, `transferEthereum`, and `callEthereum`.
 
 ## 2024-10-14
 
