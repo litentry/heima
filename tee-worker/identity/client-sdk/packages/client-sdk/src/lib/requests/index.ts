@@ -5,6 +5,7 @@ export { requestBatchVC } from './request-batch-vc.request';
 export { remark } from './remark.request';
 export { transferNative } from './transfer-native.request';
 export { transferEthereum } from './transfer-ethereum.request';
+export { callEthereum } from './call-ethereum.request';
 
 export { createAccountStore } from './create-account-store.request';
 export { getIdGraph } from './get-id-graph.request';
