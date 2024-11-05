@@ -32,6 +32,7 @@ use lc_data_providers::{
 	twitter_official::{Tweet, TwitterOfficialClient, TwitterUserAccessTokenData},
 	vec_to_string, DataProviderConfig, UserInfo,
 };
+use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_primitives::{
 	DiscordValidationData, ErrorDetail, ErrorString, Identity, IntoErrorDetail,
 	TwitterValidationData, Web2ValidationData,
@@ -206,9 +207,11 @@ pub fn verify(
 				.map_err(|e| Error::LinkIdentityFailed(e.into_error_detail()))?;
 			let verification_code = vec_to_string(data.verification_code.to_vec())
 				.map_err(|e| Error::LinkIdentityFailed(e.into_error_detail()))?;
-			let Some(account_id) = who.to_native_account() else {
-					return Err(Error::LinkIdentityFailed(ErrorDetail::ParseError));
-				};
+			let account_id = match OmniAccountStore::get_omni_account(who.hash()) {
+				Ok(Some(account)) => account,
+				_ => return Err(Error::LinkIdentityFailed(ErrorDetail::InvalidIdentity)),
+			};
+
 			let email_identity = Identity::from_email(&email);
 			let stored_verification_code =
 				match VerificationCodeStore::get(&account_id, email_identity.hash()) {

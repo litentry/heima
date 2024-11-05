@@ -36,6 +36,9 @@ pub use crate::sgx_reexport_prelude::*;
 mod trusted_call_authenticated;
 pub use trusted_call_authenticated::*;
 
+mod helpers;
+use helpers::*;
+
 mod types;
 pub use types::NativeTaskContext;
 use types::*;
@@ -43,33 +46,32 @@ use types::*;
 use codec::{Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
-use itp_api_client_types::compose_call;
+use ita_stf::{aes_encrypt_default, Getter, TrustedCall, TrustedCallSigned};
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
+use itp_node_api::{
+	api_client::{compose_call, ExtrinsicReport, XtStatus},
+	metadata::{provider::AccessNodeMetadata, NodeMetadata},
+};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
-use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
+use itp_sgx_crypto::{
+	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
+};
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{parentchain::ParentchainId, OpaqueCall};
+use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
-use litentry_primitives::{AesRequest, DecryptableRequest, Intent};
-use sp_core::{blake2_256, H256};
-use std::{
-	borrow::ToOwned,
-	boxed::Box,
-	format,
-	string::ToString,
-	sync::{
-		mpsc::{channel, Sender},
-		Arc,
-	},
-	thread,
+use lc_omni_account::{
+	GetOmniAccountInfo, InMemoryStore as OmniAccountStore, OmniAccountRepository,
 };
+use litentry_primitives::{
+	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
+};
+use sp_core::{blake2_256, H256};
+use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 
-// TODO: move to config
-const THREAD_POOL_SIZE: usize = 10;
+const THREAD_POOL_SIZE: usize = 480;
 
 pub fn run_native_task_receiver<
 	ShieldingKeyRepository,
@@ -78,6 +80,7 @@ pub fn run_native_task_receiver<
 	OCallApi,
 	ExtrinsicFactory,
 	NodeMetadataRepo,
+	Aes256KeyRepository,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -87,6 +90,7 @@ pub fn run_native_task_receiver<
 			OCallApi,
 			ExtrinsicFactory,
 			NodeMetadataRepo,
+			Aes256KeyRepository,
 		>,
 	>,
 ) where
@@ -98,6 +102,7 @@ pub fn run_native_task_receiver<
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -105,167 +110,25 @@ pub fn run_native_task_receiver<
 		.create()
 		.expect("Failed to create thread pool");
 
-	let (native_req_sender, native_req_receiver) = channel::<NativeRequest>();
-	let t_pool = thread_pool.clone();
-
-	thread::spawn(move || {
-		if let Ok(native_request) = native_req_receiver.recv() {
-			t_pool.spawn_ok(async move {
-				match native_request {
-					// TODO: handle native_request: e.g: Identity verification
-				}
-			});
-		}
-	});
-
 	while let Ok(mut req) = request_receiver.recv() {
-		let context_pool = context.clone();
-		let task_sender_pool = native_req_sender.clone();
-
-		thread_pool.spawn_ok(async move {
-			let request = &mut req.request;
-			let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
-			match handle_request(request, context_pool.clone()) {
-				Ok(trusted_call) => handle_trusted_call(
-					context_pool.clone(),
-					trusted_call,
-					connection_hash,
-					task_sender_pool,
-				),
-				Err(e) => {
-					log::error!("Failed to get trusted call from request: {:?}", e);
-					let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
-					context_pool.author_api.send_rpc_response(connection_hash, res.encode(), false);
-				},
-			};
+		thread_pool.spawn_ok({
+			let context = context.clone();
+			async move {
+				let request = &mut req.request;
+				let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
+				match handle_request(request, context.clone()) {
+					Ok(trusted_call) =>
+						handle_trusted_call(context.clone(), trusted_call, connection_hash),
+					Err(e) => {
+						log::error!("Failed to get trusted call from request: {:?}", e);
+						let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
+						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+					},
+				};
+			}
 		});
 	}
 	log::warn!("Native task receiver stopped");
-}
-
-fn handle_trusted_call<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
->(
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-		>,
-	>,
-	call: TrustedCall,
-	connection_hash: H256,
-	_tc_sender: Sender<NativeRequest>,
-) where
-	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-{
-	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
-	{
-		Ok(Some(metadata)) => metadata,
-		_ => {
-			log::error!("Failed to get node metadata");
-			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MetadataRetrievalFailed(
-				"Failed to get node metadata".to_string(),
-			));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return
-		},
-	};
-
-	let create_dispatch_as_omni_account_call = |member_identity_hash: H256, call: OpaqueCall| {
-		OpaqueCall::from_tuple(&compose_call!(
-			&metadata,
-			"OmniAccount",
-			"dispatch_as_omni_account",
-			member_identity_hash,
-			call
-		))
-	};
-
-	let opaque_call = match call {
-		TrustedCall::request_intent(who, intent) => match intent {
-			Intent::SystemRemark(remark) => create_dispatch_as_omni_account_call(
-				who.hash(),
-				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark)),
-			),
-			Intent::TransferNative(transfer) => create_dispatch_as_omni_account_call(
-				who.hash(),
-				OpaqueCall::from_tuple(&compose_call!(
-					&metadata,
-					"Balances",
-					"transfer_allow_death",
-					transfer.to,
-					transfer.value
-				)),
-			),
-			Intent::CallEthereum(_) | Intent::TransferEthereum(_) =>
-				create_dispatch_as_omni_account_call(
-					who.hash(),
-					OpaqueCall::from_tuple(&compose_call!(
-						&metadata,
-						"OmniAccount",
-						"request_intent",
-						intent
-					)),
-				),
-		},
-		TrustedCall::create_account_store(who) => {
-			let create_account_store_call = OpaqueCall::from_tuple(&compose_call!(
-				&metadata,
-				"OmniAccount",
-				"create_account_store",
-				who
-			));
-
-			create_account_store_call
-		},
-		_ => {
-			log::warn!("Received unsupported call: {:?}", call);
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return
-		},
-	};
-
-	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[opaque_call], None) {
-		Ok(extrinsic) => extrinsic,
-		Err(e) => {
-			log::error!("Failed to create extrinsic: {:?}", e);
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return
-		},
-	};
-
-	match context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, true) {
-		Ok(_) => {
-			let res: Result<(), NativeTaskError> = Ok(());
-			context.author_api.send_rpc_response(connection_hash, res.encode(), true);
-		},
-		Err(e) => {
-			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
-			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-		},
-	}
 }
 
 fn handle_request<
@@ -275,6 +138,7 @@ fn handle_request<
 	OCallApi,
 	ExtrinsicFactory,
 	NodeMetadataRepo,
+	Aes256KeyRepository,
 >(
 	request: &mut AesRequest,
 	context: Arc<
@@ -285,6 +149,7 @@ fn handle_request<
 			OCallApi,
 			ExtrinsicFactory,
 			NodeMetadataRepo,
+			Aes256KeyRepository,
 		>,
 	>,
 ) -> Result<TrustedCall, &'static str>
@@ -297,6 +162,7 @@ where
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
@@ -353,4 +219,256 @@ where
 	}
 
 	Ok(tca.call)
+}
+
+type TrustedCallResult = Result<ExtrinsicReport<H256>, NativeTaskError>;
+
+fn handle_trusted_call<
+	ShieldingKeyRepository,
+	AuthorApi,
+	StfEnclaveSigning,
+	OCallApi,
+	ExtrinsicFactory,
+	NodeMetadataRepo,
+	Aes256KeyRepository,
+>(
+	context: Arc<
+		NativeTaskContext<
+			ShieldingKeyRepository,
+			AuthorApi,
+			StfEnclaveSigning,
+			OCallApi,
+			ExtrinsicFactory,
+			NodeMetadataRepo,
+			Aes256KeyRepository,
+		>,
+	>,
+	call: TrustedCall,
+	connection_hash: H256,
+) where
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OCallApi:
+		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
+	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
+	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+{
+	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
+	{
+		Ok(Some(metadata)) => metadata,
+		_ => {
+			log::error!("Failed to get node metadata");
+			let result: TrustedCallResult = Err(NativeTaskError::MetadataRetrievalFailed(
+				"Failed to get node metadata".to_string(),
+			));
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			return
+		},
+	};
+
+	let create_dispatch_as_omni_account_call = |member_identity_hash: H256, call: OpaqueCall| {
+		OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"dispatch_as_omni_account",
+			member_identity_hash,
+			call
+		))
+	};
+
+	let opaque_call = match call {
+		TrustedCall::request_intent(who, intent) => match intent {
+			Intent::SystemRemark(remark) => create_dispatch_as_omni_account_call(
+				who.hash(),
+				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark)),
+			),
+			Intent::TransferNative(transfer) => create_dispatch_as_omni_account_call(
+				who.hash(),
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"Balances",
+					"transfer_allow_death",
+					transfer.to,
+					transfer.value
+				)),
+			),
+			Intent::CallEthereum(_) | Intent::TransferEthereum(_) =>
+				create_dispatch_as_omni_account_call(
+					who.hash(),
+					OpaqueCall::from_tuple(&compose_call!(
+						&metadata,
+						"OmniAccount",
+						"request_intent",
+						intent
+					)),
+				),
+		},
+		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"create_account_store",
+			who
+		)),
+		TrustedCall::add_account(who, identity, validation_data, public_account) => {
+			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
+			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
+				Ok(Some(account)) => account,
+				_ => {
+					let result: TrustedCallResult = Err(NativeTaskError::UnauthorizedSigner);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+			};
+			let nonce = omni_account_repository.get_nonce(omni_account.clone()).unwrap_or(0);
+			let raw_msg = get_expected_raw_message(&omni_account, &identity, nonce);
+
+			let validation_result = match validation_data {
+				ValidationData::Web2(validation_data) =>
+					if !identity.is_web2() {
+						Err(NativeTaskError::InvalidMemberIdentity)
+					} else {
+						verify_web2_identity(
+							&who,
+							&identity,
+							&raw_msg,
+							&validation_data,
+							&context.data_provider_config,
+						)
+						.map_err(|e| {
+							log::error!("Failed to verify web2 identity: {:?}", e);
+							NativeTaskError::ValidationDataVerificationFailed
+						})
+					},
+				ValidationData::Web3(validation_data) =>
+					if !identity.is_web3() {
+						Err(NativeTaskError::InvalidMemberIdentity)
+					} else {
+						verify_web3_identity(&identity, &raw_msg, &validation_data).map_err(|e| {
+							log::error!("Failed to verify web3 identity: {:?}", e);
+							NativeTaskError::ValidationDataVerificationFailed
+						})
+					},
+			};
+
+			if let Err(e) = validation_result {
+				let result: TrustedCallResult = Err(e);
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+				return
+			}
+
+			let member_account = match create_member_account(
+				context.aes256_key_repository.clone(),
+				&identity,
+				public_account,
+			) {
+				Ok(account) => account,
+				Err(e) => {
+					log::error!("Failed to create member account: {:?}", e);
+					let result: TrustedCallResult = Err(e);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+			};
+
+			create_dispatch_as_omni_account_call(
+				who.hash(),
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"OmniAccount",
+					"add_account",
+					member_account
+				)),
+			)
+		},
+		TrustedCall::remove_accounts(who, identities) => create_dispatch_as_omni_account_call(
+			who.hash(),
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"remove_accounts",
+				who,
+				identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
+			)),
+		),
+		TrustedCall::publicize_account(who, identity) => create_dispatch_as_omni_account_call(
+			who.hash(),
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"publicize_account",
+				identity
+			)),
+		),
+		_ => {
+			log::warn!("Received unsupported call: {:?}", call);
+			let result: TrustedCallResult =
+				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			return
+		},
+	};
+
+	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[opaque_call], None) {
+		Ok(extrinsic) => extrinsic,
+		Err(e) => {
+			log::error!("Failed to create extrinsic: {:?}", e);
+			let result: TrustedCallResult =
+				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			return
+		},
+	};
+
+	match context.ocall_api.send_to_parentchain(
+		extrinsic,
+		&ParentchainId::Litentry,
+		Some(XtStatus::Finalized),
+	) {
+		Ok(extrinsic_reports) =>
+			if let Some(report) = extrinsic_reports.first() {
+				let result: TrustedCallResult = Ok(report.clone());
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			} else {
+				log::error!("Failed to get extrinsic report");
+				let result: TrustedCallResult = Err(NativeTaskError::ExtrinsicSendingFailed(
+					"Failed to get extrinsic report".to_string(),
+				));
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			},
+		Err(e) => {
+			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
+			let result: TrustedCallResult =
+				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+		},
+	}
+}
+
+fn create_member_account<Aes256KeyRepository>(
+	aes256_key_repository: Arc<Aes256KeyRepository>,
+	identity: &Identity,
+	is_public: bool,
+) -> Result<MemberAccount, NativeTaskError>
+where
+	Aes256KeyRepository: AccessKey<KeyType = Aes256Key>,
+{
+	if is_public {
+		return Ok(MemberAccount::Public(identity.clone()))
+	}
+
+	let aes_key = match aes256_key_repository.retrieve_key() {
+		Ok(key) => Ok(key),
+		Err(e) => {
+			log::error!("Failed to retrieve aes key: {:?}", e);
+			Err(NativeTaskError::MissingAesKey)
+		},
+	}?;
+
+	Ok(MemberAccount::Private(
+		aes_encrypt_default(&aes_key, &identity.encode()).encode(),
+		identity.hash(),
+	))
 }
