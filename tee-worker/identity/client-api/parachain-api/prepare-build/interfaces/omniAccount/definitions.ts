@@ -20,5 +20,16 @@ export default {
             to: "AccountId32",
             value: "u128",
         },
+
+        /**
+         * AccountStore
+         * @see common/primitives/core/src/omni_account.rs
+         */
+        MemberAccount: {
+            _enum: {
+                Public: "LitentryIdentity",
+                Private: "(Bytes,H256)",
+            },
+        },
     },
 };
