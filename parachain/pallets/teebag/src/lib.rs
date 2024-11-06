@@ -331,6 +331,7 @@ pub mod pallet {
 			enclave: Enclave,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
+			Self::add_enclave_identifier_internal(enclave.worker_type, &who)?;
 			Self::add_enclave(&who, &enclave)?;
 			Ok(Pays::No.into())
 		}
@@ -697,7 +698,7 @@ pub mod pallet {
 			who: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
-			Self::add_enclave_identifier_local(worker_type, &who)?;
+			Self::add_enclave_identifier_internal(worker_type, &who)?;
 			Ok(Pays::No.into())
 		}
 	}
@@ -712,7 +713,7 @@ impl<T: Config> Pallet<T> {
 		Ok(().into())
 	}
 
-	fn add_enclave_identifier_local(
+	pub fn add_enclave_identifier_internal(
 		worker_type: WorkerType,
 		who: &T::AccountId,
 	) -> Result<(), Error<T>> {
@@ -742,7 +743,7 @@ impl<T: Config> Pallet<T> {
 						old_enclave.worker_type == enclave.worker_type,
 						Error::<T>::UnexpectedWorkerType
 					),
-					None => Self::add_enclave_identifier_local(enclave.worker_type, sender)?,
+					None => Self::add_enclave_identifier_internal(enclave.worker_type, sender)?,
 				};
 			},
 		};

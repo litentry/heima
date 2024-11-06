@@ -61,16 +61,13 @@ where
 	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
 		use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE, TEST8_SIGNER_PUB};
 		let signer: <T as frame_system::Config>::AccountId = get_signer(TEST8_SIGNER_PUB);
-		let _ = pallet_teebag::Pallet::<T>::add_enclave_identifier(
-			T::RuntimeOrigin::root(),
+		let enclave = core_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
+		let _ = pallet_teebag::Pallet::<T>::add_enclave_identifier_internal(
 			enclave.worker_type,
-			signer.clone(),
+			&signer,
 		);
 		if !pallet_teebag::EnclaveRegistry::<T>::contains_key(signer.clone()) {
-			assert_ok!(pallet_teebag::Pallet::<T>::add_enclave(
-				&signer,
-				&core_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE),
-			));
+			assert_ok!(pallet_teebag::Pallet::<T>::add_enclave(&signer, &enclave,));
 		}
 		Ok(frame_system::RawOrigin::Signed(signer).into())
 	}
