@@ -2,7 +2,7 @@ import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a, u8aConcat } from '@polkadot/util';
 import { Keyring } from '@polkadot/keyring';
 import { Codec } from '@polkadot/types/types';
-import { encodeAddress } from '@polkadot/util-crypto';
+import { encodeAddress, decodeAddress } from '@polkadot/util-crypto';
 import { IntegrationTestContext, JsonRpcRequest } from '../common-types';
 import type {
     WorkerRpcReturnValue,
@@ -11,6 +11,7 @@ import type {
     TrustedCallAuthenticated,
     TCAuthentication,
     Intent,
+    LitentryValidationData,
 } from 'parachain-api';
 import { Signer, createLitentryMultiSignature } from '../utils';
 import { aesKey } from '../call';
@@ -18,7 +19,9 @@ import { KeyObject } from 'crypto';
 import { Index } from '@polkadot/types/interfaces';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { createJsonRpcRequest, nextRequestId } from '../helpers';
-import { createAesRequest, sendRequest, getSignatureMessagePrefix } from 'common/di-utils';
+import { createAesRequest, sendRequest, getSignatureMessagePrefix } from '../di-utils';
+import { ethers } from 'ethers';
+import type { HexString } from '@polkadot/util/types';
 
 export const createAuthenticatedTrustedCall = async (
     parachainApi: ApiPromise,
@@ -201,4 +204,116 @@ export async function fundAccount(api: ApiPromise, account: string, amount: bigi
     console.log('Transfer sent with hash', hash.toHex());
     const { data } = await api.query.system.account(account);
     console.log(`Account balance: ${data.free}`);
+}
+
+export async function buildWeb3ValidationData(
+    context: IntegrationTestContext,
+    omniAccount: string,
+    accountToAdd: CorePrimitivesIdentity,
+    nonce: number,
+    network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
+    signer: Signer
+): Promise<LitentryValidationData> {
+    const msg = generateVerificationMessage(context, omniAccount, accountToAdd, nonce);
+
+    if (network === 'evm') {
+        const evmValidationData = {
+            Web3Validation: {
+                Evm: {
+                    message: '',
+                    signature: {
+                        Ethereum: '' as HexString,
+                    },
+                },
+            },
+        };
+        evmValidationData.Web3Validation.Evm.message = msg;
+        const msgHash = ethers.utils.arrayify(msg);
+        const evmSignature = u8aToHex(await signer.sign(msgHash));
+
+        evmValidationData!.Web3Validation.Evm.signature.Ethereum = evmSignature;
+
+        return context.api.createType('LitentryValidationData', evmValidationData);
+    }
+
+    if (network === 'substrate') {
+        const substrateValidationData = {
+            Web3Validation: {
+                Substrate: {
+                    message: '',
+                    signature: {
+                        Sr25519: '' as HexString,
+                    },
+                },
+            },
+        };
+        console.log('post verification msg to substrate: ', msg);
+        substrateValidationData.Web3Validation.Substrate.message = msg;
+        const substrateSignature = await signer.sign(msg);
+        substrateValidationData!.Web3Validation.Substrate.signature.Sr25519 = u8aToHex(substrateSignature);
+
+        return context.api.createType('LitentryValidationData', substrateValidationData);
+    }
+
+    if (network === 'bitcoin') {
+        const bitcoinValidationData = {
+            Web3Validation: {
+                Bitcoin: {
+                    message: '',
+                    signature: {
+                        Bitcoin: '' as HexString,
+                    },
+                },
+            },
+        };
+        bitcoinValidationData.Web3Validation.Bitcoin.message = msg;
+        // we need to sign the hex string without `0x` prefix, the signature is base64-encoded string
+        const bitcoinSignature = await signer.sign(msg.substring(2));
+        bitcoinValidationData!.Web3Validation.Bitcoin.signature.Bitcoin = u8aToHex(bitcoinSignature);
+
+        return context.api.createType('LitentryValidationData', bitcoinValidationData);
+    }
+
+    if (network === 'solana') {
+        const solanaValidationData = {
+            Web3Validation: {
+                Solana: {
+                    message: '',
+                    signature: {
+                        Ed25519: '' as HexString,
+                    },
+                },
+            },
+        };
+        console.log('post verification msg to solana: ', msg);
+        solanaValidationData.Web3Validation.Solana.message = msg;
+        const solanaSignature = await signer.sign(msg);
+        solanaValidationData!.Web3Validation.Solana.signature.Ed25519 = u8aToHex(solanaSignature);
+
+        return context.api.createType('LitentryValidationData', solanaValidationData);
+    }
+
+    throw new Error(`[buildValidation]: Unsupported network ${network}.`);
+}
+
+// blake2_256(<parachain nonce> + <omniAccount> + <identity-to-be-added>)
+function generateVerificationMessage(
+    context: IntegrationTestContext,
+    omniAccount: string,
+    identity: CorePrimitivesIdentity,
+    nonce: number,
+    options?: { prettifiedMessage?: boolean }
+): string {
+    const opts = { prettifiedMessage: false, ...options };
+    const encodedOmniAccount = context.api.createType('AccountId', decodeAddress(omniAccount)).toU8a();
+    const encodedIdentity = identity.toU8a();
+    const encodedNonce = context.api.createType('Index', nonce).toU8a();
+    const msg = Buffer.concat([encodedNonce, encodedOmniAccount, encodedIdentity]);
+    const hash = blake2AsHex(msg, 256);
+
+    if (opts.prettifiedMessage) {
+        return `Token: ${hash}`;
+    }
+
+    return hash;
 }
