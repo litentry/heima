@@ -79,6 +79,9 @@ export default {
                 clean_id_graphs: "(LitentryIdentity)",
                 request_intent: "(LitentryIdentity, Intent)",
                 create_account_store: "(LitentryIdentity)",
+                add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)",
+                remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
+                publicize_account: "(LitentryIdentity, LitentryIdentity)",
             },
         },
         TrustedOperationStatus: {
