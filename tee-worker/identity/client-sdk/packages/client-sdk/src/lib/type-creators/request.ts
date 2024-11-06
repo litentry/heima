@@ -48,21 +48,41 @@ export async function createRequestType(
     signature: signedPayload,
   });
 
-  const signedCall = api.createType('TrustedCallSigned', {
-    call,
-    index: nonce,
-    signature: signature,
-  });
+  let operationU8a = new Uint8Array();
 
-  const operation = api.createType('TrustedOperation', {
-    direct_call: signedCall,
-  });
+  if (isNativeRequest(call)) {
+    const callAuthenticated = api.createType('TrustedCallAuthenticated', {
+      call,
+      nonce,
+      authentication: api.createType('TCAuthentication', {
+        Web3: signature,
+      }),
+    });
+
+    const operation = api.createType('TrustedOperation', {
+      direct_call: callAuthenticated,
+    });
+
+    operationU8a = operation.toU8a();
+  } else {
+    const signedCall = api.createType('TrustedCallSigned', {
+      call,
+      index: nonce,
+      signature: signature,
+    });
+
+    const operation = api.createType('TrustedOperation', {
+      direct_call: signedCall,
+    });
+
+    operationU8a = operation.toU8a();
+  }
 
   // Encrypt the operation call using the client shielding key
   const encryptionNonce = generateNonce12();
   const { ciphertext: encryptedOperation } = await encrypt(
     {
-      cleartext: operation.toU8a(),
+      cleartext: operationU8a,
       nonce: encryptionNonce,
     },
     encryptionKey
@@ -85,4 +105,8 @@ export async function createRequestType(
     key: compactAddLength(encryptedKey),
     payload: encryptedPayload,
   });
+}
+
+function isNativeRequest(call: TrustedCall): boolean {
+  return call.isRequestIntent || call.isCreateAccountStore;
 }

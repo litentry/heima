@@ -15,9 +15,15 @@ These types were auto generated using [Polkadot.js Type Generation](https://polk
 2. Extend and decorate the API's types with:
 
     ```typescript
-    import { identity, vc, trusted_operations, sidechain } from "parachain-api";
+    import { identity, vc, trusted_operations, sidechain, omniAccount } from "parachain-api";
 
-    const types = { ...identity.types, ...vc.types, ...trusted_operations.types, ...sidechain.types };
+    const types = {
+        ...identity.types,
+        ...vc.types,
+        ...omniAccount.types,
+        ...trusted_operations.types,
+        ...sidechain.types,
+    };
 
     const api = await ApiPromise.create({
         provider,
