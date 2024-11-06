@@ -59,7 +59,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          ./scripts/build-docker.sh production runtime-benchmarks --features=runtime-benchmarks
+          ./parachain/scripts/build-docker.sh production runtime-benchmarks --features=runtime-benchmarks
 
       - name: Dockerhub login
         uses: docker/login-action@v3
