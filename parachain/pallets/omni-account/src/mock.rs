@@ -187,7 +187,6 @@ impl pallet_omni_account::Config for TestRuntime {
 	type MaxAccountStoreLength = ConstU32<3>;
 	type OmniAccountOrigin = EnsureOmniAccount<Self::AccountId>;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
-	type SetOmniExecutorOrigin = EnsureRoot<Self::AccountId>;
 }
 
 pub fn get_tee_signer() -> SystemAccountId {
