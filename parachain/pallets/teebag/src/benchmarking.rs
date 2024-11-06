@@ -440,5 +440,16 @@ mod benchmarks {
 		)
 	}
 
+	#[benchmark]
+	fn add_enclave_identifier() {
+		let who: T::AccountId = account("who", 1, 1);
+		let worker_type = WorkerType::Identity;
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, worker_type, who.clone());
+
+		assert!(EnclaveIdentifier::<T>::get(worker_type).contains(&who));
+	}
+
 	impl_benchmark_test_suite!(Teebag, super::mock::new_test_ext(false), super::mock::Test);
 }

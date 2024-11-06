@@ -258,4 +258,11 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
+
+	fn add_enclave_identifier() -> Weight {
+		Weight::from_parts(25_438_000, 0)
+			.saturating_add(Weight::from_parts(0, 3993))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(2))
+    }
 }

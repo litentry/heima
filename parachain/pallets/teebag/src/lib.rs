@@ -688,6 +688,18 @@ pub mod pallet {
 			let _ = pallet_utility::Pallet::<T>::batch(origin, calls)?;
 			Ok(Pays::No.into())
 		}
+
+		#[pallet::call_index(24)]
+		#[pallet::weight(<T as Config>::WeightInfo::add_enclave_identifier())]
+		pub fn add_enclave_identifier(
+			origin: OriginFor<T>,
+			worker_type: WorkerType,
+			who: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			Self::ensure_admin_or_root(origin)?;
+			Self::add_enclave_identifier_local(worker_type, &who)?;
+			Ok(Pays::No.into())
+		}
 	}
 }
 
@@ -700,7 +712,10 @@ impl<T: Config> Pallet<T> {
 		Ok(().into())
 	}
 
-	fn add_enclave_identifier(worker_type: WorkerType, who: &T::AccountId) -> Result<(), Error<T>> {
+	fn add_enclave_identifier_local(
+		worker_type: WorkerType,
+		who: &T::AccountId,
+	) -> Result<(), Error<T>> {
 		EnclaveIdentifier::<T>::try_mutate(worker_type, |v| {
 			ensure!(!v.contains(who), Error::<T>::EnclaveIdentifierAlreadyExist);
 			v.try_push(who.clone()).map_err(|_| Error::<T>::MaxEnclaveIdentifierOverflow)
@@ -708,13 +723,30 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn add_enclave(sender: &T::AccountId, enclave: &Enclave) -> Result<(), Error<T>> {
-		match EnclaveRegistry::<T>::get(sender) {
-			Some(old_enclave) => ensure!(
-				old_enclave.worker_type == enclave.worker_type,
-				Error::<T>::UnexpectedWorkerType
-			),
-			None => Self::add_enclave_identifier(enclave.worker_type, sender)?,
+		match Self::mode() {
+			OperationalMode::Production | OperationalMode::Maintenance => {
+				ensure!(
+					EnclaveIdentifier::<T>::get(enclave.worker_type).contains(sender),
+					Error::<T>::EnclaveIdentifierNotExist
+				);
+				if let Some(old_enclave) = EnclaveRegistry::<T>::get(sender) {
+					ensure!(
+						old_enclave.worker_type == enclave.worker_type,
+						Error::<T>::UnexpectedWorkerType
+					);
+				}
+			},
+			OperationalMode::Development => {
+				match EnclaveRegistry::<T>::get(sender) {
+					Some(old_enclave) => ensure!(
+						old_enclave.worker_type == enclave.worker_type,
+						Error::<T>::UnexpectedWorkerType
+					),
+					None => Self::add_enclave_identifier_local(enclave.worker_type, sender)?,
+				};
+			},
 		};
+
 		EnclaveRegistry::<T>::insert(sender, enclave);
 		Self::deposit_event(Event::<T>::EnclaveAdded {
 			who: sender.clone(),
