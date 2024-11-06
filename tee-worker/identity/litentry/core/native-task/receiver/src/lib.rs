@@ -43,7 +43,7 @@ mod types;
 pub use types::NativeTaskContext;
 use types::*;
 
-use codec::{Decode, Encode};
+use codec::{Compact, Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
 use ita_stf::{aes_encrypt_default, Getter, TrustedCall, TrustedCallSigned};
@@ -59,7 +59,10 @@ use itp_sgx_crypto::{
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
-use itp_types::{parentchain::ParentchainId, OpaqueCall};
+use itp_types::{
+	parentchain::{Address, ParentchainId},
+	OpaqueCall,
+};
 use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
 use lc_omni_account::{
@@ -269,42 +272,41 @@ fn handle_trusted_call<
 		},
 	};
 
-	let create_dispatch_as_omni_account_call = |member_identity_hash: H256, call: OpaqueCall| {
-		OpaqueCall::from_tuple(&compose_call!(
-			&metadata,
-			"OmniAccount",
-			"dispatch_as_omni_account",
-			member_identity_hash,
-			call
-		))
-	};
-
 	let opaque_call = match call {
 		TrustedCall::request_intent(who, intent) => match intent {
-			Intent::SystemRemark(remark) => create_dispatch_as_omni_account_call(
+			Intent::SystemRemark(remark) => OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"dispatch_as_signed",
 				who.hash(),
-				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark)),
-			),
-			Intent::TransferNative(transfer) => create_dispatch_as_omni_account_call(
+				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark))
+			)),
+			Intent::TransferNative(transfer) => OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"dispatch_as_signed",
 				who.hash(),
 				OpaqueCall::from_tuple(&compose_call!(
 					&metadata,
 					"Balances",
 					"transfer_allow_death",
-					transfer.to,
-					transfer.value
-				)),
-			),
+					Address::Id(transfer.to),
+					Compact(transfer.value)
+				))
+			)),
 			Intent::CallEthereum(_) | Intent::TransferEthereum(_) =>
-				create_dispatch_as_omni_account_call(
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"OmniAccount",
+					"dispatch_as_omni_account",
 					who.hash(),
 					OpaqueCall::from_tuple(&compose_call!(
 						&metadata,
 						"OmniAccount",
 						"request_intent",
 						intent
-					)),
-				),
+					))
+				)),
 		},
 		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
 			&metadata,
@@ -373,17 +375,23 @@ fn handle_trusted_call<
 				},
 			};
 
-			create_dispatch_as_omni_account_call(
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"dispatch_as_omni_account",
 				who.hash(),
 				OpaqueCall::from_tuple(&compose_call!(
 					&metadata,
 					"OmniAccount",
 					"add_account",
 					member_account
-				)),
-			)
+				))
+			))
 		},
-		TrustedCall::remove_accounts(who, identities) => create_dispatch_as_omni_account_call(
+		TrustedCall::remove_accounts(who, identities) => OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"dispatch_as_omni_account",
 			who.hash(),
 			OpaqueCall::from_tuple(&compose_call!(
 				&metadata,
@@ -391,17 +399,20 @@ fn handle_trusted_call<
 				"remove_accounts",
 				who,
 				identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
-			)),
-		),
-		TrustedCall::publicize_account(who, identity) => create_dispatch_as_omni_account_call(
+			))
+		)),
+		TrustedCall::publicize_account(who, identity) => OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"dispatch_as_omni_account",
 			who.hash(),
 			OpaqueCall::from_tuple(&compose_call!(
 				&metadata,
 				"OmniAccount",
 				"publicize_account",
 				identity
-			)),
-		),
+			))
+		)),
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
