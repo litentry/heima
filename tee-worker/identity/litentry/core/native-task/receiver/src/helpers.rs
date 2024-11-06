@@ -41,14 +41,14 @@ pub fn verify_web3_identity(
 
 	let received_message = validation_data.message().as_slice();
 
-	if expected_raw_msg != received_message || expected_prettified_msg != received_message {
+	if expected_raw_msg != received_message && expected_prettified_msg != received_message {
 		return Err("UnexpectedMessage")
 	}
 
 	let signature = validation_data.signature();
 
 	if !signature.verify(expected_raw_msg, identity)
-		|| !signature.verify(expected_prettified_msg, identity)
+		&& !signature.verify(expected_prettified_msg, identity)
 	{
 		return Err("VerifyWeb3SignatureFailed")
 	}
