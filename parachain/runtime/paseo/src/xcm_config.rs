@@ -45,12 +45,13 @@ use sp_runtime::traits::AccountIdConversion;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, FungiblesAdapter, IsConcrete, ParentIsPreset,
+	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungiblesAdapter, IsConcrete, ParentIsPreset,
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
 use xcm_executor::{traits::JustTry, XcmExecutor};
+use sp_std::sync::Arc;
 
 #[cfg(test)]
 use crate::tests::setup::ParachainXcmRouter;
@@ -67,6 +68,12 @@ parameter_types! {
 	pub const RelayNetwork: Option<NetworkId> = None;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub UniversalLocation: InteriorMultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+}
+
+impl Get<Junctions> for UniversalLocation {
+    fn get() -> Junctions {
+        UniversalLocation::get()
+    }
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -241,6 +248,10 @@ impl xcm_executor::Config for XcmConfig {
 	type CallDispatcher = RuntimeCall;
 	type SafeCallFilter = Everything;
 	type Aliasers = ();
+	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -281,15 +292,27 @@ parameter_type_with_key! {
 	};
 }
 
+impl GetByKey<MultiLocation, Option<u128>> for ParachainMinFee {
+    fn get_by_key(key: MultiLocation) -> Option<u128> {
+        Some(ParachainMinFee::get())
+    }
+}
+
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation {
 		parents:1,
-		interior: Junctions::X1(
+		interior: Junctions::X1(Arc::new([
 			Parachain(ParachainInfo::parachain_id().into())
-		)
+		]))
 	};
-	pub const BaseXcmWeight: Weight = Weight::from_parts(100_000_000u64, 0);
-	pub const MaxAssetsForTransfer: usize = 3;
+	pub const BaseXcmWeight: u64 = 100_000_000;
+}
+
+pub struct MaxAssetsForTransfer;
+impl orml_traits::parameters::frame_support::traits::Get<usize> for MaxAssetsForTransfer {
+    fn get() -> usize {
+        3
+    }
 }
 
 #[cfg(feature = "runtime-benchmarks")]

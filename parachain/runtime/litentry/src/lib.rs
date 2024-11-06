@@ -1071,7 +1071,7 @@ where
 	{
 		if let Some(author_index) = pallet_aura::Pallet::<T>::find_author(digests) {
 			let authority_id =
-				<pallet_aura::Pallet<T>>::authorities()[author_index as usize].clone();
+			pallet_aura::Authorities::<Runtime>::get()[author_index as usize].clone();
 			return Some(H160::from_slice(&authority_id.encode()[4..24]));
 		}
 
@@ -1356,7 +1356,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -1429,7 +1429,7 @@ impl_runtime_apis! {
 		}
 
 		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
 
@@ -1719,6 +1719,7 @@ impl_runtime_apis! {
 		fn trace_transaction(
 			extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 			traced_transaction: &pallet_ethereum::Transaction,
+			header: &<Block as BlockT>::Header,
 		) -> Result<
 			(),
 			sp_runtime::DispatchError,
@@ -1748,6 +1749,7 @@ impl_runtime_apis! {
 		fn trace_block(
 			extrinsics: Vec<<Block as BlockT>::Extrinsic>,
 			known_transactions: Vec<H256>,
+			header: &<Block as BlockT>::Header,
 		) -> Result<
 			(),
 			sp_runtime::DispatchError,
@@ -1776,6 +1778,91 @@ impl_runtime_apis! {
 			}
 
 			Ok(())
+		}
+		
+		fn trace_call(
+			header: &<Block as BlockT>::Header,
+			from: H160,
+			to: H160,
+			data: Vec<u8>,
+			value: U256,
+			gas_limit: U256,
+			max_fee_per_gas: Option<U256>,
+			max_priority_fee_per_gas: Option<U256>,
+			nonce: Option<U256>,
+			access_list: Option<Vec<(H160, Vec<H256>)>>,
+		) -> Result<(), sp_runtime::DispatchError> {
+			#[cfg(feature = "evm-tracing")]
+			{
+				use moonbeam_evm_tracer::tracer::EvmTracer;
+
+				// Initialize block: calls the "on_initialize" hook on every pallet
+				// in AllPalletsWithSystem.
+				Executive::initialize_block(header);
+
+				EvmTracer::new().trace(|| {
+					let is_transactional = false;
+					let validate = true;
+					let without_base_extrinsic_weight = true;
+
+
+					// Estimated encoded transaction size must be based on the heaviest transaction
+					// type (EIP1559Transaction) to be compatible with all transaction types.
+					let mut estimated_transaction_len = data.len() +
+					// pallet ethereum index: 1
+					// transact call index: 1
+					// Transaction enum variant: 1
+					// chain_id 8 bytes
+					// nonce: 32
+					// max_priority_fee_per_gas: 32
+					// max_fee_per_gas: 32
+					// gas_limit: 32
+					// action: 21 (enum varianrt + call address)
+					// value: 32
+					// access_list: 1 (empty vec size)
+					// 65 bytes signature
+					258;
+
+					if access_list.is_some() {
+						estimated_transaction_len += access_list.encoded_size();
+					}
+
+					let gas_limit = gas_limit.min(u64::MAX.into()).low_u64();
+
+					let (weight_limit, proof_size_base_cost) =
+						match <Runtime as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
+							gas_limit,
+							without_base_extrinsic_weight
+						) {
+							weight_limit if weight_limit.proof_size() > 0 => {
+								(Some(weight_limit), Some(estimated_transaction_len as u64))
+							}
+							_ => (None, None),
+						};
+
+					let _ = <Runtime as pallet_evm::Config>::Runner::call(
+						from,
+						to,
+						data,
+						value,
+						gas_limit,
+						max_fee_per_gas,
+						max_priority_fee_per_gas,
+						nonce,
+						access_list.unwrap_or_default(),
+						is_transactional,
+						validate,
+						weight_limit,
+						proof_size_base_cost,
+						<Runtime as pallet_evm::Config>::config(),
+					);
+				});
+				Ok(())
+			}
+			#[cfg(not(feature = "evm-tracing"))]
+			Err(sp_runtime::DispatchError::Other(
+				"Missing `evm-tracing` compile time feature flag.",
+			))
 		}
 	}
 
@@ -1820,7 +1907,7 @@ impl_runtime_apis! {
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block(block: Block, state_root_check: bool, signature_check: bool,select: frame_try_runtime::TryStateSelect) -> Weight {
+		fn execute_block(block: Block, state_root_check: bool,signature_check: bool, select: frame_try_runtime::TryStateSelect) -> Weight {
 			log::info!(
 				target: "runtime::Litentry", "try-runtime: executing block #{} ({:?}) / root checks: {:?} / sanity-checks: {:?}",
 				block.header.number,
@@ -1828,7 +1915,7 @@ impl_runtime_apis! {
 				state_root_check,
 				select,
 			);
-			Executive::try_execute_block(block, state_root_check,signature_check, select).expect("try_execute_block failed")
+			Executive::try_execute_block(block, state_root_check, signature_check,select).expect("try_execute_block failed")
 		}
 	}
 

@@ -286,6 +286,12 @@ parameter_type_with_key! {
 	};
 }
 
+impl GetByKey<MultiLocation, Option<u128>> for ParachainMinFee {
+    fn get_by_key(key: MultiLocation) -> Option<u128> {
+        Some(ParachainMinFee::get())
+    }
+}
+
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation {
 		parents:1,
@@ -293,8 +299,14 @@ parameter_types! {
 			Parachain(ParachainInfo::parachain_id().into())
 		]))
 	};
-	pub const BaseXcmWeight: Weight = Weight::from_parts(100_000_000u64, 0);
-	pub const MaxAssetsForTransfer: usize = 3;
+	pub const BaseXcmWeight: u64 = 100_000_000;
+}
+
+pub struct MaxAssetsForTransfer;
+impl orml_traits::parameters::frame_support::traits::Get<usize> for MaxAssetsForTransfer {
+    fn get() -> usize {
+        3
+    }
 }
 
 #[cfg(feature = "runtime-benchmarks")]
