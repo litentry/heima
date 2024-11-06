@@ -5,9 +5,11 @@ import type { IntegrationTestContext, SubstrateSigner } from './common/common-ty
 import { initIntegrationTestContext } from './common/utils';
 import { getTeeShieldingKey } from './common/di-utils';
 import {
+    createAuthenticatedTrustedCallAddAccount,
     createAuthenticatedTrustedCallCreateAccountStore,
     getOmniAccount,
     sendRequestFromTrustedCall,
+    buildWeb3ValidationData,
 } from './common/utils/omni-account-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 
@@ -60,4 +62,45 @@ describe('Omni Account', function () {
             'account store member is not the expected signer'
         );
     });
+
+    step('check that the account store exists', async function () {
+        const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        assert.isTrue(accountStore.isSome, 'account store not found');
+    });
+
+    step('test add_account web3', async function () {
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context);
+        const validationData = await buildWeb3ValidationData(
+            context,
+            omniAccount,
+            bobIdentity,
+            currentNonce,
+            'substrate',
+            bob
+        );
+        const addAccountCall = await createAuthenticatedTrustedCallAddAccount(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            sender,
+            senderIdentity,
+            bobIdentity,
+            validationData.toHex()
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, addAccountCall);
+
+        const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        const membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 2, 'account store members count should be 2');
+        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        assert.equal(
+            memberAccount1.asPublic.asSubstrate.toHex(),
+            senderIdentity.asSubstrate.toHex(),
+            'account store member is not the expected signer'
+        );
+        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        assert.isTrue(memberAccount2.isPrivate);
+    });
 });
+
