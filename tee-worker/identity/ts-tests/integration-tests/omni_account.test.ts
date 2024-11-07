@@ -17,6 +17,7 @@ import {
     sendRequestFromTrustedCall,
     buildWeb3ValidationData,
     createAuthenticatedTrustedCallRemoveAccounts,
+    createAuthenticatedTrustedCallPublicizeAccount,
 } from './common/utils/omni-account-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 
@@ -174,6 +175,38 @@ describe('Omni Account', function () {
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
+    });
+
+    step('test publicize_account', async function () {
+        const currentNonce = 3;
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context);
+        const publicizeAccountCall = await createAuthenticatedTrustedCallPublicizeAccount(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            sender,
+            senderIdentity,
+            bobIdentity
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, publicizeAccountCall);
+
+        const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        const membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 2, 'account store members count should be 2');
+        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        assert.equal(
+            memberAccount1.asPublic.asSubstrate.toHex(),
+            senderIdentity.asSubstrate.toHex(),
+            'account store member 1 is not the expected member'
+        );
+        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        assert.isTrue(memberAccount2.isPublic);
+        assert.equal(
+            memberAccount2.asPublic.asSubstrate.toHex(),
+            bobIdentity.asSubstrate.toHex(),
+            'account store member 2 is not the expected member'
+        );
     });
 });
 
