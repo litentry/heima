@@ -1,10 +1,12 @@
-FROM rust:1.82 AS builder
-WORKDIR /usr/src/omni-executor
-COPY . .
+# syntax=docker/dockerfile:1
+
+FROM litentry/litentry-tee-dev:latest AS builder
+WORKDIR /home/ubuntu/tee-worker/omni-executor
+COPY . /home/ubuntu
 RUN cargo build --release
 
-FROM ubuntu:22.04
-COPY --from=builder /usr/src/omni-executor/target/release/executor-worker /usr/local/bin/executor-worker
+FROM ubuntu:22.04 AS executor-worker
+COPY --from=local-builder:latest /home/ubuntu/tee-worker/omni-executor/target/release/executor-worker /usr/local/bin/executor-worker
 
 RUN \
   apt-get update && \

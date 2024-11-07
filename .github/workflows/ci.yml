@@ -60,9 +60,9 @@ on:
         description: rebuild-bitacross
         required: true
         default: true
-      check-omni-executor:
+      rebuild-omni-executor:
         type: boolean
-        description: check-omni-executor
+        description: rebuild-omni-executor
         required: true
         default: true
       run-multi-worker-test:
@@ -100,7 +100,7 @@ jobs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_bitacross: ${{ steps.env.outputs.rebuild_bitacross }}
-      check_omni_executor: ${{ steps.env.outputs.check_omni_executor }}
+      rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
@@ -124,7 +124,7 @@ jobs:
           rebuild_parachain=false
           rebuild_identity=false
           rebuild_bitacross=false
-          check_omni_executor=false
+          rebuild_omni_executor=false
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
@@ -137,9 +137,9 @@ jobs:
           if [ "${{ github.event.inputs.rebuild-bitacross }}" = "true" ] || [ "${{ steps.filter.outputs.bitacross_src }}" = "true" ]; then
             rebuild_bitacross=true
           fi
-          if [ "${{ github.event.inputs.check-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
-            check_omni_executor=true
-          fi          
+          if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
+            rebuild_omni_executor=true
+          fi
           if [ "${{ github.event.inputs.push-docker }}" = "true" ]; then
             push_docker=true
           elif [ "${{ github.event_name }}" = 'push' ] && [ "${{ github.ref }}" = 'refs/heads/dev' ]; then
@@ -157,7 +157,7 @@ jobs:
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
           echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_bitacross=$rebuild_bitacross" | tee -a $GITHUB_OUTPUT
-          echo "check_omni_executor=$check_omni_executor" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
           echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
@@ -261,12 +261,13 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  tee-check:
+  identity-check:
     runs-on: ubuntu-latest
     needs:
       - fmt
       - set-condition
       - sequentialise
+    if: needs.set-condition.outputs.rebuild_identity == 'true'
     container: "litentry/litentry-tee-dev:latest"
     steps:
       - uses: actions/checkout@v4
@@ -285,7 +286,7 @@ jobs:
         working-directory: ./tee-worker
         shell: bash
         run: |
-          for d in . identity/enclave-runtime bitacross/enclave-runtime; do
+          for d in . identity identity/enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
             cargo clippy --release -- -D warnings
@@ -321,6 +322,75 @@ jobs:
       - name: Fail early
         if: failure()
         uses: andymckay/cancel-action@0.5
+
+  bitacross-check:
+    runs-on: ubuntu-latest
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_bitacross == 'true'
+    container: "litentry/litentry-tee-dev:latest"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+
+      - name: Cargo test
+        working-directory: ./tee-worker
+        run: |
+          cargo test --release
+
+      - name: Check clippy
+        working-directory: ./tee-worker
+        shell: bash
+        run: |
+          for d in . bitacross bitacross/enclave-runtime; do
+            pushd "$d"
+            echo "::group::cargo clippy all"
+            cargo clippy --release -- -D warnings
+            echo "::endgroup::"
+            echo "::group::cargo clippy development"
+            cargo clippy --release --features development -- -D warnings
+            echo "::endgroup::"
+            echo "::group::cargo clippy offchain-worker"
+            cargo clippy --release --features offchain-worker -- -D warnings
+            echo "::group::cargo clippy offchain-worker,development"
+            cargo clippy --release --features offchain-worker,development -- -D warnings
+            echo "::endgroup::"
+            popd
+          done
+
+      - name: Fail early
+        if: failure()
+        uses: andymckay/cancel-action@0.5
+
+  omni-executor-check:
+    runs-on: ubuntu-latest
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+    container: "litentry/litentry-tee-dev:latest"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+
+      - name: Clippy
+        working-directory: ./tee-worker/omni-executor
+        run: cargo clippy --release -- -D warnings
+
+      - name: Tests
+        working-directory: ./tee-worker/omni-executor
+        run: cargo test
 
   parachain-build-dev:
     runs-on: ubuntu-latest
@@ -586,7 +656,7 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  omni-executor-check:
+  omni-executor-build:
     runs-on: ubuntu-latest
     needs:
       - fmt
@@ -594,18 +664,54 @@ jobs:
       - sequentialise
     steps:
       - uses: actions/checkout@v4
-      - name: Clippy
-        if: needs.set-condition.outputs.check_omni_executor == 'true'
-        working-directory: ./tee-worker/omni-executor
-        run: cargo clippy --release -- -D warnings
-      - name: Build
-        if: needs.set-condition.outputs.check_omni_executor == 'true'
-        working-directory: ./tee-worker/omni-executor
-        run: cargo build
-      - name: Tests
-        if: needs.set-condition.outputs.check_omni_executor == 'true'
-        working-directory: ./tee-worker/omni-executor
-        run: cargo test
+
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          # use the docker driver to access the local image
+          # we don't need external caches or multi platforms here
+          # see https://docs.docker.com/build/drivers/
+          driver: docker
+
+      - name: Build local builder
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tee-worker/omni-executor/Dockerfile
+          tags: local-builder:latest
+          target: builder
+
+      - name: Build omni-executor image
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tee-worker/omni-executor/Dockerfile
+          tags: litentry/omni-executor:latest
+          target: executor-worker
+
+      - name: Pull and tag worker and cli image optionally
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
+        run: |
+          docker pull litentry/omni-executor:latest
+
+      - run: docker images --all
+
+      - name: Save docker image
+        run: |
+          docker save litentry/omni-executor:latest | gzip > litentry-omni.tar.gz
+
+      - name: Upload docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: litentry-omni
+          path: litentry-omni.tar.gz
+          if-no-files-found: error
 
   parachain-ts-test:
     runs-on: ubuntu-latest
@@ -962,6 +1068,7 @@ jobs:
       - parachain-ts-test
       - identity-single-worker-test
       - bitacross-worker-test
+      - omni-executor-build
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
       - uses: actions/download-artifact@v4
@@ -976,11 +1083,16 @@ jobs:
         with:
           name: litentry-bitacross
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: litentry-omni
+
       - name: Load docker image
         run: |
           docker load < litentry-parachain-dev.tar.gz
           docker load < litentry-identity.tar.gz
           docker load < litentry-bitacross.tar.gz
+          docker load < litentry-omni.tar.gz
 
       - name: Dockerhub login
         uses: docker/login-action@v3
@@ -1005,3 +1117,8 @@ jobs:
         run: |
           docker push litentry/bitacross-worker
           docker push litentry/bitacross-cli
+
+      - name: Push omni-executor image
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+        run: |
+          docker push litentry/omni-executor
