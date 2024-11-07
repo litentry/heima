@@ -90,8 +90,8 @@ importers:
   packages/client-sdk:
     specifiers:
       '@litentry/chaindata': '*'
-      '@litentry/parachain-api': 0.9.20-next.5
-      '@litentry/sidechain-api': 0.9.20-next.5
+      '@litentry/parachain-api': 0.9.20-next.7
+      '@litentry/sidechain-api': 0.9.20-next.7
       '@polkadot/api': ^10.9.1
       '@polkadot/rpc-provider': ^10.9.1
       '@polkadot/types': ^10.9.1
@@ -101,8 +101,8 @@ importers:
       tslib: ^2.3.0
     dependencies:
       '@litentry/chaindata': link:../chaindata
-      '@litentry/parachain-api': 0.9.20-next.5
-      '@litentry/sidechain-api': 0.9.20-next.5
+      '@litentry/parachain-api': 0.9.20-next.7
+      '@litentry/sidechain-api': 0.9.20-next.7
       '@polkadot/api': 10.13.1
       '@polkadot/types': 10.13.1
       '@polkadot/types-codec': 10.13.1
@@ -1741,8 +1741,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@litentry/parachain-api/0.9.20-next.5:
-    resolution: {integrity: sha512-FnK4Jb/i2+sV0V0qy4iT7aswk8JzOXDtyW76VGVFva5vb7IXEz9TC4CmEKFTVE1o0mvBB8+eRbu2HYliq/3i4w==}
+  /@litentry/parachain-api/0.9.20-next.7:
+    resolution: {integrity: sha512-wlDrEutgh7c4CgTyUkYUPjr4+9OEGltU+gY97e7WADVX9kOn4pEDtkUQlIPcyY6yes28UUnT5eM7Gbab6cwoeQ==}
     dependencies:
       '@polkadot/api': 10.13.1
       '@polkadot/api-augment': 10.13.1
@@ -1764,8 +1764,8 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@litentry/sidechain-api/0.9.20-next.5:
-    resolution: {integrity: sha512-wJTsPq9DJGSD2PSpR4AFdAmta/RDR/L2iAUnMQxYd49H/a1Pl/X6X7Ml50QR9OIftJLfah0SIwlKhdsMaOenvg==}
+  /@litentry/sidechain-api/0.9.20-next.7:
+    resolution: {integrity: sha512-oZmQdkQNMSN+Ti1wiWiYGA1PawRjsrS908+Bp5pMlFsVBriURSYUIOI93d8oLvOGfIMZ50OfEoAliX5OmONMvw==}
     dependencies:
       '@polkadot/api': 10.13.1
       '@polkadot/api-augment': 10.13.1
