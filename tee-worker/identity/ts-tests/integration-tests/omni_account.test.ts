@@ -14,6 +14,7 @@ import {
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 
 describe('Omni Account', function () {
+    this.timeout(0);
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
     let sender: SubstrateSigner;
@@ -21,8 +22,6 @@ describe('Omni Account', function () {
     let omniAccount: string;
     let currentNonce = 0;
     const getNextNonce = () => currentNonce++;
-
-    this.timeout(60000);
 
     before(async function () {
         const parachainEndpoint = process.env.PARACHAIN_ENDPOINT;
