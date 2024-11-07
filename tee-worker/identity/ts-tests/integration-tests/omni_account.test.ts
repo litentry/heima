@@ -2,7 +2,13 @@ import { step } from 'mocha-steps';
 import { KeyObject } from 'crypto';
 import { assert } from 'chai';
 import type { IntegrationTestContext, SubstrateSigner } from './common/common-types';
-import { initIntegrationTestContext, sleep } from './common/utils';
+import {
+    buildIdentityHelper,
+    initIntegrationTestContext,
+    sleep,
+    buildWeb2Validation,
+    Web2ValidationConfig,
+} from './common/utils';
 import { getTeeShieldingKey } from './common/di-utils';
 import {
     createAuthenticatedTrustedCallAddAccount,
@@ -99,6 +105,48 @@ describe('Omni Account', function () {
         );
         const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
         assert.isTrue(memberAccount2.isPrivate);
+    });
+
+    step('test add_account web2', async function () {
+        // wait for the events to be processed in the worker
+        // so the in-memory state is updated
+        console.log('test add_account web2: waiting for the events to be processed in the worker');
+        await sleep(20);
+        const currentNonce = 1;
+
+        // twitter
+        const twitterIdentity = await buildIdentityHelper('mock_user', 'Twitter', context);
+        const validationConfig: Web2ValidationConfig = {
+            identityType: 'Twitter',
+            context,
+            signerIdentitity: senderIdentity,
+            linkIdentity: twitterIdentity,
+            verificationType: 'PublicTweet',
+            validationNonce: currentNonce,
+        };
+        const validationData = await buildWeb2Validation(validationConfig);
+        const addAccountCall = await createAuthenticatedTrustedCallAddAccount(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            sender,
+            senderIdentity,
+            twitterIdentity,
+            validationData.toHex(),
+            true // public account
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, addAccountCall);
+
+        const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        console.log('accountStore', accountStore.unwrap().toHuman());
+        const membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 3, 'account store members count should be 3');
+        const memberAccount3: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[2];
+        assert.equal(
+            memberAccount3.asPublic.asTwitter.toString(),
+            twitterIdentity.asTwitter.toString(),
+            'account store member 3 is not the expected member'
+        );
     });
 });
 
