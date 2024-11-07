@@ -21,7 +21,7 @@ import {
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 
 describe('Omni Account', function () {
-    this.timeout(0);
+    this.timeout(30000);
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
     let sender: SubstrateSigner;
