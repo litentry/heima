@@ -20,8 +20,6 @@ describe('Omni Account', function () {
     let sender: SubstrateSigner;
     let senderIdentity: CorePrimitivesIdentity;
     let omniAccount: string;
-    let currentNonce = 0;
-    const getNextNonce = () => currentNonce++;
 
     before(async function () {
         const parachainEndpoint = process.env.PARACHAIN_ENDPOINT;
@@ -40,6 +38,7 @@ describe('Omni Account', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'account store already exists');
 
+        const currentNonce = 0;
         const createAccountStoreCall = await createAuthenticatedTrustedCallCreateAccountStore(
             context.api,
             context.mrEnclave,
@@ -67,6 +66,7 @@ describe('Omni Account', function () {
         // so the in-memory state is updated
         console.log('waiting for the events to be processed in the worker');
         await sleep(20);
+        const currentNonce = 0;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context);
         const validationData = await buildWeb3ValidationData(
