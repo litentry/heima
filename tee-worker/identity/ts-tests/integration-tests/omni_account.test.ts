@@ -139,7 +139,6 @@ describe('Omni Account', function () {
         await sendRequestFromTrustedCall(context, teeShieldingKey, addAccountCall);
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
-        console.log('accountStore', accountStore.unwrap().toHuman());
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 3, 'account store members count should be 3');
         const memberAccount3: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[2];
