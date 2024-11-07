@@ -2,7 +2,7 @@ import { step } from 'mocha-steps';
 import { KeyObject } from 'crypto';
 import { assert } from 'chai';
 import type { IntegrationTestContext, SubstrateSigner } from './common/common-types';
-import { initIntegrationTestContext } from './common/utils';
+import { initIntegrationTestContext, sleep } from './common/utils';
 import { getTeeShieldingKey } from './common/di-utils';
 import {
     createAuthenticatedTrustedCallAddAccount,
@@ -64,6 +64,10 @@ describe('Omni Account', function () {
     });
 
     step('test add_account web3', async function () {
+        // wait for the events to be processed in the worker
+        // so the in-memory state is updated
+        console.log('waiting for the events to be processed in the worker');
+        await sleep(20);
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context);
         const validationData = await buildWeb3ValidationData(
