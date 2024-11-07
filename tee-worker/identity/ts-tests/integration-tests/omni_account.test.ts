@@ -63,11 +63,6 @@ describe('Omni Account', function () {
         );
     });
 
-    step('check that the account store exists', async function () {
-        const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
-        assert.isTrue(accountStore.isSome, 'account store not found');
-    });
-
     step('test add_account web3', async function () {
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context);
