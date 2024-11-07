@@ -147,8 +147,9 @@ impl<
 							{
 								if checkpoint.lt(&event.get_event_id().clone().into()) {
 									log::info!("Handling event: {:?}", event_id);
-									if let Err(e) =
-										self.handle.block_on(self.intent_event_handler.handle(event))
+									if let Err(e) = self
+										.handle
+										.block_on(self.intent_event_handler.handle(event))
 									{
 										log::error!("Could not handle event: {:?}", e);
 										match e {
@@ -184,9 +185,9 @@ impl<
 										},
 										Error::RecoverableError => {
 											error!(
-											"Recoverable intent handling error, event: {:?}",
-											event_id
-										);
+												"Recoverable intent handling error, event: {:?}",
+												event_id
+											);
 											continue 'main;
 										},
 									}
@@ -206,7 +207,7 @@ impl<
 					Err(e) => {
 						log::error!("Could not get block {} events: {:?}", block_number_to_sync, e);
 						sync_error = true;
-					}
+					},
 				}
 			} else {
 				log::trace!("Block: {} not yet finalized", block_number_to_sync);

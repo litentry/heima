@@ -16,7 +16,7 @@
 
 use crate::primitives::{BlockEvent, EventId};
 use async_trait::async_trait;
-use log::{info, error};
+use log::{error, info};
 use parity_scale_codec::Encode;
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -68,11 +68,9 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubstrateRpcClient<ChainConfi
 	}
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
 		info!("Getting block {} events", block_num);
-		match self.legacy.chain_get_block_hash(Some(block_num.into())).await
-			.map_err(|e|
-				{
-					error!("Error getting block {} hash: {:?}", block_num, e);
-				})? {
+		match self.legacy.chain_get_block_hash(Some(block_num.into())).await.map_err(|e| {
+			error!("Error getting block {} hash: {:?}", block_num, e);
+		})? {
 			Some(hash) => {
 				let events = self.events.at(BlockRef::from_hash(hash)).await.map_err(|e| {
 					error!("Error getting block {} events: {:?}", block_num, e);
