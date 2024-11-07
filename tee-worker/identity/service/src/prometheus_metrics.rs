@@ -293,6 +293,7 @@ fn handle_stf_call_request(req: RequestType, time: f64) {
 			Identity::Evm(_) => "Evm".into(),
 			Identity::Bitcoin(_) => "Bitcoin".into(),
 			Identity::Solana(_) => "Solana".into(),
+			Identity::Google(_) => "Google".into(),
 		},
 	};
 	inc_stf_calls(category, &label);
