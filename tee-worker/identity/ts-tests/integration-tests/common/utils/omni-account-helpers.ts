@@ -154,6 +154,24 @@ export async function createAuthenticatedTrustedCallAddAccount(
     );
 }
 
+export async function createAuthenticatedTrustedCallRemoveAccounts(
+    parachainApi: ApiPromise,
+    mrenclave: string,
+    nonce: Codec,
+    sender: Signer,
+    senderIdentity: CorePrimitivesIdentity,
+    identities: CorePrimitivesIdentity[]
+) {
+    return createAuthenticatedTrustedCall(
+        parachainApi,
+        ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+        sender,
+        mrenclave,
+        nonce,
+        [senderIdentity, identities]
+    );
+}
+
 export const getOmniAccount = async (parachainApi: ApiPromise, identity: CorePrimitivesIdentity): Promise<string> => {
     const omniAccount = await parachainApi.rpc.state.call('OmniAccountApi_omni_account', identity.toHex());
 
@@ -178,6 +196,7 @@ export const sendRequestFromTrustedCall = async (
 ) => {
     // construct trusted operation
     const trustedOperation = context.api.createType('TrustedOperationAuthenticated', { direct_call: call });
+    console.log('trustedOperation: ', JSON.stringify(trustedOperation.toHuman(), null, 2));
     // create the request parameter
     const requestParam = await createAesRequest(
         context.api,
