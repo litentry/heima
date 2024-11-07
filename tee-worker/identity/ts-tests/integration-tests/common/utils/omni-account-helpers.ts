@@ -2,9 +2,9 @@ import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a, u8aConcat } from '@polkadot/util';
 import { Keyring } from '@polkadot/keyring';
 import { Codec } from '@polkadot/types/types';
-import { encodeAddress, decodeAddress } from '@polkadot/util-crypto';
+import { encodeAddress } from '@polkadot/util-crypto';
 import { IntegrationTestContext, JsonRpcRequest } from '../common-types';
-import type {
+import {
     WorkerRpcReturnValue,
     CorePrimitivesIdentity,
     TrustedCall,
@@ -20,6 +20,7 @@ import { Index } from '@polkadot/types/interfaces';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { createJsonRpcRequest, nextRequestId } from '../helpers';
 import { createAesRequest, sendRequest, getSignatureMessagePrefix } from '../di-utils';
+import { generateVerificationMessage } from './identity-helper';
 import { ethers } from 'ethers';
 import type { HexString } from '@polkadot/util/types';
 
@@ -63,14 +64,14 @@ export const createAuthenticatedTrustedCall = async (
         payload,
     });
 
-    const tcAuthentication: TCAuthentication = parachainApi.createType('TCAuthentication', {
+    const authentication: TCAuthentication = parachainApi.createType('TCAuthentication', {
         Web3: parachainApi.createType('(LitentryMultiSignature)', signature),
     });
 
     return parachainApi.createType('TrustedCallAuthenticated', {
-        call: call,
-        index: nonce,
-        authentication: tcAuthentication,
+        call,
+        nonce,
+        authentication,
     });
 };
 
@@ -176,8 +177,7 @@ export const sendRequestFromTrustedCall = async (
     onMessageReceived?: (res: WorkerRpcReturnValue) => void
 ) => {
     // construct trusted operation
-    const trustedOperation = context.api.createType('TrustedOperation', { direct_call: call });
-    console.log('trustedOperation: ', JSON.stringify(trustedOperation.toHuman(), null, 2));
+    const trustedOperation = context.api.createType('TrustedOperationAuthenticated', { direct_call: call });
     // create the request parameter
     const requestParam = await createAesRequest(
         context.api,
@@ -208,13 +208,13 @@ export async function fundAccount(api: ApiPromise, account: string, amount: bigi
 
 export async function buildWeb3ValidationData(
     context: IntegrationTestContext,
-    omniAccount: string,
+    sender: CorePrimitivesIdentity,
     accountToAdd: CorePrimitivesIdentity,
     nonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer: Signer
 ): Promise<LitentryValidationData> {
-    const msg = generateVerificationMessage(context, omniAccount, accountToAdd, nonce);
+    const msg = generateVerificationMessage(context, sender, accountToAdd, nonce);
 
     if (network === 'evm') {
         const evmValidationData = {
@@ -294,26 +294,4 @@ export async function buildWeb3ValidationData(
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);
-}
-
-// blake2_256(<parachain nonce> + <omniAccount> + <identity-to-be-added>)
-function generateVerificationMessage(
-    context: IntegrationTestContext,
-    omniAccount: string,
-    identity: CorePrimitivesIdentity,
-    nonce: number,
-    options?: { prettifiedMessage?: boolean }
-): string {
-    const opts = { prettifiedMessage: false, ...options };
-    const encodedOmniAccount = context.api.createType('AccountId', decodeAddress(omniAccount)).toU8a();
-    const encodedIdentity = identity.toU8a();
-    const encodedNonce = context.api.createType('Index', nonce).toU8a();
-    const msg = Buffer.concat([encodedNonce, encodedOmniAccount, encodedIdentity]);
-    const hash = blake2AsHex(msg, 256);
-
-    if (opts.prettifiedMessage) {
-        return `Token: ${hash}`;
-    }
-
-    return hash;
 }
