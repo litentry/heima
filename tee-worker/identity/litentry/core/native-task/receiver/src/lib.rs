@@ -36,9 +36,6 @@ pub use crate::sgx_reexport_prelude::*;
 mod trusted_call_authenticated;
 pub use trusted_call_authenticated::*;
 
-mod helpers;
-use helpers::*;
-
 mod types;
 pub use types::NativeTaskContext;
 use types::*;
@@ -46,7 +43,11 @@ use types::*;
 use codec::{Compact, Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
-use ita_stf::{aes_encrypt_default, Getter, TrustedCall, TrustedCallSigned};
+use ita_stf::{
+	aes_encrypt_default,
+	helpers::{get_expected_raw_message, verify_web3_identity},
+	Getter, TrustedCall, TrustedCallSigned,
+};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
 	api_client::{compose_call, ExtrinsicReport, XtStatus},
@@ -325,7 +326,7 @@ fn handle_trusted_call<
 				},
 			};
 			let nonce = omni_account_repository.get_nonce(omni_account.clone()).unwrap_or(0);
-			let raw_msg = get_expected_raw_message(&omni_account, &identity, nonce);
+			let raw_msg = get_expected_raw_message(&who, &identity, nonce);
 
 			let validation_result = match validation_data {
 				ValidationData::Web2(validation_data) =>
