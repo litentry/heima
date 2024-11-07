@@ -1,13 +1,14 @@
 import { assert, hexToU8a, stringToHex } from '@polkadot/util';
-import { randomAsHex } from '@polkadot/util-crypto';
 
 import type { ApiPromise } from '@polkadot/api';
 import type {
   LitentryIdentity,
+  TrustedCallResult,
   WorkerRpcReturnValue,
 } from '@litentry/parachain-api';
 
 import { enclave } from '../enclave';
+import { codecToString } from '../util/codec-to-string';
 import { createPayloadToSign } from '../util/create-payload-to-sign';
 import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
@@ -30,17 +31,16 @@ export async function remark(
   }
 ): Promise<{
   payloadToSign: string;
-  txHash: string;
   send: (args: { signedPayload: string }) => Promise<{
-    response: Array<WorkerRpcReturnValue>;
-    txHash: string;
+    response: WorkerRpcReturnValue;
+    blockHash: string;
+    extrinsicHash: string;
   }>;
 }> {
   const { who, message, omniAccount } = data;
 
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
-  const txHash = randomAsHex();
 
   const { call } = await createTrustedCallType(api.registry, {
     method: 'request_intent',
@@ -68,8 +68,9 @@ export async function remark(
   const send = async (args: {
     signedPayload: string;
   }): Promise<{
-    response: Array<WorkerRpcReturnValue>;
-    txHash: string;
+    response: WorkerRpcReturnValue;
+    blockHash: string;
+    extrinsicHash: string;
   }> => {
     // prepare and encrypt request
 
@@ -88,16 +89,27 @@ export async function remark(
       params: [request.toHex()],
     };
 
-    const enclaveResult = await enclave.send(api, rpcRequest);
+    const [response] = await enclave.send(api, rpcRequest); // we expect 1 response only
+
+    const result: TrustedCallResult = api.createType(
+      'TrustedCallResult',
+      response.value
+    );
+
+    if (result.isErr) {
+      throw new Error(codecToString(result.asErr));
+    }
+
+    const { extrinsic_hash, block_hash } = result.asOk;
 
     return {
-      txHash,
-      response: enclaveResult,
+      response,
+      extrinsicHash: extrinsic_hash.toString(),
+      blockHash: block_hash.toString(),
     };
   };
 
   return {
-    txHash,
     payloadToSign,
     send,
   };
