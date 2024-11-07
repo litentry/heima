@@ -71,7 +71,7 @@ describe('Omni Account', function () {
         const bobIdentity = await bob.getIdentity(context);
         const validationData = await buildWeb3ValidationData(
             context,
-            omniAccount,
+            senderIdentity,
             bobIdentity,
             currentNonce,
             'substrate',
