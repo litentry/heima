@@ -96,7 +96,6 @@ impl<
 		log::debug!("Starting sync from {:?}", block_number_to_sync);
 
 		'main: loop {
-			log::info!("Syncing block: {}", block_number_to_sync);
 			if self.stop_signal.try_recv().is_ok() {
 				break;
 			}
@@ -135,16 +134,41 @@ impl<
 				None => false,
 			};
 
+			let mut sync_error = false;
+
 			if last_finalized_block >= block_number_to_sync {
-				if let Ok(events) =
-					self.handle.block_on(self.fetcher.get_block_events(block_number_to_sync))
-				{
-					for event in events {
-						let event_id = event.get_event_id().clone();
-						if let Some(ref checkpoint) =
-							self.checkpoint_repository.get().expect("Could not read checkpoint")
-						{
-							if checkpoint.lt(&event.get_event_id().clone().into()) {
+				log::info!("Syncing block: {}", block_number_to_sync);
+				match self.handle.block_on(self.fetcher.get_block_events(block_number_to_sync)) {
+					Ok(events) => {
+						for event in events {
+							let event_id = event.get_event_id().clone();
+							if let Some(ref checkpoint) =
+								self.checkpoint_repository.get().expect("Could not read checkpoint")
+							{
+								if checkpoint.lt(&event.get_event_id().clone().into()) {
+									log::info!("Handling event: {:?}", event_id);
+									if let Err(e) =
+										self.handle.block_on(self.intent_event_handler.handle(event))
+									{
+										log::error!("Could not handle event: {:?}", e);
+										match e {
+											Error::NonRecoverableError => {
+												error!("Non-recoverable intent handling error, event: {:?}", event_id);
+												break 'main;
+											},
+											Error::RecoverableError => {
+												error!(
+												"Recoverable intent handling error, event: {:?}",
+												event_id
+											);
+												continue 'main;
+											},
+										}
+									}
+								} else {
+									log::debug!("Skipping event");
+								}
+							} else {
 								log::info!("Handling event: {:?}", event_id);
 								if let Err(e) =
 									self.handle.block_on(self.intent_event_handler.handle(event))
@@ -152,59 +176,43 @@ impl<
 									log::error!("Could not handle event: {:?}", e);
 									match e {
 										Error::NonRecoverableError => {
-											error!("Non-recoverable intent handling error, event: {:?}", event_id);
+											error!(
+											"Non-recoverable intent handling error, event: {:?}",
+											event_id
+										);
 											break 'main;
 										},
 										Error::RecoverableError => {
 											error!(
-												"Recoverable intent handling error, event: {:?}",
-												event_id
-											);
+											"Recoverable intent handling error, event: {:?}",
+											event_id
+										);
 											continue 'main;
 										},
 									}
 								}
-							} else {
-								log::debug!("Skipping event");
 							}
-						} else {
-							log::info!("Handling event: {:?}", event_id);
-							if let Err(e) =
-								self.handle.block_on(self.intent_event_handler.handle(event))
-							{
-								log::error!("Could not handle event: {:?}", e);
-								match e {
-									Error::NonRecoverableError => {
-										error!(
-											"Non-recoverable intent handling error, event: {:?}",
-											event_id
-										);
-										break 'main;
-									},
-									Error::RecoverableError => {
-										error!(
-											"Recoverable intent handling error, event: {:?}",
-											event_id
-										);
-										continue 'main;
-									},
-								}
-							}
+							self.checkpoint_repository
+								.save(event_id.into())
+								.expect("Could not save checkpoint");
 						}
+						// we processed block completely so store new checkpoint
 						self.checkpoint_repository
-							.save(event_id.into())
+							.save(CheckpointT::from(block_number_to_sync))
 							.expect("Could not save checkpoint");
+						log::info!("Finished syncing block: {}", block_number_to_sync);
+						block_number_to_sync += 1;
+					},
+					Err(e) => {
+						log::error!("Could not get block {} events: {:?}", block_number_to_sync, e);
+						sync_error = true;
 					}
-					// we processed block completely so store new checkpoint
-					self.checkpoint_repository
-						.save(CheckpointT::from(block_number_to_sync))
-						.expect("Could not save checkpoint");
-					log::info!("Finished syncing block: {}", block_number_to_sync);
-					block_number_to_sync += 1;
 				}
+			} else {
+				log::trace!("Block: {} not yet finalized", block_number_to_sync);
 			}
 
-			if !fast {
+			if !fast || sync_error {
 				sleep(Duration::from_secs(1))
 			} else {
 				log::trace!("Fast sync skipping 1s wait");

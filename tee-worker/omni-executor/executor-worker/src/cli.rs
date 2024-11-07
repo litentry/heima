@@ -5,4 +5,5 @@ use clap::Parser;
 pub struct Cli {
 	pub parentchain_url: String,
 	pub ethereum_url: String,
+	pub start_block: u64
 }
