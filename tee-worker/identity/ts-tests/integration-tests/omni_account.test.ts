@@ -64,7 +64,7 @@ describe('Omni Account', function () {
     step('test add_account web3', async function () {
         // wait for the events to be processed in the worker
         // so the in-memory state is updated
-        console.log('waiting for the events to be processed in the worker');
+        console.log('test add_account web3: waiting for the events to be processed in the worker');
         await sleep(20);
         const currentNonce = 0;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
@@ -95,7 +95,7 @@ describe('Omni Account', function () {
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
             senderIdentity.asSubstrate.toHex(),
-            'account store member is not the expected signer'
+            'account store member 1 is not the expected member'
         );
         const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
         assert.isTrue(memberAccount2.isPrivate);
