@@ -398,7 +398,6 @@ fn handle_trusted_call<
 				&metadata,
 				"OmniAccount",
 				"remove_accounts",
-				who,
 				identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
 			))
 		)),
