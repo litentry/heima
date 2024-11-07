@@ -142,27 +142,29 @@ export default {
             },
         },
         NativeTaskError: {
-            UnexpectedCall: "String",
-            ShieldingKeyRetrievalFailed: "String", // Stringified itp_sgx_crypto::Error
-            RequestPayloadDecodingFailed: "Null",
-            ParentchainDataRetrievalFailed: "String", // Stringified itp_stf_state_handler::Error
-            InvalidSignerAccount: "Null",
-            UnauthorizedSigner: "Null",
-            InvalidMemberIdentity: "Null",
-            MissingAesKey: "Null",
-            MrEnclaveRetrievalFailed: "Null",
-            EnclaveSignerRetrievalFailed: "Null",
-            AuthenticationVerificationFailed: "Null",
-            ValidationDataVerificationFailed: "Null",
-            ConnectionHashNotFound: "String",
-            MetadataRetrievalFailed: "String", // Stringified itp_node_api_metadata_provider::Error
-            InvalidMetadata: "String", // Stringified itp_node_api_metadata::Error
-            TrustedCallSendingFailed: "String", // Stringified mpsc::SendError<(H256, TrustedCall)>
-            CallSendingFailed: "String",
-            ExtrinsicConstructionFailed: "String", // Stringified itp_extrinsics_factory::Error
-            ExtrinsicSendingFailed: "String", // Stringified sgx_status_t
-            InvalidRequest: "Null",
-            NativeRequestSendFailed: "Null",
+            _enum: {
+                UnexpectedCall: "Text",
+                ShieldingKeyRetrievalFailed: "Text", // Stringified itp_sgx_crypto::Error
+                RequestPayloadDecodingFailed: "Null",
+                ParentchainDataRetrievalFailed: "Text", // Stringified itp_stf_state_handler::Error
+                InvalidSignerAccount: "Null",
+                UnauthorizedSigner: "Null",
+                InvalidMemberIdentity: "Null",
+                MissingAesKey: "Null",
+                MrEnclaveRetrievalFailed: "Null",
+                EnclaveSignerRetrievalFailed: "Null",
+                AuthenticationVerificationFailed: "Null",
+                ValidationDataVerificationFailed: "Null",
+                ConnectionHashNotFound: "Text",
+                MetadataRetrievalFailed: "Text", // Stringified itp_node_api_metadata_provider::Error
+                InvalidMetadata: "Text", // Stringified itp_node_api_metadata::Error
+                TrustedCallSendingFailed: "Text", // Stringified mpsc::SendError<(H256, TrustedCall)>
+                CallSendingFailed: "Text",
+                ExtrinsicConstructionFailed: "Text", // Stringified itp_extrinsics_factory::Error
+                ExtrinsicSendingFailed: "Text", // Stringified sgx_status_t
+                InvalidRequest: "Null",
+                NativeRequestSendFailed: "Null",
+            },
         },
     },
 };
