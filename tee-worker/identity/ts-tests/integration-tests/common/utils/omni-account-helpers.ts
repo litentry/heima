@@ -172,6 +172,24 @@ export async function createAuthenticatedTrustedCallRemoveAccounts(
     );
 }
 
+export async function createAuthenticatedTrustedCallPublicizeAccount(
+    parachainApi: ApiPromise,
+    mrenclave: string,
+    nonce: Codec,
+    sender: Signer,
+    senderIdentity: CorePrimitivesIdentity,
+    identity: CorePrimitivesIdentity
+) {
+    return createAuthenticatedTrustedCall(
+        parachainApi,
+        ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
+        sender,
+        mrenclave,
+        nonce,
+        [senderIdentity, identity]
+    );
+}
+
 export const getOmniAccount = async (parachainApi: ApiPromise, identity: CorePrimitivesIdentity): Promise<string> => {
     const omniAccount = await parachainApi.rpc.state.call('OmniAccountApi_omni_account', identity.toHex());
 
