@@ -22,6 +22,7 @@ use std::io::Write;
 use std::thread::JoinHandle;
 use std::{fs, thread};
 use tokio::runtime::Handle;
+use tokio::signal;
 use tokio::sync::oneshot;
 
 mod cli;
@@ -48,17 +49,25 @@ async fn main() -> Result<(), ()> {
 		error!("Could not create data dir: {:?}", e);
 	})?;
 
-	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url)
+	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.start_block)
 		.await
-		.unwrap()
-		.join()
 		.unwrap();
+
+	match signal::ctrl_c().await {
+		Ok(()) => {},
+		Err(err) => {
+			eprintln!("Unable to listen for shutdown signal: {}", err);
+			// we also shut down in case of error
+		},
+	}
+
 	Ok(())
 }
 
 async fn listen_to_parentchain(
 	parentchain_url: String,
 	ethereum_url: String,
+	start_block: u64,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
@@ -75,6 +84,6 @@ async fn listen_to_parentchain(
 
 	Ok(thread::Builder::new()
 		.name("litentry_rococo_sync".to_string())
-		.spawn(move || parentchain_listener.sync(0))
+		.spawn(move || parentchain_listener.sync(start_block))
 		.unwrap())
 }
