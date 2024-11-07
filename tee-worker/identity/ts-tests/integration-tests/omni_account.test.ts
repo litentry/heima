@@ -16,6 +16,7 @@ import {
     getOmniAccount,
     sendRequestFromTrustedCall,
     buildWeb3ValidationData,
+    createAuthenticatedTrustedCallRemoveAccounts,
 } from './common/utils/omni-account-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 
@@ -147,6 +148,33 @@ describe('Omni Account', function () {
             twitterIdentity.asTwitter.toString(),
             'account store member 3 is not the expected member'
         );
+    });
+
+    step('test remove_account', async function () {
+        // wait for the events to be processed in the worker
+        // so the in-memory state is updated
+        console.log('test remove_account: waiting for the events to be processed in the worker');
+        await sleep(20);
+        const currentNonce = 2;
+        const twitterIdentity = await buildIdentityHelper('mock_user', 'Twitter', context);
+
+        let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        let membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 3, 'account store members count should be 3');
+
+        const removeAccountsCall = await createAuthenticatedTrustedCallRemoveAccounts(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            sender,
+            senderIdentity,
+            [twitterIdentity]
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, removeAccountsCall);
+
+        accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 2, 'account store members count should be 2');
     });
 });
 
