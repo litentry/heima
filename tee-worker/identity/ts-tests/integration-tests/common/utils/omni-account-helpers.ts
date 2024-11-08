@@ -92,7 +92,7 @@ export function createAuthenticatedTrustedCallCreateAccountStore(
     );
 }
 
-export function createTransferNativeIntentAuthenticatedTrustedCall(
+export function createAuthenticatedTrustedCallTransferNativeIntent(
     parachainApi: ApiPromise,
     mrenclave: string,
     nonce: Codec,
