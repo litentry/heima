@@ -117,23 +117,6 @@ export function createAuthenticatedTrustedCallTransferNativeIntent(
     );
 }
 
-export function createAuthenticatedTrustedCallRequestIntent(
-    parachainApi: ApiPromise,
-    mrenclave: string,
-    nonce: Codec,
-    signer: Signer,
-    identity: CorePrimitivesIdentity
-) {
-    return createAuthenticatedTrustedCall(
-        parachainApi,
-        ['request_intent', '(LitentryIdentity, Intent)'],
-        signer,
-        mrenclave,
-        nonce,
-        [identity]
-    );
-}
-
 export async function createAuthenticatedTrustedCallAddAccount(
     parachainApi: ApiPromise,
     mrenclave: string,
