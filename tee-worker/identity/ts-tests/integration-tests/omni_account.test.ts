@@ -25,8 +25,8 @@ describe('Omni Account', function () {
     this.timeout(60000);
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
-    let sender: SubstrateSigner;
-    let senderIdentity: CorePrimitivesIdentity;
+    let aliceWallet: SubstrateSigner;
+    let aliceIdentity: CorePrimitivesIdentity;
     let omniAccount: string;
 
     before(async function () {
@@ -37,9 +37,9 @@ describe('Omni Account', function () {
         context = await initIntegrationTestContext(parachainEndpoint);
         teeShieldingKey = await getTeeShieldingKey(context);
         const wallet = context.web3Wallets['substrate'];
-        sender = wallet['Alice'] as SubstrateSigner;
-        senderIdentity = await sender.getIdentity(context);
-        omniAccount = await getOmniAccount(context.api, await sender.getIdentity(context));
+        aliceWallet = wallet['Alice'] as SubstrateSigner;
+        aliceIdentity = await aliceWallet.getIdentity(context);
+        omniAccount = await getOmniAccount(context.api, await aliceWallet.getIdentity(context));
     });
 
     step('test create_account_store', async function () {
@@ -51,8 +51,8 @@ describe('Omni Account', function () {
             context.api,
             context.mrEnclave,
             context.api.createType('Index', currentNonce),
-            sender,
-            senderIdentity
+            aliceWallet,
+            aliceIdentity
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, createAccountStoreCall);
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -64,7 +64,7 @@ describe('Omni Account', function () {
         const memberAccount: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount.asPublic.asSubstrate.toHex(),
-            senderIdentity.asSubstrate.toHex(),
+            aliceIdentity.asSubstrate.toHex(),
             'account store member is not the expected signer'
         );
     });
@@ -79,7 +79,7 @@ describe('Omni Account', function () {
         const bobIdentity = await bob.getIdentity(context);
         const validationData = await buildWeb3ValidationData(
             context,
-            senderIdentity,
+            aliceIdentity,
             bobIdentity,
             currentNonce,
             'substrate',
@@ -89,8 +89,8 @@ describe('Omni Account', function () {
             context.api,
             context.mrEnclave,
             context.api.createType('Index', currentNonce),
-            sender,
-            senderIdentity,
+            aliceWallet,
+            aliceIdentity,
             bobIdentity,
             validationData.toHex()
         );
@@ -102,7 +102,7 @@ describe('Omni Account', function () {
         const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
-            senderIdentity.asSubstrate.toHex(),
+            aliceIdentity.asSubstrate.toHex(),
             'account store member 1 is not the expected member'
         );
         const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
@@ -121,7 +121,7 @@ describe('Omni Account', function () {
         const validationConfig: Web2ValidationConfig = {
             identityType: 'Twitter',
             context,
-            signerIdentitity: senderIdentity,
+            signerIdentitity: aliceIdentity,
             linkIdentity: twitterIdentity,
             verificationType: 'PublicTweet',
             validationNonce: currentNonce,
@@ -131,8 +131,8 @@ describe('Omni Account', function () {
             context.api,
             context.mrEnclave,
             context.api.createType('Index', currentNonce),
-            sender,
-            senderIdentity,
+            aliceWallet,
+            aliceIdentity,
             twitterIdentity,
             validationData.toHex(),
             true // public account
@@ -166,8 +166,8 @@ describe('Omni Account', function () {
             context.api,
             context.mrEnclave,
             context.api.createType('Index', currentNonce),
-            sender,
-            senderIdentity,
+            aliceWallet,
+            aliceIdentity,
             [twitterIdentity]
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, removeAccountsCall);
@@ -185,8 +185,8 @@ describe('Omni Account', function () {
             context.api,
             context.mrEnclave,
             context.api.createType('Index', currentNonce),
-            sender,
-            senderIdentity,
+            aliceWallet,
+            aliceIdentity,
             bobIdentity
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, publicizeAccountCall);
@@ -197,7 +197,7 @@ describe('Omni Account', function () {
         const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
-            senderIdentity.asSubstrate.toHex(),
+            aliceIdentity.asSubstrate.toHex(),
             'account store member 1 is not the expected member'
         );
         const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
