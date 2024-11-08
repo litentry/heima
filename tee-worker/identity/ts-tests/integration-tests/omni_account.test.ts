@@ -5,7 +5,6 @@ import type { IntegrationTestContext, SubstrateSigner } from './common/common-ty
 import {
     buildIdentityHelper,
     initIntegrationTestContext,
-    sleep,
     buildWeb2Validation,
     Web2ValidationConfig,
 } from './common/utils';
@@ -73,10 +72,6 @@ describe('Omni Account', function () {
     });
 
     step('test add_account web3', async function () {
-        // wait for the events to be processed in the worker
-        // so the in-memory state is updated
-        console.log('test add_account web3: waiting for the events to be processed in the worker');
-        await sleep(60);
         const currentNonce = 0;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context);
@@ -113,10 +108,6 @@ describe('Omni Account', function () {
     });
 
     step('test add_account web2', async function () {
-        // wait for the events to be processed in the worker
-        // so the in-memory state is updated
-        console.log('test add_account web2: waiting for the events to be processed in the worker');
-        await sleep(60);
         const currentNonce = 1;
 
         // twitter
@@ -154,10 +145,6 @@ describe('Omni Account', function () {
     });
 
     step('test remove_account', async function () {
-        // wait for the events to be processed in the worker
-        // so the in-memory state is updated
-        console.log('test remove_account: waiting for the events to be processed in the worker');
-        await sleep(60);
         const currentNonce = 2;
         const twitterIdentity = await buildIdentityHelper('mock_user', 'Twitter', context);
 
