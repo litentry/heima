@@ -212,9 +212,7 @@ describe('Omni Account', function () {
         );
     });
 
-    step('test request_intent', async function () {
-        console.log('test request_intent: waiting for the events to be processed in the worker');
-        await sleep(20);
+    step('test request_intent (TransferNative)', async function () {
         const initialBalance = context.api.createType('u128', 50000000000000000000n);
         await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
         const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
