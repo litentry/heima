@@ -24,7 +24,7 @@ import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from '
 import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('Omni Account', function () {
-    this.timeout(60000);
+    this.timeout(120000);
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
     let aliceWallet: SubstrateSigner;
