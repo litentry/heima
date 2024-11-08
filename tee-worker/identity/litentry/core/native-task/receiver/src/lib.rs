@@ -61,8 +61,8 @@ use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{
-	parentchain::{Address, ParentchainId},
-	OpaqueCall,
+	parentchain::{Address, ParachainHeader, ParentchainId},
+	AccountId, OpaqueCall,
 };
 use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
@@ -316,16 +316,17 @@ fn handle_trusted_call<
 			who
 		)),
 		TrustedCall::add_account(who, identity, validation_data, public_account) => {
-			let omni_account_repository = OmniAccountRepository::new(context.ocall_api.clone());
-			let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
-				Ok(Some(account)) => account,
-				_ => {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
+				Ok(account) => account,
+				Err(e) => {
+					log::error!("Failed to get omni account: {:?}", e);
 					let result: TrustedCallResult = Err(NativeTaskError::UnauthorizedSigner);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
 			};
-			let nonce = omni_account_repository.get_nonce(omni_account).unwrap_or(0);
+			let repository = OmniAccountRepository::new(context.ocall_api.clone());
+			let nonce = repository.get_nonce(omni_account).unwrap_or(0);
 			let raw_msg = get_expected_raw_message(&who, &identity, nonce);
 
 			let validation_result = match validation_data {
@@ -482,4 +483,32 @@ where
 		aes_encrypt_default(&aes_key, &identity.encode()).encode(),
 		identity.hash(),
 	))
+}
+
+fn get_omni_account<OCallApi: EnclaveOnChainOCallApi>(
+	ocall_api: Arc<OCallApi>,
+	who: &Identity,
+) -> Result<AccountId, &'static str> {
+	let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
+		Ok(Some(account)) => account,
+		_ => {
+			log::warn!("Failed to get omni account from the in-memory store");
+			let header: ParachainHeader = ocall_api.get_header().map_err(|_| {
+				log::error!("Failed to get header");
+				"Failed to get header"
+			})?;
+			OmniAccountRepository::new(ocall_api)
+				.with_header(header)
+				.get_account_by_member_hash(who.hash())
+				.map_err(|_| {
+					log::error!("Failed to get account by member hash");
+					"Failed to get account by member hash"
+				})?
+				.ok_or_else(|| {
+					log::error!("Omni account not found for the given member identity");
+					"Omni account not found for the given member identity"
+				})?
+		},
+	};
+	Ok(omni_account)
 }
