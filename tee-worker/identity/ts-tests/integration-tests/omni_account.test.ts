@@ -76,7 +76,7 @@ describe('Omni Account', function () {
         // wait for the events to be processed in the worker
         // so the in-memory state is updated
         console.log('test add_account web3: waiting for the events to be processed in the worker');
-        await sleep(20);
+        await sleep(60);
         const currentNonce = 0;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context);
@@ -116,7 +116,7 @@ describe('Omni Account', function () {
         // wait for the events to be processed in the worker
         // so the in-memory state is updated
         console.log('test add_account web2: waiting for the events to be processed in the worker');
-        await sleep(20);
+        await sleep(60);
         const currentNonce = 1;
 
         // twitter
@@ -157,7 +157,7 @@ describe('Omni Account', function () {
         // wait for the events to be processed in the worker
         // so the in-memory state is updated
         console.log('test remove_account: waiting for the events to be processed in the worker');
-        await sleep(20);
+        await sleep(60);
         const currentNonce = 2;
         const twitterIdentity = await buildIdentityHelper('mock_user', 'Twitter', context);
 
