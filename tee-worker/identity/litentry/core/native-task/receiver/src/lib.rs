@@ -325,7 +325,7 @@ fn handle_trusted_call<
 					return
 				},
 			};
-			let nonce = omni_account_repository.get_nonce(omni_account.clone()).unwrap_or(0);
+			let nonce = omni_account_repository.get_nonce(omni_account).unwrap_or(0);
 			let raw_msg = get_expected_raw_message(&who, &identity, nonce);
 
 			let validation_result = match validation_data {
