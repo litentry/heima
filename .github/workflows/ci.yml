@@ -1087,13 +1087,6 @@ jobs:
         with:
           name: litentry-omni
 
-      - name: Load docker image
-        run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker load < litentry-identity.tar.gz
-          docker load < litentry-bitacross.tar.gz
-          docker load < litentry-omni.tar.gz
-
       - name: Dockerhub login
         uses: docker/login-action@v3
         with:
@@ -1103,22 +1096,26 @@ jobs:
       - name: Push parachain image
         if: needs.set-condition.outputs.rebuild_parachain == 'true'
         run: |
+          docker load < litentry-parachain-dev.tar.gz
           docker push litentry/litentry-parachain
           docker push litentry/litentry-chain-aio
 
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'
         run: |
+          docker load < litentry-identity.tar.gz
           docker push litentry/identity-worker
           docker push litentry/identity-cli
 
       - name: Push bitacross-worker image
         if: needs.set-condition.outputs.rebuild_bitacross == 'true'
         run: |
+          docker load < litentry-bitacross.tar.gz
           docker push litentry/bitacross-worker
           docker push litentry/bitacross-cli
 
       - name: Push omni-executor image
         if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
         run: |
+          docker load < litentry-omni.tar.gz
           docker push litentry/omni-executor
