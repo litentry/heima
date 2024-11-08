@@ -18,8 +18,11 @@ import {
     buildWeb3ValidationData,
     createAuthenticatedTrustedCallRemoveAccounts,
     createAuthenticatedTrustedCallPublicizeAccount,
+    fundAccount,
+    createAuthenticatedTrustedCallTransferNativeIntent,
 } from './common/utils/omni-account-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
+import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('Omni Account', function () {
     this.timeout(60000);
@@ -208,5 +211,43 @@ describe('Omni Account', function () {
             'account store member 2 is not the expected member'
         );
     });
-});
 
+    step('test request_intent', async function () {
+        console.log('test request_intent: waiting for the events to be processed in the worker');
+        await sleep(20);
+        const initialBalance = context.api.createType('u128', 50000000000000000000n);
+        await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
+        const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
+        const currentNonce = 4;
+        const {
+            data: { free: bobInitialBalance },
+        } = await context.api.query.system.account(bobAddress);
+
+        const transferAmount = context.api.createType('u128', 10000000000000000000n);
+        const requestIntentCall = await createAuthenticatedTrustedCallTransferNativeIntent(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            aliceWallet,
+            aliceIdentity,
+            bobAddress,
+            transferAmount.toBigInt()
+        );
+
+        await sendRequestFromTrustedCall(context, teeShieldingKey, requestIntentCall);
+
+        const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
+        assert.equal(
+            bobAccountDataAfter.free.toBigInt(),
+            bobInitialBalance.toBigInt() + transferAmount.toBigInt(),
+            'Bob balance should be increased by 10'
+        );
+
+        const { data: omniAccountData } = await context.api.query.system.account(omniAccount);
+        assert.equal(
+            omniAccountData.free.toBigInt(),
+            initialBalance.toBigInt() - transferAmount.toBigInt(),
+            'omni account balance should be decreased by 10'
+        );
+    });
+});
