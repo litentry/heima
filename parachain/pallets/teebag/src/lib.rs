@@ -724,27 +724,24 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn add_enclave(sender: &T::AccountId, enclave: &Enclave) -> Result<(), Error<T>> {
+		if let Some(old_enclave) = EnclaveRegistry::<T>::get(sender) {
+			ensure!(
+				old_enclave.worker_type == enclave.worker_type,
+				Error::<T>::UnexpectedWorkerType
+			);
+		}
+
 		match Self::mode() {
 			OperationalMode::Production | OperationalMode::Maintenance => {
 				ensure!(
 					EnclaveIdentifier::<T>::get(enclave.worker_type).contains(sender),
 					Error::<T>::EnclaveIdentifierNotExist
 				);
-				if let Some(old_enclave) = EnclaveRegistry::<T>::get(sender) {
-					ensure!(
-						old_enclave.worker_type == enclave.worker_type,
-						Error::<T>::UnexpectedWorkerType
-					);
-				}
 			},
 			OperationalMode::Development => {
-				match EnclaveRegistry::<T>::get(sender) {
-					Some(old_enclave) => ensure!(
-						old_enclave.worker_type == enclave.worker_type,
-						Error::<T>::UnexpectedWorkerType
-					),
-					None => Self::add_enclave_identifier_internal(enclave.worker_type, sender)?,
-				};
+				if EnclaveRegistry::<T>::get(sender).is_none() {
+					Self::add_enclave_identifier_internal(enclave.worker_type, sender)?;
+				}
 			},
 		};
 
