@@ -234,13 +234,20 @@ export const sendRequestFromTrustedCall = async (
 };
 
 export async function fundAccount(api: ApiPromise, account: string, amount: bigint) {
+    console.log(`Funding account ${account} with ${amount}`);
     const keyring = new Keyring({ type: 'sr25519' });
     const alice = keyring.addFromUri('//Alice');
     const transfer = api.tx.balances.transferAllowDeath(account, amount);
-    const hash = await transfer.signAndSend(alice);
-    console.log('Transfer sent with hash', hash.toHex());
-    const { data } = await api.query.system.account(account);
-    console.log(`Account balance: ${data.free}`);
+
+    return new Promise<void>((resolve, reject) => {
+        transfer
+            .signAndSend(alice, ({ isFinalized }) => {
+                if (isFinalized) {
+                    resolve();
+                }
+            })
+            .catch(reject);
+    });
 }
 
 export async function buildWeb3ValidationData(
