@@ -302,6 +302,9 @@ pub enum Identity {
 
     #[codec(index = 8)]
     Google(IdentityString),
+
+    #[codec(index = 9)]
+    Pumpx(IdentityString),
 }
 
 impl Identity {
@@ -313,6 +316,7 @@ impl Identity {
                 | Self::Github(..)
                 | Self::Email(..)
                 | Self::Google(..)
+                | Self::Pumpx(..)
         )
     }
 
@@ -349,7 +353,8 @@ impl Identity {
             | Identity::Discord(_)
             | Identity::Github(_)
             | Identity::Email(_)
-            | Identity::Google(_) => Vec::new(),
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => Vec::new(),
         }
     }
 
@@ -366,7 +371,8 @@ impl Identity {
             | Identity::Discord(_)
             | Identity::Github(_)
             | Identity::Email(_)
-            | Identity::Google(_) => networks.is_empty(),
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => networks.is_empty(),
         }
     }
 
@@ -388,7 +394,8 @@ impl Identity {
             | Identity::Discord(_)
             | Identity::Github(_)
             | Identity::Email(_)
-            | Identity::Google(_) => None,
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => None,
         }
     }
 
@@ -455,6 +462,10 @@ impl Identity {
                     return Ok(Identity::Google(IdentityString::new(
                         v[1].as_bytes().to_vec(),
                     )));
+                } else if v[0] == "pumpx" {
+                    return Ok(Identity::Pumpx(IdentityString::new(
+                        v[1].as_bytes().to_vec(),
+                    )));
                 } else {
                     return Err("Unknown did type");
                 }
@@ -499,6 +510,11 @@ impl Identity {
                     "google:{}",
                     str::from_utf8(handle.inner_ref())
                         .map_err(|_| "google handle conversion error")?
+                ),
+                Identity::Pumpx(handle) => format!(
+                    "pumpx:{}",
+                    str::from_utf8(handle.inner_ref())
+                        .map_err(|_| "pumpx handle conversion error")?
                 ),
             }
         ))
@@ -588,6 +604,7 @@ mod tests {
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
                     Identity::Google(..) => true,
+                    Identity::Pumpx(..) => true,
                 }
             )
         })
@@ -608,6 +625,7 @@ mod tests {
                     Identity::Bitcoin(..) => true,
                     Identity::Solana(..) => true,
                     Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -628,6 +646,7 @@ mod tests {
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
                     Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -648,6 +667,7 @@ mod tests {
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
                     Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -668,6 +688,7 @@ mod tests {
                     Identity::Bitcoin(..) => true,
                     Identity::Solana(..) => false,
                     Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -688,6 +709,7 @@ mod tests {
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => true,
                     Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -827,6 +849,14 @@ mod tests {
     fn test_google_did() {
         let identity = Identity::Google(IdentityString::new("test@gmail.com".as_bytes().to_vec()));
         let did_str = "did:litentry:google:test@gmail.com";
+        assert_eq!(identity.to_did().unwrap(), did_str);
+        assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_pumpx_did() {
+        let identity = Identity::Pumpx(IdentityString::new("12345678".as_bytes().to_vec()));
+        let did_str = "did:litentry:pumpx:12345678";
         assert_eq!(identity.to_did().unwrap(), did_str);
         assert_eq!(Identity::from_did(did_str).unwrap(), identity);
     }
