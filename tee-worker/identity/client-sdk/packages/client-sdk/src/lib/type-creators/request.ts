@@ -59,7 +59,7 @@ export async function createRequestType(
       }),
     });
 
-    const operation = api.createType('TrustedOperation', {
+    const operation = api.createType('TrustedOperationAuthenticated', {
       direct_call: callAuthenticated,
     });
 
