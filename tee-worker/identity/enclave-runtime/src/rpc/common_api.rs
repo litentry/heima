@@ -477,11 +477,6 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 							"Could not parse omni account"
 						))),
 				};
-				match OmniAccountStore::get_member_accounts(&omni_account) {
-					Ok(Some(_member_accounts)) => {},
-					_ =>
-						return Ok(json!(compute_hex_encoded_return_error("Omni account not found"))),
-				}
 				let mut mailer = email::sendgrid_mailer::SendGridMailer::new(
 					data_provider_config.sendgrid_api_key.clone(),
 					data_provider_config.sendgrid_from_email.clone(),

@@ -25,7 +25,7 @@ use litentry_hex_utils::hex_encode;
 use litentry_primitives::{Identity, ShardIdentifier};
 use sp_core::{
 	blake2_256,
-	crypto::{AccountId32, UncheckedFrom},
+	crypto::{AccountId32 as AccountId, UncheckedFrom},
 	ed25519,
 };
 
@@ -57,7 +57,7 @@ impl TrustedCallAuthenticated {
 impl Default for TrustedCallAuthenticated {
 	fn default() -> Self {
 		Self {
-			call: TrustedCall::noop(AccountId32::unchecked_from([0u8; 32].into()).into()),
+			call: TrustedCall::noop(AccountId::unchecked_from([0u8; 32].into()).into()),
 			nonce: 0,
 			authentication: TCAuthentication::Web3(LitentryMultiSignature::Ed25519(
 				ed25519::Signature::unchecked_from([0u8; 64]),
@@ -114,11 +114,18 @@ pub fn verify_tca_web3_authentication(
 
 pub fn verify_tca_email_authentication(call: &TrustedCall, verification_code: String) -> bool {
 	let identity_hash = call.sender_identity().hash();
-	match OmniAccountStore::get_omni_account(identity_hash) {
-		Ok(Some(account_id)) => match VerificationCodeStore::get(&account_id, identity_hash) {
-			Ok(Some(code)) => code == verification_code,
-			_ => false,
-		},
+	let omni_account = extract_omni_account_from_call(call);
+	match VerificationCodeStore::get(&omni_account, identity_hash) {
+		Ok(Some(code)) => code == verification_code,
 		_ => false,
+	}
+}
+
+fn extract_omni_account_from_call(call: &TrustedCall) -> AccountId {
+	let member_identity = call.sender_identity();
+	if let Ok(Some(account_id)) = OmniAccountStore::get_omni_account(member_identity.hash()) {
+		account_id
+	} else {
+		member_identity.to_omni_account()
 	}
 }
