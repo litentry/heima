@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Expose the OmniAccount's trusted calls: `request_intent`, `create_account_store`, `add_account`, and `remove_accounts`.
 -   Add `TrustedCallAuthenticated` and `TCAuthentication` trusted call structs.
 -   Add `TrustedCallResult` to handle OmniAccount's call results.
+-   Add `TrustedOperationAuthenticated` type definition.
 
 ## [0.9.20-4.1] - 2024-09-30
 
