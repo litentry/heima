@@ -36,7 +36,6 @@ use lc_identity_verification::{
 	web2::{email, twitter},
 	VerificationCodeStore,
 };
-use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_macros::{if_development, if_development_or};
 use litentry_primitives::{aes_decrypt, AesRequest, DecryptableRequest, Identity};
 use log::debug;
