@@ -16,7 +16,7 @@ export default {
         },
         TrustedCallSigned: {
             call: "TrustedCall",
-            index: "u32",
+            index: "Index",
             signature: "LitentryMultiSignature",
         },
         TrustedGetterSigned: {
@@ -32,7 +32,7 @@ export default {
         },
         TrustedCallAuthenticated: {
             call: "TrustedCall",
-            nonce: "u32",
+            nonce: "Index",
             authentication: "TCAuthentication",
         },
 
