@@ -37,7 +37,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          ./scripts/build-docker.sh ${{ github.event.inputs.cargo_profile }} ${{ github.event.inputs.docker_tag }} "${{ github.event.inputs.args }}"
+          ./parachain/scripts/build-docker.sh ${{ github.event.inputs.cargo_profile }} ${{ github.event.inputs.docker_tag }} "${{ github.event.inputs.args }}"
           echo "============================="
           docker images
 
