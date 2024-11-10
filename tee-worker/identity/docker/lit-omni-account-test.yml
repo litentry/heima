@@ -1,0 +1,22 @@
+services:
+    lit-omni-account-test:
+        image: litentry/identity-cli:latest
+        container_name: litentry-omni-account-test
+        volumes:
+            - ../ts-tests:/ts-tests
+            - ../client-api:/client-api
+            - ../cli:/usr/local/worker-cli
+        build:
+            context: ..
+            dockerfile: build.Dockerfile
+            target: deployed-client
+        depends_on:
+            litentry-worker-1:
+                condition: service_healthy
+        networks:
+            - litentry-test-network
+        entrypoint: "bash -c '/usr/local/worker-cli/lit_ts_integration_test.sh omni_account.test.ts 2>&1' "
+        restart: "no"
+networks:
+    litentry-test-network:
+        driver: bridge
