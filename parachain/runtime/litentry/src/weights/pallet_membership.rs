@@ -130,7 +130,7 @@ impl<T: frame_system::Config> pallet_membership::WeightInfo for WeightInfo<T> {
 	/// Storage: `Council::Prime` (r:0 w:1)
 	/// Proof: `Council::Prime` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// The range of component `m` is `[1, 100]`.
-	fn reset_member(m: u32, ) -> Weight {
+	fn reset_members(m: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `315 + m * (64 ±0)`
 		//  Estimated: `4687 + m * (64 ±0)`

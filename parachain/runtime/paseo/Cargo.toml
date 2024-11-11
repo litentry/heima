@@ -68,8 +68,11 @@ pallet-xcm = { workspace = true }
 parachains-common = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 xcm = { workspace = true }
+staging-xcm = { workspace = true }
 xcm-builder = { workspace = true }
+staging-xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
+staging-xcm-executor = { workspace = true }
 
 orml-traits = { workspace = true }
 orml-xtokens = { workspace = true }
@@ -258,8 +261,11 @@ std = [
     "pallet-xcm/std",
     "polkadot-parachain-primitives/std",
     "xcm/std",
+    "staging-xcm/std",
     "xcm-builder/std",
+    "staging-xcm-builder/std",
     "xcm-executor/std",
+    "staging-xcm-executor/std",
     "fp-evm/std",
     "fp-rpc/std",
     "fp-self-contained/std",

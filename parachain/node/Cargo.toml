@@ -92,6 +92,7 @@ polkadot-cli = { workspace = true }
 polkadot-primitives = { workspace = true, features = ["std"] }
 polkadot-service = { workspace = true }
 xcm = { workspace = true }
+staging-xcm = { workspace = true }
 
 frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }

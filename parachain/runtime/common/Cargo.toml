@@ -37,10 +37,14 @@ parachain-info = { workspace = true }
 pallet-xcm = { workspace = true }
 parachains-common = { workspace = true }
 xcm = { workspace = true }
+staging-xcm = { workspace = true }
 xcm-builder = { workspace = true }
+staging-xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
+staging-xcm-executor = { workspace = true }
 xcm-simulator = { workspace = true, optional = true }
 
+orml-traits = { workspace = true }
 orml-xtokens = { workspace = true }
 
 polkadot-parachain-primitives = { workspace = true }
@@ -86,14 +90,18 @@ std = [
     "cumulus-test-relay-sproof-builder/std",
     "pallet-xcm/std",
     "xcm/std",
+    "staging-xcm/std",
     "xcm-builder/std",
+    "staging-xcm-builder/std",
     "xcm-executor/std",
+    "staging-xcm-executor/std",
     "parachain-info/std",
     "core-primitives/std",
     "pallet-asset-manager/std",
     "pallet-extrinsic-filter/std",
     "pallet-omni-account/std",
     "pallet-teebag/std",
+    "orml-traits/std",
     "orml-xtokens/std",
     "parachains-common/std",
 ]

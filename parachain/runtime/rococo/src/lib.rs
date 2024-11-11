@@ -28,7 +28,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	construct_runtime, dynamic_params::{dynamic_pallet_params, dynamic_params}, parameter_types, traits::{
-		tokens::UnityOrOuterConversion, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound, EnsureOrigin, Everything, FindAuthor, FromContains, InstanceFilter, OnFinalize, SortedMembers, WithdrawReasons
+		tokens::UnityOrOuterConversion, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound, EnsureOrigin, Everything, FindAuthor, FromContains, InstanceFilter, OnFinalize, SortedMembers, TransformOrigin, WithdrawReasons
 	}, weights::{constants::RocksDbWeight, ConstantMultiplier, Weight}, ConsensusEngineId, PalletId
 };
 use frame_system::{EnsureRoot, pallet_prelude::BlockNumberFor};
@@ -459,6 +459,7 @@ impl pallet_scheduler::Config for Runtime {
 parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
 	pub const PreimageBaseDeposit: Balance = 1 * DOLLARS;
+	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -466,18 +467,28 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRootOrAllCouncil;
-	// type BaseDeposit = PreimageBaseDeposit;
-	// type ByteDeposit = PreimageByteDeposit;
-	type Consideration = HoldConsideration<
+	type Consideration = frame_support::traits::fungible::HoldConsideration<
 		AccountId,
 		Balances,
 		PreimageHoldReason,
-		LinearStoragePrice<
+		frame_support::traits::LinearStoragePrice<
 			dynamic_params::preimage::BaseDeposit,
 			dynamic_params::preimage::ByteDeposit,
 			Balance,
 		>,
 	>;
+}
+
+parameter_types! {
+	pub const IndexDeposit: Balance = 1 * DOLLARS;
+}
+
+impl pallet_indices::Config for Runtime {
+	type AccountIndex = AccountIndex;
+	type Currency = Balances;
+	type Deposit = IndexDeposit;
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -499,7 +510,6 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = ();
 	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
-	// type MaxHolds = ();
 	type MaxFreezes = ();
 }
 
@@ -825,9 +835,9 @@ impl pallet_identity::Config for Runtime {
 	type RegistrarOrigin = EnsureRootOrHalfCouncil;
 	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 	type ByteDeposit = ByteDeposit;
-	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
+	type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
 	type OffchainSignature = Signature;
-	type SigningPublicKey = <Signature as traits::Verify>::Signer;
+	type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
 	type UsernameAuthorityOrigin = EnsureRoot<Self::AccountId>;
 	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
 	type MaxSuffixLength = ConstU32<7>;
@@ -858,7 +868,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
-	// type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
@@ -873,11 +882,9 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	// type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
 	// We use pallet_xcm to confirm the version of xcm
 	type VersionWrapper = PolkadotXcm;
-	// type ExecuteOverweightOrigin = EnsureRootOrAllCouncil;
 	type ControllerOrigin = EnsureRootOrAllCouncil;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
@@ -889,9 +896,9 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	// type XcmExecutor = XcmExecutor<XcmConfig>;
-	// type ExecuteOverweightOrigin = EnsureRootOrAllCouncil;
-	type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
+	// TODO need to generate
+	type WeightInfo = ();
+	// type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
 	type DmpSink = ();
 }
 

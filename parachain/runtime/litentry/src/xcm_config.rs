@@ -47,9 +47,9 @@ use sp_std::sync::Arc;
 use core_primitives::{AccountId, Weight};
 use runtime_common::{
 	xcm_impl::{
-		AccountIdToMultiLocation, AssetIdMultiLocationConvert, CurrencyId,
-		CurrencyIdMultiLocationConvert, FirstAssetTrader, MultiNativeAsset,
-		NewAnchoringSelfReserve, OldAnchoringSelfReserve, XcmFeesToAccount,
+		AccountIdToLocation, AssetIdLocationConvert, CurrencyId,
+		CurrencyIdLocationConvert, FirstAssetTrader, MultiNativeAsset,
+		NewAnchoringSelfReserve, OldAnchoringSelfReserve, ParentOrParachains, XcmFeesToAccount,
 	},
 	WEIGHT_TO_FEE_FACTOR,
 };
@@ -65,19 +65,19 @@ use super::{
 use super::{ParachainSystem, XcmpQueue};
 
 parameter_types! {
-	pub const RelayLocation: MultiLocation = MultiLocation::parent();
+	pub const RelayLocation: Location = Location::parent();
 	pub const RelayNetwork: Option<NetworkId> = None;
 	pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
-	pub UniversalLocation: InteriorMultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+	pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
 
-impl Get<Junctions> for UniversalLocation {
+impl orml_traits::parameters::frame_support::traits::Get<Junctions> for UniversalLocation {
     fn get() -> Junctions {
         UniversalLocation::get()
     }
 }
 
-/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+/// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
@@ -95,7 +95,7 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
 	(IsConcrete<NewAnchoringSelfReserve<Runtime>>, IsConcrete<OldAnchoringSelfReserve<Runtime>>),
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
@@ -108,13 +108,13 @@ parameter_types! {
 	pub TempAccount: AccountId = TempPalletId::get().into_account_truncating();
 }
 // The non-reserve fungible transactor type
-// It will use orml_tokens, and the Id will be CurrencyId::ParachainReserve(MultiLocation)
+// It will use orml_tokens, and the Id will be CurrencyId::ParachainReserve(Location)
 pub type ForeignFungiblesTransactor = FungiblesAdapter<
 	// Use this fungibles implementation
 	Assets,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	ConvertedConcreteId<AssetId, Balance, AssetIdMultiLocationConvert<Runtime>, JustTry>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+	ConvertedConcreteId<AssetId, Balance, AssetIdLocationConvert<Runtime>, JustTry>,
+	// Do a simple punn to convert an AccountId32 Location into a native chain account ID:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
@@ -164,9 +164,9 @@ parameter_types! {
 }
 
 match_types! {
-	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
-		MultiLocation { parents: 1, interior: Here } |
-		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
+	pub type ParentOrParentsExecutivePlurality: impl Contains<Location> = {
+		Location { parents: 1, interior: Here } |
+		Location { parents: 1, interior: Junctions::X1(Plurality { id: BodyId::Executive, .. }) }
 	};
 }
 
@@ -205,7 +205,7 @@ pub type Traders = (
 		AssetManager,
 		XcmFeesToAccount<
 			Assets,
-			ConvertedConcreteId<AssetId, Balance, AssetIdMultiLocationConvert<Runtime>, JustTry>,
+			ConvertedConcreteId<AssetId, Balance, AssetIdLocationConvert<Runtime>, JustTry>,
 			AccountId,
 			XcmFeesAccount,
 		>,
@@ -273,34 +273,21 @@ pub type XcmRouter = (
 	XcmpQueue,
 );
 
-match_types! {
-	pub type ParentOrParachains: impl Contains<MultiLocation> = {
-		// Local account: Litentry
-		MultiLocation { parents: 0, interior: X1(Junction::AccountId32 { .. }) } |
-		// Relay-chain account: Polkadot
-		MultiLocation { parents: 1, interior: X1(Junction::AccountId32 { .. }) } |
-		// AccountKey20 based parachain: Moonriver
-		MultiLocation { parents: 1, interior: X2(Parachain( .. ), Junction::AccountKey20 { .. }) } |
-		// AccountId 32 based parachain: Statemint
-		MultiLocation { parents: 1, interior: X2(Parachain( .. ), Junction::AccountId32 { .. }) }
-	};
-}
-
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
 		// Always return `None` to disallow using fee asset and target asset with different reserve chains
 		None
 	};
 }
 
 parameter_types! {
-	pub SelfLocation: MultiLocation = MultiLocation {
+	pub SelfLocation: Location = Location {
 		parents:1,
 		interior: Junctions::X1(Arc::new([
 			Parachain(ParachainInfo::parachain_id().into())
 		]))
 	};
-	pub const BaseXcmWeight: u64 = 100_000_000;
+	pub const BaseXcmWeight: staging_xcm::v3::Weight = staging_xcm::v3::Weight::from_parts(100_000_000u64, 0);
 }
 
 pub struct MaxAssetsForTransfer;
@@ -312,7 +299,7 @@ impl orml_traits::parameters::frame_support::traits::Get<usize> for MaxAssetsFor
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {
@@ -357,15 +344,17 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId<Runtime>;
-	type AccountIdToMultiLocation = AccountIdToMultiLocation;
-	type CurrencyIdConvert = CurrencyIdMultiLocationConvert<Runtime>;
+	type CurrencyIdConvert = CurrencyIdLocationConvert<Runtime>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type SelfLocation = SelfLocation;
-	type MultiLocationsFilter = ParentOrParachains;
 	type MinXcmFee = ParachainMinFee;
 	type Weigher = XcmWeigher;
 	type BaseXcmWeight = BaseXcmWeight;
 	type UniversalLocation = UniversalLocation;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type ReserveProvider = AbsoluteReserveProvider;
+	type AccountIdToLocation = AccountIdToLocation;
+	type LocationsFilter = ParentOrParachains;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
