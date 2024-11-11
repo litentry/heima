@@ -33,6 +33,7 @@ lc-dynamic-assertion = { workspace = true }
 lc-identity-verification = { workspace = true }
 lc-native-task-sender = { workspace = true }
 lc-omni-account = { workspace = true }
+lc-evm-dynamic-assertions = { workspace = true }
 litentry-hex-utils = { workspace = true }
 litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }
@@ -51,6 +52,7 @@ sgx = [
     "lc-native-task-sender/sgx",
     "lc-identity-verification/sgx",
     "lc-omni-account/sgx",
+    "lc-evm-dynamic-assertions/sgx",
 ]
 std = [
     "futures",
@@ -68,6 +70,7 @@ std = [
     "lc-native-task-sender/std",
     "lc-identity-verification/std",
     "lc-omni-account/std",
+    "lc-evm-dynamic-assertions/std",
 ]
 development = [
     "litentry-macros/development",

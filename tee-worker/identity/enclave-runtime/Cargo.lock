@@ -3136,6 +3136,7 @@ dependencies = [
  "itp-types",
  "lc-data-providers",
  "lc-dynamic-assertion",
+ "lc-evm-dynamic-assertions",
  "lc-identity-verification",
  "lc-native-task-sender",
  "lc-omni-account",

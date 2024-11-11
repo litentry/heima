@@ -19,14 +19,16 @@ use ita_sgx_runtime::Hash;
 use ita_stf::{Getter, TrustedCallSigned};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
-use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
+use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{
 	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
 };
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use lc_data_providers::DataProviderConfig;
-use sp_core::ed25519::Pair as Ed25519Pair;
+use lc_dynamic_assertion::AssertionLogicRepository;
+use lc_evm_dynamic_assertions::AssertionRepositoryItem;
+use sp_core::{ed25519::Pair as Ed25519Pair, H160};
 use std::{string::String, sync::Arc};
 
 pub struct NativeTaskContext<
@@ -37,16 +39,18 @@ pub struct NativeTaskContext<
 	ExtrinsicFactory,
 	NodeMetadataRepo,
 	Aes256KeyRepository,
+	AssertionRepository,
 > where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
 	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
+	OCallApi: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AssertionRepository:
+		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	pub shielding_key: Arc<ShieldingKeyRepository>,
 	pub author_api: Arc<AuthorApi>,
@@ -57,6 +61,7 @@ pub struct NativeTaskContext<
 	pub extrinsic_factory: Arc<ExtrinsicFactory>,
 	pub node_metadata_repo: Arc<NodeMetadataRepo>,
 	pub aes256_key_repository: Arc<Aes256KeyRepository>,
+	pub assertion_repository: Arc<AssertionRepository>,
 }
 
 impl<
@@ -67,6 +72,7 @@ impl<
 		ExtrinsicFactory,
 		NodeMetadataRepo,
 		Aes256KeyRepository,
+		AssertionRepository,
 	>
 	NativeTaskContext<
 		ShieldingKeyRepository,
@@ -76,16 +82,18 @@ impl<
 		ExtrinsicFactory,
 		NodeMetadataRepo,
 		Aes256KeyRepository,
+		AssertionRepository,
 	> where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
 	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
+	OCallApi: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AssertionRepository:
+		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -98,6 +106,7 @@ impl<
 		extrinsic_factory: Arc<ExtrinsicFactory>,
 		node_metadata_repo: Arc<NodeMetadataRepo>,
 		aes256_key_repository: Arc<Aes256KeyRepository>,
+		assertion_repository: Arc<AssertionRepository>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -109,6 +118,7 @@ impl<
 			extrinsic_factory,
 			node_metadata_repo,
 			aes256_key_repository,
+			assertion_repository,
 		}
 	}
 }

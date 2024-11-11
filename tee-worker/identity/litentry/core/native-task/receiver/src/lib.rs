@@ -40,6 +40,7 @@ mod types;
 pub use types::NativeTaskContext;
 use types::*;
 
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Compact, Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
@@ -64,6 +65,8 @@ use itp_types::{
 	parentchain::{Address, ParachainHeader, ParentchainId},
 	AccountId, OpaqueCall,
 };
+use lc_dynamic_assertion::AssertionLogicRepository;
+use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
 use lc_omni_account::{
@@ -72,8 +75,7 @@ use lc_omni_account::{
 use litentry_primitives::{
 	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
 };
-use sp_core::{blake2_256, H256};
-use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+use sp_core::{blake2_256, H160, H256};
 
 const THREAD_POOL_SIZE: usize = 480;
 
@@ -85,6 +87,7 @@ pub fn run_native_task_receiver<
 	ExtrinsicFactory,
 	NodeMetadataRepo,
 	Aes256KeyRepository,
+	AssertionRepository,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -95,6 +98,7 @@ pub fn run_native_task_receiver<
 			ExtrinsicFactory,
 			NodeMetadataRepo,
 			Aes256KeyRepository,
+			AssertionRepository,
 		>,
 	>,
 ) where
@@ -107,6 +111,8 @@ pub fn run_native_task_receiver<
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AssertionRepository:
+		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -143,6 +149,7 @@ fn handle_request<
 	ExtrinsicFactory,
 	NodeMetadataRepo,
 	Aes256KeyRepository,
+	AssertionRepository,
 >(
 	request: &mut AesRequest,
 	context: Arc<
@@ -154,6 +161,7 @@ fn handle_request<
 			ExtrinsicFactory,
 			NodeMetadataRepo,
 			Aes256KeyRepository,
+			AssertionRepository,
 		>,
 	>,
 ) -> Result<TrustedCall, &'static str>
@@ -167,6 +175,8 @@ where
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AssertionRepository:
+		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
@@ -235,6 +245,7 @@ fn handle_trusted_call<
 	ExtrinsicFactory,
 	NodeMetadataRepo,
 	Aes256KeyRepository,
+	AssertionRepository,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -245,6 +256,7 @@ fn handle_trusted_call<
 			ExtrinsicFactory,
 			NodeMetadataRepo,
 			Aes256KeyRepository,
+			AssertionRepository,
 		>,
 	>,
 	call: TrustedCall,
@@ -259,6 +271,8 @@ fn handle_trusted_call<
 	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
 	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AssertionRepository:
+		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
 	{
