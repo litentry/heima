@@ -45,7 +45,6 @@ use codec::{Compact, Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::Hash;
 use ita_stf::{
-	aes_encrypt_default,
 	helpers::{get_expected_raw_message, verify_web3_identity},
 	Getter, TrustedCall, TrustedCallSigned,
 };
@@ -56,7 +55,8 @@ use itp_node_api::{
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{
-	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
+	aes256::Aes256Key, aes_encrypt_default, key_repository::AccessKey, ShieldingCryptoDecrypt,
+	ShieldingCryptoEncrypt,
 };
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
