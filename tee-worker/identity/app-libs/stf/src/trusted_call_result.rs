@@ -128,6 +128,7 @@ pub enum RequestVcErrorDetail {
 	CallSendingFailed(String),
 	ExtrinsicConstructionFailed(String), // Stringified itp_extrinsics_factory::Error
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
+	ExtractingMemberIdentityFailed,
 }
 
 #[derive(Debug, Encode, Decode, Clone)]
