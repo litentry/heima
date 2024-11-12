@@ -444,6 +444,9 @@ fn handle_trusted_call<
 				identity
 			))
 		)),
+		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) => {
+			todo!()
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
