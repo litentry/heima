@@ -5208,6 +5208,7 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-stf-primitives",
  "itp-stf-state-handler",
+ "itp-storage",
  "itp-types",
  "lc-data-providers",
  "lc-dynamic-assertion",

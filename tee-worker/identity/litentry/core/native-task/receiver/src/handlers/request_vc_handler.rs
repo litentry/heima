@@ -20,8 +20,7 @@ use codec::Decode;
 use frame_support::ensure;
 use ita_sgx_runtime::VERSION as SIDECHAIN_VERSION;
 use ita_stf::{
-	helpers::ensure_self, trusted_call_result::RequestVcErrorDetail, Getter, TrustedCall,
-	TrustedCallSigned,
+	helpers::ensure_self, trusted_call_result::RequestVcErrorDetail, Getter, TrustedCallSigned,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
@@ -35,16 +34,17 @@ use itp_sgx_crypto::{
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_state_handler::handle_state::HandleState;
+use itp_storage::storage_value_key;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
-use itp_types::parentchain::ParachainHeader;
+use itp_types::BlockNumber as SidechainBlockNumber;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_omni_account::InMemoryStore as OmniAccountStore;
 use lc_stf_task_receiver::handler::assertion::create_credential_str;
 use litentry_macros::if_development_or;
 use litentry_primitives::{
-	Assertion, AssertionBuildRequest, Identity, IdentityNetworkTuple, MemberAccount, RequestAesKey,
-	Web3Network,
+	Assertion, AssertionBuildRequest, Identity, IdentityNetworkTuple, MemberAccount,
+	ParentchainBlockNumber, RequestAesKey, Web3Network,
 };
 use sp_core::{H160, H256 as Hash};
 
@@ -93,7 +93,7 @@ where
 	StateHandler: HandleState + Send + Sync + 'static,
 	StateHandler::StateT: SgxExternalitiesTrait,
 {
-	debug!(
+	log::debug!(
 		"Processing vc request for {}, assertion: {:?}",
 		who.to_did().unwrap_or_default(),
 		assertion
@@ -213,7 +213,7 @@ where
 			}?;
 			let mut output: AesOutput = Decode::decode(&mut encrypted_identity.as_slice())
 				.map_err(|_| "Failed to decode encrypted identity")?;
-			let encoded_identity = aes_decrypt(&key, &mut output).ok_or("Failed to decrypt")?;
+			let encoded_identity = aes_decrypt(&aes_key, &mut output).ok_or("Failed to decrypt")?;
 			Identity::decode(&mut encoded_identity.as_slice()).map_err(|_| "Failed to decode")
 		},
 	}
