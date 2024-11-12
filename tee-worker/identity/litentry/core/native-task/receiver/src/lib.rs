@@ -33,6 +33,8 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use crate::sgx_reexport_prelude::*;
 
+mod handlers;
+
 mod trusted_call_authenticated;
 pub use trusted_call_authenticated::*;
 
