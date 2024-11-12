@@ -58,8 +58,10 @@ use itp_sgx_crypto::{
 	aes256::Aes256Key, aes_encrypt_default, key_repository::AccessKey, ShieldingCryptoDecrypt,
 	ShieldingCryptoEncrypt,
 };
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{
 	parentchain::{Address, ParachainHeader, ParentchainId},
@@ -88,6 +90,7 @@ pub fn run_native_task_receiver<
 	NodeMetadataRepo,
 	Aes256KeyRepository,
 	AssertionRepository,
+	StateHandler,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -99,6 +102,7 @@ pub fn run_native_task_receiver<
 			NodeMetadataRepo,
 			Aes256KeyRepository,
 			AssertionRepository,
+			StateHandler,
 		>,
 	>,
 ) where
@@ -113,6 +117,8 @@ pub fn run_native_task_receiver<
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 	AssertionRepository:
 		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	StateHandler: HandleState + Send + Sync + 'static,
+	StateHandler::StateT: SgxExternalitiesTrait,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -150,6 +156,7 @@ fn handle_request<
 	NodeMetadataRepo,
 	Aes256KeyRepository,
 	AssertionRepository,
+	StateHandler,
 >(
 	request: &mut AesRequest,
 	context: Arc<
@@ -162,6 +169,7 @@ fn handle_request<
 			NodeMetadataRepo,
 			Aes256KeyRepository,
 			AssertionRepository,
+			StateHandler,
 		>,
 	>,
 ) -> Result<TrustedCall, &'static str>
@@ -177,6 +185,8 @@ where
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 	AssertionRepository:
 		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	StateHandler: HandleState + Send + Sync + 'static,
+	StateHandler::StateT: SgxExternalitiesTrait,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
@@ -246,6 +256,7 @@ fn handle_trusted_call<
 	NodeMetadataRepo,
 	Aes256KeyRepository,
 	AssertionRepository,
+	StateHandler,
 >(
 	context: Arc<
 		NativeTaskContext<
@@ -257,6 +268,7 @@ fn handle_trusted_call<
 			NodeMetadataRepo,
 			Aes256KeyRepository,
 			AssertionRepository,
+			StateHandler,
 		>,
 	>,
 	call: TrustedCall,
@@ -273,6 +285,8 @@ fn handle_trusted_call<
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 	AssertionRepository:
 		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	StateHandler: HandleState + Send + Sync + 'static,
+	StateHandler::StateT: SgxExternalitiesTrait,
 {
 	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
 	{

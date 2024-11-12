@@ -24,6 +24,7 @@ use itp_sgx_crypto::{
 	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
 };
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use lc_data_providers::DataProviderConfig;
 use lc_dynamic_assertion::AssertionLogicRepository;
@@ -40,6 +41,7 @@ pub struct NativeTaskContext<
 	NodeMetadataRepo,
 	Aes256KeyRepository,
 	AssertionRepository,
+	StateHandler,
 > where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -51,6 +53,7 @@ pub struct NativeTaskContext<
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 	AssertionRepository:
 		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	StateHandler: HandleState + Send + Sync + 'static,
 {
 	pub shielding_key: Arc<ShieldingKeyRepository>,
 	pub author_api: Arc<AuthorApi>,
@@ -62,6 +65,7 @@ pub struct NativeTaskContext<
 	pub node_metadata_repo: Arc<NodeMetadataRepo>,
 	pub aes256_key_repository: Arc<Aes256KeyRepository>,
 	pub assertion_repository: Arc<AssertionRepository>,
+	pub state_handler: Arc<StateHandler>,
 }
 
 impl<
@@ -73,6 +77,7 @@ impl<
 		NodeMetadataRepo,
 		Aes256KeyRepository,
 		AssertionRepository,
+		StateHandler,
 	>
 	NativeTaskContext<
 		ShieldingKeyRepository,
@@ -83,6 +88,7 @@ impl<
 		NodeMetadataRepo,
 		Aes256KeyRepository,
 		AssertionRepository,
+		StateHandler,
 	> where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -94,6 +100,7 @@ impl<
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
 	AssertionRepository:
 		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	StateHandler: HandleState + Send + Sync + 'static,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -107,6 +114,7 @@ impl<
 		node_metadata_repo: Arc<NodeMetadataRepo>,
 		aes256_key_repository: Arc<Aes256KeyRepository>,
 		assertion_repository: Arc<AssertionRepository>,
+		state_handler: Arc<StateHandler>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -119,6 +127,7 @@ impl<
 			node_metadata_repo,
 			aes256_key_repository,
 			assertion_repository,
+			state_handler,
 		}
 	}
 }
