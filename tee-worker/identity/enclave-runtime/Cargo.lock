@@ -3140,6 +3140,7 @@ dependencies = [
  "lc-identity-verification",
  "lc-native-task-sender",
  "lc-omni-account",
+ "lc-stf-task-receiver",
  "litentry-hex-utils",
  "litentry-macros",
  "litentry-primitives",
