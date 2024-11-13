@@ -3,7 +3,7 @@
 
 # Rust manifest example
 
-loader.entrypoint = "file:{{ gramine.libos }}"
+loader.entrypoint.uri = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ self_exe }}"
 loader.log_level = "{{ log_level }}"
 
