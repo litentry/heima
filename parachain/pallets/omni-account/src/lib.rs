@@ -193,6 +193,7 @@ pub mod pallet {
 				PostDispatchInfo,
 				sp_runtime::DispatchErrorWithPostInfo<PostDispatchInfo>,
 			> = call.dispatch(frame_system::RawOrigin::Signed(omni_account.clone()).into());
+			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsSigned {
 				who: omni_account,
 				result: result.map(|_| ()).map_err(|e| e.error),

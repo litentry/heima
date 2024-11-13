@@ -856,6 +856,7 @@ jobs:
           - test_name: lit-dr-vc-test
           - test_name: lit-parentchain-nonce
           - test_name: lit-test-failed-parentchain-extrinsic
+          - test_name: lit-omni-account-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4
@@ -926,6 +927,7 @@ jobs:
           - test_name: lit-di-identity-multiworker-test
           - test_name: lit-dr-vc-multiworker-test
           - test_name: lit-resume-worker
+          - test_name: lit-omni-account-multiworker-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4

@@ -57,7 +57,7 @@ export function parseIdGraph(
     return idGraph;
 }
 
-type Web2ValidationConfig =
+export type Web2ValidationConfig =
     | {
           identityType: 'Discord';
           context: IntegrationTestContext;

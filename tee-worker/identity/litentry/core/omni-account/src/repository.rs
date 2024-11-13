@@ -17,10 +17,11 @@
 use crate::{
 	AccountId, Error, Header, MemberAccount, OmniAccounts, ParentchainId, ParentchainIndex,
 };
-use alloc::{collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
+use alloc::{borrow::ToOwned, collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
 use frame_support::storage::storage_prefix;
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_storage::extract_blake2_128concat_key;
+use itp_storage::{extract_blake2_128concat_key, storage_map_key, StorageHasher};
+use sp_core::H256;
 
 pub trait GetAccountStore {
 	fn get_all(&self) -> Result<OmniAccounts, Error>;
@@ -55,6 +56,27 @@ impl<OCallApi: EnclaveOnChainOCallApi> GetOmniAccountInfo for OmniAccountReposit
 pub struct OmniAccountStoreRepository<OCallApi: EnclaveOnChainOCallApi> {
 	ocall_api: Arc<OCallApi>,
 	header: Header,
+}
+
+impl<OCallApi: EnclaveOnChainOCallApi> OmniAccountStoreRepository<OCallApi> {
+	pub fn get_account_by_member_hash(
+		&self,
+		member_hash: H256,
+	) -> Result<Option<AccountId>, Error> {
+		let storage_key = storage_map_key(
+			"OmniAccount",
+			"MemberAccountHash",
+			&member_hash,
+			&StorageHasher::Blake2_128Concat,
+		);
+		let storage_entry = self
+			.ocall_api
+			.get_storage_verified(storage_key, &self.header, &ParentchainId::Litentry)
+			.map_err(|_| Error::OCallApiError("Failed to get storage"))?;
+		let account_id = storage_entry.value().to_owned();
+
+		Ok(account_id)
+	}
 }
 
 impl<OCallApi: EnclaveOnChainOCallApi> GetAccountStore for OmniAccountStoreRepository<OCallApi> {

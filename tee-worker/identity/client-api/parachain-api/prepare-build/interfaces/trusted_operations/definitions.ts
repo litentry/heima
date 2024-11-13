@@ -7,9 +7,16 @@ export default {
                 get: "(Getter)",
             },
         },
+        TrustedOperationAuthenticated: {
+            _enum: {
+                indirect_call: "Null",
+                direct_call: "(TrustedCallAuthenticated)",
+                get: "(Getter)",
+            },
+        },
         TrustedCallSigned: {
             call: "TrustedCall",
-            index: "u32",
+            index: "Index",
             signature: "LitentryMultiSignature",
         },
         TrustedGetterSigned: {
