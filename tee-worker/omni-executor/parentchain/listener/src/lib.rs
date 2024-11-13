@@ -108,7 +108,7 @@ pub async fn create_listener<EthereumIntentExecutorT: IntentExecutor + Send + Sy
 
 	let metadata_provider =
 		Arc::new(SubxtMetadataProvider::new(SubxtClientFactory::new(ws_rpc_endpoint)));
-	let key_store = Arc::new(SubstrateKeyStore::new("/data/parentchain_key.bin".to_string()));
+	let key_store = Arc::new(SubstrateKeyStore::new("data/parentchain_key.bin".to_string()));
 	let secret_key_bytes = key_store
 		.read()
 		.map_err(|e| {
