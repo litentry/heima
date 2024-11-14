@@ -4,10 +4,11 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 SELF_EXE = target/release/executor-worker
-
+COMPILATION_FEATURES =
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
 ifeq ($(SGX),1)
+COMPILATION_FEATURES = gramine-quote
 all: omni-executor.manifest.sgx omni-executor.sig
 endif
 
@@ -24,7 +25,7 @@ RS_FILES := $(shell find . -type f -name '*.rs')
 # of the DEBUG setting is to control Gramine's loglevel.
 -include $(SELF_EXE).d # See also: .cargo/config.toml
 $(SELF_EXE): $(RS_FILES) Cargo.toml
-	cargo build --release --features=gramine-quote
+	cargo build --release --features=$(COMPILATION_FEATURES)
 
 omni-executor.manifest: omni-executor.manifest.template $(SELF_EXE)
 	gramine-manifest \
@@ -35,7 +36,7 @@ omni-executor.manifest: omni-executor.manifest.template $(SELF_EXE)
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
 # see the helloworld example for details on this workaround.
-omni-executor.manifest.sgx tee-bridge.sig: sgx_sign
+omni-executor.manifest.sgx omni-executor.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
