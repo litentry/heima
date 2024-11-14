@@ -18,13 +18,6 @@ import type { JsonRpcRequest } from '../util/types';
 /**
  * Sends a remark to the Litentry Parachain.
  *
- * @param {ApiPromise} api - Litentry Parachain API instance from Polkadot.js.
- * @param {Object} data - The data required to send the remark.
- * @param {LitentryIdentity} data.omniAccount - The user's omniAccount. Use
- * `createLitentryIdentityType` helper to create this struct.
- * @param {LitentryIdentity} data.who - The user's account. Use `createLitentryIdentityType` helper
- * to create this struct.
- * @param {string} data.message - The message to be sent.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign
  * (if applicable) and a send function.
  * @returns {string} [payloadToSign] - The payload to sign if who is not an email identity.

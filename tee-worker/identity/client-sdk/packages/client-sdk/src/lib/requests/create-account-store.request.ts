@@ -18,10 +18,6 @@ import type { JsonRpcRequest } from '../util/types';
 /**
  * Creates an account store on the Litentry Parachain.
  *
- * @param {ApiPromise} api - Litentry Parachain API instance from Polkadot.js.
- * @param {Object} data - The data required to create the account store.
- * @param {LitentryIdentity} data.omniAccount - The user's OmniAccount. Use `createLitentryIdentityType` helper to create this struct.
- * @param {LitentryIdentity} data.who - The user's account. Use `createLitentryIdentityType` helper to create this struct.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {string} [payloadToSign] - The payload to sign if who is not an email identity.
  * @returns {Function} send - A function to send the request to the Enclave.
@@ -29,10 +25,6 @@ import type { JsonRpcRequest } from '../util/types';
  * @returns {string} send.args.authentication - The authentication string. If who is
  * an email identity, this is the email verification code. If the who is not an email identity, this is the
  * signed payload.
- * @returns {Promise<Object>} send.response - The response from the Enclave.
- * @returns {WorkerRpcReturnValue} send.response.response - The response value from the Enclave.
- * @returns {string} send.response.blockHash - The block hash of the transaction.
- * @returns {string} send.response.extrinsicHash - The extrinsic hash of the transaction.
  */
 export async function createAccountStore(
   /** Litentry Parachain API instance from Polkadot.js */
