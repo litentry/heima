@@ -55,7 +55,7 @@ export async function createRequestType(
       call,
       nonce,
       authentication: api.createType('TCAuthentication', {
-        Web3: signature,
+        [signer.isEmail ? 'Email' : 'Web3']: signature,
       }),
     });
 
