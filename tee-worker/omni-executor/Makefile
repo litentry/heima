@@ -18,13 +18,8 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
-RS_FILES := $(shell find . -type f -name '*.rs')
-# Note that we're compiling in release mode regardless of the DEBUG setting passed
-# to Make, as compiling in debug mode results in an order of magnitude's difference in
-# performance that makes testing by running a benchmark with ab painful. The primary goal
-# of the DEBUG setting is to control Gramine's loglevel.
--include $(SELF_EXE).d # See also: .cargo/config.toml
-$(SELF_EXE): $(RS_FILES) Cargo.toml
+.PHONY: $(SELF_EXE)
+$(SELF_EXE):
 	cargo build --release --features=$(COMPILATION_FEATURES)
 
 omni-executor.manifest: omni-executor.manifest.template $(SELF_EXE)

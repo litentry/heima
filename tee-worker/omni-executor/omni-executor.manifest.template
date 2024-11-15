@@ -20,6 +20,7 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/data", uri = "file:data", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
   { path = "/etc", uri = "file:/etc" },
+  { path = "/usr", uri = "file:/usr" },
 ]
 
 sgx.debug = true
@@ -35,6 +36,7 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/etc/ssl/certs/ca-certificates.crt",
+  "file:/usr/lib/ssl/certs/ca-certificates.crt",
 ]
 
 # The maximum number of threads in a single process needs to be declared in advance.
