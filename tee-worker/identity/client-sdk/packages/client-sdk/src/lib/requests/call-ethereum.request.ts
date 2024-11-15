@@ -24,7 +24,7 @@ import type { U8aLike } from '@polkadot/util/types';
  * @returns {string} [payloadToSign] - The payload to sign if who is not an email identity.
  * @returns {Function} send - A function to send the request to the Enclave.
  * @returns {Promise<Object>} send.args - The arguments required to send the request.
- * @returns {string} send.args.authorization - The authentication string. If who is an
+ * @returns {string} send.args.authentication - The authentication string. If who is an
  * email identity, this is the email verification code. If the who is not an email identity, this
  * is the signed payload.
  */
@@ -43,7 +43,7 @@ export async function callEthereum(
   }
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authorization: string }) => Promise<{
+  send: (args: { authentication: string }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -72,7 +72,7 @@ export async function callEthereum(
   const nonce = await api.rpc.system.accountNextIndex(omniAccount.asSubstrate);
 
   const send = async (args: {
-    authorization: string;
+    authentication: string;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -81,8 +81,8 @@ export async function callEthereum(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      signer: who,
-      signature: args.authorization,
+      sender: who,
+      authentication: args.authentication,
       call,
       nonce,
       shard: shardU8,

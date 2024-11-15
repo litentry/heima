@@ -79,8 +79,8 @@ export async function setIdentityNetworks(
   }> => {
     // prepare and encrypt request
     const requestPayload = await createRequestType(api, {
-      signer: who,
-      signature: args.signedPayload,
+      sender: who,
+      authentication: args.signedPayload,
       call,
       nonce,
       shard: shardU8,

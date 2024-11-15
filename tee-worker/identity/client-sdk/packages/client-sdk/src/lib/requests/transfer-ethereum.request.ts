@@ -80,8 +80,8 @@ export async function transferEthereum(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      signer: who,
-      signature: args.authentication,
+      sender: who,
+      authentication: args.authentication,
       call,
       nonce,
       shard: shardU8,
