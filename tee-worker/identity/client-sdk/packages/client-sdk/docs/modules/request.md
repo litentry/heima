@@ -8,16 +8,99 @@ requests
 
 ### Functions
 
+- [callEthereum](request.md#callethereum)
+- [createAccountStore](request.md#createaccountstore)
 - [createChallengeCode](request.md#createchallengecode)
 - [getIdGraph](request.md#getidgraph)
 - [getIdGraphHash](request.md#getidgraphhash)
 - [getLastRegisteredEnclave](request.md#getlastregisteredenclave)
 - [linkIdentity](request.md#linkidentity)
 - [linkIdentityCallback](request.md#linkidentitycallback)
+- [remark](request.md#remark)
 - [requestBatchVC](request.md#requestbatchvc)
+- [requestVerificationCode](request.md#requestverificationcode)
 - [setIdentityNetworks](request.md#setidentitynetworks)
+- [transferEthereum](request.md#transferethereum)
+- [transferNative](request.md#transfernative)
 
 ## Functions
+
+### callEthereum
+
+▸ **callEthereum**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+OmniAccount: Call an Ethereum contract.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.address` | `string` | Ethereum contract address |
+| `data.input` | `U8aLike` | Contract input data |
+| `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+- A promise that resolves to an object containing the payload to signature
+(if applicable) and a send function.
+
+[payloadToSign] - The payload to sign if who is not an email identity.
+
+send - A function to send the request to the Enclave.
+
+send.args - The arguments required to send the request.
+
+send.args.authentication - The authentication string. If who is an
+email identity, this is the email verification code. If the who is not an email identity, this
+is the signed payload.
+
+#### Defined in
+
+[lib/requests/call-ethereum.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/call-ethereum.request.ts#L31)
+
+___
+
+### createAccountStore
+
+▸ **createAccountStore**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+Creates an account store on the Litentry Parachain.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.omniAccount` | `LitentryIdentity` | The user's OmniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+- A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
+
+[payloadToSign] - The payload to sign if who is not an email identity.
+
+send - A function to send the request to the Enclave.
+
+send.args - The arguments required to send the request.
+
+send.args.authentication - The authentication string. If who is
+an email identity, this is the email verification code. If the who is not an email identity, this is the
+signed payload.
+
+#### Defined in
+
+[lib/requests/create-account-store.request.ts:29](https://github.com/litentry/client-sdk/blob/develop/lib/requests/create-account-store.request.ts#L29)
+
+___
 
 ### createChallengeCode
 
@@ -106,7 +189,7 @@ ___
 
 ### getLastRegisteredEnclave
 
-▸ **getLastRegisteredEnclave**(`api`, `workerType?`): `Promise`\<\{ `account`: `AccountId32` ; `enclave`: `PalletTeebagEnclave`  }\>
+▸ **getLastRegisteredEnclave**(`api`, `workerType?`): `Promise`\<\{ `account`: `AccountId32` ; `enclave`: `CorePrimitivesTeebagTypesEnclave`  }\>
 
 Return the Enclave registry information of the latest registered TEE worker.
 
@@ -115,11 +198,11 @@ Return the Enclave registry information of the latest registered TEE worker.
 | Name | Type | Default value |
 | :------ | :------ | :------ |
 | `api` | `ApiPromise` | `undefined` |
-| `workerType` | ``"Identity"`` \| ``"BitAcross"`` | `'Identity'` |
+| `workerType` | ``"Identity"`` \| ``"BitAcross"`` \| ``"OmniExecutor"`` | `'Identity'` |
 
 #### Returns
 
-`Promise`\<\{ `account`: `AccountId32` ; `enclave`: `PalletTeebagEnclave`  }\>
+`Promise`\<\{ `account`: `AccountId32` ; `enclave`: `CorePrimitivesTeebagTypesEnclave`  }\>
 
 #### Defined in
 
@@ -184,6 +267,45 @@ are used as the signer.
 
 ___
 
+### remark
+
+▸ **remark**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+Sends a remark to the Litentry Parachain.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.message` | `string` | the message to be sent |
+| `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+- A promise that resolves to an object containing the payload to sign
+(if applicable) and a send function.
+
+[payloadToSign] - The payload to sign if who is not an email identity.
+
+send - A function to send the request to the Enclave.
+
+send.args - The arguments required to send the request.
+
+send.args.authentication - The authentication string. If who is
+an email identity, this is the email verification code. If the who is not an email identity,
+this is the signed payload.
+
+#### Defined in
+
+[lib/requests/remark.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/remark.request.ts#L30)
+
+___
+
 ### requestBatchVC
 
 ▸ **requestBatchVC**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string` ; `send`: (`args`: \{ `signedPayload`: `string`  }, `subscribeFn?`: (`error`: `Error` \| ``null``, `data`: \{ `index`: `number` ; `partialResult`: `WorkerRpcReturnValue`[] ; `vcPayload`: `Uint8Array`  }) => `void`) => `Promise`\<\{ `response`: `WorkerRpcReturnValue`[] ; `txHash`: `string` ; `vcPayloads`: (`Uint8Array` \| `Error`)[]  }\> ; `txHash`: `string`  }\>
@@ -219,6 +341,31 @@ The information about available assertions and their payload can be found in the
 
 ___
 
+### requestVerificationCode
+
+▸ **requestVerificationCode**(`api`, `«destructured»`): `Promise`\<\{ `success`: `boolean`  }\>
+
+Request email verification code.
+
+#### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `api` | `ApiPromise` |
+| `«destructured»` | `Object` |
+| › `email` | `string` |
+| › `omniAccount` | \`0x$\{string}\` |
+
+#### Returns
+
+`Promise`\<\{ `success`: `boolean`  }\>
+
+#### Defined in
+
+[lib/requests/request-verification-code.request.ts:9](https://github.com/litentry/client-sdk/blob/develop/lib/requests/request-verification-code.request.ts#L9)
+
+___
+
 ### setIdentityNetworks
 
 ▸ **setIdentityNetworks**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string` ; `send`: (`args`: \{ `signedPayload`: `string`  }) => `Promise`\<\{ `idGraphHash`: \`0x$\{string}\` ; `mutatedIdentities`: [`IdGraph`](../README.md#idgraph) ; `response`: `WorkerRpcReturnValue` ; `txHash`: `string`  }\> ; `txHash`: `string`  }\>
@@ -244,3 +391,83 @@ It allows to change the list of `networks` for an already linked web3 identity.
 #### Defined in
 
 [lib/requests/set-identity-networks.request.ts:26](https://github.com/litentry/client-sdk/blob/develop/lib/requests/set-identity-networks.request.ts#L26)
+
+___
+
+### transferEthereum
+
+▸ **transferEthereum**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+Transfers Ethereum to another account on the Litentry Parachain.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.amount` | `bigint` | Amount to send |
+| `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.to` | `string` | Ethereum address destination |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+- A promise that resolves to an object containing the payload to signature
+(if applicable) and a send function.
+
+[payloadToSign] - The payload to sign if who is not an email identity.
+
+send - A function to send the request to the Enclave.
+
+send.args - The arguments required to send the request.
+
+send.args.authentication - The authentication string. If who is
+an email identity, this is the email verification code. If the who is not an email identity,
+this is the signed payload.
+
+#### Defined in
+
+[lib/requests/transfer-ethereum.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-ethereum.request.ts#L30)
+
+___
+
+### transferNative
+
+▸ **transferNative**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+Transfers native tokens to another account on the Litentry Parachain.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.amount` | `bigint` | Amount to send |
+| `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.to` | `string` | Account destination in hex or ss58 formatted address |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+- A promise that resolves to an object containing the payload to sign
+(if applicable) and a send function.
+
+[payloadToSign] - The payload to sign if who is not an email identity.
+
+send - A function to send the request to the Enclave.
+
+send.args - The arguments required to send the request.
+
+send.args.authentication - The authentication string. If who is
+an email identity, this is the email verification code. If the who is not an email identity,
+this is the signed payload.
+
+#### Defined in
+
+[lib/requests/transfer-native.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-native.request.ts#L30)
