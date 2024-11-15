@@ -12,6 +12,7 @@ export * from './lib/type-creators/litentry-identity';
 export * from './lib/type-creators/request';
 export * from './lib/type-creators/trusted-call';
 export * from './lib/type-creators/validation-data';
+export * from './lib/type-creators/tc-authentication';
 
 export type { IdGraph } from './lib/type-creators/id-graph';
 export { ID_GRAPH_STRUCT } from './lib/type-creators/id-graph';
