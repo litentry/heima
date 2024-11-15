@@ -82,10 +82,10 @@ type RequestCreateAccountStoreParams = {
  *
  * Heads-up:
  * This must match the Rust implementation of the TrustedCall
- * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/app-libs/stf/src/trusted_call.rs
+ * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/app-libs/stf/src/trusted_call.rs
  *
  * Similarly, our types definitions must match also.
- * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/client-api/parachain-api/prepare-build/interfaces/trusted_operations/definitions.ts
+ * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/parachain-api/prepare-build/interfaces/trusted_operations/definitions.ts
  */
 export async function createTrustedCallType(
   registry: Registry,
