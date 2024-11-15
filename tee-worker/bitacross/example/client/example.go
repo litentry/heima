@@ -12,6 +12,7 @@ import (
 	"github.com/itering/scale.go/source"
 	"github.com/itering/scale.go/types/scaleBytes"
 	"io/ioutil"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 import "github.com/gorilla/websocket"
 import "crypto/tls"
@@ -49,6 +50,24 @@ func main() {
 	fmt.Println("port:", *portPtr)
 
 	registerCustomTypes()
+
+
+    //** prepare pumpx identity
+    pumpxIdentity := map[string]interface{}{
+    		"Pumpx": "10000",
+    }
+
+    encodedPumpxIdentity := types.Encode("LitentryIdentity", pumpxIdentity)
+    hashed := blake2b.Sum256(utiles.HexToBytes(encodedPumpxIdentity))
+
+
+    fmt.Println("Encoded identity:")
+    fmt.Println(utiles.HexToBytes(encodedPumpxIdentity))
+    fmt.Println("Hashed:")
+    fmt.Println(hashed)
+    fmt.Println("Address:")
+    fmt.Println(subkey.SS58Encode(hashed[:], 42))
+
 	c := create_conn(*portPtr)
 
 	//** request shielding key

@@ -212,6 +212,22 @@
       [
         "Bitcoin",
         "[u8; 33]"
+      ],
+      [
+        "Solana",
+        "[u8; 32]"
+      ],
+      [
+        "Email",
+        "IdentityString"
+      ],
+      [
+        "Google",
+        "IdentityString"
+      ],
+      [
+        "Pumpx",
+        "IdentityString"
       ]
     ]
   },
