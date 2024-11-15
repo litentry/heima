@@ -3,7 +3,6 @@ import { TypeRegistry } from '@polkadot/types';
 import { trusted_operations, identity } from '@litentry/parachain-api';
 import { createTCAuthenticationType } from './tc-authentication';
 import { createLitentryIdentityType } from './litentry-identity';
-import { createLitentryMultiSignature } from './litentry-multi-signature';
 
 describe('createTCAuthenticationType', () => {
   const types = {
@@ -31,25 +30,22 @@ describe('createTCAuthenticationType', () => {
   });
 
   it('creates Web3 authentication', () => {
-    const who = createLitentryIdentityType(registry, {
+    const signer = createLitentryIdentityType(registry, {
       type: 'Substrate',
       addressOrHandle: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
     });
-    const signatureString = '0x' + '12'.repeat(64);
-    const signature = createLitentryMultiSignature(registry, {
-      who,
-      signature: signatureString,
-    });
+    const signature = '0x' + '12'.repeat(64);
 
     const web3TCAuthentication = createTCAuthenticationType(registry, {
       type: 'Web3',
-      signature: signature.toHex(),
+      signer,
+      signature,
     });
 
     expect(web3TCAuthentication).toBeDefined();
     expect(web3TCAuthentication.isWeb3).toEqual(true);
     expect(web3TCAuthentication.asWeb3.toHuman()).toEqual({
-      Sr25519: signatureString,
+      Sr25519: signature,
     });
   });
 });
