@@ -110,7 +110,7 @@ If you see the screenshot below, you can tell the worker is running:
 
 ### TEE worker tests 
 
-Refer to [tee-worker ts-tests](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/ts-tests/README.md)
+Refer to [tee-worker ts-tests](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/ts-tests/README.md)
 
 ### Teardown
 

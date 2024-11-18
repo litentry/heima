@@ -18,6 +18,15 @@ import type { U8aLike } from '@polkadot/util/types';
 
 /**
  * OmniAccount: Call an Ethereum contract.
+ *
+ * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
+ * (if applicable) and a send function.
+ * @returns {string} [payloadToSign] - The payload to sign if who is not an email identity.
+ * @returns {Function} send - A function to send the request to the Enclave.
+ * @returns {Promise<Object>} send.args - The arguments required to send the request.
+ * @returns {string} send.args.authentication - The authentication string. If who is an
+ * email identity, this is the email verification code. If the who is not an email identity, this
+ * is the signed payload.
  */
 export async function callEthereum(
   /** Litentry Parachain API instance from Polkadot.js */
@@ -33,8 +42,8 @@ export async function callEthereum(
     input: U8aLike;
   }
 ): Promise<{
-  payloadToSign: string;
-  send: (args: { signedPayload: string }) => Promise<{
+  payloadToSign?: string;
+  send: (args: { authentication: string }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -62,15 +71,8 @@ export async function callEthereum(
 
   const nonce = await api.rpc.system.accountNextIndex(omniAccount.asSubstrate);
 
-  const payloadToSign = createPayloadToSign({
-    who,
-    call,
-    nonce,
-    shard: shardU8,
-  });
-
   const send = async (args: {
-    signedPayload: string;
+    authentication: string;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -79,8 +81,8 @@ export async function callEthereum(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      signer: who,
-      signature: args.signedPayload,
+      sender: who,
+      authentication: args.authentication,
       call,
       nonce,
       shard: shardU8,
@@ -112,6 +114,19 @@ export async function callEthereum(
       blockHash: block_hash.toString(),
     };
   };
+
+  if (who.isEmail) {
+    return {
+      send,
+    };
+  }
+
+  const payloadToSign = createPayloadToSign({
+    who,
+    call,
+    nonce,
+    shard: shardU8,
+  });
 
   return {
     payloadToSign,

@@ -16,7 +16,16 @@ import { createRequestType } from '../type-creators/request';
 import type { JsonRpcRequest } from '../util/types';
 
 /**
- * OmniAccount: Make a remark
+ * Sends a remark to the Litentry Parachain.
+ *
+ * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign
+ * (if applicable) and a send function.
+ * @returns {string} [payloadToSign] - The payload to sign if who is not an email identity.
+ * @returns {Function} send - A function to send the request to the Enclave.
+ * @returns {Promise<Object>} send.args - The arguments required to send the request.
+ * @returns {string} send.args.authentication - The authentication string. If who is
+ * an email identity, this is the email verification code. If the who is not an email identity,
+ * this is the signed payload.
  */
 export async function remark(
   /** Litentry Parachain API instance from Polkadot.js */
@@ -30,8 +39,8 @@ export async function remark(
     message: string;
   }
 ): Promise<{
-  payloadToSign: string;
-  send: (args: { signedPayload: string }) => Promise<{
+  payloadToSign?: string;
+  send: (args: { authentication: string }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -58,15 +67,8 @@ export async function remark(
     omniAccount.asSubstrate.toHex()
   );
 
-  const payloadToSign = createPayloadToSign({
-    who,
-    call,
-    nonce,
-    shard: shardU8,
-  });
-
   const send = async (args: {
-    signedPayload: string;
+    authentication: string;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -75,8 +77,8 @@ export async function remark(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      signer: who,
-      signature: args.signedPayload,
+      sender: who,
+      authentication: args.authentication,
       call,
       nonce,
       shard: shardU8,
@@ -108,6 +110,17 @@ export async function remark(
       blockHash: block_hash.toString(),
     };
   };
+
+  if (who.isEmail) {
+    return { send };
+  }
+
+  const payloadToSign = createPayloadToSign({
+    who,
+    call,
+    nonce,
+    shard: shardU8,
+  });
 
   return {
     payloadToSign,

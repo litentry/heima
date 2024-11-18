@@ -11,3 +11,4 @@ export { createAccountStore } from './create-account-store.request';
 export { getIdGraph } from './get-id-graph.request';
 export { getIdGraphHash } from './get-id-graph-hash';
 export { getLastRegisteredEnclave } from './get-last-registered-enclave';
+export { requestVerificationCode } from './request-verification-code.request';

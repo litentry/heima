@@ -12,7 +12,7 @@ ts-tests of bitacross-worker
 
 Before running the ts-tests, the client-api types generation needs to be completed.
 
-See client-api [README.md](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/client-api/README.md)
+See client-api [README.md](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/README.md)
 
 ## Installation
 
