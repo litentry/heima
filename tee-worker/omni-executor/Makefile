@@ -2,25 +2,28 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
+SGX_MODE ?= HW
 
 SELF_EXE = target/release/executor-worker
 COMPILATION_FEATURES =
+
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
-ifeq ($(SGX),1)
+ifeq ($(SGX_MODE), HW)
 COMPILATION_FEATURES = gramine-quote
 all: omni-executor.manifest.sgx omni-executor.sig
 endif
+
+.PHONY: $(SELF_EXE)
+$(SELF_EXE):
+	cargo build --release --features=$(COMPILATION_FEATURES)
+
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 else
 GRAMINE_LOG_LEVEL = error
 endif
-
-.PHONY: $(SELF_EXE)
-$(SELF_EXE):
-	cargo build --release --features=$(COMPILATION_FEATURES)
 
 omni-executor.manifest: omni-executor.manifest.template $(SELF_EXE)
 	gramine-manifest \
@@ -38,12 +41,13 @@ omni-executor.manifest.sgx omni-executor.sig: sgx_sign
 sgx_sign: omni-executor.manifest $(SELF_EXE)
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $<.sgx
+		--output $<.sgx \
+		--key enclave_key.pem
 
-ifeq ($(SGX),)
-GRAMINE = gramine-direct
-else
+ifeq ($(SGX_MODE), HW)
 GRAMINE = gramine-sgx
+else
+GRAMINE = gramine-direct
 endif
 
 .PHONY: start-gramine-server
@@ -52,12 +56,11 @@ start-gramine-server: all
 
 .PHONY: clean
 clean:
-	cargo clean
 	$(RM) -rf *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -rf target/ Cargo.lock
+	cargo clean
 
 .PHONY: build-docker
 build-docker:
