@@ -1085,16 +1085,18 @@ jobs:
 
       - name: Integration omni executor test ${{ matrix.test_name }}
         working-directory: ./tee-worker/omni-executor/docker
-        if: needs.set-condition.outputs.run_bitacross_test == 'true'
+        if: needs.set-condition.outputs.run_omni_executor_test == 'true'
         timeout-minutes: 40
         run: |
-          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+          docker compose -f docker-compose.yml
+        # docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Stop integration omni executor docker containers
         working-directory: ./tee-worker/bitacross/docker
-        if: needs.set-condition.outputs.run_bitacross_test == 'true'
+        if: needs.set-condition.outputs.run_omni_executor_test == 'true'
         run: |
-          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+          docker compose -f docker-compose.yml stop
+        # docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
 
       - name: Collect docker logs if test fails
         continue-on-error: true

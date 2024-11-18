@@ -7,7 +7,6 @@ services:
     depends_on:
       - ethereum-node
       - litentry-node
-      # - fund-substrate-account
     command: ["gramine-direct", "omni-executor", "--", "ws://litentry-node:9944", "http://ethereum-node:8545", "0"]
     privileged: true
     restart: always
@@ -35,19 +34,6 @@ services:
     command: ["--dev", "--rpc-external"]
     networks:
       - litentry-test-network
-  # fund-substrate-account:
-  #   image: rust:1.72-slim
-  #   working_dir: /usr/src/app
-  #   volumes:
-  #     - .:/usr/src/app
-  #   command: >
-  #     sh -c "
-  #     cargo install subxt-cli &&
-  #     subxt explore --url ws://localhost:9944 --from //Alice \
-  #     balances.transfer 5FkFYAaxiPnrQiMSZZPLABfiKazRGKU2rVZmki1iSVe15PXa 1000000000000
-  #     "
-  #   depends_on:
-  #     - litentry-node
 
 networks:
   litentry-test-network:
