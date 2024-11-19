@@ -684,6 +684,15 @@ jobs:
           # see https://docs.docker.com/build/drivers/
           driver: docker
 
+      - name: Build local builder
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tee-worker/omni-executor/Dockerfile
+          tags: local-builder:latest
+          target: builder
+
       - name: Build omni-executor image
         if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
         uses: docker/build-push-action@v6
