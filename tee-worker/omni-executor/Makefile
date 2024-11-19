@@ -4,7 +4,7 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX_MODE ?= HW
 
-SELF_EXE = target/release/executor-worker
+SELF_EXE = omni-executor-worker
 COMPILATION_FEATURES =
 
 .PHONY: all
@@ -17,6 +17,7 @@ endif
 .PHONY: $(SELF_EXE)
 $(SELF_EXE):
 	cargo build --release --features=$(COMPILATION_FEATURES)
+	cp target/release/executor-worker $(SELF_EXE)
 
 
 ifeq ($(DEBUG),1)
@@ -56,7 +57,7 @@ start-gramine-server: all
 
 .PHONY: clean
 clean:
-	$(RM) -rf *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
+	$(RM) -rf $(SELF_EXE) *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
 
 .PHONY: distclean
 distclean: clean

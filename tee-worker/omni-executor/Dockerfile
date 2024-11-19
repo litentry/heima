@@ -44,8 +44,8 @@ FROM runner AS executor-worker
 
 ENV HOME=/home/ubuntu
 ENV BUILD_DIR=$HOME/tee-worker/omni-executor
-WORKDIR $BUILD_DIR
 ENV EXECUT_DIR=/usr/local/bin
+WORKDIR $EXECUT_DIR
 
 #TODO: Copy over any test related setup here
 
@@ -58,14 +58,14 @@ RUN curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/in
 RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
 | tee /etc/apt/sources.list.d/intel-sgx.list
 
-RUN apt update && apt install -y gramine ca-certificates
+RUN apt update && apt install -y gramine ca-certificates && apt clean
 
+COPY --from=local-builder:latest $BUILD_DIR/omni-executor-worker $EXECUT_DIR/omni-executor-worker
 COPY --from=local-builder:latest $BUILD_DIR/omni-executor.manifest $EXECUT_DIR/omni-executor.manifest
-COPY --from=local-builder:latest $BUILD_DIR/target/release/executor-worker $EXECUT_DIR/executor-worker
 
-RUN chmod +x $EXECUT_DIR/executor-worker
+RUN chmod +x $EXECUT_DIR/omni-executor-worker
 RUN ls -al $EXECUT_DIR
-RUN ldd $EXECUT_DIR/executor-worker && $EXECUT_DIR/executor-worker --version
+RUN ldd $EXECUT_DIR/omni-executor-worker && $EXECUT_DIR/omni-executor-worker --version
 CMD ["$EXECUT_DIR/executor-worker"]
 
 
@@ -73,11 +73,36 @@ CMD ["$EXECUT_DIR/executor-worker"]
 ##################################################
 # FROM ubuntu:22.04 AS omni-release
 # LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
-# COPY --from=local-builder:latest /home/ubuntu/tee-worker/omni-executor/target/release/executor-worker /usr/local/bin/executor-worker
 
-# RUN \
-#   apt-get update && \
-#   apt-get install -y ca-certificates && \
-#   apt-get clean
+# ENV HOME=/home/ubuntu
+# ENV BUILD_DIR=$HOME/tee-worker/omni-executor
+# ENV EXECUT_DIR=/usr/local/bin
+# WORKDIR $EXECUT_DIR
 
-# CMD ["executor-worker"]
+# # It's easier to install gramine rather than to install cargo.
+# RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+# RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ jammy main" \
+# | tee /etc/apt/sources.list.d/gramine.list
+
+# RUN curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
+# RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
+# | tee /etc/apt/sources.list.d/intel-sgx.list
+
+# RUN apt update && apt install -y gramine ca-certificates && apt clean
+
+
+# COPY --from=local-builder:latest $BUILD_DIR/omni-executor-worker $EXECUT_DIR/omni-executor-worker
+# COPY --from=local-builder:latest $BUILD_DIR/omni-executor.manifest $EXECUT_DIR/omni-executor.manifest
+# COPY --from=local-builder:latest $BUILD_DIR/omni-executor.manifest.sgx $EXECUT_DIR/omni-executor.manifest.sgx
+# COPY --from=local-builder:latest $BUILD_DIR/omni-executor.sig $EXECUT_DIR/omni-executor.sig
+
+# RUN groupadd -g 1000 appgroup && \
+#     useradd -r -u 1000 -g appgroup appuser && \
+#     mkdir -p /dev/attestation && \
+#     chown -R appuser:appgroup /dev/attestation
+# USER appuser
+
+# RUN chmod +x $EXECUT_DIR/omni-executor-worker
+# RUN ls -al $EXECUT_DIR
+# RUN ldd $EXECUT_DIR/omni-executor-worker && $EXECUT_DIR/omni-executor-worker --version
+# CMD ["$EXECUT_DIR/executor-worker"]
