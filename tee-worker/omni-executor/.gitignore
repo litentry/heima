@@ -5,3 +5,6 @@ target/
 
 cache
 omni-executor.manifest
+omni-executor.manifest.sgx
+omni-executor.sig
+omni-executor-worker

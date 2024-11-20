@@ -3,7 +3,7 @@
 
 # Rust manifest example
 
-loader.entrypoint = "file:{{ gramine.libos }}"
+loader.entrypoint.uri = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ self_exe }}"
 loader.log_level = "{{ log_level }}"
 
@@ -18,7 +18,9 @@ loader.env.RUST_BACKTRACE = "full"
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { path = "/data", uri = "file:data", type="encrypted", key_name="_sgx_mrsigner" },
+  { path = "/data", uri = "file:data", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
+  { path = "/etc", uri = "file:/etc" },
+  { path = "/usr", uri = "file:/usr" },
 ]
 
 sgx.debug = true
@@ -33,6 +35,8 @@ sgx.trusted_files = [
   "file:{{ self_exe }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
+  "file:/etc/ssl/certs/ca-certificates.crt",
+  "file:/usr/lib/ssl/certs/ca-certificates.crt",
 ]
 
 # The maximum number of threads in a single process needs to be declared in advance.
@@ -49,3 +53,5 @@ sgx.remote_attestation = "dcap"
 # for easy demo setup
 loader.insecure__use_cmdline_argv = true
 loader.insecure__use_host_env = true
+
+fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"
