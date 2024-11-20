@@ -16,7 +16,7 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::Hash;
-use ita_stf::{Getter, TrustedCallSigned};
+use ita_stf::{trusted_call_result::RequestVcErrorDetail, Getter, TrustedCallSigned};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
@@ -155,4 +155,5 @@ pub enum NativeTaskError {
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
 	InvalidRequest,
 	NativeRequestSendFailed,
+	RequestVcFailed(RequestVcErrorDetail),
 }

@@ -21,7 +21,7 @@
 use crate::{Box, String};
 use codec::{Decode, Encode};
 use itp_stf_interface::StfExecutionResult;
-use itp_types::H256;
+use itp_types::{AccountId, H256};
 use litentry_primitives::{AesOutput, VCMPError};
 use std::vec::Vec;
 
@@ -105,7 +105,17 @@ pub struct RequestVCResult {
 	pub pre_id_graph_hash: H256,
 }
 
-#[derive(Debug, Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub struct NewRequestVCResult {
+	pub vc_payload: AesOutput,
+	// Mainly used to returning logs in dynamic contract VC.
+	pub vc_logs: Option<AesOutput>,
+	// This should be referenced/used only when the client's local AccountStore is empty
+	pub pre_account_store: AesOutput,
+	pub omni_account: AccountId,
+}
+
+#[derive(Debug, Encode, Decode, Clone, PartialEq, Eq)]
 pub enum RequestVcErrorDetail {
 	UnexpectedCall(String),
 	DuplicateAssertionRequest,
@@ -129,6 +139,8 @@ pub enum RequestVcErrorDetail {
 	ExtrinsicConstructionFailed(String), // Stringified itp_extrinsics_factory::Error
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
 	ExtractingMemberIdentityFailed,
+	OmniAccountStoreRetrievalFailed,
+	CreateAccountStoreFailed(String),
 }
 
 #[derive(Debug, Encode, Decode, Clone)]
