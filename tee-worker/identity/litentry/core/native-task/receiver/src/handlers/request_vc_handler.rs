@@ -16,15 +16,20 @@
 
 use crate::NativeTaskContext;
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
-use codec::Decode;
+use codec::{Decode, Encode};
 use frame_support::ensure;
 use ita_sgx_runtime::VERSION as SIDECHAIN_VERSION;
 use ita_stf::{
-	helpers::ensure_self, trusted_call_result::RequestVcErrorDetail, Getter, TrustedCallSigned,
+	aes_encrypt_default,
+	helpers::ensure_self,
+	trusted_call_result::{NewRequestVCResult, RequestVcErrorDetail},
+	Getter, TrustedCallSigned,
 };
+use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{
-	pallet_system::SystemConstants, provider::AccessNodeMetadata, NodeMetadata,
+use itp_node_api::{
+	api_client::compose_call,
+	metadata::{pallet_system::SystemConstants, provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{
@@ -36,7 +41,7 @@ use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::storage_value_key;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
-use itp_types::BlockNumber as SidechainBlockNumber;
+use itp_types::{parentchain::ParentchainId, BlockNumber as SidechainBlockNumber, OpaqueCall};
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_omni_account::InMemoryStore as OmniAccountStore;
@@ -44,9 +49,10 @@ use lc_stf_task_receiver::handler::assertion::create_credential_str;
 use litentry_macros::if_development_or;
 use litentry_primitives::{
 	Assertion, AssertionBuildRequest, Identity, IdentityNetworkTuple, MemberAccount,
-	ParentchainBlockNumber, RequestAesKey, Web3Network,
+	ParentchainBlockNumber, RequestAesKey,
 };
 use sp_core::{H160, H256 as Hash};
+use std::time::Instant;
 
 pub fn handle_request_vc<
 	ShieldingKeyRepository,
@@ -78,7 +84,7 @@ pub fn handle_request_vc<
 	assertion: Assertion,
 	maybe_key: Option<RequestAesKey>,
 	req_ext_hash: Hash,
-) -> Result<Vec<u8>, RequestVcErrorDetail>
+) -> Result<NewRequestVCResult, RequestVcErrorDetail>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -93,6 +99,7 @@ where
 	StateHandler: HandleState + Send + Sync + 'static,
 	StateHandler::StateT: SgxExternalitiesTrait,
 {
+	let start_time = Instant::now();
 	log::debug!(
 		"Processing vc request for {}, assertion: {:?}",
 		who.to_did().unwrap_or_default(),
@@ -126,32 +133,61 @@ where
 		})
 		.map_err(|e| RequestVcErrorDetail::SidechainDataRetrievalFailed(e.to_string()))?;
 
-	let mut account_store = match OmniAccountStore::get_omni_account(who.hash()) {
-		Ok(Some(account_id)) => match OmniAccountStore::get_member_accounts(&account_id) {
-			Ok(Some(member_accounts)) => member_accounts,
-			_ => Vec::new(),
-		},
+	let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
+		Ok(Some(account)) => account,
+		Ok(None) => who.to_omni_account(),
+		Err(_) => return Err(RequestVcErrorDetail::OmniAccountStoreRetrievalFailed),
+	};
+
+	let mut account_store = match OmniAccountStore::get_member_accounts(&omni_account) {
+		Ok(Some(member_accounts)) => member_accounts,
 		_ => Vec::new(),
 	};
 
+	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
+	{
+		Ok(Some(metadata)) => metadata,
+		_ =>
+			return Err(RequestVcErrorDetail::MetadataRetrievalFailed(
+				"Failed to retrieve metadata".to_string(),
+			)),
+	};
+
+	let mut is_new_account_store = false;
 	if account_store.is_empty() {
-		// TODO: create AccountStore on chain
+		is_new_account_store = true;
+		let create_account_store_call = OpaqueCall::from_tuple(&compose_call!(
+			&metadata,
+			"OmniAccount",
+			"create_account_store",
+			who.clone()
+		));
+		let xt = context
+			.extrinsic_factory
+			.create_extrinsics(&[create_account_store_call], None)
+			.map_err(|e| RequestVcErrorDetail::CreateAccountStoreFailed(e.to_string()))?;
+		context
+			.ocall_api
+			.send_to_parentchain(xt, &ParentchainId::Litentry, None)
+			.map_err(|e| RequestVcErrorDetail::CreateAccountStoreFailed(e.to_string()))?;
+
+		log::info!("Account store created for {}", who.to_did().unwrap_or_default());
+
 		let member_account = MemberAccount::Public(who.clone());
 		account_store.push(member_account);
 	}
 
 	let member_identities = account_store
 		.iter()
-		.map(|m| extract_identity_from_member(context.aes256_key_repository.clone(), m))
+		.map(|member| extract_identity_from_member(context.aes256_key_repository.clone(), member))
 		.collect::<Result<Vec<Identity>, &'static str>>()
-		.map_err(|e| RequestVcErrorDetail::ExtractingMemberIdentityFailed)?;
-	let identities = get_elegible_identities(member_identities, &assertion);
+		.map_err(|_| RequestVcErrorDetail::ExtractingMemberIdentityFailed)?;
+	let identities = get_elegible_identities(&member_identities, &assertion);
 
 	ensure!(!identities.is_empty(), RequestVcErrorDetail::NoEligibleIdentity);
 
 	let signer_account =
 		signer.to_native_account().ok_or(RequestVcErrorDetail::InvalidSignerAccount)?;
-
 	let parachain_runtime_version = context
 		.node_metadata_repo
 		.get_from_metadata(|m| {
@@ -174,7 +210,7 @@ where
 		parachain_runtime_version,
 		sidechain_runtime_version,
 		maybe_key,
-		should_create_id_graph: false,
+		should_create_id_graph: is_new_account_store,
 		req_ext_hash,
 	};
 
@@ -189,9 +225,46 @@ where
 		)
 		.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
 
-	// TODO: create new vc_issued call in the pallet
+	let key = maybe_key.ok_or(RequestVcErrorDetail::MissingAesKey)?;
 
-	todo!()
+	let mutated_account_store =
+		if is_new_account_store { member_identities } else { Default::default() };
+
+	let res = NewRequestVCResult {
+		vc_payload: aes_encrypt_default(&key, &vc_payload),
+		vc_logs: vc_logs.map(|log| aes_encrypt_default(&key, &log)),
+		pre_account_store: aes_encrypt_default(&key, &mutated_account_store.encode()),
+		omni_account: omni_account.clone(),
+	};
+
+	let on_vc_issued_call = OpaqueCall::from_tuple(&compose_call!(
+		metadata,
+		"VCManagement",
+		"on_vc_issued",
+		who.clone(),
+		omni_account,
+		req_ext_hash
+	));
+
+	let xt = context
+		.extrinsic_factory
+		.create_extrinsics(&[on_vc_issued_call], None)
+		.map_err(|e| RequestVcErrorDetail::ExtrinsicConstructionFailed(e.to_string()))?;
+
+	context
+		.ocall_api
+		.send_to_parentchain(xt, &ParentchainId::Litentry, None)
+		.map_err(|e| RequestVcErrorDetail::ExtrinsicSendingFailed(e.to_string()))?;
+
+	if let Err(e) = context
+		.ocall_api
+		.update_metric(EnclaveMetric::VCBuildTime(assertion.clone(), start_time.elapsed()))
+	{
+		log::warn!("Failed to update metric for vc build time: {:?}", e);
+	}
+	log::info!("Vc issued for {}, assertion: {:?}", who.to_did().unwrap_or_default(), assertion);
+
+	Ok(res)
 }
 
 fn extract_identity_from_member<Aes256KeyRepository>(
@@ -220,7 +293,7 @@ where
 }
 
 fn get_elegible_identities(
-	member_identities: Vec<Identity>,
+	member_identities: &Vec<Identity>,
 	assertion: &Assertion,
 ) -> Vec<IdentityNetworkTuple> {
 	let supported_networks = assertion.get_supported_web3networks();
