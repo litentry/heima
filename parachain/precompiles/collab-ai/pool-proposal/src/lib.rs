@@ -487,7 +487,7 @@ where
 				if let Some(bond) =
 					result.pre_investings.into_iter().find(|&x| x.owner == user_address)
 				{
-					bond_result.extend(bond);
+					bond_result.append(bond);
 				}
 			}
 		}
@@ -526,7 +526,7 @@ where
 				if let Some(bond) =
 					result.queued_pre_investings.into_iter().find(|&x| x.0.owner == user_address)
 				{
-					bond_result.extend(bond);
+					bond_result.append(bond);
 				}
 			}
 		}
