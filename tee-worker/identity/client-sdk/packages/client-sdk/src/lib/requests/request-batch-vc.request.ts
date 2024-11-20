@@ -112,8 +112,8 @@ export async function requestBatchVC(
   }> => {
     // prepare and encrypt request
     const requestPayload = await createRequestType(api, {
-      signer,
-      signature: args.signedPayload,
+      sender: signer,
+      authentication: args.signedPayload,
       call,
       nonce,
       shard: shardU8,

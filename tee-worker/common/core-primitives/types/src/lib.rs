@@ -35,6 +35,7 @@ pub use litentry_primitives::{
 	decl_rsa_request, Assertion, AttestationType, DcapProvider, DecryptableRequest, Enclave,
 	EnclaveFingerprint, Fmspc, MrEnclave, SidechainBlockNumber, WorkerType,
 };
+use parentchain::Index as ParentchainIndex;
 pub use sp_core::{crypto::AccountId32 as AccountId, H256};
 
 pub type IpfsHash = [u8; 46];
@@ -152,6 +153,8 @@ pub enum WorkerRequest {
 	ChainStorageKeysPaged(Vec<u8>, u32, Option<Vec<u8>>, Option<BlockHash>), // (storage_key_prefix, count, start_key, at_block)
 	#[codec(index = 3)]
 	ChainHeader(Option<BlockHash>), // (at_block)
+	#[codec(index = 4)]
+	ChainAccountNonce(Vec<u8>), // (account_id)
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
@@ -162,6 +165,8 @@ pub enum WorkerResponse<V: Encode + Decode> {
 	ChainStorageKeys(Vec<Vec<u8>>), // (storage_keys)
 	#[codec(index = 2)]
 	ChainHeader(Option<V>), // (header)
+	#[codec(index = 3)]
+	ChainAccountNonce(Option<ParentchainIndex>), // (account_nonce)
 }
 
 impl From<WorkerResponse<Vec<u8>>> for StorageEntry<Vec<u8>> {

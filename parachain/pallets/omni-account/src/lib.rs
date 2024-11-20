@@ -104,8 +104,6 @@ pub mod pallet {
 
 		/// Convert an `Identity` to OmniAccount type
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
-
-		type SetOmniExecutorOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 	}
 
 	pub type MemberAccounts<T> = BoundedVec<MemberAccount, <T as Config>::MaxAccountStoreLength>;
@@ -123,10 +121,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type MemberAccountHash<T: Config> =
 		StorageMap<Hasher = Blake2_128Concat, Key = H256, Value = T::AccountId>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn omni_executor)]
-	pub type OmniExecutor<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -149,8 +143,6 @@ pub mod pallet {
 		IntentRequested { who: T::AccountId, intent: Intent },
 		/// Intent is executed
 		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
-		/// Omni executor is set
-		OmniExecutorSet { omni_executor: T::AccountId },
 	}
 
 	#[pallet::error]
@@ -161,7 +153,6 @@ pub mod pallet {
 		InvalidAccount,
 		UnknownAccountStore,
 		EmptyAccount,
-		RequireOmniExecutor,
 	}
 
 	#[pallet::call]
@@ -202,6 +193,7 @@ pub mod pallet {
 				PostDispatchInfo,
 				sp_runtime::DispatchErrorWithPostInfo<PostDispatchInfo>,
 			> = call.dispatch(frame_system::RawOrigin::Signed(omni_account.clone()).into());
+			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsSigned {
 				who: omni_account,
 				result: result.map(|_| ()).map_err(|e| e.error),
@@ -262,8 +254,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
 			ensure!(!member_account_hashes.is_empty(), Error::<T>::EmptyAccount);
-
-			// TODO: shall we verify if MemberAccountHash's value is actually `who`?
 
 			let mut member_accounts =
 				AccountStore::<T>::get(&who).ok_or(Error::<T>::UnknownAccountStore)?;
@@ -365,20 +355,8 @@ pub mod pallet {
 			intent: Intent,
 			result: IntentExecutionResult,
 		) -> DispatchResult {
-			Self::ensure_omni_executor(origin)?;
+			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
 			Self::deposit_event(Event::IntentExecuted { who, intent, result });
-			Ok(())
-		}
-
-		#[pallet::call_index(9)]
-		#[pallet::weight((195_000_000, DispatchClass::Normal,  Pays::No))]
-		pub fn set_omni_executor(
-			origin: OriginFor<T>,
-			new_omni_executor: T::AccountId,
-		) -> DispatchResult {
-			T::SetOmniExecutorOrigin::ensure_origin(origin)?;
-			OmniExecutor::<T>::put(new_omni_executor.clone());
-			Self::deposit_event(Event::OmniExecutorSet { omni_executor: new_omni_executor });
 			Ok(())
 		}
 	}
@@ -417,14 +395,6 @@ pub mod pallet {
 			});
 
 			Ok(member_accounts)
-		}
-
-		fn ensure_omni_executor(origin: OriginFor<T>) -> DispatchResult {
-			ensure!(
-				Some(ensure_signed(origin)?) == Self::omni_executor(),
-				Error::<T>::RequireOmniExecutor
-			);
-			Ok(())
 		}
 	}
 }

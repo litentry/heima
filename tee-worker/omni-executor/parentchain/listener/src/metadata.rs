@@ -18,6 +18,7 @@ use crate::rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClie
 use async_trait::async_trait;
 use parity_scale_codec::Decode;
 use subxt::{Config, Metadata};
+use subxt_core::utils::AccountId32;
 
 #[async_trait]
 pub trait MetadataProvider<M> {
@@ -35,7 +36,9 @@ impl<ChainConfig: Config> SubxtMetadataProvider<ChainConfig> {
 }
 
 #[async_trait]
-impl<ChainConfig: Config> MetadataProvider<Metadata> for SubxtMetadataProvider<ChainConfig> {
+impl<ChainConfig: Config<AccountId = AccountId32>> MetadataProvider<Metadata>
+	for SubxtMetadataProvider<ChainConfig>
+{
 	async fn get(&self, block_num: Option<u64>) -> Metadata {
 		let mut client = self.client_factory.new_client().await.unwrap();
 		let raw_metadata = client.get_raw_metadata(block_num).await.unwrap();

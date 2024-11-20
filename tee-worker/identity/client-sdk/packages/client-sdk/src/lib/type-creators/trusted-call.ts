@@ -2,7 +2,7 @@ import { compactAddLength } from '@polkadot/util';
 
 import type { Registry } from '@polkadot/types-codec/types';
 
-import { trusted_operations } from '@litentry/parachain-api';
+import { trusted_operations, type Intent } from '@litentry/parachain-api';
 import type {
   TrustedCall,
   LitentryIdentity,
@@ -66,15 +66,26 @@ type SetIdentityNetworksParams = {
   hash: `0x${string}`;
 };
 
+// LitentryIdentity, Intent
+type RequestIntentParams = {
+  who: LitentryIdentity;
+  intent: Intent;
+};
+
+// LitentryIdentity
+type RequestCreateAccountStoreParams = {
+  who: LitentryIdentity;
+};
+
 /**
  * Creates the TrustedCall for the given method and provide the `param's` types expected for them.
  *
  * Heads-up:
  * This must match the Rust implementation of the TrustedCall
- * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/app-libs/stf/src/trusted_call.rs
+ * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/app-libs/stf/src/trusted_call.rs
  *
  * Similarly, our types definitions must match also.
- * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/client-api/parachain-api/prepare-build/interfaces/trusted_operations/definitions.ts
+ * @see https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/parachain-api/prepare-build/interfaces/trusted_operations/definitions.ts
  */
 export async function createTrustedCallType(
   registry: Registry,
@@ -102,6 +113,20 @@ export async function createTrustedCallType(
   data: {
     method: 'request_batch_vc';
     params: RequestBatchVcParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'request_intent';
+    params: RequestIntentParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'create_account_store';
+    params: RequestCreateAccountStoreParams;
   }
 ): Promise<{ call: TrustedCall; key: CryptoKey }>;
 export async function createTrustedCallType(
@@ -219,6 +244,32 @@ export async function createTrustedCallType(
     return { call, key };
   }
 
+  if (isRequestIntentCall(method, params)) {
+    const { who, intent } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.request_intent]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.request_intent,
+        [who, intent]
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
+  if (isRequestCreateAccountStoreParams(method, params)) {
+    const { who } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.create_account_store]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.create_account_store,
+        who
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
   throw new Error(`trusted call method: ${data.method} is not supported`);
 }
 
@@ -252,4 +303,16 @@ function isRequestBatchVcCall(
   params: Record<string, unknown>
 ): params is RequestBatchVcParams {
   return method === 'request_batch_vc';
+}
+function isRequestIntentCall(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestIntentParams {
+  return method === 'request_intent';
+}
+function isRequestCreateAccountStoreParams(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestCreateAccountStoreParams {
+  return method === 'create_account_store';
 }

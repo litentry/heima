@@ -18,6 +18,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
 	EnclaveSidechainOCallApi,
@@ -185,9 +186,9 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		&self,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 		_: &ParentchainId,
-		_: bool,
-	) -> SgxResult<()> {
-		Ok(())
+		_: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>> {
+		Ok(Vec::new())
 	}
 
 	fn worker_request<V: Encode + Decode>(
@@ -247,10 +248,14 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		Ok(Default::default())
 	}
 
-	fn get_header<H: HeaderTrait<Hash = H256>>(
+	fn get_header<H: HeaderTrait<Hash = H256>>(&self) -> itp_ocall_api::Result<H> {
+		todo!()
+	}
+
+	fn get_account_nonce(
 		&self,
-		_: &ParentchainId,
-	) -> itp_ocall_api::Result<H> {
+		_account_id: itp_types::parentchain::AccountId,
+	) -> itp_ocall_api::Result<itp_types::parentchain::Index> {
 		todo!()
 	}
 }

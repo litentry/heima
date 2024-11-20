@@ -1,11 +1,10 @@
 use crate::metadata::{MetadataProvider, SubxtMetadataProvider};
 use crate::rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use executor_core::event_handler::Error::RecoverableError;
 use executor_core::key_store::KeyStore;
 use log::error;
 use parity_scale_codec::Decode;
 use std::marker::PhantomData;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder};
 use subxt_core::tx::payload::Payload;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
@@ -14,23 +13,22 @@ use subxt_signer::sr25519::SecretKeyBytes;
 
 pub struct TransactionSigner<
 	KeyStoreT,
-	RpcClient: SubstrateRpcClient,
-	RpcClientFactory: SubstrateRpcClientFactory<RpcClient>,
-	ChainConfig,
+	RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
+	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
+	ChainConfig: Config,
 	MetadataT,
 	MetadataProviderT: MetadataProvider<MetadataT>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	rpc_client_factory: Arc<RpcClientFactory>,
 	key_store: Arc<KeyStoreT>,
-	nonce: RwLock<u64>,
 	phantom_data: PhantomData<(RpcClient, ChainConfig, MetadataT)>,
 }
 
 impl<
 		KeyStoreT: KeyStore<SecretKeyBytes>,
-		RpcClient: SubstrateRpcClient,
-		RpcClientFactory: SubstrateRpcClientFactory<RpcClient>,
+		RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
 		ChainConfig: Config<
 			ExtrinsicParams = DefaultExtrinsicParams<ChainConfig>,
 			AccountId = AccountId32,
@@ -52,14 +50,7 @@ impl<
 		rpc_client_factory: Arc<RpcClientFactory>,
 		key_store: Arc<KeyStoreT>,
 	) -> Self {
-		Self {
-			metadata_provider,
-			rpc_client_factory,
-			key_store,
-			//todo: read nonce from chain
-			nonce: RwLock::new(0),
-			phantom_data: PhantomData,
-		}
+		Self { metadata_provider, rpc_client_factory, key_store, phantom_data: PhantomData }
 	}
 
 	pub async fn sign<Call: Payload>(&self, call: Call) -> Vec<u8> {
@@ -81,23 +72,13 @@ impl<
 
 		let genesis_hash = client.get_genesis_hash().await.unwrap();
 
-		let nonce = *self
-			.nonce
-			.read()
-			.map_err(|e| {
-				error!("Could not read nonce: {:?}", e);
-				RecoverableError
-			})
-			.unwrap();
+		let account_id = AccountId32::from(signer.public_key());
 
-		*self
-			.nonce
-			.write()
-			.map_err(|e| {
-				error!("Could not write nonce: {:?}", e);
-				RecoverableError
-			})
-			.unwrap() = nonce + 1;
+		let nonce = client
+			.get_account_nonce(&account_id)
+			.await
+			.map_err(|e| error!("Could not read nonce: {:?}", e))
+			.unwrap();
 
 		// we should get latest metadata
 		let metadata = self.metadata_provider.get(None).await;

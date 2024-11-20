@@ -14,34 +14,72 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountId, Error, Header, MemberAccount, OmniAccounts, ParentchainId};
-use alloc::{collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
+use crate::{
+	AccountId, Error, Header, MemberAccount, OmniAccounts, ParentchainId, ParentchainIndex,
+};
+use alloc::{borrow::ToOwned, collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
 use frame_support::storage::storage_prefix;
 use itp_ocall_api::EnclaveOnChainOCallApi;
-use itp_storage::extract_blake2_128concat_key;
+use itp_storage::{extract_blake2_128concat_key, storage_map_key, StorageHasher};
+use sp_core::H256;
 
-pub trait GetAccountStoresRepository {
+pub trait GetAccountStore {
 	fn get_all(&self) -> Result<OmniAccounts, Error>;
+}
+
+pub trait GetOmniAccountInfo {
+	fn get_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex, Error>;
 }
 
 pub struct OmniAccountRepository<OCallApi: EnclaveOnChainOCallApi> {
 	ocall_api: Arc<OCallApi>,
-	header: Header,
 }
 
 impl<OCallApi: EnclaveOnChainOCallApi> OmniAccountRepository<OCallApi> {
-	pub fn new(ocall_api: Arc<OCallApi>, header: Header) -> Self {
-		Self { ocall_api, header }
+	pub fn new(ocall_api: Arc<OCallApi>) -> Self {
+		Self { ocall_api }
 	}
 
-	pub fn set_header(&mut self, header: Header) {
-		self.header = header;
+	pub fn with_header(self, header: Header) -> OmniAccountStoreRepository<OCallApi> {
+		OmniAccountStoreRepository { ocall_api: self.ocall_api, header }
 	}
 }
 
-impl<OCallApi: EnclaveOnChainOCallApi> GetAccountStoresRepository
-	for OmniAccountRepository<OCallApi>
-{
+impl<OCallApi: EnclaveOnChainOCallApi> GetOmniAccountInfo for OmniAccountRepository<OCallApi> {
+	fn get_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex, Error> {
+		self.ocall_api
+			.get_account_nonce(account_id)
+			.map_err(|_| Error::OCallApiError("Failed to get account nonce"))
+	}
+}
+
+pub struct OmniAccountStoreRepository<OCallApi: EnclaveOnChainOCallApi> {
+	ocall_api: Arc<OCallApi>,
+	header: Header,
+}
+
+impl<OCallApi: EnclaveOnChainOCallApi> OmniAccountStoreRepository<OCallApi> {
+	pub fn get_account_by_member_hash(
+		&self,
+		member_hash: H256,
+	) -> Result<Option<AccountId>, Error> {
+		let storage_key = storage_map_key(
+			"OmniAccount",
+			"MemberAccountHash",
+			&member_hash,
+			&StorageHasher::Blake2_128Concat,
+		);
+		let storage_entry = self
+			.ocall_api
+			.get_storage_verified(storage_key, &self.header, &ParentchainId::Litentry)
+			.map_err(|_| Error::OCallApiError("Failed to get storage"))?;
+		let account_id = storage_entry.value().to_owned();
+
+		Ok(account_id)
+	}
+}
+
+impl<OCallApi: EnclaveOnChainOCallApi> GetAccountStore for OmniAccountStoreRepository<OCallApi> {
 	fn get_all(&self) -> Result<OmniAccounts, Error> {
 		let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
 		let page_size = 300;

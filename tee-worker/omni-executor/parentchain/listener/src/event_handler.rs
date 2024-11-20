@@ -40,8 +40,8 @@ pub struct IntentEventHandler<
 	MetadataProviderT: MetadataProvider<MetadataT>,
 	EthereumIntentExecutorT: IntentExecutor,
 	KeyStoreT: KeyStore<SecretKeyBytes>,
-	RpcClient: SubstrateRpcClient,
-	RpcClientFactory: SubstrateRpcClientFactory<RpcClient>,
+	RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
+	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
@@ -65,8 +65,8 @@ impl<
 		MetadataProviderT: MetadataProvider<MetadataT>,
 		EthereumIntentExecutorT: IntentExecutor,
 		KeyStoreT: KeyStore<SecretKeyBytes>,
-		RpcClient: SubstrateRpcClient,
-		RpcClientFactory: SubstrateRpcClientFactory<RpcClient>,
+		RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
 	>
 	IntentEventHandler<
 		ChainConfig,
@@ -113,8 +113,8 @@ impl<
 		>,
 		EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 		KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
-		RpcClient: SubstrateRpcClient + Send + Sync,
-		RpcClientFactory: SubstrateRpcClientFactory<RpcClient> + Send + Sync,
+		RpcClient: SubstrateRpcClient<ChainConfig::AccountId> + Send + Sync,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient> + Send + Sync,
 	> EventHandler<BlockEvent>
 	for IntentEventHandler<
 		ChainConfig,
@@ -182,23 +182,22 @@ impl<
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::SystemRemark(_) => None,
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferNative(_) => None,
 		};
-
+		let mut execution_result =
+			crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
 		if let Some(intent) = maybe_intent {
 			// to explicitly handle all intent variants
 			match intent {
 				Intent::CallEthereum(_, _) => {
-					self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
-						// assume for now we can easily recover
-						log::error!("Error executing intent");
-						Error::RecoverableError
-					})?;
+					if let Err(e) = self.ethereum_intent_executor.execute(intent).await {
+						log::error!("Error executing intent: {:?}", e);
+						execution_result = crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Failure;
+					}
 				},
 				Intent::TransferEthereum(_, _) => {
-					self.ethereum_intent_executor.execute(intent).await.map_err(|_| {
-						// assume for now we can easily recover
-						log::error!("Error executing intent");
-						Error::RecoverableError
-					})?;
+					if let Err(e) = self.ethereum_intent_executor.execute(intent).await {
+						log::error!("Error executing intent: {:?}", e);
+						execution_result = crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Failure;
+					}
 				},
 			}
 
@@ -216,9 +215,6 @@ impl<
 					log::error!("Could not decode event {:?}", event.id);
 					Error::NonRecoverableError
 				})?;
-
-			let execution_result =
-				crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
 
 			let call = crate::litentry_rococo::tx().omni_account().intent_executed(
 				decoded.who,

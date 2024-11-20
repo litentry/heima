@@ -22,7 +22,7 @@ extern crate alloc;
 use crate::primitives::TxHash;
 use alloc::{string::String, sync::Arc, vec::Vec};
 
-use itc_direct_rpc_server::SendRpcResponse;
+use itc_direct_rpc_server::{DirectRpcError, SendRpcResponse};
 use itp_types::{BlockHash as SidechainBlockHash, TrustedOperationStatus};
 use log::*;
 
@@ -124,7 +124,12 @@ where
 
 	fn send(&mut self, status: TrustedOperationStatus) {
 		if let Err(e) = self.rpc_response_sender.update_status_event(*self.hash(), status) {
-			error!("failed to send status update to rpc client: {:?}", e);
+			match e {
+				DirectRpcError::InvalidConnectionHash => {
+					warn!("Client connection interrupted while sending status update");
+				},
+				_ => error!("Failed to send status update to RPC client: {:?}", e),
+			}
 		}
 	}
 

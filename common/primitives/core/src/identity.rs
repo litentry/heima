@@ -272,19 +272,21 @@ impl Debug for Address33 {
     Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, EnumIter, Ord, PartialOrd,
 )]
 pub enum Identity {
-    // web2
     #[codec(index = 0)]
     Twitter(IdentityString),
+
     #[codec(index = 1)]
     Discord(IdentityString),
+
     #[codec(index = 2)]
     Github(IdentityString),
 
-    // web3
     #[codec(index = 3)]
     Substrate(Address32),
+
     #[codec(index = 4)]
     Evm(Address20),
+
     // bitcoin addresses are derived (one-way hash) from the pubkey
     // by using `Address33` as the Identity handle, it requires that pubkey
     // is retrievable by the wallet API when verifying the bitcoin account.
@@ -297,13 +299,24 @@ pub enum Identity {
 
     #[codec(index = 7)]
     Email(IdentityString),
+
+    #[codec(index = 8)]
+    Google(IdentityString),
+
+    #[codec(index = 9)]
+    Pumpx(IdentityString),
 }
 
 impl Identity {
     pub fn is_web2(&self) -> bool {
         matches!(
             self,
-            Self::Twitter(..) | Self::Discord(..) | Self::Github(..) | Self::Email(..)
+            Self::Twitter(..)
+                | Self::Discord(..)
+                | Self::Github(..)
+                | Self::Email(..)
+                | Self::Google(..)
+                | Self::Pumpx(..)
         )
     }
 
@@ -339,7 +352,9 @@ impl Identity {
             Identity::Twitter(_)
             | Identity::Discord(_)
             | Identity::Github(_)
-            | Identity::Email(_) => Vec::new(),
+            | Identity::Email(_)
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => Vec::new(),
         }
     }
 
@@ -355,7 +370,9 @@ impl Identity {
             Identity::Twitter(_)
             | Identity::Discord(_)
             | Identity::Github(_)
-            | Identity::Email(_) => networks.is_empty(),
+            | Identity::Email(_)
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => networks.is_empty(),
         }
     }
 
@@ -376,7 +393,9 @@ impl Identity {
             Identity::Twitter(_)
             | Identity::Discord(_)
             | Identity::Github(_)
-            | Identity::Email(_) => None,
+            | Identity::Email(_)
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => None,
         }
     }
 
@@ -439,6 +458,14 @@ impl Identity {
                     return Ok(Identity::Email(IdentityString::new(
                         v[1].as_bytes().to_vec(),
                     )));
+                } else if v[0] == "google" {
+                    return Ok(Identity::Google(IdentityString::new(
+                        v[1].as_bytes().to_vec(),
+                    )));
+                } else if v[0] == "pumpx" {
+                    return Ok(Identity::Pumpx(IdentityString::new(
+                        v[1].as_bytes().to_vec(),
+                    )));
                 } else {
                     return Err("Unknown did type");
                 }
@@ -478,6 +505,16 @@ impl Identity {
                     "email:{}",
                     str::from_utf8(handle.inner_ref())
                         .map_err(|_| "email handle conversion error")?
+                ),
+                Identity::Google(handle) => format!(
+                    "google:{}",
+                    str::from_utf8(handle.inner_ref())
+                        .map_err(|_| "google handle conversion error")?
+                ),
+                Identity::Pumpx(handle) => format!(
+                    "pumpx:{}",
+                    str::from_utf8(handle.inner_ref())
+                        .map_err(|_| "pumpx handle conversion error")?
                 ),
             }
         ))
@@ -566,6 +603,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => true,
+                    Identity::Pumpx(..) => true,
                 }
             )
         })
@@ -585,6 +624,8 @@ mod tests {
                     Identity::Evm(..) => true,
                     Identity::Bitcoin(..) => true,
                     Identity::Solana(..) => true,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -604,6 +645,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -623,6 +666,8 @@ mod tests {
                     Identity::Evm(..) => true,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -642,6 +687,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => true,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -661,6 +708,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => true,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -794,5 +843,21 @@ mod tests {
         let did = format!("did:litentry:solana:{}", address);
         assert_eq!(identity.to_did().unwrap(), did.as_str());
         assert_eq!(Identity::from_did(did.as_str()).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_google_did() {
+        let identity = Identity::Google(IdentityString::new("test@gmail.com".as_bytes().to_vec()));
+        let did_str = "did:litentry:google:test@gmail.com";
+        assert_eq!(identity.to_did().unwrap(), did_str);
+        assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_pumpx_did() {
+        let identity = Identity::Pumpx(IdentityString::new("12345678".as_bytes().to_vec()));
+        let did_str = "did:litentry:pumpx:12345678";
+        assert_eq!(identity.to_did().unwrap(), did_str);
+        assert_eq!(Identity::from_did(did_str).unwrap(), identity);
     }
 }

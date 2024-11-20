@@ -32,6 +32,10 @@ fn alice() -> AccountId32 {
 	AccountKeyring::Alice.to_account_id()
 }
 
+fn bob() -> AccountId32 {
+	AccountKeyring::Bob.to_account_id()
+}
+
 fn default_enclave() -> Enclave {
 	Enclave::new(WorkerType::Identity)
 		.with_attestation_type(AttestationType::Ignore)
@@ -280,7 +284,13 @@ fn register_enclave_prod_works_with_sgx_build_mode_debug() {
 		));
 
 		set_timestamp(TEST4_TIMESTAMP);
+		let admin: AccountId32 = alice();
 		let signer4: AccountId32 = get_signer(TEST4_SIGNER_PUB);
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(admin.clone()),
+			Default::default(),
+			signer4.clone(),
+		));
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer4.clone()),
 			Default::default(),
@@ -314,7 +324,14 @@ fn register_enclave_prod_works_with_sgx_build_mode_production() {
 		));
 
 		set_timestamp(TEST8_TIMESTAMP);
+		let admin: AccountId32 = alice();
 		let signer8: AccountId32 = get_signer(TEST8_SIGNER_PUB);
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(admin.clone()),
+			Default::default(),
+			signer8.clone(),
+		));
+
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer8.clone()),
 			Default::default(),
@@ -411,8 +428,29 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 			TEST6_MRENCLAVE
 		));
 
+		let admin: AccountId32 = alice();
 		let signer4: AccountId32 = get_signer(TEST4_SIGNER_PUB);
 		let signer6: AccountId32 = get_signer(TEST6_SIGNER_PUB);
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(admin.clone()),
+			WorkerType::BitAcross,
+			signer4.clone(),
+		));
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(admin.clone()),
+			WorkerType::Identity,
+			signer4.clone(),
+		));
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(admin.clone()),
+			WorkerType::BitAcross,
+			signer6.clone(),
+		));
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(admin.clone()),
+			WorkerType::Identity,
+			signer6.clone(),
+		));
 
 		Timestamp::set_timestamp(TEST4_TIMESTAMP);
 		assert_ok!(Teebag::register_enclave(
@@ -427,19 +465,16 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		));
 
 		Timestamp::set_timestamp(TEST6_TIMESTAMP);
-		assert_noop!(
-			Teebag::register_enclave(
-				RuntimeOrigin::signed(signer6.clone()),
-				WorkerType::BitAcross,
-				Default::default(),
-				TEST6_CERT.to_vec(),
-				URL.to_vec(),
-				None,
-				None,
-				AttestationType::Ias,
-			),
-			Error::<Test>::MaxEnclaveIdentifierOverflow
-		);
+		assert_ok!(Teebag::register_enclave(
+			RuntimeOrigin::signed(signer6.clone()),
+			WorkerType::BitAcross,
+			Default::default(),
+			TEST6_CERT.to_vec(),
+			URL.to_vec(),
+			None,
+			None,
+			AttestationType::Ias,
+		));
 
 		// re-register them as WorkerType::Identity is not allowed
 		Timestamp::set_timestamp(TEST4_TIMESTAMP);
@@ -483,11 +518,11 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 				None,
 				AttestationType::Ias,
 			),
-			Error::<Test>::MaxEnclaveIdentifierOverflow
+			Error::<Test>::UnexpectedWorkerType
 		);
 
-		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 0);
+		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 2);
+		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 1);
 	})
 }
 
@@ -516,4 +551,97 @@ fn register_tcb_info_works() {
 		// 2023-04-16T12:45:32Z
 		assert_eq!(tcb_info.next_update, 1681649132000);
 	})
+}
+
+#[test]
+fn add_enclave_identifier_works() {
+	new_test_ext(true).execute_with(|| {
+		let signer: AccountId32 = alice();
+		let worker_type = WorkerType::Identity;
+		let enclave_identifier: AccountId32 = get_signer(TEST4_SIGNER_PUB);
+
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(signer.clone()),
+			worker_type,
+			enclave_identifier.clone(),
+		));
+
+		assert!(
+			Teebag::enclave_identifier(worker_type).contains(&enclave_identifier),
+			"Expected enclave identifier was not found in the registry."
+		);
+	});
+}
+
+#[test]
+fn add_enclave_identifier_duplicate_fails() {
+	new_test_ext(true).execute_with(|| {
+		let signer: AccountId32 = alice();
+		let worker_type = WorkerType::Identity;
+		let enclave_identifier: AccountId32 = get_signer(TEST4_SIGNER_PUB);
+
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(signer.clone()),
+			worker_type,
+			enclave_identifier.clone(),
+		));
+
+		assert_noop!(
+			Teebag::add_enclave_identifier(
+				RuntimeOrigin::signed(signer.clone()),
+				worker_type,
+				enclave_identifier,
+			),
+			Error::<Test>::EnclaveIdentifierAlreadyExist
+		);
+	});
+}
+
+#[test]
+fn add_enclave_identifier_unauthorized_fails() {
+	new_test_ext(true).execute_with(|| {
+		let unauthorized_signer: AccountId32 = bob();
+		let worker_type = WorkerType::Identity;
+		let enclave_identifier: AccountId32 = get_signer(TEST4_SIGNER_PUB);
+
+		assert_noop!(
+			Teebag::add_enclave_identifier(
+				RuntimeOrigin::signed(unauthorized_signer),
+				worker_type,
+				enclave_identifier,
+			),
+			Error::<Test>::RequireAdminOrRoot
+		);
+	});
+}
+
+#[test]
+fn add_enclave_identifier_max_identifier_overflow() {
+	new_test_ext(true).execute_with(|| {
+		let signer: AccountId32 = alice();
+		let worker_type = WorkerType::Identity;
+		let enclave_identifier1: AccountId32 = get_signer(TEST5_SIGNER_PUB);
+		let enclave_identifier2: AccountId32 = get_signer(TEST6_SIGNER_PUB);
+		let enclave_identifier3: AccountId32 = get_signer(TEST7_SIGNER_PUB);
+
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(signer.clone()),
+			worker_type,
+			enclave_identifier1,
+		));
+		assert_ok!(Teebag::add_enclave_identifier(
+			RuntimeOrigin::signed(signer.clone()),
+			worker_type,
+			enclave_identifier2,
+		));
+
+		assert_noop!(
+			Teebag::add_enclave_identifier(
+				RuntimeOrigin::signed(signer.clone()),
+				worker_type,
+				enclave_identifier3,
+			),
+			Error::<Test>::MaxEnclaveIdentifierOverflow
+		);
+	});
 }

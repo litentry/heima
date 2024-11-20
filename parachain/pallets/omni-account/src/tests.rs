@@ -635,3 +635,32 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
 }
+
+#[test]
+fn dispatch_as_signed_account_increments_omni_account_nonce() {
+	new_test_ext().execute_with(|| {
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(Balances::transfer(
+			RuntimeOrigin::signed(alice().native_account),
+			alice().omni_account,
+			6
+		));
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		assert_eq!(System::account_nonce(alice().omni_account), 0);
+
+		let call = make_balance_transfer_call(bob().native_account, 5);
+
+		assert_ok!(OmniAccount::dispatch_as_signed(
+			RuntimeOrigin::signed(tee_signer),
+			alice().identity.hash(),
+			call
+		));
+		assert_eq!(System::account_nonce(alice().omni_account), 1);
+	});
+}
