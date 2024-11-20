@@ -18,12 +18,14 @@
 
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
 use itp_ocall_api::{
 	EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
 };
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash,
-	Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse, H256,
+	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
+	storage::StorageEntryVerified,
+	BlockHash, Header as ParentchainHeader, ShardIdentifier, WorkerRequest, WorkerResponse, H256,
 };
 use its_primitives::types::block::SignedBlock as SignedSidechainBlockType;
 use its_sidechain::consensus_common::BlockImport;
@@ -53,9 +55,9 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		&self,
 		_extrinsics: Vec<OpaqueExtrinsic>,
 		_: &ParentchainId,
-		_: bool,
-	) -> SgxResult<()> {
-		Ok(())
+		_: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>> {
+		Ok(Vec::new())
 	}
 
 	fn worker_request<V: Encode + Decode>(
@@ -92,10 +94,7 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		todo!()
 	}
 
-	fn get_header<H: ParentchainHeaderTrait<Hash = H256>>(
-		&self,
-		_parentchain_id: &ParentchainId,
-	) -> Result<H> {
+	fn get_header<H: ParentchainHeaderTrait<Hash = H256>>(&self) -> Result<H> {
 		todo!()
 	}
 
@@ -106,6 +105,10 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		_start_key: Option<Vec<u8>>,
 		_header: Option<&H>,
 	) -> Result<Vec<Vec<u8>>> {
+		todo!()
+	}
+
+	fn get_account_nonce(&self, _account_id: AccountId) -> Result<ParentchainIndex> {
 		todo!()
 	}
 }

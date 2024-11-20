@@ -2308,6 +2308,7 @@ name = "itp-api-client-types"
 version = "0.1.0"
 dependencies = [
  "itp-types",
+ "parity-scale-codec",
  "substrate-api-client",
 ]
 
@@ -2438,6 +2439,7 @@ name = "itp-ocall-api"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "itp-api-client-types",
  "itp-storage",
  "itp-types",
  "parity-scale-codec",
@@ -3099,6 +3101,7 @@ dependencies = [
  "itp-utils",
  "lazy_static",
  "lc-data-providers",
+ "lc-omni-account",
  "litentry-primitives",
  "log",
  "lru",
@@ -3122,7 +3125,6 @@ dependencies = [
  "id-ita-stf",
  "id-itp-stf-executor",
  "id-itp-top-pool-author",
- "itp-api-client-types",
  "itp-enclave-metrics",
  "itp-extrinsics-factory",
  "itp-node-api",

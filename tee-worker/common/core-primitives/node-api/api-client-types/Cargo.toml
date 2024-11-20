@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@int
 edition = "2021"
 
 [dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
 itp-types = { workspace = true }
 substrate-api-client = { workspace = true }
 

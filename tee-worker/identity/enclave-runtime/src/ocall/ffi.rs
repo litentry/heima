@@ -119,7 +119,10 @@ extern "C" {
 		extrinsics_size: u32,
 		parentchain_id: *const u8,
 		parentchain_id_size: u32,
-		await_each_inclusion: c_int,
+		watch_until: *const u8,
+		watch_until_size: u32,
+		response: *mut u8,
+		response_size: u32,
 	) -> sgx_status_t;
 
 	pub fn ocall_read_ipfs(

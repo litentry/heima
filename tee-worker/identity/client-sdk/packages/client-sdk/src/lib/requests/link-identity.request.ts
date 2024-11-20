@@ -131,8 +131,8 @@ export async function linkIdentity(
   }> => {
     // prepare and encrypt request
     const request = await createRequestType(api, {
-      signer: who,
-      signature: args.signedPayload,
+      sender: who,
+      authentication: args.signedPayload,
       call,
       nonce,
       shard: shardU8,

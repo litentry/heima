@@ -12,6 +12,7 @@ fn create_test_enclaves<T: Config>(n: u32, mrenclave: MrEnclave) {
 	for i in 0..n {
 		let who: T::AccountId = account("who", i, 1);
 		let test_enclave = Enclave::new(WorkerType::Identity).with_mrenclave(mrenclave);
+		let _ = Teebag::<T>::add_enclave_identifier_internal(test_enclave.worker_type, &who);
 		assert_ok!(Teebag::<T>::add_enclave(&who, &test_enclave));
 	}
 }
@@ -109,6 +110,7 @@ mod benchmarks {
 		create_test_enclaves::<T>(T::MaxEnclaveIdentifier::get() - 1, test_util::TEST4_MRENCLAVE);
 		let who: T::AccountId = account("who", 1, 99999);
 		let test_enclave = Enclave::new(WorkerType::Identity);
+		let _ = Teebag::<T>::add_enclave_identifier_internal(test_enclave.worker_type, &who);
 		assert_ok!(Teebag::<T>::add_enclave(&who, &test_enclave));
 		assert_eq!(
 			Teebag::<T>::enclave_count(WorkerType::Identity),
@@ -221,7 +223,7 @@ mod benchmarks {
 
 		let signer: T::AccountId =
 			test_util::get_signer::<T::AccountId>(test_util::TEST4_SIGNER_PUB);
-
+		let _ = Teebag::<T>::add_enclave_identifier_internal(WorkerType::Identity, &signer);
 		#[extrinsic_call]
 		Teebag::<T>::register_enclave(
 			RawOrigin::Signed(signer.clone()),
@@ -271,7 +273,7 @@ mod benchmarks {
 			.expect("Failed to add authorized enclave");
 
 		let signer: T::AccountId = test_util::get_signer::<T::AccountId>(&PUBKEY);
-
+		let _ = Teebag::<T>::add_enclave_identifier_internal(WorkerType::Identity, &signer);
 		#[extrinsic_call]
 		Teebag::<T>::register_enclave(
 			RawOrigin::Signed(signer.clone()),
@@ -313,7 +315,7 @@ mod benchmarks {
 
 		let signer: T::AccountId =
 			test_util::get_signer::<T::AccountId>(test_util::TEST4_SIGNER_PUB);
-
+		let _ = Teebag::<T>::add_enclave_identifier_internal(WorkerType::Identity, &signer);
 		assert_ok!(Teebag::<T>::register_enclave(
 			RawOrigin::Signed(signer.clone()).into(),
 			WorkerType::Identity,
@@ -393,6 +395,7 @@ mod benchmarks {
 	fn parentchain_block_processed() {
 		let who: T::AccountId = account("who", 1, 1);
 		let test_enclave = Enclave::new(WorkerType::Identity);
+		let _ = Teebag::<T>::add_enclave_identifier_internal(test_enclave.worker_type, &who);
 		assert_ok!(Teebag::<T>::add_enclave(&who, &test_enclave));
 		let block_number: BlockNumberFor<T> = 10u32.into();
 
@@ -419,6 +422,7 @@ mod benchmarks {
 		let block_header_hash = H256::default();
 		let test_enclave =
 			Enclave::new(WorkerType::Identity).with_worker_mode(WorkerMode::Sidechain);
+		let _ = Teebag::<T>::add_enclave_identifier_internal(test_enclave.worker_type, &who);
 		assert_ok!(Teebag::<T>::add_enclave(&who, &test_enclave));
 		SidechainBlockFinalizationCandidate::<T>::insert(shard, 10);
 
@@ -438,6 +442,17 @@ mod benchmarks {
 		assert_last_event::<T>(
 			Event::SidechainBlockFinalized { who, sidechain_block_number: block_number }.into(),
 		)
+	}
+
+	#[benchmark]
+	fn add_enclave_identifier() {
+		let who: T::AccountId = account("who", 1, 1);
+		let worker_type = WorkerType::Identity;
+
+		#[extrinsic_call]
+		_(RawOrigin::Root, worker_type, who.clone());
+
+		assert!(EnclaveIdentifier::<T>::get(worker_type).contains(&who));
 	}
 
 	impl_benchmark_test_suite!(Teebag, super::mock::new_test_ext(false), super::mock::Test);

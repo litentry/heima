@@ -23,10 +23,12 @@ use alloc::{string::String, vec::Vec};
 use codec::{Decode, Encode};
 use core::result::Result as StdResult;
 use derive_more::{Display, From};
+use itp_api_client_types::{ExtrinsicReport, XtStatus};
 use itp_storage::Error as StorageError;
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, ShardIdentifier,
-	TrustedOperationStatus, WorkerRequest, WorkerResponse,
+	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
+	storage::StorageEntryVerified,
+	BlockHash, ShardIdentifier, TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
 use sp_core::H256;
@@ -94,8 +96,8 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		&self,
 		extrinsics: Vec<OpaqueExtrinsic>,
 		parentchain_id: &ParentchainId,
-		await_each_inclusion: bool,
-	) -> SgxResult<()>;
+		watch_until: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>>;
 
 	fn worker_request<V: Encode + Decode>(
 		&self,
@@ -133,7 +135,9 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		header: Option<&H>,
 	) -> Result<Vec<Vec<u8>>>;
 
-	fn get_header<H: Header<Hash = H256>>(&self, parentchain_id: &ParentchainId) -> Result<H>;
+	fn get_header<H: Header<Hash = H256>>(&self) -> Result<H>;
+
+	fn get_account_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex>;
 }
 
 /// Trait for sending metric updates.

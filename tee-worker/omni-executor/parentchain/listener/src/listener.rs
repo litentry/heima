@@ -22,6 +22,7 @@ use crate::primitives::SyncCheckpoint;
 use crate::primitives::{BlockEvent, EventId};
 use executor_core::listener::Listener;
 use subxt::Metadata;
+use subxt_core::Config;
 
 pub type IntentEventId = EventId;
 
@@ -32,7 +33,7 @@ pub type ParentchainListener<
 	ChainConfig,
 	EthereumIntentExecutor,
 > = Listener<
-	Fetcher<RpcClient, RpcClientFactory>,
+	Fetcher<<ChainConfig as Config>::AccountId, RpcClient, RpcClientFactory>,
 	SyncCheckpoint,
 	CheckpointRepository,
 	IntentEventId,

@@ -60,7 +60,7 @@ where
 					},
 				};
 			if api
-				.send_to_parentchain(vec![extrinsic], &ParentchainId::Litentry, false)
+				.send_to_parentchain(vec![extrinsic], &ParentchainId::Litentry, None)
 				.is_err()
 			{
 				error!("Failed to send extrinsic to parentchain");

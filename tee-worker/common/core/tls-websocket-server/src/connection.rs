@@ -71,10 +71,7 @@ where
 			Some(MaybeServerTlsStream::Rustls(s)) => {
 				let tls_session = &mut s.sess;
 				match tls_session.read_tls(&mut s.sock) {
-					Ok(r) =>
-						if r == 0 {
-							return ConnectionState::Closing
-						},
+					Ok(_) => {},
 					Err(err) => {
 						if let std::io::ErrorKind::WouldBlock = err.kind() {
 							debug!(

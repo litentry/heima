@@ -87,11 +87,11 @@ importers:
     dependencies:
       tslib: 2.6.2
 
-  packages/enclave:
+  packages/client-sdk:
     specifiers:
       '@litentry/chaindata': '*'
-      '@litentry/parachain-api': 0.9.20-4.1
-      '@litentry/sidechain-api': 0.9.20-4
+      '@litentry/parachain-api': 0.9.20-next.8
+      '@litentry/sidechain-api': 0.9.20-next.8
       '@polkadot/api': ^10.9.1
       '@polkadot/rpc-provider': ^10.9.1
       '@polkadot/types': ^10.9.1
@@ -101,8 +101,8 @@ importers:
       tslib: ^2.3.0
     dependencies:
       '@litentry/chaindata': link:../chaindata
-      '@litentry/parachain-api': 0.9.20-4.1
-      '@litentry/sidechain-api': 0.9.20-4
+      '@litentry/parachain-api': 0.9.20-next.8
+      '@litentry/sidechain-api': 0.9.20-next.8
       '@polkadot/api': 10.13.1
       '@polkadot/types': 10.13.1
       '@polkadot/types-codec': 10.13.1
@@ -111,25 +111,6 @@ importers:
       tslib: 2.6.2
     devDependencies:
       '@polkadot/rpc-provider': 10.13.1
-
-  packages/vc-sdk:
-    specifiers:
-      '@litentry/parachain-api': 0.9.20-4.1
-      '@litentry/sidechain-api': 0.9.20-4
-      '@polkadot/api': ^10.9.1
-      '@polkadot/util': ^12.5.1
-      '@polkadot/util-crypto': ^12.5.1
-      fast-glob: ^3.3.2
-      tslib: ^2.3.0
-    dependencies:
-      '@litentry/parachain-api': 0.9.20-4.1
-      '@litentry/sidechain-api': 0.9.20-4
-      '@polkadot/api': 10.13.1
-      '@polkadot/util': 12.6.2
-      '@polkadot/util-crypto': 12.6.2_@polkadot+util@12.6.2
-      tslib: 2.6.2
-    devDependencies:
-      fast-glob: 3.3.2
 
 packages:
 
@@ -1760,8 +1741,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  /@litentry/parachain-api/0.9.20-4.1:
-    resolution: {integrity: sha512-IL3E86EXlc3YdzHghxHwy0+a+1cWAjyQ8Ynyku4BtD6lL5b/bLgS3tFRmAYhkmmIFfJnx9vLRw2gZ3LVEudcJg==}
+  /@litentry/parachain-api/0.9.20-next.8:
+    resolution: {integrity: sha512-ilkKo902aSX7ouXhpwPX7D1iC0GNX/qLAYd87bC/4ziU+yXmHpnaRCTq1dXumPl2DDRkLQgPwnXkVPX2WLmPsQ==}
     dependencies:
       '@polkadot/api': 10.13.1
       '@polkadot/api-augment': 10.13.1
@@ -1783,8 +1764,8 @@ packages:
       - utf-8-validate
     dev: false
 
-  /@litentry/sidechain-api/0.9.20-4:
-    resolution: {integrity: sha512-wYIS8FStKL7Nw/ViRlRMijSpZgVxJr2OKQlSRO1j9rBdNiCiOw0M5Y5Uo3eeSO7y4R04gPaSm7q0FvjByvGEMw==}
+  /@litentry/sidechain-api/0.9.20-next.8:
+    resolution: {integrity: sha512-QOy9rDUZYvk2k+cIBkIOzBCEDr/ncq1Tc4NypB9+kX68d9ET9gwX1tqIX/A0HpRFh4WCuj+J2XEngFeeeB4Q8Q==}
     dependencies:
       '@polkadot/api': 10.13.1
       '@polkadot/api-augment': 10.13.1

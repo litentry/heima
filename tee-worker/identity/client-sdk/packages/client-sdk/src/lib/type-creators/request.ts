@@ -9,6 +9,7 @@ import type {
   LitentryIdentity,
   AesRequest,
   AesOutput,
+  TCAuthentication,
 } from '@litentry/parachain-api';
 import {
   encrypt,
@@ -18,6 +19,7 @@ import {
 } from '../util/shielding-key';
 import { createKeyAesOutputType } from './key-aes-output';
 import { createLitentryMultiSignature } from './litentry-multi-signature';
+import { createTCAuthenticationType } from './tc-authentication';
 
 /**
  * Creates a Request struct type for the `TrustedCall` operation.
@@ -30,39 +32,60 @@ import { createLitentryMultiSignature } from './litentry-multi-signature';
 export async function createRequestType(
   api: ApiPromise,
   data: {
-    signer: LitentryIdentity;
-    signature: string;
+    sender: LitentryIdentity;
+    /** signature or verification code based on the identity type */
+    authentication: string;
     call: TrustedCall;
     nonce: Index;
     shard: Uint8Array;
   }
 ): Promise<AesRequest> {
-  const { signer, shard, signature: signedPayload, nonce, call } = data;
+  const { sender, shard, authentication, nonce, call } = data;
 
   // generate ephemeral shielding key to encrypt the operation
   const encryptionKey = await generate();
   const encryptionKeyU8 = await exportKey(encryptionKey);
 
-  const signature = createLitentryMultiSignature(api.registry, {
-    who: signer,
-    signature: signedPayload,
-  });
+  let operationU8a = new Uint8Array();
 
-  const signedCall = api.createType('TrustedCallSigned', {
-    call,
-    index: nonce,
-    signature: signature,
-  });
+  if (isNativeRequest(call)) {
+    const callAuthenticated = api.createType('TrustedCallAuthenticated', {
+      call,
+      nonce,
+      authentication: createAuthenticationForSender(
+        api,
+        sender,
+        authentication
+      ),
+    });
 
-  const operation = api.createType('TrustedOperation', {
-    direct_call: signedCall,
-  });
+    const operation = api.createType('TrustedOperationAuthenticated', {
+      direct_call: callAuthenticated,
+    });
+
+    operationU8a = operation.toU8a();
+  } else {
+    const signedCall = api.createType('TrustedCallSigned', {
+      call,
+      index: nonce,
+      signature: createLitentryMultiSignature(api.registry, {
+        who: sender,
+        signature: authentication,
+      }),
+    });
+
+    const operation = api.createType('TrustedOperation', {
+      direct_call: signedCall,
+    });
+
+    operationU8a = operation.toU8a();
+  }
 
   // Encrypt the operation call using the client shielding key
   const encryptionNonce = generateNonce12();
   const { ciphertext: encryptedOperation } = await encrypt(
     {
-      cleartext: operation.toU8a(),
+      cleartext: operationU8a,
       nonce: encryptionNonce,
     },
     encryptionKey
@@ -84,5 +107,27 @@ export async function createRequestType(
     shard,
     key: compactAddLength(encryptedKey),
     payload: encryptedPayload,
+  });
+}
+
+function isNativeRequest(call: TrustedCall): boolean {
+  return call.isRequestIntent || call.isCreateAccountStore;
+}
+
+function createAuthenticationForSender(
+  api: ApiPromise,
+  signer: LitentryIdentity,
+  authentication: string
+): TCAuthentication {
+  if (signer.isEmail) {
+    return createTCAuthenticationType(api.registry, {
+      type: 'Email',
+      verificationCode: authentication,
+    });
+  }
+  return createTCAuthenticationType(api.registry, {
+    type: 'Web3',
+    signer,
+    signature: authentication,
   });
 }

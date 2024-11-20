@@ -125,7 +125,7 @@ impl pallet_teebag::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
-	type MaxEnclaveIdentifier = ConstU32<1>;
+	type MaxEnclaveIdentifier = ConstU32<2>;
 	type MaxAuthorizedEnclave = ConstU32<2>;
 	type WeightInfo = ();
 }
