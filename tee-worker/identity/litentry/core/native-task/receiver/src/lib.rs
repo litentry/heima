@@ -36,6 +36,7 @@ pub use crate::sgx_reexport_prelude::*;
 mod handlers;
 
 mod trusted_call_authenticated;
+use handlers::handle_request_vc;
 pub use trusted_call_authenticated::*;
 
 mod types;
@@ -135,8 +136,12 @@ pub fn run_native_task_receiver<
 				let request = &mut req.request;
 				let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 				match handle_request(request, context.clone()) {
-					Ok(trusted_call) =>
-						handle_trusted_call(context.clone(), trusted_call, connection_hash),
+					Ok(trusted_call) => handle_trusted_call(
+						context.clone(),
+						trusted_call,
+						connection_hash,
+						request.shard,
+					),
 					Err(e) => {
 						log::error!("Failed to get trusted call from request: {:?}", e);
 						let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
@@ -275,6 +280,7 @@ fn handle_trusted_call<
 	>,
 	call: TrustedCall,
 	connection_hash: H256,
+	shard: H256,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -444,9 +450,27 @@ fn handle_trusted_call<
 				identity
 			))
 		)),
-		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) => {
-			todo!()
-		},
+		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) =>
+			match handle_request_vc(
+				context.clone(),
+				shard,
+				signer,
+				who,
+				assertion,
+				maybe_key,
+				req_ext_hash,
+			) {
+				Ok(result) => {
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+				Err(e) => {
+					log::error!("Failed to handle request vc: {:?}", e);
+					let result: TrustedCallResult = Err(NativeTaskError::RequestVcFailed(e));
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+			},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
