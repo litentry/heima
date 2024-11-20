@@ -111,7 +111,7 @@ pub struct NewRequestVCResult {
 	// Mainly used to returning logs in dynamic contract VC.
 	pub vc_logs: Option<AesOutput>,
 	// This should be referenced/used only when the client's local AccountStore is empty
-	pub pre_account_store: AesOutput,
+	pub pre_mutated_account_store: AesOutput,
 	pub omni_account: AccountId,
 }
 

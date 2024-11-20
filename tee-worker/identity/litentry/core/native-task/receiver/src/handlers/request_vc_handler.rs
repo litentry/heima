@@ -233,7 +233,7 @@ where
 	let res = NewRequestVCResult {
 		vc_payload: aes_encrypt_default(&key, &vc_payload),
 		vc_logs: vc_logs.map(|log| aes_encrypt_default(&key, &log)),
-		pre_account_store: aes_encrypt_default(&key, &mutated_account_store.encode()),
+		pre_mutated_account_store: aes_encrypt_default(&key, &mutated_account_store.encode()),
 		omni_account: omni_account.clone(),
 	};
 
