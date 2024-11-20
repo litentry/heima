@@ -485,7 +485,7 @@ where
 				pool_proposal_status.pool_proposal_index,
 			) {
 				if let Some(bond) =
-					result.pre_investings.into_iter().find(|&x| x.owner == user_address)
+					result.pre_investings.into_iter().find(|x| x.owner == user_address)
 				{
 					let owner: [u8; 32] = bond.owner.into();
 					let owner = owner.into();
@@ -530,7 +530,7 @@ where
 				pool_proposal_status.pool_proposal_index,
 			) {
 				if let Some(bond) =
-					result.queued_pre_investings.into_iter().find(|&x| x.0.owner == user_address)
+					result.queued_pre_investings.into_iter().find(|x| x.0.owner == user_address)
 				{
 					let owner: [u8; 32] = bond.0.owner.into();
 					let owner = owner.into();
