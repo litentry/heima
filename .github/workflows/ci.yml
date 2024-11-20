@@ -268,13 +268,12 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  identity-check:
+  tee-check:
     runs-on: ubuntu-latest
     needs:
       - fmt
       - set-condition
       - sequentialise
-    if: needs.set-condition.outputs.rebuild_identity == 'true'
     container: "litentry/litentry-tee-dev:latest"
     steps:
       - uses: actions/checkout@v4
@@ -293,7 +292,7 @@ jobs:
         working-directory: ./tee-worker
         shell: bash
         run: |
-          for d in . identity identity/enclave-runtime; do
+          for d in . identity/enclave-runtime bitacross/enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
             cargo clippy --release -- -D warnings
@@ -325,51 +324,6 @@ jobs:
           echo "::group::cargo clippy evm development"
           cargo clippy --release --features evm,development -- -D warnings
           echo "::endgroup::"
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  bitacross-check:
-    runs-on: ubuntu-latest
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_bitacross == 'true'
-    container: "litentry/litentry-tee-dev:latest"
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-
-      - name: Cargo test
-        working-directory: ./tee-worker
-        run: |
-          cargo test --release
-
-      - name: Check clippy
-        working-directory: ./tee-worker
-        shell: bash
-        run: |
-          for d in . bitacross bitacross/enclave-runtime; do
-            pushd "$d"
-            echo "::group::cargo clippy all"
-            cargo clippy --release -- -D warnings
-            echo "::endgroup::"
-            echo "::group::cargo clippy development"
-            cargo clippy --release --features development -- -D warnings
-            echo "::endgroup::"
-            echo "::group::cargo clippy offchain-worker"
-            cargo clippy --release --features offchain-worker -- -D warnings
-            echo "::group::cargo clippy offchain-worker,development"
-            cargo clippy --release --features offchain-worker,development -- -D warnings
-            echo "::endgroup::"
-            popd
-          done
 
       - name: Fail early
         if: failure()
