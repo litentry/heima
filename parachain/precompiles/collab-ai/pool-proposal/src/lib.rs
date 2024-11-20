@@ -487,7 +487,13 @@ where
 				if let Some(bond) =
 					result.pre_investings.into_iter().find(|&x| x.owner == user_address)
 				{
-					bond_result.push(bond);
+					let owner: [u8; 32] = bond.owner.into();
+					let owner = owner.into();
+					bond_result.push(StakingBond {
+						pool_index: pool_proposal_status.pool_proposal_index.into(),
+						owner,
+						amount: bond.amount.into(),
+					});
 				}
 			}
 		}
@@ -526,7 +532,14 @@ where
 				if let Some(bond) =
 					result.queued_pre_investings.into_iter().find(|&x| x.0.owner == user_address)
 				{
-					bond_result.push(bond);
+					let owner: [u8; 32] = bond.0.owner.into();
+					let owner = owner.into();
+					bond_result.push(QueuedStakingBond {
+						pool_index: pool_proposal_status.pool_proposal_index.into(),
+						owner,
+						amount: bond.0.amount.into(),
+						queued_time: bond.1.into(),
+					});
 				}
 			}
 		}
