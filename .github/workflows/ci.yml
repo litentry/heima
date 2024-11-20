@@ -693,7 +693,7 @@ jobs:
           tags: litentry/omni-executor:latest
           target: executor-worker
 
-      - name: Pull and tag worker and cli image optionally
+      - name: Pull omni-executor image optionally
         if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
         run: |
           docker pull litentry/omni-executor:latest
@@ -1075,13 +1075,6 @@ jobs:
           docker load < litentry-parachain-dev.tar.gz
           docker load < litentry-omni.tar.gz
           docker images
-
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
-
-      - name: Launch parachain network
-        run: |
-          make launch-network-litentry
 
       - name: Integration omni executor test ${{ matrix.test_name }}
         working-directory: ./tee-worker/omni-executor/docker
