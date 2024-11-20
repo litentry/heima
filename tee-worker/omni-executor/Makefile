@@ -7,6 +7,9 @@ SGX_MODE ?= HW
 SELF_EXE = omni-executor-worker
 COMPILATION_FEATURES =
 
+ROOTDIR := $(shell git rev-parse --show-toplevel)
+EXECUTOR_DIR := $(ROOTDIR)/tee-worker/omni-executor
+
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
 ifeq ($(SGX_MODE), HW)
@@ -63,17 +66,19 @@ clean:
 distclean: clean
 	cargo clean
 
+# By default SGX_MODE=SW for docker image
 .PHONY: build-docker
 build-docker:
-	docker build . --tag omni-executor:latest
+	docker build --target builder -t local-builder:latest -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target executor-worker -t litentry/omni-executor:latest -f -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
-	docker compose up
+	docker compose -f $(EXECUTOR_DIR)/docker/docker-compose.yml up
 
 .PHONY: stop-local
 stop-local:
-	docker compose down
+	docker compose -f $(EXECUTOR_DIR)/docker/docker-compose.yml down
 
 .PHONY: get-pallet-metadata
 get-pallet-metadata:
