@@ -130,7 +130,7 @@ where
 		Ok(())
 	}
 
-	#[precompile::public("PublicGuardianCount()")]
+	#[precompile::public("publicGuardianCount()")]
 	#[precompile::view]
 	fn public_guardian_count(handle: &mut impl PrecompileHandle) -> EvmResult<U256> {
 		// Storage item: GuardianIndex u128:

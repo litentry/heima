@@ -428,7 +428,8 @@ pub mod pallet {
 			let token_end_epoch = InvestingPoolAssetIdGenerator::get_token_end_epoch(asset_id);
 
 			// Technically speaking, start_epoch <= end_epoch
-			if token_start_epoch > claimed_until_epoch {
+			// If start epoch = 0, means this is a collateral token, can not claim anything
+			if token_start_epoch > claimed_until_epoch || token_start_epoch == 0 {
 				// Nothing to claim
 				return Ok(());
 			}

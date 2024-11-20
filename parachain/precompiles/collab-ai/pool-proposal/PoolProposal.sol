@@ -127,14 +127,14 @@ interface IPoolProposal {
     function batchPoolProposal(uint256 start_id, uint256 end_id) external view returns (PoolProposalInfo[] memory proposal_info);
 
     /// @notice Batch query pool proposals and their existing included pre stakings
-        /// @param start_id: Proposal index start_id, included
+    /// @param start_id: Proposal index start_id, included
     /// @param end_id: Proposal index end id, excluded
     /// @custom:selector 0x49dc251a
 	/// 				 poolPreInvestings(uint256,uint256)
     function poolPreInvestings(uint256 start_id, uint256 end_id) external view returns (StakingBond[] memory pre_investing_bond);
 
     /// @notice Batch query pool proposals and their queued pre stakings
-        /// @param start_id: Proposal index start_id, included
+    /// @param start_id: Proposal index start_id, included
     /// @param end_id: Proposal index end id, excluded
     /// @custom:selector 0x201be573
 	/// 				 poolPreInvestingsQueued(uint256,uint256)
@@ -145,4 +145,30 @@ interface IPoolProposal {
     /// @custom:selector 0x6630e6ee
 	/// 				 poolGuardian(uint256)
     function poolGuardian(uint256 pool_proposal_index) external view returns (bytes32[] memory guardian);
+
+    /// @notice Query a user's all invested positions
+    /// @param user_address: user address, substrate
+    /// @custom:selector 0x814f8437
+	/// 				 userPoolPreInvestings(bytes32)
+    function userPoolPreInvestings(bytes32 user_address) external view returns (StakingBond[] memory pre_investing_bond);
+
+    /// @notice Query a user's all queued positions
+    /// @param user_address: user address, substrate
+    /// @custom:selector 0x64833a66
+	/// 				 userPoolPreInvestingsQueued(bytes32)
+    function userPoolPreInvestingsQueued(bytes32 user_address) external view returns (QueuedStakingBond[] memory queued_bond);
+
+    /// @notice Query corresponding pool proposal index's total pre-investing amount 
+    /// @param start_id: Proposal index start_id, included
+    /// @param end_id: Proposal index end id, excluded
+    /// @custom:selector 0x3a4fbb0f
+	/// 				 poolPreInvestingsTotal(uint256,uint256)
+    function poolPreInvestingsTotal(uint256 start_id, uint256 end_id) external view returns (uint256[] memory pre_investing_total);
+
+    /// @notice Query corresponding pool proposal index's total pre-investing queued amount 
+    /// @param start_id: Proposal index start_id, included
+    /// @param end_id: Proposal index end id, excluded
+    /// @custom:selector 0xa54205c4
+	/// 				 poolPreInvestingsQueuedTotal(uint256,uint256)
+    function poolPreInvestingsQueuedTotal(uint256 start_id, uint256 end_id) external view returns (uint256[] memory queued_total);
 }
