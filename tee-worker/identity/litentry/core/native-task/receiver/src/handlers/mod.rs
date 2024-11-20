@@ -15,4 +15,4 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 mod request_vc_handler;
-pub use request_vc_handler::handle_request_vc;
+pub use request_vc_handler::*;

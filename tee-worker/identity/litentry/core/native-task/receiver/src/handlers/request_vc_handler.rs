@@ -20,10 +20,8 @@ use codec::{Decode, Encode};
 use frame_support::ensure;
 use ita_sgx_runtime::VERSION as SIDECHAIN_VERSION;
 use ita_stf::{
-	aes_encrypt_default,
-	helpers::ensure_self,
-	trusted_call_result::{NewRequestVCResult, RequestVcErrorDetail},
-	Getter, TrustedCallSigned,
+	aes_encrypt_default, helpers::ensure_self, trusted_call_result::RequestVcErrorDetail, Getter,
+	TrustedCallSigned,
 };
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -41,7 +39,9 @@ use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::storage_value_key;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
-use itp_types::{parentchain::ParentchainId, BlockNumber as SidechainBlockNumber, OpaqueCall};
+use itp_types::{
+	parentchain::ParentchainId, AccountId, BlockNumber as SidechainBlockNumber, OpaqueCall,
+};
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_omni_account::InMemoryStore as OmniAccountStore;
@@ -53,6 +53,13 @@ use litentry_primitives::{
 };
 use sp_core::{H160, H256 as Hash};
 use std::time::Instant;
+
+pub struct RequestVCResult {
+	pub vc_payload: AesOutput,
+	pub vc_logs: Option<AesOutput>,
+	pub pre_mutated_account_store: AesOutput,
+	pub omni_account: AccountId,
+}
 
 pub fn handle_request_vc<
 	ShieldingKeyRepository,
@@ -84,7 +91,7 @@ pub fn handle_request_vc<
 	assertion: Assertion,
 	maybe_key: Option<RequestAesKey>,
 	req_ext_hash: Hash,
-) -> Result<NewRequestVCResult, RequestVcErrorDetail>
+) -> Result<RequestVCResult, RequestVcErrorDetail>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -230,7 +237,7 @@ where
 	let mutated_account_store =
 		if is_new_account_store { member_identities } else { Default::default() };
 
-	let res = NewRequestVCResult {
+	let vc_result = RequestVCResult {
 		vc_payload: aes_encrypt_default(&key, &vc_payload),
 		vc_logs: vc_logs.map(|log| aes_encrypt_default(&key, &log)),
 		pre_mutated_account_store: aes_encrypt_default(&key, &mutated_account_store.encode()),
@@ -264,7 +271,7 @@ where
 	}
 	log::info!("Vc issued for {}, assertion: {:?}", who.to_did().unwrap_or_default(), assertion);
 
-	Ok(res)
+	Ok(vc_result)
 }
 
 fn extract_identity_from_member<Aes256KeyRepository>(

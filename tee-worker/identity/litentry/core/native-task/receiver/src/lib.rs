@@ -53,7 +53,7 @@ use ita_stf::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
-	api_client::{compose_call, ExtrinsicReport, XtStatus},
+	api_client::{compose_call, XtStatus},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
@@ -252,7 +252,7 @@ where
 	Ok(tca.call)
 }
 
-type TrustedCallResult = Result<ExtrinsicReport<H256>, NativeTaskError>;
+type TrustedCallResult = Result<NativeTaskResult<H256>, NativeTaskError>;
 
 fn handle_trusted_call<
 	ShieldingKeyRepository,
@@ -460,7 +460,8 @@ fn handle_trusted_call<
 				maybe_key,
 				req_ext_hash,
 			) {
-				Ok(result) => {
+				Ok(vc_result) => {
+					let result: TrustedCallResult = Ok(vc_result.into());
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
@@ -498,7 +499,7 @@ fn handle_trusted_call<
 	) {
 		Ok(extrinsic_reports) =>
 			if let Some(report) = extrinsic_reports.first() {
-				let result: TrustedCallResult = Ok(report.clone());
+				let result: TrustedCallResult = Ok(report.into());
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			} else {
 				log::error!("Failed to get extrinsic report");

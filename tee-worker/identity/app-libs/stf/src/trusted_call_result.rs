@@ -21,7 +21,7 @@
 use crate::{Box, String};
 use codec::{Decode, Encode};
 use itp_stf_interface::StfExecutionResult;
-use itp_types::{AccountId, H256};
+use itp_types::H256;
 use litentry_primitives::{AesOutput, VCMPError};
 use std::vec::Vec;
 
@@ -103,16 +103,6 @@ pub struct RequestVCResult {
 	// they should be referenced/used only when the client's local IDGraph is empty
 	pub pre_mutated_id_graph: AesOutput,
 	pub pre_id_graph_hash: H256,
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub struct NewRequestVCResult {
-	pub vc_payload: AesOutput,
-	// Mainly used to returning logs in dynamic contract VC.
-	pub vc_logs: Option<AesOutput>,
-	// This should be referenced/used only when the client's local AccountStore is empty
-	pub pre_mutated_account_store: AesOutput,
-	pub omni_account: AccountId,
 }
 
 #[derive(Debug, Encode, Decode, Clone, PartialEq, Eq)]

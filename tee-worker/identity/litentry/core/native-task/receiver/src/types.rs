@@ -14,11 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::handlers::RequestVCResult;
 use codec::{Decode, Encode};
 use ita_sgx_runtime::Hash;
-use ita_stf::{trusted_call_result::RequestVcErrorDetail, Getter, TrustedCallSigned};
+use ita_stf::{trusted_call_result::RequestVcErrorDetail, AesOutput, Getter, TrustedCallSigned};
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
+use itp_node_api::{
+	api_client::{ExtrinsicReport, TransactionStatus},
+	metadata::{provider::AccessNodeMetadata, NodeMetadata},
+};
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{
 	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
@@ -26,6 +30,7 @@ use itp_sgx_crypto::{
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
+use itp_types::AccountId;
 use lc_data_providers::DataProviderConfig;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
@@ -156,4 +161,46 @@ pub enum NativeTaskError {
 	InvalidRequest,
 	NativeRequestSendFailed,
 	RequestVcFailed(RequestVcErrorDetail),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum NativeTaskResult<Hash: Decode> {
+	ExtrinsicReport {
+		// Hash of the extrinsic.
+		extrinsic_hash: Hash,
+		// Block hash of the block the extrinsic was included in.
+		// Only available if watched until at least `InBlock`.
+		block_hash: Option<Hash>,
+		// Last known Transaction Status.
+		status: TransactionStatus<Hash, Hash>,
+	},
+	RequestVcResult {
+		vc_payload: AesOutput,
+		// Mainly used to returning logs in dynamic contract VC.
+		vc_logs: Option<AesOutput>,
+		// This should be referenced/used only when the client's local AccountStore is empty
+		pre_mutated_account_store: AesOutput,
+		omni_account: AccountId,
+	},
+}
+
+impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskResult<Hash> {
+	fn from(report: &ExtrinsicReport<Hash>) -> Self {
+		NativeTaskResult::ExtrinsicReport {
+			extrinsic_hash: report.extrinsic_hash.clone(),
+			block_hash: report.block_hash.clone(),
+			status: report.status.clone().into(),
+		}
+	}
+}
+
+impl<Hash: Decode> From<RequestVCResult> for NativeTaskResult<Hash> {
+	fn from(result: RequestVCResult) -> Self {
+		NativeTaskResult::RequestVcResult {
+			vc_payload: result.vc_payload,
+			vc_logs: result.vc_logs,
+			pre_mutated_account_store: result.pre_mutated_account_store,
+			omni_account: result.omni_account,
+		}
+	}
 }
