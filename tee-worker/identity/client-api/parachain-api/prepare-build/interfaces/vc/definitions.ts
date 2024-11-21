@@ -61,6 +61,12 @@ export default {
             pre_mutated_id_graph: "AesOutput",
             pre_id_graph_hash: "H256",
         },
+        NewRequestVCResult: {
+            vc_payload: "AesOutput",
+            vc_logs: "Option<AesOutput>",
+            pre_mutated_account_store: "AesOutput",
+            omni_account: "AccountId",
+        },
         VCMPError: {
             _enum: {
                 RequestVCFailed: "(Assertion, ErrorDetail)",
@@ -90,6 +96,9 @@ export default {
                 CallSendingFailed: "String",
                 ExtrinsicConstructionFailed: "String", // Stringified itp_extrinsics_factory::Error
                 ExtrinsicSendingFailed: "String", // Stringified sgx_status_t
+                ExtractingMemberIdentityFailed: "Null",
+                OmniAccountStoreRetrievalFailed: "Null",
+                CreateAccountStoreFailed: "String",
             },
         },
         RequestVcResultOrError: {

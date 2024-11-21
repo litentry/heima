@@ -112,7 +112,13 @@ export default {
          * Native tasks (OmniAccount) results
          * @see tee-worker/identity/litentry/core/native-task/receiver/src/lib.rs
          */
-        TrustedCallResult: "Result<ExtrinsicReport, NativeTaskError>",
+        TrustedCallResult: "Result<NativeTaskResult, NativeTaskError>",
+        NativeTaskResult: {
+            _enum: {
+                ExtrinsicReport: "ExtrinsicReport",
+                RequestVcResult: "NewRequestVCResult",
+            },
+        },
         ExtrinsicReport: {
             // Hash of the extrinsic.
             extrinsic_hash: "H256",
