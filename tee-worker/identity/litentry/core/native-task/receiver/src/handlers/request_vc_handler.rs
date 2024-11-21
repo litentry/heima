@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::NativeTaskContext;
-use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use ita_sgx_runtime::VERSION as SIDECHAIN_VERSION;
