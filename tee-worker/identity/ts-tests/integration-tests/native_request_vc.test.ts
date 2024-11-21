@@ -1,4 +1,5 @@
 import { assert } from 'chai';
+import { step } from 'mocha-steps';
 import { KeyObject, randomBytes } from 'crypto';
 import * as ed from '@noble/ed25519';
 import { base58Encode } from '@polkadot/util-crypto';
@@ -6,13 +7,24 @@ import { hexToU8a } from '@polkadot/util';
 import { validateVcSchema } from '@litentry/vc-schema-validator';
 import { CorePrimitivesIdentity, NewRequestVCResult, TrustedCallResult, WorkerRpcReturnValue } from 'parachain-api';
 import { IntegrationTestContext, SubstrateSigner } from './common/common-types';
-import { decryptWithAes, initIntegrationTestContext } from './common/utils';
+import {
+    Web2ValidationConfig,
+    buildIdentityHelper,
+    buildWeb2Validation,
+    decryptWithAes,
+    initIntegrationTestContext,
+    mockBatchAssertion,
+} from './common/utils';
 import { subscribeToEventsWithExtHash, subscribeToEvents } from './common/transactions';
 import { getTeeShieldingKey } from './common/di-utils';
 import { aesKey, sendRequest } from './common/call';
 import { nextRequestId } from './common/helpers';
 import {
+    buildWeb3ValidationData,
+    createAuthenticatedTrustedCallAddAccount,
     createAuthenticatedTrustedCallRequestVc,
+    getOmniAccount,
+    getOmniAccountNonce,
     sendRequestFromTrustedCall,
 } from './common/utils/native-request-helpers';
 
@@ -20,8 +32,9 @@ describe('Test native vc_request', function () {
     this.timeout(6000000);
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
-    let aliceWallet: SubstrateSigner;
-    let aliceIdentity: CorePrimitivesIdentity;
+    let aliceSubstrateWallet: SubstrateSigner;
+    let aliceSubstrateIdentity: CorePrimitivesIdentity;
+    let omniAccount: string;
 
     before(async function () {
         const parachainEndpoint = process.env.PARACHAIN_ENDPOINT;
@@ -31,11 +44,12 @@ describe('Test native vc_request', function () {
         context = await initIntegrationTestContext(parachainEndpoint);
         teeShieldingKey = await getTeeShieldingKey(context);
         const wallet = context.web3Wallets['substrate'];
-        aliceWallet = wallet['Alice'] as SubstrateSigner;
-        aliceIdentity = await aliceWallet.getIdentity(context);
+        aliceSubstrateWallet = wallet['Alice'] as SubstrateSigner;
+        aliceSubstrateIdentity = await aliceSubstrateWallet.getIdentity(context);
+        omniAccount = await getOmniAccount(context.api, aliceSubstrateIdentity);
     });
 
-    it('Request VC with no AccountStore created before', async function () {
+    step('Request VC with no AccountStore created before', async function () {
         const a1Assertion = {
             description: 'Have identified at least one account/address in both Web2 and Web3.',
             assertion: {
@@ -48,8 +62,8 @@ describe('Test native vc_request', function () {
             context.api,
             context.mrEnclave,
             context.api.createType('Index', 0),
-            aliceWallet,
-            aliceIdentity,
+            aliceSubstrateWallet,
+            aliceSubstrateIdentity,
             context.api.createType('Assertion', a1Assertion.assertion).toHex(),
             context.api.createType('Option<RequestAesKey>', aesKey).toHex(),
             requestIdentifier
@@ -59,7 +73,7 @@ describe('Test native vc_request', function () {
             console.log('VC response', JSON.stringify(vcResponse, null, 2));
             if (vcResponse.isOk && vcResponse.asOk.isRequestVcResult) {
                 console.log('Asserting VC');
-                await assertVc(context, aliceIdentity, vcResponse.asOk.asRequestVcResult);
+                await assertVc(context, aliceSubstrateIdentity, vcResponse.asOk.asRequestVcResult);
             }
         };
         const vcEventsPromise = subscribeToEventsWithExtHash(requestIdentifier, context);
@@ -72,6 +86,140 @@ describe('Test native vc_request', function () {
         assert.equal(vcEvents.length, 1);
         const omniAccountEvents = await omniAccountEventsPromise;
         assert.equal(omniAccountEvents.length, 1);
+    });
+
+    step('Add accounts to the AccountStore', async function () {
+        let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        assert.isTrue(accountStore.isSome, 'account store not found');
+        let membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 1, 'account store members count should be 1');
+
+        let currentNonce = (await getOmniAccountNonce(context.api, aliceSubstrateIdentity)).toNumber();
+        // twitter
+        const twitterIdentity = await buildIdentityHelper('mock_user', 'Twitter', context);
+        const validationConfig: Web2ValidationConfig = {
+            identityType: 'Twitter',
+            context,
+            signerIdentitity: aliceSubstrateIdentity,
+            linkIdentity: twitterIdentity,
+            verificationType: 'PublicTweet',
+            validationNonce: currentNonce,
+        };
+        const twitterValidationData = await buildWeb2Validation(validationConfig);
+        const addTwitterAccountCall = await createAuthenticatedTrustedCallAddAccount(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            aliceSubstrateWallet,
+            aliceSubstrateIdentity,
+            twitterIdentity,
+            twitterValidationData.toHex(),
+            true // public account
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, addTwitterAccountCall);
+        accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 2, 'account store members count should be 2');
+
+        // EVM
+        currentNonce++;
+        const evmSigner = context.web3Wallets.evm.Alice;
+        const evmIdentity = await evmSigner.getIdentity(context);
+        const evmValidationData = await buildWeb3ValidationData(
+            context,
+            aliceSubstrateIdentity,
+            evmIdentity,
+            currentNonce,
+            'evm',
+            evmSigner
+        );
+        const addEvmAccountCall = await createAuthenticatedTrustedCallAddAccount(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            aliceSubstrateWallet,
+            aliceSubstrateIdentity,
+            evmIdentity,
+            evmValidationData.toHex(),
+            true // public account
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, addEvmAccountCall);
+        accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 3, 'account store members count should be 3');
+
+        // Bitcoin
+        currentNonce++;
+        const bitcoinSigner = context.web3Wallets.bitcoin.Alice;
+        const bitcoinIdentity = await bitcoinSigner.getIdentity(context);
+        const bitcoinValidationData = await buildWeb3ValidationData(
+            context,
+            aliceSubstrateIdentity,
+            bitcoinIdentity,
+            currentNonce,
+            'bitcoin',
+            bitcoinSigner
+        );
+        const addBitcoinAccountCall = await createAuthenticatedTrustedCallAddAccount(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            aliceSubstrateWallet,
+            aliceSubstrateIdentity,
+            bitcoinIdentity,
+            bitcoinValidationData.toHex(),
+            true // public account
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, addBitcoinAccountCall);
+        accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 4, 'account store members count should be 4');
+    });
+
+    // Request VC with AccountStore created before
+    mockBatchAssertion.forEach(({ description, assertion }) => {
+        step(`Request VC payload: ${JSON.stringify(assertion)} (alice)`, async function () {
+            const currentNonce = (await getOmniAccountNonce(context.api, aliceSubstrateIdentity)).toNumber();
+            const requestIdentifier = `0x${randomBytes(32).toString('hex')}`;
+            console.log(
+                `request vc direct ${Object.keys(assertion)[0]} for Alice ... Assertion description: ${description}`
+            );
+
+            let requestVcCall;
+            if (Array.isArray(assertion)) {
+                // TODO: add this when batch vc request is implemented
+                return;
+            } else {
+                requestVcCall = await createAuthenticatedTrustedCallRequestVc(
+                    context.api,
+                    context.mrEnclave,
+                    context.api.createType('Index', currentNonce),
+                    aliceSubstrateWallet,
+                    aliceSubstrateIdentity,
+                    context.api.createType('Assertion', assertion).toHex(),
+                    context.api.createType('Option<RequestAesKey>', aesKey).toHex(),
+                    requestIdentifier
+                );
+            }
+
+            // Instead of waiting for final response we will listen all responses from the call
+            const onMessageReceived = async (res: WorkerRpcReturnValue) => {
+                const vcResponse: TrustedCallResult = context.api.createType('TrustedCallResult', res.value);
+                console.log('VC response', JSON.stringify(vcResponse, null, 2));
+                if (vcResponse.isOk && vcResponse.asOk.isRequestVcResult) {
+                    console.log('Asserting VC');
+                    await assertVc(context, aliceSubstrateIdentity, vcResponse.asOk.asRequestVcResult);
+                }
+            };
+
+            const vcEventsPromise = subscribeToEventsWithExtHash(requestIdentifier, context);
+
+            await sendRequestFromTrustedCall(context, teeShieldingKey, requestVcCall, onMessageReceived);
+
+            console.log('Waiting for events...');
+            const vcEvents = await vcEventsPromise;
+            assert.equal(vcEvents.length, Array.isArray(assertion) ? assertion.length : 1);
+        });
     });
 });
 
