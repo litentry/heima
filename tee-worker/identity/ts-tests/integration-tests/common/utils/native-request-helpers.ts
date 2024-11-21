@@ -173,6 +173,26 @@ export async function createAuthenticatedTrustedCallPublicizeAccount(
     );
 }
 
+export async function createAuthenticatedTrustedCallRequestVc(
+    parachainApi: ApiPromise,
+    mrenclave: string,
+    nonce: Codec,
+    sender: Signer,
+    senderIdentity: CorePrimitivesIdentity,
+    assertion: string,
+    aesKey: string,
+    hash: string
+) {
+    return createAuthenticatedTrustedCall(
+        parachainApi,
+        ['request_vc', '(LitentryIdentity, LitentryIdentity, Assertion, Option<RequestAesKey>, H256)'],
+        sender,
+        mrenclave,
+        nonce,
+        [senderIdentity, senderIdentity, assertion, aesKey, hash]
+    );
+}
+
 export const getOmniAccount = async (parachainApi: ApiPromise, identity: CorePrimitivesIdentity): Promise<string> => {
     const omniAccount = await parachainApi.rpc.state.call('OmniAccountApi_omni_account', identity.toHex());
 
