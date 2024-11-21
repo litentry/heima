@@ -19,7 +19,7 @@ import {
     createAuthenticatedTrustedCallPublicizeAccount,
     fundAccount,
     createAuthenticatedTrustedCallTransferNativeIntent,
-} from './common/utils/omni-account-helpers';
+} from './common/utils/native-request-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 import { encodeAddress } from '@polkadot/util-crypto';
 
