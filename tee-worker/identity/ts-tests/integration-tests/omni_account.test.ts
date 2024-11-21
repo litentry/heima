@@ -41,7 +41,7 @@ describe('Omni Account', function () {
         const wallet = context.web3Wallets['substrate'];
         aliceWallet = wallet['Alice'] as SubstrateSigner;
         aliceIdentity = await aliceWallet.getIdentity(context);
-        omniAccount = await getOmniAccount(context.api, await aliceWallet.getIdentity(context));
+        omniAccount = await getOmniAccount(context.api, aliceIdentity);
     });
 
     step('test create_account_store', async function () {
