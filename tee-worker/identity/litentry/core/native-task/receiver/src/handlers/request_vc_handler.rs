@@ -245,10 +245,11 @@ where
 	};
 
 	let on_vc_issued_call = OpaqueCall::from_tuple(&compose_call!(
-		metadata,
+		&metadata,
 		"VCManagement",
 		"on_vc_issued",
 		who.clone(),
+		assertion.clone(),
 		omni_account,
 		req_ext_hash
 	));
