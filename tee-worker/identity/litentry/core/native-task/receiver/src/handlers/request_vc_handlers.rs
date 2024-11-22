@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{NativeTaskContext, NativeTaskResult};
+use crate::{Mutex, NativeTaskContext, NativeTaskResult};
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
@@ -54,7 +54,7 @@ use litentry_primitives::{
 	ParentchainBlockNumber, RequestAesKey,
 };
 use sp_core::{H160, H256 as Hash};
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
 pub type HandleRequestVcResult = Result<RequestVcOk, RequestVcErrorDetail>;
 
@@ -282,7 +282,7 @@ where
 }
 
 fn get_elegible_identities(
-	member_identities: &Vec<Identity>,
+	member_identities: &[Identity],
 	assertion: &Assertion,
 ) -> Vec<IdentityNetworkTuple> {
 	let supported_networks = assertion.get_supported_web3networks();
@@ -308,12 +308,10 @@ fn get_elegible_identities(
 				} else {
 					None
 				}
+			} else if identity.is_web3() && !networks.is_empty() {
+				Some((identity.clone(), networks))
 			} else {
-				if identity.is_web3() && !networks.is_empty() {
-					Some((identity.clone(), networks))
-				} else {
-					None
-				}
+				None
 			}
 		})
 		.collect()

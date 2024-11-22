@@ -19,7 +19,6 @@
 use crate::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use ita_sgx_runtime::Hash;
 use ita_stf::{Getter, TrustedCallSigned};
-use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoEncrypt};
 use itp_stf_executor::traits::StfEnclaveSigning;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_utils::stringify::account_id_to_string;
@@ -95,7 +94,7 @@ pub fn create_credential_str<
 		Assertion::A11(min_balance) =>
 			build_holding_time(req, AmountHoldingTimeType::ETH, min_balance, &data_provider_config),
 
-		Assertion::A13(owner) => lc_assertion_build::a13::build(req, ocall_api.clone(), &owner),
+		Assertion::A13(owner) => lc_assertion_build::a13::build(req, ocall_api, &owner),
 
 		Assertion::A14 => lc_assertion_build::a14::build(req, &data_provider_config),
 
@@ -164,12 +163,8 @@ pub fn create_credential_str<
 			lc_assertion_build_v2::nft_holder::build(req, nft_type, &data_provider_config),
 
 		Assertion::Dynamic(params) => {
-			let result = lc_assertion_build::dynamic::build(
-				req,
-				params,
-				assertion_repository.clone(),
-				ocall_api.clone(),
-			)?;
+			let result =
+				lc_assertion_build::dynamic::build(req, params, assertion_repository, ocall_api)?;
 			vc_logs = Some(result.1);
 			Ok(result.0)
 		},

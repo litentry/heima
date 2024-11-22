@@ -14,13 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::handlers::RequestVcOk;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::Hash;
 use ita_stf::{
 	trusted_call_result::{RequestVcErrorDetail, RequestVcResultOrError},
-	AesOutput, Getter, TrustedCallSigned,
+	Getter, TrustedCallSigned,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
@@ -34,7 +33,6 @@ use itp_sgx_crypto::{
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
-use itp_types::AccountId;
 use lc_data_providers::DataProviderConfig;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
@@ -158,7 +156,7 @@ impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskOk<Hash> {
 		NativeTaskOk::ExtrinsicReport {
 			extrinsic_hash: report.extrinsic_hash.clone(),
 			block_hash: report.block_hash.clone(),
-			status: report.status.clone().into(),
+			status: report.status.clone(),
 		}
 	}
 }
