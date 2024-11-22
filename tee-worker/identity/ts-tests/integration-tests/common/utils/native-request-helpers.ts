@@ -173,6 +173,29 @@ export async function createAuthenticatedTrustedCallPublicizeAccount(
     );
 }
 
+export async function createAuthenticatedTrustedCallRequestBatchVc(
+    parachainApi: ApiPromise,
+    mrenclave: string,
+    nonce: Codec,
+    sender: Signer,
+    senderIdentity: CorePrimitivesIdentity,
+    assertions: string,
+    aesKey: string,
+    hash: string
+) {
+    return createAuthenticatedTrustedCall(
+        parachainApi,
+        [
+            'request_batch_vc',
+            '(LitentryIdentity, LitentryIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
+        ],
+        sender,
+        mrenclave,
+        nonce,
+        [senderIdentity, senderIdentity, assertions, aesKey, hash]
+    );
+}
+
 export async function createAuthenticatedTrustedCallRequestVc(
     parachainApi: ApiPromise,
     mrenclave: string,

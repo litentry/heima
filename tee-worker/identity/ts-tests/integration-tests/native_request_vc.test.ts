@@ -28,6 +28,7 @@ import { nextRequestId } from './common/helpers';
 import {
     buildWeb3ValidationData,
     createAuthenticatedTrustedCallAddAccount,
+    createAuthenticatedTrustedCallRequestBatchVc,
     createAuthenticatedTrustedCallRequestVc,
     getOmniAccount,
     getOmniAccountNonce,
@@ -196,8 +197,17 @@ describe('Test native vc_request', function () {
 
             let requestVcCall;
             if (Array.isArray(assertion)) {
-                // TODO: add this when batch vc request is implemented
-                return;
+                console.log('>>>> Batch Assertions');
+                requestVcCall = await createAuthenticatedTrustedCallRequestBatchVc(
+                    context.api,
+                    context.mrEnclave,
+                    context.api.createType('Index', currentNonce),
+                    aliceSubstrateWallet,
+                    aliceSubstrateIdentity,
+                    context.api.createType('Vec<Assertion>', assertion).toHex(),
+                    context.api.createType('Option<RequestAesKey>', aesKey).toHex(),
+                    requestIdentifier
+                );
             } else {
                 requestVcCall = await createAuthenticatedTrustedCallRequestVc(
                     context.api,
