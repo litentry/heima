@@ -112,8 +112,8 @@ export default {
          * Native tasks (OmniAccount) results
          * @see tee-worker/identity/litentry/core/native-task/receiver/src/lib.rs
          */
-        TrustedCallResult: "Result<NativeTaskResult, NativeTaskError>",
-        NativeTaskResult: {
+        TrustedCallResult: "Result<TrustedCallOk, TrustedCallError>",
+        TrustedCallOk: {
             _enum: {
                 ExtrinsicReport: "ExtrinsicReport",
                 RequestVcResult: "RequestVcResultOrError",
@@ -154,7 +154,7 @@ export default {
                 Invalid: "Null",
             },
         },
-        NativeTaskError: {
+        TrustedCallError: {
             _enum: {
                 UnexpectedCall: "Text",
                 ShieldingKeyRetrievalFailed: "Text", // Stringified itp_sgx_crypto::Error
