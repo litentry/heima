@@ -116,7 +116,7 @@ export default {
         NativeTaskResult: {
             _enum: {
                 ExtrinsicReport: "ExtrinsicReport",
-                RequestVcResult: "NewRequestVCResult",
+                RequestVcResult: "RequestVcResultOrError",
             },
         },
         ExtrinsicReport: {
