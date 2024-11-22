@@ -176,7 +176,6 @@ export default {
                 ExtrinsicConstructionFailed: "Text", // Stringified itp_extrinsics_factory::Error
                 ExtrinsicSendingFailed: "Text", // Stringified sgx_status_t
                 InvalidRequest: "Null",
-                NativeRequestSendFailed: "Null",
             },
         },
     },
