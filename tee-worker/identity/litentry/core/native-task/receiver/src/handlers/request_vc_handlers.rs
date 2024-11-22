@@ -61,30 +61,8 @@ pub struct RequestVCResult {
 	pub omni_account: AccountId,
 }
 
-pub fn handle_request_vc<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
-	AssertionRepository,
-	StateHandler,
->(
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-			AssertionRepository,
-			StateHandler,
-		>,
-	>,
+pub fn handle_request_vc<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 	shard: Hash,
 	signer: Identity,
 	who: Identity,
@@ -93,18 +71,17 @@ pub fn handle_request_vc<
 	req_ext_hash: Hash,
 ) -> Result<RequestVCResult, RequestVcErrorDetail>
 where
-	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-	AssertionRepository:
-		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
-	StateHandler: HandleState + Send + Sync + 'static,
-	StateHandler::StateT: SgxExternalitiesTrait,
+	SR: AccessKey + Send + Sync + 'static,
+	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let start_time = Instant::now();
 	log::debug!(
