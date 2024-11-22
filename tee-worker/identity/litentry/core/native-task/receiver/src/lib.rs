@@ -33,10 +33,15 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use crate::sgx_reexport_prelude::*;
 
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+#[cfg(feature = "sgx")]
+use std::sync::SgxMutex as Mutex;
+
 mod handlers;
 
 mod trusted_call_authenticated;
-use handlers::{handle_request_vc, send_vc_response};
+use handlers::{handle_request_vc, send_vc_response, VcRequestRegistry};
 pub use trusted_call_authenticated::*;
 
 mod types;
@@ -45,10 +50,11 @@ use types::*;
 
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Compact, Decode, Encode};
-use futures::executor::ThreadPoolBuilder;
+use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use ita_sgx_runtime::Hash;
 use ita_stf::{
 	helpers::{get_expected_raw_message, verify_web3_identity},
+	trusted_call_result::RequestVcErrorDetail,
 	Getter, TrustedCall, TrustedCallSigned,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -81,6 +87,7 @@ use litentry_primitives::{
 	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
 };
 use sp_core::{blake2_256, H160, H256};
+use std::collections::HashSet;
 
 const THREAD_POOL_SIZE: usize = 480;
 
@@ -108,6 +115,7 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 	while let Ok(mut req) = request_receiver.recv() {
 		thread_pool.spawn_ok({
 			let context = context.clone();
+			let thread_pool = thread_pool.clone();
 			async move {
 				let request = &mut req.request;
 				let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
@@ -117,6 +125,7 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 						trusted_call,
 						connection_hash,
 						request.shard,
+						thread_pool,
 					),
 					Err(e) => {
 						log::error!("Failed to get trusted call from request: {:?}", e);
@@ -211,6 +220,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 	call: TrustedCall,
 	connection_hash: H256,
 	shard: H256,
+	thread_pool: ThreadPool,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -389,6 +399,101 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				req_ext_hash,
 			);
 			send_vc_response(connection_hash, context, result, 0u8, 1u8, false);
+			return
+		},
+		TrustedCall::request_batch_vc(signer, who, assertions, maybe_key, req_ext_hash) => {
+			// use local registry to manage request reponse status
+			let vc_req_registry = VcRequestRegistry::new();
+
+			// Detect duplicate assertions
+			let mut seen: HashSet<Hash> = HashSet::new();
+			let mut unique_assertions = Vec::new();
+			for assertion in assertions.into_iter() {
+				let hash = Hash::from(blake2_256(&assertion.encode()));
+				if seen.insert(hash) {
+					unique_assertions.push(Some(assertion));
+				} else {
+					unique_assertions.push(None);
+				}
+			}
+
+			let assertion_len = unique_assertions.len() as u8;
+			vc_req_registry.add_new_item(connection_hash, assertion_len);
+
+			for (idx, maybe_assertion) in unique_assertions.into_iter().enumerate() {
+				if let Some(assertion) = maybe_assertion {
+					thread_pool.spawn_ok({
+						let context = context.clone();
+						let signer = signer.clone();
+						let who = who.clone();
+						let vc_req_registry = vc_req_registry.clone();
+
+						async move {
+							let result = handle_request_vc(
+								context.clone(),
+								shard,
+								signer,
+								who,
+								assertion,
+								maybe_key,
+								req_ext_hash,
+							);
+							match vc_req_registry.update_item(connection_hash) {
+								Ok(do_watch) => {
+									send_vc_response(
+										connection_hash,
+										context,
+										result,
+										idx as u8,
+										assertion_len,
+										do_watch,
+									);
+								},
+								Err(e) => {
+									log::error!(
+										"Failed to find connection_hash in registry: {:?}",
+										e
+									);
+									send_vc_response(
+										connection_hash,
+										context,
+										Err(RequestVcErrorDetail::ConnectionHashNotFound(
+											e.to_string(),
+										)),
+										idx as u8,
+										assertion_len,
+										false,
+									);
+								},
+							}
+						}
+					});
+				} else {
+					match vc_req_registry.update_item(connection_hash) {
+						Ok(do_watch) => {
+							send_vc_response(
+								connection_hash,
+								context.clone(),
+								Err(RequestVcErrorDetail::DuplicateAssertionRequest),
+								idx as u8,
+								assertion_len,
+								do_watch,
+							);
+						},
+						Err(e) => {
+							log::error!("[DuplicateAssertionRequest] Failed to find connection_hash in registry: {:?}", e);
+							send_vc_response(
+								connection_hash,
+								context.clone(),
+								Err(RequestVcErrorDetail::ConnectionHashNotFound(e.to_string())),
+								idx as u8,
+								assertion_len,
+								false,
+							);
+						},
+					}
+				}
+			}
 			return
 		},
 		_ => {

@@ -352,3 +352,45 @@ pub fn send_vc_response<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, S
 		log::warn!("Failed to update metric for VC Issuance: {:?}", e);
 	}
 }
+
+#[derive(Clone)]
+pub struct VcRequestRegistry {
+	status_map: Arc<Mutex<HashMap<Hash, AssertionStatus>>>,
+}
+
+struct AssertionStatus {
+	pub total: u8,
+	pub processed: u8,
+}
+
+impl VcRequestRegistry {
+	pub fn new() -> Self {
+		Self { status_map: Arc::new(Mutex::new(HashMap::new())) }
+	}
+
+	pub fn add_new_item(&self, key: Hash, total: u8) {
+		let mut map = self.status_map.lock().unwrap();
+		map.insert(key, AssertionStatus { total, processed: 0u8 });
+	}
+
+	// Return value indicates whether some item is still not yet processed.
+	pub fn update_item(&self, key: Hash) -> Result<bool, &'static str> {
+		let mut map = self.status_map.lock().unwrap();
+
+		#[allow(unused_assignments)]
+		let mut all_processed = false;
+
+		if let Some(entry) = map.get_mut(&key) {
+			entry.processed += 1;
+			all_processed = entry.processed == entry.total;
+		} else {
+			return Err("Item not found in map")
+		}
+
+		if all_processed {
+			map.remove(&key);
+		}
+
+		Ok(!all_processed)
+	}
+}
