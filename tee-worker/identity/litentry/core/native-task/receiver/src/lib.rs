@@ -132,7 +132,7 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 					),
 					Err(e) => {
 						log::error!("Failed to get trusted call from request: {:?}", e);
-						let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
+						let res: TrustedCallResult = Err(TrustedCallError::InvalidRequest);
 						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 					},
 				};
@@ -163,8 +163,8 @@ where
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
 		Ok(value) => value,
 		Err(e) => {
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::ShieldingKeyRetrievalFailed(format!("{}", e)));
+			let res: TrustedCallResult =
+				Err(TrustedCallError::ShieldingKeyRetrievalFailed(format!("{}", e)));
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 			return Err("Shielding key retrieval failed")
 		},
@@ -179,8 +179,7 @@ where
 	{
 		Some(tca) => tca,
 		None => {
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::RequestPayloadDecodingFailed);
+			let res: TrustedCallResult = Err(TrustedCallError::RequestPayloadDecodingFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 			return Err("Request payload decoding failed")
 		},
@@ -188,7 +187,7 @@ where
 	let mrenclave = match context.ocall_api.get_mrenclave_of_self() {
 		Ok(m) => m.m,
 		Err(_) => {
-			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MrEnclaveRetrievalFailed);
+			let res: TrustedCallResult = Err(TrustedCallError::MrEnclaveRetrievalFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 			return Err("MrEnclave retrieval failed")
 		},
@@ -207,8 +206,7 @@ where
 	};
 
 	if !authentication_valid {
-		let res: Result<(), NativeTaskError> =
-			Err(NativeTaskError::AuthenticationVerificationFailed);
+		let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
 		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 		return Err("Authentication verification failed")
 	}
@@ -216,7 +214,7 @@ where
 	Ok(tca.call)
 }
 
-type NativeTaskResult = Result<NativeTaskOk<H256>, NativeTaskError>;
+type TrustedCallResult = Result<TrustedCallOk<H256>, TrustedCallError>;
 
 fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
@@ -242,7 +240,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		Ok(Some(metadata)) => metadata,
 		_ => {
 			log::error!("Failed to get node metadata");
-			let result: NativeTaskResult = Err(NativeTaskError::MetadataRetrievalFailed(
+			let result: TrustedCallResult = Err(TrustedCallError::MetadataRetrievalFailed(
 				"Failed to get node metadata".to_string(),
 			));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
@@ -297,7 +295,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
-					let result: NativeTaskResult = Err(NativeTaskError::UnauthorizedSigner);
+					let result: TrustedCallResult = Err(TrustedCallError::UnauthorizedSigner);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
@@ -309,7 +307,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			let validation_result = match validation_data {
 				ValidationData::Web2(validation_data) =>
 					if !identity.is_web2() {
-						Err(NativeTaskError::InvalidMemberIdentity)
+						Err(TrustedCallError::InvalidMemberIdentity)
 					} else {
 						verify_web2_identity(
 							&who,
@@ -320,22 +318,22 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 						)
 						.map_err(|e| {
 							log::error!("Failed to verify web2 identity: {:?}", e);
-							NativeTaskError::ValidationDataVerificationFailed
+							TrustedCallError::ValidationDataVerificationFailed
 						})
 					},
 				ValidationData::Web3(validation_data) =>
 					if !identity.is_web3() {
-						Err(NativeTaskError::InvalidMemberIdentity)
+						Err(TrustedCallError::InvalidMemberIdentity)
 					} else {
 						verify_web3_identity(&identity, &raw_msg, &validation_data).map_err(|e| {
 							log::error!("Failed to verify web3 identity: {:?}", e);
-							NativeTaskError::ValidationDataVerificationFailed
+							TrustedCallError::ValidationDataVerificationFailed
 						})
 					},
 			};
 
 			if let Err(e) = validation_result {
-				let result: NativeTaskResult = Err(e);
+				let result: TrustedCallResult = Err(e);
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 				return
 			}
@@ -348,7 +346,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to create member account: {:?}", e);
-					let result: NativeTaskResult = Err(e);
+					let result: TrustedCallResult = Err(e);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
@@ -501,8 +499,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
-			let result: NativeTaskResult =
-				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
+			let result: TrustedCallResult =
+				Err(TrustedCallError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
@@ -512,8 +510,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		Ok(extrinsic) => extrinsic,
 		Err(e) => {
 			log::error!("Failed to create extrinsic: {:?}", e);
-			let result: NativeTaskResult =
-				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
+			let result: TrustedCallResult =
+				Err(TrustedCallError::ExtrinsicConstructionFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
@@ -526,19 +524,19 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 	) {
 		Ok(extrinsic_reports) =>
 			if let Some(report) = extrinsic_reports.first() {
-				let result: NativeTaskResult = Ok(report.into());
+				let result: TrustedCallResult = Ok(report.into());
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			} else {
 				log::error!("Failed to get extrinsic report");
-				let result: NativeTaskResult = Err(NativeTaskError::ExtrinsicSendingFailed(
+				let result: TrustedCallResult = Err(TrustedCallError::ExtrinsicSendingFailed(
 					"Failed to get extrinsic report".to_string(),
 				));
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			},
 		Err(e) => {
 			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
-			let result: NativeTaskResult =
-				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
+			let result: TrustedCallResult =
+				Err(TrustedCallError::ExtrinsicSendingFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 		},
 	}
@@ -548,7 +546,7 @@ fn create_member_account<Aes256KeyRepository>(
 	aes256_key_repository: Arc<Aes256KeyRepository>,
 	identity: &Identity,
 	is_public: bool,
-) -> Result<MemberAccount, NativeTaskError>
+) -> Result<MemberAccount, TrustedCallError>
 where
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key>,
 {
@@ -560,7 +558,7 @@ where
 		Ok(key) => Ok(key),
 		Err(e) => {
 			log::error!("Failed to retrieve aes key: {:?}", e);
-			Err(NativeTaskError::MissingAesKey)
+			Err(TrustedCallError::MissingAesKey)
 		},
 	}?;
 

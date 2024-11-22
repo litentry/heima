@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Context, Mutex, NativeTaskResult};
+use crate::{Context, Mutex, TrustedCallResult};
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
@@ -338,7 +338,7 @@ pub fn send_vc_response<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, S
 	SH::StateT: SgxExternalitiesTrait,
 {
 	let vc_res = RequestVcResultOrError { result: result.map(|r| r.encode()), idx, len };
-	let native_task_result: NativeTaskResult = Ok(vc_res.into());
+	let native_task_result: TrustedCallResult = Ok(vc_res.into());
 
 	context
 		.author_api

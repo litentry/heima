@@ -109,7 +109,7 @@ where
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum NativeTaskError {
+pub enum TrustedCallError {
 	UnexpectedCall(String),
 	ShieldingKeyRetrievalFailed(String), // Stringified itp_sgx_crypto::Error
 	RequestPayloadDecodingFailed,
@@ -133,7 +133,7 @@ pub enum NativeTaskError {
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum NativeTaskOk<Hash: Decode> {
+pub enum TrustedCallOk<Hash: Decode> {
 	ExtrinsicReport {
 		// Hash of the extrinsic.
 		extrinsic_hash: Hash,
@@ -151,9 +151,9 @@ pub enum NativeTaskOk<Hash: Decode> {
 	},
 }
 
-impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskOk<Hash> {
+impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for TrustedCallOk<Hash> {
 	fn from(report: &ExtrinsicReport<Hash>) -> Self {
-		NativeTaskOk::ExtrinsicReport {
+		TrustedCallOk::ExtrinsicReport {
 			extrinsic_hash: report.extrinsic_hash.clone(),
 			block_hash: report.block_hash.clone(),
 			status: report.status.clone(),
@@ -161,8 +161,8 @@ impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskOk<Hash> {
 	}
 }
 
-impl<Hash: Decode> From<RequestVcResultOrError> for NativeTaskOk<Hash> {
+impl<Hash: Decode> From<RequestVcResultOrError> for TrustedCallOk<Hash> {
 	fn from(result: RequestVcResultOrError) -> Self {
-		NativeTaskOk::RequestVcResult { result: result.result, idx: result.idx, len: result.len }
+		TrustedCallOk::RequestVcResult { result: result.result, idx: result.idx, len: result.len }
 	}
 }
