@@ -36,7 +36,7 @@ pub use crate::sgx_reexport_prelude::*;
 mod handlers;
 
 mod trusted_call_authenticated;
-use handlers::handle_request_vc;
+use handlers::{handle_request_vc, send_vc_response};
 pub use trusted_call_authenticated::*;
 
 mod types;
@@ -204,7 +204,7 @@ where
 	Ok(tca.call)
 }
 
-type TrustedCallResult = Result<NativeTaskResult<H256>, NativeTaskError>;
+type NativeTaskResult = Result<NativeTaskOk<H256>, NativeTaskError>;
 
 fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
@@ -229,7 +229,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		Ok(Some(metadata)) => metadata,
 		_ => {
 			log::error!("Failed to get node metadata");
-			let result: TrustedCallResult = Err(NativeTaskError::MetadataRetrievalFailed(
+			let result: NativeTaskResult = Err(NativeTaskError::MetadataRetrievalFailed(
 				"Failed to get node metadata".to_string(),
 			));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
@@ -284,7 +284,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
-					let result: TrustedCallResult = Err(NativeTaskError::UnauthorizedSigner);
+					let result: NativeTaskResult = Err(NativeTaskError::UnauthorizedSigner);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
@@ -322,7 +322,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			};
 
 			if let Err(e) = validation_result {
-				let result: TrustedCallResult = Err(e);
+				let result: NativeTaskResult = Err(e);
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 				return
 			}
@@ -335,7 +335,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to create member account: {:?}", e);
-					let result: TrustedCallResult = Err(e);
+					let result: NativeTaskResult = Err(e);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
@@ -378,8 +378,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				identity
 			))
 		)),
-		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) =>
-			match handle_request_vc(
+		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) => {
+			let result = handle_request_vc(
 				context.clone(),
 				shard,
 				signer,
@@ -387,22 +387,13 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				assertion,
 				maybe_key,
 				req_ext_hash,
-			) {
-				Ok(vc_result) => {
-					let result: TrustedCallResult = Ok(vc_result.into());
-					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-					return
-				},
-				Err(e) => {
-					log::error!("Failed to handle request vc: {:?}", e);
-					let result: TrustedCallResult = Err(NativeTaskError::RequestVcFailed(e));
-					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-					return
-				},
-			},
+			);
+			send_vc_response(connection_hash, context, result, 0u8, 1u8, false);
+			return
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
-			let result: TrustedCallResult =
+			let result: NativeTaskResult =
 				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
@@ -413,7 +404,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		Ok(extrinsic) => extrinsic,
 		Err(e) => {
 			log::error!("Failed to create extrinsic: {:?}", e);
-			let result: TrustedCallResult =
+			let result: NativeTaskResult =
 				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
@@ -427,18 +418,18 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 	) {
 		Ok(extrinsic_reports) =>
 			if let Some(report) = extrinsic_reports.first() {
-				let result: TrustedCallResult = Ok(report.into());
+				let result: NativeTaskResult = Ok(report.into());
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			} else {
 				log::error!("Failed to get extrinsic report");
-				let result: TrustedCallResult = Err(NativeTaskError::ExtrinsicSendingFailed(
+				let result: NativeTaskResult = Err(NativeTaskError::ExtrinsicSendingFailed(
 					"Failed to get extrinsic report".to_string(),
 				));
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			},
 		Err(e) => {
 			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
-			let result: TrustedCallResult =
+			let result: NativeTaskResult =
 				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 		},

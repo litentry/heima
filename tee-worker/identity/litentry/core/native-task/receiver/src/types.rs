@@ -14,10 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::handlers::RequestVCResult;
+use crate::handlers::RequestVcOk;
+use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use ita_sgx_runtime::Hash;
-use ita_stf::{trusted_call_result::RequestVcErrorDetail, AesOutput, Getter, TrustedCallSigned};
+use ita_stf::{
+	trusted_call_result::{RequestVcErrorDetail, RequestVcResultOrError},
+	AesOutput, Getter, TrustedCallSigned,
+};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
 	api_client::{ExtrinsicReport, TransactionStatus},
@@ -35,7 +39,6 @@ use lc_data_providers::DataProviderConfig;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use sp_core::{ed25519::Pair as Ed25519Pair, H160};
-use std::{string::String, sync::Arc};
 
 pub struct NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>
 where
@@ -134,7 +137,7 @@ pub enum NativeTaskError {
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum NativeTaskResult<Hash: Decode> {
+pub enum NativeTaskOk<Hash: Decode> {
 	ExtrinsicReport {
 		// Hash of the extrinsic.
 		extrinsic_hash: Hash,
@@ -145,18 +148,16 @@ pub enum NativeTaskResult<Hash: Decode> {
 		status: TransactionStatus<Hash, Hash>,
 	},
 	RequestVcResult {
-		vc_payload: AesOutput,
-		// Mainly used to returning logs in dynamic contract VC.
-		vc_logs: Option<AesOutput>,
-		// This should be referenced/used only when the client's local AccountStore is empty
-		pre_mutated_account_store: AesOutput,
-		omni_account: AccountId,
+		// Vec<u8> == handlers::request_vc_handlers::RequestVcOk Encoded
+		result: Result<Vec<u8>, RequestVcErrorDetail>,
+		idx: u8,
+		len: u8,
 	},
 }
 
-impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskResult<Hash> {
+impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskOk<Hash> {
 	fn from(report: &ExtrinsicReport<Hash>) -> Self {
-		NativeTaskResult::ExtrinsicReport {
+		NativeTaskOk::ExtrinsicReport {
 			extrinsic_hash: report.extrinsic_hash.clone(),
 			block_hash: report.block_hash.clone(),
 			status: report.status.clone().into(),
@@ -164,13 +165,8 @@ impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for NativeTaskResult<Has
 	}
 }
 
-impl<Hash: Decode> From<RequestVCResult> for NativeTaskResult<Hash> {
-	fn from(result: RequestVCResult) -> Self {
-		NativeTaskResult::RequestVcResult {
-			vc_payload: result.vc_payload,
-			vc_logs: result.vc_logs,
-			pre_mutated_account_store: result.pre_mutated_account_store,
-			omni_account: result.omni_account,
-		}
+impl<Hash: Decode> From<RequestVcResultOrError> for NativeTaskOk<Hash> {
+	fn from(result: RequestVcResultOrError) -> Self {
+		NativeTaskOk::RequestVcResult { result: result.result, idx: result.idx, len: result.len }
 	}
 }

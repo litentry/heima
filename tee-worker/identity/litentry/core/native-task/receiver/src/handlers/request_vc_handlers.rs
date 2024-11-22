@@ -14,14 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::NativeTaskContext;
+use crate::{NativeTaskContext, NativeTaskResult};
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use ita_sgx_runtime::VERSION as SIDECHAIN_VERSION;
 use ita_stf::{
-	aes_encrypt_default, helpers::ensure_self, trusted_call_result::RequestVcErrorDetail, Getter,
-	TrustedCallSigned,
+	aes_encrypt_default,
+	helpers::ensure_self,
+	trusted_call_result::{RequestVcErrorDetail, RequestVcResultOrError},
+	Getter, TrustedCallSigned,
 };
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -54,7 +56,10 @@ use litentry_primitives::{
 use sp_core::{H160, H256 as Hash};
 use std::time::Instant;
 
-pub struct RequestVCResult {
+pub type HandleRequestVcResult = Result<RequestVcOk, RequestVcErrorDetail>;
+
+#[derive(Encode)]
+pub struct RequestVcOk {
 	pub vc_payload: AesOutput,
 	pub vc_logs: Option<AesOutput>,
 	pub pre_mutated_account_store: AesOutput,
@@ -69,7 +74,7 @@ pub fn handle_request_vc<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, 
 	assertion: Assertion,
 	maybe_key: Option<RequestAesKey>,
 	req_ext_hash: Hash,
-) -> Result<RequestVCResult, RequestVcErrorDetail>
+) -> HandleRequestVcResult
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -213,7 +218,7 @@ where
 	let mutated_account_store =
 		if is_new_account_store { member_identities } else { Default::default() };
 
-	let vc_result = RequestVCResult {
+	let vc_ok = RequestVcOk {
 		vc_payload: aes_encrypt_default(&key, &vc_payload),
 		vc_logs: vc_logs.map(|log| aes_encrypt_default(&key, &log)),
 		pre_mutated_account_store: aes_encrypt_default(&key, &mutated_account_store.encode()),
@@ -248,7 +253,7 @@ where
 	}
 	log::info!("Vc issued for {}, assertion: {:?}", who.to_did().unwrap_or_default(), assertion);
 
-	Ok(vc_result)
+	Ok(vc_ok)
 }
 
 fn extract_identity_from_member<Aes256KeyRepository>(
@@ -312,4 +317,40 @@ fn get_elegible_identities(
 			}
 		})
 		.collect()
+}
+
+pub fn send_vc_response<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	connection_hash: Hash,
+	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	result: HandleRequestVcResult,
+	idx: u8,
+	len: u8,
+	do_watch: bool,
+) where
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
+{
+	let vc_res = RequestVcResultOrError { result: result.map(|r| r.encode()), idx, len };
+	let native_task_result: NativeTaskResult = Ok(vc_res.into());
+
+	context
+		.author_api
+		.send_rpc_response(connection_hash, native_task_result.encode(), do_watch);
+
+	if native_task_result.is_err() {
+		if let Err(e) = context.ocall_api.update_metric(EnclaveMetric::FailedVCIssuance) {
+			log::warn!("Failed to update metric for VC Issuance: {:?}", e);
+		}
+	} else if let Err(e) = context.ocall_api.update_metric(EnclaveMetric::SuccessfullVCIssuance) {
+		log::warn!("Failed to update metric for VC Issuance: {:?}", e);
+	}
 }
