@@ -84,44 +84,20 @@ use sp_core::{blake2_256, H160, H256};
 
 const THREAD_POOL_SIZE: usize = 480;
 
-pub fn run_native_task_receiver<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
-	AssertionRepository,
-	StateHandler,
->(
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-			AssertionRepository,
-			StateHandler,
-		>,
-	>,
+pub fn run_native_task_receiver<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 ) where
-	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-	AssertionRepository:
-		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
-	StateHandler: HandleState + Send + Sync + 'static,
-	StateHandler::StateT: SgxExternalitiesTrait,
+	SR: AccessKey + Send + Sync + 'static,
+	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -154,46 +130,22 @@ pub fn run_native_task_receiver<
 	log::warn!("Native task receiver stopped");
 }
 
-fn handle_request<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
-	AssertionRepository,
-	StateHandler,
->(
+fn handle_request<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	request: &mut AesRequest,
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-			AssertionRepository,
-			StateHandler,
-		>,
-	>,
+	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 ) -> Result<TrustedCall, &'static str>
 where
-	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-	AssertionRepository:
-		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
-	StateHandler: HandleState + Send + Sync + 'static,
-	StateHandler::StateT: SgxExternalitiesTrait,
+	SR: AccessKey + Send + Sync + 'static,
+	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
@@ -254,47 +206,23 @@ where
 
 type TrustedCallResult = Result<NativeTaskResult<H256>, NativeTaskError>;
 
-fn handle_trusted_call<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
-	AssertionRepository,
-	StateHandler,
->(
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-			AssertionRepository,
-			StateHandler,
-		>,
-	>,
+fn handle_trusted_call<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 	call: TrustedCall,
 	connection_hash: H256,
 	shard: H256,
 ) where
-	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
-	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-	AssertionRepository:
-		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
-	StateHandler: HandleState + Send + Sync + 'static,
-	StateHandler::StateT: SgxExternalitiesTrait,
+	SR: AccessKey + Send + Sync + 'static,
+	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
 	{
