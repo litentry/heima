@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Mutex, NativeTaskContext, NativeTaskResult};
+use crate::{Context, Mutex, NativeTaskResult};
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
@@ -67,7 +67,7 @@ pub struct RequestVcOk {
 }
 
 pub fn handle_request_vc<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
-	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 	shard: Hash,
 	signer: Identity,
 	who: Identity,
@@ -319,7 +319,7 @@ fn get_elegible_identities(
 
 pub fn send_vc_response<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	connection_hash: Hash,
-	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 	result: HandleRequestVcResult,
 	idx: u8,
 	len: u8,

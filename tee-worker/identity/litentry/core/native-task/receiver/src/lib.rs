@@ -91,8 +91,11 @@ use std::collections::HashSet;
 
 const THREAD_POOL_SIZE: usize = 480;
 
+type Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH> =
+	Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>;
+
 pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
-	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -141,7 +144,7 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 
 fn handle_request<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	request: &mut AesRequest,
-	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 ) -> Result<TrustedCall, &'static str>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
@@ -216,7 +219,7 @@ where
 type NativeTaskResult = Result<NativeTaskOk<H256>, NativeTaskError>;
 
 fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
-	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 	call: TrustedCall,
 	connection_hash: H256,
 	shard: H256,
