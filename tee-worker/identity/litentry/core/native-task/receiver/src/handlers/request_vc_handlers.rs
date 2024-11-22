@@ -198,16 +198,15 @@ where
 		req_ext_hash,
 	};
 
-	let (vc_payload, vc_logs) =
-		create_credential_str::<AuthorApi, StfEnclaveSigning, OCallApi, AssertionRepository>(
-			&req,
-			context.enclave_signer.clone(),
-			context.enclave_account.clone(),
-			context.ocall_api.clone(),
-			context.data_provider_config.clone(),
-			context.assertion_repository.clone(),
-		)
-		.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
+	let (vc_payload, vc_logs) = create_credential_str::<AA, SES, OA, AR>(
+		&req,
+		context.enclave_signer.clone(),
+		context.enclave_account.clone(),
+		context.ocall_api.clone(),
+		context.data_provider_config.clone(),
+		context.assertion_repository.clone(),
+	)
+	.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
 
 	let key = maybe_key.ok_or(RequestVcErrorDetail::MissingAesKey)?;
 
