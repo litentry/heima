@@ -5,7 +5,13 @@ import * as ed from '@noble/ed25519';
 import { base58Encode } from '@polkadot/util-crypto';
 import { hexToU8a } from '@polkadot/util';
 import { validateVcSchema } from '@litentry/vc-schema-validator';
-import { CorePrimitivesIdentity, NewRequestVCResult, TrustedCallResult, WorkerRpcReturnValue } from 'parachain-api';
+import {
+    CorePrimitivesIdentity,
+    RequestVcResultOrError,
+    RequestVcOk,
+    NativeTaskResult,
+    WorkerRpcReturnValue,
+} from 'parachain-api';
 import { IntegrationTestContext, SubstrateSigner } from './common/common-types';
 import {
     Web2ValidationConfig,
@@ -69,11 +75,14 @@ describe('Test native vc_request', function () {
             requestIdentifier
         );
         const onMessageReceived = async (res: WorkerRpcReturnValue) => {
-            const vcResponse: TrustedCallResult = context.api.createType('TrustedCallResult', res.value);
-            console.log('VC response', JSON.stringify(vcResponse, null, 2));
-            if (vcResponse.isOk && vcResponse.asOk.isRequestVcResult) {
-                console.log('Asserting VC');
-                await assertVc(context, aliceSubstrateIdentity, vcResponse.asOk.asRequestVcResult);
+            const nativeTaskResult: NativeTaskResult = context.api.createType('NativeTaskResult', res.value);
+            if (nativeTaskResult.isRequestVcResult) {
+                const vcResultOrError: RequestVcResultOrError = nativeTaskResult.asRequestVcResult;
+                if (vcResultOrError.result.isOk) {
+                    const requestVcOk: RequestVcOk = context.api.createType('RequestVcOk', vcResultOrError.result.asOk);
+                    console.log('Asserting VC', requestVcOk);
+                    await assertVc(context, aliceSubstrateIdentity, requestVcOk);
+                }
             }
         };
         const vcEventsPromise = subscribeToEventsWithExtHash(requestIdentifier, context);
@@ -204,11 +213,17 @@ describe('Test native vc_request', function () {
 
             // Instead of waiting for final response we will listen all responses from the call
             const onMessageReceived = async (res: WorkerRpcReturnValue) => {
-                const vcResponse: TrustedCallResult = context.api.createType('TrustedCallResult', res.value);
-                console.log('VC response', JSON.stringify(vcResponse, null, 2));
-                if (vcResponse.isOk && vcResponse.asOk.isRequestVcResult) {
-                    console.log('Asserting VC');
-                    await assertVc(context, aliceSubstrateIdentity, vcResponse.asOk.asRequestVcResult);
+                const nativeTaskResult: NativeTaskResult = context.api.createType('NativeTaskResult', res.value);
+                if (nativeTaskResult.isRequestVcResult) {
+                    const vcResultOrError: RequestVcResultOrError = nativeTaskResult.asRequestVcResult;
+                    if (vcResultOrError.result.isOk) {
+                        const requestVcOk: RequestVcOk = context.api.createType(
+                            'RequestVcOk',
+                            vcResultOrError.result.asOk
+                        );
+                        console.log('Asserting VC', requestVcOk);
+                        await assertVc(context, aliceSubstrateIdentity, requestVcOk);
+                    }
                 }
             };
 
@@ -223,7 +238,7 @@ describe('Test native vc_request', function () {
     });
 });
 
-async function assertVc(context: IntegrationTestContext, subject: CorePrimitivesIdentity, result: NewRequestVCResult) {
+async function assertVc(context: IntegrationTestContext, subject: CorePrimitivesIdentity, result: RequestVcOk) {
     // step 1
     // decryptWithAes function added 0x prefix
     const decryptedVcPayload = decryptWithAes(aesKey, result.vc_payload, 'utf-8').replace('0x', '');
