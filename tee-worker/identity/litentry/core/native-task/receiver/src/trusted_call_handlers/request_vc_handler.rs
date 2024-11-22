@@ -19,6 +19,8 @@ use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, ve
 use codec::{Decode, Encode};
 use frame_support::ensure;
 use ita_sgx_runtime::VERSION as SIDECHAIN_VERSION;
+#[cfg(feature = "development")]
+use ita_stf::helpers::ensure_alice;
 use ita_stf::{
 	aes_encrypt_default,
 	helpers::ensure_self,
@@ -94,6 +96,9 @@ where
 		who.to_did().unwrap_or_default(),
 		assertion
 	);
+	let signer_account =
+		signer.to_native_account().ok_or(RequestVcErrorDetail::InvalidSignerAccount)?;
+
 	match assertion {
 		Assertion::A13(_) => (),
 		_ => if_development_or!(
@@ -175,8 +180,6 @@ where
 
 	ensure!(!identities.is_empty(), RequestVcErrorDetail::NoEligibleIdentity);
 
-	let signer_account =
-		signer.to_native_account().ok_or(RequestVcErrorDetail::InvalidSignerAccount)?;
 	let parachain_runtime_version = context
 		.node_metadata_repo
 		.get_from_metadata(|m| {
