@@ -61,8 +61,8 @@ pub struct RequestVCResult {
 	pub omni_account: AccountId,
 }
 
-pub fn handle_request_vc<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
-	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+pub fn handle_request_vc<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 	shard: Hash,
 	signer: Identity,
 	who: Identity,
@@ -71,8 +71,8 @@ pub fn handle_request_vc<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	req_ext_hash: Hash,
 ) -> Result<RequestVCResult, RequestVcErrorDetail>
 where
-	SR: AccessKey + Send + Sync + 'static,
-	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
 	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,

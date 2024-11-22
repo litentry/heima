@@ -37,89 +37,59 @@ use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use sp_core::{ed25519::Pair as Ed25519Pair, H160};
 use std::{string::String, sync::Arc};
 
-pub struct NativeTaskContext<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
-	AssertionRepository,
-	StateHandler,
-> where
+pub struct NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>
+where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-	AssertionRepository:
-		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
-	StateHandler: HandleState + Send + Sync + 'static,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
 {
 	pub shielding_key: Arc<ShieldingKeyRepository>,
-	pub author_api: Arc<AuthorApi>,
-	pub enclave_signer: Arc<StfEnclaveSigning>,
+	pub author_api: Arc<AA>,
+	pub enclave_signer: Arc<SES>,
 	pub enclave_account: Arc<Ed25519Pair>,
-	pub ocall_api: Arc<OCallApi>,
+	pub ocall_api: Arc<OA>,
 	pub data_provider_config: Arc<DataProviderConfig>,
-	pub extrinsic_factory: Arc<ExtrinsicFactory>,
-	pub node_metadata_repo: Arc<NodeMetadataRepo>,
-	pub aes256_key_repository: Arc<Aes256KeyRepository>,
-	pub assertion_repository: Arc<AssertionRepository>,
-	pub state_handler: Arc<StateHandler>,
+	pub extrinsic_factory: Arc<EF>,
+	pub node_metadata_repo: Arc<NMR>,
+	pub aes256_key_repository: Arc<AKR>,
+	pub assertion_repository: Arc<AR>,
+	pub state_handler: Arc<SH>,
 }
 
-impl<
-		ShieldingKeyRepository,
-		AuthorApi,
-		StfEnclaveSigning,
-		OCallApi,
-		ExtrinsicFactory,
-		NodeMetadataRepo,
-		Aes256KeyRepository,
-		AssertionRepository,
-		StateHandler,
-	>
-	NativeTaskContext<
-		ShieldingKeyRepository,
-		AuthorApi,
-		StfEnclaveSigning,
-		OCallApi,
-		ExtrinsicFactory,
-		NodeMetadataRepo,
-		Aes256KeyRepository,
-		AssertionRepository,
-		StateHandler,
-	> where
+impl<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>
+	NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>
+where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
-	AssertionRepository:
-		AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
-	StateHandler: HandleState + Send + Sync + 'static,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		shielding_key: Arc<ShieldingKeyRepository>,
-		author_api: Arc<AuthorApi>,
-		enclave_signer: Arc<StfEnclaveSigning>,
+		author_api: Arc<AA>,
+		enclave_signer: Arc<SES>,
 		enclave_account: Arc<Ed25519Pair>,
-		ocall_api: Arc<OCallApi>,
+		ocall_api: Arc<OA>,
 		data_provider_config: Arc<DataProviderConfig>,
-		extrinsic_factory: Arc<ExtrinsicFactory>,
-		node_metadata_repo: Arc<NodeMetadataRepo>,
-		aes256_key_repository: Arc<Aes256KeyRepository>,
-		assertion_repository: Arc<AssertionRepository>,
-		state_handler: Arc<StateHandler>,
+		extrinsic_factory: Arc<EF>,
+		node_metadata_repo: Arc<NMR>,
+		aes256_key_repository: Arc<AKR>,
+		assertion_repository: Arc<AR>,
+		state_handler: Arc<SH>,
 	) -> Self {
 		Self {
 			shielding_key,

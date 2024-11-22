@@ -84,11 +84,11 @@ use sp_core::{blake2_256, H160, H256};
 
 const THREAD_POOL_SIZE: usize = 480;
 
-pub fn run_native_task_receiver<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
-	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 ) where
-	SR: AccessKey + Send + Sync + 'static,
-	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
 	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + EnclaveMetricsOCallApi + 'static,
@@ -130,13 +130,13 @@ pub fn run_native_task_receiver<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	log::warn!("Native task receiver stopped");
 }
 
-fn handle_request<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+fn handle_request<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	request: &mut AesRequest,
-	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 ) -> Result<TrustedCall, &'static str>
 where
-	SR: AccessKey + Send + Sync + 'static,
-	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
 	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + EnclaveMetricsOCallApi + 'static,
@@ -206,14 +206,14 @@ where
 
 type TrustedCallResult = Result<NativeTaskResult<H256>, NativeTaskError>;
 
-fn handle_trusted_call<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>(
-	context: Arc<NativeTaskContext<SR, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
+fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>,
 	call: TrustedCall,
 	connection_hash: H256,
 	shard: H256,
 ) where
-	SR: AccessKey + Send + Sync + 'static,
-	<SR as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
+	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
+	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
 	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
