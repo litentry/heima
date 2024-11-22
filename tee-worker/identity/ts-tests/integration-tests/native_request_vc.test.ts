@@ -9,7 +9,7 @@ import {
     CorePrimitivesIdentity,
     RequestVcResultOrError,
     RequestVcOk,
-    NativeTaskResult,
+    TrustedCallResult,
     WorkerRpcReturnValue,
 } from 'parachain-api';
 import { IntegrationTestContext, SubstrateSigner } from './common/common-types';
@@ -76,11 +76,14 @@ describe('Test native vc_request', function () {
             requestIdentifier
         );
         const onMessageReceived = async (res: WorkerRpcReturnValue) => {
-            const nativeTaskResult: NativeTaskResult = context.api.createType('NativeTaskResult', res.value);
-            if (nativeTaskResult.isRequestVcResult) {
-                const vcResultOrError: RequestVcResultOrError = nativeTaskResult.asRequestVcResult;
-                if (vcResultOrError.result.isOk) {
-                    const requestVcOk: RequestVcOk = context.api.createType('RequestVcOk', vcResultOrError.result.asOk);
+            const trustedCallResult: TrustedCallResult = context.api.createType('TrustedCallResult', res.value);
+            if (trustedCallResult.isOk && trustedCallResult.asOk.isRequestVcResult) {
+                const requestVcResultOrError: RequestVcResultOrError = trustedCallResult.asOk.asRequestVcResult;
+                if (requestVcResultOrError.result.isOk) {
+                    const requestVcOk: RequestVcOk = context.api.createType(
+                        'RequestVcOk',
+                        requestVcResultOrError.result.asOk
+                    );
                     console.log('Asserting VC', requestVcOk);
                     await assertVc(context, aliceSubstrateIdentity, requestVcOk);
                 }
@@ -223,13 +226,13 @@ describe('Test native vc_request', function () {
 
             // Instead of waiting for final response we will listen all responses from the call
             const onMessageReceived = async (res: WorkerRpcReturnValue) => {
-                const nativeTaskResult: NativeTaskResult = context.api.createType('NativeTaskResult', res.value);
-                if (nativeTaskResult.isRequestVcResult) {
-                    const vcResultOrError: RequestVcResultOrError = nativeTaskResult.asRequestVcResult;
-                    if (vcResultOrError.result.isOk) {
+                const trustedCallResult: TrustedCallResult = context.api.createType('TrustedCallResult', res.value);
+                if (trustedCallResult.isOk && trustedCallResult.asOk.isRequestVcResult) {
+                    const requestVcResultOrError: RequestVcResultOrError = trustedCallResult.asOk.asRequestVcResult;
+                    if (requestVcResultOrError.result.isOk) {
                         const requestVcOk: RequestVcOk = context.api.createType(
                             'RequestVcOk',
-                            vcResultOrError.result.asOk
+                            requestVcResultOrError.result.asOk
                         );
                         console.log('Asserting VC', requestVcOk);
                         await assertVc(context, aliceSubstrateIdentity, requestVcOk);
