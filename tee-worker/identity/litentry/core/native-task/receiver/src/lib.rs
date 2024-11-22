@@ -38,11 +38,13 @@ use std::sync::Mutex;
 #[cfg(feature = "sgx")]
 use std::sync::SgxMutex as Mutex;
 
-mod handlers;
+mod trusted_call_handlers;
 
 mod trusted_call_authenticated;
-use handlers::{handle_request_vc, send_vc_response, VcRequestRegistry};
 pub use trusted_call_authenticated::*;
+use trusted_call_handlers::request_vc_handler::{
+	handle_request_vc, send_vc_response, VcRequestRegistry,
+};
 
 mod types;
 pub use types::NativeTaskContext;

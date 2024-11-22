@@ -14,5 +14,4 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-mod request_vc_handlers;
-pub use request_vc_handlers::*;
+pub mod request_vc_handler;
