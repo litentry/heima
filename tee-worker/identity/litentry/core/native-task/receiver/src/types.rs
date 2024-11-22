@@ -132,8 +132,6 @@ pub enum NativeTaskError {
 	ExtrinsicConstructionFailed(String), // Stringified itp_extrinsics_factory::Error
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
 	InvalidRequest,
-	NativeRequestSendFailed,
-	RequestVcFailed(RequestVcErrorDetail),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
