@@ -17,7 +17,9 @@
 use crate as pallet_pool_proposal;
 use frame_support::{
 	assert_ok, construct_runtime, parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, Everything},
+	traits::{
+		AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, Everything, OnFinalize, OnInitialize,
+	},
 };
 use sp_core::{Get, H256};
 use sp_runtime::{

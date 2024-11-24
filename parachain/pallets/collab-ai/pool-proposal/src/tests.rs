@@ -113,7 +113,7 @@ fn test_pre_stake_proposal_ok() {
 		// Pool not exist
 		assert_noop!(
 			PoolProposal::pre_stake_proposal(
-				RuntimeOrigin::signed(user_a),
+				RuntimeOrigin::signed(user_a.clone()),
 				2u128,
 				500_000_000_000_000_000_000u128,
 			),
@@ -122,7 +122,7 @@ fn test_pre_stake_proposal_ok() {
 
 		// Normal pre staking worked
 		assert_ok!(PoolProposal::pre_stake_proposal(
-			RuntimeOrigin::signed(user_a),
+			RuntimeOrigin::signed(user_a.clone()),
 			1u128,
 			500_000_000_000_000_000_000u128,
 		));
