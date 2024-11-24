@@ -251,3 +251,26 @@ pub fn assert_events(mut expected: Vec<RuntimeEvent>) {
 		assert_eq!(next, evt, "Events don't match");
 	}
 }
+
+/// Rolls forward one block. Returns the new block number.
+pub(crate) fn roll_one_block() -> u64 {
+	ParachainStaking::on_finalize(System::block_number());
+	Balances::on_finalize(System::block_number());
+	System::on_finalize(System::block_number());
+	System::set_block_number(System::block_number() + 1);
+	System::on_initialize(System::block_number());
+	Balances::on_initialize(System::block_number());
+	ParachainStaking::on_initialize(System::block_number());
+	System::block_number()
+}
+
+/// Rolls to the desired block. Returns the number of blocks played.
+pub(crate) fn roll_to(n: u64) -> u64 {
+	let mut num_blocks = 0;
+	let mut block = System::block_number();
+	while block < n {
+		block = roll_one_block();
+		num_blocks += 1;
+	}
+	num_blocks
+}

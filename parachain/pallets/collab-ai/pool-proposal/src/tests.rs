@@ -120,14 +120,23 @@ fn test_pre_stake_proposal_ok() {
 			crate::Error::<Test>::ProposalNotExist
 		);
 
-		// // Proposal Expired
-		// assert_noop!(
-		// 	PoolProposal::pre_stake_proposal(
-		// 		RuntimeOrigin::signed(user_a),
-		// 		2.into(),
-		// 		500_000_000_000_000_000_000u128,
-		// 	),
-		// 	crate::Error::<Test>::ProposalExpired
-		// );
+		// Normal pre staking worked
+		assert_ok!(PoolProposal::pre_stake_proposal(
+			RuntimeOrigin::signed(user_a),
+			1.into(),
+			500_000_000_000_000_000_000u128,
+		));
+
+		// Go to proposal expire time
+		roll_to(150);
+		// Proposal Expired, Not work
+		assert_noop!(
+			PoolProposal::pre_stake_proposal(
+				RuntimeOrigin::signed(user_a),
+				1.into(),
+				500_000_000_000_000_000_000u128,
+			),
+			crate::Error::<Test>::ProposalExpired
+		);
 	})
 }
