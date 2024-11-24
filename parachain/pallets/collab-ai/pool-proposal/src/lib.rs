@@ -265,11 +265,18 @@ pub mod pallet {
 			amount: AssetBalanceOf<T>,
 		},
 		/// A public vote result of proposal get passed
-		ProposalPublicVoted { pool_proposal_index: PoolProposalIndex, vote_result: bool },
+		ProposalPublicVoted {
+			pool_proposal_index: PoolProposalIndex,
+			vote_result: bool,
+		},
 		/// A proposal is ready for baking
-		ProposalReadyForBake { pool_proposal_index: PoolProposalIndex },
+		ProposalReadyForBake {
+			pool_proposal_index: PoolProposalIndex,
+		},
 		/// A proposal is ready for full dissolve, since the proposal expired but not satisifed all requirement
-		ProposalReadyForDissolve { pool_proposal_index: PoolProposalIndex },
+		ProposalReadyForDissolve {
+			pool_proposal_index: PoolProposalIndex,
+		},
 		/// A proposal passed all checking and become a investing pool
 		ProposalBaked {
 			pool_proposal_index: PoolProposalIndex,
@@ -277,7 +284,13 @@ pub mod pallet {
 			proposal_settlement: AssetBalanceOf<T>,
 		},
 		/// A proposal failed some checking or type error, but fund is returned
-		ProposalDissolved { pool_proposal_index: PoolProposalIndex },
+		ProposalDissolved {
+			pool_proposal_index: PoolProposalIndex,
+		},
+		PorposalGuardian {
+			pool_proposal_index: PoolProposalIndex,
+			guardian: T::AccountId,
+		},
 	}
 
 	#[pallet::error]
@@ -624,6 +637,7 @@ pub mod pallet {
 		// Including KYC. Otherwise he will be ignored no matter how much vote he collects
 		#[pallet::call_index(4)]
 		#[pallet::weight({195_000_000})]
+		#[transactional]
 		pub fn guardian_participate_proposal(
 			origin: OriginFor<T>,
 			pool_proposal_index: PoolProposalIndex,
@@ -637,7 +651,7 @@ pub mod pallet {
 					match maybe_ordered_set.as_mut() {
 						Some(ordered_set) => {
 							ensure!(
-								ordered_set.insert(who),
+								ordered_set.insert(who.clone()),
 								Error::<T>::GuardianDuplicatedOrOversized
 							);
 							Ok(())
@@ -646,7 +660,7 @@ pub mod pallet {
 							let mut new_ordered_set = OrderedSet::new();
 
 							ensure!(
-								new_ordered_set.insert(who),
+								new_ordered_set.insert(who.clone()),
 								Error::<T>::GuardianDuplicatedOrOversized
 							);
 							*maybe_ordered_set = Some(new_ordered_set);
@@ -654,7 +668,10 @@ pub mod pallet {
 						},
 					}
 				},
-			)
+			)?;
+
+			Self::deposit_event(Event::PorposalGuardian { pool_proposal_index, guardian: who });
+			Ok(())
 		}
 
 		// Make all avaialable qualified proposal into investing pool

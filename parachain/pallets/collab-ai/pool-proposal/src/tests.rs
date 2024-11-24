@@ -219,12 +219,66 @@ fn test_withdraw_pre_investing_ok() {
 	})
 }
 
-fn test_public_vote_proposal_ok() {}
+fn test_public_vote_proposal_ok() {
+	new_test_ext().execute_with(|| {
+		// Pool not exist
+		assert_noop!(
+			PoolProposal::public_vote_proposal(RuntimeOrigin::root(), 1u128, true,),
+			crate::Error::<Test>::ProposalNotExist
+		);
 
-fn test_guardian_participate_proposal_ok() {}
+		let user_a: AccountId32 = AccountId32::from([1u8; 32]);
+		let user_b: AccountId32 = AccountId32::from([2u8; 32]);
+		Balances::make_free_balance_be(&user_a, 100_000_000_000_000_000_000);
+		Balances::make_free_balance_be(&user_b, 100_000_000_000_000_000_000);
 
-fn test_bake_proposal_ok() {}
+		let max_pool_size = 10_000_000_000_000_000_000u128;
+		let proposal_last_time = 100;
+		let pool_last_time = 10000;
+		let estimated_pool_reward = 2_000_000_000_000_000_000_000u128;
+		let pool_info_hash: H256 = H256([2; 32]);
 
-fn test_dissolve_proposal_ok() {}
+		// Setup
+		assert_ok!(PoolProposal::propose_investing_pool(
+			RuntimeOrigin::signed(user_a.clone()),
+			max_pool_size,
+			proposal_last_time,
+			pool_last_time,
+			estimated_pool_reward,
+			pool_info_hash
+		));
 
-// TODO: solve pending test, types test
+		// Wrong origin
+		assert_noop!(
+			PoolProposal::public_vote_proposal(RuntimeOrigin::signed(user_a.clone()), 1u128, true,),
+			sp_runtime::DispatchError::BadOrigin
+		);
+
+		// Works
+		assert_ok!(PoolProposal::public_vote_proposal(
+			RuntimeOrigin::signed(user_a.clone()),
+			1u128,
+			true,
+		));
+		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::ProposalPublicVoted {
+			pool_proposal_index: 1u128,
+			vote_result: true,
+		})]);
+	})
+}
+
+fn test_guardian_participate_proposal_ok() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(PoolProposal::guardian_participate_proposal(
+			RuntimeOrigin::signed(user_a.clone()),
+			1u128,
+		));
+
+		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PorposalGuardian {
+			pool_proposal_index: 1u128,
+			guardian: user_a,
+		})]);
+	})
+}
+
+// TODO: test_bake_proposal_ok, test_dissolve_proposal_ok, solve pending test, types test
