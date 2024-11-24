@@ -254,13 +254,13 @@ pub fn assert_events(mut expected: Vec<RuntimeEvent>) {
 
 /// Rolls forward one block. Returns the new block number.
 pub(crate) fn roll_one_block() -> u64 {
-	ParachainStaking::on_finalize(System::block_number());
+	PoolProposal::on_finalize(System::block_number());
 	Balances::on_finalize(System::block_number());
 	System::on_finalize(System::block_number());
 	System::set_block_number(System::block_number() + 1);
 	System::on_initialize(System::block_number());
 	Balances::on_initialize(System::block_number());
-	ParachainStaking::on_initialize(System::block_number());
+	PoolProposal::on_initialize(System::block_number());
 	System::block_number()
 }
 
