@@ -2,14 +2,26 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
+SGX_MODE ?= HW
 
-SELF_EXE = target/release/executor-worker
+SELF_EXE = omni-executor-worker
+COMPILATION_FEATURES =
+
+ROOTDIR := $(shell git rev-parse --show-toplevel)
+EXECUTOR_DIR := $(ROOTDIR)/tee-worker/omni-executor
 
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
-ifeq ($(SGX),1)
+ifeq ($(SGX_MODE), HW)
+COMPILATION_FEATURES = gramine-quote
 all: omni-executor.manifest.sgx omni-executor.sig
 endif
+
+.PHONY: $(SELF_EXE)
+$(SELF_EXE):
+	cargo build --release --features=$(COMPILATION_FEATURES)
+	cp target/release/executor-worker $(SELF_EXE)
+
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
@@ -17,15 +29,7 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
-# Note that we're compiling in release mode regardless of the DEBUG setting passed
-# to Make, as compiling in debug mode results in an order of magnitude's difference in
-# performance that makes testing by running a benchmark with ab painful. The primary goal
-# of the DEBUG setting is to control Gramine's loglevel.
--include $(SELF_EXE).d # See also: .cargo/config.toml
-$(SELF_EXE): Cargo.toml
-	cargo build --release --features=gramine-quote
-
-omni-executor.manifest: omni-executor.manifest.template
+omni-executor.manifest: omni-executor.manifest.template $(SELF_EXE)
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -34,44 +38,47 @@ omni-executor.manifest: omni-executor.manifest.template
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
 # see the helloworld example for details on this workaround.
-omni-executor.manifest.sgx tee-bridge.sig: sgx_sign
+omni-executor.manifest.sgx omni-executor.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
 sgx_sign: omni-executor.manifest $(SELF_EXE)
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $<.sgx
+		--output $<.sgx \
+		--key enclave_key.pem
 
-ifeq ($(SGX),)
-GRAMINE = gramine-direct
-else
+ifeq ($(SGX_MODE), HW)
 GRAMINE = gramine-sgx
+else
+GRAMINE = gramine-direct
 endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) omni-executor ${ARGS}
+	$(GRAMINE) omni-executor -- ${ARGS}
 
 .PHONY: clean
 clean:
-	$(RM) -rf *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
+	$(RM) -rf $(SELF_EXE) *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -rf target/ Cargo.lock
+	cargo clean
 
+# By default SGX_MODE=SW for docker image
 .PHONY: build-docker
 build-docker:
-	docker build . --tag omni-executor:latest
+	docker build --target builder -t local-builder:latest -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target executor-worker -t litentry/omni-executor:latest -f -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
-	docker compose up
+	docker compose -f $(EXECUTOR_DIR)/docker/docker-compose.yml up
 
 .PHONY: stop-local
 stop-local:
-	docker compose down
+	docker compose -f $(EXECUTOR_DIR)/docker/docker-compose.yml down
 
 .PHONY: get-pallet-metadata
 get-pallet-metadata:

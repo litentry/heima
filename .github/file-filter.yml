@@ -52,3 +52,8 @@ omni_executor_src: &omni_executor_src
   - 'tee-worker/omni-executor/**/*.rs'
   - 'tee-worker/omni-executor/rust-toolchain.toml'
   - 'tee-worker/omni-executor/**/*.scale'
+
+
+omni_executor_test: &omni_executor_test
+  - 'parachain/docker/**'
+  - 'tee-worker/omni-executor/docker/*.yml'

@@ -60,9 +60,9 @@ on:
         description: rebuild-bitacross
         required: true
         default: true
-      check-omni-executor:
+      rebuild-omni-executor:
         type: boolean
-        description: check-omni-executor
+        description: rebuild-omni-executor
         required: true
         default: true
       run-multi-worker-test:
@@ -100,11 +100,12 @@ jobs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_bitacross: ${{ steps.env.outputs.rebuild_bitacross }}
-      check_omni_executor: ${{ steps.env.outputs.check_omni_executor }}
+      rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
       run_bitacross_test: ${{ steps.env.outputs.run_bitacross_test }}
+      run_omni_executor_test: ${{ steps.env.outputs.run_omni_executor_test }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -124,10 +125,12 @@ jobs:
           rebuild_parachain=false
           rebuild_identity=false
           rebuild_bitacross=false
-          check_omni_executor=false
+          rebuild_omni_executor=false
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
+          run_bitacross_test=false
+          run_omni_executor_test=false
           if [ "${{ github.event.inputs.rebuild-parachain }}" = "true" ] || [ "${{ steps.filter.outputs.parachain_src }}" = "true" ]; then
             rebuild_parachain=true
           fi
@@ -137,8 +140,8 @@ jobs:
           if [ "${{ github.event.inputs.rebuild-bitacross }}" = "true" ] || [ "${{ steps.filter.outputs.bitacross_src }}" = "true" ]; then
             rebuild_bitacross=true
           fi
-          if [ "${{ github.event.inputs.check-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
-            check_omni_executor=true
+          if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
+            rebuild_omni_executor=true
           fi
           if [ "${{ github.event.inputs.push-docker }}" = "true" ]; then
             push_docker=true
@@ -154,14 +157,18 @@ jobs:
           if [ "${{ steps.filter.outputs.bitacross_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_bitacross" = "true" ]; then
             run_bitacross_test=true
           fi
+          if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
+            run_omni_executor_test=true
+          fi
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
           echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_bitacross=$rebuild_bitacross" | tee -a $GITHUB_OUTPUT
-          echo "check_omni_executor=$check_omni_executor" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
           echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
           echo "run_bitacross_test=$run_bitacross_test" | tee -a $GITHUB_OUTPUT
+          echo "run_omni_executor_test=$run_omni_executor_test" | tee -a $GITHUB_OUTPUT
 
   fmt:
     runs-on: ubuntu-latest
@@ -321,6 +328,30 @@ jobs:
       - name: Fail early
         if: failure()
         uses: andymckay/cancel-action@0.5
+
+  omni-executor-check:
+    runs-on: ubuntu-latest
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+    container: "litentry/litentry-tee-dev:latest"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+
+      - name: Clippy
+        working-directory: ./tee-worker/omni-executor
+        run: cargo clippy --release -- -D warnings
+
+      - name: Tests
+        working-directory: ./tee-worker/omni-executor
+        run: cargo test
 
   parachain-build-dev:
     runs-on: ubuntu-latest
@@ -586,7 +617,7 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  omni-executor-check:
+  omni-executor-build:
     runs-on: ubuntu-latest
     needs:
       - fmt
@@ -594,18 +625,45 @@ jobs:
       - sequentialise
     steps:
       - uses: actions/checkout@v4
-      - name: Clippy
-        if: needs.set-condition.outputs.check_omni_executor == 'true'
-        working-directory: ./tee-worker/omni-executor
-        run: cargo clippy --release -- -D warnings
-      - name: Build
-        if: needs.set-condition.outputs.check_omni_executor == 'true'
-        working-directory: ./tee-worker/omni-executor
-        run: cargo build
-      - name: Tests
-        if: needs.set-condition.outputs.check_omni_executor == 'true'
-        working-directory: ./tee-worker/omni-executor
-        run: cargo test
+
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          # use the docker driver to access the local image
+          # we don't need external caches or multi platforms here
+          # see https://docs.docker.com/build/drivers/
+          driver: docker
+
+      - name: Build omni-executor image
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tee-worker/omni-executor/Dockerfile
+          tags: litentry/omni-executor:latest
+          target: executor-worker
+
+      - name: Pull omni-executor image optionally
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
+        run: |
+          docker pull litentry/omni-executor:latest
+
+      - run: docker images --all
+
+      - name: Save docker image
+        run: |
+          docker save litentry/omni-executor:latest | gzip > litentry-omni.tar.gz
+
+      - name: Upload docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: litentry-omni
+          path: litentry-omni.tar.gz
+          if-no-files-found: error
 
   parachain-ts-test:
     runs-on: ubuntu-latest
@@ -943,6 +1001,65 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+  omni-executor-test:
+    runs-on: ubuntu-latest
+    needs:
+      - set-condition
+      - parachain-build-dev
+      - omni-executor-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test_name: omni-test
+    name: ${{ matrix.test_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: litentry-parachain-dev
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: litentry-omni
+
+      - name: Load docker image
+        run: |
+          docker load < litentry-parachain-dev.tar.gz
+          docker load < litentry-omni.tar.gz
+          docker images
+
+      # - name: Integration omni executor test ${{ matrix.test_name }}
+      #   working-directory: ./tee-worker/omni-executor/docker
+      #   if: needs.set-condition.outputs.run_omni_executor_test == 'true'
+      #   timeout-minutes: 40
+      #   run: |
+      #     docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+
+      # - name: Stop integration omni executor docker containers
+      #   working-directory: ./tee-worker/bitacross/docker
+      #   if: needs.set-condition.outputs.run_omni_executor_test == 'true'
+      #   run: |
+      #     docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+
+      - name: Collect docker logs if test fails
+        continue-on-error: true
+        uses: jwalton/gh-docker-logs@v2
+        if: failure()
+        with:
+          tail: all
+          dest: docker-logs
+
+      - name: Upload docker logs if test fails
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-docker-logs
+          path: docker-logs
+          if-no-files-found: ignore
+          retention-days: 3
+
   # Secrets are not passed to the runner when a workflow is triggered from a forked repository,
   # see https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow
   #
@@ -964,6 +1081,7 @@ jobs:
       - parachain-ts-test
       - identity-single-worker-test
       - bitacross-worker-test
+      - omni-executor-test
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
       - uses: actions/download-artifact@v4
@@ -978,11 +1096,9 @@ jobs:
         with:
           name: litentry-bitacross
 
-      - name: Load docker image
-        run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker load < litentry-identity.tar.gz
-          docker load < litentry-bitacross.tar.gz
+      - uses: actions/download-artifact@v4
+        with:
+          name: litentry-omni
 
       - name: Dockerhub login
         uses: docker/login-action@v3
@@ -993,17 +1109,26 @@ jobs:
       - name: Push parachain image
         if: needs.set-condition.outputs.rebuild_parachain == 'true'
         run: |
+          docker load < litentry-parachain-dev.tar.gz
           docker push litentry/litentry-parachain
           docker push litentry/litentry-chain-aio
 
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'
         run: |
+          docker load < litentry-identity.tar.gz
           docker push litentry/identity-worker
           docker push litentry/identity-cli
 
       - name: Push bitacross-worker image
         if: needs.set-condition.outputs.rebuild_bitacross == 'true'
         run: |
+          docker load < litentry-bitacross.tar.gz
           docker push litentry/bitacross-worker
           docker push litentry/bitacross-cli
+
+      - name: Push omni-executor image
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+        run: |
+          docker load < litentry-omni.tar.gz
+          docker push litentry/omni-executor

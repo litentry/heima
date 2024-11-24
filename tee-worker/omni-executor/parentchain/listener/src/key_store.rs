@@ -34,9 +34,16 @@ impl SubstrateKeyStore {
 
 impl KeyStore<SecretKeyBytes> for SubstrateKeyStore {
 	fn generate_key() -> Result<SecretKeyBytes, ()> {
+		// Secret Key URI `//Alice` is account:
+		// Network ID:        substrate
+		// Secret seed:       0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a
+		// Public key (hex):  0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+		// Account ID:        0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+		// Public key (SS58): 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+		// SS58 Address:      5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
 		Ok([
-			45, 219, 105, 155, 49, 74, 164, 131, 153, 192, 15, 213, 225, 179, 167, 129, 12, 160,
-			229, 37, 133, 168, 141, 233, 98, 117, 254, 112, 139, 210, 76, 6,
+			229, 190, 154, 80, 146, 184, 27, 202, 100, 190, 129, 210, 18, 231, 242, 249, 235, 161,
+			131, 187, 122, 144, 149, 79, 123, 118, 54, 31, 110, 219, 92, 10,
 		])
 	}
 
