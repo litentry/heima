@@ -186,7 +186,7 @@ pub mod pallet {
 		type PoolProposalPalletOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		/// Origin used to update epoch reward for investing pool
-		type RewardUpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+		type RewardUpdateOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 
 		/// Origin used to administer the investing pool
 		type InvestingPoolAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
@@ -339,6 +339,7 @@ pub mod pallet {
 		EpochNotExist,
 		NoAssetId,
 		TypeIncompatibleOrArithmeticError,
+		WrongPoolAdmin,
 	}
 
 	#[pallet::hooks]
@@ -369,6 +370,7 @@ pub mod pallet {
 
 		/// Update a reward for an investing pool of specific epoch
 		/// Each epoch can be only updated once
+		/// Pool admin will transfer its AIUSD into pool accordingly
 		#[pallet::call_index(1)]
 		#[pallet::weight({1000})]
 		#[transactional]
@@ -378,11 +380,12 @@ pub mod pallet {
 			epoch: u128,
 			reward: BalanceOf<T>,
 		) -> DispatchResult {
-			T::RewardUpdateOrigin::ensure_origin(origin)?;
+			let who = T::RewardUpdateOrigin::ensure_origin(origin)?;
 
 			let setting =
 				<InvestingPoolSetting<T>>::get(pool_id).ok_or(Error::<T>::PoolNotExisted)?;
 			ensure!(0 < epoch && epoch <= setting.epoch, Error::<T>::EpochNotExist);
+			ensure!(setting.admin == who.clone(), Error::<T>::WrongPoolAdmin);
 
 			<StableInvestingPoolEpochReward<T>>::try_mutate(
 				pool_id,
@@ -403,7 +406,15 @@ pub mod pallet {
 			// Mint AIUSD into reward pool
 			let aiusd_asset_id = <AIUSDAssetId<T>>::get().ok_or(Error::<T>::NoAssetId)?;
 			let beneficiary_account: T::AccountId = Self::stable_token_beneficiary_account();
-			let _ = T::Fungibles::mint_into(aiusd_asset_id, &beneficiary_account, reward)?;
+
+			// Curator must transfer corresponding cash into reward pool
+			T::Fungibles::transfer(
+				aiusd_asset_id,
+				&who,
+				&beneficiary_account,
+				reward,
+				Preservation::Expendable,
+			)?;
 
 			Ok(())
 		}

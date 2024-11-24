@@ -146,6 +146,7 @@ fn test_pre_stake_proposal_ok() {
 	})
 }
 
+#[test]
 fn test_withdraw_pre_investing_ok() {
 	new_test_ext().execute_with(|| {
 		let user_a: AccountId32 = AccountId32::from([1u8; 32]);
@@ -219,6 +220,7 @@ fn test_withdraw_pre_investing_ok() {
 	})
 }
 
+#[test]
 fn test_public_vote_proposal_ok() {
 	new_test_ext().execute_with(|| {
 		// Pool not exist
@@ -267,6 +269,7 @@ fn test_public_vote_proposal_ok() {
 	})
 }
 
+#[test]
 fn test_guardian_participate_proposal_ok() {
 	new_test_ext().execute_with(|| {
 		let user_a: AccountId32 = AccountId32::from([1u8; 32]);

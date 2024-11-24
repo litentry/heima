@@ -1098,7 +1098,8 @@ parameter_types! {
 impl pallet_investing_pool::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PoolProposalPalletOrigin = EnsureRoot<AccountId>;
-	type RewardUpdateOrigin = EnsureRootOrAllCouncil;
+	// Equal to Proposal's admin is judged inside pallet
+	type RewardUpdateOrigin = EnsureSignedAndVerifiedCurator<AccountId, Curator>;
 	type InvestingPoolAdminOrigin = EnsureRoot<AccountId>;
 	type Fungibles = Assets;
 	type StableTokenBeneficiaryId = StableTokenBeneficiaryId;
