@@ -269,6 +269,7 @@ fn test_public_vote_proposal_ok() {
 
 fn test_guardian_participate_proposal_ok() {
 	new_test_ext().execute_with(|| {
+		let user_a: AccountId32 = AccountId32::from([1u8; 32]);
 		assert_ok!(PoolProposal::guardian_participate_proposal(
 			RuntimeOrigin::signed(user_a.clone()),
 			1u128,
