@@ -184,7 +184,7 @@ fn test_withdraw_pre_investing_ok() {
 				1u128,
 				1_000_000_000_000_000_000u128,
 			),
-			crate::Error::<Test>::ProposalPreInvestingLocked
+			crate::Error::<Test>::InsufficientPreInvesting
 		);
 
 		// Fullfil the pool
@@ -252,16 +252,12 @@ fn test_public_vote_proposal_ok() {
 
 		// Wrong origin
 		assert_noop!(
-			PoolProposal::public_vote_proposal(RuntimeOrigin::signed(user_a.clone()), 1u128, true,),
+			PoolProposal::public_vote_proposal(RuntimeOrigin::signed(user_a), 1u128, true,),
 			sp_runtime::DispatchError::BadOrigin
 		);
 
 		// Works
-		assert_ok!(PoolProposal::public_vote_proposal(
-			RuntimeOrigin::signed(user_a.clone()),
-			1u128,
-			true,
-		));
+		assert_ok!(PoolProposal::public_vote_proposal(RuntimeOrigin::root(), 1u128, true,));
 		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::ProposalPublicVoted {
 			pool_proposal_index: 1u128,
 			vote_result: true,
