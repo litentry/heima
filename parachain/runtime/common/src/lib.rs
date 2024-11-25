@@ -24,6 +24,7 @@ extern crate core;
 #[cfg(feature = "tests")]
 pub mod tests;
 
+pub mod impls;
 pub mod xcm_impl;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -333,3 +334,6 @@ where
 }
 
 pub type EnsureOmniAccount = pallet_omni_account::EnsureOmniAccount<AccountId>;
+
+/// The type for looking up accounts. We don't expect more than 4 billion of them.
+pub type AccountIndex = u32;

@@ -25,9 +25,9 @@
 extern crate frame_benchmarking;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
+use cumulus_primitives_core::{AggregateMessageOrigin, InteriorLocation, PalletInstance, ParaId};
 use frame_support::{
-	construct_runtime, dynamic_params::{dynamic_pallet_params, dynamic_params}, parameter_types, traits::{
+	construct_runtime, parameter_types, traits::{
 		tokens::UnityOrOuterConversion, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound, EnsureOrigin, Everything, FindAuthor, FromContains, InstanceFilter, OnFinalize, SortedMembers, TransformOrigin, WithdrawReasons
 	}, weights::{constants::RocksDbWeight, ConstantMultiplier, Weight}, ConsensusEngineId, PalletId
 };
@@ -72,7 +72,7 @@ pub use core_primitives::{
 pub use runtime_common::currency::*;
 
 use runtime_common::{
-	impl_runtime_transaction_payment_fees, prod_or_fast, BlockHashCount, BlockLength, MessageQueue,
+	impl_runtime_transaction_payment_fees, prod_or_fast, AccountIndex, BlockHashCount, BlockLength, MessageQueue,
 	CouncilInstance, CouncilMembershipInstance, DeveloperCommitteeInstance,
 	DeveloperCommitteeMembershipInstance, EnsureEnclaveSigner, EnsureOmniAccount, EnsureRootOrAllCouncil,
 	EnsureRootOrAllTechnicalCommittee, EnsureRootOrHalfCouncil, EnsureRootOrHalfTechnicalCommittee,
@@ -309,18 +309,6 @@ impl pallet_multisig::Config for Runtime {
 	type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-	pub const IndexDeposit: Balance = 100 * CENTS;
-}
-
-impl pallet_indices::Config for Runtime {
-	type AccountIndex = AccountIndex;
-	type Currency = Balances;
-	type Deposit = IndexDeposit;
-	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = weights::pallet_indices::WeightInfo<Runtime>;
-}
-
 /// The type used to represent the kinds of proxying allowed.
 #[derive(
 	Copy,
@@ -459,6 +447,7 @@ impl pallet_scheduler::Config for Runtime {
 parameter_types! {
 	pub const PreimageMaxSize: u32 = 4096 * 1024;
 	pub const PreimageBaseDeposit: Balance = 1 * DOLLARS;
+	pub const PreimageByteDeposit: Balance = 1 * CENTS;
 	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
@@ -472,8 +461,8 @@ impl pallet_preimage::Config for Runtime {
 		Balances,
 		PreimageHoldReason,
 		frame_support::traits::LinearStoragePrice<
-			dynamic_params::preimage::BaseDeposit,
-			dynamic_params::preimage::ByteDeposit,
+			PreimageBaseDeposit,
+			PreimageByteDeposit,
 			Balance,
 		>,
 	>;
@@ -544,7 +533,6 @@ parameter_types! {
 	pub const MinimumDeposit: Balance = 100 * DOLLARS;
 	pub EnactmentPeriod: BlockNumber = prod_or_fast!(5 * MINUTES, 2 * MINUTES, "ROCOCO_ENACTMENTPERIOD");
 	pub CooloffPeriod: BlockNumber = prod_or_fast!(10 * MINUTES, 2 * MINUTES, "ROCOCO_COOLOFFPERIOD");
-	pub const PreimageByteDeposit: Balance = deposit(0, 1);
 }
 
 impl pallet_democracy::Config for Runtime {
@@ -742,7 +730,7 @@ impl pallet_treasury::Config for Runtime {
 	type Paymaster = PayOverXcm<
 		TreasuryInteriorLocation,
 		crate::xcm_config::XcmRouter,
-		crate::XcmPallet,
+		crate::PolkadotXcm,
 		ConstU32<{ 6 * HOURS }>,
 		Self::Beneficiary,
 		Self::AssetKind,
@@ -1000,7 +988,7 @@ impl pallet_vesting::Config for Runtime {
 	// highest number of schedules that encodes less than 2^10.
 	const MAX_VESTING_SCHEDULES: u32 = 28;
 	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
-	type BlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
