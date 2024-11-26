@@ -87,12 +87,6 @@ rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
 ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
 webpki = { version = "=0.102.2", git = "https://github.com/rustls/webpki", rev = "049e9d5", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
-# No version for polkadot-v1.11.0 found, so using version for polkadot-v1.10.0 instead.
-orml-traits = { version = "0.10.0", default-features = false }
-orml-xtokens = { version = "0.10.0", default-features = false }
-staging-xcm = { version = "11.0.0", default-features = false }
-staging-xcm-builder = { version = "11.0.0", default-features = false }
-staging-xcm-executor = { version = "11.0.0", default-features = false }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
@@ -174,7 +168,7 @@ sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "releas
 sp-core-hashing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false, features = ["improved_panic_error_reporting"] }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false, features = ["improved_panic_error_reporting", "disable_panic_handler"] }
 sp-keystore = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
@@ -242,11 +236,15 @@ pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk"
 parachain-info = { package = "staging-parachain-info", git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
+# orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
+# orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
+orml-traits = { version = "0.10.0", default-features = false }
+orml-xtokens = { version = "0.10.0", default-features = false }
 
 # benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
-frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 try-runtime-cli = { package = "try-runtime-core", git = "https://github.com/paritytech/try-runtime-cli", tag = "v0.7.0" }
 cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/polkadot-sdk', branch = "release-polkadot-v1.11.0", default-features = false }
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
@@ -286,9 +284,6 @@ pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = fa
 getrandom = { git = "https://github.com/rust-random/getrandom", tag = "v0.2.10" }
 governor = { git = "https://github.com/boinkor-net/governor", tag = "v0.6.0" }
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
-staging-xcm = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
-staging-xcm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
-staging-xcm-executor = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0" }
 
 [patch."https://github.com/AstarNetwork/frontier"]
 fc-api = { git = "https://github.com/paritytech/frontier", branch = "polkadot-v1.11.0" }

@@ -24,7 +24,7 @@ frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "
 pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "polkadot-v1.11.0", default-features = false }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false, features = ["improved_panic_error_reporting", "disable_panic_handler"]}
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 

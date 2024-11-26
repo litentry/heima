@@ -152,7 +152,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	// How much we charge for XCM from remote chain per XCM command.
-	pub UnitWeightCost: staging_xcm::v3::Weight = staging_xcm::v3::Weight::from_parts(200_000_000u64, 0);
+	pub UnitWeightCost: xcm::v3::Weight = xcm::v3::Weight::from_parts(200_000_000u64, 0);
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -206,7 +206,7 @@ pub type Traders = (
 );
 
 /// Xcm Weigher shared between multiple Xcm-related configs.
-pub type XcmWeigher = staging_xcm_builder::FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+pub type XcmWeigher = xcm_builder::FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -280,7 +280,7 @@ parameter_types! {
 			Parachain(ParachainInfo::parachain_id().into())
 		]))
 	};
-	pub const BaseXcmWeight: staging_xcm::v3::Weight = staging_xcm::v3::Weight::from_parts(100_000_000u64, 0);
+	pub const BaseXcmWeight: xcm::v3::Weight = xcm::v3::Weight::from_parts(100_000_000u64, 0);
 }
 
 pub struct MaxAssetsForTransfer;
@@ -291,8 +291,8 @@ impl orml_traits::parameters::frame_support::traits::Get<usize> for MaxAssetsFor
 }
 
 // impl orml_traits::parameters::frame_support::traits::Get<usize> for BaseXcmWeight {
-//     fn get() -> staging_xcm::v3::Weight {
-//         staging_xcm::v3::Weight::from_parts(100_000_000u64, 0)
+//     fn get() -> xcm::v3::Weight {
+//         xcm::v3::Weight::from_parts(100_000_000u64, 0)
 //     }
 // }
 

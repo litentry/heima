@@ -281,7 +281,7 @@ parameter_types! {
 			Parachain(ParachainInfo::parachain_id().into())
 		]))
 	};
-	pub const BaseXcmWeight: staging_xcm::v3::Weight = staging_xcm::v3::Weight::from_parts(100_000_000u64, 0);
+	pub const BaseXcmWeight: xcm::v3::Weight = xcm::v3::Weight::from_parts(100_000_000u64, 0);
 }
 
 pub struct MaxAssetsForTransfer;

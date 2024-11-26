@@ -271,20 +271,6 @@ impl<R: BaseRuntimeRequirements> Default for CurrencyId<R> {
 	}
 }
 
-/*
- note: `cumulus_primitives_core::Junctions` is defined in crate `staging_xcm`
-   --> /home/will/.cargo/git/checkouts/polkadot-sdk-cff69157b985ed76/8c8edac/polkadot/xcm/src/v4/junctions.rs:47:1
-    |
-47  | pub enum Junctions {
-    | ^^^^^^^^^^^^^^^^^^
-note: `staging_xcm::v4::Junctions` is defined in crate `staging_xcm`
-   --> /home/will/.cargo/registry/src/index.crates.io-6f17d22bba15001f/staging-xcm-11.0.0/src/v4/junctions.rs:47:1
-    |
-47  | pub enum Junctions {
-    | ^^^^^^^^^^^^^^^^^^
-    = note: perhaps two different versions of crate `staging_xcm` are being used?
-TODO: fix
- */
 /// Instructs how to convert a 32 byte accountId into a Location
 pub struct AccountIdToLocation;
 impl orml_traits::parameters::sp_runtime::traits::Convert<AccountId, Location> for AccountIdToLocation {

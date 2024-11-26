@@ -19,7 +19,7 @@ sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
 sp-debug-derive = { workspace = true, features = ["force-debug"], optional = true }
 sp-inherents = { workspace = true }
-sp-io = { workspace = true, features = ["disable_panic_handler"] }
+sp-io = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
 sp-session = { workspace = true }
@@ -73,11 +73,8 @@ parachains-common = { workspace = true }
 polkadot-runtime-common = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 xcm = { workspace = true }
-staging-xcm = { workspace = true }
 xcm-builder = { workspace = true }
-staging-xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
-staging-xcm-executor = { workspace = true }
 
 orml-traits = { workspace = true }
 orml-xtokens = { workspace = true }
@@ -257,11 +254,8 @@ std = [
     "pallet-xcm/std",
     "polkadot-parachain-primitives/std",
     "xcm/std",
-    "staging-xcm/std",
     "xcm-builder/std",
-    "staging-xcm-builder/std",
     "xcm-executor/std",
-    "staging-xcm-executor/std",
     "fp-evm/std",
     "fp-rpc/std",
     "fp-self-contained/std",
