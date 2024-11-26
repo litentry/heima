@@ -114,6 +114,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumPoolProposed: Get<u32>;
 
+		/// The maximum amount of investor per pool for both pre-investing and queued
+		#[pallet::constant]
+		type MaximumInvestingPerProposal: Get<u32>;
+
 		/// Standard epoch length
 		#[pallet::constant]
 		type StandardEpoch: Get<BlockNumberFor<Self>>;

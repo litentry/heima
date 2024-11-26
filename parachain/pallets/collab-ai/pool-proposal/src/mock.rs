@@ -54,6 +54,7 @@ parameter_types! {
 	pub const MaxGuardianPerProposal: u32 = 2;
 	pub const MaxGuardianSelectedPerProposal: u32 = 1;
 	pub const MaximumPoolProposed: u32 = 1;
+	pub const MaximumInvestingPerProposal: u32 = 100;
 
 	pub const DepositBase: Balance = 1;
 	pub const DepositFactor: Balance = 1;
@@ -200,6 +201,7 @@ impl pallet_pool_proposal::Config for Test {
 	type MinimumProposalLastTime = MinimumProposalLastTime;
 	type MinimumPoolDeposit = MinimumPoolDeposit;
 	type MaximumPoolProposed = MaximumPoolProposed;
+	type MaximumInvestingPerProposal = MaximumInvestingPerProposal;
 	type StandardEpoch = StandardEpoch;
 	type ProposalOrigin = EnsureSignedAndCurator<Self::AccountId, MockCuratorQuery>;
 	type PublicVotingOrigin = frame_system::EnsureRoot<Self::AccountId>;
