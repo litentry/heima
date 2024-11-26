@@ -204,7 +204,7 @@ pub mod pallet {
 			T::AccountId,
 			AssetBalanceOf<T>,
 			BlockNumberFor<T>,
-			T::MaximumPoolProposed,
+			T::MaximumInvestingPerProposal,
 		>,
 		OptionQuery,
 	>;
