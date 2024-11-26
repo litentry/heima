@@ -36,6 +36,7 @@ parachain-info = { workspace = true }
 
 pallet-xcm = { workspace = true }
 parachains-common = { workspace = true }
+polkadot-runtime-common = { workspace = true }
 xcm = { workspace = true }
 staging-xcm = { workspace = true }
 xcm-builder = { workspace = true }
@@ -104,6 +105,7 @@ std = [
     "orml-traits/std",
     "orml-xtokens/std",
     "parachains-common/std",
+    "polkadot-runtime-common/std",
 ]
 
 runtime-benchmarks = [

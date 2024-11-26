@@ -70,12 +70,6 @@ parameter_types! {
 	pub UniversalLocation: InteriorLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
 
-impl orml_traits::parameters::frame_support::traits::Get<Junctions> for UniversalLocation {
-    fn get() -> Junctions {
-        UniversalLocation::get()
-    }
-}
-
 /// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.

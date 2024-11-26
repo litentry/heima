@@ -69,6 +69,7 @@ use sp_version::RuntimeVersion;
 // XCM Imports
 use xcm_builder::PayOverXcm;
 use xcm_executor::XcmExecutor;
+use xcm::latest::prelude::Junction;
 
 pub use constants::currency::deposit;
 pub use core_primitives::{
@@ -90,6 +91,7 @@ use runtime_common::{
 	WEIGHT_TO_FEE_FACTOR,
 	impls::{ContainsParts, LocatableAssetConverter, VersionedLocationConverter}
 };
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 use pallet_ethereum::{Call::transact, PostLogContent, TransactionStatus};
@@ -763,7 +765,9 @@ impl SortedMembers<AccountId> for CouncilProvider {
 	}
 
 	fn sorted_members() -> Vec<AccountId> {
-		pallet_collective::pallet::Members::<T, I>::get()
+		// pallet_collective::pallet::Members::<T, I>::get()
+		// TODO
+		unimplemented!()
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -879,10 +883,37 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ControllerOrigin = EnsureRootOrAllCouncil;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
-	type PriceForSiblingDelivery = ();
+	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
 	// Enqueue XCMP messages from siblings for later processing.
 	type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
 	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
+}
+
+parameter_types! {
+	/// All messages that came into the `DmpSink`.
+	pub static RecordedMessages: Vec<Vec<u8>> = vec![];
+}
+
+/// Can be used as [`Config::DmpSink`] to record all messages that came in.
+pub struct RecordingDmpSink;
+impl frame_support::traits::HandleMessage for RecordingDmpSink {
+	type MaxMessageLen = ConstU32<16>;
+
+	fn handle_message(msg: frame_support::BoundedSlice<u8, Self::MaxMessageLen>) {
+		RecordedMessages::mutate(|n| n.push(msg.to_vec()));
+	}
+
+	fn handle_messages<'a>(_: impl Iterator<Item = frame_support::BoundedSlice<'a, u8, Self::MaxMessageLen>>) {
+		unimplemented!()
+	}
+
+	fn sweep_queue() {
+		unimplemented!()
+	}
+
+	fn footprint() -> frame_support::traits::QueueFootprint {
+		unimplemented!()
+	}
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -890,7 +921,7 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	// TODO need to generate
 	type WeightInfo = ();
 	// type WeightInfo = weights::cumulus_pallet_dmp_queue::WeightInfo<Runtime>;
-	type DmpSink = ();
+	type DmpSink = RecordingDmpSink;
 }
 
 parameter_types! {
@@ -1271,6 +1302,33 @@ impl pallet_score_staking::Config for Runtime {
 impl runtime_common::BaseRuntimeRequirements for Runtime {}
 impl runtime_common::ParaRuntimeRequirements for Runtime {}
 
+parameter_types! {
+	pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+}
+
+impl pallet_message_queue::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
+		cumulus_primitives_core::AggregateMessageOrigin,
+	>;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type MessageProcessor = xcm_builder::ProcessXcmMessage<
+		AggregateMessageOrigin,
+		xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+		RuntimeCall,
+	>;
+	type Size = u32;
+	// The XCMP queue pallet is only ever able to handle the `Sibling(ParaId)` origin:
+	type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
+	type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
+	type HeapSize = sp_core::ConstU32<{ 64 * 1024 }>;
+	type MaxStale = sp_core::ConstU32<8>;
+	type ServiceWeight = MessageQueueServiceWeight;
+	type IdleMaxServiceWeight = ();
+}
+
 construct_runtime! {
 	pub enum Runtime
 	{
@@ -1333,6 +1391,7 @@ construct_runtime! {
 		// XTokens: orml_xtokens = 54,
 		// 55 is saved for old pallet: Tokens: orml_tokens
 		Assets: pallet_assets = 56,
+		MessageQueue: pallet_message_queue = 57,
 
 		// Rococo pallets
 		ChainBridge: pallet_chain_bridge= 60,
