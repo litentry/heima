@@ -35,23 +35,23 @@ use xcm_builder::{ConvertedConcreteId, NoChecking};
 // We should replace () regarding fake_pallet_id account after our PR passed.
 use core_primitives::{AccountId, Weight};
 use runtime_common::xcm_impl::{
-	AccountIdToLocation, AssetIdLocationConvert, CurrencyId,
-	CurrencyIdLocationConvert, FirstAssetTrader, MultiNativeAsset, NewAnchoringSelfReserve,
-	OldAnchoringSelfReserve, ParentOrParachains, XcmFeesToAccount,
+	AccountIdToLocation, AssetIdLocationConvert, CurrencyId, CurrencyIdLocationConvert,
+	FirstAssetTrader, MultiNativeAsset, NewAnchoringSelfReserve, OldAnchoringSelfReserve,
+	ParentOrParachains, XcmFeesToAccount,
 };
 
 use runtime_common::WEIGHT_TO_FEE_FACTOR;
 use sp_runtime::traits::AccountIdConversion;
+use sp_std::sync::Arc;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungiblesAdapter, IsConcrete, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungiblesAdapter, IsConcrete,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
 use xcm_executor::{traits::JustTry, XcmExecutor};
-use sp_std::sync::Arc;
 
 #[cfg(test)]
 use crate::tests::setup::ParachainXcmRouter;
@@ -206,7 +206,7 @@ pub type Traders = (
 );
 
 /// Xcm Weigher shared between multiple Xcm-related configs.
-pub type XcmWeigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+pub type XcmWeigher = FixedWeightBounds<BaseXcmWeight, RuntimeCall, MaxInstructions>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -285,9 +285,9 @@ parameter_types! {
 
 pub struct MaxAssetsForTransfer;
 impl orml_traits::parameters::frame_support::traits::Get<usize> for MaxAssetsForTransfer {
-    fn get() -> usize {
-        3
-    }
+	fn get() -> usize {
+		3
+	}
 }
 
 #[cfg(feature = "runtime-benchmarks")]

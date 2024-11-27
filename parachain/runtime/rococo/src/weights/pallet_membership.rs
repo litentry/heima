@@ -192,15 +192,13 @@ impl<T: frame_system::Config> pallet_membership::WeightInfo for WeightInfo<T> {
 	/// Storage: `Council::Prime` (r:0 w:1)
 	/// Proof: `Council::Prime` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
 	/// The range of component `m` is `[1, 100]`.
-	fn clear_prime(m: u32, ) -> Weight {
+	fn clear_prime() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 3_043_000 picoseconds.
 		Weight::from_parts(3_337_476, 0)
 			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 111
-			.saturating_add(Weight::from_parts(164, 0).saturating_mul(m.into()))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
 }

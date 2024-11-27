@@ -14,16 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use cumulus_primitives_core::{AssetId, Location};
 /// Adapter for [`Contains`] trait to match [`VersionedLocatableAsset`] type converted to the latest
 /// version of itself where it's location matched by `L` and it's asset id by `A` parameter types.
-
 use frame_support::traits::{Contains, ContainsPair};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use sp_runtime::{traits::TryConvert, RuntimeDebug};
-use xcm::{latest::{Junction, Junctions}, VersionedLocation};
-use xcm_builder::LocatableAssetId;
-use cumulus_primitives_core::{AssetId, Location};
 use sp_std::sync::Arc;
+use xcm::{
+	latest::{Junction, Junctions},
+	VersionedLocation,
+};
+use xcm_builder::LocatableAssetId;
 
 /// Versioned locatable asset type which contains both an XCM `location` and `asset_id` to identify
 /// an asset which exists on some chain.
@@ -75,41 +77,40 @@ where
 
 /// Converts the [`VersionedLocatableAsset`] to the [`LocatableAssetId`].
 pub struct LocatableAssetConverter;
-impl TryConvert<VersionedLocatableAsset, LocatableAssetId>
-	for LocatableAssetConverter
-{
+impl TryConvert<VersionedLocatableAsset, LocatableAssetId> for LocatableAssetConverter {
 	fn try_convert(
 		asset: VersionedLocatableAsset,
 	) -> Result<LocatableAssetId, VersionedLocatableAsset> {
 		match asset {
-			VersionedLocatableAsset::V3 { location, asset_id } =>
-				Ok(LocatableAssetId {
-					location: location.try_into().map_err(|_| asset.clone())?,
-					asset_id: asset_id.try_into().map_err(|_| asset.clone())?,
-				}),
-			VersionedLocatableAsset::V4 { location, asset_id } =>
-				Ok(LocatableAssetId { location, asset_id }),
+			VersionedLocatableAsset::V3 { location, asset_id } => Ok(LocatableAssetId {
+				location: location.try_into().map_err(|_| asset.clone())?,
+				asset_id: asset_id.try_into().map_err(|_| asset.clone())?,
+			}),
+			VersionedLocatableAsset::V4 { location, asset_id } => {
+				Ok(LocatableAssetId { location, asset_id })
+			},
 		}
 	}
 }
 
 impl sp_runtime::traits::TryConvert<u32, LocatableAssetId> for LocatableAssetConverter {
-    fn try_convert(value: u32) -> Result<LocatableAssetId, u32> {
+	fn try_convert(value: u32) -> Result<LocatableAssetId, u32> {
 		// let location = Location::new(1, Junctions::X1(Arc::new([Junction::Parachain(value)])));
-        // Ok(LocatableAssetId {
-        //     asset_id: AssetId::from(location.clone()),
-        //     location,
-        // })
+		// Ok(LocatableAssetId {
+		//     asset_id: AssetId::from(location.clone()),
+		//     location,
+		// })
 		Ok(LocatableAssetId {
-            asset_id: AssetId::from(Location::default()),
-            location: Location::default(),
-        })
-
-    }
+			asset_id: AssetId::from(xcm::v4::Location::default()),
+			location: xcm::v4::Location::default(),
+		})
+	}
 }
 
 impl<'a> TryConvert<&'a sp_runtime::AccountId32, Location> for VersionedLocationConverter {
-    fn try_convert(value: &'a sp_runtime::AccountId32) -> Result<Location, &'a sp_runtime::AccountId32> {
-        Ok(Location::default())
-    }
+	fn try_convert(
+		value: &'a sp_runtime::AccountId32,
+	) -> Result<Location, &'a sp_runtime::AccountId32> {
+		Ok(Location::default())
+	}
 }

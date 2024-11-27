@@ -27,11 +27,17 @@ extern crate frame_benchmarking;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::{AggregateMessageOrigin, InteriorLocation, PalletInstance, ParaId};
 use frame_support::{
-	construct_runtime, parameter_types, traits::{
-		tokens::UnityOrOuterConversion, ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound, EnsureOrigin, Everything, FindAuthor, FromContains, InstanceFilter, OnFinalize, SortedMembers, TransformOrigin, WithdrawReasons
-	}, weights::{constants::RocksDbWeight, ConstantMultiplier, Weight}, ConsensusEngineId, PalletId
+	construct_runtime, parameter_types,
+	traits::{
+		fungible::HoldConsideration, tokens::UnityOrOuterConversion, ConstBool, ConstU128,
+		ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound, EnsureOrigin, Everything,
+		FindAuthor, FromContains, InstanceFilter, LinearStoragePrice, OnFinalize, SortedMembers,
+		TransformOrigin, WithdrawReasons,
+	},
+	weights::{constants::RocksDbWeight, ConstantMultiplier, Weight},
+	ConsensusEngineId, PalletId,
 };
-use frame_system::{EnsureRoot, pallet_prelude::BlockNumberFor};
+use frame_system::{pallet_prelude::BlockNumberFor, EnsureRoot};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
@@ -60,9 +66,9 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 // XCM Imports
+use xcm::latest::prelude::Junction;
 use xcm_builder::PayOverXcm;
 use xcm_executor::XcmExecutor;
-use xcm::latest::prelude::Junction;
 
 pub use constants::currency::deposit;
 pub use core_primitives::{
@@ -72,19 +78,20 @@ pub use core_primitives::{
 };
 pub use runtime_common::currency::*;
 
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use runtime_common::{
-	impl_runtime_transaction_payment_fees, prod_or_fast, AccountIndex, BlockHashCount, BlockLength,
-	CouncilInstance, CouncilMembershipInstance, DeveloperCommitteeInstance,
-	DeveloperCommitteeMembershipInstance, EnsureEnclaveSigner, EnsureOmniAccount, EnsureRootOrAllCouncil,
+	impl_runtime_transaction_payment_fees,
+	impls::{ContainsParts, LocatableAssetConverter, VersionedLocationConverter},
+	prod_or_fast, AccountIndex, BlockHashCount, BlockLength, CouncilInstance,
+	CouncilMembershipInstance, DeveloperCommitteeInstance, DeveloperCommitteeMembershipInstance,
+	EnsureEnclaveSigner, EnsureOmniAccount, EnsureRootOrAllCouncil,
 	EnsureRootOrAllTechnicalCommittee, EnsureRootOrHalfCouncil, EnsureRootOrHalfTechnicalCommittee,
 	EnsureRootOrTwoThirdsCouncil, EnsureRootOrTwoThirdsTechnicalCommittee,
 	IMPExtrinsicWhitelistInstance, NegativeImbalance, RuntimeBlockWeights, SlowAdjustingFeeUpdate,
 	TechnicalCommitteeInstance, TechnicalCommitteeMembershipInstance,
 	VCMPExtrinsicWhitelistInstance, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO, WEIGHT_PER_GAS,
 	WEIGHT_TO_FEE_FACTOR,
-	impls::{ContainsParts, LocatableAssetConverter, VersionedLocationConverter}
 };
-use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 use pallet_ethereum::{Call::transact, PostLogContent, TransactionStatus};
@@ -276,14 +283,14 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 	type RuntimeTask = ();
 	type SingleBlockMigrations = ();
-	type MultiBlockMigrator= ();
+	type MultiBlockMigrator = ();
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
 }
 
 impl pallet_asset_rate::Config for Runtime {
-	type WeightInfo = weights::pallet_asset_rate::WeightInfo<Runtime>;
+	type WeightInfo = ();
 	type RuntimeEvent = RuntimeEvent;
 	type CreateOrigin = EnsureRoot<AccountId>;
 	type RemoveOrigin = EnsureRoot<AccountId>;
@@ -458,15 +465,11 @@ impl pallet_preimage::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRootOrAllCouncil;
-	type Consideration = frame_support::traits::fungible::HoldConsideration<
+	type Consideration = HoldConsideration<
 		AccountId,
 		Balances,
 		PreimageHoldReason,
-		frame_support::traits::LinearStoragePrice<
-			PreimageBaseDeposit,
-			PreimageByteDeposit,
-			Balance,
-		>,
+		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
 	>;
 }
 
@@ -888,7 +891,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 
 parameter_types! {
 	/// All messages that came into the `DmpSink`.
-	pub static RecordedMessages: Vec<Vec<u8>> = vec![];
+	pub RecordedMessages: Vec<Vec<u8>> = vec![];
 }
 
 /// Can be used as [`Config::DmpSink`] to record all messages that came in.
@@ -900,7 +903,9 @@ impl frame_support::traits::HandleMessage for RecordingDmpSink {
 		RecordedMessages::mutate(|n| n.push(msg.to_vec()));
 	}
 
-	fn handle_messages<'a>(_: impl Iterator<Item = frame_support::BoundedSlice<'a, u8, Self::MaxMessageLen>>) {
+	fn handle_messages<'a>(
+		_: impl Iterator<Item = frame_support::BoundedSlice<'a, u8, Self::MaxMessageLen>>,
+	) {
 		unimplemented!()
 	}
 
@@ -1228,7 +1233,7 @@ where
 	{
 		if let Some(author_index) = pallet_aura::Pallet::<T>::find_author(digests) {
 			let authority_id =
-			pallet_aura::Authorities::<Runtime>::get()[author_index as usize].clone();
+				pallet_aura::Authorities::<Runtime>::get()[author_index as usize].clone();
 			return Some(H160::from_slice(&authority_id.encode()[4..24]));
 		}
 
@@ -1986,7 +1991,7 @@ impl_runtime_apis! {
 
 			Ok(())
 		}
-		
+
 		fn trace_call(
 			header: &<Block as BlockT>::Header,
 			from: H160,

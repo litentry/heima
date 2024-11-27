@@ -35,23 +35,23 @@ use xcm_builder::{ConvertedConcreteId, NoChecking};
 // We should replace () regarding fake_pallet_id account after our PR passed.
 use core_primitives::{AccountId, Weight};
 use runtime_common::xcm_impl::{
-	AccountIdToLocation, AssetIdLocationConvert, CurrencyId,
-	CurrencyIdLocationConvert, FirstAssetTrader, MultiNativeAsset, NewAnchoringSelfReserve,
-	OldAnchoringSelfReserve, ParentOrParachains, XcmFeesToAccount,
+	AccountIdToLocation, AssetIdLocationConvert, CurrencyId, CurrencyIdLocationConvert,
+	FirstAssetTrader, MultiNativeAsset, NewAnchoringSelfReserve, OldAnchoringSelfReserve,
+	ParentOrParachains, XcmFeesToAccount,
 };
 
 use runtime_common::WEIGHT_TO_FEE_FACTOR;
 use sp_runtime::traits::AccountIdConversion;
+use sp_std::sync::Arc;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungiblesAdapter, IsConcrete, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	EnsureXcmOrigin, FixedWeightBounds, FrameTransactionalProcessor, FungiblesAdapter, IsConcrete,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
 use xcm_executor::{traits::JustTry, XcmExecutor};
-use sp_std::sync::Arc;
 
 #[cfg(test)]
 use crate::tests::setup::ParachainXcmRouter;
@@ -152,14 +152,14 @@ pub type XcmOriginToTransactDispatchOrigin = (
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
 	// How much we charge for XCM from remote chain per XCM command.
-	pub UnitWeightCost: xcm::v3::Weight = xcm::v3::Weight::from_parts(200_000_000u64, 0);
+	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000u64, 0);
 	pub const MaxInstructions: u32 = 100;
 }
 
 match_types! {
 	pub type ParentOrParentsExecutivePlurality: impl Contains<Location> = {
 		Location { parents: 1, interior: Here } |
-		Location { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
+		Location { parents: 1, interior: Junctions::X1(Plurality { id: BodyId::Executive, .. }) }
 	};
 }
 
@@ -206,7 +206,7 @@ pub type Traders = (
 );
 
 /// Xcm Weigher shared between multiple Xcm-related configs.
-pub type XcmWeigher = xcm_builder::FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+pub type XcmWeigher = FixedWeightBounds<BaseXcmWeight, RuntimeCall, MaxInstructions>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
@@ -285,9 +285,9 @@ parameter_types! {
 
 pub struct MaxAssetsForTransfer;
 impl orml_traits::parameters::frame_support::traits::Get<usize> for MaxAssetsForTransfer {
-    fn get() -> usize {
-        3
-    }
+	fn get() -> usize {
+		3
+	}
 }
 
 // impl orml_traits::parameters::frame_support::traits::Get<usize> for BaseXcmWeight {

@@ -23,14 +23,13 @@ use sp_runtime::traits::{Convert, MaybeEquivalence, Zero};
 use sp_std::{boxed::Box, cmp::Ordering, marker::PhantomData, prelude::*, sync::Arc};
 use xcm::{
 	latest::{
-		AssetId as xcmAssetId,Junction::*, Junctions::*,
-		prelude::{
-			Asset as MultiAsset, Fungibility, Junction, Junctions,
-			XcmError,
-		},
+		prelude::{Asset as MultiAsset, Fungibility, Junction, Junctions, XcmError},
+		AssetId as xcmAssetId,
+		Junction::*,
+		Junctions::*,
 		Weight, XcmContext,
 	},
-	v4::Location
+	v4::Location,
 };
 use xcm_builder::TakeRevenue;
 use xcm_executor::traits::{ConvertLocation, MatchesFungibles, WeightTrader};
@@ -273,7 +272,9 @@ impl<R: BaseRuntimeRequirements> Default for CurrencyId<R> {
 
 /// Instructs how to convert a 32 byte accountId into a Location
 pub struct AccountIdToLocation;
-impl orml_traits::parameters::sp_runtime::traits::Convert<AccountId, Location> for AccountIdToLocation {
+impl orml_traits::parameters::sp_runtime::traits::Convert<AccountId, Location>
+	for AccountIdToLocation
+{
 	fn convert(account: AccountId) -> Location {
 		Location {
 			parents: 0,
@@ -284,7 +285,7 @@ impl orml_traits::parameters::sp_runtime::traits::Convert<AccountId, Location> f
 
 pub struct ParentOrParachains;
 impl orml_traits::parameters::frame_support::traits::Contains<Location> for ParentOrParachains {
-    fn contains(location: &Location) -> bool {
+	fn contains(location: &Location) -> bool {
 		match location {
 			// Local account: for litentry is Litentry, for paseo is Litmus, for rococo is Rococo
 			Location { parents: 0, interior: X1(inner) } => {
@@ -416,8 +417,7 @@ impl<R: BaseRuntimeRequirements> Convert<Location, Option<CurrencyId<R>>>
 /// The trait bounds enforce is that the AssetTypeGetter trait is also implemented
 pub struct AssetIdLocationConvert<R>(PhantomData<R>);
 
-impl<R: ParaRuntimeRequirements> MaybeEquivalence<Location, AssetId>
-	for AssetIdLocationConvert<R>
+impl<R: ParaRuntimeRequirements> MaybeEquivalence<Location, AssetId> for AssetIdLocationConvert<R>
 where
 	R: pallet_asset_manager::Config<ForeignAssetType = CurrencyId<R>>,
 {
@@ -429,10 +429,9 @@ where
 		if let Some(currency_id) =
 			<AssetManager<R> as AssetTypeGetter<AssetId, CurrencyId<R>>>::get_asset_type(*id)
 		{
-			<CurrencyIdLocationConvert<R> as Convert<
-			CurrencyId<R>,
-			Option<Location>,
-			>>::convert(currency_id)
+			<CurrencyIdLocationConvert<R> as Convert<CurrencyId<R>, Option<Location>>>::convert(
+				currency_id,
+			)
 		} else {
 			None
 		}
