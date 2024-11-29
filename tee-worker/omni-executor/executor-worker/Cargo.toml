@@ -9,7 +9,7 @@ clap = { workspace = true, features = ["derive"] }
 env_logger = { workspace = true }
 executor-core = { path = "../executor-core" }
 hex = "0.4.3"
-intent-executor = { path = "../ethereum/intent-executor" }
+ethereum-intent-executor = { path = "../ethereum/intent-executor" }
 log = { workspace = true }
 parentchain-listener = { path = "../parentchain/listener" }
 scale-encode = { workspace = true }

@@ -16,7 +16,7 @@
 
 use crate::cli::Cli;
 use clap::Parser;
-use intent_executor::EthereumIntentExecutor;
+use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
 use std::io::Write;
 use std::thread::JoinHandle;
