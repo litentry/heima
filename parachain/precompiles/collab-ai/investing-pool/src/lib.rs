@@ -17,13 +17,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use fp_evm::{PrecompileFailure, PrecompileHandle};
-use frame_support::{
-	dispatch::{GetDispatchInfo, PostDispatchInfo},
-	traits::Currency,
-};
+use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_evm::AddressMapping;
-use pallet_investing_pool::BalanceOf;
+use pallet_investing_pool::{AssetIdOf, BalanceOf};
 
 use parity_scale_codec::MaxEncodedLen;
 use precompile_utils::prelude::*;
@@ -32,7 +29,9 @@ use sp_runtime::traits::Dispatchable;
 use sp_core::{Get, H256, U256};
 use sp_std::{marker::PhantomData, vec::Vec};
 
-use pallet_collab_ai_common::{InvestingPoolAssetIdGenerator, PoolProposalIndex};
+use pallet_collab_ai_common::{
+	InvestingPoolAssetIdGenerator, PoolProposalIndex, PoolSetting as InvestingPoolSetting,
+};
 
 pub struct InvestingPoolPrecompile<Runtime>(PhantomData<Runtime>);
 
@@ -46,7 +45,7 @@ where
 	<Runtime as frame_system::Config>::RuntimeCall: From<pallet_investing_pool::Call<Runtime>>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin:
 		From<Option<Runtime::AccountId>>,
-	AssetBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
+	AssetIdOf<Runtime>: TryFrom<U256> + Into<U256>,
 	BlockNumberFor<Runtime>: TryFrom<U256> + Into<U256>,
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 {
@@ -59,20 +58,21 @@ where
 	) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
-		let pool_proposal_index: u128 = pool_proposal_index.try_into().map_err(|_| {
-			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
-		})?;
+		let pool_proposal_index: PoolProposalIndex =
+			pool_proposal_index.try_into().map_err(|_| {
+				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
+			})?;
 
 		let epoch: u128 = epoch.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("epoch type"))
 		})?;
 
-		let reward: AssetBalanceOf<Runtime> = reward.try_into().map_err(|_| {
+		let reward: BalanceOf<Runtime> = reward.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("balance type"))
 		})?;
 
 		let call = pallet_investing_pool::Call::<Runtime>::update_reward {
-			pool_proposal_index,
+			pool_id: pool_proposal_index,
 			epoch,
 			reward,
 		};
@@ -89,7 +89,7 @@ where
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("asset type"))
 		})?;
 
-		let amount: AssetBalanceOf<Runtime> = amount.try_into().map_err(|_| {
+		let amount: BalanceOf<Runtime> = amount.try_into().map_err(|_| {
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("balance type"))
 		})?;
 
@@ -110,7 +110,7 @@ where
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
 		})?;
 		handle.record_db_read::<Runtime>(
-			PoolSetting::<Runtime::AccountId, BlockNumberFor, BalanceOf<Runtime>>::max_encoded_len(
+			InvestingPoolSetting::<Runtime::AccountId, BlockNumberFor, BalanceOf<Runtime>>::max_encoded_len(
 			)
 			.saturating_mul(length_usize),
 		)?;
@@ -118,6 +118,9 @@ where
 		let mut setting_result = Vec::<PoolSetting>::new();
 
 		for index in pool_proposal_index.iter() {
+			let index: PoolProposalIndex = index.try_into().map_err(|_| {
+				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
+			})?;
 			// get underlying investings
 			if let Some(result) =
 				pallet_investing_pool::Pallet::<Runtime>::investing_pool_setting(index)
@@ -146,13 +149,18 @@ where
 		pool_proposal_index: U256,
 	) -> EvmResult<Vec<EpochReward>> {
 		// Storage item: PoolSetting
-		handle.record_db_read::<Runtime>(PoolSetting::<
+		handle.record_db_read::<Runtime>(InvestingPoolSetting::<
 			Runtime::AccountId,
 			BlockNumberFor,
 			BalanceOf<Runtime>,
 		>::max_encoded_len())?;
 		let mut reward_result = Vec::<EpochReward>::new();
 		let mut epoch = 0u128;
+
+		let pool_proposal_index: PoolProposalIndex =
+			pool_proposal_index.try_into().map_err(|_| {
+				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
+			})?;
 
 		if let Some(result) =
 			pallet_investing_pool::Pallet::<Runtime>::investing_pool_setting(pool_proposal_index)
@@ -170,11 +178,12 @@ where
 		for i in 1..(epoch + 1) {
 			if let Some(result) =
 				pallet_investing_pool::Pallet::<Runtime>::stable_investing_pool_epoch_reward(
-					index, i,
+					pool_proposal_index,
+					i,
 				) {
 				let admin: [u8; 32] = result.admin.into();
 				let admin = admin.into();
-				setting_result.push(EpochReward {
+				reward_result.push(EpochReward {
 					total_reward: result.0.into(),
 					claimed_reward: result.1.into(),
 				});
@@ -183,7 +192,7 @@ where
 				break;
 			}
 		}
-		Ok(setting_result)
+		Ok(reward_result)
 	}
 }
 
