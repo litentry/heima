@@ -232,14 +232,14 @@ fn test_withdraw_pre_investing_ok() {
 		));
 		assert_events(vec![
 			RuntimeEvent::PoolProposal(crate::Event::PoolWithdrawed {
-				user: user_a,
+				user: user_a.clone(),
 				pool_proposal_index: 1u128,
 				amount: 490_000_000_000_000_000_000u128,
 			}),
 			RuntimeEvent::Assets(pallet_assets::Event::Transferred {
 				asset_id: 1,
 				from: PreInvestingPool::get(),
-				to: user_a.clone(),
+				to: user_a,
 				amount: 490_000_000_000_000_000_000,
 			}),
 		]);
