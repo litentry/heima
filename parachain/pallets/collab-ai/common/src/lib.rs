@@ -88,7 +88,7 @@ pub trait ProposerQuery<AccountId> {
 	fn is_proposer(account: AccountId, proposal_index: PoolProposalIndex) -> bool;
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, MaxEncodedLen, TypeInfo)]
 pub struct PoolSetting<AccountId, BlockNumber, Balance> {
 	// The start time of investing pool
 	pub start_time: BlockNumber,
