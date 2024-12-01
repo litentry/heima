@@ -26,12 +26,10 @@ use parity_scale_codec::MaxEncodedLen;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
-use sp_core::{Get, H256, U256};
+use sp_core::{H256, U256};
 use sp_std::{marker::PhantomData, vec::Vec};
 
-use pallet_collab_ai_common::{
-	InvestingPoolAssetIdGenerator, PoolProposalIndex, PoolSetting as InvestingPoolSetting,
-};
+use pallet_collab_ai_common::{PoolProposalIndex, PoolSetting as InvestingPoolSetting};
 
 pub struct InvestingPoolPrecompile<Runtime>(PhantomData<Runtime>);
 
@@ -110,7 +108,7 @@ where
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
 		})?;
 		handle.record_db_read::<Runtime>(
-			InvestingPoolSetting::<Runtime::AccountId, BlockNumberFor, BalanceOf<Runtime>>::max_encoded_len(
+			InvestingPoolSetting::<Runtime::AccountId, BlockNumberFor<Runtime>, BalanceOf<Runtime>>::max_encoded_len(
 			)
 			.saturating_mul(length_usize),
 		)?;
@@ -118,12 +116,12 @@ where
 		let mut setting_result = Vec::<PoolSetting>::new();
 
 		for index in pool_proposal_index.iter() {
-			let index: PoolProposalIndex = index.try_into().map_err(|_| {
+			let index_u128: PoolProposalIndex = *index.try_into().map_err(|_| {
 				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
 			})?;
 			// get underlying investings
 			if let Some(result) =
-				pallet_investing_pool::Pallet::<Runtime>::investing_pool_setting(index)
+				pallet_investing_pool::Pallet::<Runtime>::investing_pool_setting(index_u128)
 			{
 				let admin: [u8; 32] = result.admin.into();
 				let admin = admin.into();
@@ -151,7 +149,7 @@ where
 		// Storage item: PoolSetting
 		handle.record_db_read::<Runtime>(InvestingPoolSetting::<
 			Runtime::AccountId,
-			BlockNumberFor,
+			BlockNumberFor<Runtime>,
 			BalanceOf<Runtime>,
 		>::max_encoded_len())?;
 		let mut reward_result = Vec::<EpochReward>::new();
@@ -181,8 +179,6 @@ where
 					pool_proposal_index,
 					i,
 				) {
-				let admin: [u8; 32] = result.admin.into();
-				let admin = admin.into();
 				reward_result.push(EpochReward {
 					total_reward: result.0.into(),
 					claimed_reward: result.1.into(),
