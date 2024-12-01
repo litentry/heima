@@ -231,7 +231,7 @@ fn test_withdraw_pre_investing_ok() {
 			490_000_000_000_000_000_000u128,
 		));
 		assert_events(vec![
-			RuntimeEvent::Assets(Event::Transferred {
+			RuntimeEvent::Assets(pallet_assets::Event::Transferred {
 				asset_id: 1,
 				from: PreInvestingPool::get(),
 				to: user_a.clone(),
