@@ -1,3 +1,19 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::mock::*;
 use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
 use pallet_balances::Error as BalanceError;
@@ -195,15 +211,15 @@ fn test_withdraw_pre_investing_ok() {
 		));
 
 		// pre investing and queued
-		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolPreInvested {
-			user: user_a.clone(),
-			pool_proposal_index: 1u128,
-			amount: 5_000_000_000_000_000_000u128,
-		})]);
 		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolPreStakeQueued {
 			user: user_a.clone(),
 			pool_proposal_index: 1u128,
 			amount: 490_000_000_000_000_000_000u128,
+		})]);
+		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolPreInvested {
+			user: user_a.clone(),
+			pool_proposal_index: 1u128,
+			amount: 5_000_000_000_000_000_000u128,
 		})]);
 
 		// Withdraw succeed

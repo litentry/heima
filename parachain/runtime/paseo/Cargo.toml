@@ -124,6 +124,7 @@ pallet-evm-precompile-aiusd-convertor = { workspace = true }
 pallet-evm-precompile-curator = { workspace = true }
 pallet-evm-precompile-guardian = { workspace = true }
 pallet-evm-precompile-pool-proposal = { workspace = true }
+pallet-evm-precompile-investing-pool = { workspace = true }
 
 moonbeam-evm-tracer = { workspace = true }
 moonbeam-rpc-primitives-debug = { workspace = true }
@@ -244,6 +245,7 @@ std = [
     "pallet-evm-precompile-curator/std",
     "pallet-evm-precompile-guardian/std",
     "pallet-evm-precompile-pool-proposal/std",
+    "pallet-evm-precompile-investing-pool/std",
     "pallet-identity/std",
     "pallet-membership/std",
     "pallet-message-queue/std",

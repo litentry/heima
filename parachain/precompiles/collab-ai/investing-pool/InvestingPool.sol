@@ -21,7 +21,7 @@ interface IInvestingPool {
 
     /// @dev A structure for pool setting
     struct PoolSetting {
-        uint256 startTime;
+        uint256 start_time;
         uint256 epoch;
         uint256 epoch_range;
         uint256 pool_cap;
@@ -36,8 +36,8 @@ interface IInvestingPool {
 
     /// @dev A structure for recording epoch reward
     struct EpochReward {
-        uint256 totalReward;
-        uint256 claimedReward;
+        uint256 total_reward;
+        uint256 claimed_reward;
     }
 
     /// @notice Query All epoch rewards updated by curator
@@ -45,11 +45,4 @@ interface IInvestingPool {
     /// @custom:selector 0x25819dc7
 	/// 				 stableInvestingPoolEpochReward(uint256)
     function stableInvestingPoolEpochReward(uint256 pool_proposal_index) external view returns (EpochReward[] memory epcoh_reward);
-
-    /// @notice Query the estimated reward can be collected given the list of pair of token type and amounts
-    /// @param asset_id: a list of asset ids
-    /// @param amount: a list of amount of corresponding token
-    /// @custom:selector 0xfb570be1
-	/// 				 estimateReward(uint256[],uint256[])
-    function estimateReward(uint256[] calldata asset_id, uint256[] calldata amount) external view returns (uint256 aiusd, uint256 can);
 }

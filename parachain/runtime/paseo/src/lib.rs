@@ -1048,6 +1048,7 @@ parameter_types! {
 	pub MinimumProposalLastTime: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_MINIMUMPROPOSALLASTTIME");
 	pub const MinimumPoolDeposit: Balance = 1000 * DOLLARS;
 	pub const MaximumPoolProposed: u32 = 10000;
+	pub const MaximumInvestingPerProposal: u32 = 100000;
 	pub StandardEpoch: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_STANDARDEPOCH");
 	pub const MaxGuardianPerProposal: u32 = 1000;
 	pub const MaxGuardianSelectedPerProposal: u32 = 3;
@@ -1080,6 +1081,7 @@ impl pallet_pool_proposal::Config for Runtime {
 	type MinimumProposalLastTime = MinimumProposalLastTime;
 	type MinimumPoolDeposit = MinimumPoolDeposit;
 	type MaximumPoolProposed = MaximumPoolProposed;
+	type MaximumInvestingPerProposal = MaximumInvestingPerProposal;
 	type StandardEpoch = StandardEpoch;
 	type ProposalOrigin = EnsureSignedAndVerifiedCurator<AccountId, Curator>;
 	type PublicVotingOrigin = EnsureRootOrAllCouncil;

@@ -41,6 +41,7 @@ use sp_std::fmt::Debug;
 use pallet_evm_precompile_aiusd_convertor::AIUSDConvertorPrecompile;
 use pallet_evm_precompile_curator::CuratorPrecompile;
 use pallet_evm_precompile_guardian::GuardianPrecompile;
+use pallet_evm_precompile_investing_pool::InvestingPoolPrecompile;
 use pallet_evm_precompile_pool_proposal::PoolProposalPrecompile;
 
 /// The asset precompile address prefix. Addresses that match against this prefix will be routed
@@ -157,6 +158,12 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<
 		AddressU64<20632>,
 		PoolProposalPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// InvestingPool: pallet_investing_pool = 153 + 20480
+	PrecompileAt<
+		AddressU64<20633>,
+		InvestingPoolPrecompile<R>,
 		(CallableByContract, CallableByPrecompile),
 	>,
 	// AIUSDConvertor: pallet_aiusd_convertor = 154 + 20480
