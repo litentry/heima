@@ -140,7 +140,7 @@ impl pallet_balances::Config for Test {
 pub struct PreInvestingPool;
 impl Get<AccountId32> for PreInvestingPool {
 	fn get() -> AccountId32 {
-		AccountId32::new([1u8; 32])
+		AccountId32::new([8u8; 32])
 	}
 }
 
