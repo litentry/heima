@@ -104,9 +104,7 @@ where
 		pool_proposal_index: Vec<U256>,
 	) -> EvmResult<Vec<PoolSetting>> {
 		// Storage item: PoolSetting
-		let length_usize: usize = pool_proposal_index.len().try_into().map_err(|_| {
-			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
-		})?;
+		let length_usize: usize = pool_proposal_index.len();
 		handle.record_db_read::<Runtime>(
 			InvestingPoolSetting::<Runtime::AccountId, BlockNumberFor<Runtime>, BalanceOf<Runtime>>::max_encoded_len(
 			)
@@ -116,7 +114,7 @@ where
 		let mut setting_result = Vec::<PoolSetting>::new();
 
 		for index in pool_proposal_index.iter() {
-			let index_u128: PoolProposalIndex = index.clone().try_into().map_err(|_| {
+			let index_u128: PoolProposalIndex = (*index).try_into().map_err(|_| {
 				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
 			})?;
 			// get underlying investings
@@ -163,7 +161,7 @@ where
 		if let Some(result) =
 			pallet_investing_pool::Pallet::<Runtime>::investing_pool_setting(pool_proposal_index)
 		{
-			epoch = result.epoch.into();
+			epoch = result.epoch;
 			let length_usize: usize = epoch.try_into().map_err(|_| {
 				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
 			})?;
