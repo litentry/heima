@@ -290,7 +290,7 @@ pallet-evm-precompile-aiusd-convertor = { path = "precompiles/collab-ai/aiusd-co
 pallet-evm-precompile-curator = { path = "precompiles/collab-ai/curator", default-features = false }
 pallet-evm-precompile-guardian = { path = "precompiles/collab-ai/guardian", default-features = false }
 pallet-evm-precompile-pool-proposal = { path = "precompiles/collab-ai/pool-proposal", default-features = false }
-pallet-evm-precompile-investing-pool =  { path = "precompiles/collab-ai/investing-pool", default-features = false }
+pallet-evm-precompile-investing-pool = { path = "precompiles/collab-ai/investing-pool", default-features = false }
 
 pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = false }
 
