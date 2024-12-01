@@ -116,7 +116,7 @@ where
 		let mut setting_result = Vec::<PoolSetting>::new();
 
 		for index in pool_proposal_index.iter() {
-			let index_u128: PoolProposalIndex = *index.try_into().map_err(|_| {
+			let index_u128: PoolProposalIndex = index.clone().try_into().map_err(|_| {
 				Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("index type"))
 			})?;
 			// get underlying investings
@@ -153,7 +153,7 @@ where
 			BalanceOf<Runtime>,
 		>::max_encoded_len())?;
 		let mut reward_result = Vec::<EpochReward>::new();
-		let mut epoch = 0u128;
+		let mut epoch: u128;
 
 		let pool_proposal_index: PoolProposalIndex =
 			pool_proposal_index.try_into().map_err(|_| {
