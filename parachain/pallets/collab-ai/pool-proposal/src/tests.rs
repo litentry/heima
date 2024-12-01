@@ -211,16 +211,18 @@ fn test_withdraw_pre_investing_ok() {
 		));
 
 		// pre investing and queued
-		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolPreStakeQueued {
-			user: user_a.clone(),
-			pool_proposal_index: 1u128,
-			amount: 490_000_000_000_000_000_000u128,
-		})]);
-		assert_events(vec![RuntimeEvent::PoolProposal(crate::Event::PoolPreInvested {
-			user: user_a.clone(),
-			pool_proposal_index: 1u128,
-			amount: 5_000_000_000_000_000_000u128,
-		})]);
+		assert_events(vec![
+			RuntimeEvent::PoolProposal(crate::Event::PoolPreInvested {
+				user: user_a.clone(),
+				pool_proposal_index: 1u128,
+				amount: 5_000_000_000_000_000_000u128,
+			}),
+			RuntimeEvent::PoolProposal(crate::Event::PoolPreStakeQueued {
+				user: user_a.clone(),
+				pool_proposal_index: 1u128,
+				amount: 490_000_000_000_000_000_000u128,
+			}),
+		]);
 
 		// Withdraw succeed
 		assert_ok!(PoolProposal::withdraw_pre_investing(
