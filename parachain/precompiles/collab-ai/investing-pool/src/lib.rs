@@ -48,7 +48,7 @@ where
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 {
 	#[precompile::public("updateReward(uint256,uint256,uint256)")]
-	fn updateReward(
+	fn update_reward(
 		handle: &mut impl PrecompileHandle,
 		pool_proposal_index: U256,
 		epoch: U256,
@@ -153,7 +153,7 @@ where
 			BalanceOf<Runtime>,
 		>::max_encoded_len())?;
 		let mut reward_result = Vec::<EpochReward>::new();
-		let mut epoch: u128;
+		let epoch: u128;
 
 		let pool_proposal_index: PoolProposalIndex =
 			pool_proposal_index.try_into().map_err(|_| {
