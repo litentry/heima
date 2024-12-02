@@ -85,6 +85,9 @@ mod types {
 
     // Weight Type for XCM
     pub type Weight = frame_support::weights::Weight;
+
+    // Aura consensus authority.
+    pub type AuraId = sp_consensus_aura::sr25519::AuthorityId;
 }
 
 /// Common constants of parachains.

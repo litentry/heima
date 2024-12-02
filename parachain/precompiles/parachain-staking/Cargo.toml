@@ -41,4 +41,10 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
+    "pallet-balances/std",
+    "pallet-timestamp/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "serde/std",
+    "sha3/std",
 ]

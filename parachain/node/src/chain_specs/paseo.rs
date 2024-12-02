@@ -20,9 +20,9 @@ use cumulus_primitives_core::ParaId;
 use paseo_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig, SystemConfig,
+	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
 	TechnicalCommitteeMembershipConfig, TeebagConfig, TeebagOperationalMode, VCManagementConfig,
-	UNIT, WASM_BINARY,
+	WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -36,9 +36,9 @@ pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensio
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Get default parachain properties for paseo which will be filled into chain spec
-/// Currently, we use 131 as the SS58Prefix (same as Litmus)
-fn default_parachain_properties() -> Option<Properties> {
-	parachain_properties("LIT", 18, 131)
+/// We use 31 as the SS58Prefix (same as Litentry)
+fn default_parachain_properties() -> Properties {
+	parachain_properties("LIT", 18, 31)
 }
 
 const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 1000 * UNIT;
@@ -59,51 +59,39 @@ struct GenesisInfo {
 
 pub fn get_chain_spec_dev(is_standalone: bool) -> ChainSpec {
 	let id = if is_standalone { "standalone" } else { "litentry-paseo-dev" };
-	ChainSpec::from_genesis(
-		"Litentry-paseo-dev",
-		id,
-		ChainType::Development,
-		move || {
-			generate_genesis(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				vec![(
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_collator_keys_from_seed("Alice"),
-				)],
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Charlie"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Eve"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-				],
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-				PASEO_PARA_ID.into(),
-			)
-		},
-		Vec::new(),
-		None,
-		Some("litentry-paseo"),
-		None,
-		default_parachain_properties(),
+	ChainSpec::builder(
+		WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		Extensions { relay_chain: "paseo".into(), para_id: PASEO_PARA_ID },
 	)
+	.with_name("Litentry-paseo-dev")
+	.with_id(id)
+	.with_protocol_id("litentry-paseo")
+	.with_chain_type(ChainType::Development)
+	.with_properties(default_parachain_properties())
+	.with_genesis_config(generate_genesis(
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		vec![(
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_collator_keys_from_seed("Alice"),
+		)],
+		vec![
+			(get_account_id_from_seed::<sr25519::Public>("Alice"), DEFAULT_ENDOWED_ACCOUNT_BALANCE),
+			(get_account_id_from_seed::<sr25519::Public>("Bob"), DEFAULT_ENDOWED_ACCOUNT_BALANCE),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Charlie"),
+				DEFAULT_ENDOWED_ACCOUNT_BALANCE,
+			),
+			(get_account_id_from_seed::<sr25519::Public>("Eve"), DEFAULT_ENDOWED_ACCOUNT_BALANCE),
+		],
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+		],
+		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+		PASEO_PARA_ID.into(),
+	))
+	.build()
 }
 
 pub fn get_chain_spec_prod() -> ChainSpec {
@@ -132,46 +120,48 @@ fn get_chain_spec_from_genesis_info(
 
 	let boot_nodes = genesis_info.boot_nodes.clone();
 	let telemetry_endpoints = genesis_info.telemetry_endpoints.clone();
+	let genesis_info_cloned = genesis_info.clone();
 
-	ChainSpec::from_genesis(
-		name,
-		id,
-		chain_type,
-		move || {
-			use std::str::FromStr;
-			let genesis_info_cloned = genesis_info.clone();
-			generate_genesis(
-				genesis_info_cloned.root_key,
-				genesis_info_cloned.invulnerables,
-				genesis_info_cloned
-					.endowed_accounts
-					.into_iter()
-					.map(|(k, b)| (k, u128::from_str(&b).expect("Bad endowed balance; qed.")))
-					.collect(),
-				genesis_info_cloned.council,
-				genesis_info_cloned.technical_committee,
-				genesis_info_cloned.developer_committee,
-				para_id,
-			)
-		},
+	use std::str::FromStr;
+
+	ChainSpec::builder(
+		WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		Extensions { relay_chain: relay_chain_name, para_id: para_id.into() },
+	)
+	.with_name(name)
+	.with_id(id)
+	.with_chain_type(chain_type)
+	.with_protocol_id("litentry-paseo")
+	.with_properties(default_parachain_properties())
+	.with_boot_nodes(
 		boot_nodes
 			.into_iter()
 			.map(|k| k.parse().expect("Wrong bootnode format; qed."))
 			.collect(),
-		Some(
-			TelemetryEndpoints::new(
-				telemetry_endpoints
-					.into_iter()
-					.map(|k| (k, 0)) // 0 is verbose level
-					.collect(),
-			)
-			.expect("Invalid telemetry URL; qed."),
-		),
-		Some("litentry-paseo"),
-		None,
-		default_parachain_properties(),
-		Extensions { relay_chain: relay_chain_name, para_id: para_id.into() },
 	)
+	.with_telemetry_endpoints(
+		TelemetryEndpoints::new(
+			telemetry_endpoints
+				.into_iter()
+				.map(|k| (k, 0)) // 0 is verbose level
+				.collect(),
+		)
+		.expect("Invalid telemetry URL; qed."),
+	)
+	.with_genesis_config(generate_genesis(
+		genesis_info_cloned.root_key,
+		genesis_info_cloned.invulnerables,
+		genesis_info_cloned
+			.endowed_accounts
+			.into_iter()
+			.map(|(k, b)| (k, u128::from_str(&b).expect("Bad endowed balance; qed.")))
+			.collect(),
+		genesis_info_cloned.council,
+		genesis_info_cloned.technical_committee,
+		genesis_info_cloned.developer_committee,
+		para_id,
+	))
+	.build()
 }
 
 fn generate_genesis(
@@ -182,12 +172,9 @@ fn generate_genesis(
 	technical_committee_members: Vec<AccountId>,
 	developer_committee_members: Vec<AccountId>,
 	id: ParaId,
-) -> RuntimeGenesisConfig {
-	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			..Default::default()
-		},
+) -> serde_json::Value {
+	let config = RuntimeGenesisConfig {
+		system: Default::default(),
 		balances: BalancesConfig { balances: endowed_accounts },
 		sudo: SudoConfig { key: Some(root_key.clone()) },
 		parachain_info: ParachainInfoConfig { parachain_id: id, ..Default::default() },
@@ -245,5 +232,7 @@ fn generate_genesis(
 		},
 		bitacross: BitacrossConfig { admin: Some(root_key) },
 		score_staking: Default::default(),
-	}
+	};
+
+	serde_json::to_value(&config).expect("Could not build genesis config")
 }

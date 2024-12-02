@@ -31,13 +31,15 @@ runtime-benchmarks = [
     "pallet-timestamp/runtime-benchmarks",
 ]
 std = [
+    "core-primitives/std",
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-io/std",
     "sp-runtime/std",
-    "frame-support/std",
-    "frame-system/std",
-    "frame-benchmarking?/std",
-    "core-primitives/std",
+    "pallet-balances/std",
+    "pallet-timestamp/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

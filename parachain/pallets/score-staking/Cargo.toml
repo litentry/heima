@@ -28,20 +28,21 @@ sp-keyring = { workspace = true }
 [features]
 default = ["std"]
 std = [
-    "parity-scale-codec/std",
-    "serde/std",
-    "num-integer/std",
+    "core-primitives/std",
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "num-integer/std",
+    "pallet-balances/std",
+    "pallet-parachain-staking/std",
+    "parity-scale-codec/std",
     "scale-info/std",
+    "serde/std",
     "sp-core/std",
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pallet-balances/std",
-    "core-primitives/std",
-    "pallet-parachain-staking/std",
+    "sp-keyring/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

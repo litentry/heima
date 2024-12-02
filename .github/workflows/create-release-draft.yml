@@ -35,7 +35,6 @@ on:
         description: If any of the genesis artefacts should be released alongside
         options:
           - none
-          - rococo
           - paseo
           - litentry
 
@@ -76,7 +75,6 @@ jobs:
     strategy:
       matrix:
         chain:
-          - rococo
           - paseo
           - litentry
     name: ${{ matrix.chain }}

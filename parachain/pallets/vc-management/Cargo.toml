@@ -40,18 +40,20 @@ runtime-benchmarks = [
     "pallet-teebag/runtime-benchmarks",
 ]
 std = [
-    "parity-scale-codec/std",
-    "sp-std/std",
-    "sp-runtime/std",
-    "sp-io/std",
-    "sp-core/std",
+    "core-primitives/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
-    "frame-benchmarking?/std",
-    "core-primitives/std",
-    "pallet-teebag/std",
     "pallet-balances/std",
     "pallet-group/std",
+    "pallet-teebag/std",
     "pallet-utility/std",
+    "parity-scale-codec/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "pallet-timestamp/std",
+    "scale-info/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

@@ -25,12 +25,12 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
 ]
 std = [
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "sp-std/std",
-    "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-runtime/std",
+    "sp-std/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

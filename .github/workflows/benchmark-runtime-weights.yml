@@ -14,11 +14,6 @@ on:
         description: litentry
         required: true
         default: true
-      rococo:
-        type: boolean
-        description: rococo
-        required: true
-        default: true
       paseo:
         type: boolean
         description: paseo
@@ -85,9 +80,6 @@ jobs:
           chain=""
           if [ "${{ github.event.inputs.litentry }}" = "true" ]; then
             chain="$chain litentry"
-          fi
-          if [ "${{ github.event.inputs.rococo }}" = "true" ]; then
-            chain="$chain rococo"
           fi
           if [ "${{ github.event.inputs.paseo }}" = "true" ]; then
             chain="$chain paseo"

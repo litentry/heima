@@ -37,6 +37,7 @@ sp-io = { workspace = true, features = ["std"] }
 default = ["std"]
 runtime-benchmarks = ["frame-benchmarking"]
 std = [
+    "core-primitives/std",
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
@@ -46,11 +47,12 @@ std = [
     "parity-scale-codec/std",
     "scale-info/std",
     "serde/std",
-    "core-primitives/std",
-    "sp-runtime/std",
-    "sp-std/std",
-    "sp-staking/std",
     "sp-core/std",
     "sp-io/std",
+    "sp-runtime/std",
+    "sp-staking/std",
+    "sp-std/std",
+    "log/std",
+    "substrate-fixed/std",
 ]
 try-runtime = ["frame-support/try-runtime"]
