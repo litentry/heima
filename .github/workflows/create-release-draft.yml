@@ -23,6 +23,11 @@ on:
         description: bitacross-worker
         required: true
         default: true
+      omni_executor:
+        type: boolean
+        description: omni_executor
+        required: true
+        default: true
       release_tag:
         description: an existing tag for creating release (e.g. v1.2.0)
         required: true
@@ -59,6 +64,10 @@ jobs:
           [ "${{ github.event.inputs.parachain_runtime }}" = "true" ] && t="${t:0:1}1${t:2}"
           [ "${{ github.event.inputs.identity_worker }}" = "true" ] && t="${t:0:2}1${t:3}"
           [ "${{ github.event.inputs.bitacross_worker }}" = "true" ] && t="${t:0:3}1${t:4}"
+          [ "${{ github.event.inputs.omni_executor }}" = "true" ] && t="${t:0:4}1${t:5}"
+          if [ $t = "00000"]; then
+            echo "::error::Please select at least one release type."
+            exit 1
           if [ $t = "0000"]; then
             echo "::error::Please select at least one release type."
             exit 1
@@ -296,6 +305,57 @@ jobs:
       - name: Push worker image
         run: |
           docker push litentry/bitacross-worker:${{ env.RELEASE_TAG }}
+
+  build-omni-executor:
+    if: ${{ github.event.inputs.omni_executor == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout codes on ${{ env.RELEASE_TAG }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          # use the docker driver to access the local image
+          # we don't need external caches or multi platforms here
+          # see https://docs.docker.com/build/drivers/
+          driver: docker
+
+      - name: Write enclave signing key
+        run: |
+          cat << EOF > tee-worker/omni-executor/enclave_key.pem
+          ${{ secrets.BITACROSS_ENCLAVE_PROD_SIGNING_KEY }}
+          EOF
+
+      - name: Build omni-executor image
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: tee-worker/omni-executor/Dockerfile
+          tags: litentry/omni-executor:${{ env.RELEASE_TAG }}
+          target: omni-release
+
+      - run: docker images --all
+
+      - name: Dockerhub login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Push worker image
+        run: |
+          docker push litentry/omni-executor:${{ env.RELEASE_TAG }}
 
   parachain-ts-tests:
     runs-on: ubuntu-latest
