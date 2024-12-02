@@ -69,8 +69,7 @@ distclean: clean
 # By default SGX_MODE=SW for docker image
 .PHONY: build-docker
 build-docker:
-	docker build --target builder -t local-builder:latest -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
-	docker build --target executor-worker -t litentry/omni-executor:latest -f -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target executor-worker -t litentry/omni-executor:latest -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
