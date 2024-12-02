@@ -212,7 +212,8 @@ pub fn verify(
 				_ => return Err(Error::LinkIdentityFailed(ErrorDetail::InvalidIdentity)),
 			};
 
-			let email_identity = Identity::from_email(&email);
+			let email_identity =
+				Identity::from_web2_account(&email, litentry_primitives::Web2IdentityType::Email);
 			let stored_verification_code =
 				match VerificationCodeStore::get(&account_id, email_identity.hash()) {
 					Ok(data) => data.ok_or_else(|| {

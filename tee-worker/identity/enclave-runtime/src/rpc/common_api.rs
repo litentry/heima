@@ -37,7 +37,9 @@ use lc_identity_verification::{
 	VerificationCodeStore,
 };
 use litentry_macros::{if_development, if_development_or};
-use litentry_primitives::{aes_decrypt, AesRequest, DecryptableRequest, Identity};
+use litentry_primitives::{
+	aes_decrypt, AesRequest, DecryptableRequest, Identity, Web2IdentityType,
+};
 use log::debug;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::Pair;
@@ -481,7 +483,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 					data_provider_config.sendgrid_from_email.clone(),
 				);
 				let verification_code = generate_verification_code();
-				let email_identity = Identity::from_email(&email);
+				let email_identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
 
 				match VerificationCodeStore::insert(
 					omni_account,

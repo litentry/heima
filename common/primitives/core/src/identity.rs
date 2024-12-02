@@ -524,9 +524,34 @@ impl Identity {
         self.using_encoded(blake2_256).into()
     }
 
-    pub fn from_email(email: &str) -> Self {
-        Identity::Email(IdentityString::new(email.as_bytes().to_vec()))
+    pub fn from_web2_account(handle: &str, identity_type: Web2IdentityType) -> Self {
+        match identity_type {
+            Web2IdentityType::Twitter => {
+                Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Discord => {
+                Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Github => {
+                Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Email => {
+                Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Google => {
+                Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+        }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Web2IdentityType {
+    Twitter,
+    Discord,
+    Github,
+    Email,
+    Google,
 }
 
 impl From<ed25519::Public> for Identity {
