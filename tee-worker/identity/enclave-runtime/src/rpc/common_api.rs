@@ -33,7 +33,7 @@ use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use lc_data_providers::DataProviderConfig;
 use lc_identity_verification::{
 	generate_verification_code,
-	web2::{email, twitter},
+	web2::{email, google, twitter},
 	VerificationCodeStore,
 };
 use litentry_macros::{if_development, if_development_or};
@@ -464,6 +464,39 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 				}
 			},
 
+			Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not parse params"))),
+		}
+	});
+
+	let google_client_id = data_provider_config.google_client_id.clone();
+
+	io_handler.add_sync_method("omni_getOAuth2GoogleAuthorizationUrl", move |params: Params| {
+		match params.parse::<(String, String, String)>() {
+			Ok((encoded_omni_account, google_account, redirect_uri)) => {
+				let omni_account = match AccountId::from_hex(encoded_omni_account.as_str()) {
+					Ok(account_id) => account_id,
+					Err(_) =>
+						return Ok(json!(compute_hex_encoded_return_error(
+							"Could not parse omni account"
+						))),
+				};
+				let google_identity =
+					Identity::from_web2_account(&google_account, Web2IdentityType::Google);
+				let state = generate_verification_code();
+				let authorize_data = google::get_authorize_data(&google_client_id, &redirect_uri);
+
+				match VerificationCodeStore::insert(omni_account, google_identity.hash(), state) {
+					Ok(_) => {
+						let json_value = RpcReturnValue::new(
+							authorize_data.authorize_url.encode(),
+							false,
+							DirectRequestStatus::Ok,
+						);
+						Ok(json!(json_value.to_hex()))
+					},
+					Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not save state"))),
+				}
+			},
 			Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not parse params"))),
 		}
 	});
