@@ -34,7 +34,6 @@ use lc_data_providers::DataProviderConfig;
 use lc_identity_verification::{
 	generate_verification_code,
 	web2::{email, google, twitter},
-	VerificationCodeStore,
 };
 use litentry_macros::{if_development, if_development_or};
 use litentry_primitives::{
@@ -518,7 +517,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 				let verification_code = generate_verification_code();
 				let email_identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
 
-				match VerificationCodeStore::insert(
+				match email::VerificationCodeStore::insert(
 					omni_account,
 					email_identity.hash(),
 					verification_code.clone(),

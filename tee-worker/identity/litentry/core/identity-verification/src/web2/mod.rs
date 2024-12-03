@@ -25,7 +25,8 @@ pub mod email;
 pub mod google;
 pub mod twitter;
 
-use crate::{ensure, Error, Result, VerificationCodeStore};
+use crate::{ensure, Error, Result};
+use email::VerificationCodeStore;
 use itp_sgx_crypto::ShieldingCryptoDecrypt;
 use itp_utils::stringify::account_id_to_string;
 use lc_data_providers::{

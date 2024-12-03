@@ -19,7 +19,7 @@ use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::parentchain::Index as ParentchainIndex;
-use lc_identity_verification::VerificationCodeStore;
+use lc_identity_verification::web2::email::VerificationCodeStore;
 use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_hex_utils::hex_encode;
 use litentry_primitives::{Identity, ShardIdentifier};
@@ -112,7 +112,10 @@ pub fn verify_tca_web3_authentication(
 		|| signature.verify(&hashed, call.sender_identity())
 }
 
-pub fn verify_tca_email_authentication(call: &TrustedCall, verification_code: String) -> bool {
+pub fn verify_tca_email_authentication(
+	call: &TrustedCall,
+	verification_code: VerificationCode,
+) -> bool {
 	let identity_hash = call.sender_identity().hash();
 	let omni_account = extract_omni_account_from_call(call);
 	match VerificationCodeStore::get(&omni_account, identity_hash) {
