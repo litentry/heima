@@ -4,7 +4,7 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX_MODE ?= HW
 
-SELF_EXE = executor-worker
+SELF_EXE = omni-executor-worker
 COMPILATION_FEATURES =
 
 ROOTDIR := $(shell git rev-parse --show-toplevel)
@@ -20,7 +20,7 @@ endif
 .PHONY: $(SELF_EXE)
 $(SELF_EXE):
 	cargo build --release --features=$(COMPILATION_FEATURES)
-	cp target/release/$(SELF_EXE) $(SELF_EXE)
+	cp target/release/executor-worker $(SELF_EXE)
 
 
 ifeq ($(DEBUG),1)
