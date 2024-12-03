@@ -643,7 +643,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: tee-worker/omni-executor/
-          file: Dockerfile
+          file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:latest
           target: executor-worker
 
