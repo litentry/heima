@@ -329,7 +329,7 @@ pub mod mock_msg_queue {
 			iter: impl Iterator<Item = (RelayBlockNumber, Vec<u8>)>,
 			limit: Weight,
 		) -> Weight {
-			for (_i, (_sent_at, data)) in iter.enumerate() {
+			for (_sent_at, data) in iter {
 				let mut id = sp_io::hashing::blake2_256(&data[..]);
 				let maybe_versioned = VersionedXcm::<T::RuntimeCall>::decode(&mut &data[..]);
 				match maybe_versioned {

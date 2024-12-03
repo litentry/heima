@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
 use crate as pallet_evm_address;
 use fp_evm::GenesisAccount;
 use frame_support::{

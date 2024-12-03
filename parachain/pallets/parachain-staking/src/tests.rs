@@ -16,7 +16,6 @@
 
 //! Inspired by:
 //! - Moonbeam `pallet_parachain_staking`
-//! implementations.
 
 //! # Staking Pallet Unit Tests
 //! The unit tests are organized by the call they test. The order matches the order
@@ -25,8 +24,6 @@
 //! 2. Monetary Governance
 //! 3. Public (Collator, Nominator)
 //! 4. Miscellaneous Property-Based Tests
-#![allow(clippy::explicit_counter_loop)]
-#![allow(clippy::bool_assert_comparison)]
 
 use crate::{
 	assert_eq_events, assert_eq_last_events, assert_event_emitted, assert_last_event,

@@ -24,7 +24,6 @@
 // (4) Code for destroy asset is removed
 
 //! TODO Doc comments for the pallet
-//! # Asset Manager Pallet
 //!
 //! This pallet allows to register new assets if certain conditions are met
 //! The main goal of this pallet is to allow Litentry to register XCM assets

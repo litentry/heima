@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use frame_support::{derive_impl, parameter_types};
 use sp_runtime::BuildStorage;
 

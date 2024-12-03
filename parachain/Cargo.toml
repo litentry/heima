@@ -27,6 +27,9 @@ members = [
 ]
 exclude = []
 
+[workspace.lints.clippy]
+doc_lazy_continuation = "allow"
+
 [profile.release]
 opt-level = 3
 panic = "unwind"

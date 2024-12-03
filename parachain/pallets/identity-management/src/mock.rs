@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use crate as pallet_identity_management;
 use frame_support::{
 	assert_ok, derive_impl,

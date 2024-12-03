@@ -8,6 +8,9 @@ name = "pallet-parachain-staking"
 repository = 'https://github.com/litentry/litentry-parachain'
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 log = { workspace = true }
 parity-scale-codec = { workspace = true }

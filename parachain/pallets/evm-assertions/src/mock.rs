@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
 use crate as pallet_evm_assertions;
 use frame_support::{derive_impl, parameter_types, weights::Weight};
 use sp_core::{H160, U256};

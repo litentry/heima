@@ -16,9 +16,7 @@
 
 //! Inspired by:
 //! - Moonbeam `pallet_parachain_staking`
-//! implementations.
 
-//! Test utilities
 use crate as pallet_parachain_staking;
 use crate::{pallet, AwardedPts, Config, InflationInfo, Points, Range};
 use frame_support::{

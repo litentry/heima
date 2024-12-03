@@ -124,12 +124,12 @@ githooks:
 # clippy
 .PHONY: clippy ## cargo clippy
 clippy:
-	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --workspace --all-targets --all-features -- -D warnings
+	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --locked --workspace --all -- -D warnings
 
 .PHONY: clippyfix ## cargo clippy --fix
 clippyfix:
-	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --allow-dirty --allow-staged --fix --workspace --all-targets --all-features -- -D warnings
+	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --locked --allow-dirty --allow-staged --fix --workspace --all -- -D warnings
 
 .PHONY: cargofix ## cargo fix
 cargofix:
-	cd parachain && cargo fix --allow-dirty --allow-staged --workspace --all-targets --all-features
+	cd parachain && cargo fix --locked --allow-dirty --allow-staged --workspace --all

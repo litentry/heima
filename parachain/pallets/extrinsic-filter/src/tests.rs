@@ -446,7 +446,7 @@ fn unpaired_block_unblock_fails() {
 		);
 
 		// clear the storage
-		let _ = crate::BlockedExtrinsics::<Test>::clear(u32::max_value(), None);
+		let _ = crate::BlockedExtrinsics::<Test>::clear(u32::MAX, None);
 
 		// block the whole pallet and unblock a single extrinsic should fail
 		assert_ok!(ExtrinsicFilter::block_extrinsics(

@@ -4,6 +4,9 @@ edition = "2021"
 name = "pallet-asset-manager"
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }

@@ -687,7 +687,7 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureRootOrTwoThirdsCouncilWrapper {
 	type Success = Balance;
 	fn try_origin(o: RuntimeOrigin) -> Result<Self::Success, RuntimeOrigin> {
 		match EnsureRootOrTwoThirdsCouncil::try_origin(o) {
-			Ok(_) => Ok(Balance::max_value()),
+			Ok(_) => Ok(Balance::MAX),
 			Err(o) => Err(o),
 		}
 	}

@@ -8,6 +8,9 @@ name = 'pallet-extrinsic-filter'
 repository = 'https://github.com/litentry/litentry-parachain'
 version = '0.1.0'
 
+[lints]
+workspace = true
+
 [dependencies]
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }

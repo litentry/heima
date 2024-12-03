@@ -327,8 +327,7 @@ pub fn run() -> Result<()> {
 							"Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 								.into(),
-						)
-						.into())
+						))
 					}
 				},
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
