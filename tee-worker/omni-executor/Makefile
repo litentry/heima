@@ -4,11 +4,11 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX_MODE ?= HW
 
-SELF_EXE = omni-executor-worker
+SELF_EXE = executor-worker
 COMPILATION_FEATURES =
 
 ROOTDIR := $(shell git rev-parse --show-toplevel)
-EXECUTOR_DIR := $(ROOTDIR)/tee-worker/omni-executor
+OMNI_DIR := $(ROOTDIR)/tee-worker/omni-executor
 
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
@@ -20,7 +20,7 @@ endif
 .PHONY: $(SELF_EXE)
 $(SELF_EXE):
 	cargo build --release --features=$(COMPILATION_FEATURES)
-	cp target/release/executor-worker $(SELF_EXE)
+	cp target/release/$(SELF_EXE) $(SELF_EXE)
 
 
 ifeq ($(DEBUG),1)
@@ -69,15 +69,15 @@ distclean: clean
 # By default SGX_MODE=SW for docker image
 .PHONY: build-docker
 build-docker:
-	docker build --target executor-worker -t litentry/omni-executor:latest -f $(EXECUTOR_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(OMNI_DIR)
 
 .PHONY: start-local
 start-local:
-	docker compose -f $(EXECUTOR_DIR)/docker/docker-compose.yml up
+	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml up
 
 .PHONY: stop-local
 stop-local:
-	docker compose -f $(EXECUTOR_DIR)/docker/docker-compose.yml down
+	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml down
 
 .PHONY: get-pallet-metadata
 get-pallet-metadata:
