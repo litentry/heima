@@ -5804,6 +5804,7 @@ dependencies = [
  "cumulus-client-consensus-common",
  "cumulus-client-consensus-proposer",
  "cumulus-client-network",
+ "cumulus-client-parachain-inherent",
  "cumulus-client-service",
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
@@ -11809,7 +11810,6 @@ name = "runtime-common"
 version = "0.1.0"
 dependencies = [
  "core-primitives",
- "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
  "cumulus-test-relay-sproof-builder",

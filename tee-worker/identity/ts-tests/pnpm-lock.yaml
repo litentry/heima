@@ -114,7 +114,7 @@ importers:
         version: 2.0.1
       ws:
         specifier: ^8.17.1
-        version: 8.17.1
+        version: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       zx:
         specifier: ^7.2.3
         version: 7.2.3
@@ -217,7 +217,7 @@ importers:
         version: 5.0.4
       ws:
         specifier: ^8.17.1
-        version: 8.17.1
+        version: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
 
   stress:
     dependencies:
@@ -259,7 +259,7 @@ importers:
         version: 2.0.1
       ws:
         specifier: ^8.17.1
-        version: 8.17.1
+        version: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       zod:
         specifier: ^3.22.3
         version: 3.22.3
@@ -401,7 +401,7 @@ importers:
         version: 2.0.1
       ws:
         specifier: ^8.17.1
-        version: 8.17.1
+        version: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     devDependencies:
       '@ethersproject/providers':
         specifier: ^5.7.2
@@ -489,7 +489,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       espree: 9.6.1
       globals: 13.22.0
       ignore: 5.2.4
@@ -826,7 +826,7 @@ packages:
     engines: {node: '>=10.10.0'}
     dependencies:
       '@humanwhocodes/object-schema': 1.2.1
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -1392,7 +1392,7 @@ packages:
     dependencies:
       '@polkadot/x-global': 12.5.1
       tslib: 2.6.2
-      ws: 8.17.1
+      ws: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -1566,7 +1566,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/type-utils': 5.62.0(eslint@8.50.0)(typescript@5.0.4)
       '@typescript-eslint/utils': 5.62.0(eslint@8.50.0)(typescript@5.0.4)
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       eslint: 8.50.0
       graphemer: 1.4.0
       ignore: 5.2.4
@@ -1591,7 +1591,7 @@ packages:
       '@typescript-eslint/scope-manager': 5.62.0
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.0.4)
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       eslint: 8.50.0
       typescript: 5.0.4
     transitivePeerDependencies:
@@ -1618,7 +1618,7 @@ packages:
     dependencies:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.0.4)
       '@typescript-eslint/utils': 5.62.0(eslint@8.50.0)(typescript@5.0.4)
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       eslint: 8.50.0
       tsutils: 3.21.0(typescript@5.0.4)
       typescript: 5.0.4
@@ -1642,7 +1642,7 @@ packages:
     dependencies:
       '@typescript-eslint/types': 5.62.0
       '@typescript-eslint/visitor-keys': 5.62.0
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.5.4
@@ -2174,17 +2174,6 @@ packages:
     engines: {node: '>= 12'}
     dev: false
 
-  /debug@4.3.4:
-    resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
-    engines: {node: '>=6.0'}
-    peerDependencies:
-      supports-color: '*'
-    peerDependenciesMeta:
-      supports-color:
-        optional: true
-    dependencies:
-      ms: 2.1.2
-
   /debug@4.3.4(supports-color@8.1.1):
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
     engines: {node: '>=6.0'}
@@ -2420,7 +2409,7 @@ packages:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.3
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -3324,7 +3313,7 @@ packages:
     resolution: {integrity: sha512-z+KUlILy9SK/RjpeXDiDUEAq4T94ADPHE3qaRkf66mpEhzc/ytOMm3Bwdrbq6k1tMWkbdujiKim3G2tfQARuJw==}
     engines: {node: '>= 10.13'}
     dependencies:
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       json-stringify-safe: 5.0.1
       lodash: 4.17.21
       propagate: 2.0.1
@@ -3716,7 +3705,7 @@ packages:
     requiresBuild: true
     dependencies:
       pako: 2.1.0
-      ws: 8.17.1
+      ws: 8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -4115,19 +4104,6 @@ packages:
       utf-8-validate:
         optional: true
 
-  /ws@8.17.1:
-    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-    dev: false
-
   /ws@8.17.1(bufferutil@4.0.8)(utf-8-validate@5.0.10):
     resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
     engines: {node: '>=10.0.0'}
@@ -4237,7 +4213,6 @@ packages:
   file:../client-api/parachain-api:
     resolution: {directory: ../client-api/parachain-api, type: directory}
     name: '@litentry/parachain-api'
-    version: 0.9.20-04.1
     dependencies:
       '@polkadot/api': 10.9.1
       '@polkadot/api-augment': 10.9.1
@@ -4262,7 +4237,6 @@ packages:
   file:../client-api/sidechain-api:
     resolution: {directory: ../client-api/sidechain-api, type: directory}
     name: '@litentry/sidechain-api'
-    version: 0.9.20-04
     dependencies:
       '@polkadot/api': 10.9.1
       '@polkadot/api-augment': 10.9.1

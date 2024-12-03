@@ -33,6 +33,7 @@ use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params a
 use cumulus_client_consensus_aura::SlotProportion;
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
+use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
 	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
@@ -48,6 +49,7 @@ use fc_storage::{StorageOverride, StorageOverrideHandler};
 use futures::StreamExt;
 use jsonrpsee::RpcModule;
 use sc_client_api::BlockchainEvents;
+use sc_client_api::HeaderBackend;
 use sc_consensus::{ImportQueue, LongestChain};
 use sc_consensus_aura::StartAuraParams;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
@@ -537,22 +539,50 @@ where
 		+ sp_consensus_aura::AuraApi<Block, AuraId>,
 {
 	if is_standalone {
+		// aura import queue
 		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+		let client_for_cidp = client.clone();
 
 		sc_consensus_aura::import_queue::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _>(
 			sc_consensus_aura::ImportQueueParams {
 				block_import,
 				justification_import: None,
-				client: client.clone(),
-                create_inherent_data_providers: move |_, ()| async move {
-                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-                    let slot =
-                        sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-                            *timestamp,
-                            slot_duration,
-                        );
-                    Ok((slot, timestamp))
-                },
+				client,
+				create_inherent_data_providers: move |block: Hash, ()| {
+					let current_para_block = client_for_cidp
+						.number(block)
+						.expect("Header lookup should succeed")
+						.expect("Header passed in as parent should be present in backend.");
+					let client_for_xcm = client_for_cidp.clone();
+
+					async move {
+						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+						let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+								*timestamp,
+								slot_duration,
+							);
+
+						let mocked_parachain = MockValidationDataInherentDataProvider {
+							current_para_block,
+							relay_offset: 1000,
+							relay_blocks_per_para_block: 2,
+							para_blocks_per_relay_epoch: 0,
+							relay_randomness_config: (),
+							xcm_config: MockXcmConfig::new(
+								&*client_for_xcm,
+								block,
+								Default::default(),
+								Default::default(),
+							),
+							raw_downward_messages: vec![],
+							raw_horizontal_messages: vec![],
+							additional_key_values: None,
+						};
+
+						Ok((slot, timestamp, mocked_parachain))
+					}
+				},
 				spawner: &task_manager.spawn_essential_handle(),
 				registry: config.prometheus_registry(),
 				check_for_equivocation: Default::default(),
@@ -691,6 +721,7 @@ where
 		);
 		// aura
 		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+		let client_for_cidp = client.clone();
 
 		let aura = sc_consensus_aura::start_aura::<
 			sp_consensus_aura::sr25519::AuthorityPair,
@@ -710,16 +741,40 @@ where
 			select_chain,
 			block_import: StandaloneBlockImport::new(client.clone()),
 			proposer_factory,
-			create_inherent_data_providers: move |_, ()| async move {
-				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+			create_inherent_data_providers: move |block: Hash, ()| {
+				let current_para_block = client_for_cidp
+					.number(block)
+					.expect("Header lookup should succeed")
+					.expect("Header passed in as parent should be present in backend.");
+				let client_for_xcm = client_for_cidp.clone();
 
-				let slot =
-					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-						*timestamp,
-						slot_duration,
-					);
+				async move {
+					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-				Ok((slot, timestamp))
+					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+							*timestamp,
+							slot_duration,
+						);
+
+					let mocked_parachain = MockValidationDataInherentDataProvider {
+						current_para_block,
+						relay_offset: 1000,
+						relay_blocks_per_para_block: 2,
+						para_blocks_per_relay_epoch: 0,
+						relay_randomness_config: (),
+						xcm_config: MockXcmConfig::new(
+							&*client_for_xcm,
+							block,
+							Default::default(),
+							Default::default(),
+						),
+						raw_downward_messages: vec![],
+						raw_horizontal_messages: vec![],
+						additional_key_values: None,
+					};
+
+					Ok((slot, timestamp, mocked_parachain))
+				}
 			},
 			force_authoring,
 			backoff_authoring_blocks,
