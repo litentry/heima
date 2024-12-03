@@ -40,14 +40,14 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "pallet-teebag/std",
+    "pallet-timestamp/std",
+    "pallet-utility/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-core/std",
     "sp-io/std",
+    "sp-keyring/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pallet-timestamp/std",
-    "pallet-utility/std",
-    "sp-keyring/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

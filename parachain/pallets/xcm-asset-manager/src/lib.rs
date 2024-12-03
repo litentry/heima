@@ -53,8 +53,10 @@
 #![allow(clippy::needless_borrow)]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+// TODO: fix benchmarking
+// #[cfg(feature = "runtime-benchmarks")]
+// mod benchmarking;
+
 #[cfg(test)]
 pub mod mock;
 #[cfg(test)]

@@ -34,10 +34,6 @@ build-node:
 build-runtime-litentry:
 	cd parachain && cargo build --locked -p litentry-parachain-runtime --release
 
-.PHONY: build-runtime-rococo ## Build rococo release runtime
-build-runtime-rococo:
-	cd parachain && cargo build --locked -p rococo-parachain-runtime --release
-
 .PHONY: build-runtime-paseo ## Build paseo release runtime
 build-runtime-paseo:
 	cd parachain && cargo build --locked -p paseo-parachain-runtime --release
@@ -64,10 +60,6 @@ build-node-tryruntime:
 launch-standalone:
 	@cd parachain && ./scripts/launch-standalone.sh
 
-.PHONY: launch-network-rococo ## Launch a local rococo network with relaychain network
-launch-network-rococo:
-	@cd parachain && ./scripts/launch-network.sh rococo
-
 .PHONY: launch-network-litentry ## Launch a local litentry network with relaychain network
 launch-network-litentry:
 	@cd parachain && ./scripts/launch-network.sh litentry
@@ -89,10 +81,6 @@ test-cargo-all-benchmarks:
 .PHONY: test-ts-litentry ## Run litentry ts tests without clean-up
 test-ts-litentry: launch-network-litentry
 	@cd parachain && ./scripts/run-ts-test.sh litentry
-
-.PHONY: test-ts-rococo ## Run rococo ts tests without clean-up
-test-ts-rococo: launch-network-rococo
-	@cd parachain && ./scripts/run-ts-test.sh rococo
 
 .PHONY: test-ts-paseo ## Run paseo ts tests without clean-up
 test-ts-paseo: launch-network-paseo

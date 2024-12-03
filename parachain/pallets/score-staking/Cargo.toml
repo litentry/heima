@@ -40,9 +40,9 @@ std = [
     "serde/std",
     "sp-core/std",
     "sp-io/std",
+    "sp-keyring/std",
     "sp-runtime/std",
     "sp-std/std",
-    "sp-keyring/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

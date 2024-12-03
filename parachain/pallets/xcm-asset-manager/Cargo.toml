@@ -26,14 +26,14 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "pallet-balances/std",
     "parity-scale-codec/std",
     "scale-info/std",
+    "sp-core/std",
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
     "xcm/std",
-    "pallet-balances/std",
-    "sp-core/std",
 ]
 
 runtime-benchmarks = [

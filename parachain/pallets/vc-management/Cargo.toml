@@ -47,13 +47,13 @@ std = [
     "pallet-balances/std",
     "pallet-group/std",
     "pallet-teebag/std",
+    "pallet-timestamp/std",
     "pallet-utility/std",
     "parity-scale-codec/std",
+    "scale-info/std",
     "sp-core/std",
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pallet-timestamp/std",
-    "scale-info/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

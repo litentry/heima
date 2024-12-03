@@ -46,7 +46,9 @@ default = ["std"]
 std = [
     "base64/std",
     "chrono/std",
+    "core-primitives/std",
     "der/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
     "hex/std",
@@ -60,13 +62,11 @@ std = [
     "serde_json/std",
     "sp-core/std",
     "sp-io/std",
+    "sp-keyring/std",
     "sp-runtime/std",
     "sp-std/std",
     "webpki/std",
     "x509-cert/std",
-    "core-primitives/std",
-    "frame-benchmarking?/std",
-    "sp-keyring/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

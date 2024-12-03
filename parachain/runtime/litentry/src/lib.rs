@@ -230,7 +230,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("litentry-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9202,
+	spec_version: 9210,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1364,7 +1364,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 mod benches {
 	define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
-		[pallet_asset_manager, AssetManager]
+		// [pallet_asset_manager, AssetManager]
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]

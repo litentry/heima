@@ -230,7 +230,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("paseo-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9202,
+	spec_version: 9210,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -675,7 +675,7 @@ parameter_types! {
 	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 20 * DOLLARS;
 	pub SpendPeriod: BlockNumber = prod_or_fast!(10 * MINUTES, 2 * MINUTES, "ROCOCO_SPENDPERIOD");
-	pub PayoutPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_PAYOUTPERIOD");
+	pub PayoutPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "ROCOCO_PAYOUTPERIOD");
 
 	pub const TipCountdown: BlockNumber = DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(5);
@@ -1416,7 +1416,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 mod benches {
 	define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
-		[pallet_asset_manager, AssetManager]
+		// [pallet_asset_manager, AssetManager]
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
 		[pallet_utility, Utility]

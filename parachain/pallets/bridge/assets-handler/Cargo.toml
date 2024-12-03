@@ -44,6 +44,7 @@ std = [
     "pallet-assets/std",
     "pallet-balances/std",
     "pallet-bridge-common/std",
+    "pallet-bridge-transfer/std",
     "pallet-chain-bridge/std",
     "pallet-parachain-staking/std",
     "parity-scale-codec/std",
@@ -52,6 +53,5 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pallet-bridge-transfer/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

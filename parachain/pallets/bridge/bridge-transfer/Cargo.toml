@@ -44,9 +44,12 @@ std = [
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "pallet-assets-handler/std",
     "pallet-assets/std",
+    "pallet-balances/std",
     "pallet-bridge-common/std",
     "pallet-chain-bridge/std",
+    "pallet-timestamp/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-arithmetic/std",
@@ -54,8 +57,5 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pallet-assets-handler/std",
-    "pallet-balances/std",
-    "pallet-timestamp/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

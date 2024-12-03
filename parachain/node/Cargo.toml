@@ -7,7 +7,7 @@ homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
 name = 'litentry-collator'
 repository = 'https://github.com/litentry/litentry-parachain'
-version = '0.9.20'
+version = '0.9.21'
 
 [[bin]]
 name = 'litentry-collator'
@@ -120,15 +120,31 @@ fast-runtime = [
     "paseo-parachain-runtime/fast-runtime",
 ]
 runtime-benchmarks = [
+    "cumulus-primitives-core/runtime-benchmarks",
+    "frame-benchmarking-cli/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
     "litentry-parachain-runtime/runtime-benchmarks",
+    "pallet-ethereum/runtime-benchmarks",
+    "pallet-evm/runtime-benchmarks",
     "paseo-parachain-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks",
+    "polkadot-primitives/runtime-benchmarks",
     "polkadot-service/runtime-benchmarks",
+    "runtime-common/runtime-benchmarks",
+    "sc-service/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [
+    "frame-support/try-runtime",
     "litentry-parachain-runtime/try-runtime",
+    "pallet-ethereum/try-runtime",
+    "pallet-evm/try-runtime",
+    "pallet-transaction-payment/try-runtime",
     "paseo-parachain-runtime/try-runtime",
     "polkadot-cli/try-runtime",
     "polkadot-service/try-runtime",
-    "pallet-transaction-payment/try-runtime",
+    "runtime-common/try-runtime",
+    "sp-runtime/try-runtime",
 ]
+std = []

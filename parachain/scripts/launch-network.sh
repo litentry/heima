@@ -6,7 +6,7 @@
 set -eo pipefail
 
 function usage() {
-  echo "Usage: $0 litentry|rococo|paseo"
+  echo "Usage: $0 litentry|paseo"
 }
 
 function print_divider() {
@@ -17,7 +17,7 @@ function print_divider() {
 
 CHAIN=$1
 
-ZOMBIENET_VERSION=v1.3.109
+ZOMBIENET_VERSION=v1.3.116
 ZOMBIENET_DIR=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 8; echo)
 
 LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
