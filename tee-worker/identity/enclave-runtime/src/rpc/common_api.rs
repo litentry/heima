@@ -484,7 +484,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 				let state = generate_verification_code();
 				let authorize_data = google::get_authorize_data(&google_client_id, &redirect_uri);
 
-				match VerificationCodeStore::insert(omni_account, google_identity.hash(), state) {
+				match google::OAuthStateStore::insert(omni_account, google_identity.hash(), state) {
 					Ok(_) => {
 						let json_value = RpcReturnValue::new(
 							authorize_data.authorize_url.encode(),
