@@ -3,7 +3,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 PARACHAIN_BASEDIR="/opt/litentry/parachain"
 REPO_DIR="/code"
-# Currently, only chain type rococo is supported.
 CHAIN='paseo'
 ZOMBIENET_DIR=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 8; echo)
 

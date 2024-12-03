@@ -95,8 +95,7 @@ mod constants {
     use super::types::BlockNumber;
 
     pub const LITENTRY_PARA_ID: u32 = 2013;
-    pub const ROCOCO_PARA_ID: u32 = 2106; // will be replaced by paseo
-    pub const PASEO_PARA_ID: u32 = 2106; // will be replaced by paseo
+    pub const PASEO_PARA_ID: u32 = 2106;
 
     /// This determines the average expected block time that we are targeting.
     /// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
