@@ -832,7 +832,6 @@ jobs:
       - name: Launch parachain network
         run: |
           make launch-network-litentry
-          sleep 20
 
       - name: Integration single worker test ${{ matrix.test_name }}
         working-directory: ./tee-worker/identity/docker
