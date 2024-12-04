@@ -37,6 +37,13 @@ use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripe
 use precompile_utils::precompile_set::*;
 use sp_std::fmt::Debug;
 
+// CollabAI
+use pallet_evm_precompile_aiusd_convertor::AIUSDConvertorPrecompile;
+use pallet_evm_precompile_curator::CuratorPrecompile;
+use pallet_evm_precompile_guardian::GuardianPrecompile;
+use pallet_evm_precompile_investing_pool::InvestingPoolPrecompile;
+use pallet_evm_precompile_pool_proposal::PoolProposalPrecompile;
+
 /// The asset precompile address prefix. Addresses that match against this prefix will be routed
 /// to Erc20AssetsPrecompileSet
 pub const ASSET_PRECOMPILE_ADDRESS_PREFIX: &[u8] = &[255u8; 4];
@@ -135,6 +142,36 @@ pub type PrecompilesSetAt<R> = (
 		ScoreStakingPrecompile<R>,
 		(CallableByContract, CallableByPrecompile),
 	>,
+	// Curator: pallet_curator = 150 + 20480
+	PrecompileAt<
+		AddressU64<20630>,
+		CuratorPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// Guardian: pallet_guardian = 151 + 20480
+	PrecompileAt<
+		AddressU64<20631>,
+		GuardianPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// PoolProposal: pallet_pool_proposal = 152 + 20480
+	PrecompileAt<
+		AddressU64<20632>,
+		PoolProposalPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// InvestingPool: pallet_investing_pool = 153 + 20480
+	PrecompileAt<
+		AddressU64<20633>,
+		InvestingPoolPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// AIUSDConvertor: pallet_aiusd_convertor = 154 + 20480
+	PrecompileAt<
+		AddressU64<20634>,
+		AIUSDConvertorPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
 );
 
 pub type RococoNetworkPrecompiles<R> = PrecompileSetBuilder<
@@ -143,7 +180,7 @@ pub type RococoNetworkPrecompiles<R> = PrecompileSetBuilder<
 		// Skip precompiles if out of range.
 		PrecompilesInRangeInclusive<
 			// We take range as last precompile index, UPDATE this once new prcompile is added
-			(AddressU64<1>, AddressU64<20556>),
+			(AddressU64<1>, AddressU64<20635>),
 			PrecompilesSetAt<R>,
 		>,
 		// Prefixed precompile sets (XC20)

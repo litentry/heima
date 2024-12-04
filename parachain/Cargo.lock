@@ -6828,6 +6828,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-aiusd-convertor"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "pallet-assets",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-asset-manager"
 version = "0.1.0"
 dependencies = [
@@ -7139,6 +7156,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-collab-ai-common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-collective"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -7167,6 +7197,22 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-curator"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-collab-ai-common",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -7331,6 +7377,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm-precompile-aiusd-convertor"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-aiusd-convertor",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-evm",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-evm-precompile-assets-erc20"
 version = "0.1.0"
 dependencies = [
@@ -7395,6 +7467,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm-precompile-curator"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-balances",
+ "pallet-collab-ai-common",
+ "pallet-curator",
+ "pallet-evm",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
 source = "git+https://github.com/paritytech/frontier?branch=polkadot-v1.1.0#7544791796a93e85716241b72ba68b7c7231376f"
@@ -7413,6 +7511,56 @@ source = "git+https://github.com/paritytech/frontier?branch=polkadot-v1.1.0#7544
 dependencies = [
  "ed25519-dalek",
  "fp-evm",
+]
+
+[[package]]
+name = "pallet-evm-precompile-guardian"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-balances",
+ "pallet-collab-ai-common",
+ "pallet-evm",
+ "pallet-guardian",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-evm-precompile-investing-pool"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-collab-ai-common",
+ "pallet-evm",
+ "pallet-investing-pool",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -7443,6 +7591,30 @@ dependencies = [
  "sha3",
  "sp-core",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-evm-precompile-pool-proposal"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-collab-ai-common",
+ "pallet-evm",
+ "pallet-pool-proposal",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
  "sp-runtime",
  "sp-std",
 ]
@@ -7567,6 +7739,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-guardian"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-collab-ai-common",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-identity"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.1.0#e51a91fcac27d2f95ad631989622848aa8043f9e"
@@ -7636,6 +7824,25 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-investing-pool"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-collab-ai-common",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -7869,6 +8076,26 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "substrate-fixed",
+]
+
+[[package]]
+name = "pallet-pool-proposal"
+version = "0.1.0"
+dependencies = [
+ "bitflags 1.3.2",
+ "frame-support",
+ "frame-system",
+ "orml-utilities",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-collab-ai-common",
+ "pallet-multisig",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -8541,6 +8768,7 @@ dependencies = [
  "orml-traits",
  "orml-xtokens",
  "pallet-account-fix",
+ "pallet-aiusd-convertor",
  "pallet-asset-manager",
  "pallet-assets",
  "pallet-assets-handler",
@@ -8551,32 +8779,42 @@ dependencies = [
  "pallet-bounties",
  "pallet-bridge-transfer",
  "pallet-chain-bridge",
+ "pallet-collab-ai-common",
  "pallet-collective",
+ "pallet-curator",
  "pallet-democracy",
  "pallet-ethereum",
  "pallet-evm",
  "pallet-evm-assertions",
+ "pallet-evm-precompile-aiusd-convertor",
  "pallet-evm-precompile-assets-erc20",
  "pallet-evm-precompile-blake2",
  "pallet-evm-precompile-bn128",
  "pallet-evm-precompile-bridge-transfer",
+ "pallet-evm-precompile-curator",
  "pallet-evm-precompile-dispatch",
  "pallet-evm-precompile-ed25519",
+ "pallet-evm-precompile-guardian",
+ "pallet-evm-precompile-investing-pool",
  "pallet-evm-precompile-modexp",
  "pallet-evm-precompile-parachain-staking",
+ "pallet-evm-precompile-pool-proposal",
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
  "pallet-extrinsic-filter",
  "pallet-group",
+ "pallet-guardian",
  "pallet-identity",
  "pallet-identity-management",
+ "pallet-investing-pool",
  "pallet-membership",
  "pallet-message-queue",
  "pallet-multisig",
  "pallet-omni-account",
  "pallet-omni-account-runtime-api",
  "pallet-parachain-staking",
+ "pallet-pool-proposal",
  "pallet-preimage",
  "pallet-proxy",
  "pallet-scheduler",

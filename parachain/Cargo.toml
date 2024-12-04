@@ -8,6 +8,12 @@ members = [
     'pallets/bridge/chain-bridge',
     'pallets/bridge/bridge-transfer',
     'pallets/bridge/common',
+    'pallets/collab-ai/aiusd-convertor',
+    'pallets/collab-ai/common',
+    'pallets/collab-ai/curator',
+    'pallets/collab-ai/guardian',
+    'pallets/collab-ai/pool-proposal',
+    'pallets/collab-ai/investing-pool',
     'pallets/extrinsic-filter',
     'pallets/evm-address',
     'pallets/evm-assertions',
@@ -20,7 +26,15 @@ members = [
     'pallets/xcm-asset-manager',
     'pallets/omni-account',
     'pallets/omni-account/runtime-api',
-    'precompiles/*',
+    'precompiles/assets-erc20',
+    'precompiles/bridge-transfer',
+    'precompiles/collab-ai/aiusd-convertor',
+    'precompiles/collab-ai/curator',
+    'precompiles/collab-ai/guardian',
+    'precompiles/collab-ai/pool-proposal',
+    'precompiles/collab-ai/investing-pool',
+    'precompiles/parachain-staking',
+    'precompiles/score-staking',
     'runtime/litentry',
     'runtime/rococo',
     'runtime/paseo',
@@ -52,6 +66,7 @@ assert_matches = { version = "1.3.0" }
 blake2-rfc = { version = "0.2.18", default-features = false }
 base58 = { version = "0.2", default-features = false }
 base64 = { version = "0.13", default-features = false, features = ["alloc"] }
+bitflags = { version = "1.3.2" }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 clap = { version = "4.4", features = ["derive"] }
 der = { version = "0.6.0", default-features = false }
@@ -230,6 +245,7 @@ parachain-info = { git = "https://github.com/paritytech/polkadot-sdk", branch = 
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
+orml-utilities = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v1.1.0", default-features = false }
 
 # benchmarking
@@ -269,7 +285,22 @@ pallet-evm-precompile-assets-erc20 = { path = "precompiles/assets-erc20", defaul
 pallet-evm-precompile-bridge-transfer = { path = "precompiles/bridge-transfer", default-features = false }
 pallet-evm-precompile-parachain-staking = { path = "precompiles/parachain-staking", default-features = false }
 pallet-evm-precompile-score-staking = { path = "precompiles/score-staking", default-features = false }
+
+pallet-evm-precompile-aiusd-convertor = { path = "precompiles/collab-ai/aiusd-convertor", default-features = false }
+pallet-evm-precompile-curator = { path = "precompiles/collab-ai/curator", default-features = false }
+pallet-evm-precompile-guardian = { path = "precompiles/collab-ai/guardian", default-features = false }
+pallet-evm-precompile-pool-proposal = { path = "precompiles/collab-ai/pool-proposal", default-features = false }
+pallet-evm-precompile-investing-pool = { path = "precompiles/collab-ai/investing-pool", default-features = false }
+
 pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = false }
+
+# CollabAI local
+pallet-aiusd-convertor = { path = "pallets/collab-ai/aiusd-convertor", default-features = false }
+pallet-collab-ai-common = { path = "pallets/collab-ai/common", default-features = false }
+pallet-curator = { path = "pallets/collab-ai/curator", default-features = false }
+pallet-guardian = { path = "pallets/collab-ai/guardian", default-features = false }
+pallet-pool-proposal = { path = "pallets/collab-ai/pool-proposal", default-features = false }
+pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-features = false }
 
 [patch.crates-io]
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
