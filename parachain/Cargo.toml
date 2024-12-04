@@ -251,9 +251,6 @@ parachain-info = { package = "staging-parachain-info", git = "https://github.com
 parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
-orml-traits = { git = "https://github.com/litentry/open-runtime-module-library", branch = "litentry-polkadot-v1.11.0", default-features = false }
-orml-utilities = { git = "https://github.com/litentry/open-runtime-module-library", branch = "litentry-polkadot-v1.11.0", default-features = false }
-orml-xtokens = { git = "https://github.com/litentry/open-runtime-module-library", branch = "litentry-polkadot-v1.11.0", default-features = false }
 
 # benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.11.0", default-features = false }

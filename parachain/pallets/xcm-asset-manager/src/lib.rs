@@ -19,8 +19,9 @@
 //! implementations.
 
 // (1) The local asset support is removed. This pallet is for managing Xcm foreign asset
-// specifically. (2) The mapping of AssetId and AssetType is now capable of manual choosen
-// (3) Compatibility to orml_token instead of pallet_assets
+// specifically.
+// (2) The mapping of AssetId and AssetType is now capable of manual choosen
+// (3) Compatibility to orml_token instead of pallet_assets => TODO: to be reviewed
 // (4) Code for destroy asset is removed
 
 //! TODO Doc comments for the pallet
@@ -69,7 +70,6 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-// use orml_traits::GetByKey;
 pub use pallet::*;
 use parity_scale_codec::HasCompact;
 use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, One};
