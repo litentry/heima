@@ -90,8 +90,8 @@ impl pallet_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
-	// TODO: We do not allow creating by regular users before pallet_asset_manager fully adopted
-	// P-937
+	// We do not allow creating by regular users
+	// CollabAI derivative token do not want it that way
 	type CreateOrigin = AsEnsureOriginWithArg<NeverEnsureOrigin<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = AssetDeposit;

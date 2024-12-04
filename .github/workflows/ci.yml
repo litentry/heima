@@ -642,7 +642,7 @@ jobs:
         if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: tee-worker/omni-executor/
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:latest
           target: executor-worker

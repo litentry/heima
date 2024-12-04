@@ -97,6 +97,13 @@ pallet-teebag = { workspace = true }
 pallet-vc-management = { workspace = true }
 runtime-common = { workspace = true }
 
+pallet-aiusd-convertor = { workspace = true }
+pallet-collab-ai-common = { workspace = true }
+pallet-curator = { workspace = true }
+pallet-guardian = { workspace = true }
+pallet-investing-pool = { workspace = true }
+pallet-pool-proposal = { workspace = true }
+
 fp-evm = { workspace = true }
 fp-rpc = { workspace = true }
 fp-self-contained = { workspace = true }
@@ -114,6 +121,12 @@ pallet-evm-precompile-simple = { workspace = true }
 pallet-evm-precompile-bridge-transfer = { workspace = true }
 pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
+
+pallet-evm-precompile-aiusd-convertor = { workspace = true }
+pallet-evm-precompile-curator = { workspace = true }
+pallet-evm-precompile-guardian = { workspace = true }
+pallet-evm-precompile-investing-pool = { workspace = true }
+pallet-evm-precompile-pool-proposal = { workspace = true }
 
 moonbeam-evm-tracer = { workspace = true }
 moonbeam-rpc-primitives-debug = { workspace = true }

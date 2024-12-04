@@ -5,11 +5,10 @@
 # rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
 FROM rust:1.82-bookworm AS plain-builder
 
-ENV HOME=/home/ubuntu
-ENV BUILD_DIR=$HOME/tee-worker/omni-executor
+ENV SRC_DIR=/home/ubuntu/omni-executor
 
-COPY . $HOME
-WORKDIR $BUILD_DIR
+COPY . $SRC_DIR
+WORKDIR $SRC_DIR
 
 RUN cargo build --release
 
@@ -18,18 +17,17 @@ RUN cargo build --release
 ##################################################
 FROM node:20-bookworm-slim AS executor-worker
 
-ENV HOME=/home/ubuntu
-ENV BUILD_DIR=$HOME/tee-worker/omni-executor
-ENV EXECUT_DIR=/usr/local/bin
-WORKDIR $EXECUT_DIR
+ENV SRC_DIR=/home/ubuntu/omni-executor
+ENV BIN_DIR=/usr/local/bin
+WORKDIR $BIN_DIR
 
 RUN apt update && apt install -y ca-certificates
-COPY --from=plain-builder $BUILD_DIR/target/release/executor-worker $EXECUT_DIR/executor-worker
+COPY --from=plain-builder $SRC_DIR/target/release/executor-worker $BIN_DIR/executor-worker
 
-RUN chmod +x $EXECUT_DIR/executor-worker
-RUN ls -al $EXECUT_DIR
-RUN ldd $EXECUT_DIR/executor-worker && $EXECUT_DIR/executor-worker --version
-CMD ["$EXECUT_DIR/executor-worker"]
+RUN chmod +x $BIN_DIR/executor-worker
+RUN ls -al $BIN_DIR
+RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
+CMD ["$BIN_DIR/executor-worker"]
 
 
 
