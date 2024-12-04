@@ -69,12 +69,12 @@ pub fn verify_tca_oauth2_authentication(
 	match payload.provider {
 		OAuth2Provider::Google => {
 			let state_verifier_result =
-				google::OAuthStateStore::get(&omni_account, sender_identity_hash);
+				google::OAuthStateStore::get(omni_account, sender_identity_hash);
 			let Ok(Some(state_verifier)) = state_verifier_result else {
 				return false;
 			};
 			state_verifier == payload.state
-				&& verify_google_oauth2(data_providers_config, &omni_account, &payload)
+				&& verify_google_oauth2(data_providers_config, omni_account, &payload)
 		},
 	}
 }
