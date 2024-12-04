@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::authentication_utils::OAuth2Data;
 use alloc::string::String;
 use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
@@ -26,19 +27,6 @@ use sp_core::{
 };
 
 pub type VerificationCode = String;
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum OAuth2Provider {
-	Google,
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub struct OAuth2Data {
-	pub provider: OAuth2Provider,
-	pub code: String,
-	pub state: String,
-	pub redirect_uri: String,
-}
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum TCAuthentication {

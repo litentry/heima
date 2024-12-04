@@ -1,6 +1,6 @@
-use crate::{OAuth2Data, OAuth2Provider, VerificationCode};
-use alloc::sync::Arc;
-use codec::Encode;
+use crate::VerificationCode;
+use alloc::{string::String, sync::Arc};
+use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
 use itp_types::parentchain::Index as ParentchainIndex;
 use lc_data_providers::{google::GoogleOAuth2Client, DataProviderConfig};
@@ -9,6 +9,19 @@ use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_hex_utils::hex_encode;
 use litentry_primitives::{Identity, ShardIdentifier, Web2IdentityType};
 use sp_core::{blake2_256, crypto::AccountId32 as AccountId, H256};
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum OAuth2Provider {
+	Google,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub struct OAuth2Data {
+	pub provider: OAuth2Provider,
+	pub code: String,
+	pub state: String,
+	pub redirect_uri: String,
+}
 
 pub fn verify_tca_web3_authentication(
 	signature: &LitentryMultiSignature,
