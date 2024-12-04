@@ -36,10 +36,10 @@
     "dependencies": {
         "@polkadot/api": "^15.0.1",
         "@polkadot/api-augment": "^15.0.1",
-        "@polkadot/keyring": "^12.2.1",
+        "@polkadot/keyring": "12.4.2",
         "@polkadot/types": "^15.0.1",
-        "@polkadot/util": "^12.5.1",
-        "@polkadot/util-crypto": "^12.5.1",
+        "@polkadot/util": "12.4.2",
+        "@polkadot/util-crypto": "12.4.2",
         "@types/bn.js": "^5.1.2",
         "add": "^2.0.6",
         "bn.js": "^5.2.1",
