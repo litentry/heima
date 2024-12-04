@@ -18,6 +18,7 @@
 #![allow(clippy::large_enum_variant)]
 #![allow(clippy::result_large_err)]
 
+extern crate alloc;
 extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
@@ -34,6 +35,12 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
+use alloc::{
+	format,
+	string::{String, ToString},
+	vec,
+	vec::Vec,
+};
 use codec::{Decode, Encode};
 use core::time::Duration;
 use http_req::response::Headers;
@@ -43,19 +50,13 @@ use itc_rest_client::{
 	rest_client::RestClient,
 	Query, RestGet, RestPath, RestPost,
 };
-use log::debug;
-use serde::{Deserialize, Serialize};
-use std::{thread, vec};
-
 use litentry_primitives::{
 	AchainableParams, Assertion, ErrorDetail, ErrorString, IntoErrorDetail, ParameterString,
 	VCMPError,
 };
-use std::{
-	env, format,
-	string::{String, ToString},
-	vec::Vec,
-};
+use log::debug;
+use serde::{Deserialize, Serialize};
+use std::{env, thread};
 use url::Url;
 
 #[cfg(all(feature = "std", feature = "sgx"))]
