@@ -42,7 +42,6 @@ use types::*;
 
 use codec::{Compact, Decode, Encode};
 use futures::executor::ThreadPoolBuilder;
-use ita_sgx_runtime::Hash;
 use ita_stf::{
 	aes_encrypt_default,
 	helpers::{get_expected_raw_message, verify_web3_identity},
@@ -100,7 +99,7 @@ pub fn run_native_task_receiver<
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AuthorApi: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
@@ -160,7 +159,7 @@ fn handle_request<
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AuthorApi: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
@@ -252,7 +251,7 @@ fn handle_trusted_call<
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AuthorApi: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,

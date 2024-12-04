@@ -13,7 +13,6 @@ codec = { package = "parity-scale-codec", workspace = true }
 log = { workspace = true }
 sp-core = { workspace = true, features = ["full_crypto"] }
 
-ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../../../../app-libs/sgx-runtime", default-features = false }
 ita-stf = { package = "id-ita-stf", path = "../../../../app-libs/stf", default-features = false }
 itp-enclave-metrics = { workspace = true }
 itp-extrinsics-factory = { workspace = true }
@@ -62,7 +61,6 @@ std = [
     "itp-extrinsics-factory/std",
     "sp-core/std",
     "litentry-primitives/std",
-    "ita-sgx-runtime/std",
     "frame-support/std",
     "itp-node-api/std",
     "lc-native-task-sender/std",

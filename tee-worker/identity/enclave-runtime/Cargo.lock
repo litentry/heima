@@ -3121,7 +3121,6 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "futures 0.3.8",
- "id-ita-sgx-runtime",
  "id-ita-stf",
  "id-itp-stf-executor",
  "id-itp-top-pool-author",

@@ -15,7 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use codec::{Decode, Encode};
-use ita_sgx_runtime::Hash;
 use ita_stf::{Getter, TrustedCallSigned};
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadata};
@@ -26,7 +25,7 @@ use itp_sgx_crypto::{
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use lc_data_providers::DataProviderConfig;
-use sp_core::ed25519::Pair as Ed25519Pair;
+use sp_core::{ed25519::Pair as Ed25519Pair, H256};
 use std::{string::String, sync::Arc};
 
 pub struct NativeTaskContext<
@@ -40,7 +39,7 @@ pub struct NativeTaskContext<
 > where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AuthorApi: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
@@ -79,7 +78,7 @@ impl<
 	> where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AuthorApi: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OCallApi:
 		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
