@@ -34,16 +34,32 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-collab-ai-common/runtime-benchmarks",
+    "pallet-assets/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-multisig/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]
 std = [
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "sp-std/std",
-    "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
     "orml-utilities/std",
     "pallet-collab-ai-common/std",
     "pallet-multisig/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "pallet-assets/std",
+    "pallet-balances/std",
+    "sp-core/std",
+    "sp-io/std",
 ]
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-assets/try-runtime",
+    "pallet-balances/try-runtime",
+    "pallet-collab-ai-common/try-runtime",
+    "pallet-multisig/try-runtime",
+    "sp-runtime/try-runtime",
+]
