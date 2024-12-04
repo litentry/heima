@@ -674,7 +674,6 @@ jobs:
       matrix:
         chain:
           - litentry
-          - rococo
           - paseo
     name: ${{ matrix.chain }}
     steps:
@@ -783,8 +782,8 @@ jobs:
       - name: Run runtime tests
         working-directory: ./parachain
         run: |
-          echo "::group::rococo runtime test"
-          cargo test --locked -p rococo-parachain-runtime --lib
+          echo "::group::paseo runtime test"
+          cargo test --locked -p paseo-parachain-runtime --lib
           echo "::endgroup::"
           echo "::group::litentry runtime test"
           cargo test --locked -p litentry-parachain-runtime --lib

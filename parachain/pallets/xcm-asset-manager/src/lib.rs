@@ -24,7 +24,6 @@
 // (4) Code for destroy asset is removed
 
 //! TODO Doc comments for the pallet
-//! # Asset Manager Pallet
 //!
 //! This pallet allows to register new assets if certain conditions are met
 //! The main goal of this pallet is to allow Litentry to register XCM assets
@@ -53,8 +52,10 @@
 #![allow(clippy::needless_borrow)]
 #![allow(clippy::needless_borrows_for_generic_args)]
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+// TODO: fix benchmarking
+// #[cfg(feature = "runtime-benchmarks")]
+// mod benchmarking;
+
 #[cfg(test)]
 pub mod mock;
 #[cfg(test)]
@@ -68,7 +69,7 @@ use frame_support::{
 	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::GetByKey;
+// use orml_traits::GetByKey;
 pub use pallet::*;
 use parity_scale_codec::HasCompact;
 use sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, One};
@@ -366,13 +367,13 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> GetByKey<T::AssetId, BalanceOf<T>> for Pallet<T> {
-		fn get(asset_id: &T::AssetId) -> BalanceOf<T> {
-			let metadata: AssetMetadata<BalanceOf<T>> =
-				AssetIdMetadata::<T>::get(asset_id).unwrap_or_default();
-			metadata.minimal_balance
-		}
-	}
+	// impl<T: Config> GetByKey<T::AssetId, BalanceOf<T>> for Pallet<T> {
+	// 	fn get(asset_id: &T::AssetId) -> BalanceOf<T> {
+	// 		let metadata: AssetMetadata<BalanceOf<T>> =
+	// 			AssetIdMetadata::<T>::get(asset_id).unwrap_or_default();
+	// 		metadata.minimal_balance
+	// 	}
+	// }
 
 	// AssetManager or other FeeToWeight source should implement this trait
 	// Defines the trait to obtain the units per second of a give asset_type for local execution

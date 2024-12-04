@@ -26,7 +26,10 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         let eveMappedSustrateAccount = evmToAddress(eveMappedEVMAccount, 31);
 
         // Deposit money into substrate account's truncated EVM address's mapping substrate account
-        const tx_init = context.api.tx.balances.transfer(eveMappedSustrateAccount, new BN('30000000000000000000'));
+        const tx_init = context.api.tx.balances.transferKeepAlive(
+            eveMappedSustrateAccount,
+            new BN('30000000000000000000')
+        );
         await signAndSend(tx_init, context.eve);
 
         // Get the initial balance of Eve and EVM external account

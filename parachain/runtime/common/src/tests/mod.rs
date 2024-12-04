@@ -15,6 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod base_call_filter;
+// TODO: use separate runtimes
 pub mod setup;
 pub mod transaction_payment;
-pub mod xcm_parachain;

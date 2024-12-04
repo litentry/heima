@@ -11,7 +11,7 @@ function transfer(api: any) {
     let txs: any = [];
     for (let index = 0; index < whiteList.length; index++) {
         try {
-            let tx = api.tx.balances.transfer(whiteList[index], transferAmount);
+            let tx = api.tx.balances.transferKeepAlive(whiteList[index], transferAmount);
             txs.push(tx);
         } catch (error: any) {
             //maybe invalied address or other error remove it from whitelist

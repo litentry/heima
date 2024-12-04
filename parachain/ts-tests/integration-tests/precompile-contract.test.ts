@@ -85,7 +85,10 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log('transfer from Alice to alice EMV');
 
         // Deposit money into substrate account's truncated EVM address's mapping substrate account
-        const tx_init = context.api.tx.balances.transfer(aliceMappedSustrateAccount, new BN('70000000000000000000')); // 70
+        const tx_init = context.api.tx.balances.transferKeepAlive(
+            aliceMappedSustrateAccount,
+            new BN('70000000000000000000')
+        ); // 70
         await signAndSend(tx_init, context.alice);
 
         // 25000 is min_gas_price setup
