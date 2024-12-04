@@ -33,6 +33,12 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use crate::sgx_reexport_prelude::*;
 
+mod authentication_utils;
+use authentication_utils::{
+	verify_tca_email_authentication, verify_tca_oauth2_authentication,
+	verify_tca_web3_authentication,
+};
+
 mod trusted_call_authenticated;
 pub use trusted_call_authenticated::*;
 
@@ -210,8 +216,31 @@ where
 			&mrenclave,
 			&request.shard,
 		),
-		TCAuthentication::Email(verification_code) =>
-			verify_tca_email_authentication(&tca.call, verification_code),
+		TCAuthentication::Email(verification_code) => {
+			let sender_identity = tca.call.sender_identity();
+			let omni_account = match get_omni_account(context.ocall_api.clone(), sender_identity) {
+				Ok(account) => account,
+				_ => sender_identity.to_omni_account(),
+			};
+			verify_tca_email_authentication(
+				sender_identity.hash(),
+				&omni_account,
+				verification_code,
+			)
+		},
+		TCAuthentication::OAuth2(oauth2_data) => {
+			let sender_identity = tca.call.sender_identity();
+			let omni_account = match get_omni_account(context.ocall_api.clone(), sender_identity) {
+				Ok(account) => account,
+				_ => sender_identity.to_omni_account(),
+			};
+			verify_tca_oauth2_authentication(
+				context.data_provider_config.clone(),
+				sender_identity.hash(),
+				&omni_account,
+				oauth2_data,
+			)
+		},
 	};
 
 	if !authentication_valid {
