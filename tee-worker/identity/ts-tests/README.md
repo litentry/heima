@@ -14,6 +14,8 @@ Before running the ts-tests, the client-api types generation needs to be complet
 
 See client-api [README.md](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/client-api/README.md)
 
+Clean node_modules: `pnpm run clean` when client-api is updated.
+
 ## Installation
 
 ```
