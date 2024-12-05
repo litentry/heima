@@ -846,6 +846,16 @@ jobs:
         run: |
           docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
 
+      - name: Upload zombienet logs if test fails
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-zombienet-logs
+          path: /tmp/parachain_dev
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Collect docker logs if test fails
         continue-on-error: true
         uses: jwalton/gh-docker-logs@v2
@@ -917,6 +927,16 @@ jobs:
         run: |
           docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
 
+      - name: Upload zombienet logs if test fails
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-zombienet-logs
+          path: /tmp/parachain_dev
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Collect docker logs if test fails
         continue-on-error: true
         uses: jwalton/gh-docker-logs@v2
@@ -982,6 +1002,16 @@ jobs:
         if: needs.set-condition.outputs.run_bitacross_test == 'true'
         run: |
           docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+
+      - name: Upload zombienet logs if test fails
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-zombienet-logs
+          path: /tmp/parachain_dev
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Collect docker logs if test fails
         continue-on-error: true
