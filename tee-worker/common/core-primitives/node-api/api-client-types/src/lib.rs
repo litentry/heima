@@ -86,6 +86,7 @@ pub enum XtStatus {
 	Ready = 1,
 	Broadcast = 2,
 	InBlock = 3,
+	Retracted = 4,
 	Finalized = 6,
 }
 
@@ -95,6 +96,7 @@ impl From<XtStatus> for substrate_api_client::XtStatus {
 			XtStatus::Ready => substrate_api_client::XtStatus::Ready,
 			XtStatus::Broadcast => substrate_api_client::XtStatus::Broadcast,
 			XtStatus::InBlock => substrate_api_client::XtStatus::InBlock,
+			XtStatus::Retracted => substrate_api_client::XtStatus::Retracted,
 			XtStatus::Finalized => substrate_api_client::XtStatus::Finalized,
 		}
 	}
@@ -217,6 +219,7 @@ mod tests {
 		assert_eq!(1, XtStatus::Ready as u8);
 		assert_eq!(2, XtStatus::Broadcast as u8);
 		assert_eq!(3, XtStatus::InBlock as u8);
+		assert_eq!(4, XtStatus::Retracted as u8);
 		assert_eq!(6, XtStatus::Finalized as u8);
 	}
 
@@ -241,6 +244,10 @@ mod tests {
 		assert_eq!(
 			XtStatus::InBlock as u8,
 			TransactionStatus::<Hash, Hash>::InBlock(Hash::random()).as_u8()
+		);
+		assert_eq!(
+			XtStatus::Retracted as u8,
+			TransactionStatus::<Hash, Hash>::Retracted(Hash::random()).as_u8()
 		);
 		assert_eq!(
 			XtStatus::Finalized as u8,
