@@ -14,9 +14,9 @@ Before running the ts-tests, the client-api types generation needs to be complet
 
 See client-api [README.md](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/client-api/README.md)
 
-Clean node_modules: `pnpm run clean` when client-api is updated.
-
 ## Installation
+
+Note: Whenever the `client-api` is updated, it must be reinstalled, and it's best to clean node_modules(`pnpm run clean`) to prevent caching issues.
 
 ```
 cd tee-worker/ts-tests
