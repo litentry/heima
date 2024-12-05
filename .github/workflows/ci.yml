@@ -852,7 +852,11 @@ jobs:
         if: failure()
         with:
           name: ${{ matrix.test_name }}-zombienet-logs
-          path: /tmp/parachain_dev
+          path: |
+            /tmp/parachain_dev
+            !/tmp/parachain_dev/polkadot*
+            !/tmp/parachain_dev/zombienet*
+            !/tmp/parachain_dev/litentry-collator
           if-no-files-found: ignore
           retention-days: 3
 
@@ -933,7 +937,11 @@ jobs:
         if: failure()
         with:
           name: ${{ matrix.test_name }}-zombienet-logs
-          path: /tmp/parachain_dev
+          path: |
+            /tmp/parachain_dev
+            !/tmp/parachain_dev/polkadot*
+            !/tmp/parachain_dev/zombienet*
+            !/tmp/parachain_dev/litentry-collator
           if-no-files-found: ignore
           retention-days: 3
 
@@ -1009,7 +1017,11 @@ jobs:
         if: failure()
         with:
           name: ${{ matrix.test_name }}-zombienet-logs
-          path: /tmp/parachain_dev
+          path: |
+            /tmp/parachain_dev
+            !/tmp/parachain_dev/polkadot*
+            !/tmp/parachain_dev/zombienet*
+            !/tmp/parachain_dev/litentry-collator
           if-no-files-found: ignore
           retention-days: 3
 
