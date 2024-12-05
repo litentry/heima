@@ -33,9 +33,6 @@ describe('Omni Account', function () {
 
     before(async function () {
         const parachainEndpoint = process.env.PARACHAIN_ENDPOINT;
-        if (!parachainEndpoint) {
-            throw new Error('PARACHAIN_ENDPOINT environment variable is missing.');
-        }
         context = await initIntegrationTestContext(parachainEndpoint);
         teeShieldingKey = await getTeeShieldingKey(context);
         const wallet = context.web3Wallets['substrate'];

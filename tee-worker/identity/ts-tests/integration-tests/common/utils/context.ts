@@ -28,7 +28,7 @@ export async function initWorkerConnection(endpoint: string): Promise<WebSocketA
 }
 
 export async function initIntegrationTestContext(
-    parachainEndpoint: string,
+    parachainEndpoint?: string,
     enclaveEndpoint?: string
 ): Promise<IntegrationTestContext> {
     const provider = new WsProvider(parachainEndpoint);
