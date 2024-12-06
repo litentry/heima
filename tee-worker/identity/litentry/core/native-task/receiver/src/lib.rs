@@ -64,6 +64,8 @@ use itp_types::{
 	parentchain::{Address, ParachainHeader, ParentchainId},
 	AccountId, OpaqueCall,
 };
+use itp_utils::stringify::account_id_to_string_without_prefix;
+use lc_authentication::{jwt, AuthOptions};
 use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
 use lc_omni_account::{
@@ -414,6 +416,28 @@ fn handle_trusted_call<
 				identity
 			))
 		)),
+		TrustedCall::request_auth_token(who, auth_options) => {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
+				Ok(account) => account,
+				Err(e) => {
+					log::error!("Failed to get omni account: {:?}", e);
+					let result: TrustedCallResult = Err(NativeTaskError::UnauthorizedSigner);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+			};
+			let subject = account_id_to_string_without_prefix(&omni_account);
+			let payload = jwt::Payload::new(subject, auth_options);
+			let Ok(auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
+				log::error!("Failed to create jwt token");
+				let result: TrustedCallResult = Err(NativeTaskError::AuthTokenCreationFailed);
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+				return
+			};
+
+			// Return the auth token with a new variant once #3183 is merged
+			unimplemented!()
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =

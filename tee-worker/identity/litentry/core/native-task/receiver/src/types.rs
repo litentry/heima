@@ -136,4 +136,5 @@ pub enum NativeTaskError {
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
 	InvalidRequest,
 	NativeRequestSendFailed,
+	AuthTokenCreationFailed,
 }

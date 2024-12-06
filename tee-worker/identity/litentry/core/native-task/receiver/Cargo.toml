@@ -26,6 +26,7 @@ itp-stf-primitives = { workspace = true }
 itp-stf-state-handler = { workspace = true }
 itp-top-pool-author = { package = "id-itp-top-pool-author", path = "../../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { workspace = true }
+itp-utils = { workspace = true }
 
 frame-support = { workspace = true }
 lc-data-providers = { workspace = true }
@@ -33,6 +34,7 @@ lc-dynamic-assertion = { workspace = true }
 lc-identity-verification = { workspace = true }
 lc-native-task-sender = { workspace = true }
 lc-omni-account = { workspace = true }
+lc-authentication = { workspace = true }
 litentry-hex-utils = { workspace = true }
 litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }
@@ -44,7 +46,6 @@ sgx = [
     "sgx_tstd",
     "ita-stf/sgx",
     "itp-top-pool-author/sgx",
-    "sp-core/full_crypto",
     "litentry-primitives/sgx",
     "itp-node-api/sgx",
     "itp-extrinsics-factory/sgx",
