@@ -35,6 +35,7 @@ type VerificationCode = String;
 pub enum TCAuthentication {
 	Web3(LitentryMultiSignature),
 	Email(VerificationCode),
+	AuthToken(String),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
