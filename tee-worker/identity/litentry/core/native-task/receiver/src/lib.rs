@@ -318,7 +318,7 @@ fn handle_trusted_call<
 			who
 		)),
 		TrustedCall::add_account(who, identity, validation_data, public_account) => {
-			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
@@ -417,7 +417,7 @@ fn handle_trusted_call<
 			))
 		)),
 		TrustedCall::request_auth_token(who, auth_options) => {
-			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
@@ -512,15 +512,19 @@ where
 fn get_omni_account<OCallApi: EnclaveOnChainOCallApi>(
 	ocall_api: Arc<OCallApi>,
 	who: &Identity,
+	header: Option<ParachainHeader>,
 ) -> Result<AccountId, &'static str> {
 	let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 		Ok(Some(account)) => account,
 		_ => {
 			log::warn!("Failed to get omni account from the in-memory store");
-			let header: ParachainHeader = ocall_api.get_header().map_err(|_| {
-				log::error!("Failed to get header");
-				"Failed to get header"
-			})?;
+			let header = match header {
+				Some(h) => h,
+				None => ocall_api.get_header().map_err(|_| {
+					log::error!("Failed to get header");
+					"Failed to get header"
+				})?,
+			};
 			OmniAccountRepository::new(ocall_api)
 				.with_header(header)
 				.get_account_by_member_hash(who.hash())
