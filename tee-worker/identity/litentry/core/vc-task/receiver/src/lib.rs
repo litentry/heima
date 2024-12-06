@@ -572,8 +572,15 @@ where
 			req_ext_hash,
 		};
 
-		let (vc_payload, vc_logs) = create_credential_str(&req, &context)
-			.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
+		let (vc_payload, vc_logs) = create_credential_str::<A, S, O, AR>(
+			&req,
+			context.enclave_signer.clone(),
+			context.enclave_account.clone(),
+			context.ocall_api.clone(),
+			context.data_provider_config.clone(),
+			context.assertion_repository.clone(),
+		)
+		.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
 
 		let call_index = node_metadata_repo
 			.get_from_metadata(|m| m.vc_issued_call_indexes())

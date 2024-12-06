@@ -1,4 +1,4 @@
-import { WsProvider, ApiPromise, PalletTeebagEnclave } from 'parachain-api';
+import { WsProvider, ApiPromise, CorePrimitivesTeebagTypesEnclave } from 'parachain-api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';
@@ -78,7 +78,7 @@ async function getenclaveEndpoint(api: ApiPromise): Promise<string> {
             return enclaves;
         }
         return [...enclaves, enclave.unwrap()];
-    }, [] as PalletTeebagEnclave[]);
+    }, [] as CorePrimitivesTeebagTypesEnclave[]);
 
     if (identityEnclaves.length === 0) {
         throw new Error('No identity worker found');

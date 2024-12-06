@@ -126,7 +126,7 @@ impl<Hash: Decode> From<substrate_api_client::ExtrinsicReport<Hash>> for Extrins
 }
 
 /// Possible transaction status events.
-#[derive(Encode, Decode, Debug, Clone, PartialEq, MaxEncodedLen)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen)]
 pub enum TransactionStatus<Hash, BlockHash> {
 	/// Transaction is part of the future queue.
 	Future,

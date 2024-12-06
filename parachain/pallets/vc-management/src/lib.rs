@@ -161,6 +161,12 @@ pub mod pallet {
 			detail: ErrorDetail,
 			req_ext_hash: H256,
 		},
+		VCIssuedNew {
+			identity: Identity,
+			assertion: Assertion,
+			omni_account: T::AccountId,
+			req_ext_hash: H256,
+		},
 	}
 
 	#[pallet::error]
@@ -384,6 +390,26 @@ pub mod pallet {
 					Self::deposit_event(Event::UnclassifiedError { identity, detail, req_ext_hash })
 				},
 			}
+			Ok(Pays::No.into())
+		}
+
+		// TODO: update the weight info to use on_vc_issued
+		#[pallet::call_index(32)]
+		#[pallet::weight(<T as Config>::WeightInfo::vc_issued())]
+		pub fn on_vc_issued(
+			origin: OriginFor<T>,
+			identity: Identity,
+			assertion: Assertion,
+			omni_account: T::AccountId,
+			req_ext_hash: H256,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::VCIssuedNew {
+				identity,
+				assertion,
+				omni_account,
+				req_ext_hash,
+			});
 			Ok(Pays::No.into())
 		}
 	}
