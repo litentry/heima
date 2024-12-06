@@ -215,6 +215,26 @@ where
 		),
 		TCAuthentication::Email(verification_code) =>
 			verify_tca_email_authentication(&tca.call, verification_code),
+		TCAuthentication::AuthToken(auth_token) => {
+			let Ok(header)= context.ocall_api.get_header::<ParachainHeader>() else {
+				let res: Result<(), NativeTaskError> = Err(NativeTaskError::ParentchainHeaderRetrievalFailed);
+				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				return Err("Failed to get parachain header")
+			};
+			let current_block = header.number;
+			let sender_identity = tca.call.sender_identity();
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, Some(header)) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
+			verify_tca_auth_token_authentication(
+				&omni_account,
+				current_block,
+				auth_token,
+				&context.data_provider_config.jwt_secret.as_bytes(),
+			)
+		},
 	};
 
 	if !authentication_valid {
