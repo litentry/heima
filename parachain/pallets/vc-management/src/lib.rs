@@ -161,7 +161,7 @@ pub mod pallet {
 			detail: ErrorDetail,
 			req_ext_hash: H256,
 		},
-		VCHasBeenIssued {
+		VCIssuedNew {
 			identity: Identity,
 			assertion: Assertion,
 			omni_account: T::AccountId,
@@ -404,7 +404,7 @@ pub mod pallet {
 			req_ext_hash: H256,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			Self::deposit_event(Event::VCHasBeenIssued {
+			Self::deposit_event(Event::VCIssuedNew {
 				identity,
 				assertion,
 				omni_account,

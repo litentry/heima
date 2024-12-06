@@ -363,7 +363,7 @@ fn on_vc_issued_works() {
 			omni_account.clone(),
 			H256::default(),
 		));
-		System::assert_last_event(RuntimeEvent::VCManagement(crate::Event::VCHasBeenIssued {
+		System::assert_last_event(RuntimeEvent::VCManagement(crate::Event::VCIssuedNew {
 			identity: alice,
 			assertion: Assertion::A1,
 			omni_account,
