@@ -36,8 +36,11 @@ let api: ApiPromise;
 
 beforeAll(() => {
   const optionEnclave = registry.createType(
-    'Option<PalletTeebagEnclave>',
-    registry.createType('PalletTeebagEnclave', palletTeebagEnclaveJson)
+    'Option<CorePrimitivesTeebagTypesEnclave>',
+    registry.createType(
+      'CorePrimitivesTeebagTypesEnclave',
+      palletTeebagEnclaveJson
+    )
   );
 
   // define api manually to mock query methods
@@ -127,7 +130,7 @@ describe('VcValidator', () => {
     (
       api.query['teebag']['enclaveRegistry']['entries'] as unknown as jest.Mock
     ).mockImplementationOnce(() => {
-      const enclave = registry.createType('PalletTeebagEnclave', {
+      const enclave = registry.createType('CorePrimitivesTeebagTypesEnclave', {
         ...palletTeebagEnclaveJson,
         // mess-up vcPubkey and mrEnclave
         vcPubkey:
@@ -137,7 +140,7 @@ describe('VcValidator', () => {
       });
 
       const returnedValue = registry.createType(
-        'Option<PalletTeebagEnclave>',
+        'Option<CorePrimitivesTeebagTypesEnclave>',
         enclave
       );
 

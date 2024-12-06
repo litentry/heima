@@ -24,15 +24,18 @@ itp-sgx-externalities = { workspace = true }
 itp-stf-executor = { package = "id-itp-stf-executor", path = "../../../../core-primitives/stf-executor", default-features = false }
 itp-stf-primitives = { workspace = true }
 itp-stf-state-handler = { workspace = true }
+itp-storage = { workspace = true }
 itp-top-pool-author = { package = "id-itp-top-pool-author", path = "../../../../core-primitives/top-pool-author", default-features = false }
 itp-types = { workspace = true }
 
 frame-support = { workspace = true }
 lc-data-providers = { workspace = true }
 lc-dynamic-assertion = { workspace = true }
+lc-evm-dynamic-assertions = { workspace = true }
 lc-identity-verification = { workspace = true }
 lc-native-task-sender = { workspace = true }
 lc-omni-account = { workspace = true }
+lc-stf-task-receiver = { workspace = true }
 litentry-hex-utils = { workspace = true }
 litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }
@@ -51,6 +54,9 @@ sgx = [
     "lc-native-task-sender/sgx",
     "lc-identity-verification/sgx",
     "lc-omni-account/sgx",
+    "lc-stf-task-receiver/sgx",
+    "lc-evm-dynamic-assertions/sgx",
+    "itp-storage/sgx",
 ]
 std = [
     "futures",
@@ -68,6 +74,9 @@ std = [
     "lc-native-task-sender/std",
     "lc-identity-verification/std",
     "lc-omni-account/std",
+    "lc-stf-task-receiver/std",
+    "lc-evm-dynamic-assertions/std",
+    "itp-storage/std",
 ]
 development = [
     "litentry-macros/development",

@@ -157,6 +157,18 @@ benchmarks! {
 		assert_last_event::<T>(Event::SchemaRevoked { account, shard, index: 0 }.into())
 	}
 
+	// Benchmark `on_vc_issued`. There are no worst conditions. The benchmark showed that
+	// execution time is constant irrespective of encrypted_data size.
+	on_vc_issued {
+		let call_origin = T::TEECallOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+		let identity: Identity =  frame_benchmarking::account::<AccountId>("TEST_A", 0u32, USER_SEED).into();
+		let assertion = Assertion::A1;
+		let omni_account: T::AccountId =  frame_benchmarking::account("TEST_OMNI_ACCOUNT", 0u32, USER_SEED);
+		let req_ext_hash = H256::default();
+	}: _<T::RuntimeOrigin>(call_origin, identity.clone(), assertion.clone(), omni_account.clone(), req_ext_hash)
+	verify{
+		assert_last_event::<T>(Event::VCIssuedNew{ identity, assertion, omni_account, req_ext_hash }.into());
+	}
 }
 
 #[cfg(test)]
