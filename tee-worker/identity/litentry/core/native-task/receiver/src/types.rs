@@ -137,4 +137,5 @@ pub enum NativeTaskError {
 	InvalidRequest,
 	NativeRequestSendFailed,
 	AuthTokenCreationFailed,
+	ParentchainHeaderRetrievalFailed,
 }
