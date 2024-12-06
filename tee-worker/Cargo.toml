@@ -53,6 +53,7 @@ members = [
     "identity/litentry/core/data-providers",
     "identity/litentry/core/vc-task/sender",
     "identity/litentry/core/vc-task/receiver",
+    "identity/litentry/core/authentication",
     "identity/litentry/core/native-task/sender",
     "identity/litentry/core/native-task/receiver",
     "identity/litentry/core/identity-verification",
