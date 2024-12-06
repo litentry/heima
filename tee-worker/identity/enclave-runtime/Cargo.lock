@@ -1864,6 +1864,7 @@ dependencies = [
  "itp-storage",
  "itp-types",
  "itp-utils",
+ "lc-authentication",
  "lc-stf-task-sender",
  "litentry-hex-utils",
  "litentry-macros",
@@ -2984,6 +2985,19 @@ dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
  "thiserror",
+]
+
+[[package]]
+name = "lc-authentication"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "core-primitives",
+ "parity-scale-codec",
+ "ring 0.16.20",
+ "serde 1.0.204",
+ "serde_json 1.0.120",
+ "sgx_tstd",
 ]
 
 [[package]]

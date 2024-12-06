@@ -38,6 +38,7 @@ sp-std = { workspace = true }
 # litentry
 itp-node-api-metadata-provider = { workspace = true }
 lc-stf-task-sender = { path = "../../litentry/core/stf-task/sender", default-features = false }
+lc-authentication = { path = "../../litentry/core/authentication", default-features = false }
 litentry-hex-utils = { workspace = true }
 litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }
@@ -56,6 +57,7 @@ sgx = [
     "itp-node-api/sgx",
     "litentry-primitives/sgx",
     "lc-stf-task-sender/sgx",
+    "lc-authentication/sgx",
     "itp-node-api-metadata-provider/sgx",
 ]
 std = [
@@ -79,6 +81,7 @@ std = [
     "sp-io/std",
     "litentry-primitives/std",
     "lc-stf-task-sender/std",
+    "lc-authentication/std",
     "itp-node-api-metadata-provider/std",
 ]
 test = []
