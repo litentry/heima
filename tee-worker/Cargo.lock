@@ -4052,6 +4052,7 @@ dependencies = [
 name = "itp-extrinsics-factory"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
