@@ -102,7 +102,7 @@ pub fn create(payload: &Payload, secret: &[u8]) -> Result<String, Error> {
 	Ok([data, encoded_signature].join("."))
 }
 
-pub fn decode(jwt: &str, secret: &[u8], validation: Validation) -> Result<Payload, Error> {
+pub fn verify(jwt: &str, secret: &[u8], validation: Validation) -> Result<(), Error> {
 	let parts: Vec<&str> = jwt.split('.').collect();
 	if parts.len() != 3 {
 		return Err(Error::InvalidToken)
@@ -113,11 +113,19 @@ pub fn decode(jwt: &str, secret: &[u8], validation: Validation) -> Result<Payloa
 	let decoded_signature = base64_decode(parts[2])?;
 
 	hmac::verify(&key, data.as_bytes(), &decoded_signature).map_err(|_| Error::InvalidSignature)?;
-
 	let payload = base64_decode(parts[1])?;
 	let payload: Payload = serde_json::from_slice(&payload).map_err(|_| Error::JsonError)?;
 
-	validation.validate(&payload)?;
+	validation.validate(&payload)
+}
+
+pub fn decode(jwt: &str) -> Result<Payload, Error> {
+	let parts: Vec<&str> = jwt.split('.').collect();
+	if parts.len() != 3 {
+		return Err(Error::InvalidToken)
+	}
+	let payload = base64_decode(parts[1])?;
+	let payload: Payload = serde_json::from_slice(&payload).map_err(|_| Error::JsonError)?;
 
 	Ok(payload)
 }
@@ -131,10 +139,7 @@ mod tests {
 		let secret = "secret".as_bytes();
 		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: 10 });
 		let jwt = create(&payload, secret).unwrap();
-
-		let current_block = 5;
-		let decoded_payload =
-			decode(&jwt, secret, Validation::new("subject".to_string(), current_block)).unwrap();
+		let decoded_payload = decode(&jwt).unwrap();
 
 		assert_eq!(decoded_payload, payload);
 	}
@@ -146,7 +151,7 @@ mod tests {
 		let jwt = create(&payload, secret).unwrap();
 
 		let current_block = 12;
-		let result = decode(&jwt, secret, Validation::new("subject".to_string(), current_block));
+		let result = verify(&jwt, secret, Validation::new("subject".to_string(), current_block));
 
 		assert_eq!(result, Err(Error::ExpiredToken));
 	}
@@ -159,7 +164,7 @@ mod tests {
 
 		let current_block = 5;
 		let result =
-			decode(&jwt, secret, Validation::new("other-subject".to_string(), current_block));
+			verify(&jwt, secret, Validation::new("other-subject".to_string(), current_block));
 
 		assert_eq!(result, Err(Error::InvalidSubject));
 	}
