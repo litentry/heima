@@ -48,8 +48,7 @@ pub struct Header {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Payload {
 	sub: String,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	exp: Option<BlockNumber>,
+	exp: BlockNumber,
 }
 
 impl Payload {
@@ -73,10 +72,8 @@ impl Validation {
 			return Err(Error::InvalidSubject)
 		}
 
-		if let Some(exp_block) = payload.exp {
-			if self.current_block > exp_block {
-				return Err(Error::ExpiredToken)
-			}
+		if self.current_block > payload.exp {
+			return Err(Error::ExpiredToken)
 		}
 
 		Ok(())
@@ -132,7 +129,7 @@ mod tests {
 	#[test]
 	fn test_jwt() {
 		let secret = "secret".as_bytes();
-		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: Some(10) });
+		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: 10 });
 		let jwt = create(&payload, secret).unwrap();
 
 		let current_block = 5;
@@ -145,7 +142,7 @@ mod tests {
 	#[test]
 	fn test_jwt_exp_validation() {
 		let secret = "secret".as_bytes();
-		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: Some(10) });
+		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: 10 });
 		let jwt = create(&payload, secret).unwrap();
 
 		let current_block = 12;
@@ -157,7 +154,7 @@ mod tests {
 	#[test]
 	fn test_jwt_sub_validation() {
 		let secret = "secret".as_bytes();
-		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: None });
+		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: 10 });
 		let jwt = create(&payload, secret).unwrap();
 
 		let current_block = 5;

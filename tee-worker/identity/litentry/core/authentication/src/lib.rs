@@ -31,5 +31,5 @@ use parentchain_primitives::BlockNumber;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
-	expires_at: Option<BlockNumber>,
+	expires_at: BlockNumber,
 }
