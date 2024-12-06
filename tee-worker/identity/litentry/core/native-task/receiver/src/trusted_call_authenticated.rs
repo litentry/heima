@@ -18,7 +18,9 @@ use alloc::string::String;
 use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
 use itp_stf_primitives::traits::TrustedCallVerification;
-use itp_types::parentchain::Index as ParentchainIndex;
+use itp_types::parentchain::{BlockNumber, Index as ParentchainIndex};
+use itp_utils::stringify::account_id_to_string_without_prefix;
+use lc_authentication::jwt;
 use lc_identity_verification::VerificationCodeStore;
 use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_hex_utils::hex_encode;
@@ -129,4 +131,15 @@ fn extract_omni_account_from_call(call: &TrustedCall) -> AccountId {
 	} else {
 		member_identity.to_omni_account()
 	}
+}
+
+pub fn verify_tca_auth_token_authentication(
+	omni_account: &AccountId,
+	current_block: BlockNumber,
+	auth_token: String,
+	secret: &[u8],
+) -> bool {
+	let expected_subject = account_id_to_string_without_prefix(&omni_account);
+	let validation = jwt::Validation::new(expected_subject, current_block);
+	jwt::verify(&auth_token, secret, validation).is_ok()
 }
