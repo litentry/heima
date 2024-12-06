@@ -29,12 +29,12 @@ itp-types = { workspace = true }
 itp-utils = { workspace = true }
 
 frame-support = { workspace = true }
+lc-authentication = { workspace = true }
 lc-data-providers = { workspace = true }
 lc-dynamic-assertion = { workspace = true }
 lc-identity-verification = { workspace = true }
 lc-native-task-sender = { workspace = true }
 lc-omni-account = { workspace = true }
-lc-authentication = { workspace = true }
 litentry-hex-utils = { workspace = true }
 litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }

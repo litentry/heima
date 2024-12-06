@@ -37,8 +37,8 @@ sp-std = { workspace = true }
 
 # litentry
 itp-node-api-metadata-provider = { workspace = true }
-lc-stf-task-sender = { path = "../../litentry/core/stf-task/sender", default-features = false }
 lc-authentication = { path = "../../litentry/core/authentication", default-features = false }
+lc-stf-task-sender = { path = "../../litentry/core/stf-task/sender", default-features = false }
 litentry-hex-utils = { workspace = true }
 litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }

@@ -5,12 +5,12 @@ name = "lc-authentication"
 version = "0.1.0"
 
 [dependencies]
-codec = { package = "parity-scale-codec", workspace = true }
-serde = { workspace = true }
-ring = { workspace = true }
-serde_json = { workspace = true }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] } # a newer base64
+codec = { package = "parity-scale-codec", workspace = true }
 parentchain-primitives = { workspace = true }
+ring = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
 
