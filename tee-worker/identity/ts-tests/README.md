@@ -16,6 +16,8 @@ See client-api [README.md](https://github.com/litentry/litentry-parachain/blob/d
 
 ## Installation
 
+Note: Whenever the `client-api` is updated, it must be reinstalled, and it's best to clean node_modules(`pnpm run clean`) to prevent caching issues.
+
 ```
 cd tee-worker/ts-tests
 nvm use
