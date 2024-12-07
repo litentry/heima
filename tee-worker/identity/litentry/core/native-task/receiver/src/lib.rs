@@ -33,37 +33,53 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub use crate::sgx_reexport_prelude::*;
 
+#[cfg(feature = "std")]
+use std::sync::Mutex;
+#[cfg(feature = "sgx")]
+use std::sync::SgxMutex as Mutex;
+
+mod trusted_call_handlers;
+
 mod trusted_call_authenticated;
 pub use trusted_call_authenticated::*;
+use trusted_call_handlers::request_vc_handler::{
+	handle_request_vc, send_vc_response, VcRequestRegistry,
+};
 
 mod types;
 pub use types::NativeTaskContext;
 use types::*;
 
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Compact, Decode, Encode};
-use futures::executor::ThreadPoolBuilder;
+use futures::executor::{ThreadPool, ThreadPoolBuilder};
 use ita_sgx_runtime::Hash;
 use ita_stf::{
-	aes_encrypt_default,
 	helpers::{get_expected_raw_message, verify_web3_identity},
+	trusted_call_result::RequestVcErrorDetail,
 	Getter, TrustedCall, TrustedCallSigned,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
-	api_client::{compose_call, ExtrinsicReport, XtStatus},
+	api_client::{compose_call, XtStatus},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{
-	aes256::Aes256Key, key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt,
+	aes256::Aes256Key, aes_encrypt_default, key_repository::AccessKey, ShieldingCryptoDecrypt,
+	ShieldingCryptoEncrypt,
 };
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::traits::StfEnclaveSigning as StfEnclaveSigningTrait;
 use itp_stf_primitives::types::TrustedOperation;
+use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use itp_types::{
 	parentchain::{Address, ParachainHeader, ParentchainId},
 	AccountId, OpaqueCall,
 };
+use lc_dynamic_assertion::AssertionLogicRepository;
+use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_identity_verification::web2::verify as verify_web2_identity;
 use lc_native_task_sender::init_native_task_sender;
 use lc_omni_account::{
@@ -72,41 +88,28 @@ use lc_omni_account::{
 use litentry_primitives::{
 	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
 };
-use sp_core::{blake2_256, H256};
-use std::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+use sp_core::{blake2_256, H160, H256};
+use std::collections::HashSet;
 
 const THREAD_POOL_SIZE: usize = 480;
 
-pub fn run_native_task_receiver<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
->(
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-		>,
-	>,
+type Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH> =
+	Arc<NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>>;
+
+pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let request_receiver = init_native_task_sender();
 	let thread_pool = ThreadPoolBuilder::new()
@@ -117,15 +120,21 @@ pub fn run_native_task_receiver<
 	while let Ok(mut req) = request_receiver.recv() {
 		thread_pool.spawn_ok({
 			let context = context.clone();
+			let thread_pool = thread_pool.clone();
 			async move {
 				let request = &mut req.request;
 				let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 				match handle_request(request, context.clone()) {
-					Ok(trusted_call) =>
-						handle_trusted_call(context.clone(), trusted_call, connection_hash),
+					Ok(trusted_call) => handle_trusted_call(
+						context.clone(),
+						trusted_call,
+						connection_hash,
+						request.shard,
+						thread_pool,
+					),
 					Err(e) => {
 						log::error!("Failed to get trusted call from request: {:?}", e);
-						let res: Result<(), NativeTaskError> = Err(NativeTaskError::InvalidRequest);
+						let res: TrustedCallResult = Err(TrustedCallError::InvalidRequest);
 						context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 					},
 				};
@@ -135,45 +144,29 @@ pub fn run_native_task_receiver<
 	log::warn!("Native task receiver stopped");
 }
 
-fn handle_request<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
->(
+fn handle_request<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	request: &mut AesRequest,
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-		>,
-	>,
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 ) -> Result<TrustedCall, &'static str>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 	let enclave_shielding_key = match context.shielding_key.retrieve_key() {
 		Ok(value) => value,
 		Err(e) => {
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::ShieldingKeyRetrievalFailed(format!("{}", e)));
+			let res: TrustedCallResult =
+				Err(TrustedCallError::ShieldingKeyRetrievalFailed(format!("{}", e)));
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 			return Err("Shielding key retrieval failed")
 		},
@@ -188,8 +181,7 @@ where
 	{
 		Some(tca) => tca,
 		None => {
-			let res: Result<(), NativeTaskError> =
-				Err(NativeTaskError::RequestPayloadDecodingFailed);
+			let res: TrustedCallResult = Err(TrustedCallError::RequestPayloadDecodingFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 			return Err("Request payload decoding failed")
 		},
@@ -197,7 +189,7 @@ where
 	let mrenclave = match context.ocall_api.get_mrenclave_of_self() {
 		Ok(m) => m.m,
 		Err(_) => {
-			let res: Result<(), NativeTaskError> = Err(NativeTaskError::MrEnclaveRetrievalFailed);
+			let res: TrustedCallResult = Err(TrustedCallError::MrEnclaveRetrievalFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 			return Err("MrEnclave retrieval failed")
 		},
@@ -216,8 +208,7 @@ where
 	};
 
 	if !authentication_valid {
-		let res: Result<(), NativeTaskError> =
-			Err(NativeTaskError::AuthenticationVerificationFailed);
+		let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
 		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
 		return Err("Authentication verification failed")
 	}
@@ -225,47 +216,33 @@ where
 	Ok(tca.call)
 }
 
-type TrustedCallResult = Result<ExtrinsicReport<H256>, NativeTaskError>;
+type TrustedCallResult = Result<TrustedCallOk<H256>, TrustedCallError>;
 
-fn handle_trusted_call<
-	ShieldingKeyRepository,
-	AuthorApi,
-	StfEnclaveSigning,
-	OCallApi,
-	ExtrinsicFactory,
-	NodeMetadataRepo,
-	Aes256KeyRepository,
->(
-	context: Arc<
-		NativeTaskContext<
-			ShieldingKeyRepository,
-			AuthorApi,
-			StfEnclaveSigning,
-			OCallApi,
-			ExtrinsicFactory,
-			NodeMetadataRepo,
-			Aes256KeyRepository,
-		>,
-	>,
+fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
+	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 	call: TrustedCall,
 	connection_hash: H256,
+	shard: H256,
+	thread_pool: ThreadPool,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AuthorApi: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
-	StfEnclaveSigning: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
-	OCallApi:
-		EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
-	ExtrinsicFactory: CreateExtrinsics + Send + Sync + 'static,
-	NodeMetadataRepo: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
-	Aes256KeyRepository: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
+	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
+	EF: CreateExtrinsics + Send + Sync + 'static,
+	NMR: AccessNodeMetadata<MetadataType = NodeMetadata> + Send + Sync + 'static,
+	AKR: AccessKey<KeyType = Aes256Key> + Send + Sync + 'static,
+	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
+	SH: HandleState + Send + Sync + 'static,
+	SH::StateT: SgxExternalitiesTrait,
 {
 	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
 	{
 		Ok(Some(metadata)) => metadata,
 		_ => {
 			log::error!("Failed to get node metadata");
-			let result: TrustedCallResult = Err(NativeTaskError::MetadataRetrievalFailed(
+			let result: TrustedCallResult = Err(TrustedCallError::MetadataRetrievalFailed(
 				"Failed to get node metadata".to_string(),
 			));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
@@ -320,7 +297,7 @@ fn handle_trusted_call<
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
-					let result: TrustedCallResult = Err(NativeTaskError::UnauthorizedSigner);
+					let result: TrustedCallResult = Err(TrustedCallError::UnauthorizedSigner);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 					return
 				},
@@ -332,7 +309,7 @@ fn handle_trusted_call<
 			let validation_result = match validation_data {
 				ValidationData::Web2(validation_data) =>
 					if !identity.is_web2() {
-						Err(NativeTaskError::InvalidMemberIdentity)
+						Err(TrustedCallError::InvalidMemberIdentity)
 					} else {
 						verify_web2_identity(
 							&who,
@@ -343,16 +320,16 @@ fn handle_trusted_call<
 						)
 						.map_err(|e| {
 							log::error!("Failed to verify web2 identity: {:?}", e);
-							NativeTaskError::ValidationDataVerificationFailed
+							TrustedCallError::ValidationDataVerificationFailed
 						})
 					},
 				ValidationData::Web3(validation_data) =>
 					if !identity.is_web3() {
-						Err(NativeTaskError::InvalidMemberIdentity)
+						Err(TrustedCallError::InvalidMemberIdentity)
 					} else {
 						verify_web3_identity(&identity, &raw_msg, &validation_data).map_err(|e| {
 							log::error!("Failed to verify web3 identity: {:?}", e);
-							NativeTaskError::ValidationDataVerificationFailed
+							TrustedCallError::ValidationDataVerificationFailed
 						})
 					},
 			};
@@ -414,10 +391,118 @@ fn handle_trusted_call<
 				identity
 			))
 		)),
+		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) => {
+			let result = handle_request_vc(
+				context.clone(),
+				shard,
+				signer,
+				who,
+				assertion,
+				maybe_key,
+				req_ext_hash,
+			);
+			send_vc_response(connection_hash, context, result, 0u8, 1u8, false);
+			return
+		},
+		TrustedCall::request_batch_vc(signer, who, assertions, maybe_key, req_ext_hash) => {
+			// use local registry to manage request reponse status
+			let vc_req_registry = VcRequestRegistry::new();
+
+			// Detect duplicate assertions
+			let mut seen: HashSet<Hash> = HashSet::new();
+			let mut unique_assertions = Vec::new();
+			for assertion in assertions.into_iter() {
+				let hash = Hash::from(blake2_256(&assertion.encode()));
+				if seen.insert(hash) {
+					unique_assertions.push(Some(assertion));
+				} else {
+					unique_assertions.push(None);
+				}
+			}
+
+			let assertion_len = unique_assertions.len() as u8;
+			vc_req_registry.add_new_item(connection_hash, assertion_len);
+
+			for (idx, maybe_assertion) in unique_assertions.into_iter().enumerate() {
+				if let Some(assertion) = maybe_assertion {
+					thread_pool.spawn_ok({
+						let context = context.clone();
+						let signer = signer.clone();
+						let who = who.clone();
+						let vc_req_registry = vc_req_registry.clone();
+
+						async move {
+							let result = handle_request_vc(
+								context.clone(),
+								shard,
+								signer,
+								who,
+								assertion,
+								maybe_key,
+								req_ext_hash,
+							);
+							match vc_req_registry.update_item(connection_hash) {
+								Ok(do_watch) => {
+									send_vc_response(
+										connection_hash,
+										context,
+										result,
+										idx as u8,
+										assertion_len,
+										do_watch,
+									);
+								},
+								Err(e) => {
+									log::error!(
+										"Failed to find connection_hash in registry: {:?}",
+										e
+									);
+									send_vc_response(
+										connection_hash,
+										context,
+										Err(RequestVcErrorDetail::ConnectionHashNotFound(
+											e.to_string(),
+										)),
+										idx as u8,
+										assertion_len,
+										false,
+									);
+								},
+							}
+						}
+					});
+				} else {
+					match vc_req_registry.update_item(connection_hash) {
+						Ok(do_watch) => {
+							send_vc_response(
+								connection_hash,
+								context.clone(),
+								Err(RequestVcErrorDetail::DuplicateAssertionRequest),
+								idx as u8,
+								assertion_len,
+								do_watch,
+							);
+						},
+						Err(e) => {
+							log::error!("[DuplicateAssertionRequest] Failed to find connection_hash in registry: {:?}", e);
+							send_vc_response(
+								connection_hash,
+								context.clone(),
+								Err(RequestVcErrorDetail::ConnectionHashNotFound(e.to_string())),
+								idx as u8,
+								assertion_len,
+								false,
+							);
+						},
+					}
+				}
+			}
+			return
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
-				Err(NativeTaskError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
+				Err(TrustedCallError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
@@ -428,7 +513,7 @@ fn handle_trusted_call<
 		Err(e) => {
 			log::error!("Failed to create extrinsic: {:?}", e);
 			let result: TrustedCallResult =
-				Err(NativeTaskError::ExtrinsicConstructionFailed(e.to_string()));
+				Err(TrustedCallError::ExtrinsicConstructionFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
 		},
@@ -441,11 +526,11 @@ fn handle_trusted_call<
 	) {
 		Ok(extrinsic_reports) =>
 			if let Some(report) = extrinsic_reports.first() {
-				let result: TrustedCallResult = Ok(report.clone());
+				let result: TrustedCallResult = Ok(report.into());
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			} else {
 				log::error!("Failed to get extrinsic report");
-				let result: TrustedCallResult = Err(NativeTaskError::ExtrinsicSendingFailed(
+				let result: TrustedCallResult = Err(TrustedCallError::ExtrinsicSendingFailed(
 					"Failed to get extrinsic report".to_string(),
 				));
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
@@ -453,7 +538,7 @@ fn handle_trusted_call<
 		Err(e) => {
 			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
 			let result: TrustedCallResult =
-				Err(NativeTaskError::ExtrinsicSendingFailed(e.to_string()));
+				Err(TrustedCallError::ExtrinsicSendingFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 		},
 	}
@@ -463,7 +548,7 @@ fn create_member_account<Aes256KeyRepository>(
 	aes256_key_repository: Arc<Aes256KeyRepository>,
 	identity: &Identity,
 	is_public: bool,
-) -> Result<MemberAccount, NativeTaskError>
+) -> Result<MemberAccount, TrustedCallError>
 where
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key>,
 {
@@ -475,7 +560,7 @@ where
 		Ok(key) => Ok(key),
 		Err(e) => {
 			log::error!("Failed to retrieve aes key: {:?}", e);
-			Err(NativeTaskError::MissingAesKey)
+			Err(TrustedCallError::MissingAesKey)
 		},
 	}?;
 
