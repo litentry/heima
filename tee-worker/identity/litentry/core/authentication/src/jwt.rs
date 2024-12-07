@@ -139,8 +139,10 @@ mod tests {
 		let secret = "secret".as_bytes();
 		let payload = Payload::new("subject".to_string(), AuthOptions { expires_at: 10 });
 		let jwt = create(&payload, secret).unwrap();
-		let decoded_payload = decode(&jwt).unwrap();
 
+		assert!(verify(&jwt, secret, Validation::new("subject".to_string(), 5)).is_ok());
+
+		let decoded_payload = decode(&jwt).unwrap();
 		assert_eq!(decoded_payload, payload);
 	}
 
