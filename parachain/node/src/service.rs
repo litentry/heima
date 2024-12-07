@@ -93,6 +93,7 @@ pub fn new_partial<RuntimeApi, BIQ>(
 	config: &Configuration,
 	build_import_queue: BIQ,
 	is_standalone: bool,
+	delayed_best_block: bool,
 ) -> Result<
 	PartialComponents<
 		ParachainClient<RuntimeApi>,
@@ -176,11 +177,23 @@ where
 
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
+	// Note: `new_with_delayed_best_block` will cause less `Retracted`/`Invalid` tx,
+	//       especially for rococo-local where the epoch duration is 1m. However, it
+	//       also means the imported block will not be notified as best blocks, instead,
+	//       it waits for the best block from relay chain
 	// see https://github.com/paritytech/polkadot-sdk/issues/1202
 	//     https://github.com/paritytech/polkadot-sdk/pull/2001
-	// we might not need this after async backing is supported
-	let block_import =
-		ParachainBlockImport::new_with_delayed_best_block(client.clone(), backend.clone());
+	//     https://github.com/moonbeam-foundation/moonbeam/issues/3040
+	//
+	// my suggestion:
+	//     use `new_with_delayed_best_block` in CI, use `new` in prod
+	//
+	// TODO: re-investigate this after async backing is supported
+	let block_import = if delayed_best_block {
+		ParachainBlockImport::new_with_delayed_best_block(client.clone(), backend.clone())
+	} else {
+		ParachainBlockImport::new(client.clone(), backend.clone())
+	};
 
 	let import_queue = build_import_queue(
 		client.clone(),
@@ -228,6 +241,7 @@ async fn start_node_impl<RuntimeApi, RB, BIQ, SC, Net>(
 	start_consensus: SC,
 	hwbench: Option<sc_sysinfo::HwBench>,
 	additional_config: AdditionalConfig,
+	delayed_best_block: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient<RuntimeApi>>)>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
@@ -282,7 +296,12 @@ where
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial::<RuntimeApi, BIQ>(&parachain_config, build_import_queue, false)?;
+	let params = new_partial::<RuntimeApi, BIQ>(
+		&parachain_config,
+		build_import_queue,
+		false,
+		delayed_best_block,
+	)?;
 	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
@@ -488,6 +507,7 @@ pub async fn start_node<RuntimeApi>(
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 	additional_config: AdditionalConfig,
+	delayed_best_block: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient<RuntimeApi>>)>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
@@ -518,6 +538,7 @@ where
 		start_lookahead_aura_consensus::<RuntimeApi>,
 		hwbench,
 		additional_config.clone(),
+		delayed_best_block,
 	)
 	.await
 }
@@ -659,7 +680,7 @@ where
 		select_chain: maybe_select_chain,
 		transaction_pool,
 		other: (_, _, _, frontier_backend),
-	} = new_partial::<RuntimeApi, _>(&config, build_import_queue::<RuntimeApi>, true)?;
+	} = new_partial::<RuntimeApi, _>(&config, build_import_queue::<RuntimeApi>, true, true)?;
 
 	// Sinks for pubsub notifications.
 	// Everytime a new subscription is created, a new mpsc channel is added to the sink pool.

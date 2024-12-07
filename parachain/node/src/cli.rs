@@ -93,6 +93,12 @@ pub struct Cli {
 	/// Enable Ethereum compatible JSON-RPC servers (disabled by default).
 	#[clap(name = "enable-evm-rpc", long)]
 	pub enable_evm_rpc: bool,
+
+	/// Enable the `delayed best block` import strategy, where only blocks confirmed
+	/// by relay chain are notified as best blocks
+	/// see comment in `service.rs`
+	#[clap(name = "delayed-best-block", long)]
+	pub delayed_best_block: bool,
 }
 
 #[derive(Debug)]

@@ -175,6 +175,7 @@ macro_rules! construct_benchmark_partials {
 				&$config,
 				build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
 				false,
+				true,
 			)?;
 			$code
 		} else if $config.chain_spec.is_paseo() {
@@ -182,6 +183,7 @@ macro_rules! construct_benchmark_partials {
 				&$config,
 				build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
 				false,
+				true,
 			)?;
 			$code
 		} else {
@@ -203,6 +205,7 @@ macro_rules! construct_async_run {
 					&$config,
 					build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
 					false,
+					$cli.delayed_best_block,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
@@ -216,6 +219,7 @@ macro_rules! construct_async_run {
 					&$config,
 					build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
 					false,
+					$cli.delayed_best_block,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
@@ -287,6 +291,7 @@ pub fn run() -> Result<()> {
 							&config,
 							build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
 							false,
+							cli.delayed_best_block,
 						)?;
 					cmd.run(client)
 				})
@@ -297,6 +302,7 @@ pub fn run() -> Result<()> {
 							&config,
 							build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
 							false,
+							cli.delayed_best_block,
 						)?;
 					cmd.run(client)
 				})
@@ -430,6 +436,7 @@ pub fn run() -> Result<()> {
 						para_id,
 						hwbench,
 						additional_config,
+						cli.delayed_best_block,
 					)
 					.await
 					.map(|r| r.0)
@@ -442,6 +449,7 @@ pub fn run() -> Result<()> {
 						para_id,
 						hwbench,
 						additional_config,
+						cli.delayed_best_block,
 					)
 					.await
 					.map(|r| r.0)
