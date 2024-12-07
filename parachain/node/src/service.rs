@@ -177,6 +177,8 @@ where
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
 	// see https://github.com/paritytech/polkadot-sdk/issues/1202
+	//     https://github.com/paritytech/polkadot-sdk/pull/2001
+	// we might not need this after async backing is supported
 	let block_import =
 		ParachainBlockImport::new_with_delayed_best_block(client.clone(), backend.clone());
 
