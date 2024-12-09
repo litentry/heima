@@ -24,6 +24,7 @@
 //! The Pool Proposal handles the administration of proposed investing pool and pre-investing.
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
+mod ordered_set;
 pub mod types;
 
 use frame_support::{
@@ -45,7 +46,7 @@ use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
-use orml_utilities::OrderedSet;
+use ordered_set::OrderedSet;
 pub use pallet::*;
 use pallet_collab_ai_common::*;
 use sp_runtime::{

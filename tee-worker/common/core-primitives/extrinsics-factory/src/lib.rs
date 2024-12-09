@@ -39,7 +39,7 @@ use itp_node_api::{
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_types::{parentchain::AccountId, OpaqueCall};
-use sp_core::H256;
+use sp_core::{blake2_256, H256};
 use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{borrow::ToOwned, sync::Arc, vec::Vec};
 use substrate_api_client::ac_compose_macros::{compose_call, compose_extrinsic_offline};
@@ -132,7 +132,6 @@ where
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
 			.map(|call| {
-				log::info!("Creating extrinsics using nonce: {}", nonce_value);
 				let extrinsic_params = ParentchainExtrinsicParams::new(
 					runtime_spec_version,
 					runtime_transaction_version,
@@ -141,6 +140,9 @@ where
 					additional_extrinsic_params,
 				);
 				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
+				log::info!("extrinsic created: {}", hex::encode(&xt));
+				log::info!("extrinsic nonce: {}", nonce_value);
+				log::info!("extrinsic hash: {}", hex::encode(blake2_256(&xt)));
 				nonce_value += 1;
 				xt
 			})

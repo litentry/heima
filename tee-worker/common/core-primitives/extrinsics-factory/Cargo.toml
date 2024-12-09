@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@int
 edition = "2021"
 
 [dependencies]
+hex = { workspace = true }
 sgx_tstd = { workspace = true, optional = true }
 sgx_types = { workspace = true }
 substrate-api-client = { workspace = true }
@@ -24,6 +25,7 @@ sp-runtime = { workspace = true }
 [features]
 default = ["std"]
 std = [
+    "hex/std",
     "itp-node-api/std",
     "itp-nonce-cache/std",
     "itp-types/std",

@@ -15,7 +15,7 @@ async function transfer(api: any, Alice: any) {
     console.log(colors.green('transfer start...'));
     return new Promise(async (resolve, reject) => {
         await api.tx.balances
-            .transfer(enclaveAccount, transferAmount)
+            .transferKeepAlive(enclaveAccount, transferAmount)
             .signAndSend(Alice, ({ status, events, dispatchError }) => {
                 if (status.isInBlock || status.isFinalized) {
                     events.forEach(({ phase, event: { data, method, section } }) => {

@@ -10,7 +10,7 @@ set -eo pipefail
 # The `litentry-collator` binary must be compiled with `runtime-benchmarks` feature.
 
 function usage() {
-    echo "Usage: $0 litentry|rococo pallet-name runtime|pallet"
+    echo "Usage: $0 litentry|paseo pallet-name runtime|pallet"
 }
 
 [ $# -ne 3 ] && (usage; exit 1)

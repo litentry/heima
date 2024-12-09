@@ -19,6 +19,7 @@ use frame_support::{
 	assert_ok,
 	dispatch::{DispatchClass, DispatchInfo, PostDispatchInfo, RawOrigin},
 	parameter_types,
+	traits::{fungible::Credit, Currency},
 	weights::{constants::ExtrinsicBaseWeight, ConstantMultiplier, Weight, WeightToFee},
 };
 use pallet_balances::Call as BalancesCall;
@@ -28,10 +29,10 @@ use sp_runtime::traits::{Convert, Dispatchable, SignedExtension};
 use crate::{
 	currency::UNIT,
 	tests::setup::{
-		alice, bob, info_from_weight, post_info_from_weight, run_with_system_weight, ExtBuilder,
+		alice, bob, info_from_weight, para_ext, post_info_from_weight, run_with_system_weight,
 	},
-	BaseRuntimeRequirements, MinimumMultiplier, NegativeImbalance, RuntimeBlockWeights,
-	SlowAdjustingFeeUpdate, TargetBlockFullness, WEIGHT_TO_FEE_FACTOR,
+	BaseRuntimeRequirements, MinimumMultiplier, RuntimeBlockWeights, SlowAdjustingFeeUpdate,
+	TargetBlockFullness, WEIGHT_TO_FEE_FACTOR,
 };
 
 type Balances<R> = pallet_balances::Pallet<R>;
@@ -72,86 +73,76 @@ where
 		From<sp_runtime::AccountId32>,
 	<R as frame_system::Config>::RuntimeCall:
 		Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
-	<R as pallet_transaction_payment::Config>::OnChargeTransaction:
-		OnChargeTransaction<R, Balance = Balance, LiquidityInfo = Option<NegativeImbalance<R>>>,
+	<R as pallet_transaction_payment::Config>::OnChargeTransaction: OnChargeTransaction<
+		R,
+		Balance = Balance,
+		LiquidityInfo = Option<Credit<R::AccountId, pallet_balances::Pallet<R>>>,
+	>,
 {
-	ExtBuilder::<R>::default()
-		.balances(vec![
-			(alice(), 100_000_000 * UNIT),
-			(Treasury::<R>::account_id(), 100_000_000 * UNIT),
-		])
-		.build()
-		.execute_with(|| {
-			assert_eq!(Balances::<R>::free_balance(&alice()), 100_000_000 * UNIT);
-			assert_eq!(
-				Balances::<R>::free_balance(Treasury::<R>::account_id()),
-				100_000_000 * UNIT
-			);
-			let initial_total_issuance = Balances::<R>::total_issuance();
-			assert_eq!(initial_total_issuance, 200_000_000 * UNIT);
+	para_ext(1).execute_with(|| {
+		let _ = Balances::<R>::deposit_creating(&alice(), (100_000_000 - 10) * UNIT);
+		let _ = Balances::<R>::deposit_creating(&Treasury::<R>::account_id(), 100_000_000 * UNIT);
 
-			let dispatch_info: u128 = 50;
-			let post_dispatch_info: u128 = 35;
-			let len = 10;
+		let initial_total_issuance = Balances::<R>::total_issuance();
+		assert_eq!(initial_total_issuance, 200_000_000 * UNIT);
 
-			// let tranfer_call: Call =
-			// 	Call::Balances(BalancesCall::transfer { dest: bob().into(), value: 69 });
-			let tranfer_call: Call =
-				BalancesCall::transfer { dest: bob().into(), value: 69 }.into();
-			let mut old_sender_balance = Balances::<R>::free_balance(&alice());
-			let mut old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
-			let fee: Balance = 0;
-			let pre = pallet_transaction_payment::ChargeTransactionPayment::<R>::from(fee)
-				.pre_dispatch(
-					&alice(),
-					&tranfer_call,
-					&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
-					len as usize,
-				)
-				.unwrap();
-			parameter_types! {
-				pub const WeightToFeeFactor: Balance = WEIGHT_TO_FEE_FACTOR; // 10^6
-			}
-			// This test here already assume that we use ConstantMultiplier<Balance,
-			// WeightToFeeFactor>
-			let total_payment: Balance =
-				ConstantMultiplier::<Balance, WeightToFeeFactor>::weight_to_fee(
-					&ExtrinsicBaseWeight::get(),
-				) + ConstantMultiplier::<Balance, WeightToFeeFactor>::weight_to_fee(
-					&Weight::from_parts(dispatch_info as u64, 0),
-				) + (len as Balance) * TransactionByteFee::get();
-			assert_eq!(old_sender_balance - Balances::<R>::free_balance(&alice()), total_payment);
-			assert_eq!(
-				Balances::<R>::free_balance(Treasury::<R>::account_id()),
-				old_treasury_balance
-			);
+		let dispatch_info: u128 = 50;
+		let post_dispatch_info: u128 = 35;
+		let len = 10;
 
-			old_sender_balance = Balances::<R>::free_balance(&alice());
-			old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
-			assert_ok!(<pallet_transaction_payment::ChargeTransactionPayment::<R>>::post_dispatch(
-				Some(pre),
+		let tranfer_call: Call =
+			BalancesCall::transfer_keep_alive { dest: bob().into(), value: 69 }.into();
+		let mut old_sender_balance = Balances::<R>::free_balance(&alice());
+		let mut old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
+		let fee: Balance = 0;
+		let pre = pallet_transaction_payment::ChargeTransactionPayment::<R>::from(fee)
+			.pre_dispatch(
+				&alice(),
+				&tranfer_call,
 				&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
-				&post_info_from_weight(Weight::from_parts(post_dispatch_info as u64, 0)),
 				len as usize,
-				&Ok(())
-			));
-			// (dispatch_info - post_dispatch_info) weights (toFee) are refunded
-			let refunded = (dispatch_info - post_dispatch_info) * WEIGHT_TO_FEE_FACTOR;
-			assert_eq!(Balances::<R>::free_balance(&alice()) - old_sender_balance, refunded);
+			)
+			.unwrap();
+		parameter_types! {
+			pub const WeightToFeeFactor: Balance = WEIGHT_TO_FEE_FACTOR; // 10^6
+		}
+		// This test here already assume that we use ConstantMultiplier<Balance,
+		// WeightToFeeFactor>
+		let total_payment: Balance =
+			ConstantMultiplier::<Balance, WeightToFeeFactor>::weight_to_fee(
+				&ExtrinsicBaseWeight::get(),
+			) + ConstantMultiplier::<Balance, WeightToFeeFactor>::weight_to_fee(
+				&Weight::from_parts(dispatch_info as u64, 0),
+			) + (len as Balance) * TransactionByteFee::get();
+		assert_eq!(old_sender_balance - Balances::<R>::free_balance(&alice()), total_payment);
+		assert_eq!(Balances::<R>::free_balance(Treasury::<R>::account_id()), old_treasury_balance);
 
-			// treasury gets 40% of actual payment
-			let actual_payment = total_payment - refunded;
-			assert_eq!(
-				Balances::<R>::free_balance(Treasury::<R>::account_id()) - old_treasury_balance,
-				actual_payment * 40 / (40 + 60)
-			);
+		old_sender_balance = Balances::<R>::free_balance(&alice());
+		old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
+		assert_ok!(<pallet_transaction_payment::ChargeTransactionPayment::<R>>::post_dispatch(
+			Some(pre),
+			&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
+			&post_info_from_weight(Weight::from_parts(post_dispatch_info as u64, 0)),
+			len as usize,
+			&Ok(())
+		));
+		// (dispatch_info - post_dispatch_info) weights (toFee) are refunded
+		let refunded = (dispatch_info - post_dispatch_info) * WEIGHT_TO_FEE_FACTOR;
+		assert_eq!(Balances::<R>::free_balance(&alice()) - old_sender_balance, refunded);
 
-			// ... and the rest (= 60% of actual payment) is burnt
-			assert_eq!(
-				initial_total_issuance - Balances::<R>::total_issuance(),
-				actual_payment * 60 / (40 + 60)
-			);
-		})
+		// treasury gets 40% of actual payment
+		let actual_payment = total_payment - refunded;
+		assert_eq!(
+			Balances::<R>::free_balance(Treasury::<R>::account_id()) - old_treasury_balance,
+			actual_payment * 40 / (40 + 60)
+		);
+
+		// ... and the rest (= 60% of actual payment) is burnt
+		assert_eq!(
+			initial_total_issuance - Balances::<R>::total_issuance(),
+			actual_payment * 60 / (40 + 60)
+		);
+	})
 }
 
 #[macro_export]

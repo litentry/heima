@@ -10,7 +10,7 @@ const enclaveAccount = process.argv[2];
 async function transfer(api, Alice) {
     console.log(colors.green('Transfer start...'));
     return new Promise((resolve, reject) => {
-        api.tx.balances.transfer(enclaveAccount, transferAmount).signAndSend(Alice, ({ status, events }) => {
+        api.tx.balances.transferKeepAlive(enclaveAccount, transferAmount).signAndSend(Alice, ({ status, events }) => {
             if (status.isInBlock || status.isFinalized) {
                 events.forEach(({ event: { method, section } }) => {
                     if (method === 'Transfer' && section === 'balances') {

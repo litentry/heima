@@ -38,7 +38,7 @@ make build-runtime-litentry
 
 The wasms should be located under `target/release/wbuild/litentry-parachain-runtime/`
 
-Similarly, use `make build-runtime-rococo` to build the rococo-parachain-runtime.
+Similarly, use `make build-runtime-paseo` to build the paseo-parachain-runtime.
 
 ## Launch parachain
 ### Launch a parachain network with relaychains

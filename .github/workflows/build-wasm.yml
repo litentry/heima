@@ -8,7 +8,6 @@ on:
         description: The chain whose runtime-wasm is built
         options:
           - litentry
-          - rococo
           - paseo
       ref:
         description: The commit SHA or tag for checking out code

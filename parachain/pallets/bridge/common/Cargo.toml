@@ -20,8 +20,8 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
 ]
 std = [
-    "scale-info/std",
-    "parity-scale-codec/std",
     "frame-support?/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
     "sp-runtime/std",
 ]

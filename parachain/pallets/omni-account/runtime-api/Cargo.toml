@@ -16,8 +16,8 @@ pallet-omni-account = { workspace = true }
 [features]
 default = ["std"]
 std = [
-    "parity-scale-codec/std",
-    "sp-api/std",
     "core-primitives/std",
     "pallet-omni-account/std",
+    "parity-scale-codec/std",
+    "sp-api/std",
 ]

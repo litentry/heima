@@ -2,7 +2,7 @@
 set -eo pipefail
 
 function usage() {
-  echo "Usage: $0 litentry|rococo [docker-tag]"
+  echo "Usage: $0 litentry|paseo [docker-tag]"
 }
 
 [ $# -lt 1 ] && (usage; exit 1)

@@ -15,17 +15,9 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate as pallet_guardian;
-use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{ConstU16, ConstU32, Everything},
-};
-use sp_core::H256;
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
-	AccountId32,
-};
+use frame_support::{construct_runtime, derive_impl, parameter_types};
+use sp_runtime::{traits::IdentityLookup, AccountId32};
 // use sp_io::TestExternalities;
-use frame_support::traits::ConstU128;
 use sp_runtime::BuildStorage;
 
 // Define mock runtime types
@@ -42,54 +34,26 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
 	pub const MinimumGuardianDeposit: Balance = 10;
 }
 
-// Implement frame_system config trait for mock runtime.
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type Nonce = u64;
-	type RuntimeCall = RuntimeCall;
-	type RuntimeEvent = RuntimeEvent;
-	// type BlockNumber = u64;  // Add this
-	type Hash = H256;
-	type Block = frame_system::mocking::MockBlock<Test>; // Add this
-	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	// type Header = sp_runtime::generic::Header<Self::BlockNumber, BlakeTwo256>;  // Add this
-	type BlockHashCount = BlockHashCount;
-	type Version = (); // Add this
-	type PalletInfo = PalletInfo;
+	type Block = frame_system::mocking::MockBlock<Test>;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<31>;
-	type OnSetCode = (); // Add this
-	type MaxConsumers = ConstU32<16>; // Add this
+	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
-// Implement pallet_balances config trait for mock runtime.
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
 	type Balance = Balance;
-	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = ConstU128<1>;
+	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
-	type FreezeIdentifier = ();
-	type MaxHolds = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
 }
 
 // Implement pallet_guardian config trait for mock runtime.

@@ -14,7 +14,7 @@ describeLitentry('Test Base Filter', ``, (context) => {
             context.bob.address
         );
 
-        const tx = context.api.tx.balances.transfer(context.bob.address, 1000);
+        const tx = context.api.tx.balances.transferKeepAlive(context.bob.address, 1000);
         await signAndSend(tx, context.eve);
 
         const { nonce: eveCurrentNonce, data: eveCurrentBalance } = await context.api.query.system.account(

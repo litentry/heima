@@ -10,7 +10,10 @@ import { Metadata, TypeRegistry } from '@polkadot/types';
 
 import metadataRpc from '@litentry/parachain-api/prepare-build/litentry-parachain-metadata.json';
 
-import { validateEnclaveRegistry, type VerifiableCredentialLike } from '../validator';
+import {
+  validateEnclaveRegistry,
+  type VerifiableCredentialLike,
+} from '../validator';
 
 // VC where issuer.id is an enclave account. vc-pubkey is not the issuer.id
 const VC_SAMPLE =
@@ -24,12 +27,14 @@ registry.setMetadata(metadata);
 
 const palletTeebagEnclaveJson = {
   workerType: 'Identity',
-  mrenclave: '0x482b74e3ed4faab7675c54d72cca9a2e9016e0d0b02416553d470a5c81806077',
+  mrenclave:
+    '0x482b74e3ed4faab7675c54d72cca9a2e9016e0d0b02416553d470a5c81806077',
   lastSeenTimestamp: '1707504072000',
   url: 'wss://127.0.0.1:2130',
   shieldingPubkey:
     '{n:[141,96,206,167,106,208,16,177,54,166,114,140,239,178,72,146,59,119,66,206,243,148,12,52,93,2,116,190,194,69,118,224,88,155,161,41,135,49,32,122,215,193,214,67,121,161,52,23,62,146,172,6,167,154,67,128,42,170,12,52,138,216,42,148,59,251,253,45,105,255,125,139,249,40,234,41,214,81,206,22,116,148,15,200,158,92,135,142,168,59,48,66,86,199,204,253,115,132,67,123,26,88,82,157,176,240,239,106,200,97,13,200,226,130,222,8,26,131,222,155,128,36,212,162,152,18,117,98,194,210,147,213,243,193,154,155,223,146,116,66,201,154,5,35,1,173,42,11,67,15,124,96,108,137,82,42,28,37,71,151,83,6,19,197,137,165,238,227,251,25,93,144,100,240,14,205,93,50,105,227,193,191,179,69,88,174,53,109,122,87,210,166,69,173,5,193,210,95,22,17,79,187,3,165,193,195,238,36,181,206,197,255,29,172,175,64,41,73,91,158,136,105,226,101,20,196,173,158,187,132,221,204,253,65,238,59,93,204,93,178,123,57,16,172,225,37,127,50,226,52,242,215,204,21,67,179,56,136,126,189,56,20,13,163,54,199,47,215,161,196,56,79,152,154,95,52,44,206,80,222,140,229,139,229,255,199,79,137,240,212,237,235,29,181,153,89,183,20,68,168,2,26,18,135,69,205,32,176,13,10,33,185,180,32,129,169,102,250,62,146,255,61,86,255,207,238,139,198,161,170,239,57,69,209,92,220,52,178,36,4,180,116,51,177,226,228,160,112,198,246,122,190,96,37,148,72,120,126,90,135,136,52,25,120,188,156,52,24,222,219,181,236,54,158,204,119,158,21,234,21,239,22,155,130],e:[1,0,0,1]}',
-  vcPubkey: '0xbf31981dbb9673a3a0fd662ed716a2a172fa897202ad9b43ce914a6c73916c6b',
+  vcPubkey:
+    '0xbf31981dbb9673a3a0fd662ed716a2a172fa897202ad9b43ce914a6c73916c6b',
   sgxBuildMode: 'Production',
   attestationType: 'Ignore',
 };
@@ -43,8 +48,11 @@ beforeAll(() => {
   registry.setMetadata(metadata);
 
   const optionEnclave = registry.createType(
-    'Option<PalletTeebagEnclave>',
-    registry.createType('PalletTeebagEnclave', palletTeebagEnclaveJson)
+    'Option<CorePrimitivesTeebagTypesEnclave>',
+    registry.createType(
+      'CorePrimitivesTeebagTypesEnclave',
+      palletTeebagEnclaveJson
+    )
   );
 
   // define api manually to mock query methods
@@ -65,7 +73,8 @@ beforeAll(() => {
     rpc: {
       chain: {
         getBlockHash: jest.fn(
-          () => '0x8a9bc5971c3a6d23ba4743134c0caf12dca775a872fea5c27516175142bd4e1b'
+          () =>
+            '0x8a9bc5971c3a6d23ba4743134c0caf12dca775a872fea5c27516175142bd4e1b'
         ),
       },
     },
@@ -73,12 +82,16 @@ beforeAll(() => {
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
-  api.query.teebag.enclaveRegistry.entries = jest.fn(() => [[null, optionEnclave]]);
+  api.query.teebag.enclaveRegistry.entries = jest.fn(() => [
+    [null, optionEnclave],
+  ]);
 });
 
 describe('[regular VC] `issuer.id` is the enclave account', () => {
   it('issuer.id and enclave account should not be the same', () => {
-    expect(`did:litentry:substrate:${VC.proof.verificationMethod}`).not.toEqual(VC.issuer.id);
+    expect(`did:litentry:substrate:${VC.proof.verificationMethod}`).not.toEqual(
+      VC.issuer.id
+    );
   });
 
   it('should call query.teebag.enclaveRegistry(enclaveAccount)', async () => {
@@ -86,7 +99,9 @@ describe('[regular VC] `issuer.id` is the enclave account', () => {
 
     expect(result).toBeTruthy();
 
-    expect(api.rpc.chain.getBlockHash).toHaveBeenCalledWith(VC.parachainBlockNumber);
+    expect(api.rpc.chain.getBlockHash).toHaveBeenCalledWith(
+      VC.parachainBlockNumber
+    );
     expect(api.at).toHaveBeenCalled();
 
     expect(api.query.teebag.enclaveRegistry).toHaveBeenCalledWith(
@@ -112,7 +127,9 @@ describe('[old VC] `issuer.id` is vc-pubkey', () => {
   });
 
   it('issuer.id and enclave account are the same', () => {
-    expect(`did:litentry:substrate:${VC_OLD.proof.verificationMethod}`).toEqual(VC_OLD.issuer.id);
+    expect(`did:litentry:substrate:${VC_OLD.proof.verificationMethod}`).toEqual(
+      VC_OLD.issuer.id
+    );
   });
 
   it('should call query.teebag.enclaveRegistry()', async () => {
@@ -120,7 +137,9 @@ describe('[old VC] `issuer.id` is vc-pubkey', () => {
 
     expect(result).toBeTruthy();
 
-    expect(api.query.teebag.enclaveRegistry).not.toHaveBeenCalledWith(VC_OLD.issuer.id);
+    expect(api.query.teebag.enclaveRegistry).not.toHaveBeenCalledWith(
+      VC_OLD.issuer.id
+    );
     expect(api.query.teebag.enclaveRegistry.entries).toHaveBeenCalled();
   });
 });
