@@ -14,13 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#[derive(Debug)]
-pub enum Intent {
-	TransferEthereum([u8; 20], [u8; 32]),
-	CallEthereum([u8; 20], Vec<u8>),
-	TransferSolana([u8; 32], u64), // (to_pubkey, lamports)
+use async_trait::async_trait;
+use executor_core::intent_executor::IntentExecutor;
+use executor_core::primitives::Intent;
+use log::{error, info};
+use solana_sdk::{pubkey::Pubkey, signer::keypair::Keypair, system_instruction::transfer};
+
+// Executes intents on Solana network.
+pub struct SolanaIntentExecutor {
+	rpc_url: String,
 }
 
-pub trait GetEventId<Id> {
-	fn get_event_id(&self) -> Id;
+impl SolanaIntentExecutor {
+	pub fn new(rpc_url: &str) -> Result<Self, ()> {
+		Ok(Self { rpc_url: rpc_url.to_string() })
+	}
+}
+
+#[async_trait]
+impl IntentExecutor for SolanaIntentExecutor {
+	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+		info!("Executing intent: {:?}", intent);
+
+		// let signer =
+
+		Ok(())
+	}
 }

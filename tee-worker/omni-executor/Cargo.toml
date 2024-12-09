@@ -4,6 +4,7 @@ members = [
     "executor-worker",
     "parentchain/listener",
     "ethereum/intent-executor",
+    "solana/intent-executor",
 ]
 
 resolver = "2"
@@ -20,6 +21,7 @@ scale-encode = "0.7.1"
 parity-scale-codec = "3.6.12"
 alloy = "0.3.6"
 clap = "4.5.17"
+solana-sdk = "2.1.4"
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
