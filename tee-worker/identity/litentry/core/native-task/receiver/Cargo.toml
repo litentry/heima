@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }   # a newer base64
 futures = { workspace = true, optional = true }
 futures_sgx = { workspace = true, features = ["thread-pool"], optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
-
 
 codec = { package = "parity-scale-codec", workspace = true }
 log = { workspace = true }
@@ -69,7 +71,6 @@ std = [
     "itp-extrinsics-factory/std",
     "sp-core/std",
     "litentry-primitives/std",
-    "ita-sgx-runtime/std",
     "frame-support/std",
     "itp-node-api/std",
     "lc-native-task-sender/std",

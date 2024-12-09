@@ -38,6 +38,12 @@ use std::sync::Mutex;
 #[cfg(feature = "sgx")]
 use std::sync::SgxMutex as Mutex;
 
+mod authentication_utils;
+use authentication_utils::{
+	verify_tca_auth_token_authentication, verify_tca_email_authentication,
+	verify_tca_oauth2_authentication, verify_tca_web3_authentication,
+};
+
 mod trusted_call_handlers;
 
 mod trusted_call_authenticated;
@@ -53,7 +59,6 @@ use types::*;
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Compact, Decode, Encode};
 use futures::executor::{ThreadPool, ThreadPoolBuilder};
-use ita_sgx_runtime::Hash;
 use ita_stf::{
 	helpers::{get_expected_raw_message, verify_web3_identity},
 	trusted_call_result::RequestVcErrorDetail,
@@ -79,7 +84,7 @@ use itp_types::{
 	AccountId, OpaqueCall,
 };
 use itp_utils::stringify::account_id_to_string_without_prefix;
-use lc_authentication::{jwt, AuthOptions};
+use lc_authentication::jwt;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_identity_verification::web2::verify as verify_web2_identity;
@@ -103,7 +108,7 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AA: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + EnclaveMetricsOCallApi + 'static,
 	EF: CreateExtrinsics + Send + Sync + 'static,
@@ -153,7 +158,7 @@ fn handle_request<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AA: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveAttestationOCallApi + EnclaveMetricsOCallApi + 'static,
 	EF: CreateExtrinsics + Send + Sync + 'static,
@@ -197,7 +202,7 @@ where
 		},
 	};
 
-	let authentication_valid = match tca.authentication {
+	let authentication_result = match tca.authentication {
 		TCAuthentication::Web3(signature) => verify_tca_web3_authentication(
 			&signature,
 			&tca.call,
@@ -205,8 +210,33 @@ where
 			&mrenclave,
 			&request.shard,
 		),
-		TCAuthentication::Email(verification_code) =>
-			verify_tca_email_authentication(&tca.call, verification_code),
+		TCAuthentication::Email(verification_code) => {
+			let sender_identity = tca.call.sender_identity();
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
+			verify_tca_email_authentication(
+				sender_identity.hash(),
+				&omni_account,
+				verification_code,
+			)
+		},
+		TCAuthentication::OAuth2(oauth2_data) => {
+			let sender_identity = tca.call.sender_identity();
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
+			verify_tca_oauth2_authentication(
+				context.data_provider_config.clone(),
+				sender_identity.hash(),
+				&omni_account,
+				oauth2_data,
+			)
+		},
 		TCAuthentication::AuthToken(auth_token) => {
 			let Ok(header)= context.ocall_api.get_header::<ParachainHeader>() else {
 				let res: Result<(), TrustedCallError> = Err(TrustedCallError::ParentchainHeaderRetrievalFailed);
@@ -224,18 +254,20 @@ where
 				&omni_account,
 				current_block,
 				auth_token,
-				&context.data_provider_config.jwt_secret.as_bytes(),
+				context.data_provider_config.jwt_secret.as_bytes(),
 			)
 		},
 	};
 
-	if !authentication_valid {
-		let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
-		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-		return Err("Authentication verification failed")
+	match authentication_result {
+		Ok(_) => Ok(tca.call),
+		Err(e) => {
+			log::error!("Failed to verify authentication: {:?}", e);
+			let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			Err("Authentication verification failed")
+		},
 	}
-
-	Ok(tca.call)
 }
 
 type TrustedCallResult = Result<TrustedCallOk<H256>, TrustedCallError>;
@@ -249,7 +281,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AA: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
 	EF: CreateExtrinsics + Send + Sync + 'static,
@@ -431,10 +463,10 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			let vc_req_registry = VcRequestRegistry::new();
 
 			// Detect duplicate assertions
-			let mut seen: HashSet<Hash> = HashSet::new();
+			let mut seen: HashSet<H256> = HashSet::new();
 			let mut unique_assertions = Vec::new();
 			for assertion in assertions.into_iter() {
-				let hash = Hash::from(blake2_256(&assertion.encode()));
+				let hash = H256::from(blake2_256(&assertion.encode()));
 				if seen.insert(hash) {
 					unique_assertions.push(Some(assertion));
 				} else {
@@ -533,7 +565,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			};
 			let subject = account_id_to_string_without_prefix(&omni_account);
 			let payload = jwt::Payload::new(subject, auth_options);
-			let Ok(auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
+			let Ok(_auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
 				log::error!("Failed to create jwt token");
 				let result: TrustedCallResult = Err(TrustedCallError::AuthTokenCreationFailed);
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);

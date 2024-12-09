@@ -16,7 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub extern crate alloc;
+extern crate alloc;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
@@ -35,9 +35,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 
 mod error;
 mod helpers;
-mod verification_code_store;
 pub mod web2;
-pub use verification_code_store::VerificationCodeStore;
 
 use alloc::string::String;
 use error::{Error, Result};

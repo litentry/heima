@@ -3135,6 +3135,7 @@ dependencies = [
 name = "lc-native-task-receiver"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "frame-support",
  "futures 0.3.8",
  "id-ita-sgx-runtime",
@@ -3165,6 +3166,8 @@ dependencies = [
  "litentry-primitives",
  "log",
  "parity-scale-codec",
+ "serde 1.0.204",
+ "serde_json 1.0.120",
  "sgx_tstd",
  "sp-core",
 ]

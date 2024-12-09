@@ -524,9 +524,34 @@ impl Identity {
         self.using_encoded(blake2_256).into()
     }
 
-    pub fn from_email(email: &str) -> Self {
-        Identity::Email(IdentityString::new(email.as_bytes().to_vec()))
+    pub fn from_web2_account(handle: &str, identity_type: Web2IdentityType) -> Self {
+        match identity_type {
+            Web2IdentityType::Twitter => {
+                Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Discord => {
+                Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Github => {
+                Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Email => {
+                Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Google => {
+                Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+        }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Web2IdentityType {
+    Twitter,
+    Discord,
+    Github,
+    Email,
+    Google,
 }
 
 impl From<ed25519::Public> for Identity {
@@ -859,5 +884,153 @@ mod tests {
         let did_str = "did:litentry:pumpx:12345678";
         assert_eq!(identity.to_did().unwrap(), did_str);
         assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_substrate_omni_account() {
+        let identity = Identity::Substrate([0; 32].into());
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("27740a1393c8bb0fe84ec50d2e12a1cb870cdf397c6c9b75e8407a9e427faa90")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_evm_omni_account() {
+        let identity = Identity::Evm([0; 20].into());
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("5a5ff27b196c754649b9901a2decdb70f1c568441f01f67fdd82a5dbf797baf8")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_bitcoin_omni_account() {
+        let identity = Identity::Bitcoin([0; 33].into());
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("901695afadc759ca38157789774d2c0ce8813a13a7c92f7240c9e5f82fdcc2c1")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_discord_omni_account() {
+        let identity = Identity::Discord(IdentityString::new("discord_handle".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("8e4e89367678ebee97dab02fa69e8079d5138d3f9a6f0b1a0872cebf6fb3cb97")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_twitter_omni_account() {
+        let identity = Identity::Twitter(IdentityString::new("twitter_handle".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("bb23631a4051564f39061cbad36d4ecc12bba016cb8960fc18254b6bdef8df56")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_github_omni_account() {
+        let identity = Identity::Github(IdentityString::new("github_handle".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("9e5ab389599991aea22d0f3964efd36f3aa74262c1b819a4cded54752dec5981")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_email_omni_account() {
+        let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("ae1eabb1474eb776e2db7e061d61411c5ad65782313b2ae3a1253c2514895485")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_solana_omni_account() {
+        let address = "4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4";
+        let identity = Identity::Solana(
+            address
+                .from_base58()
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+        );
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("ba126bdb4324ddd880785b071375602530060223758b006460b4b363b35d49fc")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_google_omni_account() {
+        let identity = Identity::Google(IdentityString::new("test@gmail.com".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("0447c42563f9bdc18ee3cd41fa75bbfd08496f71692d1818a4e626709cf4e91d")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_pumpx_omni_account() {
+        let identity = Identity::Pumpx(IdentityString::new("12345678".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("d95f5a079ac8298c86505f6efbf8719e1e7e09f6b69e5f67d714b32dd65946b3")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
     }
 }

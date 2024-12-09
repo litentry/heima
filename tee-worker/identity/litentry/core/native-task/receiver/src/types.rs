@@ -16,7 +16,6 @@
 
 use alloc::{string::String, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
-use ita_sgx_runtime::Hash;
 use ita_stf::{
 	trusted_call_result::{RequestVcErrorDetail, RequestVcResultOrError},
 	Getter, TrustedCallSigned,
@@ -36,13 +35,13 @@ use itp_top_pool_author::traits::AuthorApi as AuthorApiTrait;
 use lc_data_providers::DataProviderConfig;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
-use sp_core::{ed25519::Pair as Ed25519Pair, H160};
+use sp_core::{ed25519::Pair as Ed25519Pair, H160, H256};
 
 pub struct NativeTaskContext<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AA: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
 	EF: CreateExtrinsics + Send + Sync + 'static,
@@ -69,7 +68,7 @@ impl<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
-	AA: AuthorApiTrait<Hash, Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	AA: AuthorApiTrait<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	SES: StfEnclaveSigningTrait<TrustedCallSigned> + Send + Sync + 'static,
 	OA: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + 'static,
 	EF: CreateExtrinsics + Send + Sync + 'static,

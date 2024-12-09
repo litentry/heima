@@ -14,29 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::authentication_utils::OAuth2Data;
 use alloc::string::String;
 use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
 use itp_stf_primitives::traits::TrustedCallVerification;
-use itp_types::parentchain::{BlockNumber, Index as ParentchainIndex};
-use itp_utils::stringify::account_id_to_string_without_prefix;
-use lc_authentication::jwt;
-use lc_identity_verification::VerificationCodeStore;
-use lc_omni_account::InMemoryStore as OmniAccountStore;
-use litentry_hex_utils::hex_encode;
+use itp_types::parentchain::Index as ParentchainIndex;
 use litentry_primitives::{Identity, ShardIdentifier};
 use sp_core::{
-	blake2_256,
 	crypto::{AccountId32 as AccountId, UncheckedFrom},
 	ed25519,
 };
 
-type VerificationCode = String;
+pub type VerificationCode = String;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum TCAuthentication {
 	Web3(LitentryMultiSignature),
 	Email(VerificationCode),
+	OAuth2(OAuth2Data),
 	AuthToken(String),
 }
 
@@ -87,59 +83,4 @@ impl TrustedCallVerification for TrustedCallAuthenticated {
 	fn metric_name(&self) -> &'static str {
 		self.call.metric_name()
 	}
-}
-
-pub fn verify_tca_web3_authentication(
-	signature: &LitentryMultiSignature,
-	call: &TrustedCall,
-	nonce: ParentchainIndex,
-	mrenclave: &[u8; 32],
-	shard: &ShardIdentifier,
-) -> bool {
-	let mut payload = call.encode();
-	payload.append(&mut nonce.encode());
-	payload.append(&mut mrenclave.encode());
-	payload.append(&mut shard.encode());
-
-	// The signature should be valid in either case:
-	// 1. blake2_256(payload)
-	// 2. Signature Prefix + blake2_256(payload)
-
-	let hashed = blake2_256(&payload);
-
-	let prettified_msg_hash = call.signature_message_prefix() + &hex_encode(&hashed);
-	let prettified_msg_hash = prettified_msg_hash.as_bytes();
-
-	// Most common signatures variants by clients are verified first (4 and 2).
-	signature.verify(prettified_msg_hash, call.sender_identity())
-		|| signature.verify(&hashed, call.sender_identity())
-}
-
-pub fn verify_tca_email_authentication(call: &TrustedCall, verification_code: String) -> bool {
-	let identity_hash = call.sender_identity().hash();
-	let omni_account = extract_omni_account_from_call(call);
-	match VerificationCodeStore::get(&omni_account, identity_hash) {
-		Ok(Some(code)) => code == verification_code,
-		_ => false,
-	}
-}
-
-fn extract_omni_account_from_call(call: &TrustedCall) -> AccountId {
-	let member_identity = call.sender_identity();
-	if let Ok(Some(account_id)) = OmniAccountStore::get_omni_account(member_identity.hash()) {
-		account_id
-	} else {
-		member_identity.to_omni_account()
-	}
-}
-
-pub fn verify_tca_auth_token_authentication(
-	omni_account: &AccountId,
-	current_block: BlockNumber,
-	auth_token: String,
-	secret: &[u8],
-) -> bool {
-	let expected_subject = account_id_to_string_without_prefix(&omni_account);
-	let validation = jwt::Validation::new(expected_subject, current_block);
-	jwt::verify(&auth_token, secret, validation).is_ok()
 }
