@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.42-tag-v0.14.0#e4ed74b0fb6c2fd5585f55c2702b97b56d99c7f6"
+source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
 dependencies = [
  "ac-primitives",
  "log 0.4.20",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.42-tag-v0.14.0#e4ed74b0fb6c2fd5585f55c2702b97b56d99c7f6"
+source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.42-tag-v0.14.0#e4ed74b0fb6c2fd5585f55c2702b97b56d99c7f6"
+source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
 dependencies = [
  "frame-system",
  "impl-serde",
@@ -1472,6 +1472,7 @@ dependencies = [
  "scale-info",
  "serde 1.0.210",
  "serde_json 1.0.120",
+ "sp-consensus-aura",
  "sp-core",
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
  "sp-runtime",
@@ -4051,6 +4052,7 @@ dependencies = [
 name = "itp-extrinsics-factory"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
@@ -5197,6 +5199,7 @@ dependencies = [
  "frame-support",
  "futures 0.3.28",
  "futures 0.3.8",
+ "id-ita-sgx-runtime",
  "id-ita-stf",
  "id-itp-stf-executor",
  "id-itp-top-pool-author",
@@ -5208,12 +5211,15 @@ dependencies = [
  "itp-sgx-externalities",
  "itp-stf-primitives",
  "itp-stf-state-handler",
+ "itp-storage",
  "itp-types",
  "lc-data-providers",
  "lc-dynamic-assertion",
+ "lc-evm-dynamic-assertions",
  "lc-identity-verification",
  "lc-native-task-sender",
  "lc-omni-account",
+ "lc-stf-task-receiver",
  "litentry-hex-utils",
  "litentry-macros",
  "litentry-primitives",
@@ -8626,6 +8632,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-consensus"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
+dependencies = [
+ "async-trait",
+ "futures 0.3.28",
+ "log 0.4.20",
+ "sp-core",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-state-machine",
+ "thiserror 1.0.44",
+]
+
+[[package]]
+name = "sp-consensus-aura"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
+dependencies = [
+ "async-trait",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-consensus",
+ "sp-consensus-slots",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-std",
+ "sp-timestamp",
+]
+
+[[package]]
 name = "sp-consensus-grandpa"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
@@ -9169,7 +9208,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.42-tag-v0.14.0#e4ed74b0fb6c2fd5585f55c2702b97b56d99c7f6"
+source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -9207,7 +9246,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.9.1"
-source = "git+https://github.com/scs/substrate-api-client?branch=polkadot-v0.9.42-tag-v0.14.0#e4ed74b0fb6c2fd5585f55c2702b97b56d99c7f6"
+source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
 dependencies = [
  "array-bytes 4.2.0",
  "async-trait",

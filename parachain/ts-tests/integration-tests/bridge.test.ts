@@ -37,8 +37,8 @@ describeCrossChainTransfer('Test Cross-chain Transfer', ``, (context) => {
         );
 
         assert.equal(
-            bn100e18.add(beforeAccountData.data.free.toBn()).toString(),
-            afterAccountData.data.free.toBn().toString()
+            bn100e18.add(new BN(beforeAccountData.data.free.toString())).toString(),
+            new BN(afterAccountData.data.free.toString()).toString()
         );
     });
 

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PARACHAIN="rococo"
+PARACHAIN="paseo"
 ROOTDIR=$(git rev-parse --show-toplevel)
 ROOTDIR="${ROOTDIR}/tee-worker"
 
@@ -20,7 +20,7 @@ function start_local_parachain() {
     cd ${ROOTDIR}
     echo "------------------------------------------------------------"
     echo "Start local parachain: ${PARACHAIN} ..."
-    # TODO: only `rococo` is supported for the moment. And it's hard-coded inside `start_parachain.sh`
+    # TODO: only `paseo` is supported for the moment. And it's hard-coded inside `start_parachain.sh`
     ./../local-setup/start_parachain.sh
     if [ $? -ne 0 ]; then
         exit 1

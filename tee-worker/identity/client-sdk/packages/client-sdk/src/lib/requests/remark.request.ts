@@ -102,7 +102,11 @@ export async function remark(
       throw new Error(codecToString(result.asErr));
     }
 
-    const { extrinsic_hash, block_hash } = result.asOk;
+    if (!result.asOk.isExtrinsicReport) {
+      throw new Error('Unexpected response type');
+    }
+
+    const { extrinsic_hash, block_hash } = result.asOk.asExtrinsicReport;
 
     return {
       response,

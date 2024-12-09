@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Add `TrustedCallAuthenticated` and `TCAuthentication` trusted call structs.
 -   Add `TrustedCallResult` to handle OmniAccount's call results.
 -   Add `TrustedOperationAuthenticated` type definition.
+-   Update `TrustedCallResult` type definition.
+-   Add error variants to `RequestVcErrorDetail`.
 
 ## [0.9.20-4.1] - 2024-09-30
 

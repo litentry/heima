@@ -20,14 +20,11 @@ use std::path::PathBuf;
 
 /// Sub-commands supported by the collator.
 #[derive(Debug, clap::Subcommand)]
+#[allow(clippy::large_enum_variant)]
 pub enum Subcommand {
-	/// Export the genesis state of the parachain.
-	#[clap(name = "export-genesis-state")]
-	ExportGenesisState(cumulus_client_cli::ExportGenesisStateCommand),
-
-	/// Export the genesis wasm of the parachain.
-	#[clap(name = "export-genesis-wasm")]
-	ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
+	/// Key management CLI utilities
+	#[command(subcommand)]
+	Key(sc_cli::KeySubcommand),
 
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
@@ -44,28 +41,23 @@ pub enum Subcommand {
 	/// Import blocks.
 	ImportBlocks(sc_cli::ImportBlocksCmd),
 
-	/// Remove the whole chain.
-	PurgeChain(cumulus_client_cli::PurgeChainCmd),
-
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
 
-	/// Key management cli utilities
-	#[command(subcommand)]
-	Key(sc_cli::KeySubcommand),
+	/// Remove the whole chain.
+	PurgeChain(cumulus_client_cli::PurgeChainCmd),
+
+	/// Export the genesis state of the parachain.
+	#[command(alias = "export-genesis-state")]
+	ExportGenesisHead(cumulus_client_cli::ExportGenesisHeadCommand),
+
+	/// Export the genesis wasm of the parachain.
+	ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
 
 	/// Sub-commands concerned with benchmarking.
 	/// The pallet benchmarking moved to the `pallet` sub-command.
 	#[command(subcommand)]
-	Benchmark(Box<frame_benchmarking_cli::BenchmarkCmd>),
-
-	/// Try some testing command against a specified runtime state.
-	#[cfg(feature = "try-runtime")]
-	TryRuntime(try_runtime_cli::TryRuntimeCmd),
-
-	/// Errors since the binary was not build with `--features try-runtime`.
-	#[cfg(not(feature = "try-runtime"))]
-	TryRuntime,
+	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 }
 
 #[derive(Debug, Parser)]
@@ -92,8 +84,8 @@ pub struct Cli {
 	pub no_hardware_benchmarks: bool,
 
 	/// Relay chain arguments
-	#[arg(raw = true, conflicts_with = "relay-chain-rpc-url")]
-	pub relay_chain_args: Vec<String>,
+	#[arg(raw = true)]
+	pub relaychain_args: Vec<String>,
 
 	#[clap(flatten)]
 	pub eth_api_options: EthApiOptions,
@@ -102,13 +94,11 @@ pub struct Cli {
 	#[clap(name = "enable-evm-rpc", long)]
 	pub enable_evm_rpc: bool,
 
-	/// Proposer's maximum block size limit in bytes
-	#[clap(long, default_value = sc_basic_authorship::DEFAULT_BLOCK_SIZE_LIMIT.to_string())]
-	pub proposer_block_size_limit: usize,
-
-	/// Proposer's soft deadline in percents of block size
-	#[clap(long, default_value = "50")]
-	pub proposer_soft_deadline_percent: u8,
+	/// Enable the `delayed best block` import strategy, where only blocks confirmed
+	/// by relay chain are notified as best blocks
+	/// see comment in `service.rs`
+	#[clap(name = "delayed-best-block", long)]
+	pub delayed_best_block: bool,
 }
 
 #[derive(Debug)]

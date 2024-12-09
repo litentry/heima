@@ -16,20 +16,20 @@
 
 use crate::*;
 use frame_support::{
-	assert_ok, construct_runtime,
+	assert_ok, construct_runtime, derive_impl,
 	pallet_prelude::Weight,
 	parameter_types,
 	traits::{
 		tokens::fungibles::{Inspect, Mutate},
-		AsEnsureOriginWithArg, ConstU128, ConstU16, ConstU32, ConstU64, Everything,
+		AsEnsureOriginWithArg, ConstU128, ConstU32, ConstU64,
 	},
 };
 use pallet_aiusd_convertor as pallet_aiusd;
 use pallet_evm::{EnsureAddressNever, EnsureAddressRoot};
 use precompile_utils::precompile_set::{AddressU64, PrecompileAt, PrecompileSetBuilder};
-use sp_core::{Get, H160, H256};
+use sp_core::{Get, H160};
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	traits::{IdentifyAccount, IdentityLookup, Verify},
 	AccountId32, BuildStorage,
 };
 
@@ -51,34 +51,26 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
 	pub const AIUSDAssetId: u32 = 1;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Block = frame_system::mocking::MockBlock<Test>;
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Nonce = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
+	type Block = frame_system::mocking::MockBlock<Test>;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<31>;
-	type OnSetCode = ();
-	type MaxConsumers = ConstU32<16>;
+	type Lookup = IdentityLookup<Self::AccountId>;
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
+impl pallet_balances::Config for Test {
+	type Balance = Balance;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
 }
 
 impl pallet_assets::Config for Test {
@@ -104,21 +96,6 @@ impl pallet_assets::Config for Test {
 	type BenchmarkHelper = ();
 }
 
-impl pallet_balances::Config for Test {
-	type MaxLocks = ();
-	type Balance = Balance;
-	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = ConstU128<1>;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
-	type FreezeIdentifier = ();
-	type MaxHolds = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
-}
 pub struct ConvertingPool;
 impl Get<AccountId32> for ConvertingPool {
 	fn get() -> AccountId32 {
@@ -178,6 +155,7 @@ impl pallet_evm::Config for Test {
 	type OnCreate = ();
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
+	type SuicideQuickClearLimit = ConstU32<0>;
 }
 
 parameter_types! {

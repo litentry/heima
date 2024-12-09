@@ -16,16 +16,13 @@
 
 use crate::*;
 use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything},
+	construct_runtime, derive_impl, parameter_types,
+	traits::{ConstU32, ConstU64},
 };
 use pallet_evm::{EnsureAddressNever, EnsureAddressRoot};
 use precompile_utils::precompile_set::{AddressU64, PrecompileAt, PrecompileSetBuilder};
-use sp_core::{H160, H256};
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
-	AccountId32, BuildStorage,
-};
+use sp_core::H160;
+use sp_runtime::{traits::IdentityLookup, AccountId32, BuildStorage};
 
 pub type Balance = u128;
 pub type AccountId = AccountId32;
@@ -42,50 +39,26 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
 	pub const MinimumCuratorDeposit: Balance = 10;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Nonce = u64;
-	type Hash = H256;
-	type Block = frame_system::mocking::MockBlock<Test>; // Add this
-	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
+	type Block = frame_system::mocking::MockBlock<Test>;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<31>;
-	type OnSetCode = ();
-	type MaxConsumers = ConstU32<16>;
+	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
 impl pallet_balances::Config for Test {
-	type MaxLocks = ();
 	type Balance = Balance;
-	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = ConstU128<1>;
+	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
-	type FreezeIdentifier = ();
-	type MaxHolds = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
 }
 
 // Implement pallet_curator config trait for mock runtime.
@@ -122,6 +95,7 @@ impl pallet_evm::Config for Test {
 	type OnCreate = ();
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
+	type SuicideQuickClearLimit = ConstU32<0>;
 }
 
 impl pallet_timestamp::Config for Test {

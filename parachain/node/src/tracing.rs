@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-//! EVM tracing RPC support.
 use crate::evm_tracing_types::{EthApi as EthApiCmd, EvmTracingConfig};
 
-use fc_rpc::OverrideHandle;
 use fc_rpc_core::types::FilterPool;
+use fc_storage::StorageOverride;
 use fp_rpc::EthereumRuntimeRPCApi;
 use moonbeam_rpc_debug::{DebugHandler, DebugRequester};
 use moonbeam_rpc_trace::{CacheRequester as TraceFilterCacheRequester, CacheTask};
@@ -26,12 +25,13 @@ use sc_client_api::{
 	Backend, BlockOf, BlockchainEvents, HeaderBackend, StateBackend, StorageProvider,
 };
 use sc_service::TaskManager;
-use sp_api::{BlockT, HeaderT, ProvideRuntimeApi};
+use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderMetadata};
 use sp_core::H256;
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT, Header as HeaderT};
 use std::sync::Arc;
+use substrate_prometheus_endpoint::Registry as PrometheusRegistry;
 use tokio::sync::Semaphore;
 
 #[derive(Clone)]
@@ -40,18 +40,19 @@ pub struct RpcRequesters {
 	pub trace: Option<TraceFilterCacheRequester>,
 }
 
+#[allow(dead_code)]
 pub struct SpawnTasksParams<'a, B: BlockT, C, BE> {
 	pub task_manager: &'a TaskManager,
 	pub client: Arc<C>,
 	pub substrate_backend: Arc<BE>,
-	pub frontier_backend: Arc<dyn fc_api::backend::Backend<B>>,
+	pub frontier_backend: Arc<dyn fc_api::Backend<B> + Send + Sync>,
 	pub filter_pool: Option<FilterPool>,
-	pub overrides: Arc<OverrideHandle<B>>,
+	pub storage_override: Arc<dyn StorageOverride<B>>,
 }
 
-/// Spawn the tasks that are required to run a EVM tracing.
 pub fn spawn_tracing_tasks<B, C, BE>(
 	rpc_config: &EvmTracingConfig,
+	prometheus: Option<PrometheusRegistry>,
 	params: SpawnTasksParams<B, C, BE>,
 ) -> RpcRequesters
 where
@@ -76,7 +77,8 @@ where
 				Arc::clone(&params.substrate_backend),
 				core::time::Duration::from_secs(rpc_config.ethapi_trace_cache_duration),
 				Arc::clone(&permit_pool),
-				Arc::clone(&params.overrides),
+				Arc::clone(&params.storage_override),
+				prometheus,
 			);
 			(Some(trace_filter_task), Some(trace_filter_requester))
 		} else {
@@ -89,7 +91,7 @@ where
 			Arc::clone(&params.substrate_backend),
 			Arc::clone(&params.frontier_backend),
 			Arc::clone(&permit_pool),
-			Arc::clone(&params.overrides),
+			Arc::clone(&params.storage_override),
 			rpc_config.tracing_raw_max_memory_usage,
 		);
 		(Some(debug_task), Some(debug_requester))

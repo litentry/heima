@@ -24,8 +24,6 @@ extern crate core;
 #[cfg(feature = "tests")]
 pub mod tests;
 
-pub mod xcm_impl;
-
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::assert_ok;
 
@@ -75,6 +73,15 @@ pub const WEIGHT_PER_GAS: u64 = WEIGHT_REF_TIME_PER_SECOND / GAS_PER_SECOND;
 
 // Cosnt ratio of 1 weight = n fee
 pub const WEIGHT_TO_FEE_FACTOR: u128 = 1_000_000u128;
+
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included into the
+/// relay chain.
+pub const UNINCLUDED_SEGMENT_CAPACITY: u32 = 1;
+/// How many parachain blocks are processed by the relay chain per parent. Limits the number of
+/// blocks authored per slot.
+pub const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+/// Relay chain slot duration, in milliseconds.
+pub const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
 
 pub mod currency {
 	use core_primitives::Balance;
@@ -158,45 +165,6 @@ where
 			<pallet_balances::Pallet<R>>::resolve_creating(&author, amount);
 		}
 	}
-}
-
-/// This macro expects the passed runtime constants to contain a `currency` module.
-#[macro_export]
-macro_rules! impl_runtime_transaction_payment_fees {
-	($runtime:ident) => {
-		use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
-		use runtime_common::ToAuthor;
-
-		// Do i need to extract these constants to the common module?
-		use $runtime::currency::{AUTHOR_PROPORTION, BURNED_PROPORTION, TREASURY_PROPORTION};
-
-		// important !! The struct is used externally
-		pub struct DealWithFees<R>(sp_std::marker::PhantomData<R>);
-
-		impl<R> OnUnbalanced<NegativeImbalance<R>> for DealWithFees<R>
-		where
-			R: pallet_balances::Config + pallet_treasury::Config + pallet_authorship::Config,
-			pallet_treasury::Pallet<R>: OnUnbalanced<NegativeImbalance<R>>,
-			<R as frame_system::Config>::RuntimeEvent: From<pallet_balances::Event<R>>,
-		{
-			fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance<R>>) {
-				if let Some(fees) = fees_then_tips.next() {
-					// for fees, (1) to treasury, (2) to author and (3) burned
-					let (unburned, _) =
-						fees.ration(TREASURY_PROPORTION + AUTHOR_PROPORTION, BURNED_PROPORTION);
-					let mut split = unburned.ration(TREASURY_PROPORTION, AUTHOR_PROPORTION);
-
-					if let Some(tips) = fees_then_tips.next() {
-						// for tips, if any, 100% to author
-						tips.merge_into(&mut split.1);
-					}
-					use pallet_treasury::Pallet as Treasury;
-					<Treasury<R> as OnUnbalanced<_>>::on_unbalanced(split.0);
-					<ToAuthor<R> as OnUnbalanced<_>>::on_unbalanced(split.1);
-				}
-			}
-		}
-	};
 }
 
 /// See https://github.com/paritytech/polkadot/blob/7096430edd116b1dc6d8337ab35b149e213cbfe9/runtime/common/src/lib.rs#L218
@@ -283,10 +251,10 @@ pub trait BaseRuntimeRequirements:
 	+ pallet_balances::Config<Balance = Balance>
 	+ pallet_extrinsic_filter::Config
 	+ pallet_multisig::Config
-	+ parachain_info::Config
 	+ pallet_xcm::Config
 	+ pallet_treasury::Config
 	+ pallet_transaction_payment::Config
+	+ parachain_info::Config
 {
 }
 

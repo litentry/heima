@@ -35,7 +35,7 @@ PARACHAIN_ALICE_BASEDIR="$PARACHAIN_BASEDIR/para-alice"
 BUILD=false
 DISCARD=false
 WORKER_CONFIG=
-CHAIN=rococo
+CHAIN=paseo
 ONLY_WORKER=false
 PARACHAIN_HOST=localhost
 PARACHAIN_PORT=9944
@@ -215,7 +215,7 @@ function display_help {
   echo "  -d, --discard               Clean the existing state for parachain and worker (default: false)"
   echo "  -c, --config <config.json>  Config file for the worker"
   echo "  -a, --only-worker           Start only the worker (default: false)"
-  echo "  -x, --chain                 Chain type for launching the parachain network (default: rococo)"
+  echo "  -x, --chain                 Chain type for launching the parachain network (default: paseo)"
   echo "  -h, --parachain-host        Parachain ws URL (default: localhost)"
   echo "  -p, --parachain-port        Parachain ws port (default: 9944)"
   echo "  -v, --copy-from-docker      Copy the parachain binary from a docker image (default: litentry/litentry-parachain:tee-prod)"

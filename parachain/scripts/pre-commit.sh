@@ -24,7 +24,6 @@ function parachain_check() {
     cargo clippy --workspace --all-targets --all-features -- -D warnings
     cargo test --locked --release -p pallet-* --lib
     cargo test --locked --release -p pallet-* --lib --features=runtime-benchmarks
-    cargo test --locked --release -p rococo-parachain-runtime --lib
     cargo test --locked --release -p paseo-parachain-runtime --lib
     cargo test --locked --release -p litentry-parachain-runtime --lib
 }

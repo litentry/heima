@@ -349,3 +349,25 @@ fn revoke_schema_with_unprivileged_origin_fails() {
 		);
 	});
 }
+
+#[test]
+fn on_vc_issued_works() {
+	new_test_ext().execute_with(|| {
+		let signer: SystemAccountId = get_signer(TEST8_SIGNER_PUB);
+		let alice: Identity = get_signer(ALICE_PUBKEY);
+		let omni_account = alice.to_omni_account();
+		assert_ok!(VCManagement::on_vc_issued(
+			RuntimeOrigin::signed(signer),
+			alice.clone(),
+			Assertion::A1,
+			omni_account.clone(),
+			H256::default(),
+		));
+		System::assert_last_event(RuntimeEvent::VCManagement(crate::Event::VCIssuedNew {
+			identity: alice,
+			assertion: Assertion::A1,
+			omni_account,
+			req_ext_hash: H256::default(),
+		}));
+	});
+}

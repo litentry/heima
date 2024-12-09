@@ -43,7 +43,7 @@ fn request_intent_call(intent: Intent) -> Box<RuntimeCall> {
 }
 
 fn make_balance_transfer_call(dest: AccountId, value: Balance) -> Box<RuntimeCall> {
-	let call = RuntimeCall::Balances(pallet_balances::Call::transfer { dest, value });
+	let call = RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { dest, value });
 	Box::new(call)
 }
 
@@ -57,7 +57,7 @@ fn create_account_store_works() {
 			alice().identity,
 		));
 
-		let member_accounts: MemberAccounts<TestRuntime> =
+		let member_accounts: MemberAccounts<Test> =
 			vec![public_member_account(alice())].try_into().unwrap();
 
 		System::assert_has_event(Event::AccountStoreCreated { who: alice().omni_account }.into());
@@ -72,7 +72,7 @@ fn create_account_store_works() {
 		// create it the second time will fail
 		assert_noop!(
 			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), alice().identity),
-			Error::<TestRuntime>::AccountAlreadyAdded
+			Error::<Test>::AccountAlreadyAdded
 		);
 	});
 }
@@ -89,7 +89,7 @@ fn add_account_without_creating_store_fails() {
 				alice().identity.hash(),
 				call,
 			),
-			Error::<TestRuntime>::AccountNotFound
+			Error::<Test>::AccountNotFound
 		);
 	});
 }
@@ -102,7 +102,7 @@ fn add_account_works() {
 		let bob = private_member_account(bob());
 		let charlie = public_member_account(charlie());
 
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
+		let expected_member_accounts: MemberAccounts<Test> =
 			vec![public_member_account(alice()), bob.clone()].try_into().unwrap();
 
 		assert_ok!(OmniAccount::create_account_store(
@@ -133,7 +133,7 @@ fn add_account_works() {
 		);
 
 		assert_eq!(
-			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
+			AccountStore::<Test>::get(alice().omni_account).unwrap(),
 			expected_member_accounts
 		);
 
@@ -143,12 +143,11 @@ fn add_account_works() {
 			alice().identity.hash(),
 			call,
 		));
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
-			BoundedVec::truncate_from(vec![
-				public_member_account(alice()),
-				bob.clone(),
-				charlie.clone(),
-			]);
+		let expected_member_accounts: MemberAccounts<Test> = BoundedVec::truncate_from(vec![
+			public_member_account(alice()),
+			bob.clone(),
+			charlie.clone(),
+		]);
 
 		System::assert_has_event(
 			Event::AccountAdded { who: alice().omni_account, member_account_hash: charlie.hash() }
@@ -162,8 +161,8 @@ fn add_account_works() {
 			.into(),
 		);
 
-		assert!(MemberAccountHash::<TestRuntime>::contains_key(bob.hash()));
-		assert!(MemberAccountHash::<TestRuntime>::contains_key(charlie.hash()));
+		assert!(MemberAccountHash::<Test>::contains_key(bob.hash()));
+		assert!(MemberAccountHash::<Test>::contains_key(charlie.hash()));
 	});
 }
 
@@ -258,7 +257,7 @@ fn add_account_store_len_limit_reached_works() {
 			alice().identity,
 		));
 
-		let member_accounts: MemberAccounts<TestRuntime> = vec![
+		let member_accounts: MemberAccounts<Test> = vec![
 			public_member_account(alice()),
 			private_member_account(bob()),
 			private_member_account(charlie()),
@@ -266,7 +265,7 @@ fn add_account_store_len_limit_reached_works() {
 		.try_into()
 		.unwrap();
 
-		AccountStore::<TestRuntime>::insert(alice().omni_account, member_accounts);
+		AccountStore::<Test>::insert(alice().omni_account, member_accounts);
 
 		let call = add_account_call(MemberAccount::Private(
 			vec![7, 8, 9],
@@ -344,7 +343,7 @@ fn remove_account_works() {
 			.into(),
 		);
 
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
+		let expected_member_accounts: MemberAccounts<Test> =
 			BoundedVec::truncate_from(vec![public_member_account(alice())]);
 
 		System::assert_has_event(
@@ -363,10 +362,10 @@ fn remove_account_works() {
 		);
 
 		assert_eq!(
-			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
+			AccountStore::<Test>::get(alice().omni_account).unwrap(),
 			expected_member_accounts
 		);
-		assert!(!MemberAccountHash::<TestRuntime>::contains_key(bob.hash()));
+		assert!(!MemberAccountHash::<Test>::contains_key(bob.hash()));
 
 		let call = remove_accounts_call(vec![alice().identity.hash()]);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
@@ -375,7 +374,7 @@ fn remove_account_works() {
 			call,
 		));
 
-		assert!(!AccountStore::<TestRuntime>::contains_key(alice().omni_account));
+		assert!(!AccountStore::<Test>::contains_key(alice().omni_account));
 	});
 }
 
@@ -437,10 +436,10 @@ fn publicize_account_works() {
 			call,
 		));
 
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
+		let expected_member_accounts: MemberAccounts<Test> =
 			vec![public_member_account(alice()), private_bob.clone()].try_into().unwrap();
 		assert_eq!(
-			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
+			AccountStore::<Test>::get(alice().omni_account).unwrap(),
 			expected_member_accounts
 		);
 
@@ -459,7 +458,7 @@ fn publicize_account_works() {
 			.into(),
 		);
 
-		let expected_member_accounts: MemberAccounts<TestRuntime> =
+		let expected_member_accounts: MemberAccounts<Test> =
 			BoundedVec::truncate_from(vec![public_member_account(alice()), public_bob]);
 
 		System::assert_has_event(
@@ -478,7 +477,7 @@ fn publicize_account_works() {
 		);
 
 		assert_eq!(
-			AccountStore::<TestRuntime>::get(alice().omni_account).unwrap(),
+			AccountStore::<Test>::get(alice().omni_account).unwrap(),
 			expected_member_accounts
 		);
 	});
@@ -497,7 +496,7 @@ fn publicize_account_identity_not_found_works() {
 				alice().identity.hash(),
 				call,
 			),
-			Error::<TestRuntime>::AccountNotFound
+			Error::<Test>::AccountNotFound
 		);
 
 		assert_ok!(OmniAccount::create_account_store(
@@ -579,7 +578,7 @@ fn dispatch_as_signed_works() {
 	new_test_ext().execute_with(|| {
 		let tee_signer = get_tee_signer();
 
-		assert_ok!(Balances::transfer(
+		assert_ok!(Balances::transfer_keep_alive(
 			RuntimeOrigin::signed(alice().native_account),
 			alice().omni_account,
 			6
@@ -641,7 +640,7 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 	new_test_ext().execute_with(|| {
 		let tee_signer = get_tee_signer();
 
-		assert_ok!(Balances::transfer(
+		assert_ok!(Balances::transfer_keep_alive(
 			RuntimeOrigin::signed(alice().native_account),
 			alice().omni_account,
 			6

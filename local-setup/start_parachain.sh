@@ -19,4 +19,4 @@ done
 
 ROOTDIR=$(git rev-parse --show-toplevel)
 cd "$ROOTDIR/parachain"
-make launch-docker-rococo
+make launch-docker-paseo

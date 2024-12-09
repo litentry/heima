@@ -51,10 +51,13 @@ fn set_mode_should_not_clear_blocked_extrinsics() {
 		assert_ok!(ExtrinsicFilter::block_extrinsics(
 			RuntimeOrigin::root(),
 			b"Balances".to_vec(),
-			Some(b"transfer".to_vec())
+			Some(b"transfer_keep_alive".to_vec())
 		));
 		assert_eq!(
-			ExtrinsicFilter::blocked_extrinsics((b"Balances".to_vec(), b"transfer".to_vec())),
+			ExtrinsicFilter::blocked_extrinsics((
+				b"Balances".to_vec(),
+				b"transfer_keep_alive".to_vec()
+			)),
 			Some(())
 		);
 
@@ -62,7 +65,10 @@ fn set_mode_should_not_clear_blocked_extrinsics() {
 		assert_eq!(ExtrinsicFilter::mode(), crate::OperationalMode::Test);
 		// previously blocked extrinsics are still there
 		assert_eq!(
-			ExtrinsicFilter::blocked_extrinsics((b"Balances".to_vec(), b"transfer".to_vec())),
+			ExtrinsicFilter::blocked_extrinsics((
+				b"Balances".to_vec(),
+				b"transfer_keep_alive".to_vec()
+			)),
 			Some(())
 		);
 	});
@@ -84,7 +90,8 @@ fn safe_mode_works() {
 		);
 
 		// SafeModeFilter disallows balance calls
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -108,7 +115,8 @@ fn normal_mode_works() {
 		assert_ok!(call.dispatch(RuntimeOrigin::none()));
 
 		// NormalModeFilter disallows balance calls
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -129,7 +137,8 @@ fn test_mode_works() {
 		assert_ok!(call.dispatch(RuntimeOrigin::none()));
 
 		// TestModeFilter allows balance calls
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_ok!(call.dispatch(RuntimeOrigin::signed(1)));
 		assert_eq!(Balances::free_balance(2), 10);
 	});
@@ -145,28 +154,26 @@ fn block_single_extrinsic_works() {
 		assert_ok!(ExtrinsicFilter::block_extrinsics(
 			RuntimeOrigin::root(),
 			b"Balances".to_vec(),
-			Some(b"transfer".to_vec())
+			Some(b"transfer_keep_alive".to_vec())
 		));
 		System::assert_last_event(RuntimeEvent::ExtrinsicFilter(crate::Event::ExtrinsicsBlocked {
 			pallet_name_bytes: b"Balances".to_vec(),
-			function_name_bytes: Some(b"transfer".to_vec()),
+			function_name_bytes: Some(b"transfer_keep_alive".to_vec()),
 		}));
 		assert_eq!(
-			ExtrinsicFilter::blocked_extrinsics((b"Balances".to_vec(), b"transfer".to_vec())),
+			ExtrinsicFilter::blocked_extrinsics((
+				b"Balances".to_vec(),
+				b"transfer_keep_alive".to_vec()
+			)),
 			Some(())
 		);
 		// try to dispatch Balances.transfer should fail
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
 		);
-
-		// however, Balances.transfer_keep_alive should work
-		let call: RuntimeCall =
-			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
-		assert_ok!(call.dispatch(RuntimeOrigin::signed(1)));
-		assert_eq!(Balances::free_balance(2), 10);
 	});
 }
 
@@ -191,7 +198,8 @@ fn block_whole_pallet_works() {
 			Some(())
 		);
 		// try to dispatch Balances.transfer should fail
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -218,18 +226,22 @@ fn unblock_single_extrinsic_works() {
 		assert_ok!(ExtrinsicFilter::block_extrinsics(
 			RuntimeOrigin::root(),
 			b"Balances".to_vec(),
-			Some(b"transfer".to_vec())
+			Some(b"transfer_keep_alive".to_vec())
 		));
 		System::assert_last_event(RuntimeEvent::ExtrinsicFilter(crate::Event::ExtrinsicsBlocked {
 			pallet_name_bytes: b"Balances".to_vec(),
-			function_name_bytes: Some(b"transfer".to_vec()),
+			function_name_bytes: Some(b"transfer_keep_alive".to_vec()),
 		}));
 		assert_eq!(
-			ExtrinsicFilter::blocked_extrinsics((b"Balances".to_vec(), b"transfer".to_vec())),
+			ExtrinsicFilter::blocked_extrinsics((
+				b"Balances".to_vec(),
+				b"transfer_keep_alive".to_vec()
+			)),
 			Some(())
 		);
 		// try to dispatch Balances.transfer should fail
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -239,20 +251,24 @@ fn unblock_single_extrinsic_works() {
 		assert_ok!(ExtrinsicFilter::unblock_extrinsics(
 			RuntimeOrigin::root(),
 			b"Balances".to_vec(),
-			Some(b"transfer".to_vec())
+			Some(b"transfer_keep_alive".to_vec())
 		));
 
 		System::assert_last_event(RuntimeEvent::ExtrinsicFilter(
 			crate::Event::ExtrinsicsUnblocked {
 				pallet_name_bytes: b"Balances".to_vec(),
-				function_name_bytes: Some(b"transfer".to_vec()),
+				function_name_bytes: Some(b"transfer_keep_alive".to_vec()),
 			},
 		));
 		assert_eq!(
-			ExtrinsicFilter::blocked_extrinsics((b"Balances".to_vec(), b"transfer".to_vec())),
+			ExtrinsicFilter::blocked_extrinsics((
+				b"Balances".to_vec(),
+				b"transfer_keep_alive".to_vec()
+			)),
 			None
 		);
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_ok!(call.dispatch(RuntimeOrigin::signed(1)));
 		assert_eq!(Balances::free_balance(2), 10);
 	});
@@ -279,7 +295,8 @@ fn unblock_whole_pallet_works() {
 			Some(())
 		);
 		// try to dispatch Balances.transfer should fail
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -311,7 +328,8 @@ fn unblock_whole_pallet_works() {
 			None
 		);
 		// try to dispatch Balances.transfer should work
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_ok!(call.dispatch(RuntimeOrigin::signed(1)));
 		assert_eq!(Balances::free_balance(2), 10);
 
@@ -336,11 +354,12 @@ fn whitelisting_fails() {
 			ExtrinsicFilter::unblock_extrinsics(
 				RuntimeOrigin::root(),
 				b"Balances".to_vec(),
-				Some(b"transfer".to_vec())
+				Some(b"transfer_keep_alive".to_vec())
 			),
 			Error::<Test>::ExtrinsicNotBlocked
 		);
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -380,20 +399,21 @@ fn block_more_than_once_fails() {
 		assert_ok!(ExtrinsicFilter::block_extrinsics(
 			RuntimeOrigin::root(),
 			b"Balances".to_vec(),
-			Some(b"transfer".to_vec()),
+			Some(b"transfer_keep_alive".to_vec()),
 		));
 
 		assert_noop!(
 			ExtrinsicFilter::block_extrinsics(
 				RuntimeOrigin::root(),
 				b"Balances".to_vec(),
-				Some(b"transfer".to_vec()),
+				Some(b"transfer_keep_alive".to_vec()),
 			),
 			Error::<Test>::ExtrinsicAlreadyBlocked
 		);
 
 		// Balances.transfer should be blocked though
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
@@ -410,7 +430,7 @@ fn unpaired_block_unblock_fails() {
 		assert_ok!(ExtrinsicFilter::block_extrinsics(
 			RuntimeOrigin::root(),
 			b"Balances".to_vec(),
-			Some(b"transfer".to_vec()),
+			Some(b"transfer_keep_alive".to_vec()),
 		));
 		assert_noop!(
 			ExtrinsicFilter::unblock_extrinsics(RuntimeOrigin::root(), b"Balances".to_vec(), None),
@@ -418,14 +438,15 @@ fn unpaired_block_unblock_fails() {
 		);
 
 		// Balances.transfer should still be blocked
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered
 		);
 
 		// clear the storage
-		let _ = crate::BlockedExtrinsics::<Test>::clear(u32::max_value(), None);
+		let _ = crate::BlockedExtrinsics::<Test>::clear(u32::MAX, None);
 
 		// block the whole pallet and unblock a single extrinsic should fail
 		assert_ok!(ExtrinsicFilter::block_extrinsics(
@@ -443,7 +464,8 @@ fn unpaired_block_unblock_fails() {
 		);
 
 		// Balances.transfer should still be blocked
-		let call: RuntimeCall = pallet_balances::Call::transfer { dest: 2, value: 10 }.into();
+		let call: RuntimeCall =
+			pallet_balances::Call::transfer_keep_alive { dest: 2, value: 10 }.into();
 		assert_noop!(
 			call.dispatch(RuntimeOrigin::signed(1)),
 			frame_system::Error::<Test>::CallFiltered

@@ -105,7 +105,7 @@ pub struct RequestVCResult {
 	pub pre_id_graph_hash: H256,
 }
 
-#[derive(Debug, Encode, Decode, Clone)]
+#[derive(Debug, Encode, Decode, Clone, PartialEq, Eq)]
 pub enum RequestVcErrorDetail {
 	UnexpectedCall(String),
 	DuplicateAssertionRequest,
@@ -128,6 +128,9 @@ pub enum RequestVcErrorDetail {
 	CallSendingFailed(String),
 	ExtrinsicConstructionFailed(String), // Stringified itp_extrinsics_factory::Error
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
+	ExtractingMemberIdentityFailed,
+	OmniAccountStoreRetrievalFailed,
+	CreateAccountStoreFailed(String),
 }
 
 #[derive(Debug, Encode, Decode, Clone)]
