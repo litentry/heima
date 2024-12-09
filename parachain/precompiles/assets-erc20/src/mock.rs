@@ -36,9 +36,7 @@
 use super::*;
 
 use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{AsEnsureOriginWithArg, ConstU64},
-	weights::Weight,
+	construct_runtime, derive_impl, parameter_types, traits::AsEnsureOriginWithArg, weights::Weight,
 };
 
 use frame_system::EnsureRoot;
@@ -48,11 +46,9 @@ use precompile_utils::{
 	testing::{AddressInPrefixedSet, MockAccount},
 };
 
-use sp_core::{ConstU32, H160, H256};
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage,
-};
+use sp_core::{ConstU32, ConstU64, H160};
+use sp_runtime::traits::IdentityLookup;
+use sp_runtime::BuildStorage;
 
 pub type AccountId = MockAccount;
 pub type AssetId = u128;
@@ -84,34 +80,23 @@ impl AddressToAssetId<AssetId> for Runtime {
 	}
 }
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
+impl frame_system::Config for Runtime {
+	type AccountId = AccountId;
+	type Block = frame_system::mocking::MockBlock<Runtime>;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
-impl frame_system::Config for Runtime {
-	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Block = frame_system::mocking::MockBlock<Runtime>;
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type Nonce = u64;
-	type RuntimeCall = RuntimeCall;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
+impl pallet_balances::Config for Runtime {
+	type Balance = Balance;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
 }
 
 parameter_types! {
@@ -123,26 +108,6 @@ impl pallet_timestamp::Config for Runtime {
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const ExistentialDeposit: u128 = 1;
-}
-
-impl pallet_balances::Config for Runtime {
-	type MaxLocks = ();
-	type Balance = u128;
-	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
-	type FreezeIdentifier = ();
-	type MaxHolds = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
 }
 
 parameter_types! {
@@ -174,6 +139,7 @@ impl pallet_evm::Config for Runtime {
 	type OnCreate = ();
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
+	type SuicideQuickClearLimit = ConstU32<0>;
 }
 
 // These parameters dont matter much as this will only be called by root with the forced arguments

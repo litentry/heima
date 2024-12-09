@@ -674,7 +674,6 @@ jobs:
       matrix:
         chain:
           - litentry
-          - rococo
           - paseo
     name: ${{ matrix.chain }}
     steps:
@@ -783,8 +782,8 @@ jobs:
       - name: Run runtime tests
         working-directory: ./parachain
         run: |
-          echo "::group::rococo runtime test"
-          cargo test --locked -p rococo-parachain-runtime --lib
+          echo "::group::paseo runtime test"
+          cargo test --locked -p paseo-parachain-runtime --lib
           echo "::endgroup::"
           echo "::group::litentry runtime test"
           cargo test --locked -p litentry-parachain-runtime --lib
@@ -847,6 +846,20 @@ jobs:
         if: needs.set-condition.outputs.run_identity_test == 'true'
         run: |
           docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+
+      - name: Upload zombienet logs if test fails
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-zombienet-logs
+          path: |
+            /tmp/parachain_dev
+            !/tmp/parachain_dev/polkadot*
+            !/tmp/parachain_dev/zombienet*
+            !/tmp/parachain_dev/litentry-collator
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Collect docker logs if test fails
         continue-on-error: true
@@ -920,6 +933,20 @@ jobs:
         run: |
           docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
 
+      - name: Upload zombienet logs if test fails
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-zombienet-logs
+          path: |
+            /tmp/parachain_dev
+            !/tmp/parachain_dev/polkadot*
+            !/tmp/parachain_dev/zombienet*
+            !/tmp/parachain_dev/litentry-collator
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Collect docker logs if test fails
         continue-on-error: true
         uses: jwalton/gh-docker-logs@v2
@@ -985,6 +1012,20 @@ jobs:
         if: needs.set-condition.outputs.run_bitacross_test == 'true'
         run: |
           docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+
+      - name: Upload zombienet logs if test fails
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.test_name }}-zombienet-logs
+          path: |
+            /tmp/parachain_dev
+            !/tmp/parachain_dev/polkadot*
+            !/tmp/parachain_dev/zombienet*
+            !/tmp/parachain_dev/litentry-collator
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Collect docker logs if test fails
         continue-on-error: true

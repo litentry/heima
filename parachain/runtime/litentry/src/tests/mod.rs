@@ -14,31 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-mod base_call_filter;
-pub mod setup {
-	use crate::Runtime;
-	#[cfg(test)]
-	runtime_common::decl_test_chain!(Runtime);
+// TODO: enable tests for litentry-runtime, it requires that the `setup/mod.rs` to be
+//       parameterized (or generalized) with Runtime
+
+/*
+mod base_call_filter {
+	use crate::{Runtime, RuntimeCall, RuntimeOrigin};
+	runtime_common::run_call_filter_tests!();
+
+	#[test]
+	fn balance_transfer_works() {
+		base_call_filter::balance_transfer_works::<Runtime, RuntimeOrigin, RuntimeCall>();
+	}
 }
 
 mod transaction_payment {
 	use crate::{Runtime, RuntimeCall, RuntimeOrigin, TransactionByteFee};
-
 	runtime_common::run_transaction_payment_tests!();
 }
-
-mod xcm_parachain {
-	use crate::{
-		tests::setup::{
-			relay_chain::{
-				Runtime as RelayChainRuntime, RuntimeCall as RelayCall,
-				RuntimeOrigin as RelayOrigin,
-			},
-			ParaA, ParaB, Relay, TestNet,
-		},
-		xcm_config::{LocationToAccountId, UnitWeightCost},
-		Runtime, RuntimeCall, RuntimeOrigin,
-	};
-
-	runtime_common::run_xcm_tests!();
-}
+*/

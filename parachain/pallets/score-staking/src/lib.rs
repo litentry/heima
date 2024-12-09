@@ -249,7 +249,8 @@ pub mod pallet {
 
 			// 2. calculate payout
 			let round_reward: BalanceOf<T> = (T::YearlyInflation::get() * T::YearlyIssuance::get()
-				/ YEARS.into()) * Self::round_config().interval.into();
+				/ YEARS.into())
+				* Self::round_config().interval.into();
 			let round_reward_u128 = round_reward.saturated_into::<u128>();
 
 			let total_stake_u128 = ParaStaking::Pallet::<T>::total().saturated_into::<u128>();

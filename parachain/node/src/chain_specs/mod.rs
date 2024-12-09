@@ -16,7 +16,8 @@
 
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use core_primitives::{AccountId, Signature};
+use core_primitives::{AccountId, Signature, LITENTRY_PARA_ID};
+use runtime_common::currency::UNIT;
 pub use sc_chain_spec::Properties;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
@@ -26,7 +27,6 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 pub mod litentry;
 pub mod paseo;
-pub mod rococo;
 
 // This is a default chain spec using litentry genesis config
 pub type ChainSpec =
@@ -74,11 +74,11 @@ where
 }
 
 /// Helper function to generate parachain properties
-pub fn parachain_properties(symbol: &str, decimals: u32, ss58format: u32) -> Option<Properties> {
+pub fn parachain_properties(symbol: &str, decimals: u32, ss58format: u32) -> Properties {
 	let mut properties = Properties::new();
 	properties.insert("tokenSymbol".into(), symbol.into());
 	properties.insert("tokenDecimals".into(), decimals.into());
 	properties.insert("ss58Format".into(), ss58format.into());
 
-	Some(properties)
+	properties
 }

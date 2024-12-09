@@ -19,9 +19,8 @@ use cumulus_primitives_core::ParaId;
 use litentry_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SystemConfig,
-	TechnicalCommitteeMembershipConfig, TeebagConfig, TeebagOperationalMode, VCManagementConfig,
-	LITENTRY_PARA_ID, UNIT, WASM_BINARY,
+	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, TechnicalCommitteeMembershipConfig,
+	TeebagConfig, TeebagOperationalMode, VCManagementConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -35,7 +34,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensio
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Get default parachain properties for Litentry which will be filled into chain spec
-fn default_parachain_properties() -> Option<Properties> {
+fn default_parachain_properties() -> Properties {
 	parachain_properties("LIT", 18, 31)
 }
 
@@ -55,50 +54,41 @@ struct GenesisInfo {
 }
 
 pub fn get_chain_spec_dev() -> ChainSpec {
-	ChainSpec::from_genesis(
-		"Litentry-dev",
-		"litentry-dev",
-		ChainType::Development,
-		move || {
-			generate_genesis(
-				vec![(
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_collator_keys_from_seed("Alice"),
-				)],
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						6 * DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Charlie"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Eve"),
-						DEFAULT_ENDOWED_ACCOUNT_BALANCE,
-					),
-				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-				],
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-				vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-				LITENTRY_PARA_ID.into(),
-			)
-		},
-		Vec::new(),
-		None,
-		Some("litentry"),
-		None,
-		default_parachain_properties(),
+	ChainSpec::builder(
+		WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		Extensions { relay_chain: "rococo-local".into(), para_id: LITENTRY_PARA_ID },
 	)
+	.with_name("Litentry-dev")
+	.with_id("litentry-dev")
+	.with_protocol_id("litentry")
+	.with_chain_type(ChainType::Development)
+	.with_properties(default_parachain_properties())
+	.with_genesis_config(generate_genesis(
+		vec![(
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_collator_keys_from_seed("Alice"),
+		)],
+		vec![
+			(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				6 * DEFAULT_ENDOWED_ACCOUNT_BALANCE,
+			),
+			(get_account_id_from_seed::<sr25519::Public>("Bob"), DEFAULT_ENDOWED_ACCOUNT_BALANCE),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Charlie"),
+				DEFAULT_ENDOWED_ACCOUNT_BALANCE,
+			),
+			(get_account_id_from_seed::<sr25519::Public>("Eve"), DEFAULT_ENDOWED_ACCOUNT_BALANCE),
+		],
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+		],
+		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
+		LITENTRY_PARA_ID.into(),
+	))
+	.build()
 }
 
 pub fn get_chain_spec_staging() -> ChainSpec {
@@ -143,45 +133,47 @@ fn get_chain_spec_from_genesis_info(
 
 	let boot_nodes = genesis_info.boot_nodes.clone();
 	let telemetry_endpoints = genesis_info.telemetry_endpoints.clone();
+	let genesis_info_cloned = genesis_info.clone();
 
-	ChainSpec::from_genesis(
-		name,
-		id,
-		chain_type,
-		move || {
-			use std::str::FromStr;
-			let genesis_info_cloned = genesis_info.clone();
-			generate_genesis(
-				genesis_info_cloned.invulnerables,
-				genesis_info_cloned
-					.endowed_accounts
-					.into_iter()
-					.map(|(k, b)| (k, u128::from_str(&b).expect("Bad endowed balance; qed.")))
-					.collect(),
-				genesis_info_cloned.council,
-				genesis_info_cloned.technical_committee,
-				genesis_info_cloned.developer_committee,
-				para_id,
-			)
-		},
+	use std::str::FromStr;
+
+	ChainSpec::builder(
+		WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		Extensions { relay_chain: relay_chain_name, para_id: para_id.into() },
+	)
+	.with_name(name)
+	.with_id(id)
+	.with_chain_type(chain_type)
+	.with_protocol_id("litentry")
+	.with_properties(default_parachain_properties())
+	.with_boot_nodes(
 		boot_nodes
 			.into_iter()
 			.map(|k| k.parse().expect("Wrong bootnode format; qed."))
 			.collect(),
-		Some(
-			TelemetryEndpoints::new(
-				telemetry_endpoints
-					.into_iter()
-					.map(|k| (k, 0)) // 0 is verbose level
-					.collect(),
-			)
-			.expect("Invalid telemetry URL; qed."),
-		),
-		Some("litentry"),
-		None,
-		default_parachain_properties(),
-		Extensions { relay_chain: relay_chain_name, para_id: para_id.into() },
 	)
+	.with_telemetry_endpoints(
+		TelemetryEndpoints::new(
+			telemetry_endpoints
+				.into_iter()
+				.map(|k| (k, 0)) // 0 is verbose level
+				.collect(),
+		)
+		.expect("Invalid telemetry URL; qed."),
+	)
+	.with_genesis_config(generate_genesis(
+		genesis_info_cloned.invulnerables,
+		genesis_info_cloned
+			.endowed_accounts
+			.into_iter()
+			.map(|(k, b)| (k, u128::from_str(&b).expect("Bad endowed balance; qed.")))
+			.collect(),
+		genesis_info_cloned.council,
+		genesis_info_cloned.technical_committee,
+		genesis_info_cloned.developer_committee,
+		para_id,
+	))
+	.build()
 }
 
 fn generate_genesis(
@@ -191,12 +183,9 @@ fn generate_genesis(
 	technical_committee_members: Vec<AccountId>,
 	developer_committee_members: Vec<AccountId>,
 	id: ParaId,
-) -> RuntimeGenesisConfig {
-	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			..Default::default()
-		},
+) -> serde_json::Value {
+	let config = RuntimeGenesisConfig {
+		system: Default::default(),
 		balances: BalancesConfig { balances: endowed_accounts },
 		parachain_info: ParachainInfoConfig { parachain_id: id, ..Default::default() },
 		parachain_staking: ParachainStakingConfig {
@@ -254,5 +243,7 @@ fn generate_genesis(
 		},
 		bitacross: BitacrossConfig { admin: None },
 		score_staking: Default::default(),
-	}
+	};
+
+	serde_json::to_value(&config).expect("Could not build genesis config")
 }

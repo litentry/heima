@@ -18,15 +18,15 @@
 // This File should be safe to delete once All parachain matrix are EVM impl.
 #![warn(missing_docs)]
 
-use core_primitives::{AccountId, Balance, Block, Hash, Nonce};
+use core_primitives::{AccountId, Balance, Block, Nonce};
 use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use fc_rpc::{
 	pending::ConsensusDataProvider, Eth, EthApiServer, EthBlockDataCacheTask, EthFilter,
-	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, OverrideHandle, Web3,
-	Web3ApiServer,
+	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, Web3, Web3ApiServer,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
+use fc_storage::StorageOverride;
 use moonbeam_rpc_debug::{Debug, DebugServer};
 use moonbeam_rpc_trace::{Trace, TraceServer};
 use moonbeam_rpc_txpool::{TxPool as MoonbeamTxPool, TxPoolServer};
@@ -34,7 +34,7 @@ use polkadot_primitives::PersistedValidationData;
 use sc_client_api::{
 	AuxStore, Backend, BlockchainEvents, StateBackend, StorageProvider, UsageProvider,
 };
-use sc_network::NetworkService;
+use sc_network::service::traits::NetworkService;
 use sc_network_sync::SyncingService;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
 use sc_transaction_pool::{ChainApi, Pool};
@@ -65,14 +65,14 @@ pub struct EvmTracingConfig {
 pub fn open_frontier_backend<C>(
 	client: Arc<C>,
 	config: &sc_service::Configuration,
-) -> Result<Arc<fc_db::kv::Backend<Block>>, String>
+) -> Result<Arc<fc_db::kv::Backend<Block, C>>, String>
 where
 	C: sp_blockchain::HeaderBackend<Block>,
 {
 	let config_dir = config.base_path.config_dir(config.chain_spec.id());
 	let path = config_dir.join("frontier").join("db");
 
-	Ok(Arc::new(fc_db::kv::Backend::<Block>::new(
+	Ok(Arc::new(fc_db::kv::Backend::<Block, C>::new(
 		client,
 		&fc_db::kv::DatabaseSettings {
 			source: fc_db::DatabaseSource::RocksDb { path, cache_size: 0 },
@@ -104,7 +104,7 @@ pub struct FullDeps<C, P, A: ChainApi> {
 	/// Graph pool instance.
 	pub graph: Arc<Pool<A>>,
 	/// Network service
-	pub network: Arc<NetworkService<Block, Hash>>,
+	pub network: Arc<dyn NetworkService>,
 	/// Chain syncing service
 	pub sync: Arc<SyncingService<Block>>,
 	/// Whether to deny unsafe calls
@@ -119,8 +119,8 @@ pub struct FullDeps<C, P, A: ChainApi> {
 	pub fee_history_limit: u64,
 	/// Fee history cache.
 	pub fee_history_cache: FeeHistoryCache,
-	/// Ethereum data access overrides.
-	pub overrides: Arc<OverrideHandle<Block>>,
+	/// Ethereum data access storage_override.
+	pub storage_override: Arc<dyn StorageOverride<Block>>,
 	/// Cache for Ethereum block data.
 	pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
 	/// Enable EVM RPC servers
@@ -182,7 +182,7 @@ where
 		filter_pool,
 		fee_history_limit,
 		fee_history_cache,
-		overrides,
+		storage_override,
 		block_data_cache,
 		enable_evm_rpc,
 	} = deps;
@@ -239,7 +239,7 @@ where
 				no_tx_converter,
 				sync.clone(),
 				Default::default(),
-				overrides.clone(),
+				storage_override.clone(),
 				frontier_backend.clone(),
 				is_authority,
 				block_data_cache.clone(),
@@ -280,7 +280,7 @@ where
 				client.clone(),
 				sync,
 				subscription_task_executor,
-				overrides,
+				storage_override,
 				pubsub_notification_sinks,
 			)
 			.into_rpc(),

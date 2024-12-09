@@ -201,11 +201,7 @@ where
 			Ok(result
 				.0
 				.into_iter()
-				.enumerate()
-				.map(|(_index, bond)| DepositBond {
-					owner: bond.owner.into(),
-					amount: bond.amount.into(),
-				})
+				.map(|bond| DepositBond { owner: bond.owner.into(), amount: bond.amount.into() })
 				.collect())
 		} else {
 			Ok(Vec::new())
@@ -226,8 +222,7 @@ where
 
 		let result = pallet_pool_proposal::Pallet::<Runtime>::pending_pool_proposal_status()
 			.into_iter()
-			.enumerate()
-			.map(|(_index, status)| PoolProposalStatus {
+			.map(|status| PoolProposalStatus {
 				index: status.pool_proposal_index.into(),
 				expiry_time: status.proposal_expire_time.into(),
 			})
@@ -376,8 +371,7 @@ where
 				let bond_vec: Vec<StakingBond> = result
 					.pre_investings
 					.into_iter()
-					.enumerate()
-					.map(|(_index, bond)| {
+					.map(|bond| {
 						let owner: [u8; 32] = bond.owner.into();
 						let owner = owner.into();
 						StakingBond { pool_index: n.into(), owner, amount: bond.amount.into() }
@@ -417,8 +411,7 @@ where
 				let bond_vec: Vec<QueuedStakingBond> = result
 					.queued_pre_investings
 					.into_iter()
-					.enumerate()
-					.map(|(_index, bond)| {
+					.map(|bond| {
 						let owner: [u8; 32] = bond.0.owner.into();
 						let owner = owner.into();
 						QueuedStakingBond {
@@ -459,8 +452,7 @@ where
 			let guardian_vec = result
 				.0
 				.into_iter()
-				.enumerate()
-				.map(|(_index, guardian)| {
+				.map(|guardian| {
 					let guardian: [u8; 32] = guardian.into();
 					guardian.into()
 				})

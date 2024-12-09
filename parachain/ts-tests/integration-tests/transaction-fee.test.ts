@@ -29,7 +29,7 @@ describeLitentry('Test Transaction Fee', ``, (context) => {
 
         // Send a transaction from Eve
         const transferAmount = 1000;
-        const txTransfer = context.api.tx.balances.transfer(context.bob.address, transferAmount);
+        const txTransfer = context.api.tx.balances.transferKeepAlive(context.bob.address, transferAmount);
         await signAndSend(txTransfer, context.eve);
 
         // Get the current balances of Alice (the block author), Eve and Treasury

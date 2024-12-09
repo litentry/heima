@@ -119,7 +119,7 @@ fi
 
 if is_runtime_release; then
   echo "## Parachain runtime" >> "$1"
-  for CHAIN in rococo litentry paseo; do
+  for CHAIN in litentry paseo; do
     SRTOOL_DIGEST_FILE=$CHAIN-parachain-runtime/$CHAIN-parachain-srtool-digest.json
     RUNTIME_VERSION=$(grep spec_version parachain/runtime/$CHAIN/src/lib.rs | sed 's/.*version: //;s/,//')
     RUNTIME_COMPRESSED_SIZE=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.size | sed 's/"//g')

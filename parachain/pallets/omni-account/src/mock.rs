@@ -17,17 +17,17 @@
 use crate::{self as pallet_omni_account, Encode, EnsureOmniAccount};
 use core_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 use frame_support::{
-	assert_ok,
+	assert_ok, derive_impl,
 	pallet_prelude::EnsureOrigin,
-	traits::{ConstU16, ConstU32, ConstU64, Everything},
+	parameter_types,
+	traits::{ConstU32, ConstU64},
 };
 use frame_system::EnsureRoot;
 pub use pallet_teebag::test_util::get_signer;
 use pallet_teebag::test_util::{TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL};
-use sp_core::H256;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	traits::{IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
 };
 use sp_std::marker::PhantomData;
@@ -35,7 +35,7 @@ use sp_std::marker::PhantomData;
 pub type Signature = sp_runtime::MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Balance = u64;
-pub type SystemAccountId = <TestRuntime as frame_system::Config>::AccountId;
+pub type SystemAccountId = <Test as frame_system::Config>::AccountId;
 
 pub struct EnsureEnclaveSigner<T>(PhantomData<T>);
 impl<T> EnsureOrigin<T::RuntimeOrigin> for EnsureEnclaveSigner<T>
@@ -105,7 +105,7 @@ pub fn private_member_account(accounts: Accounts) -> MemberAccount {
 }
 
 frame_support::construct_runtime!(
-	pub enum TestRuntime
+	pub enum Test
 	{
 		System: frame_system,
 		Balances: pallet_balances,
@@ -116,63 +116,40 @@ frame_support::construct_runtime!(
 	}
 );
 
-impl frame_system::Config for TestRuntime {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Block = frame_system::mocking::MockBlock<TestRuntime>;
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Nonce = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
+impl frame_system::Config for Test {
 	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = ConstU64<250>;
-	type Version = ();
-	type PalletInfo = PalletInfo;
+	type Block = frame_system::mocking::MockBlock<Test>;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<31>;
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
-impl pallet_balances::Config for TestRuntime {
-	type MaxLocks = ConstU32<50>;
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
+impl pallet_balances::Config for Test {
 	type Balance = Balance;
-	type RuntimeEvent = RuntimeEvent;
-	type DustRemoval = ();
-	type ExistentialDeposit = ConstU64<1>;
+	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
-	type FreezeIdentifier = ();
-	type MaxHolds = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
 }
 
-impl pallet_timestamp::Config for TestRuntime {
+impl pallet_timestamp::Config for Test {
 	type Moment = u64;
 	type OnTimestampSet = ();
 	type MinimumPeriod = ConstU64<10000>;
 	type WeightInfo = ();
 }
 
-impl pallet_utility::Config for TestRuntime {
+impl pallet_utility::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type PalletsOrigin = OriginCaller;
 	type WeightInfo = ();
 }
 
-impl pallet_teebag::Config for TestRuntime {
+impl pallet_teebag::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = ConstU64<86_400_000>; // [ms/d]
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
@@ -181,7 +158,7 @@ impl pallet_teebag::Config for TestRuntime {
 	type WeightInfo = ();
 }
 
-impl pallet_omni_account::Config for TestRuntime {
+impl pallet_omni_account::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
@@ -196,8 +173,8 @@ pub fn get_tee_signer() -> SystemAccountId {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::<TestRuntime>::default().build_storage().unwrap();
-	pallet_balances::GenesisConfig::<TestRuntime> { balances: vec![(alice().native_account, 10)] }
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(alice().native_account, 10)] }
 		.assimilate_storage(&mut t)
 		.unwrap();
 
@@ -212,7 +189,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		));
 
 		Timestamp::set_timestamp(TEST8_TIMESTAMP);
-		if !pallet_teebag::EnclaveRegistry::<TestRuntime>::contains_key(signer.clone()) {
+		if !pallet_teebag::EnclaveRegistry::<Test>::contains_key(signer.clone()) {
 			assert_ok!(Teebag::register_enclave(
 				RuntimeOrigin::signed(signer),
 				core_primitives::WorkerType::Identity,

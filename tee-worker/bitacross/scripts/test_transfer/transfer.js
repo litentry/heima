@@ -31,7 +31,7 @@ async function main () {
     console.log('Sending', AMOUNT, 'from', address, 'who has a balance of', balance.free, 'to', recipient, 'with nonce', nonce.toString());
 
     api.tx.balances
-        .transfer(recipient, AMOUNT)
+        .transferKeepAlive(recipient, AMOUNT)
         .signAndSend(alice, { nonce }, ({ events = [], status }) => {
         console.log('Transaction status:', status.type);
 

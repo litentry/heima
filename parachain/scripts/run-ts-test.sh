@@ -3,8 +3,8 @@
 set -eo pipefail
 
 case "$1" in
-    litentry|rococo|paseo) export PARACHAIN_TYPE=$1 ;;
-    *) echo "usage: ./$0 litentry|rococo|paseo"; exit 1 ;;
+    litentry|paseo) export PARACHAIN_TYPE=$1 ;;
+    *) echo "usage: ./$0 litentry|paseo"; exit 1 ;;
 esac
 
 ROOTDIR=$(git rev-parse --show-toplevel)
