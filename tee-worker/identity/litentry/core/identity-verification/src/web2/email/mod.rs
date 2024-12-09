@@ -1,3 +1,5 @@
+mod verification_code_store;
+pub use verification_code_store::*;
 mod mailer;
 pub use mailer::*;
 
