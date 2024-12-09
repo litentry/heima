@@ -25,8 +25,9 @@ pub struct OAuth2Data {
 
 #[derive(Debug)]
 pub enum AuthenticationError {
-	Web3Error(String),
-	EmailError(String),
+	Web3InvalidSignature,
+	EmailVerificationCodeNotFound,
+	EmailInvalidVerificationCode,
 	OAuth2Error(String),
 }
 
@@ -56,7 +57,7 @@ pub fn verify_tca_web3_authentication(
 		|| signature.verify(&hashed, call.sender_identity())
 	{
 		true => Ok(()),
-		false => Err(AuthenticationError::Web3Error(String::from("Invalid signature"))),
+		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
 }
 
@@ -66,12 +67,12 @@ pub fn verify_tca_email_authentication(
 	verification_code: VerificationCode,
 ) -> Result<(), AuthenticationError> {
 	let Ok(Some(code)) = VerificationCodeStore::get(omni_account, sender_identity_hash) else {
-		return Err(AuthenticationError::EmailError(String::from("Verification code not found")));
+		return Err(AuthenticationError::EmailVerificationCodeNotFound);
 	};
 	if code == verification_code {
 		Ok(())
 	} else {
-		Err(AuthenticationError::EmailError(String::from("Invalid verification code")))
+		Err(AuthenticationError::EmailInvalidVerificationCode)
 	}
 }
 
@@ -95,7 +96,9 @@ fn verify_google_oauth2(
 ) -> Result<(), AuthenticationError> {
 	let state_verifier_result = google::OAuthStateStore::get(omni_account, sender_identity_hash);
 	let Ok(Some(state_verifier)) = state_verifier_result else {
-		return Err(AuthenticationError::OAuth2Error(String::from("State verifier not found")));
+		return Err(AuthenticationError::OAuth2Error(
+				String::from("State verifier not found"),
+		));
 	};
 	if state_verifier != payload.state {
 		return Err(AuthenticationError::OAuth2Error(String::from("Invalid state")))
@@ -106,7 +109,7 @@ fn verify_google_oauth2(
 		data_providers_config.google_client_secret.clone(),
 	);
 	let code = payload.code.clone();
-	let redirect_uri = payload.redirect_uri.clone();
+	let redirect_uri = payload.redirect_uri;
 	let token = google_client.exchange_code_for_token(code, redirect_uri).map_err(|e| {
 		AuthenticationError::OAuth2Error(format!("Failed to exchange code for token: {:?}", e))
 	})?;

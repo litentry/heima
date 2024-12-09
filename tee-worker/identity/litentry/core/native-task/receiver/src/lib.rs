@@ -241,7 +241,7 @@ where
 			log::error!("Failed to verify authentication: {:?}", e);
 			let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("Authentication verification failed")
+			Err("Authentication verification failed")
 		},
 	}
 }
