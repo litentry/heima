@@ -1,5 +1,5 @@
 use crate::VerificationCode;
-use alloc::{string::String, sync::Arc};
+use alloc::{format, string::String, sync::Arc};
 use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
 use itp_types::parentchain::Index as ParentchainIndex;
@@ -23,13 +23,20 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
+#[derive(Debug)]
+pub enum AuthenticationError {
+	Web3Error(String),
+	EmailError(String),
+	OAuth2Error(String),
+}
+
 pub fn verify_tca_web3_authentication(
 	signature: &LitentryMultiSignature,
 	call: &TrustedCall,
 	nonce: ParentchainIndex,
 	mrenclave: &[u8; 32],
 	shard: &ShardIdentifier,
-) -> bool {
+) -> Result<(), AuthenticationError> {
 	let mut payload = call.encode();
 	payload.append(&mut nonce.encode());
 	payload.append(&mut mrenclave.encode());
@@ -45,18 +52,26 @@ pub fn verify_tca_web3_authentication(
 	let prettified_msg_hash = prettified_msg_hash.as_bytes();
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	signature.verify(prettified_msg_hash, call.sender_identity())
+	match signature.verify(prettified_msg_hash, call.sender_identity())
 		|| signature.verify(&hashed, call.sender_identity())
+	{
+		true => Ok(()),
+		false => Err(AuthenticationError::Web3Error(String::from("Invalid signature"))),
+	}
 }
 
 pub fn verify_tca_email_authentication(
 	sender_identity_hash: H256,
 	omni_account: &AccountId,
 	verification_code: VerificationCode,
-) -> bool {
-	match VerificationCodeStore::get(omni_account, sender_identity_hash) {
-		Ok(Some(code)) => code == verification_code,
-		_ => false,
+) -> Result<(), AuthenticationError> {
+	let Ok(Some(code)) = VerificationCodeStore::get(omni_account, sender_identity_hash) else {
+		return Err(AuthenticationError::EmailError(String::from("Verification code not found")));
+	};
+	if code == verification_code {
+		Ok(())
+	} else {
+		Err(AuthenticationError::EmailError(String::from("Invalid verification code")))
 	}
 }
 
@@ -65,42 +80,46 @@ pub fn verify_tca_oauth2_authentication(
 	sender_identity_hash: H256,
 	omni_account: &AccountId,
 	payload: OAuth2Data,
-) -> bool {
+) -> Result<(), AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google => {
-			let state_verifier_result =
-				google::OAuthStateStore::get(omni_account, sender_identity_hash);
-			let Ok(Some(state_verifier)) = state_verifier_result else {
-				return false;
-			};
-			state_verifier == payload.state
-				&& verify_google_oauth2(data_providers_config, omni_account, &payload)
-		},
+		OAuth2Provider::Google =>
+			verify_google_oauth2(data_providers_config, sender_identity_hash, omni_account, payload),
 	}
 }
 
 fn verify_google_oauth2(
 	data_providers_config: Arc<DataProviderConfig>,
+	sender_identity_hash: H256,
 	omni_account: &AccountId,
-	payload: &OAuth2Data,
-) -> bool {
+	payload: OAuth2Data,
+) -> Result<(), AuthenticationError> {
+	let state_verifier_result = google::OAuthStateStore::get(omni_account, sender_identity_hash);
+	let Ok(Some(state_verifier)) = state_verifier_result else {
+		return Err(AuthenticationError::OAuth2Error(String::from("State verifier not found")));
+	};
+	if state_verifier != payload.state {
+		return Err(AuthenticationError::OAuth2Error(String::from("Invalid state")))
+	}
+
 	let mut google_client = GoogleOAuth2Client::new(
 		data_providers_config.google_client_id.clone(),
 		data_providers_config.google_client_secret.clone(),
 	);
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
-	let Ok(token) = google_client.exchange_code_for_token(code, redirect_uri) else {
-		return false;
-	};
-	let Ok(claims) = google::decode_jwt(&token) else {
-		return false;
-	};
+	let token = google_client.exchange_code_for_token(code, redirect_uri).map_err(|e| {
+		AuthenticationError::OAuth2Error(format!("Failed to exchange code for token: {:?}", e))
+	})?;
+	let claims = google::decode_jwt(&token)
+		.map_err(|e| AuthenticationError::OAuth2Error(format!("Failed to decode JWT: {:?}", e)))?;
 	let google_identity = Identity::from_web2_account(&claims.email, Web2IdentityType::Google);
 	let identity_omni_account = match OmniAccountStore::get_omni_account(google_identity.hash()) {
 		Ok(Some(account_id)) => account_id,
 		_ => google_identity.to_omni_account(),
 	};
 
-	*omni_account == identity_omni_account
+	match *omni_account == identity_omni_account {
+		true => Ok(()),
+		false => Err(AuthenticationError::OAuth2Error(String::from("Invalid identity member"))),
+	}
 }

@@ -200,7 +200,7 @@ where
 		},
 	};
 
-	let authentication_valid = match tca.authentication {
+	let authentication_result = match tca.authentication {
 		TCAuthentication::Web3(signature) => verify_tca_web3_authentication(
 			&signature,
 			&tca.call,
@@ -235,13 +235,15 @@ where
 		},
 	};
 
-	if !authentication_valid {
-		let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
-		context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-		return Err("Authentication verification failed")
+	match authentication_result {
+		Ok(_) => Ok(tca.call),
+		Err(e) => {
+			log::error!("Failed to verify authentication: {:?}", e);
+			let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
+			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+			return Err("Authentication verification failed")
+		},
 	}
-
-	Ok(tca.call)
 }
 
 type TrustedCallResult = Result<TrustedCallOk<H256>, TrustedCallError>;
