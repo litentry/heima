@@ -565,15 +565,16 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			};
 			let subject = account_id_to_string_without_prefix(&omni_account);
 			let payload = jwt::Payload::new(subject, auth_options);
-			let Ok(_auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
+			let Ok(auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
 				log::error!("Failed to create jwt token");
 				let result: TrustedCallResult = Err(TrustedCallError::AuthTokenCreationFailed);
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 				return
 			};
 
-			// Return the auth token with a new variant once #3183 is merged
-			unimplemented!()
+			let result: TrustedCallResult = Ok(auth_token.into());
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			return
 		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
