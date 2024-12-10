@@ -40,7 +40,7 @@ impl EthereumIntentExecutor {
 #[async_trait]
 impl IntentExecutor for EthereumIntentExecutor {
 	async fn execute(&self, intent: Intent) -> Result<(), ()> {
-		info!("Executin intent: {:?}", intent);
+		info!("Executing intent: {:?}", intent);
 		// todo: this should be retrieved from key_store
 		let signer = PrivateKeySigner::from_str(
 			"0x59c6995e998f97a5a0044964f0945389dc9e86dae86c7a8412f4603b6b78690d",
@@ -87,6 +87,10 @@ impl IntentExecutor for EthereumIntentExecutor {
 				pending_tx.get_receipt().await.map_err(|e| {
 					error!("Could not get transaction receipt: {:?}", e);
 				})?;
+			},
+			_ => {
+				error!("[EthereumIntentExecutor]: Unsupported intent: {:?}", intent);
+				return Err(());
 			},
 		}
 		Ok(())
