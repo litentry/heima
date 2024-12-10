@@ -18,6 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
+use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
 use std::thread::JoinHandle;
 use std::{fs, thread};
@@ -49,7 +50,7 @@ async fn main() -> Result<(), ()> {
 		error!("Could not create data dir: {:?}", e);
 	})?;
 
-	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.start_block)
+	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
 		.await
 		.unwrap();
 
@@ -67,20 +68,25 @@ async fn main() -> Result<(), ()> {
 async fn listen_to_parentchain(
 	parentchain_url: String,
 	ethereum_url: String,
+	solana_url: String,
 	start_block: u64,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
 		EthereumIntentExecutor::new(&ethereum_url).map_err(|e| log::error!("{:?}", e))?;
+	let solana_intent_executor =
+		SolanaIntentExecutor::new(solana_url).map_err(|e| log::error!("{:?}", e))?;
 
-	let mut parentchain_listener = parentchain_listener::create_listener::<EthereumIntentExecutor>(
-		"litentry_rococo",
-		Handle::current(),
-		&parentchain_url,
-		ethereum_intent_executor,
-		sub_stop_receiver,
-	)
-	.await?;
+	let mut parentchain_listener =
+		parentchain_listener::create_listener::<EthereumIntentExecutor, SolanaIntentExecutor>(
+			"litentry_rococo",
+			Handle::current(),
+			&parentchain_url,
+			ethereum_intent_executor,
+			solana_intent_executor,
+			sub_stop_receiver,
+		)
+		.await?;
 
 	Ok(thread::Builder::new()
 		.name("litentry_rococo_sync".to_string())
