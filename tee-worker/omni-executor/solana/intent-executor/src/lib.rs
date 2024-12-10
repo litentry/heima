@@ -18,16 +18,24 @@ use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::primitives::Intent;
 use log::{error, info};
-use solana_sdk::{pubkey::Pubkey, signer::keypair::Keypair, system_instruction::transfer};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_sdk::{
+	commitment_config::CommitmentConfig,
+	pubkey::Pubkey,
+	signer::{keypair::Keypair, EncodableKey, Signer},
+	system_instruction,
+	transaction::Transaction,
+};
 
 // Executes intents on Solana network.
 pub struct SolanaIntentExecutor {
-	rpc_url: String,
+	rpc_client: RpcClient,
 }
 
 impl SolanaIntentExecutor {
-	pub fn new(rpc_url: &str) -> Result<Self, ()> {
-		Ok(Self { rpc_url: rpc_url.to_string() })
+	pub fn new(rpc_url: String) -> Result<Self, ()> {
+		let client = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
+		Ok(Self { rpc_client: client })
 	}
 }
 
@@ -35,8 +43,37 @@ impl SolanaIntentExecutor {
 impl IntentExecutor for SolanaIntentExecutor {
 	async fn execute(&self, intent: Intent) -> Result<(), ()> {
 		info!("Executing intent: {:?}", intent);
+		// TODO: get key from key store
+		let signer_key_pair = Keypair::read_from_file("dev-key.json")
+			.map_err(|e| error!("Could not read key: {:?}", e))?;
+		let block_hash = self
+			.rpc_client
+			.get_latest_blockhash()
+			.await
+			.map_err(|e| error!("Could not get block hash: {:?}", e))?;
 
-		// let signer =
+		match intent {
+			Intent::TransferSolana(to, amount) => {
+				let to = Pubkey::new_from_array(to);
+				let transfer_instruction =
+					system_instruction::transfer(&signer_key_pair.pubkey(), &to, amount);
+				let tx = Transaction::new_signed_with_payer(
+					&[transfer_instruction],
+					Some(&signer_key_pair.pubkey()),
+					&[&signer_key_pair],
+					block_hash,
+				);
+				let _signature = self
+					.rpc_client
+					.send_and_confirm_transaction(&tx)
+					.await
+					.map_err(|e| error!("Could not send transaction: {:?}", e))?;
+			},
+			_ => {
+				error!("[SolanaIntentExecutor]: Unsupported intent: {:?}", intent);
+				return Err(());
+			},
+		}
 
 		Ok(())
 	}
