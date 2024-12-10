@@ -522,13 +522,13 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 parameter_types! {
-	pub LaunchPeriod: BlockNumber = prod_or_fast!(5 * DAYS, 5 * MINUTES, "LITENTRY_LAUNCHPERIOD");
-	pub VotingPeriod: BlockNumber = prod_or_fast!(5 * DAYS, 5 * MINUTES, "LITENTRY_VOTINGPERIOD");
+	pub LaunchPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "LITENTRY_LAUNCHPERIOD");
+	pub VotingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "LITENTRY_VOTINGPERIOD");
 	pub FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS, 2 * MINUTES, "LITENTRY_FASTTRACKVOTINGPERIOD");
 	pub const InstantAllowed: bool = true;
 	pub const MinimumDeposit: Balance = 100 * DOLLARS;
 	pub EnactmentPeriod: BlockNumber = prod_or_fast!(1 * DAYS, 2 * MINUTES, "LITENTRY_ENACTMENTPERIOD");
-	pub CooloffPeriod: BlockNumber = prod_or_fast!(5 * DAYS, 2 * MINUTES, "LITENTRY_COOLOFFPERIOD");
+	pub CooloffPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_COOLOFFPERIOD");
 }
 
 impl pallet_democracy::Config for Runtime {
@@ -1325,6 +1325,8 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::DeveloperCommitteeMembership(_) |
 			// democracy, we don't subdivide the calls, so we allow public proposals
 			RuntimeCall::Democracy(_) |
+			// treasury
+			RuntimeCall::Treasury(_) |
 			// Preimage
 			RuntimeCall::Preimage(_) |
 			// Identity
