@@ -1462,6 +1462,8 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::DeveloperCommitteeMembership(_) |
 			// democracy, we don't subdivide the calls, so we allow public proposals
 			RuntimeCall::Democracy(_) |
+			// treasury
+			RuntimeCall::Treasury(_) |
 			// Preimage
 			RuntimeCall::Preimage(_) |
 			// Identity
