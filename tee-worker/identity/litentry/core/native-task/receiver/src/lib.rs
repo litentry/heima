@@ -326,7 +326,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					Compact(transfer.value)
 				))
 			)),
-			Intent::CallEthereum(_) | Intent::TransferEthereum(_) =>
+			Intent::CallEthereum(_) | Intent::TransferEthereum(_) | Intent::TransferSolana(_) =>
 				OpaqueCall::from_tuple(&compose_call!(
 					&metadata,
 					"OmniAccount",

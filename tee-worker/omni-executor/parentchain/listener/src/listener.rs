@@ -32,6 +32,7 @@ pub type ParentchainListener<
 	CheckpointRepository,
 	ChainConfig,
 	EthereumIntentExecutor,
+	SolanaIntentExecutor,
 > = Listener<
 	Fetcher<<ChainConfig as Config>::AccountId, RpcClient, RpcClientFactory>,
 	SyncCheckpoint,
@@ -43,6 +44,7 @@ pub type ParentchainListener<
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,
 		EthereumIntentExecutor,
+		SolanaIntentExecutor,
 		SubstrateKeyStore,
 		RpcClient,
 		RpcClientFactory,

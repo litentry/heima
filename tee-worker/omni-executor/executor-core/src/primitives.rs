@@ -18,6 +18,7 @@
 pub enum Intent {
 	TransferEthereum([u8; 20], [u8; 32]),
 	CallEthereum([u8; 20], Vec<u8>),
+	TransferSolana([u8; 32], u64), // (to_pubkey, lamports)
 }
 
 pub trait GetEventId<Id> {

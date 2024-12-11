@@ -16,7 +16,7 @@ import { createRequestType } from '../type-creators/request';
 import type { JsonRpcRequest } from '../util/types';
 
 /**
- * Transfers ETH to another account on Ethereum.
+ * Transfers SOL to another account on Solana.
  *
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
  * (if applicable) and a send function.
@@ -27,7 +27,7 @@ import type { JsonRpcRequest } from '../util/types';
  * an email identity, this is the email verification code. If the who is not an email identity,
  * this is the signed payload.
  */
-export async function transferEthereum(
+export async function transferSolana(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
@@ -35,9 +35,9 @@ export async function transferEthereum(
     omniAccount: LitentryIdentity;
     /** The user's account.  Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
-    /** Ethereum address destination */
+    /** Solana address destination */
     to: string;
-    /** Amount to send */
+    /** Amount to send in lamports */
     amount: bigint;
   }
 ): Promise<{
@@ -60,7 +60,7 @@ export async function transferEthereum(
     params: {
       who,
       intent: api.createType('Intent', {
-        TransferEthereum: api.createType('IntentTransferEthereum', {
+        TransferSolana: api.createType('IntentTransferSolana', {
           to: data.to,
           value: data.amount,
         }),
