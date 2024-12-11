@@ -39,12 +39,14 @@ pub struct IntentEventHandler<
 	MetadataT,
 	MetadataProviderT: MetadataProvider<MetadataT>,
 	EthereumIntentExecutorT: IntentExecutor,
+	SolanaIntentExecutorT: IntentExecutor,
 	KeyStoreT: KeyStore<SecretKeyBytes>,
 	RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
+	solana_intent_executor: SolanaIntentExecutorT,
 	rpc_client_factory: RpcClientFactory,
 	transaction_signer: Arc<
 		TransactionSigner<
@@ -64,6 +66,7 @@ impl<
 		MetadataT,
 		MetadataProviderT: MetadataProvider<MetadataT>,
 		EthereumIntentExecutorT: IntentExecutor,
+		SolanaIntentExecutorT: IntentExecutor,
 		KeyStoreT: KeyStore<SecretKeyBytes>,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
@@ -73,6 +76,7 @@ impl<
 		MetadataT,
 		MetadataProviderT,
 		EthereumIntentExecutorT,
+		SolanaIntentExecutorT,
 		KeyStoreT,
 		RpcClient,
 		RpcClientFactory,
@@ -81,6 +85,7 @@ impl<
 	pub fn new(
 		metadata_provider: Arc<MetadataProviderT>,
 		ethereum_intent_executor: EthereumIntentExecutorT,
+		solana_intent_executor: SolanaIntentExecutorT,
 		rpc_client_factory: RpcClientFactory,
 		transaction_signer: Arc<
 			TransactionSigner<
@@ -96,6 +101,7 @@ impl<
 		Self {
 			metadata_provider,
 			ethereum_intent_executor,
+			solana_intent_executor,
 			rpc_client_factory,
 			transaction_signer,
 			phantom_data: Default::default(),
@@ -112,6 +118,7 @@ impl<
 			Signature = MultiSignature,
 		>,
 		EthereumIntentExecutorT: IntentExecutor + Send + Sync,
+		SolanaIntentExecutorT: IntentExecutor + Send + Sync,
 		KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId> + Send + Sync,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient> + Send + Sync,
@@ -121,6 +128,7 @@ impl<
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,
 		EthereumIntentExecutorT,
+		SolanaIntentExecutorT,
 		KeyStoreT,
 		RpcClient,
 		RpcClientFactory,
@@ -187,14 +195,14 @@ impl<
 		if let Some(intent) = maybe_intent {
 			// to explicitly handle all intent variants
 			match intent {
-				Intent::CallEthereum(_, _) => {
+				Intent::CallEthereum(_, _) | Intent::TransferEthereum(_, _) => {
 					if let Err(e) = self.ethereum_intent_executor.execute(intent).await {
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Failure;
 					}
 				},
-				Intent::TransferEthereum(_, _) => {
-					if let Err(e) = self.ethereum_intent_executor.execute(intent).await {
+				Intent::TransferSolana(_, _) => {
+					if let Err(e) = self.solana_intent_executor.execute(intent).await {
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Failure;
 					}

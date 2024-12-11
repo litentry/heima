@@ -1,17 +1,16 @@
 [package]
-name = "ethereum-intent-executor"
+name = "solana-intent-executor"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types"] }
 async-trait = { workspace = true }
 executor-core = { path = "../../executor-core" }
 log = { workspace = true }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
 
-[dev-dependencies]
-tokio = { workspace = true }
 
 [lints]
 workspace = true

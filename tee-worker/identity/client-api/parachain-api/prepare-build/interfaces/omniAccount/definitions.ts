@@ -6,6 +6,7 @@ export default {
                 CallEthereum: "IntentCallEthereum",
                 SystemRemark: "Bytes",
                 TransferNative: "IntentTransferNative",
+                TransferSolana: "IntentTransferSolana",
             },
         },
         IntentTransferEthereum: {
@@ -19,6 +20,10 @@ export default {
         IntentTransferNative: {
             to: "AccountId32",
             value: "u128",
+        },
+        IntentTransferSolana: {
+            to: "[u8; 32]",
+            value: "u64",
         },
 
         /**
