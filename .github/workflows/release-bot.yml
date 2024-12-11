@@ -5,7 +5,7 @@ on:
 
 jobs:
   release-bot:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # this means the release contains a new docker image (thus a new client)
     if: contains(github.event.release.body, 'litentry/litentry-parachain:v')
     steps:

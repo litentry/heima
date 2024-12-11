@@ -21,7 +21,7 @@ env:
 
 jobs:
   check-condition:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       skip_simulation: ${{ steps.check.outputs.skip_simulation }}
     steps:
@@ -37,7 +37,7 @@ jobs:
           echo "skip_simulation=$skip_simulation" | tee -a $GITHUB_OUTPUT
 
   runtime-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       runtime: ${{ steps.runtime.outputs.runtime }}
     name: Parse runtime matrix
@@ -56,7 +56,7 @@ jobs:
           echo "runtime=$TASKS" >> $GITHUB_OUTPUT
 
   simulate-runtime-upgrade:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - check-condition
       - runtime-matrix
@@ -112,7 +112,7 @@ jobs:
           retention-days: 3
 
   try-runtime:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - check-condition
       - runtime-matrix

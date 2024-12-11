@@ -21,7 +21,7 @@ env:
 jobs:
   cancel_previous_runs:
     name: Cancel Previous Runs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
@@ -198,7 +198,7 @@ jobs:
           docker images --all
 
   code-quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: "integritee/integritee-dev:0.2.2"
     strategy:
       fail-fast: false
@@ -239,7 +239,7 @@ jobs:
         run: ${{ matrix.check }}
 
   toml-fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - name: init rust
@@ -550,7 +550,7 @@ jobs:
           docker images --all
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
     needs: [ build-test, integration-tests, release-build ]

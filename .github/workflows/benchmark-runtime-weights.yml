@@ -34,7 +34,7 @@ jobs:
   ## build docker image with runtime-benchmarks feature and push it to the hub
   build-docker:
     if: ${{ github.event.inputs.rebuild-docker == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ github.ref }}
         uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
 
   ## run the benchmarking remotely
   benchmark:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-docker
     # see https://github.com/actions/runner/issues/491
     if: |
