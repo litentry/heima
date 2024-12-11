@@ -5,11 +5,11 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-solana-sdk = { workspace = true }
-solana-client = { workspace = true }
 async-trait = { workspace = true }
 executor-core = { path = "../../executor-core" }
 log = { workspace = true }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
 
 
 [lints]
