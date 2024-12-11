@@ -22,6 +22,7 @@ requests
 - [setIdentityNetworks](request.md#setidentitynetworks)
 - [transferEthereum](request.md#transferethereum)
 - [transferNative](request.md#transfernative)
+- [transferSolana](request.md#transfersolana)
 
 ## Functions
 
@@ -471,3 +472,43 @@ this is the signed payload.
 #### Defined in
 
 [lib/requests/transfer-native.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-native.request.ts#L30)
+
+___
+
+### transferSolana
+
+▸ **transferSolana**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+Transfers Solana to another account on the Litentry Parachain.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.amount` | `bigint` | Amount to send in lamports |
+| `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.to` | `string` | Solana address destination |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+- A promise that resolves to an object containing the payload to signature
+(if applicable) and a send function.
+
+[payloadToSign] - The payload to sign if who is not an email identity.
+
+send - A function to send the request to the Enclave.
+
+send.args - The arguments required to send the request.
+
+send.args.authentication - The authentication string. If who is
+an email identity, this is the email verification code. If the who is not an email identity,
+this is the signed payload.
+
+#### Defined in
+
+[lib/requests/transfer-solana.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-solana.request.ts#L30)
