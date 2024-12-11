@@ -9,11 +9,6 @@ jobs:
     # this means the release contains a new docker image (thus a new client)
     if: contains(github.event.release.body, 'litentry/litentry-parachain:v')
     steps:
-      - name: Set env
-        run: |
-          DOCKER_TAG=$(echo ${{ env.RELEASE_TAG }} | cut -d'-' -f1 | sed 's/p/v/')
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-
       - name: Post discord message
         env:
           DISCORD_WEBHOOK: ${{ secrets.RELEASE_BOT_DISCORD_WEBHOOK }}
@@ -23,7 +18,7 @@ jobs:
           args: |
             Hi @everyone,
             🚀 A new client release has been built: https://github.com/litentry/litentry-parachain/releases/tag/${{ github.event.release.tag_name }}
-            ✨ Please update the client using the docker image litentry/litentry-parachain:$DOCKER_TAG
+            ✨ Please update the client using the docker image litentry/litentry-parachain:${{ github.event.release.tag_name }}
 
       - name: Update litentry image version
         uses: "OnFinality-io/action-onf-release@v1"
@@ -38,5 +33,5 @@ jobs:
           # Add a new image version to network spec
           onf-sub-command: image
           onf-action: add
-          image-version: $DOCKER_TAG
+          image-version: ${{ github.event.release.tag_name }}
 
