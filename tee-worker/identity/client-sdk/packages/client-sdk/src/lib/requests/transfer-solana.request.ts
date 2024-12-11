@@ -16,7 +16,7 @@ import { createRequestType } from '../type-creators/request';
 import type { JsonRpcRequest } from '../util/types';
 
 /**
- * Transfers Solana to another account on the Litentry Parachain.
+ * Transfers SOL to another account on Solana.
  *
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
  * (if applicable) and a send function.
