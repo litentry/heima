@@ -266,7 +266,8 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn add_account(
 			origin: OriginFor<T>,
-			member_account: MemberAccount, // account to be added
+			member_account: MemberAccount,           // account to be added
+			permissions: Option<Vec<T::Permission>>, // permissions for the account
 		) -> DispatchResult {
 			// mutation of AccountStore requires `OmniAccountOrigin`, same as "remove" and "publicize"
 			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
@@ -282,8 +283,16 @@ pub mod pallet {
 			member_accounts
 				.try_push(member_account)
 				.map_err(|_| Error::<T>::AccountStoreLenLimitReached)?;
+			let member_permissions: BoundedVec<T::Permission, T::MaxPermissions> = {
+				let p = match permissions {
+					Some(p) => p,
+					None => vec![T::Permission::default()],
+				};
+				p.try_into().map_err(|_| Error::<T>::PermissionsLenLimitReached)?
+			};
 
 			MemberAccountHash::<T>::insert(hash, who.clone());
+			MemberAccountPermissions::<T>::insert(hash, member_permissions);
 			AccountStore::<T>::insert(who.clone(), member_accounts.clone());
 
 			Self::deposit_event(Event::AccountAdded {
