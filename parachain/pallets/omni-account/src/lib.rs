@@ -215,6 +215,7 @@ pub mod pallet {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
 				.ok_or(Error::<T>::AccountNotFound)?;
+			Self::ensure_permission(call.as_ref(), member_account_hash)?;
 			let result = call.dispatch(RawOrigin::OmniAccount(omni_account.clone()).into());
 			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsOmniAccount {
@@ -236,6 +237,7 @@ pub mod pallet {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
 				.ok_or(Error::<T>::AccountNotFound)?;
+			Self::ensure_permission(call.as_ref(), member_account_hash)?;
 			let result: Result<
 				PostDispatchInfo,
 				sp_runtime::DispatchErrorWithPostInfo<PostDispatchInfo>,
@@ -447,6 +449,19 @@ pub mod pallet {
 			});
 
 			Ok(member_accounts)
+		}
+
+		fn ensure_permission(
+			call: &<T as Config>::RuntimeCall,
+			member_account_hash: H256,
+		) -> Result<(), Error<T>> {
+			let permissions = MemberAccountPermissions::<T>::get(member_account_hash);
+			ensure!(
+				permissions.iter().any(|permission| permission.filter(call)),
+				Error::<T>::NoPermission
+			);
+
+			Ok(())
 		}
 	}
 }
