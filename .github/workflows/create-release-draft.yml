@@ -47,7 +47,7 @@ env:
 
 jobs:
   set-release-type:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: set release_type
         id: vars
@@ -71,7 +71,7 @@ jobs:
 
   build-parachain-runtime:
     if: ${{ github.event.inputs.parachain_runtime == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         chain:
@@ -115,7 +115,7 @@ jobs:
 
   build-parachain-client:
     if: ${{ github.event.inputs.parachain_client == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
         uses: actions/checkout@v4
@@ -160,7 +160,7 @@ jobs:
 
   build-identity-worker:
     if: ${{ github.event.inputs.identity_worker == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: production
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
@@ -229,7 +229,7 @@ jobs:
 
   build-bitacross-worker:
     if: ${{ github.event.inputs.bitacross_worker == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: production
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
@@ -296,7 +296,7 @@ jobs:
           docker push litentry/bitacross-worker:${{ env.RELEASE_TAG }}
 
   parachain-ts-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-parachain-client
     strategy:
       matrix:
@@ -354,7 +354,7 @@ jobs:
 
   ## create the release draft ##
   create-release-draft:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # see https://github.com/actions/runner/issues/491
     # seems to be the only way to achieve this
     needs:

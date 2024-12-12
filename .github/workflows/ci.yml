@@ -93,7 +93,7 @@ concurrency:
 
 jobs:
   set-condition:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # see https://github.com/orgs/community/discussions/25722
     if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
     outputs:
@@ -171,7 +171,7 @@ jobs:
           echo "run_omni_executor_test=$run_omni_executor_test" | tee -a $GITHUB_OUTPUT
 
   fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -233,7 +233,7 @@ jobs:
   # sequentialise the workflow runs on `dev` branch
   # the if condition is applied in step level to make this job always `successful`
   sequentialise:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Wait for previous run
         if: ${{ !failure() && (github.event_name == 'push') && (github.ref == 'refs/heads/dev') }}
@@ -244,7 +244,7 @@ jobs:
           branch: dev
 
   parachain-clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -269,7 +269,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   tee-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -330,7 +330,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   omni-executor-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -354,7 +354,7 @@ jobs:
         run: cargo test
 
   parachain-build-dev:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -399,7 +399,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   identity-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -540,7 +540,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   bitacross-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -618,7 +618,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   omni-executor-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -666,7 +666,7 @@ jobs:
           if-no-files-found: error
 
   parachain-ts-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -727,7 +727,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   parachain-unit-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -755,7 +755,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   parachain-runtime-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -794,7 +794,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   identity-single-worker-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -879,7 +879,7 @@ jobs:
           retention-days: 3
 
   identity-multi-worker-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: true
     if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
     needs:
@@ -965,7 +965,7 @@ jobs:
           retention-days: 3
 
   bitacross-worker-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -1045,7 +1045,7 @@ jobs:
           retention-days: 3
 
   omni-executor-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -1118,7 +1118,7 @@ jobs:
   #
   # `!failure()` needs to be used to cover skipped jobs
   push-docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-ts-test

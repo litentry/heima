@@ -27,7 +27,7 @@ env:
 jobs:
   ## build docker image of client binary with args ##
   build-docker-with-args:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ github.event.inputs.ref || github.ref }}
         uses: actions/checkout@v4
