@@ -43,6 +43,7 @@ use cumulus_primitives_core::{
 	ParaId,
 };
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
+use fc_consensus::FrontierBlockImport;
 use fc_rpc::EthBlockDataCacheTask;
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::{StorageOverride, StorageOverrideHandler};
@@ -80,8 +81,11 @@ type ParachainClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<H
 
 type ParachainBackend = TFullBackend<Block>;
 
-type ParachainBlockImport<RuntimeApi> =
-	TParachainBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainBackend>;
+type ParachainBlockImport<RuntimeApi> = TParachainBlockImport<
+	Block,
+	FrontierBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainClient<RuntimeApi>>,
+	ParachainBackend,
+>;
 
 type MaybeSelectChain = Option<LongestChain<ParachainBackend, Block>>;
 
@@ -177,6 +181,8 @@ where
 
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
+	let frontier_block_import = FrontierBlockImport::new(client.clone(), client.clone());
+
 	// Note: `new_with_delayed_best_block` will cause less `Retracted`/`Invalid` tx,
 	//       especially for rococo-local where the epoch duration is 1m. However, it
 	//       also means the imported block will not be notified as best blocks, instead,
@@ -190,9 +196,9 @@ where
 	//
 	// TODO: re-investigate this after async backing is supported
 	let block_import = if delayed_best_block {
-		ParachainBlockImport::new_with_delayed_best_block(client.clone(), backend.clone())
+		ParachainBlockImport::new_with_delayed_best_block(frontier_block_import, backend.clone())
 	} else {
-		ParachainBlockImport::new(client.clone(), backend.clone())
+		ParachainBlockImport::new(frontier_block_import, backend.clone())
 	};
 
 	let import_queue = build_import_queue(
