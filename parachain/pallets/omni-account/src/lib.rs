@@ -105,6 +105,9 @@ pub mod pallet {
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
 
 		/// The permissions that a member account can have
+		/// The instance filter determines whether a given call may can be dispatched under this type.
+		///
+		/// IMPORTANT: `Default` must be provided and MUST BE the the *most permissive* value.
 		type Permission: Parameter
 			+ Member
 			+ Ord
