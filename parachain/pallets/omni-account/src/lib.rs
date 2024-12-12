@@ -28,7 +28,7 @@ pub use pallet::*;
 use frame_support::pallet_prelude::*;
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
-	traits::{IsSubType, UnfilteredDispatchable},
+	traits::{InstanceFilter, IsSubType, UnfilteredDispatchable},
 };
 use frame_system::pallet_prelude::*;
 use sp_core::H256;
@@ -104,12 +104,30 @@ pub mod pallet {
 		/// Convert an `Identity` to OmniAccount type
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
 
+		/// The permissions that a member account can have
+		type Permission: Parameter
+			+ Member
+			+ Ord
+			+ PartialOrd
+			+ Default
+			+ InstanceFilter<<Self as Config>::RuntimeCall>
+			+ MaxEncodedLen;
+
+		/// The maximum number of permissions that a member account can have
+		#[pallet::constant]
+		type MaxPermissions: Get<u32>;
+	}
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn integrity_test() {
 			assert!(
 				<T as Config>::MaxAccountStoreLength::get() > 0,
 				"MaxAccountStoreLength must be greater than 0"
+			);
+			assert!(
+				<T as Config>::MaxPermissions::get() > 0,
+				"MaxPermissions must be greater than 0"
 			);
 		}
 	}
