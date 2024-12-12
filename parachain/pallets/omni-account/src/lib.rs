@@ -188,6 +188,8 @@ pub mod pallet {
 		InvalidAccount,
 		UnknownAccountStore,
 		EmptyAccount,
+		NoPermission,
+		PermissionsLenLimitReached,
 	}
 
 	#[pallet::call]
