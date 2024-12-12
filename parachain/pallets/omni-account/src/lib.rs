@@ -66,7 +66,6 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -113,6 +112,7 @@ pub mod pallet {
 
 	/// A map between OmniAccount and its MemberAccounts (a bounded vector of MemberAccount)
 	#[pallet::storage]
+	#[pallet::unbounded]
 	#[pallet::getter(fn account_store)]
 	pub type AccountStore<T: Config> =
 		StorageMap<Hasher = Blake2_128Concat, Key = T::AccountId, Value = MemberAccounts<T>>;
