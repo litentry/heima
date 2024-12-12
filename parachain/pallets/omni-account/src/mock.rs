@@ -14,17 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_omni_account, Encode, EnsureOmniAccount};
+use crate::{self as pallet_omni_account, Decode, Encode, EnsureOmniAccount, MaxEncodedLen};
 use core_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 use frame_support::{
 	assert_ok, derive_impl,
 	pallet_prelude::EnsureOrigin,
 	parameter_types,
-	traits::{ConstU32, ConstU64},
+	traits::{ConstU32, ConstU64, InstanceFilter},
 };
 use frame_system::EnsureRoot;
 pub use pallet_teebag::test_util::get_signer;
 use pallet_teebag::test_util::{TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL};
+use sp_core::RuntimeDebug;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	traits::{IdentifyAccount, IdentityLookup, Verify},
@@ -158,6 +159,59 @@ impl pallet_teebag::Config for Test {
 	type WeightInfo = ();
 }
 
+#[derive(
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	RuntimeDebug,
+	MaxEncodedLen,
+	scale_info::TypeInfo,
+)]
+pub enum Permission {
+	All,
+	Balances,
+	RemoveAccount,
+	RequestEthereumIntent,
+}
+
+impl Default for Permission {
+	fn default() -> Self {
+		Self::All
+	}
+}
+
+impl InstanceFilter<RuntimeCall> for Permission {
+	fn filter(&self, call: &RuntimeCall) -> bool {
+		match self {
+			Permission::All => true,
+			Permission::Balances => matches!(call, RuntimeCall::Balances { .. }),
+			Permission::RemoveAccount => matches!(
+				call,
+				RuntimeCall::OmniAccount(pallet_omni_account::Call::remove_accounts { .. })
+			),
+			Permission::RequestEthereumIntent => {
+				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
+					intent,
+				}) = call
+				{
+					matches!(
+						intent,
+						pallet_omni_account::Intent::TransferEthereum(_)
+							| pallet_omni_account::Intent::CallEthereum(_)
+					)
+				} else {
+					false
+				}
+			},
+		}
+	}
+}
+
 impl pallet_omni_account::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -166,6 +220,8 @@ impl pallet_omni_account::Config for Test {
 	type MaxAccountStoreLength = ConstU32<3>;
 	type OmniAccountOrigin = EnsureOmniAccount<Self::AccountId>;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
+	type MaxPermissions = ConstU32<3>;
+	type Permission = Permission;
 }
 
 pub fn get_tee_signer() -> SystemAccountId {
