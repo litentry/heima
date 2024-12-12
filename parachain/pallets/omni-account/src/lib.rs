@@ -149,6 +149,14 @@ pub mod pallet {
 	pub type MemberAccountHash<T: Config> =
 		StorageMap<Hasher = Blake2_128Concat, Key = H256, Value = T::AccountId>;
 
+	/// A map between hash of MemberAccount and its permissions
+	#[pallet::storage]
+	pub type MemberAccountPermissions<T: Config> = StorageMap<
+		Hasher = Blake2_128Concat,
+		Key = H256,
+		Value = BoundedVec<T::Permission, T::MaxPermissions>,
+	>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
