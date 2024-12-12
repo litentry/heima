@@ -23,7 +23,10 @@ use sp_runtime::{traits::BadOrigin, ModuleError};
 use sp_std::vec;
 
 fn add_account_call(account: MemberAccount) -> Box<RuntimeCall> {
-	let call = RuntimeCall::OmniAccount(crate::Call::add_account { member_account: account });
+	let call = RuntimeCall::OmniAccount(crate::Call::add_account {
+		member_account: account,
+		permissions: None,
+	});
 	Box::new(call)
 }
 
@@ -163,6 +166,16 @@ fn add_account_works() {
 
 		assert!(MemberAccountHash::<Test>::contains_key(bob.hash()));
 		assert!(MemberAccountHash::<Test>::contains_key(charlie.hash()));
+		assert!(MemberAccountPermissions::<Test>::contains_key(bob.hash()));
+		assert_eq!(
+			MemberAccountPermissions::<Test>::get(bob.hash()).to_vec(),
+			vec![Permission::All]
+		);
+		assert!(MemberAccountPermissions::<Test>::contains_key(charlie.hash()));
+		assert_eq!(
+			MemberAccountPermissions::<Test>::get(charlie.hash()).to_vec(),
+			vec![Permission::All]
+		);
 	});
 }
 
@@ -173,12 +186,12 @@ fn add_account_origin_check_works() {
 		let bob = private_member_account(bob());
 
 		assert_noop!(
-			OmniAccount::add_account(RuntimeOrigin::signed(tee_signer), bob.clone()),
+			OmniAccount::add_account(RuntimeOrigin::signed(tee_signer), bob.clone(), None),
 			BadOrigin
 		);
 
 		assert_noop!(
-			OmniAccount::add_account(RuntimeOrigin::signed(alice().omni_account), bob),
+			OmniAccount::add_account(RuntimeOrigin::signed(alice().omni_account), bob, None),
 			BadOrigin
 		);
 	});
