@@ -425,6 +425,12 @@ pub mod pallet {
 			MemberAccountHash::<T>::insert(hash, omni_account.clone());
 			AccountStore::<T>::insert(omni_account.clone(), member_accounts.clone());
 
+			let mut permissions = BoundedVec::<T::Permission, T::MaxPermissions>::new();
+			permissions
+				.try_push(T::Permission::default())
+				.map_err(|_| Error::<T>::PermissionsLenLimitReached)?;
+			MemberAccountPermissions::<T>::insert(hash, permissions);
+
 			Self::deposit_event(Event::AccountStoreCreated { who: omni_account.clone() });
 			Self::deposit_event(Event::AccountStoreUpdated {
 				who: omni_account,
