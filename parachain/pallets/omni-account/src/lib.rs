@@ -103,6 +103,15 @@ pub mod pallet {
 
 		/// Convert an `Identity` to OmniAccount type
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn integrity_test() {
+			assert!(
+				<T as Config>::MaxAccountStoreLength::get() > 0,
+				"MaxAccountStoreLength must be greater than 0"
+			);
+		}
 	}
 
 	pub type MemberAccounts<T> = BoundedVec<MemberAccount, <T as Config>::MaxAccountStoreLength>;
