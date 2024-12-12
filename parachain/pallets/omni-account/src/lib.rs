@@ -34,7 +34,7 @@ use frame_system::pallet_prelude::*;
 use sp_core::H256;
 use sp_runtime::traits::Dispatchable;
 use sp_std::boxed::Box;
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 
 pub type MemberCount = u32;
 
@@ -152,12 +152,19 @@ pub mod pallet {
 	pub type MemberAccountHash<T: Config> =
 		StorageMap<Hasher = Blake2_128Concat, Key = H256, Value = T::AccountId>;
 
+	#[pallet::type_value]
+	pub fn DefaultPermissions<T: Config>() -> BoundedVec<T::Permission, T::MaxPermissions> {
+		BoundedVec::try_from(vec![T::Permission::default()]).expect("default permission")
+	}
+
 	/// A map between hash of MemberAccount and its permissions
 	#[pallet::storage]
 	pub type MemberAccountPermissions<T: Config> = StorageMap<
 		Hasher = Blake2_128Concat,
 		Key = H256,
 		Value = BoundedVec<T::Permission, T::MaxPermissions>,
+		QueryKind = ValueQuery,
+		OnEmpty = DefaultPermissions<T>,
 	>;
 
 	#[pallet::event]
