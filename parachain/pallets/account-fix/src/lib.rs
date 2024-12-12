@@ -22,7 +22,7 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		fungible::Mutate,
-		tokens::{Fortitude, Precision},
+		tokens::{Fortitude, Precision, Preservation},
 		Currency, ReservableCurrency, StorageVersion,
 	},
 };
@@ -103,6 +103,7 @@ pub mod pallet {
 			let _ = pallet_balances::Pallet::<T>::burn_from(
 				&who,
 				amount,
+				Preservation::Expendable,
 				Precision::Exact,
 				Fortitude::Polite,
 			)?;

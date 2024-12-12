@@ -455,6 +455,7 @@ pub mod pallet {
 				asset_id,
 				&source,
 				amount,
+				Preservation::Expendable,
 				Precision::Exact,
 				// Seem to be no effect
 				Fortitude::Polite,

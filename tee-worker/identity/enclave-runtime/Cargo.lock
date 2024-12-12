@@ -40,7 +40,7 @@ dependencies = [
  "scale-encode",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -57,7 +57,7 @@ dependencies = [
  "primitive-types",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sp-application-crypto",
  "sp-core",
  "sp-core-hashing",
@@ -629,7 +629,7 @@ dependencies = [
  "rustls-webpki",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sp-consensus-aura",
  "sp-core",
  "sp-io",
@@ -1892,7 +1892,7 @@ dependencies = [
  "itp-utils",
  "log",
  "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "tungstenite",
  "url 2.5.0",
@@ -1910,7 +1910,7 @@ dependencies = [
  "jsonrpc-core",
  "log",
  "parity-scale-codec",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "sp-runtime",
  "thiserror",
@@ -2247,7 +2247,7 @@ dependencies = [
  "http_req",
  "log",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "thiserror",
  "url 2.5.0",
@@ -2467,7 +2467,7 @@ dependencies = [
  "itp-types",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
 ]
 
@@ -2959,7 +2959,7 @@ dependencies = [
  "primitive-types",
  "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx)",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "sp-core",
  "ss58-registry",
@@ -3014,7 +3014,7 @@ dependencies = [
  "rust-base58 0.0.4 (git+https://github.com/mesalock-linux/rust-base58-sgx)",
  "scale-info",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "serde_json 1.0.60 (git+https://github.com/mesalock-linux/serde-json-sgx?tag=sgx_1.1.3)",
  "sgx_tstd",
  "sp-core",
@@ -3046,7 +3046,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "thiserror",
  "url 2.5.0",
@@ -3082,7 +3082,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "rust_decimal",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "ss58-registry",
  "thiserror",
@@ -3109,7 +3109,7 @@ dependencies = [
  "lru",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_rand",
  "sgx_tstd",
  "sp-core",
@@ -3151,7 +3151,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
  "sp-core",
 ]
@@ -4635,11 +4635,12 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.120"
+version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
+checksum = "c7fceb2473b9166b2294ef05efcb65a3db80803f0b03ef86a5fc88a2b85ee377"
 dependencies = [
  "itoa 1.0.9",
+ "memchr 2.6.3",
  "ryu",
  "serde 1.0.204",
 ]
@@ -5360,7 +5361,7 @@ dependencies = [
  "proc-macro2",
  "quote 1.0.36",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "unicode-xid 0.2.4",
 ]
 
@@ -5411,7 +5412,7 @@ dependencies = [
  "maybe-async",
  "parity-scale-codec",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sp-core",
  "sp-runtime",
  "sp-runtime-interface",

@@ -191,6 +191,7 @@ pub mod pallet {
 					aiusd_id,
 					&beneficiary,
 					aiusd_amount,
+					Preservation::Expendable,
 					Precision::Exact,
 					Fortitude::Polite,
 				)?;
