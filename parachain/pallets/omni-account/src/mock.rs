@@ -193,17 +193,17 @@ impl Default for Permission {
 impl InstanceFilter<RuntimeCall> for Permission {
 	fn filter(&self, call: &RuntimeCall) -> bool {
 		match self {
-			Permission::All => true,
-			Permission::Balances => matches!(call, RuntimeCall::Balances { .. }),
-			Permission::RemoveAccounts => matches!(
+			Self::All => true,
+			Self::Balances => matches!(call, RuntimeCall::Balances { .. }),
+			Self::RemoveAccounts => matches!(
 				call,
 				RuntimeCall::OmniAccount(pallet_omni_account::Call::remove_accounts { .. })
 			),
-			Permission::AddAccounts => matches!(
+			Self::AddAccounts => matches!(
 				call,
 				RuntimeCall::OmniAccount(pallet_omni_account::Call::add_account { .. })
 			),
-			Permission::RequestEthereumIntent => {
+			Self::RequestEthereumIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
 					intent,
 				}) = call
