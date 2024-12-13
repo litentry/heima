@@ -104,7 +104,6 @@ fn register_enclave_dev_works_with_no_authorized_enclave() {
 		let enclave = default_enclave().with_mrenclave(TEST4_MRENCLAVE);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 0);
 		assert_eq!(EnclaveRegistry::<Test>::get(alice()).unwrap(), enclave);
 		let authorized_enclave = AuthorizedEnclave::<Test>::get(WorkerType::default());
 		assert_eq!(authorized_enclave.len(), 1);
@@ -136,7 +135,6 @@ fn register_enclave_dev_works_with_sgx_build_mode_debug() {
 			.with_attestation_type(AttestationType::Ias);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 0);
 		assert_eq!(EnclaveRegistry::<Test>::get(signer4).unwrap(), enclave);
 	})
 }
@@ -159,7 +157,7 @@ fn parentchain_block_processed_works() {
 		// Ensure that enclave is registered
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer7.clone()),
-			WorkerType::BitAcross,
+			WorkerType::Identity,
 			Default::default(),
 			TEST7_CERT.to_vec(),
 			URL.to_vec(),
@@ -167,7 +165,7 @@ fn parentchain_block_processed_works() {
 			None,
 			AttestationType::Ias,
 		));
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 1);
+		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
 
 		run_to_block(3);
 		Timestamp::set_timestamp(TEST7_TIMESTAMP + 24 * 1000);
@@ -309,7 +307,6 @@ fn register_enclave_prod_works_with_sgx_build_mode_debug() {
 			.with_attestation_type(AttestationType::Ias);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 0);
 		assert_eq!(EnclaveRegistry::<Test>::get(signer4).unwrap(), enclave);
 	})
 }
@@ -350,7 +347,6 @@ fn register_enclave_prod_works_with_sgx_build_mode_production() {
 			.with_attestation_type(AttestationType::Ias);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 0);
 		assert_eq!(EnclaveRegistry::<Test>::get(signer8).unwrap(), enclave);
 
 		// remove authorized enclave should remove enclave too
@@ -419,12 +415,12 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		));
 		assert_ok!(Teebag::force_add_authorized_enclave(
 			RuntimeOrigin::signed(alice()),
-			WorkerType::BitAcross,
+			WorkerType::OmniExecutor,
 			TEST4_MRENCLAVE
 		));
 		assert_ok!(Teebag::force_add_authorized_enclave(
 			RuntimeOrigin::signed(alice()),
-			WorkerType::BitAcross,
+			WorkerType::OmniExecutor,
 			TEST6_MRENCLAVE
 		));
 
@@ -433,7 +429,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		let signer6: AccountId32 = get_signer(TEST6_SIGNER_PUB);
 		assert_ok!(Teebag::add_enclave_identifier(
 			RuntimeOrigin::signed(admin.clone()),
-			WorkerType::BitAcross,
+			WorkerType::OmniExecutor,
 			signer4.clone(),
 		));
 		assert_ok!(Teebag::add_enclave_identifier(
@@ -443,7 +439,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		));
 		assert_ok!(Teebag::add_enclave_identifier(
 			RuntimeOrigin::signed(admin.clone()),
-			WorkerType::BitAcross,
+			WorkerType::OmniExecutor,
 			signer6.clone(),
 		));
 		assert_ok!(Teebag::add_enclave_identifier(
@@ -455,7 +451,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		Timestamp::set_timestamp(TEST4_TIMESTAMP);
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer4.clone()),
-			WorkerType::BitAcross,
+			WorkerType::OmniExecutor,
 			Default::default(),
 			TEST4_CERT.to_vec(),
 			URL.to_vec(),
@@ -467,7 +463,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		Timestamp::set_timestamp(TEST6_TIMESTAMP);
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer6.clone()),
-			WorkerType::BitAcross,
+			WorkerType::OmniExecutor,
 			Default::default(),
 			TEST6_CERT.to_vec(),
 			URL.to_vec(),
@@ -522,7 +518,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 		);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 2);
-		assert_eq!(Teebag::enclave_count(WorkerType::BitAcross), 1);
+		assert_eq!(Teebag::enclave_count(WorkerType::OmniExecutor), 1);
 	})
 }
 

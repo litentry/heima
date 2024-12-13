@@ -17,7 +17,7 @@
 use super::*;
 use cumulus_primitives_core::ParaId;
 use litentry_parachain_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
+	AccountId, AuraId, Balance, BalancesConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
 	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, TechnicalCommitteeMembershipConfig,
 	TeebagConfig, TeebagOperationalMode, VCManagementConfig, WASM_BINARY,
@@ -241,7 +241,6 @@ fn generate_genesis(
 			admin: None,
 			mode: TeebagOperationalMode::Development,
 		},
-		bitacross: BitacrossConfig { admin: None },
 		score_staking: Default::default(),
 	};
 

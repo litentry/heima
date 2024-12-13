@@ -70,8 +70,9 @@ pub enum AttestationType {
 #[derive(Encode, Decode, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum WorkerType {
     #[default]
+    #[codec(index = 0)]
     Identity,
-    BitAcross,
+    #[codec(index = 2)]
     OmniExecutor,
 }
 
