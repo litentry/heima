@@ -34,10 +34,6 @@ build-node:
 build-runtime-litentry:
 	cd parachain && cargo build --locked -p litentry-parachain-runtime --release
 
-.PHONY: build-runtime-rococo ## Build rococo release runtime
-build-runtime-rococo:
-	cd parachain && cargo build --locked -p rococo-parachain-runtime --release
-
 .PHONY: build-runtime-paseo ## Build paseo release runtime
 build-runtime-paseo:
 	cd parachain && cargo build --locked -p paseo-parachain-runtime --release
@@ -64,10 +60,6 @@ build-node-tryruntime:
 launch-standalone:
 	@cd parachain && ./scripts/launch-standalone.sh
 
-.PHONY: launch-network-rococo ## Launch a local rococo network with relaychain network
-launch-network-rococo:
-	@cd parachain && ./scripts/launch-network.sh rococo
-
 .PHONY: launch-network-litentry ## Launch a local litentry network with relaychain network
 launch-network-litentry:
 	@cd parachain && ./scripts/launch-network.sh litentry
@@ -88,15 +80,11 @@ test-cargo-all-benchmarks:
 
 .PHONY: test-ts-litentry ## Run litentry ts tests without clean-up
 test-ts-litentry: launch-network-litentry
-	@cd parachain && ./scripts/run-ts-test.sh litentry bridge evm
-
-.PHONY: test-ts-rococo ## Run rococo ts tests without clean-up
-test-ts-rococo: launch-network-rococo
-	@cd parachain && ./scripts/run-ts-test.sh rococo bridge evm
+	@cd parachain && ./scripts/run-ts-test.sh litentry
 
 .PHONY: test-ts-paseo ## Run paseo ts tests without clean-up
 test-ts-paseo: launch-network-paseo
-	@cd parachain && ./scripts/run-ts-test.sh paseo bridge evm
+	@cd parachain && ./scripts/run-ts-test.sh paseo
 
 # clean up
 .PHONY: clean-network ## Clean up the network launched by 'launch-network'
@@ -115,16 +103,13 @@ fmt: fmt-cargo fmt-taplo fmt-ts
 .PHONY: fmt-cargo ## cargo fmt
 fmt-cargo:
 	@cd parachain && cargo fmt --all
-	@cd tee-worker/identity && cargo fmt --all
+	@cd tee-worker && cargo fmt --all
 	@cd tee-worker/identity/enclave-runtime && cargo fmt --all
-	@cd tee-worker/bitacross && cargo fmt --all
-	@cd tee-worker/bitacross/enclave-runtime && cargo fmt --all
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:
 	@cd parachain && RUST_LOG=error taplo fmt
-	@cd tee-worker/identity && RUST_LOG=error taplo fmt
-	@cd tee-worker/identity/enclave-runtime && RUST_LOG=error taplo fmt
+	@cd tee-worker && RUST_LOG=error taplo fmt
 
 .PHONY: fmt-ts ## ts fmt
 fmt-ts:
@@ -138,12 +123,12 @@ githooks:
 # clippy
 .PHONY: clippy ## cargo clippy
 clippy:
-	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --workspace --all-targets --all-features -- -D warnings
+	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --locked --workspace --all -- -D warnings
 
 .PHONY: clippyfix ## cargo clippy --fix
 clippyfix:
-	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --allow-dirty --allow-staged --fix --workspace --all-targets --all-features -- -D warnings
+	cd parachain && SKIP_WASM_BUILD=1 cargo clippy --locked --allow-dirty --allow-staged --fix --workspace --all -- -D warnings
 
 .PHONY: cargofix ## cargo fix
 cargofix:
-	cd parachain && cargo fix --allow-dirty --allow-staged --workspace --all-targets --all-features
+	cd parachain && cargo fix --locked --allow-dirty --allow-staged --workspace --all

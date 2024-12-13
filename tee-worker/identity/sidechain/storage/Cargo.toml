@@ -5,30 +5,24 @@ authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@int
 edition = "2021"
 
 [dependencies]
-# crate.io
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-log = "0.4"
+codec = { package = "parity-scale-codec", workspace = true, features = ["std"] }
+log = { workspace = true, features = ["std"] }
 parking_lot = "0.12.1"
 rocksdb = { version = "0.20.1", default_features = false }
-serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
+serde = { workspace = true, features = ["std"] }
+thiserror = { workspace = true }
 
-# integritee
-itp-settings = { path = "../../core-primitives/settings" }
+itp-settings = { workspace = true }
+its-primitives = { workspace = true, features = ["std"] }
 
-its-primitives = { path = "../primitives" }
-
-# Substrate dependencies
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
-# crate.io
 mockall = "0.11"
 temp-dir = "0.1"
-# local
-itp-time-utils = { path = "../../core-primitives/time-utils" }
-its-test = { path = "../test" }
-itp-types = { path = "../../core-primitives/types" }
+itp-time-utils = { workspace = true, features = ["std"] }
+its-test = { workspace = true, features = ["std"] }
+itp-types = { workspace = true, features = ["std"] }
 
 [features]
 mocks = []

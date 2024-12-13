@@ -1,0 +1,10 @@
+[package]
+name = "itp-node-api-factory"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+itp-api-client-types = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
+thiserror = { workspace = true }

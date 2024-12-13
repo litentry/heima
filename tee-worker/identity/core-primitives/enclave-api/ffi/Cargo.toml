@@ -1,12 +1,10 @@
 [package]
-name = "itp-enclave-api-ffi"
+name = "id-itp-enclave-api-ffi"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_types = { workspace = true }
 
 [features]
 # necessary to run cargo tests without any preliminaries

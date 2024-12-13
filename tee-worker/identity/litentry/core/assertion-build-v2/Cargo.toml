@@ -4,40 +4,31 @@ edition = "2021"
 name = "lc-assertion-build-v2"
 version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-# std dependencies
-base58 = { version = "0.2", default-features = false }
-thiserror = { version = "1.0.38", optional = true }
+base58 = { workspace = true }
+thiserror = { workspace = true, optional = true }
 
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
-thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+codec = { package = "parity-scale-codec", workspace = true }
+log = { workspace = true }
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+thiserror_sgx = { workspace = true, optional = true }
 
-# no_std dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-log = { version = "0.4", default-features = false }
+itc-rest-client = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-types = { workspace = true }
+itp-utils = { workspace = true }
 
-# internal dependencies
-itc-rest-client = { path = "../../../core/rest-client", default-features = false }
-itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-stf-primitives = { default-features = false, path = "../../../core-primitives/stf-primitives" }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
-itp-utils = { path = "../../../core-primitives/utils", default-features = false }
-
-# litentry
-lc-assertion-build = { path = "../assertion-build", default-features = false }
-lc-common = { path = "../common", default-features = false }
-lc-credentials-v2 = { path = "../credentials-v2", default-features = false }
-lc-service = { path = "../service", default-features = false }
-lc-stf-task-sender = { path = "../stf-task/sender", default-features = false }
-litentry-hex-utils = { path = "../../../../../common/utils/hex", default-features = false }
-litentry-primitives = { path = "../../primitives", default-features = false }
+lc-assertion-build = { workspace = true }
+lc-common = { workspace = true }
+lc-credentials-v2 = { workspace = true }
+lc-service = { workspace = true }
+litentry-hex-utils = { workspace = true }
+litentry-primitives = { workspace = true }
 
 [dev-dependencies]
-env_logger = "0.10.0"
-lc-mock-server = { path = "../mock-server" }
+env_logger = { workspace = true }
+lc-mock-server = { workspace = true }
 
 [features]
 default = ["std"]
@@ -49,7 +40,6 @@ sgx = [
     "lc-assertion-build/sgx",
     "lc-credentials-v2/sgx",
     "lc-service/sgx",
-    "lc-stf-task-sender/sgx",
 ]
 std = [
     "log/std",
@@ -60,5 +50,4 @@ std = [
     "lc-assertion-build/std",
     "lc-credentials-v2/std",
     "lc-service/std",
-    "lc-stf-task-sender/std",
 ]

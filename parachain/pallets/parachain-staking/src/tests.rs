@@ -16,7 +16,6 @@
 
 //! Inspired by:
 //! - Moonbeam `pallet_parachain_staking`
-//! implementations.
 
 //! # Staking Pallet Unit Tests
 //! The unit tests are organized by the call they test. The order matches the order
@@ -25,8 +24,6 @@
 //! 2. Monetary Governance
 //! 3. Public (Collator, Nominator)
 //! 4. Miscellaneous Property-Based Tests
-#![allow(clippy::explicit_counter_loop)]
-#![allow(clippy::bool_assert_comparison)]
 
 use crate::{
 	assert_eq_events, assert_eq_last_events, assert_event_emitted, assert_last_event,
@@ -34,8 +31,8 @@ use crate::{
 	auto_compound::{AutoCompoundConfig, AutoCompoundDelegations},
 	delegation_requests::{CancelledScheduledRequest, DelegationAction, ScheduledRequest},
 	mock::{
-		roll_one_block, roll_to, roll_to_round_begin, roll_to_round_end, set_author, Balances,
-		ExtBuilder, ParachainStaking, RuntimeEvent as MetaEvent, RuntimeOrigin, Test,
+		roll_one_block, roll_to, roll_to_round_begin, roll_to_round_end, set_author, AccountId,
+		Balances, ExtBuilder, ParachainStaking, RuntimeEvent as MetaEvent, RuntimeOrigin, Test,
 	},
 	AtStake, Bond, CollatorStatus, DelegationScheduledRequests, DelegatorAdded, Error, Event,
 	Range,
@@ -44,6 +41,7 @@ use frame_support::{
 	assert_noop, assert_ok,
 	traits::{LockIdentifier, LockableCurrency, WithdrawReasons},
 };
+use pallet_balances::PositiveImbalance;
 use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
 
 // ~~ ROOT ~~
@@ -5127,14 +5125,15 @@ fn deferred_payment_steady_state_event_flow() {
 
 			// grab initial issuance -- we will reset it before round issuance is calculated so that
 			// it is consistent every round
+			let account: AccountId = 111;
 			let initial_issuance = Balances::total_issuance();
 			let reset_issuance = || {
 				let new_issuance = Balances::total_issuance();
-				let diff = new_issuance - initial_issuance;
-				let burned = Balances::burn(diff);
+				let amount_to_burn = new_issuance - initial_issuance;
+				let _ = Balances::burn(Some(account).into(), amount_to_burn, false);
 				Balances::settle(
-					&111,
-					burned,
+					&account,
+					PositiveImbalance::new(amount_to_burn),
 					WithdrawReasons::FEE,
 					ExistenceRequirement::AllowDeath,
 				)

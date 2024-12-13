@@ -1,0 +1,38 @@
+[package]
+name = "sp-io"
+version = "7.0.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network> and Parity Technologies <admin@parity.io>']
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+libsecp256k1 = { workspace = true, features = ["static-context"] }
+log = { workspace = true }
+
+itp-sgx-externalities = { path = "../externalities", default-features = false }
+sgx_tstd = { workspace = true, features = ["untrusted_fs", "net", "backtrace"], optional = true }
+
+sp-core = { workspace = true, features = ["full_crypto"] }
+
+[features]
+default = ["std"]
+std = [
+    "log/std",
+    "sp-core/std",
+    "codec/std",
+    "libsecp256k1/std",
+    "itp-sgx-externalities/std",
+]
+sgx = [
+    "sgx_tstd",
+    "itp-sgx-externalities/sgx",
+]
+
+# These two features are used for `no_std` builds for the environments which already provides
+# `#[panic_handler]`, `#[alloc_error_handler]` and `#[global_allocator]`.
+#
+# For the regular wasm sgx-runtime builds those are not used.
+disable_panic_handler = []
+disable_oom = []
+disable_allocator = []

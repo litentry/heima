@@ -23,7 +23,7 @@ extern crate sgx_tstd as std;
 use lc_credentials_v2::{
 	linked_identities::LinkedIdentitiesAssertionUpdate, Credential, IssuerRuntimeVersion,
 };
-use lc_stf_task_sender::AssertionBuildRequest;
+use litentry_primitives::AssertionBuildRequest;
 
 use crate::*;
 

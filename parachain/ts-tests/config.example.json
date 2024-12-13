@@ -1,7 +1,0 @@
-{
-    "eth_address": "[0x4d88dc5d528a33e4b8be579e9476715f60060582]",
-    "private_key": "0xe82c0c4259710bb0d6cf9f9e8d0ad73419c1278a14d375e5ca691e7618103011",
-    "ocw_account": "5FEYX9NES9mAJt1Xg4WebmHWywxyeGQK8G3oEBXtyfZrRePX",
-    "parachain_ws": "ws://localhost:9844",
-    "relaychain_ws": "ws://localhost:9944"
-}

@@ -18,6 +18,7 @@
 #![allow(clippy::large_enum_variant)]
 #![allow(clippy::result_large_err)]
 
+extern crate alloc;
 extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
@@ -34,6 +35,12 @@ pub mod sgx_reexport_prelude {
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use crate::sgx_reexport_prelude::*;
 
+use alloc::{
+	format,
+	string::{String, ToString},
+	vec,
+	vec::Vec,
+};
 use codec::{Decode, Encode};
 use core::time::Duration;
 use http_req::response::Headers;
@@ -43,19 +50,13 @@ use itc_rest_client::{
 	rest_client::RestClient,
 	Query, RestGet, RestPath, RestPost,
 };
-use log::debug;
-use serde::{Deserialize, Serialize};
-use std::{thread, vec};
-
 use litentry_primitives::{
 	AchainableParams, Assertion, ErrorDetail, ErrorString, IntoErrorDetail, ParameterString,
 	VCMPError,
 };
-use std::{
-	env, format,
-	string::{String, ToString},
-	vec::Vec,
-};
+use log::debug;
+use serde::{Deserialize, Serialize};
+use std::{env, thread};
 use url::Url;
 
 #[cfg(all(feature = "std", feature = "sgx"))]
@@ -68,6 +69,7 @@ pub mod daren_market;
 pub mod discord_litentry;
 pub mod discord_official;
 pub mod geniidata;
+pub mod google;
 pub mod karat_dao;
 pub mod magic_craft;
 pub mod moralis;
@@ -174,6 +176,8 @@ pub struct DataProviderConfig {
 	pub discord_official_url: String,
 	pub discord_client_id: String,
 	pub discord_client_secret: String,
+	pub google_client_id: String,
+	pub google_client_secret: String,
 	pub litentry_discord_microservice_url: String,
 	pub discord_auth_token: String,
 	pub achainable_url: String,
@@ -230,12 +234,14 @@ impl DataProviderConfig {
 			discord_official_url: "https://discordapp.com".to_string(),
 			discord_client_id: "".to_string(),
 			discord_client_secret: "".to_string(),
+			google_client_id: "".to_string(),
+			google_client_secret: "".to_string(),
 			litentry_discord_microservice_url: "https://tee-microservice.litentry.io:9528"
 				.to_string(),
 			discord_auth_token: "".to_string(),
 			achainable_url: "https://label-production.litentry.io/".to_string(),
 			achainable_auth_key: "".to_string(),
-			credential_endpoint: "wss://rpc.rococo-parachain.litentry.io".to_string(),
+			credential_endpoint: "wss://rpc.litentry-parachain.litentry.io".to_string(),
 			oneblock_notion_key: "".to_string(),
 			oneblock_notion_url: "https://api.notion.com/".to_string(),
 			sora_quiz_master_id: "1164463721989554218".to_string(),
@@ -399,6 +405,12 @@ impl DataProviderConfig {
 		if let Ok(v) = env::var("DISCORD_CLIENT_SECRET") {
 			config.set_discord_client_secret(v);
 		}
+		if let Ok(v) = env::var("GOOGLE_CLIENT_ID") {
+			config.set_google_client_id(v);
+		}
+		if let Ok(v) = env::var("GOOGLE_CLIENT_SECRET") {
+			config.set_google_client_secret(v);
+		}
 		if let Ok(v) = env::var("ACHAINABLE_AUTH_KEY") {
 			config.set_achainable_auth_key(v);
 		}
@@ -457,6 +469,14 @@ impl DataProviderConfig {
 	pub fn set_discord_client_secret(&mut self, v: String) {
 		debug!("set_discord_client_secret: {:?}", v);
 		self.discord_client_secret = v;
+	}
+	pub fn set_google_client_id(&mut self, v: String) {
+		debug!("set_google_client_id: {:?}", v);
+		self.google_client_id = v;
+	}
+	pub fn set_google_client_secret(&mut self, v: String) {
+		debug!("set_google_client_secret: {:?}", v);
+		self.google_client_secret = v;
 	}
 	pub fn set_litentry_discord_microservice_url(&mut self, v: String) -> Result<(), Error> {
 		check_url(&v)?;

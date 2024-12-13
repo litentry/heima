@@ -8,7 +8,6 @@ on:
         description: The chain whose runtime-wasm is built
         options:
           - litentry
-          - rococo
           - paseo
       ref:
         description: The commit SHA or tag for checking out code
@@ -20,7 +19,7 @@ env:
 
 jobs:
   build-wasm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ github.event.inputs.ref || github.ref }}
         uses: actions/checkout@v4

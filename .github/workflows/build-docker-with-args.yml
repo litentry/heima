@@ -27,7 +27,7 @@ env:
 jobs:
   ## build docker image of client binary with args ##
   build-docker-with-args:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ github.event.inputs.ref || github.ref }}
         uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          ./scripts/build-docker.sh ${{ github.event.inputs.cargo_profile }} ${{ github.event.inputs.docker_tag }} "${{ github.event.inputs.args }}"
+          ./parachain/scripts/build-docker.sh ${{ github.event.inputs.cargo_profile }} ${{ github.event.inputs.docker_tag }} "${{ github.event.inputs.args }}"
           echo "============================="
           docker images
 

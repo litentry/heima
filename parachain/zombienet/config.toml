@@ -26,5 +26,12 @@ cumulus_based = true
 [[parachains.collators]]
 name = "collator1"
 command = "litentry-collator"
-args = ["--no-hardware-benchmarks", "--force-authoring", "--enable-evm-rpc"]
+args = [
+  "--no-hardware-benchmarks",
+  "--force-authoring",
+  "--enable-evm-rpc",
+  "--state-pruning=archive",
+  "--delayed-best-block",
+  "-l=parachain=debug,txpool=debug"
+]
 ws_port = {{COLLATOR_WS_PORT}}

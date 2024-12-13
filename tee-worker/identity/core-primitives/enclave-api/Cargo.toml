@@ -1,33 +1,30 @@
 [package]
-name = "itp-enclave-api"
+name = "id-itp-enclave-api"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-hex = "0.4"
-log = "0.4"
-serde_json = "1.0"
-thiserror = "1.0.25"
+codec = { package = "parity-scale-codec", workspace = true }
+hex = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
 
-sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_urts = { optional = true, branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_crypto_helper = { workspace = true }
+sgx_types = { workspace = true }
+sgx_urts = { workspace = true, optional = true }
 
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+frame-support = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 
-itc-parentchain = { path = "../../core/parentchain/parentchain-crate" }
-itp-enclave-api-ffi = { path = "ffi" }
-itp-settings = { path = "../settings" }
-itp-stf-interface = { path = "../stf-interface" }
-itp-storage = { path = "../storage" }
-itp-types = { path = "../types" }
-
-# litentry
-pallet-teebag = { git = "https://github.com/litentry/litentry-parachain", branch = "release-v0.9.19", default-features = false }
+itp-enclave-api-ffi = { package = "id-itp-enclave-api-ffi", path = "ffi" }
+itp-settings = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-stf-interface = { workspace = true }
+itp-storage = { workspace = true }
+itp-types = { workspace = true }
 
 [features]
 default = []

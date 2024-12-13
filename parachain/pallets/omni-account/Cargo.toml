@@ -1,0 +1,53 @@
+[package]
+authors = ['Trust Computing GmbH <info@litentry.com>']
+version = "0.1.0"
+edition = "2021"
+homepage = 'https://litentry.com'
+name = 'pallet-omni-account'
+repository = 'https://github.com/litentry/litentry-parachain'
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-core = { workspace = true }
+
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+core-primitives = { workspace = true }
+
+[dev-dependencies]
+pallet-balances = { workspace = true, default-features = true }
+pallet-timestamp = { workspace = true, features = ["std"] }
+pallet-teebag = { workspace = true, features = ["std", "test-util"] }
+pallet-utility = { workspace = true, features = ["std"] }
+sp-keyring = { workspace = true }
+
+[features]
+default = ["std"]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-teebag/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
+]
+std = [
+    "core-primitives/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-teebag/std",
+    "pallet-timestamp/std",
+    "pallet-utility/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-keyring/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+try-runtime = ["frame-support/try-runtime"]

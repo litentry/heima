@@ -14,7 +14,6 @@
         "setup-enclave": "pnpm exec ts-node common/setup/setup-enclave.ts",
         "test-filter": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/base-filter.test.ts'",
         "test-bridge": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/bridge.test.ts'",
-        "test-evm-transfer": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/evm-transfer.test.ts'",
         "test-evm-contract": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/evm-contract.test.ts'",
         "test-runtime-upgrade": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/runtime-upgrade.test.ts'",
         "test-all": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/**/*.test.ts'",
@@ -35,10 +34,10 @@
         "typescript": "^4.9.4"
     },
     "dependencies": {
-        "@polkadot/api": "10.9.1",
-        "@polkadot/api-augment": "10.9.1",
+        "@polkadot/api": "^15.0.1",
+        "@polkadot/api-augment": "^15.0.1",
         "@polkadot/keyring": "12.4.2",
-        "@polkadot/types": "10.9.1",
+        "@polkadot/types": "^15.0.1",
         "@polkadot/util": "12.4.2",
         "@polkadot/util-crypto": "12.4.2",
         "@types/bn.js": "^5.1.2",

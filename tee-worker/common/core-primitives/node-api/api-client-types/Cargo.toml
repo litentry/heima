@@ -1,0 +1,18 @@
+[package]
+name = "itp-api-client-types"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+itp-types = { workspace = true }
+substrate-api-client = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "itp-types/std",
+    "substrate-api-client/std",
+    "substrate-api-client/tungstenite-client",
+]

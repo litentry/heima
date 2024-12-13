@@ -22,7 +22,9 @@ use crate::{
 };
 use base58::{FromBase58, ToBase58};
 use codec::{Decode, Encode, Input};
-use ita_stf::{trusted_call_result::RequestVcResultOrError, Getter, TrustedCallSigned};
+use ita_stf::{
+	trusted_call_result::RequestVcResultOrError, Getter, PublicGetter, TrustedCallSigned,
+};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ApiClientError, TEEBAG};
 use itp_rpc::{Id, RpcRequest, RpcResponse, RpcReturnValue};
@@ -36,7 +38,7 @@ use itp_types::{
 	DirectRequestStatus, RsaRequest, TrustedOperationStatus,
 };
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
-use litentry_primitives::{aes_encrypt_default, AesRequest, RequestAesKey};
+use litentry_primitives::{aes_encrypt_default, AesRequest, Identity, RequestAesKey};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::H256;
@@ -153,6 +155,15 @@ pub(crate) fn get_state<T: Decode + Debug>(
 		},
 		None => Err(TrustedOperationError::Default { msg: "Value not present".to_string() }),
 	}
+}
+
+pub(crate) fn get_id_graph_hash<T: Decode + Debug>(
+	direct_api: &DirectClient,
+	shard: &ShardIdentifier,
+	identity: &Identity,
+) -> TrustedOpResult<T> {
+	let getter = Getter::public(PublicGetter::id_graph_hash(identity.clone()));
+	get_state(direct_api, *shard, &getter)
 }
 
 fn send_indirect_request<T: Decode + Debug>(
@@ -345,10 +356,18 @@ fn send_direct_request<T: Decode + Debug>(
 							}
 						},
 						DirectRequestStatus::Ok => {
-							debug!("request status is ignored");
+							debug!("request status (Ok) is ignored");
 							direct_api.close().unwrap();
 							return Err(TrustedOperationError::Default {
 								msg: "Unexpected status: DirectRequestStatus::Ok".to_string(),
+							})
+						},
+						DirectRequestStatus::Processing(hash) => {
+							debug!("request status (Processing) is ignored, hash: {:?}", hash);
+							direct_api.close().unwrap();
+							return Err(TrustedOperationError::Default {
+								msg: "Unexpected status: DirectRequestStatus::Processing"
+									.to_string(),
 							})
 						},
 					}
@@ -534,7 +553,11 @@ pub(crate) fn wait_until(
 								}
 							},
 							DirectRequestStatus::Ok => {
-								debug!("request status is ignored");
+								debug!("request status (Ok) is ignored");
+								return None
+							},
+							DirectRequestStatus::Processing(hash) => {
+								debug!("request status (Processing) is ignored, hash: {:?}", hash);
 								return None
 							},
 						}

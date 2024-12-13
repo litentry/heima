@@ -1,0 +1,67 @@
+[package]
+name = "itp-stf-state-handler"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { workspace = true, optional = true }
+sgx_types = { workspace = true }
+
+itp-hashing = { workspace = true, default-features = false }
+itp-settings = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-sgx-externalities = { workspace = true }
+itp-sgx-io = { workspace = true }
+itp-stf-interface = { workspace = true }
+itp-stf-state-observer = { workspace = true }
+itp-time-utils = { workspace = true }
+itp-types = { workspace = true }
+
+# for tests
+itp-sgx-temp-dir = { workspace = true, optional = true }
+
+rust-base58_sgx = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+rust-base58 = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+
+codec = { package = "parity-scale-codec", workspace = true }
+log = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+
+[dev-dependencies]
+itp-sgx-crypto = { workspace = true, features = ["std", "mocks"] }
+itp-stf-state-observer = { workspace = true, features = ["std", "mocks"] }
+itp-hashing = { workspace = true, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "rust-base58",
+    "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
+    "itp-sgx-io/std",
+    "itp-stf-interface/std",
+    "itp-stf-state-observer/std",
+    "itp-time-utils/std",
+    "itp-types/std",
+    "thiserror",
+    "log/std",
+]
+sgx = [
+    "sgx_tstd",
+    "rust-base58_sgx",
+    "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
+    "itp-sgx-io/sgx",
+    "itp-stf-state-observer/sgx",
+    "itp-time-utils/sgx",
+    "thiserror_sgx",
+]
+test = [
+    "itp-sgx-crypto/mocks",
+    "itp-stf-interface/mocks",
+    "itp-sgx-temp-dir",
+]

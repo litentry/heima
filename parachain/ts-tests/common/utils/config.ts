@@ -6,8 +6,8 @@ export function loadConfig() {
         case 'test':
         case 'ci':
             return require('../../config.ci.json');
-        case 'staging':
-            return require('../../config.staging.json');
+        case 'prod':
+            return require('../../config.prod.json');
         default:
             throw new Error(`Invalid NODE_ENV: ${process.env.NODE_ENV}`);
     }

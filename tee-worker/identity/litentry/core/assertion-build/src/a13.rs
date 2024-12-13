@@ -24,6 +24,7 @@ use crate::*;
 use codec::Decode;
 use frame_support::storage::storage_prefix;
 use itp_ocall_api::EnclaveOnChainOCallApi;
+use itp_types::parentchain::Header;
 use lc_credentials::IssuerRuntimeVersion;
 use litentry_primitives::Address32;
 
@@ -39,7 +40,7 @@ pub fn build<O: EnclaveOnChainOCallApi>(
 	debug!("Assertion A13 build, who: {:?}", account_id_to_string(&who));
 
 	let key_prefix = storage_prefix(b"VCManagement", b"Delegatee");
-	let response = ocall_api.get_storage_keys(key_prefix.into()).map_err(|_| {
+	let response = ocall_api.get_storage_keys::<Header>(key_prefix.into(), None).map_err(|_| {
 		Error::RequestVCFailed(Assertion::A13(who.clone()), ErrorDetail::ParseError)
 	})?;
 	let keys: Vec<String> = response

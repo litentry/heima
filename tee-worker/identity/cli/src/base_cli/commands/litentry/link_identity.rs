@@ -115,7 +115,7 @@ impl LinkIdentityCommand {
 			let tee_shielding_key = get_shielding_key(cli).unwrap();
 			let encrypted_web3network = tee_shielding_key.encrypt(&web3network.encode()).unwrap();
 
-			let identity_account_id = identity.to_account_id().unwrap();
+			let identity_account_id = identity.to_native_account().unwrap();
 			let identity_public_key = format!("{}", identity_account_id);
 			let identity_pair: sr25519_core::Pair = get_pair_from_str(&identity_public_key).into();
 

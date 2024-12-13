@@ -34,8 +34,7 @@ use itc_rest_client::{
 };
 use itp_enclave_metrics::EnclaveMetric;
 use lazy_static::lazy_static;
-use lc_stf_task_sender::RequestType;
-use litentry_primitives::{Assertion, Identity};
+use litentry_primitives::{Assertion, Identity, RequestType};
 use log::*;
 use prometheus::{
 	proto::MetricFamily, register_counter, register_counter_vec, register_histogram,
@@ -261,6 +260,7 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			EnclaveMetric::DynamicAssertionGetTime(time) => {
 				DYNAMIC_ASSERTION_GET_TIME.observe(time.as_secs_f64());
 			},
+			_ => warn!("Not supported metric: {:?}", metric),
 		}
 		Ok(())
 	}
@@ -293,6 +293,8 @@ fn handle_stf_call_request(req: RequestType, time: f64) {
 			Identity::Evm(_) => "Evm".into(),
 			Identity::Bitcoin(_) => "Bitcoin".into(),
 			Identity::Solana(_) => "Solana".into(),
+			Identity::Google(_) => "Google".into(),
+			Identity::Pumpx(_) => "Pumpx".into(),
 		},
 	};
 	inc_stf_calls(category, &label);

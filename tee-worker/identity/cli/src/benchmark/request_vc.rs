@@ -8,14 +8,14 @@ use crate::{
 };
 use clap::Parser;
 use core::time::Duration;
-use ita_sgx_runtime::pallet_imt::Identity;
+use ita_sgx_runtime::pallet_identity_management_tee::Identity;
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_rpc_client::direct_client::DirectClient;
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use litentry_primitives::{RequestAesKey, ShardIdentifier, REQUEST_AES_KEY_LEN};
+use litentry_primitives::{RequestAesKey, ShardIdentifier, AES_KEY_LEN};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::Pair;
@@ -161,6 +161,6 @@ impl BenchmarkRequestVcCommand {
 }
 
 fn random_aes_key() -> RequestAesKey {
-	let random: Vec<u8> = (0..REQUEST_AES_KEY_LEN).map(|_| rand::random::<u8>()).collect();
-	random[0..REQUEST_AES_KEY_LEN].try_into().unwrap()
+	let random: Vec<u8> = (0..AES_KEY_LEN).map(|_| rand::random::<u8>()).collect();
+	random[0..AES_KEY_LEN].try_into().unwrap()
 }

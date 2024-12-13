@@ -41,18 +41,19 @@ is_bitacross_worker_release() {
   [ "${type:3:1}" = "1" ]
 }
 
-cd "$ROOTDIR/parachain"
+cd "$ROOTDIR"
 
 if is_client_release; then
   # base image used to build the node binary
-  NODE_BUILD_BASE_IMAGE=$(grep FROM docker/Dockerfile | head -n1 | sed 's/^FROM //;s/ as.*//')
+  NODE_BUILD_BASE_IMAGE=$(grep FROM parachain/docker/Dockerfile | head -n1 | sed 's/^FROM //;s/ as.*//')
 
   # somehow `docker inspect` doesn't pull our litentry-parachain image sometimes
   docker pull "$NODE_BUILD_BASE_IMAGE"
   docker pull "litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG"
 
-  NODE_VERSION=$(grep version node/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
+  NODE_VERSION=$(grep version parachain/node/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
   NODE_BIN=litentry-collator
+  # if is_client_release, files are downloaded in the upper layer
   NODE_SHA1SUM=$(shasum litentry-collator/"$NODE_BIN" | awk '{print $1}')
   if [ -f rust-toolchain.toml ]; then
     NODE_RUSTC_VERSION=$(rustc --version)
@@ -61,8 +62,8 @@ if is_client_release; then
   fi
 fi
 
-SUBSTRATE_DEP=$(grep 'frame-system' ./Cargo.toml | head -n1 | sed 's/.*branch = "//;s/".*//')
-FRONTIER_DEP=$(grep 'fc-api' ./Cargo.toml | head -n1 | sed 's/.*branch = "//;s/".*//')
+SUBSTRATE_DEP=$(grep 'frame-system' parachain/Cargo.toml | head -n1 | sed 's/.*branch = "//;s/".*//')
+FRONTIER_DEP=$(grep 'fc-api' parachain/Cargo.toml | head -n1 | sed 's/.*branch = "//;s/".*//')
 
 echo > "$1"
 echo "## This is a release for:" >> "$1"
@@ -118,9 +119,9 @@ fi
 
 if is_runtime_release; then
   echo "## Parachain runtime" >> "$1"
-  for CHAIN in rococo litentry paseo; do
+  for CHAIN in litentry paseo; do
     SRTOOL_DIGEST_FILE=$CHAIN-parachain-runtime/$CHAIN-parachain-srtool-digest.json
-    RUNTIME_VERSION=$(grep spec_version runtime/$CHAIN/src/lib.rs | sed 's/.*version: //;s/,//')
+    RUNTIME_VERSION=$(grep spec_version parachain/runtime/$CHAIN/src/lib.rs | sed 's/.*version: //;s/,//')
     RUNTIME_COMPRESSED_SIZE=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.size | sed 's/"//g')
     RUNTIME_RUSTC_VERSION=$(cat "$SRTOOL_DIGEST_FILE" | jq .rustc | sed 's/"//g')
     RUNTIME_COMPRESSED_SHA256=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.sha256 | sed 's/"//g')

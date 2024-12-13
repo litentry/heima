@@ -1,0 +1,94 @@
+[package]
+name = "itp-attestation-handler"
+version = "0.8.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+arrayvec = { workspace = true }
+bit-vec = { workspace = true }
+codec = { package = "parity-scale-codec", workspace = true }
+hex = { workspace = true }
+itertools = { workspace = true }
+log = { workspace = true }
+
+base64 = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true, features = ["preserve_order"] }
+thiserror = { workspace = true, optional = true }
+webpki = { workspace = true, optional = true }
+
+base64_sgx = { workspace = true, optional = true }
+chrono_sgx = { workspace = true, optional = true }
+num-bigint = { workspace = true, optional = true }
+rustls_sgx = { workspace = true, features = ["dangerous_configuration"], optional = true }
+serde_json_sgx = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+webpki-roots = { workspace = true }
+webpki_sgx = { workspace = true, optional = true }
+yasna_sgx = { workspace = true, optional = true }
+
+sgx_rand = { workspace = true, optional = true }
+sgx_tcrypto = { workspace = true, optional = true }
+sgx_tse = { workspace = true, optional = true }
+sgx_tstd = { workspace = true, features = ["untrusted_fs", "net", "backtrace"], optional = true }
+sgx_types = { workspace = true, features = ["extra_traits"] }
+
+itp-ocall-api = { workspace = true }
+itp-settings = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-sgx-io = { workspace = true }
+itp-time-utils = { workspace = true }
+
+httparse = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+
+[features]
+default = ["std"]
+std = [
+    # crates-io no_std
+    "arrayvec/std",
+    "codec/std",
+    "hex/std",
+    "log/std",
+    "itertools/use_std",
+    # optional std only
+    "base64",
+    "chrono",
+    "rustls",
+    "serde_json",
+    "thiserror",
+    "webpki",
+    # local
+    "itp-ocall-api/std",
+    "itp-sgx-io/std",
+    "itp-sgx-crypto/std",
+    # substrate
+    "sp-core/std",
+    # integritee
+    "httparse/std",
+]
+
+sgx = [
+    # sgx-only
+    "base64_sgx",
+    "chrono_sgx",
+    "rustls_sgx",
+    "serde_json_sgx",
+    "thiserror_sgx",
+    "webpki_sgx",
+    "yasna_sgx",
+    "sgx_tse",
+    "sgx_tstd",
+    "sgx_rand",
+    "sgx_tcrypto",
+    "num-bigint",
+    # local
+    "itp-sgx-io/sgx",
+    "itp-sgx-crypto/sgx",
+    # integritee
+    "httparse/mesalock_sgx",
+]
+test = []
+development = []

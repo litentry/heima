@@ -1,0 +1,26 @@
+[package]
+name = "itp-node-api-metadata-provider"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+itp-node-api-metadata = { workspace = true }
+itp-stf-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "thiserror",
+    "itp-stf-primitives/std",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror_sgx",
+]
+# used for unit testing only!
+mocks = []

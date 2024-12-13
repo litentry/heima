@@ -61,6 +61,8 @@ enclave {
 			[in, size=shard_size] uint8_t* shard, uint32_t shard_size
 		);
 
+		public sgx_status_t init_in_memory_state();
+
 		public sgx_status_t init_shard_creation_parentchain_header(
 		    [in, size=shard_size] uint8_t* shard, uint32_t shard_size,
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
@@ -170,6 +172,8 @@ enclave {
 			uint32_t shard_size
 		);
 
+		public sgx_status_t upload_id_graph();
+
 		public sgx_status_t ignore_parentchain_block_import_validation_until(
 			[in] uint32_t* until
 		);
@@ -252,7 +256,8 @@ enclave {
 		sgx_status_t ocall_send_to_parentchain(
 			[in, size = extrinsics_size] uint8_t * extrinsics, uint32_t extrinsics_size,
 			[in, size=parentchain_id_size] uint8_t* parentchain_id, uint32_t parentchain_id_size,
-			int await_each_inclusion
+			[in, size=watch_until_size] uint8_t* watch_until, uint32_t watch_until_size,
+			[out, size = resp_size] uint8_t * response, uint32_t resp_size
 		);
 	};
 };

@@ -1,9 +1,0 @@
-{
-  "$schema": "https://typedoc.org/schema.json",
-  "plugin": ["typedoc-plugin-markdown"],
-  "entryPoints": ["./src/index.ts"],
-  "disableGit": true,
-  "sourceLinkTemplate": "https://github.com/litentry/client-sdk/blob/main/{path}#L{line}",
-  "readme": "none",
-  "out": "docs"
-}

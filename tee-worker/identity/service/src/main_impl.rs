@@ -63,8 +63,7 @@ use substrate_api_client::{
 use litentry_primitives::extract_tcb_info_from_raw_dcap_quote;
 
 use crate::error::ServiceResult;
-use itc_parentchain::primitives::ParentchainId;
-use itp_types::parentchain::{AccountId, Balance};
+use itp_types::parentchain::{AccountId, Balance, ParentchainId};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
@@ -162,6 +161,11 @@ pub(crate) fn main() {
 		tokio_handle.clone(),
 		enclave_metrics_receiver,
 	)));
+
+	// init in-memory store, it should be done after the o-call bridge is initialized
+	if let Err(e) = enclave.init_in_memory_state() {
+		error!("Failed to initialize in-memory state: {:?}", e);
+	}
 
 	#[cfg(feature = "dcap")]
 	let quoting_enclave_target_info = match enclave.qe_get_target_info() {
@@ -292,6 +296,14 @@ pub(crate) fn main() {
 		setup::migrate_shard(enclave.as_ref(), &new_shard);
 		let new_shard_name = new_shard.encode().to_base58();
 		setup::remove_old_shards(config.data_dir(), &new_shard_name);
+	} else if let Some(sub_matches) = matches.subcommand_matches("upload-id-graph") {
+		let tee_accountid = enclave_account(enclave.as_ref());
+		let shard = extract_shard(sub_matches.value_of("shard"), enclave.as_ref());
+		info!("shard is {:?}", shard);
+		let node_api =
+			node_api_factory.create_api().expect("Failed to create parentchain node API");
+		init_parentchain(&enclave, &node_api, &tee_accountid, ParentchainId::Litentry, &shard);
+		enclave.upload_id_graph();
 	} else {
 		info!("For options: use --help");
 	}

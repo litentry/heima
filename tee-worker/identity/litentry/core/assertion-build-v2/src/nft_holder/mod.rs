@@ -22,8 +22,7 @@ extern crate sgx_tstd as std;
 
 use lc_credentials_v2::{nft_holder::NFTHolderAssertionUpdate, Credential, IssuerRuntimeVersion};
 use lc_service::web3_nft::nft_holder::has_nft;
-use lc_stf_task_sender::AssertionBuildRequest;
-use litentry_primitives::{Web3Network, Web3NftType};
+use litentry_primitives::{AssertionBuildRequest, Web3Network, Web3NftType};
 use log::debug;
 
 use crate::*;

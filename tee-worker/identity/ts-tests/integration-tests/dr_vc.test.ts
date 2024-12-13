@@ -77,7 +77,7 @@ describe('Test Vc (direct request)', function () {
             aliceSubstrateIdentity,
             evmIdentity,
             evmNonce,
-            'ethereum',
+            'evm',
             context.web3Wallets.evm.Alice
         );
         const evmNetworks = context.api.createType('Vec<Web3Network>', ['Ethereum', 'Bsc']);

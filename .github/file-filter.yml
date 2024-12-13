@@ -4,7 +4,7 @@
 parachain_src: &parachain_src
   - 'parachain/node/**'
   - 'parachain/pallets/**'
-  - 'primitives/**'
+  - 'common/**'
   - 'parachain/runtime/**'
   - 'parachain/docker/Dockerfile'
   - 'parachain/Cargo.*'
@@ -23,23 +23,22 @@ coverage_src: &coverage_src
   - '.github/workflows/coverage.yml'
 
 identity_src: &identity_src
+  - 'common/**'
+  - 'tee-worker/Cargo.toml'
+  - 'tee-worker/Cargo.lock'
   - 'tee-worker/identity/**/*.rs'
-  - 'tee-worker/identity/**/Cargo.toml'
-  - 'tee-worker/identity/**/Cargo.lock'
   - 'tee-worker/identity/**/rust-toolchain.toml'
   - 'tee-worker/identity/build.Dockerfile'
   - 'tee-worker/identity/enclave-runtime/**'
 
-bitacross_src: &bitacross_src
-  - 'tee-worker/bitacross/**/*.rs'
-  - 'tee-worker/bitacross/**/Cargo.toml'
-  - 'tee-worker/bitacross/**/Cargo.lock'
-  - 'tee-worker/bitacross/**/rust-toolchain.toml'
-  - 'tee-worker/bitacross/build.Dockerfile'
-  - 'tee-worker/bitacross/enclave-runtime/**'
+omni_executor_src: &omni_executor_src
+  - 'tee-worker/omni-executor/Cargo.toml'
+  - 'tee-worker/omni-executor/Cargo.lock'
+  - 'tee-worker/omni-executor/**/*.rs'
+  - 'tee-worker/omni-executor/rust-toolchain.toml'
+  - 'tee-worker/omni-executor/**/*.scale'
 
-bitacross_test: &bitacross_test
-  - 'tee-worker/bitacross/ts-tests/**'
-  - 'tee-worker/bitacross/cli/*.sh'
+
+omni_executor_test: &omni_executor_test
   - 'parachain/docker/**'
-  - 'tee-worker/bitacross/docker/*.yml'
+  - 'tee-worker/omni-executor/docker/*.yml'

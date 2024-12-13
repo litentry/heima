@@ -1,0 +1,45 @@
+[package]
+name = "itp-extrinsics-factory"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+hex = { workspace = true }
+sgx_tstd = { workspace = true, optional = true }
+sgx_types = { workspace = true }
+substrate-api-client = { workspace = true }
+
+itp-node-api = { workspace = true }
+itp-nonce-cache = { workspace = true }
+itp-types = { workspace = true }
+
+thiserror = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+codec = { package = "parity-scale-codec", workspace = true }
+log = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+sp-runtime = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "hex/std",
+    "itp-node-api/std",
+    "itp-nonce-cache/std",
+    "itp-types/std",
+    "log/std",
+    "substrate-api-client/std",
+    "thiserror",
+    "codec/std",
+    "sp-core/std",
+    "sp-runtime/std",
+]
+sgx = [
+    "itp-node-api/sgx",
+    "itp-nonce-cache/sgx",
+    "sgx_tstd",
+    "thiserror_sgx",
+]
+mocks = []

@@ -32,11 +32,11 @@ use crate::{
 	},
 };
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
-pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_stf_interface::ShardCreationInfo;
 use itp_types::parentchain::ParentchainId;
+pub use itp_types::parentchain::{SolochainBlock, SolochainHeader, SolochainParams};
 use std::{path::PathBuf, sync::Arc};
 
 pub struct TargetBSolochainHandler {

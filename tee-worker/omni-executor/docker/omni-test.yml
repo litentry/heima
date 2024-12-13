@@ -1,0 +1,17 @@
+services:
+    omni-test:
+        image: ubuntu:22.04
+        container_name: omni-test
+        volumes:
+            - ../cli:/usr/local/cli
+        depends_on:
+            omni-executor:
+                condition: service_healthy
+        networks:
+            - litentry-test-network
+        entrypoint: "bash -c '/usr/local/cli/test.sh 2>&1' "
+        restart: "no"
+
+networks:
+    litentry-test-network:
+        driver: bridge

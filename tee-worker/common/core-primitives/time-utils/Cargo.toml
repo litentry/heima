@@ -1,0 +1,20 @@
+[package]
+name = "itp-time-utils"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+chrono = { workspace = true, optional = true }
+chrono_sgx = { workspace = true, optional = true }
+sgx_tstd = { workspace = true, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "chrono",
+]
+sgx = [
+    "sgx_tstd",
+    "chrono_sgx",
+]

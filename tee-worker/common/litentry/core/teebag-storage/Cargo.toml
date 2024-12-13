@@ -1,0 +1,18 @@
+[package]
+name = "lc-teebag-storage"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition = "2021"
+
+[dependencies]
+itp-storage = { workspace = true }
+itp-types = { workspace = true }
+sp-std = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "sp-std/std",
+    "itp-storage/std",
+    "itp-types/std",
+]

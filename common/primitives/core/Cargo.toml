@@ -6,16 +6,28 @@ version = '0.1.0'
 
 [dependencies]
 base58 = { version = "0.2", default-features = false }
+base64 = { version = "0.13", default-features = false, features = ["alloc"] }
+chrono = { version = "0.4", default-features = false, features = ["serde"] }
+der = { version = "0.6.0", default-features = false }
+hex = { version = "0.4", default-features = false }
+hex-literal = { version = "0.4.1", default-features = false }
 parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
+ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "=1.0.133", default-features = false }
 strum = { version = "0.26", default-features = false }
 strum_macros = { version = "0.26", default-features = false }
+webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
 
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "polkadot-v1.1.0", default-features = false }
+frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407", default-features = false }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 litentry-hex-utils = { path = "../../utils/hex", default-features = false }
 litentry-macros = { path = "macros" }
@@ -24,6 +36,14 @@ litentry-proc-macros = { path = "proc-macros" }
 [features]
 default = ["std"]
 std = [
+    "chrono/std",
+    "der/std",
+    "hex/std",
+    "ring/std",
+    "webpki/std",
+    "x509-cert/std",
+    "serde/std",
+    "serde_json/std",
     "strum/std",
     "parity-scale-codec/std",
     "scale-info/std",
@@ -31,6 +51,8 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
     "sp-io/std",
+    "sp-std/std",
+    "sp-consensus-aura/std",
     "pallet-evm/std",
     "litentry-hex-utils/std",
 ]

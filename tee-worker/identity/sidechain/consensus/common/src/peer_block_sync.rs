@@ -55,6 +55,7 @@ where
 }
 
 /// Sidechain peer block sync implementation.
+#[allow(dead_code)]
 pub struct PeerBlockSync<
 	ParentchainBlock,
 	SignedSidechainBlock,
@@ -218,9 +219,14 @@ where
 
 				// We confirm the successful block import. Only in this case, not when we're in
 				// on-boarding and importing blocks that were fetched from a peer.
-				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier) {
-					error!("Failed to confirm sidechain block import: {:?}", e);
-				}
+				//
+				// Litentry: disable it for now, see P-1091
+				// the parachain storage is not updated upon shard migration, so submitting this extrinsic with new shard will fail.
+				// Additionally, confirmation of sidechain block import doesn't bring anything right now
+				//
+				// if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier) {
+				// 	error!("Failed to confirm sidechain block import: {:?}", e);
+				// }
 
 				Ok(latest_parentchain_header)
 			},

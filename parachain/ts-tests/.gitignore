@@ -3,3 +3,6 @@
 
 config.local.json
 package-lock.json
+
+common/bob.json
+common/data/

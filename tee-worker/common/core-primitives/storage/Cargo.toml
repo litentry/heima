@@ -1,0 +1,47 @@
+[package]
+name = "itp-storage"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true, features = ["chain-error"] }
+derive_more = { workspace = true }
+frame-metadata = { workspace = true }
+hash-db = { workspace = true }
+
+sgx_tstd = { workspace = true, optional = true }
+
+thiserror = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+frame-support = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+sp-trie = { workspace = true }
+
+itp-types = { workspace = true }
+
+[dev-dependencies]
+sp-state-machine = { workspace = true, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-metadata/std",
+    "frame-support/std",
+    "hash-db/std",
+    "itp-types/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-trie/std",
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror_sgx",
+]
+test = []

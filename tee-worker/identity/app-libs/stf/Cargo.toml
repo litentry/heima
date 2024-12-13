@@ -1,53 +1,50 @@
 [package]
-name = "ita-stf"
+name = "id-ita-stf"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
 edition = "2021"
 
 [dependencies]
-# crates.io
-codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
-hex = { version = "0.4", default-features = false }
-hex-literal = { version = "0.4" }
-log = { version = "0.4", default-features = false }
-rlp = { version = "0.5", default-features = false }
-sha3 = { version = "0.10", default-features = false }
+codec = { package = "parity-scale-codec", workspace = true }
+hex = { workspace = true }
+hex-literal = { workspace = true }
+log = { workspace = true }
+rlp = { workspace = true }
+sha3 = { workspace = true }
 
-# sgx deps
-sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"], git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { workspace = true, features = ["untrusted_fs", "net", "backtrace"], optional = true }
 
-# local crates
-ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
-itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
-itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
-itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
-itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
-itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }
-itp-stf-primitives = { default-features = false, path = "../../core-primitives/stf-primitives" }
-itp-storage = { default-features = false, path = "../../core-primitives/storage" }
-itp-types = { default-features = false, path = "../../core-primitives/types" }
-itp-utils = { default-features = false, path = "../../core-primitives/utils" }
-sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
+itp-hashing = { workspace = true }
+itp-node-api = { workspace = true }
+itp-node-api-metadata = { workspace = true }
+itp-sgx-externalities = { workspace = true }
+itp-stf-interface = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-storage = { workspace = true }
+itp-types = { workspace = true }
+itp-utils = { workspace = true }
 
-# Substrate dependencies
-frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-pallet-sudo = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../sgx-runtime", default-features = false }
+sp-io = { path = "../../../common/core-primitives/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"] }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-sudo = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
 
 # litentry
-itp-node-api-metadata-provider = { path = "../../core-primitives/node-api/metadata-provider", default-features = false }
+itp-node-api-metadata-provider = { workspace = true }
 lc-stf-task-sender = { path = "../../litentry/core/stf-task/sender", default-features = false }
-litentry-hex-utils = { path = "../../../../common/utils/hex", default-features = false }
-litentry-macros = { path = "../../../../common/primitives/core/macros", default-features = false }
-litentry-primitives = { path = "../../litentry/primitives", default-features = false }
-pallet-parentchain = { path = "../../../../parachain/worker-pallets/parentchain", default-features = false }
+litentry-hex-utils = { workspace = true }
+litentry-macros = { workspace = true }
+litentry-primitives = { workspace = true }
+pallet-parentchain = { workspace = true }
 
 [dev-dependencies]
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-keyring = { workspace = true }
 
 [features]
 default = ["std"]
@@ -57,16 +54,13 @@ sgx = [
     "itp-sgx-externalities/sgx",
     "sp-io/sgx",
     "itp-node-api/sgx",
-    # litentry
     "litentry-primitives/sgx",
     "lc-stf-task-sender/sgx",
     "itp-node-api-metadata-provider/sgx",
 ]
 std = [
-    # crates.io
     "codec/std",
     "log/std",
-    # local
     "ita-sgx-runtime/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
@@ -75,17 +69,14 @@ std = [
     "itp-types/std",
     "itp-node-api/std",
     "itp-node-api-metadata/std",
-    # substrate
     "sp-core/std",
     "pallet-balances/std",
     "pallet-sudo/std",
     "frame-system/std",
     "frame-support/std",
     "sp-runtime/std",
-    # scs/integritee
     "pallet-parentchain/std",
     "sp-io/std",
-    # litentry
     "litentry-primitives/std",
     "lc-stf-task-sender/std",
     "itp-node-api-metadata-provider/std",

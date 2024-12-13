@@ -64,6 +64,7 @@ pub trait WeightInfo {
 	fn post_opaque_task() -> Weight;
 	fn parentchain_block_processed() -> Weight;
 	fn sidechain_block_imported() -> Weight;
+	fn add_enclave_identifier() -> Weight;
 }
 
 /// Weights for pallet_teebag using the Substrate node and recommended hardware.
@@ -264,6 +265,12 @@ impl<T: frame_system::Config> WeightInfo for LitentryWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(4_u64))
 			.saturating_add(T::DbWeight::get().writes(2_u64))
 	}
+
+	fn add_enclave_identifier() -> Weight {
+        Weight::from_parts(15_000_000, 3000)
+            .saturating_add(T::DbWeight::get().reads(1_u64))
+            .saturating_add(T::DbWeight::get().writes(1_u64))
+    }
 }
 
 // For backwards compatibility and tests
@@ -463,4 +470,10 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(2_u64))
 	}
+
+	fn add_enclave_identifier() -> Weight {
+        Weight::from_parts(15_000_000, 3000)
+            .saturating_add(RocksDbWeight::get().reads(1_u64))
+            .saturating_add(RocksDbWeight::get().writes(1_u64))
+    }
 }

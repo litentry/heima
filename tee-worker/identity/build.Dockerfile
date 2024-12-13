@@ -22,11 +22,11 @@ FROM litentry/litentry-tee-dev:latest AS builder
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 # set environment variables
-ENV SGX_SDK /opt/sgxsdk
-ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
-ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
-ENV CARGO_NET_GIT_FETCH_WITH_CLI true
+ENV SGX_SDK=/opt/sgxsdk
+ENV PATH="$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
+ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
 ENV SCCACHE_CACHE_SIZE="20G"
 ENV SCCACHE_DIR="/opt/rust/sccache"
@@ -85,7 +85,7 @@ RUN cargo test --release
 ##################################################
 FROM node:18-bookworm-slim AS runner
 
-RUN apt update && apt install -y libssl-dev iproute2 jq curl protobuf-compiler
+RUN apt update && apt install -y libssl-dev iproute2 jq curl protobuf-compiler python3 python-is-python3 build-essential
 RUN corepack enable && corepack prepare pnpm@8.7.6 --activate && corepack enable pnpm
 
 
@@ -97,8 +97,8 @@ LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 ARG SCRIPT_DIR=/usr/local/worker-cli
 ARG LOG_DIR=/usr/local/log
 
-ENV SCRIPT_DIR ${SCRIPT_DIR}
-ENV LOG_DIR ${LOG_DIR}
+ENV SCRIPT_DIR=${SCRIPT_DIR}
+ENV LOG_DIR=${LOG_DIR}
 
 COPY --from=local-builder:latest /home/ubuntu/tee-worker/identity/bin/litentry-cli /usr/local/bin
 COPY --from=local-builder:latest /home/ubuntu/tee-worker/identity/cli/*.sh /usr/local/worker-cli/
@@ -130,8 +130,8 @@ RUN chmod +x /usr/local/bin/litentry-worker
 RUN ls -al /usr/local/bin
 
 # checks
-ENV SGX_SDK /opt/sgxsdk
-ENV SGX_ENCLAVE_SIGNER $SGX_SDK/bin/x64/sgx_sign
+ENV SGX_SDK=/opt/sgxsdk
+ENV SGX_ENCLAVE_SIGNER=$SGX_SDK/bin/x64/sgx_sign
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/sgx-aesm-service/aesm:$SGX_SDK/sdk_libs
 ENV AESM_PATH=/opt/intel/sgx-aesm-service/aesm
 
@@ -164,12 +164,12 @@ COPY --from=local-builder:latest /lib/x86_64-linux-gnu/libsgx* /lib/x86_64-linux
 COPY --from=local-builder:latest /lib/x86_64-linux-gnu/libdcap* /lib/x86_64-linux-gnu/
 COPY --from=local-builder:latest /lib/x86_64-linux-gnu/libprotobuf* /lib/x86_64-linux-gnu/
 
-ENV DEBIAN_FRONTEND noninteractive
-ENV TERM xterm
-ENV SGX_SDK /opt/sgxsdk
-ENV PATH "$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
-ENV PKG_CONFIG_PATH "${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm
+ENV SGX_SDK=/opt/sgxsdk
+ENV PATH="$PATH:${SGX_SDK}/bin:${SGX_SDK}/bin/x64:/opt/rust/bin"
+ENV PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:${SGX_SDK}/pkgconfig"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${SGX_SDK}/sdk_libs"
 
 RUN mkdir -p /origin /data
 
@@ -187,7 +187,7 @@ RUN touch spid.txt key.txt && \
 
 RUN ldd /usr/local/bin/litentry-worker && /usr/local/bin/litentry-worker --version
 
-ENV DATA_DIR /data
+ENV DATA_DIR=/data
 
 USER litentry
 WORKDIR /data

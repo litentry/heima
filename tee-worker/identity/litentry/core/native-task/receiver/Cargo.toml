@@ -1,0 +1,84 @@
+[package]
+name = "lc-native-task-receiver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }   # a newer base64
+futures = { workspace = true, optional = true }
+futures_sgx = { workspace = true, features = ["thread-pool"], optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+codec = { package = "parity-scale-codec", workspace = true }
+log = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+
+ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../../../../app-libs/sgx-runtime", default-features = false }
+ita-stf = { package = "id-ita-stf", path = "../../../../app-libs/stf", default-features = false }
+itp-enclave-metrics = { workspace = true }
+itp-extrinsics-factory = { workspace = true }
+itp-node-api = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-sgx-externalities = { workspace = true }
+itp-stf-executor = { package = "id-itp-stf-executor", path = "../../../../core-primitives/stf-executor", default-features = false }
+itp-stf-primitives = { workspace = true }
+itp-stf-state-handler = { workspace = true }
+itp-storage = { workspace = true }
+itp-top-pool-author = { package = "id-itp-top-pool-author", path = "../../../../core-primitives/top-pool-author", default-features = false }
+itp-types = { workspace = true }
+
+frame-support = { workspace = true }
+lc-data-providers = { workspace = true }
+lc-dynamic-assertion = { workspace = true }
+lc-evm-dynamic-assertions = { workspace = true }
+lc-identity-verification = { workspace = true }
+lc-native-task-sender = { workspace = true }
+lc-omni-account = { workspace = true }
+lc-stf-task-receiver = { workspace = true }
+litentry-hex-utils = { workspace = true }
+litentry-macros = { workspace = true }
+litentry-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+sgx = [
+    "futures_sgx",
+    "sgx_tstd",
+    "ita-stf/sgx",
+    "itp-top-pool-author/sgx",
+    "sp-core/full_crypto",
+    "litentry-primitives/sgx",
+    "itp-node-api/sgx",
+    "itp-extrinsics-factory/sgx",
+    "lc-native-task-sender/sgx",
+    "lc-identity-verification/sgx",
+    "lc-omni-account/sgx",
+    "lc-stf-task-receiver/sgx",
+    "lc-evm-dynamic-assertions/sgx",
+    "itp-storage/sgx",
+]
+std = [
+    "futures",
+    "log/std",
+    "ita-stf/std",
+    "itp-types/std",
+    "itp-top-pool-author/std",
+    "itp-stf-primitives/std",
+    "itp-extrinsics-factory/std",
+    "sp-core/std",
+    "litentry-primitives/std",
+    "frame-support/std",
+    "itp-node-api/std",
+    "lc-native-task-sender/std",
+    "lc-identity-verification/std",
+    "lc-omni-account/std",
+    "lc-stf-task-receiver/std",
+    "lc-evm-dynamic-assertions/std",
+    "itp-storage/std",
+]
+development = [
+    "litentry-macros/development",
+]

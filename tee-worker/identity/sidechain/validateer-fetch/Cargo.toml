@@ -5,18 +5,20 @@ authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@int
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
-derive_more = "0.99.16"
+codec = { package = "parity-scale-codec", workspace = true, features = ["chain-error"] }
+derive_more = { workspace = true }
 
-# substrate deps
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
 
-# local deps
-itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
-lc-teebag-storage = { path = "../../litentry/core/teebag-storage", default-features = false }
+itp-ocall-api = { workspace = true }
+itp-types = { workspace = true }
+lc-teebag-storage = { workspace = true }
+
+[dev-dependencies]
+itp-test = { workspace = true, features = ["std"] }
+itc-parentchain-test = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]
@@ -29,7 +31,3 @@ std = [
     "itp-ocall-api/std",
     "lc-teebag-storage/std",
 ]
-
-[dev-dependencies]
-itp-test = { path = "../../core-primitives/test" }
-itc-parentchain-test = { path = "../../core/parentchain/test" }

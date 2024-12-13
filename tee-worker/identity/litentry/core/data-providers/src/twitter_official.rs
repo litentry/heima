@@ -18,7 +18,6 @@
 use crate::sgx_reexport_prelude::*;
 
 use crate::{build_client_with_cert, vec_to_string, Error, HttpError, UserInfo};
-use base64::engine::{general_purpose::STANDARD as BASE64_STANDARD, Engine};
 use http::header::{AUTHORIZATION, CONNECTION};
 use http_req::response::Headers;
 use itc_rest_client::{
@@ -183,7 +182,7 @@ impl TwitterOfficialClient {
 	}
 
 	pub fn oauth2_authorization(client_id: &str, client_secret: &str) -> String {
-		format!("Basic {}", BASE64_STANDARD.encode(format!("{}:{}", client_id, client_secret)))
+		format!("Basic {}", base64::encode(format!("{}:{}", client_id, client_secret)))
 	}
 
 	/// V2, rate limit: 300/15min(per App) 900/15min(per User)

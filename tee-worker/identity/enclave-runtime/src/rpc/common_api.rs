@@ -24,14 +24,21 @@ use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_executor::getter_executor::ExecuteGetter;
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{DirectRequestStatus, Index, RsaRequest, ShardIdentifier, H256};
+use itp_types::{
+	parentchain::AccountId, DirectRequestStatus, Index, RsaRequest, ShardIdentifier, H256,
+};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use its_rpc_handler::direct_top_pool_api::add_top_pool_direct_rpc_methods;
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use lc_data_providers::DataProviderConfig;
-use lc_identity_verification::web2::{email, twitter};
+use lc_identity_verification::{
+	generate_verification_code,
+	web2::{email, google, twitter},
+};
 use litentry_macros::{if_development, if_development_or};
-use litentry_primitives::{aes_decrypt, AesRequest, DecryptableRequest, Identity};
+use litentry_primitives::{
+	aes_decrypt, AesRequest, DecryptableRequest, Identity, Web2IdentityType,
+};
 use log::debug;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_core::Pair;
@@ -138,7 +145,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 
 				let account_id = match Identity::from_hex(identity_hex.as_str()) {
 					Ok(identity) =>
-						if let Some(account_id) = identity.to_account_id() {
+						if let Some(account_id) = identity.to_native_account() {
 							account_id
 						} else {
 							return Ok(json!(compute_hex_encoded_return_error(
@@ -424,10 +431,10 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		debug!("worker_api_direct rpc was called: identity_getTwitterAuthorizeUrl");
 
 		match params.parse::<(String, String)>() {
-			Ok((encoded_did, redirect_url)) => {
-				let account_id = match Identity::from_did(encoded_did.as_str()) {
+			Ok((did, redirect_url)) => {
+				let account_id = match Identity::from_did(did.as_str()) {
 					Ok(identity) =>
-						if let Some(account_id) = identity.to_account_id() {
+						if let Some(account_id) = identity.to_native_account() {
 							account_id
 						} else {
 							return Ok(json!(compute_hex_encoded_return_error("Invalid identity")))
@@ -460,30 +467,59 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		}
 	});
 
-	io_handler.add_sync_method("identity_requestEmailVerification", move |params: Params| {
-		match params.parse::<(String, String)>() {
-			Ok((encoded_did, email)) => {
-				let account_id = match Identity::from_did(encoded_did.as_str()) {
-					Ok(identity) =>
-						if let Some(account_id) = identity.to_account_id() {
-							account_id
-						} else {
-							return Ok(json!(compute_hex_encoded_return_error("Invalid identity")))
-						},
+	let google_client_id = data_provider_config.google_client_id.clone();
+
+	io_handler.add_sync_method("omni_getOAuth2GoogleAuthorizationUrl", move |params: Params| {
+		match params.parse::<(String, String, String)>() {
+			Ok((encoded_omni_account, google_account, redirect_uri)) => {
+				let omni_account = match AccountId::from_hex(encoded_omni_account.as_str()) {
+					Ok(account_id) => account_id,
 					Err(_) =>
 						return Ok(json!(compute_hex_encoded_return_error(
-							"Could not parse identity"
+							"Could not parse omni account"
+						))),
+				};
+				let google_identity =
+					Identity::from_web2_account(&google_account, Web2IdentityType::Google);
+				let state = generate_verification_code();
+				let authorize_data = google::get_authorize_data(&google_client_id, &redirect_uri);
+
+				match google::OAuthStateStore::insert(omni_account, google_identity.hash(), state) {
+					Ok(_) => {
+						let json_value = RpcReturnValue::new(
+							authorize_data.authorize_url.encode(),
+							false,
+							DirectRequestStatus::Ok,
+						);
+						Ok(json!(json_value.to_hex()))
+					},
+					Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not save state"))),
+				}
+			},
+			Err(_) => Ok(json!(compute_hex_encoded_return_error("Could not parse params"))),
+		}
+	});
+
+	io_handler.add_sync_method("omni_requestEmailVerificationCode", move |params: Params| {
+		match params.parse::<(String, String)>() {
+			Ok((encoded_omni_account, email)) => {
+				let omni_account = match AccountId::from_hex(encoded_omni_account.as_str()) {
+					Ok(account_id) => account_id,
+					Err(_) =>
+						return Ok(json!(compute_hex_encoded_return_error(
+							"Could not parse omni account"
 						))),
 				};
 				let mut mailer = email::sendgrid_mailer::SendGridMailer::new(
 					data_provider_config.sendgrid_api_key.clone(),
 					data_provider_config.sendgrid_from_email.clone(),
 				);
-				let verification_code = email::generate_verification_code();
+				let verification_code = generate_verification_code();
+				let email_identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
 
 				match email::VerificationCodeStore::insert(
-					account_id,
-					email.clone(),
+					omni_account,
+					email_identity.hash(),
 					verification_code.clone(),
 				) {
 					Ok(_) => {

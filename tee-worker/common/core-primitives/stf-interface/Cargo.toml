@@ -1,0 +1,24 @@
+[package]
+name = "itp-stf-interface"
+version = "0.8.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+
+itp-node-api-metadata = { workspace = true, features = ["mocks"] }
+itp-node-api-metadata-provider = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-types = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
+    "itp-stf-primitives/std",
+    "itp-types/std",
+]
+sgx = []
+mocks = []

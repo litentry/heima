@@ -22,63 +22,58 @@ parse_duration = "2.1.1"
 prometheus = { version = "0.13.0", features = ["process"], default-features = false } # Enabling std lead to protobuf dependency conflicts with substrate, and we don't need it.
 rayon = "1.10.0"
 regex = "1.9.5"
-scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
-serde = "1.0"
-serde_derive = "1.0"
-serde_json = "1.0"
-thiserror = "1.0"
+scale-info = { workspace = true, features = ["std"] }
+serde = { workspace = true, features = ["std"] }
+serde_derive = { workspace = true }
+serde_json = { workspace = true, features = ["std"] }
+thiserror = { workspace = true }
 tokio = { version = "1.6.1", features = ["full"] }
 url = "2.5.0"
 warp = "0.3"
 
-# ipfs
 ipfs-api = "0.11.0"
 
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-primitive-types = { version = "0.12.1", default-features = false, features = ["codec"] }
+codec = { package = "parity-scale-codec", workspace = true }
+primitive-types = { workspace = true, features = ["codec"] }
 
-sgx_crypto_helper = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
-sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
+sgx_crypto_helper = { workspace = true, features = ["ucrypto_help"] }
+sgx_types = { workspace = true }
 
-# local
-ita-parentchain-interface = { path = "../app-libs/parentchain-interface" }
-itc-parentchain = { path = "../core/parentchain/parentchain-crate" }
-itc-rest-client = { path = "../core/rest-client" }
-itc-rpc-client = { path = "../core/rpc-client" }
-itc-rpc-server = { path = "../core/rpc-server" }
-itp-api-client-types = { path = "../core-primitives/node-api/api-client-types" }
-itp-enclave-api = { path = "../core-primitives/enclave-api" }
-itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
-itp-node-api = { path = "../core-primitives/node-api" }
-itp-settings = { path = "../core-primitives/settings" }
-itp-stf-interface = { path = "../core-primitives/stf-interface" }
-itp-storage = { path = "../core-primitives/storage" }
-itp-time-utils = { path = "../core-primitives/time-utils" }
-itp-types = { path = "../core-primitives/types" }
-itp-utils = { path = "../core-primitives/utils" }
-its-consensus-slots = { path = "../sidechain/consensus/slots" }
-its-peer-fetch = { path = "../sidechain/peer-fetch" }
-its-primitives = { path = "../sidechain/primitives" }
-its-rpc-handler = { path = "../sidechain/rpc-handler" }
-its-storage = { path = "../sidechain/storage" }
+ita-parentchain-interface = { package = "id-ita-parentchain-interface", path = "../app-libs/parentchain-interface" }
 
-# `default-features = false` to remove the jsonrpsee dependency.
-substrate-api-client = { default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+itc-rest-client = { workspace = true, features = ["std"] }
+itc-rpc-client = { workspace = true }
+itc-rpc-server = { workspace = true, features = ["std"] }
+itp-api-client-types = { workspace = true, features = ["std"] }
+itp-enclave-api = { package = "id-itp-enclave-api", path = "../core-primitives/enclave-api" }
+itp-enclave-metrics = { workspace = true, features = ["std"] }
+itp-node-api = { workspace = true, features = ["std"] }
+itp-settings = { workspace = true }
+itp-stf-interface = { workspace = true, features = ["std"] }
+itp-storage = { workspace = true, features = ["std"] }
+itp-time-utils = { workspace = true, features = ["std"] }
+itp-types = { workspace = true, features = ["std"] }
+itp-utils = { workspace = true, features = ["std"] }
 
-# Substrate dependencies
-frame-support = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42", features = ["full_crypto"] }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+its-consensus-slots = { workspace = true, features = ["std"] }
+its-peer-fetch = { workspace = true, features = ["std"] }
+its-primitives = { workspace = true, features = ["std"] }
+its-rpc-handler = { workspace = true, features = ["std"] }
+its-storage = { workspace = true }
 
-# litentry
+substrate-api-client = { workspace = true }
+
+frame-support = { workspace = true, features = ["std"] }
+sp-consensus-grandpa = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
+sp-keyring = { workspace = true }
+sp-runtime = { workspace = true, features = ["std"] }
+
 config = "0.13.3"
-lc-data-providers = { path = "../litentry/core/data-providers" }
-lc-mock-server = { path = "../litentry/core/mock-server" }
-lc-stf-task-sender = { path = "../litentry/core/stf-task/sender", default-features = false }
-litentry-macros = { path = "../../../common/primitives/core/macros", default-features = false }
-litentry-primitives = { path = "../litentry/primitives" }
+lc-data-providers = { workspace = true, features = ["std"] }
+lc-mock-server = { workspace = true }
+litentry-macros = { workspace = true }
+litentry-primitives = { workspace = true, features = ["std"] }
 
 [features]
 default = []
@@ -107,10 +102,8 @@ link-binary = [
 mock-server = []
 
 [dev-dependencies]
-# crates.io
 anyhow = "1.0.40"
 mockall = "0.11"
-# local
-itc-parentchain-test = { path = "../core/parentchain/test" }
-its-peer-fetch = { path = "../sidechain/peer-fetch", features = ["mocks"] }
-its-test = { path = "../sidechain/test" }
+itc-parentchain-test = { workspace = true }
+its-peer-fetch = { workspace = true, features = ["std", "mocks"] }
+its-test = { workspace = true, features = ["std"] }

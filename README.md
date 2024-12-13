@@ -38,7 +38,7 @@ make build-runtime-litentry
 
 The wasms should be located under `target/release/wbuild/litentry-parachain-runtime/`
 
-Similarly, use `make build-runtime-rococo` to build the rococo-parachain-runtime.
+Similarly, use `make build-runtime-paseo` to build the paseo-parachain-runtime.
 
 ## Launch parachain
 ### Launch a parachain network with relaychains
@@ -110,7 +110,7 @@ If you see the screenshot below, you can tell the worker is running:
 
 ### TEE worker tests 
 
-Refer to [tee-worker ts-tests](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/ts-tests/README.md)
+Refer to [tee-worker ts-tests](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/ts-tests/README.md)
 
 ### Teardown
 

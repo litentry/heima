@@ -24,7 +24,8 @@ use codec::{Decode, Encode};
 use frame_support::{ensure, sp_runtime::traits::One};
 use futures::executor::ThreadPoolBuilder;
 use ita_sgx_runtime::{
-	pallet_imt::get_eligible_identities, BlockNumber, Hash, Runtime, VERSION as SIDECHAIN_VERSION,
+	pallet_identity_management_tee::get_eligible_identities, BlockNumber, Hash, Runtime,
+	VERSION as SIDECHAIN_VERSION,
 };
 
 #[cfg(feature = "development")]
@@ -36,6 +37,7 @@ use ita_stf::{
 	Getter, TrustedCall, TrustedCallSigned,
 };
 use itp_enclave_metrics::EnclaveMetric;
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{
 	pallet_system::SystemConstants, pallet_vcmp::VCMPCallIndexes, provider::AccessNodeMetadata,
 	NodeMetadataTrait,
@@ -49,16 +51,17 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	AccountId, BlockNumber as SidechainBlockNumber, OpaqueCall, ShardIdentifier, H256,
+	parentchain::ParentchainId, AccountId, BlockNumber as SidechainBlockNumber, OpaqueCall,
+	ShardIdentifier, H256,
 };
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
-use lc_parachain_extrinsic_task_sender::{ParachainExtrinsicSender, SendParachainExtrinsic};
 use lc_stf_task_receiver::{handler::assertion::create_credential_str, StfTaskContext};
-use lc_stf_task_sender::AssertionBuildRequest;
 use lc_vc_task_sender::init_vc_task_sender;
 use litentry_macros::if_development_or;
-use litentry_primitives::{Assertion, DecryptableRequest, Identity, ParentchainBlockNumber};
+use litentry_primitives::{
+	Assertion, AssertionBuildRequest, DecryptableRequest, Identity, ParentchainBlockNumber,
+};
 use log::*;
 use pallet_identity_management_tee::{identity_context::sort_id_graph, IdentityContext};
 use sp_core::{blake2_256, H160};
@@ -76,8 +79,9 @@ use std::{
 	vec::Vec,
 };
 
-pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
+pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 	context: Arc<StfTaskContext<ShieldingKeyRepository, A, S, H, O, AR>>,
+	extrinsic_factory: Arc<Z>,
 	node_metadata_repo: Arc<N>,
 ) where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
@@ -88,12 +92,13 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
 	H: HandleState + Send + Sync + 'static,
 	H::StateT: SgxExternalitiesTrait,
 	O: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
+	Z: CreateExtrinsics + Send + Sync + 'static,
 	N: AccessNodeMetadata + Send + Sync + 'static,
 	N::MetadataType: NodeMetadataTrait,
 	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem> + Send + Sync + 'static,
 {
 	let vc_task_receiver = init_vc_task_sender();
-	let n_workers = 960;
+	let n_workers = 480;
 	let pool = ThreadPoolBuilder::new().pool_size(n_workers).create().unwrap();
 
 	let (tc_sender, tc_receiver) = channel::<(ShardIdentifier, TrustedCall)>();
@@ -183,6 +188,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
 
 			let shard_pool = request.shard;
 			let context_pool = context.clone();
+			let extrinsic_factory_pool = extrinsic_factory.clone();
 			let node_metadata_repo_pool = node_metadata_repo.clone();
 			let tc_sender_pool = tc_sender.clone();
 			let req_registry_pool = req_registry.clone();
@@ -190,6 +196,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
 				let response = process_single_request(
 					shard_pool,
 					context_pool.clone(),
+					extrinsic_factory_pool,
 					node_metadata_repo_pool,
 					tc_sender_pool,
 					tcs.call.clone(),
@@ -247,6 +254,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
 
 					let shard_pool = request.shard;
 					let context_pool = context.clone();
+					let extrinsic_factory_pool = extrinsic_factory.clone();
 					let node_metadata_repo_pool = node_metadata_repo.clone();
 					let tc_sender_pool = tc_sender.clone();
 					let req_registry_pool = req_registry.clone();
@@ -255,6 +263,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, N, AR>(
 						let response = process_single_request(
 							shard_pool,
 							context_pool.clone(),
+							extrinsic_factory_pool,
 							node_metadata_repo_pool,
 							tc_sender_pool,
 							new_call,
@@ -403,9 +412,10 @@ fn send_vc_response<ShieldingKeyRepository, A, S, H, O, AR>(
 	}
 }
 
-fn process_single_request<ShieldingKeyRepository, A, S, H, O, N, AR>(
+fn process_single_request<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 	shard: H256,
 	context: Arc<StfTaskContext<ShieldingKeyRepository, A, S, H, O, AR>>,
+	extrinsic_factory: Arc<Z>,
 	node_metadata_repo: Arc<N>,
 	tc_sender: Sender<(ShardIdentifier, TrustedCall)>,
 	call: TrustedCall,
@@ -419,6 +429,7 @@ where
 	H: HandleState + Send + Sync + 'static,
 	H::StateT: SgxExternalitiesTrait,
 	O: EnclaveOnChainOCallApi + EnclaveMetricsOCallApi + EnclaveAttestationOCallApi + 'static,
+	Z: CreateExtrinsics + Send + Sync + 'static,
 	N: AccessNodeMetadata + Send + Sync + 'static,
 	N::MetadataType: NodeMetadataTrait,
 	AR: AssertionLogicRepository<Id = H160, Item = AssertionRepositoryItem>,
@@ -531,7 +542,7 @@ where
 		ensure!(!identities.is_empty(), RequestVcErrorDetail::NoEligibleIdentity);
 
 		let signer_account =
-			signer.to_account_id().ok_or(RequestVcErrorDetail::InvalidSignerAccount)?;
+			signer.to_native_account().ok_or(RequestVcErrorDetail::InvalidSignerAccount)?;
 
 		match assertion {
 			// the signer will be checked inside A13, as we don't seem to have access to ocall_api here
@@ -561,8 +572,15 @@ where
 			req_ext_hash,
 		};
 
-		let (vc_payload, vc_logs) = create_credential_str(&req, &context)
-			.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
+		let (vc_payload, vc_logs) = create_credential_str::<A, S, O, AR>(
+			&req,
+			context.enclave_signer.clone(),
+			context.enclave_account.clone(),
+			context.ocall_api.clone(),
+			context.data_provider_config.clone(),
+			context.assertion_repository.clone(),
+		)
+		.map_err(|e| RequestVcErrorDetail::AssertionBuildFailed(Box::new(e)))?;
 
 		let call_index = node_metadata_repo
 			.get_from_metadata(|m| m.vc_issued_call_indexes())
@@ -597,8 +615,15 @@ where
 			.send((shard, c))
 			.map_err(|e| RequestVcErrorDetail::TrustedCallSendingFailed(e.to_string()))?;
 
-		let extrinsic_sender = ParachainExtrinsicSender::new();
-		extrinsic_sender.send(call).map_err(RequestVcErrorDetail::CallSendingFailed)?;
+		// this internally fetches nonce from a mutex and then updates it thereby ensuring ordering
+		let xt = extrinsic_factory
+			.create_extrinsics(&[call], None)
+			.map_err(|e| RequestVcErrorDetail::ExtrinsicConstructionFailed(e.to_string()))?;
+
+		context
+			.ocall_api
+			.send_to_parentchain(xt, &ParentchainId::Litentry, None)
+			.map_err(|e| RequestVcErrorDetail::ExtrinsicSendingFailed(e.to_string()))?;
 
 		if let Err(e) = context
 			.ocall_api

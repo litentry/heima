@@ -1,0 +1,20 @@
+[package]
+name = "lc-parachain-extrinsic-task-sender"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lazy_static = { workspace = true }
+log = { workspace = true }
+
+itp-types = { workspace = true }
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+[features]
+default = ["std"]
+sgx = [
+    "sgx_tstd",
+]
+std = [
+    "log/std",
+]

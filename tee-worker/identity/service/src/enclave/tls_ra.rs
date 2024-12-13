@@ -46,7 +46,7 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 	loop {
 		match listener.accept() {
 			Ok((socket, addr)) => {
-				info!("[MU-RA-Server] a worker at {} is requesting key provisiong", addr);
+				info!("[MU-RA-Server] a worker at {} is requesting key provisioning", addr);
 
 				let result = enclave_api.run_state_provisioning_server(
 					socket.as_raw_fd(),

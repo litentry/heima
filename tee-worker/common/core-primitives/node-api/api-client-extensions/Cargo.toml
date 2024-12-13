@@ -1,0 +1,17 @@
+[package]
+name = "itp-api-client-extensions"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+sp-consensus-grandpa = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+substrate-api-client = { workspace = true, features = ["std"] }
+
+itp-api-client-types = { workspace = true, features = ["std"] }
+itp-types = { workspace = true, features = ["std"] }
+
+[features]
+# used for unit testing only!
+mocks = []

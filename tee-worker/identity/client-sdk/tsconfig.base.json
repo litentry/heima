@@ -16,7 +16,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@litentry/chaindata": ["packages/chaindata/src/index.ts"],
-			"@litentry/enclave": ["packages/enclave/src/index.ts"],
+			"packages/client-sdk": ["packages/client-sdk/src/index.ts"],
 			"@litentry/vc-sdk": ["packages/vc-sdk/src/index.ts"]
 		}
 	},

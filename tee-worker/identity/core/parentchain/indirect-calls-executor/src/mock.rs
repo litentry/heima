@@ -2,16 +2,11 @@ use crate::{error::Error, filter_metadata::EventsFromMetadata};
 use itp_stf_primitives::traits::IndirectExecutor;
 use itp_test::mock::stf_mock::TrustedCallSignedMock;
 use itp_types::{
-	parentchain::{
-		events::{
-			ActivateIdentityRequested, AssertionCreated, DeactivateIdentityRequested,
-			EnclaveUnauthorized, LinkIdentityRequested, OpaqueTaskPosted, VCRequested,
-		},
-		FilterEvents, HandleParentchainEvents, ProcessedEventsArtifacts,
-	},
+	parentchain::{events::*, FilterEvents, HandleParentchainEvents, ProcessedEventsArtifacts},
 	RsaRequest, H256,
 };
 use sp_core::H160;
+use sp_runtime::traits::{Block as ParentchainBlock, Header as ParentchainHeader};
 use std::vec::Vec;
 
 pub struct TestEventCreator;
@@ -67,23 +62,40 @@ impl FilterEvents for MockEvents {
 
 	fn get_parentchain_block_proccessed_events(
 		&self,
-	) -> Result<Vec<itp_types::parentchain::events::ParentchainBlockProcessed>, Self::Error> {
+	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error> {
+		Ok(Vec::new())
+	}
+
+	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error> {
+		Ok(Vec::new())
+	}
+
+	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error> {
+		Ok(Vec::new())
+	}
+
+	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error> {
 		Ok(Vec::new())
 	}
 }
 
 pub struct MockParentchainEventHandler {}
 
-impl<Executor> HandleParentchainEvents<Executor, TrustedCallSignedMock, Error>
+impl<Executor> HandleParentchainEvents<Executor, TrustedCallSignedMock, Error, (), (), ()>
 	for MockParentchainEventHandler
 where
-	Executor: IndirectExecutor<TrustedCallSignedMock, Error>,
+	Executor: IndirectExecutor<TrustedCallSignedMock, Error, (), (), ()>,
 {
-	fn handle_events(
+	type Output = ProcessedEventsArtifacts;
+	fn handle_events<Block>(
 		&self,
 		_: &Executor,
 		_: impl FilterEvents,
-	) -> Result<ProcessedEventsArtifacts, Error> {
+		_block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
+	) -> Result<ProcessedEventsArtifacts, Error>
+	where
+		Block: ParentchainBlock,
+	{
 		Ok((
 			Vec::from([H256::default()]),
 			Vec::from([H160::default()]),

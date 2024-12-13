@@ -1,0 +1,68 @@
+[package]
+name = "itp-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+log = { workspace = true }
+sgx_crypto_helper = { workspace = true }
+
+jsonrpc-core_sgx = { workspace = true, optional = true }
+sgx_tstd = { workspace = true, optional = true }
+sgx_types = { workspace = true }
+
+sp-core = { workspace = true }
+sp-io = { path = "../substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"] }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+itp-node-api = { workspace = true }
+itp-node-api-metadata-provider = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-sgx-externalities = { workspace = true }
+itp-stf-interface = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-stf-state-handler = { workspace = true }
+itp-storage = { workspace = true }
+itp-types = { workspace = true }
+
+hex = { workspace = true }
+lc-teebag-storage = { workspace = true }
+litentry-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "itp-node-api-metadata-provider/std",
+    "itp-node-api/std",
+    "itp-ocall-api/std",
+    "itp-sgx-crypto/std",
+    "itp-sgx-externalities/std",
+    "itp-stf-interface/std",
+    "itp-stf-primitives/std",
+    "itp-stf-state-handler/std",
+    "itp-storage/std",
+    "itp-types/std",
+    "log/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "litentry-primitives/std",
+    "lc-teebag-storage/std",
+    "sgx_crypto_helper/default",
+]
+sgx = [
+    "itp-node-api/sgx",
+    "itp-node-api-metadata-provider/sgx",
+    "itp-sgx-crypto/sgx",
+    "itp-sgx-externalities/sgx",
+    "itp-stf-state-handler/sgx",
+    "jsonrpc-core_sgx",
+    "sgx_tstd",
+    "litentry-primitives/sgx",
+    "sgx_crypto_helper/mesalock_sgx",
+]

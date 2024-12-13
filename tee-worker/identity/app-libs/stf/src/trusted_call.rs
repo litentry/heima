@@ -53,8 +53,8 @@ use itp_utils::stringify::account_id_to_string;
 use litentry_hex_utils::hex_encode;
 pub use litentry_primitives::{
 	aes_encrypt_default, all_evm_web3networks, all_substrate_web3networks, AesOutput, Assertion,
-	ErrorDetail, IMPError, Identity, LitentryMultiSignature, ParentchainBlockNumber, RequestAesKey,
-	RequestAesKeyNonce, VCMPError, ValidationData, Web3Network,
+	ErrorDetail, IMPError, Identity, Intent, LitentryMultiSignature, ParentchainBlockNumber,
+	RequestAesKey, VCMPError, ValidationData, Web3Network,
 };
 use log::*;
 use sp_core::{
@@ -65,7 +65,7 @@ use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::ConstU32, BoundedVec, MultiAddress};
 
 pub type IMTCall = ita_sgx_runtime::IdentityManagementCall<Runtime>;
-pub type IMT = ita_sgx_runtime::pallet_imt::Pallet<Runtime>;
+pub type IMT = ita_sgx_runtime::pallet_identity_management_tee::Pallet<Runtime>;
 pub type MaxAssertionLength = ConstU32<128>;
 pub type VecAssertion = BoundedVec<Assertion, MaxAssertionLength>;
 
@@ -136,6 +136,19 @@ pub enum TrustedCall {
 	send_erroneous_parentchain_call(Identity),
 	#[codec(index = 24)]
 	maybe_create_id_graph(Identity, Identity),
+	#[cfg(feature = "development")]
+	#[codec(index = 25)]
+	clean_id_graphs(Identity),
+	#[codec(index = 26)]
+	request_intent(Identity, Intent),
+	#[codec(index = 27)]
+	create_account_store(Identity),
+	#[codec(index = 28)]
+	add_account(Identity, Identity, ValidationData, bool),
+	#[codec(index = 29)]
+	remove_accounts(Identity, Vec<Identity>),
+	#[codec(index = 30)]
+	publicize_account(Identity, Identity),
 
 	// original integritee trusted calls, starting from index 50
 	#[codec(index = 50)]
@@ -224,6 +237,13 @@ impl TrustedCall {
 			#[cfg(feature = "development")]
 			Self::remove_identity(sender_identity, ..) => sender_identity,
 			Self::request_batch_vc(sender_identity, ..) => sender_identity,
+			#[cfg(feature = "development")]
+			Self::clean_id_graphs(sender_identity) => sender_identity,
+			Self::request_intent(sender_identity, ..) => sender_identity,
+			Self::create_account_store(sender_identity) => sender_identity,
+			Self::add_account(sender_identity, ..) => sender_identity,
+			Self::remove_accounts(sender_identity, ..) => sender_identity,
+			Self::publicize_account(sender_identity, ..) => sender_identity,
 		}
 	}
 
@@ -237,6 +257,11 @@ impl TrustedCall {
 			Self::deactivate_identity(..) => "deactivate_identity",
 			Self::activate_identity(..) => "activate_identity",
 			Self::maybe_create_id_graph(..) => "maybe_create_id_graph",
+			Self::request_intent(..) => "request_intent",
+			Self::create_account_store(..) => "create_account_store",
+			Self::add_account(..) => "add_account",
+			Self::remove_accounts(..) => "remove_account",
+			Self::publicize_account(..) => "publicize_account",
 			_ => "unsupported_trusted_call",
 		}
 	}
@@ -388,7 +413,8 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<Self::Result, Self::Error> {
 		let sender = self.call.sender_identity().clone();
-		let account_id: AccountId = sender.to_account_id().ok_or(Self::Error::InvalidAccount)?;
+		let account_id: AccountId =
+			sender.to_native_account().ok_or(Self::Error::InvalidAccount)?;
 		let system_nonce = System::account_nonce(&account_id);
 		ensure!(self.nonce == system_nonce, Self::Error::InvalidNonce(self.nonce, system_nonce));
 
@@ -404,7 +430,7 @@ where
 			},
 			TrustedCall::balance_set_balance(root, who, free_balance, reserved_balance) => {
 				let root_account_id: AccountId =
-					root.to_account_id().ok_or(Self::Error::InvalidAccount)?;
+					root.to_native_account().ok_or(Self::Error::InvalidAccount)?;
 				ensure!(
 					is_root::<Runtime, AccountId>(&root_account_id),
 					Self::Error::MissingPrivileges(root_account_id)
@@ -434,7 +460,7 @@ where
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(
-					from.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					from.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 				);
 				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
 				// endow fee to enclave (self)
@@ -468,7 +494,7 @@ where
 			},
 			TrustedCall::timestamp_set(enclave_account, now, parentchain_id) => {
 				let account_id: AccountId32 =
-					enclave_account.to_account_id().ok_or(Self::Error::InvalidAccount)?;
+					enclave_account.to_native_account().ok_or(Self::Error::InvalidAccount)?;
 				ensure_enclave_signer_account(&account_id)?;
 				// Litentry: we don't actually set the timestamp, see `BlockMetadata`
 				warn!("unused timestamp_set({}, {:?})", now, parentchain_id);
@@ -480,7 +506,7 @@ where
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
 				ita_sgx_runtime::EvmCall::<Runtime>::withdraw { address, value }
 					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(
-						from.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+						from.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 					))
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Evm Withdraw error: {:?}", e.error))
@@ -518,7 +544,7 @@ where
 					access_list,
 				}
 				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(
-					from.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					from.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 				))
 				.map_err(|e| Self::Error::Dispatch(format!("Evm Call error: {:?}", e.error)))?;
 				Ok(TrustedCallResult::Empty)
@@ -554,7 +580,7 @@ where
 					access_list,
 				}
 				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(
-					from.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					from.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 				))
 				.map_err(|e| Self::Error::Dispatch(format!("Evm Create error: {:?}", e.error)))?;
 				let contract_address = evm_create_address(source, nonce_evm_account);
@@ -593,7 +619,7 @@ where
 					access_list,
 				}
 				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(
-					from.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					from.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 				))
 				.map_err(|e| Self::Error::Dispatch(format!("Evm Create2 error: {:?}", e.error)))?;
 				let contract_address = evm_create2_address(source, salt, code_hash);
@@ -615,7 +641,7 @@ where
 				debug!("link_identity, who: {}", account_id_to_string(&who));
 				let verification_done = Self::link_identity_internal(
 					shard,
-					signer.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					signer.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 					who.clone(),
 					identity.clone(),
 					validation_data,
@@ -654,7 +680,7 @@ where
 			TrustedCall::remove_identity(signer, who, identities) => {
 				debug!("remove_identity, who: {}", account_id_to_string(&who));
 
-				let account = signer.to_account_id().ok_or(Self::Error::InvalidAccount)?;
+				let account = signer.to_native_account().ok_or(Self::Error::InvalidAccount)?;
 				use crate::helpers::ensure_enclave_signer_or_alice;
 				ensure!(
 					ensure_enclave_signer_or_alice(&account),
@@ -674,7 +700,7 @@ where
 
 				let old_id_graph = IMT::id_graph(&who);
 				Self::deactivate_identity_internal(
-					signer.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					signer.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 					who.clone(),
 					identity,
 				)
@@ -719,7 +745,7 @@ where
 				let old_id_graph = IMT::id_graph(&who);
 
 				Self::activate_identity_internal(
-					signer.to_account_id().ok_or(Self::Error::InvalidAccount)?,
+					signer.to_native_account().ok_or(Self::Error::InvalidAccount)?,
 					who.clone(),
 					identity,
 				)
@@ -862,7 +888,7 @@ where
 			TrustedCall::maybe_create_id_graph(signer, who) => {
 				debug!("maybe_create_id_graph, who: {:?}", who);
 				let signer_account: AccountId32 =
-					signer.to_account_id().ok_or(Self::Error::InvalidAccount)?;
+					signer.to_native_account().ok_or(Self::Error::InvalidAccount)?;
 				ensure_enclave_signer_account(&signer_account)?;
 
 				// we only log the error
@@ -871,6 +897,31 @@ where
 					Err(e) => warn!("maybe_create_id_graph NOK: {:?}", e),
 				};
 
+				Ok(TrustedCallResult::Empty)
+			},
+			#[cfg(feature = "development")]
+			TrustedCall::clean_id_graphs(signer) => {
+				debug!("clean_id_graphs");
+
+				let account = signer.to_native_account().ok_or(Self::Error::InvalidAccount)?;
+				use crate::helpers::ensure_enclave_signer_or_alice;
+				ensure!(
+					ensure_enclave_signer_or_alice(&account),
+					StfError::CleanIDGraphsFailed(ErrorDetail::UnauthorizedSigner)
+				);
+
+				IMTCall::clean_id_graphs {}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					.map_err(|e| StfError::CleanIDGraphsFailed(e.into()))?;
+
+				Ok(TrustedCallResult::Empty)
+			},
+			TrustedCall::request_intent(..)
+			| TrustedCall::create_account_store(..)
+			| TrustedCall::add_account(..)
+			| TrustedCall::remove_accounts(..)
+			| TrustedCall::publicize_account(..) => {
+				error!("please use author_submitNativeRequest instead");
 				Ok(TrustedCallResult::Empty)
 			},
 		}

@@ -22,20 +22,26 @@ use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::traits::IndirectExecutor;
 use itp_types::parentchain::{FilterEvents, HandleParentchainEvents, ProcessedEventsArtifacts};
 use log::*;
+use sp_runtime::traits::{Block as ParentchainBlock, Header as ParentchainHeader};
 use sp_std::vec::Vec;
 
 pub struct ParentchainEventHandler {}
 
-impl<Executor> HandleParentchainEvents<Executor, TrustedCallSigned, Error>
+impl<Executor> HandleParentchainEvents<Executor, TrustedCallSigned, Error, (), (), ()>
 	for ParentchainEventHandler
 where
-	Executor: IndirectExecutor<TrustedCallSigned, Error>,
+	Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>,
 {
-	fn handle_events(
+	type Output = ProcessedEventsArtifacts;
+	fn handle_events<Block>(
 		&self,
 		_executor: &Executor,
 		_events: impl FilterEvents,
-	) -> Result<ProcessedEventsArtifacts, Error> {
+		_block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
+	) -> Result<ProcessedEventsArtifacts, Error>
+	where
+		Block: ParentchainBlock,
+	{
 		debug!("not handling any events for target a");
 		Ok((Vec::new(), Vec::new(), Vec::new()))
 	}

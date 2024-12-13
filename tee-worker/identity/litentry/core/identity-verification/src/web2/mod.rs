@@ -17,25 +17,16 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use http_req_sgx as http_req;
-	pub use http_sgx as http;
-}
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use crate::sgx_reexport_prelude::*;
-
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
 mod discord;
 pub mod email;
-mod helpers;
+pub mod google;
 pub mod twitter;
 
 use crate::{ensure, Error, Result};
+use email::VerificationCodeStore;
 use itp_sgx_crypto::ShieldingCryptoDecrypt;
 use itp_utils::stringify::account_id_to_string;
 use lc_data_providers::{
@@ -43,6 +34,7 @@ use lc_data_providers::{
 	twitter_official::{Tweet, TwitterOfficialClient, TwitterUserAccessTokenData},
 	vec_to_string, DataProviderConfig, UserInfo,
 };
+use lc_omni_account::InMemoryStore as OmniAccountStore;
 use litentry_primitives::{
 	DiscordValidationData, ErrorDetail, ErrorString, Identity, IntoErrorDetail,
 	TwitterValidationData, Web2ValidationData,
@@ -102,7 +94,7 @@ pub fn verify(
 					.map_err(|e| Error::LinkIdentityFailed(e.into_error_detail()))?;
 				let state = vec_to_string(state.to_vec())
 					.map_err(|e| Error::LinkIdentityFailed(e.into_error_detail()))?;
-				let Some(account_id) = who.to_account_id() else {
+				let Some(account_id) = who.to_native_account() else {
 					return Err(Error::LinkIdentityFailed(ErrorDetail::ParseError));
 				};
 				let (code_verifier, state_verifier) =
@@ -217,11 +209,15 @@ pub fn verify(
 				.map_err(|e| Error::LinkIdentityFailed(e.into_error_detail()))?;
 			let verification_code = vec_to_string(data.verification_code.to_vec())
 				.map_err(|e| Error::LinkIdentityFailed(e.into_error_detail()))?;
-			let Some(account_id) = who.to_account_id() else {
-					return Err(Error::LinkIdentityFailed(ErrorDetail::ParseError));
-				};
+			let account_id = match OmniAccountStore::get_omni_account(who.hash()) {
+				Ok(Some(account)) => account,
+				_ => return Err(Error::LinkIdentityFailed(ErrorDetail::InvalidIdentity)),
+			};
+
+			let email_identity =
+				Identity::from_web2_account(&email, litentry_primitives::Web2IdentityType::Email);
 			let stored_verification_code =
-				match email::VerificationCodeStore::get(&account_id, &email) {
+				match VerificationCodeStore::get(&account_id, email_identity.hash()) {
 					Ok(data) => data.ok_or_else(|| {
 						Error::LinkIdentityFailed(ErrorDetail::StfError(
 							ErrorString::truncate_from(

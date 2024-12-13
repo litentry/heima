@@ -17,16 +17,8 @@
 
 use crate::{
 	base_cli::commands::{
-		balance::BalanceCommand,
-		faucet::FaucetCommand,
-		listen::ListenCommand,
-		litentry::{
-			activate_identity::ActivateIdentityCommand,
-			deactivate_identity::DeactivateIdentityCommand, id_graph_hash::IDGraphHashCommand,
-			link_identity::LinkIdentityCommand, shield_text::ShieldTextCommand,
-		},
-		register_tcb_info::RegisterTcbInfoCommand,
-		transfer::TransferCommand,
+		balance::BalanceCommand, faucet::FaucetCommand, listen::ListenCommand, litentry::*,
+		register_tcb_info::RegisterTcbInfoCommand, transfer::TransferCommand,
 	},
 	command_utils::*,
 	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,

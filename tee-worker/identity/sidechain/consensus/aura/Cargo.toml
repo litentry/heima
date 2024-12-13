@@ -5,52 +5,47 @@ authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@int
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "chain-error"] }
-finality-grandpa = { version = "0.16.0", default-features = false, features = ["derive-codec"] }
-log = { version = "0.4", default-features = false }
+codec = { package = "parity-scale-codec", workspace = true, features = ["chain-error"] }
+finality-grandpa = { workspace = true }
+log = { workspace = true }
 
-# sgx deps
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { workspace = true, optional = true }
 
-# substrate deps
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-core = { workspace = true, features = ["full_crypto"] }
+sp-runtime = { workspace = true }
 
-# local deps
-ita-stf = { path = "../../../app-libs/stf", default-features = false }
-itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", default-features = false }
-itc-peer-top-broadcaster = { path = "../../../core/peer-top-broadcaster", default-features = false }
-itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", default-features = false }
-itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings" }
-itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
-itp-sgx-externalities = { path = "../../../core-primitives/substrate-sgx/externalities", default-features = false }
-itp-stf-executor = { path = "../../../core-primitives/stf-executor", default-features = false }
-itp-stf-primitives = { path = "../../../core-primitives/stf-primitives", default-features = false }
-itp-stf-state-handler = { path = "../../../core-primitives/stf-state-handler", default-features = false }
-itp-time-utils = { path = "../../../core-primitives/time-utils", default-features = false }
-itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
-its-block-composer = { path = "../../block-composer", default-features = false }
-its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
-its-consensus-common = { path = "../common", default-features = false }
-its-consensus-slots = { path = "../slots", default-features = false }
-its-primitives = { path = "../../primitives", default-features = false }
-its-state = { path = "../../state", default-features = false }
-its-validateer-fetch = { path = "../../validateer-fetch", default-features = false }
+ita-stf = { package = "id-ita-stf", path = "../../../app-libs/stf", default-features = false }
+itc-parentchain-block-import-dispatcher = { package = "id-itc-parentchain-block-import-dispatcher", path = "../../../core/parentchain/block-import-dispatcher", default-features = false }
+itc-peer-top-broadcaster = { workspace = true }
+itp-enclave-metrics = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-settings = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-sgx-externalities = { workspace = true }
+itp-stf-executor = { package = "id-itp-stf-executor", path = "../../../core-primitives/stf-executor", default-features = false }
+itp-stf-primitives = { workspace = true }
+itp-stf-state-handler = { workspace = true }
+itp-time-utils = { workspace = true }
+itp-top-pool-author = { package = "id-itp-top-pool-author", path = "../../../core-primitives/top-pool-author", default-features = false }
+itp-types = { workspace = true }
+its-block-composer = { workspace = true }
+its-block-verification = { workspace = true }
+its-consensus-common = { workspace = true }
+its-consensus-slots = { workspace = true }
+its-primitives = { workspace = true }
+its-state = { workspace = true }
+its-validateer-fetch = { workspace = true }
 
-# litentry
-litentry-hex-utils = { path = "../../../../../common/utils/hex", default-features = false }
+litentry-hex-utils = { workspace = true }
 
 [dev-dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-env_logger = "0.9.0"
-itc-parentchain-block-import-dispatcher = { path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
-itc-parentchain-test = { path = "../../../core/parentchain/test" }
-itp-storage = { path = "../../../core-primitives/storage" }
-itp-test = { path = "../../../core-primitives/test" }
-its-test = { path = "../../../sidechain/test" }
-sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+env_logger = { workspace = true }
+itc-parentchain-block-import-dispatcher = { package = "id-itc-parentchain-block-import-dispatcher", path = "../../../core/parentchain/block-import-dispatcher", features = ["mocks"] }
+itc-parentchain-test = { workspace = true, features = ["std"] }
+itp-storage = { workspace = true, features = ["std"] }
+itp-test = { workspace = true, features = ["std"] }
+its-test = { workspace = true, features = ["std"] }
+sp-keyring = { workspace = true }
 
 [features]
 default = ["std"]

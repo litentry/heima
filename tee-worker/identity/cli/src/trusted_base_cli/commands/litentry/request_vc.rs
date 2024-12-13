@@ -28,7 +28,7 @@ use ita_stf::{trusted_call_result::RequestVCResult, Index, TrustedCall};
 use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
 use litentry_primitives::{
 	aes_decrypt, Assertion, BoundedWeb3Network, Identity, ParameterString, RequestAesKey,
-	Web3Network, REQUEST_AES_KEY_LEN,
+	Web3Network, AES_KEY_LEN,
 };
 use sp_core::Pair;
 
@@ -163,8 +163,8 @@ impl RequestVcCommand {
 	}
 
 	fn random_aes_key() -> RequestAesKey {
-		let random: Vec<u8> = (0..REQUEST_AES_KEY_LEN).map(|_| rand::random::<u8>()).collect();
-		random[0..REQUEST_AES_KEY_LEN].try_into().unwrap()
+		let random: Vec<u8> = (0..AES_KEY_LEN).map(|_| rand::random::<u8>()).collect();
+		random[0..AES_KEY_LEN].try_into().unwrap()
 	}
 }
 

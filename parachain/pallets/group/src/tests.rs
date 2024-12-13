@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use super::{
 	mock::{
 		assert_events, new_test_ext, RuntimeEvent, RuntimeOrigin, Test, Whitelist, ACCOUNT_A,

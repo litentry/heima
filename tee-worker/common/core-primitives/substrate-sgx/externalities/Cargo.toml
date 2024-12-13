@@ -1,0 +1,39 @@
+[package]
+name = "itp-sgx-externalities"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network> and Parity Technologies <admin@parity.io>']
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true, features = ["chain-error"] }
+derive_more = { workspace = true }
+log = { workspace = true }
+postcard = { workspace = true }
+serde = { workspace = true }
+
+sgx_tstd = { workspace = true, features = ["untrusted_fs", "net", "backtrace"], optional = true }
+
+sp-core = { workspace = true }
+
+environmental = { path = "../environmental", default-features = false }
+itp-hashing = { workspace = true }
+
+[dev-dependencies]
+itp-storage = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "environmental/std",
+    "itp-hashing/std",
+    "log/std",
+    "postcard/use-std",
+    "serde/std",
+    "itp-storage/std",
+    "sp-core/std",
+]
+sgx = [
+    "sgx_tstd",
+    "environmental/sgx",
+]

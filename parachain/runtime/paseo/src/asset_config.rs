@@ -1,7 +1,25 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use super::{
 	weights, AccountId, AssetId, Balance, Balances, Runtime, RuntimeEvent, TreasuryPalletId,
 };
-use crate::{constants::currency::deposit, precompiles::ASSET_PRECOMPILE_ADDRESS_PREFIX};
+use crate::{
+	constants::currency::deposit, precompiles::ASSET_PRECOMPILE_ADDRESS_PREFIX, Decode, Encode,
+};
 use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU32, NeverEnsureOrigin},
@@ -11,9 +29,9 @@ use pallet_evm_precompile_assets_erc20::AddressToAssetId;
 use parity_scale_codec::Compact;
 use runtime_common::{
 	currency::{DOLLARS, EXISTENTIAL_DEPOSIT},
-	xcm_impl::CurrencyId,
 	EnsureRootOrHalfCouncil,
 };
+use scale_info::TypeInfo;
 use sp_core::{ConstU128, H160};
 use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
@@ -72,8 +90,8 @@ impl pallet_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
-	// TODO: We do not allow creating by regular users before pallet_asset_manager fully adopted
-	// P-937
+	// We do not allow creating by regular users
+	// CollabAI derivative token do not want it that way
 	type CreateOrigin = AsEnsureOriginWithArg<NeverEnsureOrigin<AccountId>>;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = AssetDeposit;
@@ -92,11 +110,16 @@ impl pallet_assets::Config for Runtime {
 	type BenchmarkHelper = AssetsBenchmarkHelper;
 }
 
+#[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
+pub enum ForeignAssetType {
+	Xcm(xcm::v4::Location),
+}
+
 impl pallet_asset_manager::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type ForeignAssetType = CurrencyId<Runtime>;
+	type ForeignAssetType = ForeignAssetType; // TODO
 	type ForeignAssetModifierOrigin = EnsureRootOrHalfCouncil;
 	type Currency = Balances;
 	type WeightInfo = weights::pallet_asset_manager::WeightInfo<Runtime>;

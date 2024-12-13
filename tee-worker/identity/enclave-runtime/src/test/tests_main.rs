@@ -90,6 +90,8 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itp_stf_state_handler::test::sgx_tests::test_list_state_ids_ignores_files_not_matching_the_pattern,
 		itp_stf_state_handler::test::sgx_tests::test_in_memory_state_initializes_from_shard_directory,
 		itp_sgx_crypto::tests::aes_sealing_works,
+		itp_sgx_crypto::tests::aes256_creating_repository_with_same_path_and_prefix_results_in_same_key,
+		itp_sgx_crypto::tests::aes256_creating_repository_with_same_path_and_prefix_but_new_key_results_in_new_key,
 		itp_sgx_crypto::tests::using_get_aes_repository_twice_initializes_key_only_once,
 		itp_sgx_crypto::tests::ed25529_sealing_works,
 		itp_sgx_crypto::tests::using_get_ed25519_repository_twice_initializes_key_only_once,

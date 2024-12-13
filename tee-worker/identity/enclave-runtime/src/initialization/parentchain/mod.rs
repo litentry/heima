@@ -38,12 +38,10 @@ use crate::{
 use codec::{Decode, Encode};
 use integritee_parachain::IntegriteeParachainHandler;
 use integritee_solochain::IntegriteeSolochainHandler;
-use itc_parentchain::{
-	light_client::{concurrent_access::ValidatorAccess, LightClientState},
-	primitives::{ParentchainId, ParentchainInitParams},
-};
+use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentInitializer;
 use itp_settings::worker_mode::ProvideWorkerMode;
+use itp_types::parentchain::{ParentchainId, ParentchainInitParams};
 use log::*;
 use std::{path::PathBuf, vec::Vec};
 

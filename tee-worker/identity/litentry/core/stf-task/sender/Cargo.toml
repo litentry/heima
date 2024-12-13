@@ -5,27 +5,20 @@ name = "lc-stf-task-sender"
 version = "0.1.0"
 
 [dependencies]
-# std dependencies
-thiserror = { version = "1.0.26", optional = true }
+thiserror = { workspace = true, optional = true }
 
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["net", "thread"], optional = true }
-thiserror_sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+thiserror_sgx = { workspace = true, optional = true }
 
-# no_std dependencies
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-lazy_static = { version = "1.1.0", features = ["spin_no_std"] }
-log = { version = "0.4", default-features = false }
+codec = { package = "parity-scale-codec", workspace = true }
+lazy_static = { workspace = true }
+log = { workspace = true }
 
-# substrate dependencies
-sp-runtime = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42", default-features = false }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
 
-# internal dependencies
-itp-types = { path = "../../../../core-primitives/types", default-features = false }
-
-# litentry
-litentry-primitives = { path = "../../../primitives", default-features = false }
+itp-types = { workspace = true }
+litentry-primitives = { workspace = true }
 
 [features]
 default = ["std"]

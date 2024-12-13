@@ -18,15 +18,22 @@
 
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use codec::{Decode, Encode};
-use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::enclave_base::EnclaveBase;
-use itp_node_api::{api_client::AccountApi, node_api_factory::CreateNodeApi};
-use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
+use itp_node_api::{
+	api_client::{AccountApi, ExtrinsicReport, ParentchainApi, XtStatus},
+	node_api_factory::CreateNodeApi,
+};
+use itp_types::{
+	parentchain::{AccountId, ParentchainId},
+	WorkerRequest, WorkerResponse,
+};
 use log::*;
+use sp_core::H256;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, thread, vec::Vec};
 use substrate_api_client::{
-	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	ac_primitives::serde_impls::StorageKey, GetAccountInformation, GetChainInfo, GetStorage,
+	SubmitAndWatch, SubmitExtrinsic,
 };
 
 #[cfg(feature = "link-binary")]
@@ -112,6 +119,35 @@ where
 					};
 					WorkerResponse::ChainStorageKeys(keys)
 				},
+				WorkerRequest::ChainStorageKeysPaged(prefix, count, start_key, hash) => {
+					let keys: Vec<Vec<u8>> = match api.get_storage_keys_paged(
+						Some(StorageKey(prefix)),
+						count,
+						start_key.map(StorageKey),
+						hash,
+					) {
+						Ok(keys) => keys.iter().map(|k| k.0.to_vec()).collect(),
+						_ => Default::default(),
+					};
+					WorkerResponse::ChainStorageKeys(keys)
+				},
+				WorkerRequest::ChainHeader(block_hash) => {
+					let header = match api.get_header(block_hash) {
+						Ok(Some(header)) => Some(header.encode()),
+						_ => None,
+					};
+					WorkerResponse::ChainHeader(header)
+				},
+				WorkerRequest::ChainAccountNonce(encoded_account_id) => {
+					let maybe_nonce = match AccountId::decode(&mut encoded_account_id.as_slice()) {
+						Ok(account_id) => api.get_account_nonce(&account_id).ok(),
+						_ => {
+							error!("[ChainAccountNonce] account_id could not be decoded");
+							None
+						},
+					};
+					WorkerResponse::ChainAccountNonce(maybe_nonce)
+				},
 			})
 			.collect();
 
@@ -124,101 +160,102 @@ where
 		&self,
 		extrinsics_encoded: Vec<u8>,
 		parentchain_id: Vec<u8>,
-		await_each_inlcusion: bool,
-	) -> OCallBridgeResult<()> {
-		// TODO: improve error handling, using a mut status is not good design?
-		let mut status: OCallBridgeResult<()> = Ok(());
+		watch_until: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>> {
+		let maybe_watch_until: Option<XtStatus> = Decode::decode(&mut watch_until.as_slice())
+			.map_err(|_| {
+				OCallBridgeError::SendExtrinsicsToParentchain(
+					"Could not decode watch_until".to_string(),
+				)
+			})?;
+		let extrinsics: Vec<OpaqueExtrinsic> = Decode::decode(&mut extrinsics_encoded.as_slice())
+			.map_err(|_| {
+			OCallBridgeError::SendExtrinsicsToParentchain("Could not decode extrinsics".to_string())
+		})?;
+		let mut extrinsic_reports: Vec<ExtrinsicReport<H256>> = Vec::new();
+		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+		debug!(
+			"Enclave wants to send {} extrinsics to parentchain: {:?}. watch_until: {:?}",
+			extrinsics.len(),
+			parentchain_id,
+			maybe_watch_until
+		);
+		let api = self.create_api(parentchain_id)?;
+		let mut send_extrinsic_failed = false;
 
-		let extrinsics: Vec<OpaqueExtrinsic> =
-			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
-				Ok(calls) => calls,
-				Err(_) => {
-					status = Err(OCallBridgeError::SendExtrinsicsToParentchain(
-						"Could not decode extrinsics".to_string(),
-					));
-					Default::default()
-				},
-			};
-
-		if !extrinsics.is_empty() {
-			let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
-			debug!(
-				"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
-				extrinsics.len(),
-				parentchain_id, await_each_inlcusion
-			);
-			let api = self.create_api(parentchain_id)?;
-			let mut send_extrinsic_failed = false;
-			for call in extrinsics.into_iter() {
-				if await_each_inlcusion {
-					if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
-						&call.encode().into(),
-						XtStatus::InBlock,
-					) {
+		for call in extrinsics.into_iter() {
+			if let Some(xt_status) = maybe_watch_until {
+				match api.submit_and_watch_opaque_extrinsic_until(
+					&call.encode().into(),
+					xt_status.into(),
+				) {
+					Ok(report) => extrinsic_reports.push(report.into()),
+					Err(e) => {
 						error!(
 							"Could not send extrinsic to {:?}: {:?}, error: {:?}",
 							parentchain_id,
 							serde_json::to_string(&call),
 							e
 						);
-					}
-				} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
-					error!(
-						"Could not send extrinsic to {:?}: {:?}, error: {:?}",
-						parentchain_id,
-						serde_json::to_string(&call),
-						e
-					);
-					send_extrinsic_failed = true;
+						send_extrinsic_failed = true;
+					},
 				}
-			}
-
-			// Try to reset nonce, see
-			// - https://github.com/litentry/litentry-parachain/issues/1036
-			// - https://github.com/integritee-network/worker/issues/970
-			// It has to be done in a separate thread as nested ECALL/OCALL is disallowed
-			//
-			// This workaround is likely to cause duplicate nonce or "transaction outdated" error in the parentchain
-			// tx pool, because the retrieved on-chain nonce doesn't count the pending tx, meanwhile the extrinsic factory
-			// keeps composing new extrinsics. So the nonce used for composing the new extrinsics can collide with the nonce
-			// in the already submitted tx. As a result, a few txs could be dropped during the parentchain tx pool processing.
-			// Not to mention the thread dispatch delay and network delay (query on-chain nonce).
-			//
-			// However, we still consider it better than the current situation, where the nonce never gets rectified and
-			// all following extrinsics will be blocked. Moreover, the txs sent to the parentchain are mostly
-			// "notification extrinsics" and don't cause chain state change, therefore we deem it less harmful to drop them.
-			// The worst case is some action is wrongly intepreted as "failed" (because F/E doesn't get the event in time)
-			// while it actually succeeds. In that case, the user needs to re-do the extrinsic, which is suboptimal,
-			// but still better than the chain stalling.
-			//
-			// To have a better synchronisation handling we probably need a sending queue in extrinsic factory that
-			// can be paused on demand (or wait for the nonce synchronisation).
-			//
-			// Another small thing that can be improved is to use rpc.system.accountNextIndex instead of system.account.nonce
-			// see https://polkadot.js.org/docs/api/cookbook/tx/#how-do-i-take-the-pending-tx-pool-into-account-in-my-nonce
-			#[cfg(feature = "link-binary")]
-			if send_extrinsic_failed {
-				// drop &self lifetime
-				let node_api_factory_cloned = self.integritee_api_factory.clone();
-				let enclave_cloned = self.enclave_api.clone();
-				thread::spawn(move || {
-					let api = node_api_factory_cloned.create_api().unwrap();
-					let enclave_account = enclave_account(enclave_cloned.as_ref());
-					warn!("send_extrinsic failed, try to reset nonce ...");
-					match api.get_account_next_index(&enclave_account) {
-						Ok(nonce) => {
-							warn!("query on-chain nonce OK, reset nonce to: {}", nonce);
-							if let Err(e) = enclave_cloned.set_nonce(nonce, ParentchainId::Litentry)
-							{
-								warn!("failed to reset nonce due to: {:?}", e);
-							}
-						},
-						Err(e) => warn!("query on-chain nonce failed: {:?}", e),
-					}
-				});
+			} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
+				error!(
+					"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+					parentchain_id,
+					serde_json::to_string(&call),
+					e
+				);
+				send_extrinsic_failed = true;
 			}
 		}
-		status
+
+		// Try to reset nonce, see
+		// - https://github.com/litentry/litentry-parachain/issues/1036
+		// - https://github.com/integritee-network/worker/issues/970
+		// It has to be done in a separate thread as nested ECALL/OCALL is disallowed
+		//
+		// This workaround is likely to cause duplicate nonce or "transaction outdated" error in the parentchain
+		// tx pool, because the retrieved on-chain nonce doesn't count the pending tx, meanwhile the extrinsic factory
+		// keeps composing new extrinsics. So the nonce used for composing the new extrinsics can collide with the nonce
+		// in the already submitted tx. As a result, a few txs could be dropped during the parentchain tx pool processing.
+		// Not to mention the thread dispatch delay and network delay (query on-chain nonce).
+		//
+		// However, we still consider it better than the current situation, where the nonce never gets rectified and
+		// all following extrinsics will be blocked. Moreover, the txs sent to the parentchain are mostly
+		// "notification extrinsics" and don't cause chain state change, therefore we deem it less harmful to drop them.
+		// The worst case is some action is wrongly intepreted as "failed" (because F/E doesn't get the event in time)
+		// while it actually succeeds. In that case, the user needs to re-do the extrinsic, which is suboptimal,
+		// but still better than the chain stalling.
+		//
+		// To have a better synchronisation handling we probably need a sending queue in extrinsic factory that
+		// can be paused on demand (or wait for the nonce synchronisation).
+		//
+		// Another small thing that can be improved is to use rpc.system.accountNextIndex instead of system.account.nonce
+		// see https://polkadot.js.org/docs/api/cookbook/tx/#how-do-i-take-the-pending-tx-pool-into-account-in-my-nonce
+		#[cfg(feature = "link-binary")]
+		if send_extrinsic_failed {
+			// drop &self lifetime
+			let node_api_factory_cloned = self.integritee_api_factory.clone();
+			let enclave_cloned = self.enclave_api.clone();
+			thread::spawn(move || {
+				let api = node_api_factory_cloned.create_api().unwrap();
+				let enclave_account = enclave_account(enclave_cloned.as_ref());
+				warn!("send_extrinsic failed, try to reset nonce ...");
+				match api.get_account_next_index(&enclave_account) {
+					Ok(nonce) => {
+						warn!("query on-chain nonce OK, reset nonce to: {}", nonce);
+						if let Err(e) = enclave_cloned.set_nonce(nonce, ParentchainId::Litentry) {
+							warn!("failed to reset nonce due to: {:?}", e);
+						}
+					},
+					Err(e) => warn!("query on-chain nonce failed: {:?}", e),
+				}
+			});
+		}
+
+		Ok(extrinsic_reports.encode())
 	}
 }
 

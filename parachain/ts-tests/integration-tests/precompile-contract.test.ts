@@ -7,7 +7,6 @@ import {
     subscribeToEvents,
     sudoWrapperGC,
     sudoWrapperTC,
-    sleep,
 } from '../common/utils';
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
@@ -17,6 +16,7 @@ import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
 import { destResourceId } from '../common/utils/consts';
+
 const toBigInt = (int: number) => BigInt(int) * BigInt(1e18);
 const bn1e18 = new BN(10).pow(new BN(18));
 const bn100 = new BN(100);
@@ -85,7 +85,10 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log('transfer from Alice to alice EMV');
 
         // Deposit money into substrate account's truncated EVM address's mapping substrate account
-        const tx_init = context.api.tx.balances.transfer(aliceMappedSustrateAccount, new BN('70000000000000000000')); // 70
+        const tx_init = context.api.tx.balances.transferKeepAlive(
+            aliceMappedSustrateAccount,
+            new BN('70000000000000000000')
+        ); // 70
         await signAndSend(tx_init, context.alice);
 
         // 25000 is min_gas_price setup
@@ -100,12 +103,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             null,
             []
         );
-        let block = await context.api.rpc.chain.getBlock();
-        console.log(`evm call await before: ${block.block.header.number}`);
         await signAndSend(tx, from);
-        let temp = await context.api.rpc.chain.getBlock();
-        console.log(`evm call await end: ${temp.block.header.number}`);
-        await sleep(30);
     };
 
     const isPendingRequest = async () =>
@@ -117,7 +115,12 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         return collators[0];
     };
 
-    step('Address with not sufficient amount of tokens', async function () {
+    step('Set ExtrinsicFilter mode to Test', async function () {
+        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
+        await signAndSend(extrinsic, context.alice);
+    });
+
+    step('Address with insufficient amount of tokens', async function () {
         const randomEvmWallet = ethers.Wallet.createRandom();
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
@@ -139,17 +142,10 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             expect(e).to.be.instanceof(Error);
         }
     });
+
     step('Test precompile bridge contract', async function () {
         console.time('Test precompile bridge contract');
-        const filterMode = (await context.api.query.extrinsicFilter.mode()).toHuman();
-        if ('Test' !== filterMode) {
-            let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
-            let temp = await context.api.rpc.chain.getBlock();
-            console.log(`setMode await Before: ${temp.block.header.number}`);
-            await signAndSend(extrinsic, context.alice);
-            temp = await context.api.rpc.chain.getBlock();
-            console.log(`setMode await end: ${temp.block.header.number}`);
-        }
+
         const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
 
@@ -204,23 +200,15 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         console.timeEnd('Test precompile bridge contract');
     });
+
     // To see full params types for the interfaces, check notion page: https://web3builders.notion.site/Parachain-Precompile-Contract-0c34929e5f16408084446dcf3dd36006
     step('Test precompile staking contract', async function () {
         console.time('Test precompile staking contract');
 
-        const filterMode = (await context.api.query.extrinsicFilter.mode()).toHuman();
-        if ('Test' !== filterMode) {
-            let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
-            let temp = await context.api.rpc.chain.getBlock();
-            console.log(`setMode await Before: ${temp.block.header.number}`);
-            await signAndSend(extrinsic, context.alice);
-            temp = await context.api.rpc.chain.getBlock();
-            console.log(`setMode await end: ${temp.block.header.number}`);
-        }
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
         printBalance('initial balance', balance);
 
-        // top up LITs if not sufficient amount for staking or they are not reserved (require: 50 LITs minimum)
+        // top up LITs if insufficient amount for staking or they are not reserved (require: 50 LITs minimum)
         if (
             parseInt(balance.free.toString()) < parseInt('60000000000000000000') &&
             Number(balance.reserved.toString()) === 0
@@ -233,11 +221,9 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             printBalance('balance after transferring', balance);
         }
 
-        //// TESTS
         const autoCompoundPercent = 20;
 
         let collator = (await context.api.query.parachainStaking.candidateInfo(context.alice.address)).toHuman();
-        console.log('Candidates Info:', collator);
         const staking_status = (
             await context.api.query.parachainStaking.delegatorState(evmAccountRaw.mappedAddress)
         ).toHuman();
@@ -252,7 +238,6 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             await signAndSend(join_extrinsic, context.alice);
         }
         collator = (await context.api.query.parachainStaking.candidateInfo(context.alice.address)).toHuman();
-        console.log('Candidates Info:', collator);
 
         // delegateWithAutoCompound(collator, amount, percent)
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
@@ -320,68 +305,67 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         await executeTransaction(cancelDelegationRequest, precompileStakingContractAddress, 'cancelDelegationRequest');
         expect(await isPendingRequest()).to.be.false;
 
-        // testing bond less + execution
-        await executeTransaction(
-            scheduleDelegatorBondLess,
-            precompileStakingContractAddress,
-            'scheduleDelegatorBondLess again to test execution'
-        );
-        expect(await isPendingRequest()).to.be.true;
+        // only makes sense when parachain is compiled with `fast-runtime` feature, otherwise we'll
+        // never make it within reasonable time
+        if (config.parachain_fast_runtime === 'true') {
+            // testing bond less + execution
+            await executeTransaction(
+                scheduleDelegatorBondLess,
+                precompileStakingContractAddress,
+                'scheduleDelegatorBondLess again to test execution'
+            );
+            expect(await isPendingRequest()).to.be.true;
 
-        console.log('Waiting 2 blocks before execute delegation request');
-        await context.api.rpc.chain.getBlock();
-        await context.api.rpc.chain.getBlock();
+            // executeDelegationRequest(delegator, collator);
+            const executeDelegationRequest = precompileStakingContract.interface.encodeFunctionData(
+                'executeDelegationRequest',
+                [evmAccountRaw.publicKey, collatorPublicKey]
+            );
+            await executeTransaction(
+                executeDelegationRequest,
+                precompileStakingContractAddress,
+                'executeDelegationRequest'
+            );
+            const { data: balanceAfterBondLess } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
+            expect(balanceAfterBondLess.reserved.toBigInt()).to.eq(
+                balanceAfterBondMore.reserved.toBigInt() - toBigInt(5)
+            );
 
-        // executeDelegationRequest(delegator, collator);
-        const executeDelegationRequest = precompileStakingContract.interface.encodeFunctionData(
-            'executeDelegationRequest',
-            [evmAccountRaw.publicKey, collatorPublicKey]
-        );
-        await executeTransaction(
-            executeDelegationRequest,
-            precompileStakingContractAddress,
-            'executeDelegationRequest'
-        );
-        const { data: balanceAfterBondLess } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
-        expect(balanceAfterBondLess.reserved.toBigInt()).to.eq(balanceAfterBondMore.reserved.toBigInt() - toBigInt(5));
+            // testing revoke delegation + execute
+            // scheduleRevokeDelegation(collator);
+            const scheduleRevokeDelegation = precompileStakingContract.interface.encodeFunctionData(
+                'scheduleRevokeDelegation',
+                [collatorPublicKey]
+            );
+            await executeTransaction(
+                scheduleRevokeDelegation,
+                precompileStakingContractAddress,
+                'scheduleRevokeDelegation'
+            );
 
-        // testing revoke delegation + execute
-        // scheduleRevokeDelegation(collator);
-        const scheduleRevokeDelegation = precompileStakingContract.interface.encodeFunctionData(
-            'scheduleRevokeDelegation',
-            [collatorPublicKey]
-        );
-        await executeTransaction(
-            scheduleRevokeDelegation,
-            precompileStakingContractAddress,
-            'scheduleRevokeDelegation'
-        );
+            await executeTransaction(
+                executeDelegationRequest,
+                precompileStakingContractAddress,
+                'executeDelegationRequest'
+            );
+            const { data: balanceAfterRevoke } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
+            expect(balanceAfterRevoke.reserved.toBigInt()).to.eq(toBigInt(0));
 
-        console.log('Waiting 2 blocks before execute delegation request');
-        await context.api.rpc.chain.getBlock();
-        await context.api.rpc.chain.getBlock();
-
-        await executeTransaction(
-            executeDelegationRequest,
-            precompileStakingContractAddress,
-            'executeDelegationRequest'
-        );
-        const { data: balanceAfterRevoke } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
-        expect(balanceAfterRevoke.reserved.toBigInt()).to.eq(toBigInt(0));
-
-        // delegate(collator, amount);
-        const delegate = precompileStakingContract.interface.encodeFunctionData('delegate', [
-            collatorPublicKey,
-            ethers.utils.parseUnits('57', 18).toString(),
-        ]);
-        await executeTransaction(delegate, precompileStakingContractAddress, 'delegate');
-        const { data: balanceAfterDelegate } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
-        expect(balanceAfterDelegate.reserved.toBigInt()).to.eq(toBigInt(57));
-
-        // In case evm is not enabled in Normal Mode, switch back to filterMode, after test.
-        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode(filterMode));
-        await signAndSend(extrinsic, context.alice);
+            // delegate(collator, amount);
+            const delegate = precompileStakingContract.interface.encodeFunctionData('delegate', [
+                collatorPublicKey,
+                ethers.utils.parseUnits('57', 18).toString(),
+            ]);
+            await executeTransaction(delegate, precompileStakingContractAddress, 'delegate');
+            const { data: balanceAfterDelegate } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
+            expect(balanceAfterDelegate.reserved.toBigInt()).to.eq(toBigInt(57));
+        }
 
         console.timeEnd('Test precompile staking contract');
+    });
+
+    step('Set ExtrinsicFilter mode to Normal', async function () {
+        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
+        await signAndSend(extrinsic, context.alice);
     });
 });

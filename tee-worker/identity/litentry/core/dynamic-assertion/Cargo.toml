@@ -4,15 +4,9 @@ version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-#local
-litentry-primitives = { path = "../../primitives", default-features = false }
-
-# sgx
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-
+litentry-primitives = { workspace = true }
+sgx_tstd = { workspace = true, optional = true }
 
 [features]
 default = ["std"]

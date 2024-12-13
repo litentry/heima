@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{mock::*, Error, ShardIdentifier, Status};
-use core_primitives::{Assertion, Identity};
+use crate::{mock::*, Error, Status};
+use core_primitives::{Assertion, Identity, ShardIdentifier};
 use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
 use sp_std::{vec, vec::Vec};
@@ -347,5 +347,27 @@ fn revoke_schema_with_unprivileged_origin_fails() {
 			VCManagement::revoke_schema(RuntimeOrigin::signed(bob), shard, 0),
 			Error::<Test>::RequireAdmin
 		);
+	});
+}
+
+#[test]
+fn on_vc_issued_works() {
+	new_test_ext().execute_with(|| {
+		let signer: SystemAccountId = get_signer(TEST8_SIGNER_PUB);
+		let alice: Identity = get_signer(ALICE_PUBKEY);
+		let omni_account = alice.to_omni_account();
+		assert_ok!(VCManagement::on_vc_issued(
+			RuntimeOrigin::signed(signer),
+			alice.clone(),
+			Assertion::A1,
+			omni_account.clone(),
+			H256::default(),
+		));
+		System::assert_last_event(RuntimeEvent::VCManagement(crate::Event::VCIssuedNew {
+			identity: alice,
+			assertion: Assertion::A1,
+			omni_account,
+			req_ext_hash: H256::default(),
+		}));
 	});
 }

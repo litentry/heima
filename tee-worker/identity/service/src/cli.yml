@@ -176,7 +176,7 @@ subcommands:
     - mrenclave:
           about: Dump mrenclave to stdout. base58 encoded.
     - init-shard:
-          about: Initialize new shard (do this only if you run the first worker for that shard). if shard is not specified, the MRENCLAVE is used instead
+          about: Initialize new shard (do this only if you run the first worker for that shard). Default is mrenclave
           args:
               - shard:
                     required: false
@@ -185,6 +185,13 @@ subcommands:
                     help: shard identifier base58 encoded
     - migrate-shard:
           about: Migrate state from old shards to the new(current) shard, which is identical to mrenclave
+    - upload-id-graph:
+          about: Upload the existing IDGraph in the sidechain state onto parachain
+          args:
+              - shard:
+                    long: shard
+                    required: false
+                    help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
     - test:
           about: Run tests involving the enclave
           takes_value: true

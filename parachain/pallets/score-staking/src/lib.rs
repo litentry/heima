@@ -249,7 +249,8 @@ pub mod pallet {
 
 			// 2. calculate payout
 			let round_reward: BalanceOf<T> = (T::YearlyInflation::get() * T::YearlyIssuance::get()
-				/ YEARS.into()) * Self::round_config().interval.into();
+				/ YEARS.into())
+				* Self::round_config().interval.into();
 			let round_reward_u128 = round_reward.saturated_into::<u128>();
 
 			let total_stake_u128 = ParaStaking::Pallet::<T>::total().saturated_into::<u128>();
@@ -361,7 +362,7 @@ pub mod pallet {
 				Error::<T>::UnauthorizedOrigin
 			);
 			let account = T::AccountIdConvert::convert(
-				user.to_account_id().ok_or(Error::<T>::ConvertIdentityFailed)?,
+				user.to_native_account().ok_or(Error::<T>::ConvertIdentityFailed)?,
 			);
 			Scores::<T>::try_mutate(&account, |payment| {
 				let state = ParaStaking::Pallet::<T>::delegator_state(&account)
@@ -395,7 +396,7 @@ pub mod pallet {
 				Error::<T>::UnauthorizedOrigin
 			);
 			let account = T::AccountIdConvert::convert(
-				user.to_account_id().ok_or(Error::<T>::ConvertIdentityFailed)?,
+				user.to_native_account().ok_or(Error::<T>::ConvertIdentityFailed)?,
 			);
 			let user_score = Scores::<T>::get(&account).ok_or(Error::<T>::UserNotExist)?.score;
 			Self::update_total_score(user_score, 0)?;

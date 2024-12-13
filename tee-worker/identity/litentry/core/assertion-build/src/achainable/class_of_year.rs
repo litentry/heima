@@ -23,8 +23,7 @@ extern crate sgx_tstd as std;
 use crate::{achainable::request_achainable_classofyear, *};
 use lc_credentials::{Credential, IssuerRuntimeVersion};
 use lc_data_providers::DataProviderConfig;
-use lc_stf_task_sender::AssertionBuildRequest;
-use litentry_primitives::{AchainableClassOfYear, AchainableParams};
+use litentry_primitives::{AchainableClassOfYear, AchainableParams, AssertionBuildRequest};
 use log::debug;
 
 const VC_SUBJECT_DESCRIPTION: &str =

@@ -35,8 +35,7 @@ use log::*;
 mod error;
 pub use error::*;
 
-mod request;
-pub use request::*;
+use litentry_primitives::RequestType;
 
 #[cfg(feature = "std")]
 use std::sync::Mutex;

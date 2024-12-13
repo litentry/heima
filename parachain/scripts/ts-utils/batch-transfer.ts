@@ -61,7 +61,7 @@ async function encodeExtrinsic() {
     while (data.length > 0) {
         const batch = data.splice(0, BATCH_SIZE);
         const batchTxs = batch.map((entry: any) =>
-            destinationAPI.tx.balances.transfer(entry.account[0], entry.totalBalance)
+            destinationAPI.tx.balances.transferKeepAlive(entry.account[0], entry.totalBalance)
         );
         txs = txs.concat(batchTxs);
         if (data.length === 0 || txs.length >= BATCH_SIZE) {

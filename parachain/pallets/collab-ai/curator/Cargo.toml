@@ -1,0 +1,54 @@
+[package]
+authors = ['Litentry Dev']
+description = 'Pallet for managing curator'
+edition = '2021'
+homepage = 'https://litentry.com/'
+license = 'GPL-3.0'
+name = 'pallet-curator'
+repository = 'https://github.com/litentry/litentry-parachain'
+version = '0.1.0'
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+pallet-collab-ai-common = { workspace = true }
+
+[dev-dependencies]
+pallet-balances = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+
+[features]
+default = ["std"]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-collab-ai-common/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "pallet-collab-ai-common/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "sp-core/std",
+    "sp-io/std",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-balances/try-runtime",
+    "pallet-collab-ai-common/try-runtime",
+    "sp-runtime/try-runtime",
+]

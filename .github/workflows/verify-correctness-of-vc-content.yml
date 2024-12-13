@@ -9,18 +9,18 @@ on:
         default: "latest"
   schedule:
     - cron: '0 12 * * 3,6' # Run every Wednesday and Saturday at 12:00 UTC
+
 env:
   DOCKER_TAG: ${{ github.event.inputs.docker-tag || 'latest' }}
 
 jobs:
   test-vc-correctness:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Pull litentry image optionally
         run: |
-          docker pull parity/polkadot
           docker pull litentry/identity-worker:$DOCKER_TAG
           docker pull litentry/identity-cli:$DOCKER_TAG
           docker pull litentry/litentry-parachain:$DOCKER_TAG
@@ -41,13 +41,13 @@ jobs:
           make launch-network-litentry
 
       - name: Run vc correctness tests
+        working-directory: ./tee-worker/identity/docker
         run: |
-          cd tee-worker/docker
           docker compose -f docker-compose.yml -f lit-vc-correctness-test.yml up --no-build --exit-code-from lit-vc-correctness-test lit-vc-correctness-test
 
       - name: Stop docker containers
+        working-directory: ./tee-worker/identity/docker
         run: |
-          cd tee-worker/docker
           docker compose -f docker-compose.yml -f lit-vc-correctness-test.yml stop
 
       - name: Collect Docker Logs

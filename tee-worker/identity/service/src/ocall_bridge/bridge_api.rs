@@ -213,8 +213,8 @@ pub trait WorkerOnChainBridge {
 		&self,
 		extrinsics_encoded: Vec<u8>,
 		parentchain_id: Vec<u8>,
-		await_each_inclusion: bool,
-	) -> OCallBridgeResult<()>;
+		watch_until: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>>;
 }
 
 /// Trait for updating metrics from inside the enclave.

@@ -19,22 +19,23 @@ use codec::{Decode, Encode};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
-use itp_api_client_types::StaticEvent;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
 use itp_types::{
 	parentchain::{
-		events::ParentchainBlockProcessed, AccountId, FilterEvents, HandleParentchainEvents,
+		AccountId, BlockNumber, FilterEvents, HandleParentchainEvents,
 		ParentchainEventProcessingError, ProcessedEventsArtifacts,
 	},
 	RsaRequest, H256,
 };
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::repository::EvmAssertionRepository;
-use litentry_primitives::{Assertion, Identity, ValidationData, Web3Network};
+use lc_omni_account::InMemoryStore as OmniAccountStore;
+use litentry_primitives::{Assertion, Identity, MemberAccount, ValidationData, Web3Network};
 use log::*;
 use sp_core::{blake2_256, H160};
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeader};
 use sp_std::vec::Vec;
 use std::{format, string::String, sync::Arc, time::Instant};
 
@@ -50,7 +51,7 @@ impl<MetricsApi> ParentchainEventHandler<MetricsApi>
 where
 	MetricsApi: EnclaveMetricsOCallApi,
 {
-	fn link_identity<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
+	fn link_identity<Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>>(
 		executor: &Executor,
 		account: &AccountId,
 		encrypted_identity: Vec<u8>,
@@ -86,7 +87,7 @@ where
 		Ok(())
 	}
 
-	fn deactivate_identity<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
+	fn deactivate_identity<Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>>(
 		executor: &Executor,
 		account: &AccountId,
 		encrypted_identity: Vec<u8>,
@@ -114,7 +115,7 @@ where
 		Ok(())
 	}
 
-	fn activate_identity<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
+	fn activate_identity<Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>>(
 		executor: &Executor,
 		account: &AccountId,
 		encrypted_identity: Vec<u8>,
@@ -142,7 +143,7 @@ where
 		Ok(())
 	}
 
-	fn request_vc<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
+	fn request_vc<Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>>(
 		executor: &Executor,
 		account: &AccountId,
 		assertion: Assertion,
@@ -168,7 +169,7 @@ where
 		Ok(())
 	}
 
-	fn post_opaque_task<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
+	fn post_opaque_task<Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>>(
 		executor: &Executor,
 		request: &RsaRequest,
 	) -> Result<(), Error> {
@@ -178,7 +179,7 @@ where
 		Ok(())
 	}
 
-	fn store_assertion<Executor: IndirectExecutor<TrustedCallSigned, Error>>(
+	fn store_assertion<Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>>(
 		&self,
 		executor: &Executor,
 		id: H160,
@@ -219,19 +220,50 @@ where
 
 		Ok(())
 	}
+
+	fn update_account_store(
+		account_id: AccountId,
+		members: Vec<MemberAccount>,
+		block_number: BlockNumber,
+	) -> Result<(), Error> {
+		let last_block_number = OmniAccountStore::get_block_height().map_err(|e| {
+			Error::AccountStoreError(format!(
+				"Could not get last block number from account store, reason: {:?}",
+				e
+			))
+		})?;
+		if block_number <= last_block_number {
+			return Ok(())
+		}
+		OmniAccountStore::insert_account_store(account_id.clone(), members).map_err(|e| {
+			Error::AccountStoreError(format!(
+				"Could not update account store for account_id: {:?}, reason: {:?}",
+				account_id, e
+			))
+		})
+	}
 }
 
-impl<Executor, MetricsApi> HandleParentchainEvents<Executor, TrustedCallSigned, Error>
+impl<Executor, MetricsApi> HandleParentchainEvents<Executor, TrustedCallSigned, Error, (), (), ()>
 	for ParentchainEventHandler<MetricsApi>
 where
-	Executor: IndirectExecutor<TrustedCallSigned, Error>,
+	Executor: IndirectExecutor<TrustedCallSigned, Error, (), (), ()>,
 	MetricsApi: EnclaveMetricsOCallApi,
 {
-	fn handle_events(
+	type Output = ProcessedEventsArtifacts;
+
+	fn handle_events<Block>(
 		&self,
 		executor: &Executor,
 		events: impl FilterEvents,
-	) -> Result<ProcessedEventsArtifacts, Error> {
+		block_number: <<Block as ParentchainBlockTrait>::Header as ParentchainHeader>::Number,
+	) -> Result<ProcessedEventsArtifacts, Error>
+	where
+		Block: ParentchainBlockTrait,
+	{
+		let block_number: BlockNumber = block_number
+			.try_into()
+			.map_err(|_| ParentchainEventProcessingError::ParentchainBlockProcessedFailure)?;
 		let mut handled_events: Vec<H256> = Vec::new();
 		let mut successful_assertion_ids: Vec<H160> = Vec::new();
 		let mut failed_assertion_ids: Vec<H160> = Vec::new();
@@ -345,8 +377,20 @@ where
 			events.iter().for_each(|event| {
 				debug!("found ParentchainBlockProcessed event: {:?}", event);
 				// This is for monitoring purposes
-				handled_events.push(hash_of(ParentchainBlockProcessed::EVENT));
+				handled_events.push(hash_of(&event));
 			});
+		}
+
+		if let Ok(events) = events.get_account_store_updated_events() {
+			debug!("Handling AccountStoreUpdated events");
+			events
+				.into_iter()
+				.try_for_each(|event| {
+					debug!("found AccountStoreUpdated event: {:?}", event);
+					handled_events.push(hash_of(&event));
+					Self::update_account_store(event.who, event.account_store, block_number)
+				})
+				.map_err(|_| ParentchainEventProcessingError::AccountStoreUpdatedFailure)?;
 		}
 
 		Ok((handled_events, successful_assertion_ids, failed_assertion_ids))

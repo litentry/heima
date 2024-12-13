@@ -1,0 +1,20 @@
+[package]
+name = "itp-sgx-runtime-primitives"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+frame-system = { workspace = true }
+pallet-balances = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "frame-system/std",
+    "pallet-balances/std",
+    "sp-core/std",
+    "sp-runtime/std",
+]

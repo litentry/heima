@@ -1,0 +1,14 @@
+[package]
+name = "itp-hashing"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+sp-core = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "sp-core/std",
+]

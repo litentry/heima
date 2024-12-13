@@ -4,17 +4,16 @@ name = "lc-mock-server"
 version = "0.1.0"
 
 [dependencies]
-hex = "0.4.3"
-log = "0.4"
-serde_json = { version = "1.0", features = ["alloc"] }
+hex = { workspace = true, features = ["std"] }
+log = { workspace = true, features = ["std"] }
+serde_json = { workspace = true, features = ["std"] }
 tokio = { version = "1.5", features = ["full"] }
 warp = "0.3"
 
-# Substrate
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-core = { workspace = true, features = ["std"] }
 
 # Internal dependencies
-ita-stf = { path = "../../../app-libs/stf" }
-itp-rpc = { path = "../../../core-primitives/rpc", default-features = false }
-lc-data-providers = { path = "../data-providers" }
-litentry-primitives = { path = "../../primitives" }
+ita-stf = { package = "id-ita-stf", path = "../../../app-libs/stf" }
+itp-rpc = { workspace = true, features = ["std"] }
+lc-data-providers = { workspace = true, features = ["std"] }
+litentry-primitives = { workspace = true, features = ["std"] }

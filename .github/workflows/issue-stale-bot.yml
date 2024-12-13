@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   stale-bot:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/stale@v9
         with:

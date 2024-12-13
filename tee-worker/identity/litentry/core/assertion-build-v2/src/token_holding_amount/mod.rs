@@ -24,8 +24,7 @@ use lc_credentials_v2::{
 	token_holding_amount::TokenHoldingAmountAssertionUpdate, Credential, IssuerRuntimeVersion,
 };
 use lc_service::web3_token::token_balance::get_token_balance;
-use lc_stf_task_sender::AssertionBuildRequest;
-use litentry_primitives::{Web3Network, Web3TokenType};
+use litentry_primitives::{AssertionBuildRequest, Web3Network, Web3TokenType};
 use log::debug;
 
 use crate::*;

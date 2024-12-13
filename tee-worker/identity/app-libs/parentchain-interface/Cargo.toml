@@ -1,49 +1,43 @@
 [package]
-name = "ita-parentchain-interface"
+name = "id-ita-parentchain-interface"
 version = "0.1.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { workspace = true, optional = true }
 
-# local dependencies
-ita-sgx-runtime = { path = "../sgx-runtime", default-features = false }
-ita-stf = { path = "../stf", default-features = false }
-itc-parentchain-indirect-calls-executor = { path = "../../core/parentchain/indirect-calls-executor", default-features = false }
-itp-api-client-types = { path = "../../core-primitives/node-api/api-client-types", default-features = false }
-itp-enclave-metrics = { path = "../../core-primitives/enclave-metrics", default-features = false }
-itp-node-api = { path = "../../core-primitives/node-api", default-features = false }
-itp-ocall-api = { path = "../../core-primitives/ocall-api", default-features = false }
-itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
+ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../sgx-runtime", default-features = false }
+ita-stf = { package = "id-ita-stf", path = "../stf", default-features = false }
+itc-parentchain-indirect-calls-executor = { package = "id-itc-parentchain-indirect-calls-executor", path = "../../core/parentchain/indirect-calls-executor", default-features = false }
+itp-api-client-types = { workspace = true }
+itp-enclave-metrics = { workspace = true }
+itp-node-api = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-types = { workspace = true }
 
-# no-std compatible libraries
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-log = { version = "0.4", default-features = false }
+codec = { package = "parity-scale-codec", workspace = true }
+log = { workspace = true }
 
-substrate-api-client = { optional = true, default-features = false, features = ["std", "sync-api"], git = "https://github.com/scs/substrate-api-client.git", branch = "polkadot-v0.9.42-tag-v0.14.0" }
+sp-core = { workspace = true, features = ["full_crypto"] }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+substrate-api-client = { workspace = true, optional = true }
 
-# substrate dep
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-
-# litentry
-lc-dynamic-assertion = { path = "../../litentry/core/dynamic-assertion", default-features = false }
-lc-evm-dynamic-assertions = { path = "../../litentry/core/evm-dynamic-assertions", default-features = false }
-litentry-primitives = { path = "../../litentry/primitives", default-features = false }
-
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+lc-dynamic-assertion = { workspace = true }
+lc-evm-dynamic-assertions = { workspace = true }
+lc-omni-account = { workspace = true }
+litentry-primitives = { workspace = true }
 
 [dev-dependencies]
-env_logger = "0.9.0"
-itp-node-api = { path = "../../core-primitives/node-api", features = ["mocks"] }
-itp-sgx-crypto = { path = "../../core-primitives/sgx/crypto", features = ["mocks"] }
-itp-stf-executor = { path = "../../core-primitives/stf-executor", features = ["mocks"] }
-itp-test = { path = "../../core-primitives/test" }
-itp-top-pool-author = { path = "../../core-primitives/top-pool-author", features = ["mocks"] }
-itc-parentchain-test = { path = "../../core/parentchain/test" }
+env_logger = { workspace = true }
+itp-node-api = { workspace = true, features = ["std", "mocks"] }
+itp-sgx-crypto = { workspace = true, features = ["std", "mocks"] }
+itp-test = { workspace = true }
+itc-parentchain-test = { workspace = true }
+itp-stf-executor = { package = "id-itp-stf-executor", path = "../../core-primitives/stf-executor", features = ["mocks"] }
+itp-top-pool-author = { package = "id-itp-top-pool-author", path = "../../core-primitives/top-pool-author", features = ["mocks"] }
 
 
 [features]
@@ -68,6 +62,7 @@ std = [
     "lc-dynamic-assertion/std",
     "lc-evm-dynamic-assertions/std",
     "sp-std/std",
+    "lc-omni-account/std",
 ]
 sgx = [
     "sgx_tstd",
@@ -80,4 +75,5 @@ sgx = [
     "litentry-primitives/sgx",
     "lc-dynamic-assertion/sgx",
     "lc-evm-dynamic-assertions/sgx",
+    "lc-omni-account/sgx",
 ]

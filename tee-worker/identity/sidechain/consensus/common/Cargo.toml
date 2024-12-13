@@ -5,46 +5,40 @@ authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@int
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
+codec = { package = "parity-scale-codec", workspace = true }
 itertools = { version = "0.10.1", default-features = false, features = ["use_alloc"] }
-log = { version = "0.4", default-features = false }
-thiserror = { version = "1.0.26", optional = true }
+log = { workspace = true }
+thiserror = { workspace = true, optional = true }
 
-# local deps
-itc-parentchain-light-client = { path = "../../../core/parentchain/light-client", default-features = false }
-itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", default-features = false }
-itp-extrinsics-factory = { path = "../../../core-primitives/extrinsics-factory", default-features = false }
-itp-import-queue = { path = "../../../core-primitives/import-queue", default-features = false }
-itp-node-api-metadata = { path = "../../../core-primitives/node-api/metadata", default-features = false }
-itp-node-api-metadata-provider = { path = "../../../core-primitives/node-api/metadata-provider", default-features = false }
-itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings" }
-itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-features = false }
-itp-types = { path = "../../../core-primitives/types", default-features = false }
-its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
-its-primitives = { path = "../../primitives", default-features = false }
-its-state = { path = "../../state", default-features = false }
+itc-parentchain-light-client = { workspace = true }
+itp-enclave-metrics = { workspace = true }
+itp-extrinsics-factory = { workspace = true }
+itp-import-queue = { workspace = true }
+itp-node-api-metadata = { workspace = true }
+itp-node-api-metadata-provider = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-settings = { workspace = true }
+itp-sgx-crypto = { workspace = true }
+itp-types = { workspace = true }
+its-block-verification = { workspace = true, optional = true }
+its-primitives = { workspace = true }
+its-state = { workspace = true }
 
-# sgx deps
-sgx_tstd = { optional = true, git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
-sgx_types = { git = "https://github.com/apache/teaclave-sgx-sdk.git", branch = "master" }
-thiserror-sgx = { package = "thiserror", optional = true, git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3" }
+sgx_tstd = { workspace = true, optional = true }
+sgx_types = { workspace = true }
+thiserror_sgx = { workspace = true, optional = true }
 
-# substrate deps
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-runtime = { workspace = true }
 
-litentry-hex-utils = { path = "../../../../../common/utils/hex", default-features = false }
+litentry-hex-utils = { workspace = true }
 
 [dev-dependencies]
-# local
-itc-parentchain-test = { path = "../../../core/parentchain/test" }
-itp-sgx-externalities = { default-features = false, path = "../../../core-primitives/substrate-sgx/externalities" }
-itp-test = { path = "../../../core-primitives/test" }
-its-test = { path = "../../test" }
-fork-tree = { path = "../../fork-tree", default-features = false }
-
-# substrate
-sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+itc-parentchain-test = { workspace = true, features = ["std"] }
+itp-sgx-externalities = { workspace = true }
+itp-test = { workspace = true, features = ["std"] }
+its-test = { workspace = true, features = ["std"] }
+fork-tree = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["full_crypto"] }
 
 [features]
 default = ["std"]
@@ -52,7 +46,6 @@ std = [
     "codec/std",
     "log/std",
     "thiserror",
-    # local
     "itc-parentchain-light-client/std",
     "itertools/use_std",
     "itp-import-queue/std",
@@ -68,13 +61,11 @@ std = [
     "its-block-verification/std",
     "its-state/std",
     "fork-tree/std",
-    # substrate
     "sp-runtime/std",
 ]
 sgx = [
     "sgx_tstd",
-    "thiserror-sgx",
-    # local
+    "thiserror_sgx",
     "itc-parentchain-light-client/sgx",
     "itp-import-queue/sgx",
     "itp-enclave-metrics/sgx",
@@ -84,6 +75,5 @@ sgx = [
     "itp-sgx-externalities/sgx",
     "its-state/sgx",
     "fork-tree/sgx",
-    # scs
     "its-block-verification/sgx",
 ]

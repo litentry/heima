@@ -119,14 +119,14 @@ Worker_Rust_Flags := $(CARGO_TARGET) $(WORKER_FEATURES)
 Worker_Include_Paths := -I ./service -I./include -I$(SGX_SDK)/include -I$(CUSTOM_EDL_PATH)
 Worker_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(Worker_Include_Paths)
 
-Worker_Rust_Path := target/$(OUTPUT_PATH)
+Worker_Rust_Path := ../target/$(OUTPUT_PATH)
 Worker_Enclave_u_Object :=service/libEnclave_u.a
 Worker_Name := bin/app
 
 ######## litentry-cli settings ########
 Client_Rust_Flags := $(CARGO_TARGET) $(CLIENT_FEATURES)
 
-Client_Rust_Path := target/$(OUTPUT_PATH)
+Client_Rust_Path := ../target/$(OUTPUT_PATH)
 Client_Path := bin
 Client_Binary := litentry-cli
 Client_Name := $(Client_Path)/$(Client_Binary)
@@ -233,7 +233,7 @@ endif
 enclave:
 	@echo
 	@echo "Building the enclave"
-	$(MAKE) -C ./enclave-runtime/
+	$(MAKE) -C ./enclave-runtime/ RA_METHOD=$(RA_METHOD) WORKER_DEV=$(WORKER_DEV)
 
 .git/hooks/pre-commit: .githooks/pre-commit
 	@echo "Installing git hooks"

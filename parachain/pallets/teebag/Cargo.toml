@@ -16,7 +16,6 @@ hex = { workspace = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
-ring = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["alloc"] }
@@ -28,10 +27,13 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 pallet-balances = { workspace = true, optional = true }
 pallet-timestamp = { workspace = true }
+pallet-utility = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
+
+core-primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
@@ -44,30 +46,34 @@ default = ["std"]
 std = [
     "base64/std",
     "chrono/std",
+    "core-primitives/std",
     "der/std",
-    "hex/std",
-    "serde/std",
-    "serde_json/std",
-    "ring/std",
-    "x509-cert/std",
-    "parity-scale-codec/std",
-    "log/std",
-    "scale-info/std",
-    "webpki/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "hex/std",
+    "log/std",
+    "pallet-balances?/std",
+    "pallet-timestamp/std",
+    "pallet-utility/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "serde/std",
+    "serde_json/std",
     "sp-core/std",
     "sp-io/std",
+    "sp-keyring/std",
     "sp-runtime/std",
     "sp-std/std",
-    "pallet-timestamp/std",
-    "pallet-balances?/std",
+    "webpki/std",
+    "x509-cert/std",
 ]
 runtime-benchmarks = [
-    "frame-support/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
     "pallet-balances?/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+    "pallet-utility/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
 # workaround to cross crate boundary, see https://github.com/rust-lang/cargo/issues/8379

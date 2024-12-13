@@ -21,6 +21,6 @@ COPY --from=gaiaadm/pumba /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-c
 COPY --from=gaiaadm/pumba /pumba /usr/local/bin/pumba
 COPY --from=powerman/dockerize /usr/local/bin/dockerize /usr/local/bin/dockerize
 
-ENV PATH "$PATH:/usr/local/bin"
+ENV PATH="$PATH:/usr/local/bin"
 
 ENTRYPOINT ["/usr/local/bin/dockerize"]

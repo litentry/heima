@@ -9,6 +9,6 @@ use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 pub struct Upgrade;
 impl OnRuntimeUpgrade for Upgrade {
 	fn on_runtime_upgrade() -> Weight {
-		pallet_imt::migrations::migrate_to_v1::<Runtime, IdentityManagement>()
+		pallet_identity_management_tee::migrations::migrate_to_v1::<Runtime, IdentityManagement>()
 	}
 }

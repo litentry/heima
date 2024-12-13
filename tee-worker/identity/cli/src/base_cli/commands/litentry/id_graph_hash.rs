@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{command_utils::get_worker_api_direct, Cli, CliResult, CliResultOk};
+use crate::{
+	command_utils::get_worker_api_direct, trusted_operation::get_id_graph_hash, Cli, CliResult,
+	CliResultOk, H256,
+};
 use codec::Decode;
 use itc_rpc_client::direct_client::DirectApi;
 use itp_types::ShardIdentifier;
@@ -36,7 +39,7 @@ impl IDGraphHashCommand {
 		let mrenclave = direct_api.get_state_mrenclave().unwrap();
 		let shard = ShardIdentifier::decode(&mut &mrenclave[..]).unwrap();
 		let identity = Identity::from_did(self.did.as_str()).unwrap();
-		let id_graph_hash = direct_api.get_id_graph_hash(&shard, &identity).unwrap();
+		let id_graph_hash = get_id_graph_hash::<H256>(&direct_api, &shard, &identity).unwrap();
 		println!("{:?}", id_graph_hash);
 
 		Ok(CliResultOk::None)

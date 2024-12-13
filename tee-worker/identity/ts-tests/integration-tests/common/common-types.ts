@@ -7,11 +7,13 @@ import type { KeyringPair } from '@polkadot/keyring/types';
 import type { HexString } from '@polkadot/util/types';
 import { ECPairInterface } from 'ecpair';
 import { Keypair } from '@solana/web3.js';
-import { Signer } from './utils/crypto';
+import { Signer, PolkadotSigner } from './utils/crypto';
 // If there are types already defined in the client-api, please avoid redefining these types.
 // Instead, make every effort to use the types that have been generated within the client-api.
 
-interface WalletType {
+export type SubstrateSigner = PolkadotSigner;
+
+export interface WalletType {
     [walletName: string]: Signer;
 }
 export interface Wallets {

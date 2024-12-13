@@ -82,7 +82,9 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 // litentry
-pub use pallet_imt::{self, Call as IdentityManagementCall, IDGraph, IdentityStatus};
+pub use pallet_identity_management_tee::{
+	self, Call as IdentityManagementCall, IDGraph, IdentityStatus,
+};
 
 /// Block type as expected by this sgx-runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -139,7 +141,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("node-template"),
 	impl_name: create_runtime_str!("node-template"),
 	authoring_version: 1,
-	spec_version: 110,
+	spec_version: 111,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -283,7 +285,7 @@ impl pallet_parentchain::Config<crate::ParentchainInstanceTargetB> for Runtime {
 	type WeightInfo = ();
 }
 
-impl pallet_imt::Config for Runtime {
+impl pallet_identity_management_tee::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type ManageOrigin = EnsureRoot<AccountId>;
 	type MaxIDGraphLength = ConstU32<64>;
@@ -305,7 +307,7 @@ construct_runtime!(
 		ParentchainLitentry: pallet_parentchain::<Instance1>,
 		ParentchainTargetA: pallet_parentchain::<Instance2>,
 		ParentchainTargetB: pallet_parentchain::<Instance3>,
-		IdentityManagement: pallet_imt,
+		IdentityManagement: pallet_identity_management_tee,
 	}
 );
 
@@ -328,7 +330,7 @@ construct_runtime!(
 		ParentchainLitentry: pallet_parentchain::<Instance1>,
 		ParentchainTargetA: pallet_parentchain::<Instance2>,
 		ParentchainTargetB: pallet_parentchain::<Instance3>,
-		IdentityManagement: pallet_imt,
+		IdentityManagement: pallet_identity_management_tee,
 		Evm: pallet_evm,
 	}
 );

@@ -38,7 +38,7 @@ import { createJsonRpcRequest, nextRequestId, stfErrorToString } from './helpers
 // the corresponding parachain event should be emitted **around** that, it's not guaranteed if it's before or after this status
 // due to block inclusion delays from the parachain
 //
-async function sendRequest(
+export async function sendRequest(
     wsClient: WebSocketAsPromised,
     request: JsonRpcRequest,
     api: ApiPromise,
@@ -144,7 +144,7 @@ export const createSignedTrustedCall = async (
 };
 
 // See TrustedCall.signature_message_prefix
-function getSignatureMessagePrefix(call: TrustedCall): string {
+export function getSignatureMessagePrefix(call: TrustedCall): string {
     if (call.isLinkIdentity) {
         return "By linking your identity to our platform, you're taking a step towards a more integrated experience. Please be assured, this process is safe and involves no transactions of your assets. Token: ";
     }

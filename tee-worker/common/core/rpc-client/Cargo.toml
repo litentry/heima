@@ -1,0 +1,33 @@
+[package]
+name = "itc-rpc-client"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+base58 = { workspace = true }
+codec = { package = "parity-scale-codec", workspace = true, features = ["std"] }
+log = { workspace = true, features = ["std"] }
+openssl = "0.10"
+parking_lot = "0.12.1"
+serde_json = { workspace = true, features = ["std"] }
+sgx_crypto_helper = { workspace = true, features = ["ucrypto_help"] }
+thiserror = { workspace = true }
+url = { version = "2.0.0" }
+ws = { version = "0.9.1", features = ["ssl"] }
+
+frame-metadata = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
+
+itp-api-client-types = { workspace = true, features = ["std"] }
+itp-rpc = { workspace = true, features = ["std"] }
+itp-stf-primitives = { workspace = true, features = ["std"] }
+itp-types = { workspace = true, features = ["std"] }
+itp-utils = { workspace = true, features = ["std"] }
+litentry-primitives = { workspace = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+itc-tls-websocket-server = { workspace = true, features = ["mocks"] }
+itp-networking-utils = { workspace = true, features = ["std"] }
+rustls = { workspace = true, features = ["dangerous_configuration"] }

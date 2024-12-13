@@ -30,7 +30,7 @@ use parity_scale_codec::{Decode, Encode, Error, Input, MaxEncodedLen};
 use scale_info::{meta_type, Type, TypeDefSequence, TypeInfo};
 use sp_core::{
     crypto::{AccountId32, ByteArray},
-    ecdsa, ed25519, sr25519, H160,
+    ecdsa, ed25519, sr25519, H160, H256,
 };
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
@@ -272,19 +272,21 @@ impl Debug for Address33 {
     Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, EnumIter, Ord, PartialOrd,
 )]
 pub enum Identity {
-    // web2
     #[codec(index = 0)]
     Twitter(IdentityString),
+
     #[codec(index = 1)]
     Discord(IdentityString),
+
     #[codec(index = 2)]
     Github(IdentityString),
 
-    // web3
     #[codec(index = 3)]
     Substrate(Address32),
+
     #[codec(index = 4)]
     Evm(Address20),
+
     // bitcoin addresses are derived (one-way hash) from the pubkey
     // by using `Address33` as the Identity handle, it requires that pubkey
     // is retrievable by the wallet API when verifying the bitcoin account.
@@ -297,13 +299,24 @@ pub enum Identity {
 
     #[codec(index = 7)]
     Email(IdentityString),
+
+    #[codec(index = 8)]
+    Google(IdentityString),
+
+    #[codec(index = 9)]
+    Pumpx(IdentityString),
 }
 
 impl Identity {
     pub fn is_web2(&self) -> bool {
         matches!(
             self,
-            Self::Twitter(..) | Self::Discord(..) | Self::Github(..) | Self::Email(..)
+            Self::Twitter(..)
+                | Self::Discord(..)
+                | Self::Github(..)
+                | Self::Email(..)
+                | Self::Google(..)
+                | Self::Pumpx(..)
         )
     }
 
@@ -339,7 +352,9 @@ impl Identity {
             Identity::Twitter(_)
             | Identity::Discord(_)
             | Identity::Github(_)
-            | Identity::Email(_) => Vec::new(),
+            | Identity::Email(_)
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => Vec::new(),
         }
     }
 
@@ -355,23 +370,41 @@ impl Identity {
             Identity::Twitter(_)
             | Identity::Discord(_)
             | Identity::Github(_)
-            | Identity::Email(_) => networks.is_empty(),
+            | Identity::Email(_)
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => networks.is_empty(),
         }
     }
 
-    /// Currently we only support mapping from Address32/Address20 to AccountId, not opposite.
-    pub fn to_account_id(&self) -> Option<AccountId> {
+    /// map an `Identity` to a native parachain account that:
+    /// - has a private key for substrate and evm accounts, or any connect that can connect to parachain directly
+    /// - appears as origin when submitting extrinsics
+    ///
+    /// this account is also used within the worker as e.g. sidechain accounts
+    pub fn to_native_account(&self) -> Option<AccountId> {
         match self {
-            Identity::Substrate(address) | Identity::Solana(address) => Some(address.into()),
+            Identity::Substrate(address) => Some(address.into()),
             Identity::Evm(address) => Some(HashedAddressMapping::into_account_id(
                 H160::from_slice(address.as_ref()),
             )),
-            Identity::Bitcoin(address) => Some(blake2_256(address.as_ref()).into()),
+            // we use `to_omni_account` impl for non substrate/evm web3 accounts, as they
+            // can't connect to the parachain directly
+            Identity::Bitcoin(_) | Identity::Solana(_) => Some(self.to_omni_account()),
             Identity::Twitter(_)
             | Identity::Discord(_)
             | Identity::Github(_)
-            | Identity::Email(_) => None,
+            | Identity::Email(_)
+            | Identity::Google(_)
+            | Identity::Pumpx(_) => None,
         }
+    }
+
+    /// derive an `OmniAccount` from `Identity` by hashing the encoded identity,
+    /// it should always be successful
+    ///
+    /// an `OmniAccount` has no private key and can only be controlled by its MemberAccount
+    pub fn to_omni_account(&self) -> AccountId {
+        self.hash().to_fixed_bytes().into()
     }
 
     pub fn from_did(s: &str) -> Result<Self, &'static str> {
@@ -425,6 +458,14 @@ impl Identity {
                     return Ok(Identity::Email(IdentityString::new(
                         v[1].as_bytes().to_vec(),
                     )));
+                } else if v[0] == "google" {
+                    return Ok(Identity::Google(IdentityString::new(
+                        v[1].as_bytes().to_vec(),
+                    )));
+                } else if v[0] == "pumpx" {
+                    return Ok(Identity::Pumpx(IdentityString::new(
+                        v[1].as_bytes().to_vec(),
+                    )));
                 } else {
                     return Err("Unknown did type");
                 }
@@ -465,9 +506,52 @@ impl Identity {
                     str::from_utf8(handle.inner_ref())
                         .map_err(|_| "email handle conversion error")?
                 ),
+                Identity::Google(handle) => format!(
+                    "google:{}",
+                    str::from_utf8(handle.inner_ref())
+                        .map_err(|_| "google handle conversion error")?
+                ),
+                Identity::Pumpx(handle) => format!(
+                    "pumpx:{}",
+                    str::from_utf8(handle.inner_ref())
+                        .map_err(|_| "pumpx handle conversion error")?
+                ),
             }
         ))
     }
+
+    pub fn hash(&self) -> H256 {
+        self.using_encoded(blake2_256).into()
+    }
+
+    pub fn from_web2_account(handle: &str, identity_type: Web2IdentityType) -> Self {
+        match identity_type {
+            Web2IdentityType::Twitter => {
+                Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Discord => {
+                Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Github => {
+                Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Email => {
+                Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+            Web2IdentityType::Google => {
+                Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Web2IdentityType {
+    Twitter,
+    Discord,
+    Github,
+    Email,
+    Google,
 }
 
 impl From<ed25519::Public> for Identity {
@@ -544,6 +628,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => true,
+                    Identity::Pumpx(..) => true,
                 }
             )
         })
@@ -563,6 +649,8 @@ mod tests {
                     Identity::Evm(..) => true,
                     Identity::Bitcoin(..) => true,
                     Identity::Solana(..) => true,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -582,6 +670,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -601,6 +691,8 @@ mod tests {
                     Identity::Evm(..) => true,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -620,6 +712,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => true,
                     Identity::Solana(..) => false,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -639,6 +733,8 @@ mod tests {
                     Identity::Evm(..) => false,
                     Identity::Bitcoin(..) => false,
                     Identity::Solana(..) => true,
+                    Identity::Google(..) => false,
+                    Identity::Pumpx(..) => false,
                 }
             )
         })
@@ -772,5 +868,169 @@ mod tests {
         let did = format!("did:litentry:solana:{}", address);
         assert_eq!(identity.to_did().unwrap(), did.as_str());
         assert_eq!(Identity::from_did(did.as_str()).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_google_did() {
+        let identity = Identity::Google(IdentityString::new("test@gmail.com".as_bytes().to_vec()));
+        let did_str = "did:litentry:google:test@gmail.com";
+        assert_eq!(identity.to_did().unwrap(), did_str);
+        assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_pumpx_did() {
+        let identity = Identity::Pumpx(IdentityString::new("12345678".as_bytes().to_vec()));
+        let did_str = "did:litentry:pumpx:12345678";
+        assert_eq!(identity.to_did().unwrap(), did_str);
+        assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+    }
+
+    #[test]
+    fn test_substrate_omni_account() {
+        let identity = Identity::Substrate([0; 32].into());
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("27740a1393c8bb0fe84ec50d2e12a1cb870cdf397c6c9b75e8407a9e427faa90")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_evm_omni_account() {
+        let identity = Identity::Evm([0; 20].into());
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("5a5ff27b196c754649b9901a2decdb70f1c568441f01f67fdd82a5dbf797baf8")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_bitcoin_omni_account() {
+        let identity = Identity::Bitcoin([0; 33].into());
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("901695afadc759ca38157789774d2c0ce8813a13a7c92f7240c9e5f82fdcc2c1")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_discord_omni_account() {
+        let identity = Identity::Discord(IdentityString::new("discord_handle".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("8e4e89367678ebee97dab02fa69e8079d5138d3f9a6f0b1a0872cebf6fb3cb97")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_twitter_omni_account() {
+        let identity = Identity::Twitter(IdentityString::new("twitter_handle".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("bb23631a4051564f39061cbad36d4ecc12bba016cb8960fc18254b6bdef8df56")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_github_omni_account() {
+        let identity = Identity::Github(IdentityString::new("github_handle".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("9e5ab389599991aea22d0f3964efd36f3aa74262c1b819a4cded54752dec5981")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_email_omni_account() {
+        let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("ae1eabb1474eb776e2db7e061d61411c5ad65782313b2ae3a1253c2514895485")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_solana_omni_account() {
+        let address = "4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4";
+        let identity = Identity::Solana(
+            address
+                .from_base58()
+                .unwrap()
+                .as_slice()
+                .try_into()
+                .unwrap(),
+        );
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("ba126bdb4324ddd880785b071375602530060223758b006460b4b363b35d49fc")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_google_omni_account() {
+        let identity = Identity::Google(IdentityString::new("test@gmail.com".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("0447c42563f9bdc18ee3cd41fa75bbfd08496f71692d1818a4e626709cf4e91d")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
+    }
+
+    #[test]
+    fn test_pumpx_omni_account() {
+        let identity = Identity::Pumpx(IdentityString::new("12345678".as_bytes().to_vec()));
+        assert_eq!(
+            identity.to_omni_account(),
+            AccountId::new(
+                hex::decode("d95f5a079ac8298c86505f6efbf8719e1e7e09f6b69e5f67d714b32dd65946b3")
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+            )
+        );
     }
 }

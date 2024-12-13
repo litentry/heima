@@ -1,0 +1,14 @@
+[package]
+name = "executor-core"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

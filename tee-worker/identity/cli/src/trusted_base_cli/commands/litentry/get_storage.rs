@@ -183,6 +183,10 @@ fn send_get_storage_request(
 						warn!("request status is: {:?}, top_hash: {:?}", status, top_hash);
 						None
 					},
+					DirectRequestStatus::Processing(hash) => {
+						warn!("request status is processing, hash: {:?}", hash);
+						None
+					},
 				}
 			} else {
 				None
@@ -198,24 +202,24 @@ fn send_get_storage_request(
 }
 
 fn write_storage_address_root_bytes(pallet_name: &str, storage_name: &str, out: &mut Vec<u8>) {
-	out.extend(sp_core_hashing::twox_128(pallet_name.as_bytes()));
-	out.extend(sp_core_hashing::twox_128(storage_name.as_bytes()));
+	out.extend(sp_core::hashing::twox_128(pallet_name.as_bytes()));
+	out.extend(sp_core::hashing::twox_128(storage_name.as_bytes()));
 }
 
 /// Take some SCALE encoded bytes and a [`StorageHasher`] and hash the bytes accordingly.
 fn hash_bytes(input: &[u8], hasher: &StorageHasher, bytes: &mut Vec<u8>) {
 	match hasher {
 		StorageHasher::Identity => bytes.extend(input),
-		StorageHasher::Blake2_128 => bytes.extend(sp_core_hashing::blake2_128(input)),
+		StorageHasher::Blake2_128 => bytes.extend(sp_core::hashing::blake2_128(input)),
 		StorageHasher::Blake2_128Concat => {
-			bytes.extend(sp_core_hashing::blake2_128(input));
+			bytes.extend(sp_core::hashing::blake2_128(input));
 			bytes.extend(input);
 		},
-		StorageHasher::Blake2_256 => bytes.extend(sp_core_hashing::blake2_256(input)),
-		StorageHasher::Twox128 => bytes.extend(sp_core_hashing::twox_128(input)),
-		StorageHasher::Twox256 => bytes.extend(sp_core_hashing::twox_256(input)),
+		StorageHasher::Blake2_256 => bytes.extend(sp_core::hashing::blake2_256(input)),
+		StorageHasher::Twox128 => bytes.extend(sp_core::hashing::twox_128(input)),
+		StorageHasher::Twox256 => bytes.extend(sp_core::hashing::twox_256(input)),
 		StorageHasher::Twox64Concat => {
-			bytes.extend(sp_core_hashing::twox_64(input));
+			bytes.extend(sp_core::hashing::twox_64(input));
 			bytes.extend(input);
 		},
 	}

@@ -1,0 +1,21 @@
+[package]
+name = "lc-native-task-sender"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+lazy_static = { workspace = true }
+log = { workspace = true }
+
+litentry-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+sgx = [
+    "sgx_tstd",
+]
+std = [
+    "log/std",
+]

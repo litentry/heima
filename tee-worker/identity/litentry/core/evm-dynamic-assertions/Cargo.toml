@@ -4,47 +4,41 @@ version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-# std dependecies
-base58 = { version = "0.2", default-features = false }
-blake2-rfc = { version = "0.2.18", default-features = false }
-chrono = { version = "0.4.26", default-features = true, optional = true }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-http = { version = "0.2", optional = true }
+base58 = { workspace = true }
+blake2-rfc = { workspace = true }
+chrono = { workspace = true, optional = true }
+codec = { package = "parity-scale-codec", workspace = true }
+http = { workspace = true, optional = true }
 rust_decimal = { version = "1.35.0", default-features = false }
-ss58-registry = { version = "1.40", default-features = false }
-thiserror = { version = "1.0.26", optional = true }
+ss58-registry = { workspace = true }
+thiserror = { workspace = true, optional = true }
 
-# sgx dependencies
-chrono_sgx = { package = "chrono", git = "https://github.com/mesalock-linux/chrono-sgx", optional = true }
-http-sgx = { package = "http", git = "https://github.com/integritee-network/http-sgx.git", branch = "sgx-experimental", optional = true }
-itp-sgx-temp-dir = { version = "0.1", default-features = false, path = "../../../core-primitives/sgx/temp-dir", optional = true }
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
-thiserror-sgx = { package = "thiserror", git = "https://github.com/mesalock-linux/thiserror-sgx", tag = "sgx_1.1.3", optional = true }
+chrono_sgx = { workspace = true, optional = true }
+http-sgx = { workspace = true, optional = true }
+itp-sgx-temp-dir = { workspace = true, optional = true }
+sgx_tstd = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
 
-# no std
 ethabi = { version = "18.0.0", default-features = false }
 evm = { version = "0.41.1", default-features = false, features = ["with-codec"] }
-hex = { version = "0.4.3", default-features = false }
-log = { version = "0.4", default-features = false }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+hex = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
 
-# local
-itc-rest-client = { path = "../../../core/rest-client", default-features = false }
-itp-enclave-metrics = { path = "../../../core-primitives/enclave-metrics", default-features = false }
-itp-ocall-api = { path = "../../../core-primitives/ocall-api", default-features = false }
-itp-settings = { path = "../../../core-primitives/settings" }
-itp-sgx-io = { path = "../../../core-primitives/sgx/io", default-features = false }
-lc-dynamic-assertion = { path = "../dynamic-assertion", default-features = false }
-litentry-primitives = { path = "../../primitives", default-features = false }
+itc-rest-client = { workspace = true }
+itp-enclave-metrics = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-settings = { workspace = true }
+itp-sgx-io = { workspace = true }
+lc-dynamic-assertion = { workspace = true }
+litentry-primitives = { workspace = true }
 
 [dev-dependencies]
-http_req = { features = ["rust-tls"], branch = "master", git = "https://github.com/integritee-network/http_req" }
-lc-mock-server = { path = "../mock-server" }
-litentry-primitives = { path = "../../primitives" }
-litentry-hex-utils = { path = "../../../../../common/utils/hex" }
+http_req = { workspace = true }
+lc-mock-server = { workspace = true }
+litentry-primitives = { workspace = true, features = ["std"] }
+litentry-hex-utils = { workspace = true }
 
 [features]
 default = ["std"]
@@ -63,7 +57,7 @@ sgx = [
     "lc-dynamic-assertion/sgx",
     "itc-rest-client/sgx",
     "itp-sgx-io/sgx",
-    "thiserror-sgx",
+    "thiserror_sgx",
     "chrono_sgx",
 ]
 sgx-test = ["itp-sgx-temp-dir/sgx"]

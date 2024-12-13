@@ -17,8 +17,7 @@
 */
 
 use crate::EnclaveResult;
-use itp_types::ShardIdentifier;
-use pallet_teebag::Fmspc;
+use itp_types::{Fmspc, ShardIdentifier};
 use sgx_types::*;
 
 /// Struct that unites all relevant data reported by the QVE
@@ -126,9 +125,8 @@ mod impl_ffi {
 	use frame_support::ensure;
 	use itp_enclave_api_ffi as ffi;
 	use itp_settings::worker::EXTRINSIC_MAX_SIZE;
-	use itp_types::ShardIdentifier;
+	use itp_types::{Fmspc, ShardIdentifier};
 	use log::*;
-	use pallet_teebag::Fmspc;
 	use sgx_types::*;
 
 	const OS_SYSTEM_PATH: &str = "/usr/lib/x86_64-linux-gnu/";

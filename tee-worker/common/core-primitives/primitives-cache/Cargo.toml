@@ -1,0 +1,21 @@
+[package]
+name = "itp-primitives-cache"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+lazy_static = { workspace = true }
+sgx_tstd = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror_sgx",
+]

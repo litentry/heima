@@ -63,7 +63,10 @@ use itp_node_api::{
 	metadata::{provider::NodeMetadataRepository, NodeMetadata},
 };
 use itp_nonce_cache::NonceCache;
-use itp_sgx_crypto::{key_repository::KeyRepository, Aes, AesSeal, Ed25519Seal, Rsa3072Seal};
+use itp_sgx_crypto::{
+	aes256::sgx::Seal as Aes256Seal, key_repository::KeyRepository, Aes, Aes256Key, AesSeal,
+	Ed25519Seal, Rsa3072Seal,
+};
 use itp_stf_executor::{
 	enclave_signer::StfEnclaveSigner, executor::StfExecutor, getter_executor::GetterExecutor,
 	state_getter::StfStateGetter,
@@ -106,6 +109,7 @@ pub type EnclaveGetter = Getter;
 pub type EnclaveTrustedCallSigned = TrustedCallSigned;
 pub type EnclaveStf = Stf<EnclaveTrustedCallSigned, EnclaveGetter, StfState, Runtime>;
 pub type EnclaveStateKeyRepository = KeyRepository<Aes, AesSeal>;
+pub type EnclaveAccountStoreKeyRepository = KeyRepository<Aes256Key, Aes256Seal>;
 pub type EnclaveShieldingKeyRepository = KeyRepository<Rsa3072KeyPair, Rsa3072Seal>;
 pub type EnclaveSigningKeyRepository = KeyRepository<ed25519::Pair, Ed25519Seal>;
 pub type EnclaveStateFileIo = SgxStateFileIo<EnclaveStateKeyRepository, StfState>;
@@ -370,6 +374,11 @@ pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor:
 /// State key repository
 pub static GLOBAL_STATE_KEY_REPOSITORY_COMPONENT: ComponentContainer<EnclaveStateKeyRepository> =
 	ComponentContainer::new("State key repository");
+
+/// IDGraph key repository
+pub static GLOBAL_ACCOUNT_STORE_KEY_REPOSITORY_COMPONENT: ComponentContainer<
+	EnclaveAccountStoreKeyRepository,
+> = ComponentContainer::new("StoreAccount key repository");
 
 /// Shielding key repository
 pub static GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT: ComponentContainer<

@@ -17,27 +17,42 @@
 */
 
 use crate::ocall::{ffi, OcallApi};
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::ensure;
-use itc_parentchain::primitives::ParentchainId;
-use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
+use itp_node_api::api_client::{ExtrinsicReport, XtStatus};
+use itp_ocall_api::{EnclaveOnChainOCallApi, Error, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
-use itp_types::{storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256};
+use itp_types::{
+	parentchain::{AccountId, Index as ParentchainIndex, ParentchainId},
+	storage::StorageEntryVerified,
+	WorkerRequest, WorkerResponse, H256,
+};
 use log::*;
 use sgx_types::*;
 use sp_runtime::{traits::Header, OpaqueExtrinsic};
-use std::vec::Vec;
+use std::{mem::size_of, vec::Vec};
 
 impl EnclaveOnChainOCallApi for OcallApi {
 	fn send_to_parentchain(
 		&self,
 		extrinsics: Vec<OpaqueExtrinsic>,
 		parentchain_id: &ParentchainId,
-		await_each_inclusion: bool,
-	) -> SgxResult<()> {
+		watch_until: Option<XtStatus>,
+	) -> SgxResult<Vec<ExtrinsicReport<H256>>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let extrinsics_encoded = extrinsics.encode();
 		let parentchain_id_encoded = parentchain_id.encode();
+		let watch_until_encoded = watch_until.encode();
+		let response_size = match watch_until {
+			Some(_) => extrinsics
+				.len()
+				.checked_mul(ExtrinsicReport::<H256>::max_encoded_len())
+				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?
+				.checked_add(size_of::<Vec<u8>>())
+				.ok_or(sgx_status_t::SGX_ERROR_UNEXPECTED)?,
+			None => size_of::<Vec<u8>>(),
+		};
+		let mut response: Vec<u8> = vec![0; response_size];
 
 		let res = unsafe {
 			ffi::ocall_send_to_parentchain(
@@ -46,14 +61,23 @@ impl EnclaveOnChainOCallApi for OcallApi {
 				extrinsics_encoded.len() as u32,
 				parentchain_id_encoded.as_ptr(),
 				parentchain_id_encoded.len() as u32,
-				await_each_inclusion.into(),
+				watch_until_encoded.as_ptr(),
+				watch_until_encoded.len() as u32,
+				response.as_mut_ptr(),
+				response_size as u32,
 			)
 		};
 
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 
-		Ok(())
+		let decoded_response: Vec<ExtrinsicReport<H256>> = Decode::decode(&mut response.as_slice())
+			.map_err(|e| {
+				error!("Failed to decode ExtrinsicReport: {}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			})?;
+
+		Ok(decoded_response)
 	}
 
 	fn worker_request<V: Encode + Decode>(
@@ -124,9 +148,13 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		Ok(storage_entries)
 	}
 
-	fn get_storage_keys(&self, key_prefix: Vec<u8>) -> Result<Vec<Vec<u8>>> {
-		// always using the latest state - we need to support optional header
-		let requests = vec![WorkerRequest::ChainStorageKeys(key_prefix, None)];
+	fn get_storage_keys<H: Header<Hash = H256>>(
+		&self,
+		key_prefix: Vec<u8>,
+		header: Option<&H>,
+	) -> Result<Vec<Vec<u8>>> {
+		let header_hash = header.map(|h| h.hash());
+		let requests = vec![WorkerRequest::ChainStorageKeys(key_prefix, header_hash)];
 
 		let responses: Vec<Vec<Vec<u8>>> = self
 			.worker_request::<Vec<u8>>(requests, &ParentchainId::Litentry)?
@@ -140,5 +168,59 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		// we should only have one response as we only sent one request
 		let first_response = responses.get(0).ok_or(StorageError::WrongValue)?;
 		Ok(first_response.clone())
+	}
+
+	fn get_storage_keys_paged<H: Header<Hash = H256>>(
+		&self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+		header: Option<&H>,
+	) -> Result<Vec<Vec<u8>>> {
+		let header_hash = header.map(|h| h.hash());
+		let requests =
+			vec![WorkerRequest::ChainStorageKeysPaged(key_prefix, count, start_key, header_hash)];
+
+		let responses: Vec<Vec<Vec<u8>>> = self
+			.worker_request::<Vec<u8>>(requests, &ParentchainId::Litentry)?
+			.iter()
+			.filter_map(|r| match r {
+				WorkerResponse::ChainStorageKeys(k) => Some(k.clone()),
+				_ => None,
+			})
+			.collect();
+
+		// we should only have one response as we only sent one request
+		let first_response = responses.get(0).ok_or(StorageError::WrongValue)?;
+		Ok(first_response.clone())
+	}
+
+	fn get_header<H: Header<Hash = H256>>(&self) -> Result<H> {
+		let request = vec![WorkerRequest::ChainHeader(None)];
+		let responses: Vec<H> = self
+			.worker_request::<Vec<u8>>(request, &ParentchainId::Litentry)?
+			.iter()
+			.filter_map(|r| match r {
+				WorkerResponse::ChainHeader(Some(h)) =>
+					Some(Decode::decode(&mut h.as_slice()).ok()?),
+				_ => None,
+			})
+			.collect();
+
+		responses.first().cloned().ok_or(Error::ChainCallFailed)
+	}
+
+	fn get_account_nonce(&self, account_id: AccountId) -> Result<ParentchainIndex> {
+		let request = vec![WorkerRequest::ChainAccountNonce(account_id.encode())];
+		let responses: Vec<ParentchainIndex> = self
+			.worker_request::<Vec<ParentchainIndex>>(request, &ParentchainId::Litentry)?
+			.iter()
+			.filter_map(|r| match r {
+				WorkerResponse::ChainAccountNonce(Some(index)) => Some(*index),
+				_ => None,
+			})
+			.collect();
+
+		responses.first().cloned().ok_or(Error::ChainCallFailed)
 	}
 }

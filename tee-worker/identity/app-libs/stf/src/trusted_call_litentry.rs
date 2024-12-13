@@ -35,11 +35,12 @@ use itp_stf_primitives::{
 };
 use itp_types::{parentchain::ParentchainCall, OpaqueCall, H256};
 use itp_utils::stringify::account_id_to_string;
-use lc_stf_task_sender::{
-	RequestType, SendStfRequest, StfRequestSender, Web2IdentityVerificationRequest,
-};
+use lc_stf_task_sender::{SendStfRequest, StfRequestSender};
 use litentry_macros::if_development_or;
-use litentry_primitives::{ErrorDetail, Identity, RequestAesKey, ValidationData, Web3Network};
+use litentry_primitives::{
+	ErrorDetail, Identity, RequestAesKey, RequestType, ValidationData,
+	Web2IdentityVerificationRequest, Web3Network,
+};
 use log::*;
 
 impl TrustedCallSigned {
@@ -56,7 +57,7 @@ impl TrustedCallSigned {
 		req_ext_hash: H256,
 	) -> StfResult<bool> {
 		ensure!(
-			ensure_enclave_signer_or_self(&signer, who.to_account_id()),
+			ensure_enclave_signer_or_self(&signer, who.to_native_account()),
 			StfError::LinkIdentityFailed(ErrorDetail::UnauthorizedSigner)
 		);
 
@@ -110,7 +111,7 @@ impl TrustedCallSigned {
 		identity: Identity,
 	) -> StfResult<()> {
 		ensure!(
-			ensure_enclave_signer_or_self(&signer, who.to_account_id()),
+			ensure_enclave_signer_or_self(&signer, who.to_native_account()),
 			StfError::DeactivateIdentityFailed(ErrorDetail::UnauthorizedSigner)
 		);
 
@@ -127,7 +128,7 @@ impl TrustedCallSigned {
 		identity: Identity,
 	) -> StfResult<()> {
 		ensure!(
-			ensure_enclave_signer_or_self(&signer, who.to_account_id()),
+			ensure_enclave_signer_or_self(&signer, who.to_native_account()),
 			StfError::ActivateIdentityFailed(ErrorDetail::UnauthorizedSigner)
 		);
 
@@ -189,7 +190,7 @@ impl TrustedCallSigned {
 		let old_id_graph = IMT::id_graph(&who);
 
 		Self::link_identity_callback_internal(
-			signer.to_account_id().ok_or(StfError::InvalidAccount)?,
+			signer.to_native_account().ok_or(StfError::InvalidAccount)?,
 			who.clone(),
 			identity,
 			web3networks,

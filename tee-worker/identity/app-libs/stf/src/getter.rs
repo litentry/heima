@@ -213,7 +213,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self.getter {
 			TrustedGetter::free_balance(who) =>
-				if let Some(account_id) = who.to_account_id() {
+				if let Some(account_id) = who.to_native_account() {
 					let info = System::account(&account_id);
 					debug!("TrustedGetter free_balance");
 					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
@@ -223,7 +223,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 					None
 				},
 			TrustedGetter::reserved_balance(who) =>
-				if let Some(account_id) = who.to_account_id() {
+				if let Some(account_id) = who.to_native_account() {
 					let info = System::account(&account_id);
 					debug!("TrustedGetter reserved_balance");
 					debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
@@ -234,7 +234,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				},
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) =>
-				if let Some(account_id) = who.to_account_id() {
+				if let Some(account_id) = who.to_native_account() {
 					let evm_account = get_evm_account(&account_id);
 					let evm_account = HashedAddressMapping::into_account_id(evm_account);
 					let nonce = System::account_nonce(&evm_account);
@@ -279,7 +279,7 @@ impl ExecuteGetter for PublicGetter {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::nonce(identity) =>
-				if let Some(account_id) = identity.to_account_id() {
+				if let Some(account_id) = identity.to_native_account() {
 					let nonce = System::account_nonce(&account_id);
 					debug!("PublicGetter nonce");
 					debug!("Account nonce is {}", nonce);

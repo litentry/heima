@@ -1,0 +1,65 @@
+{
+  "name": "client-sdk",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/client-sdk/src",
+  "projectType": "library",
+  "targets": {
+    "publish": {
+      "command": "node tools/scripts/publish.mjs client-sdk {args.ver} {args.tag}",
+      "dependsOn": [
+        "build"
+      ]
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/packages/client-sdk",
+        "main": "packages/client-sdk/src/index.ts",
+        "tsConfig": "packages/client-sdk/tsconfig.lib.json",
+        "assets": [
+          "packages/client-sdk/*.md",
+          "packages/client-sdk/LICENSE"
+        ]
+      }
+    },
+    "generate-doc": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "./packages/client-sdk",
+        "command": "typedoc --options ./typedoc.json"
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "packages/client-sdk/src/**/*.ts",
+          "packages/client-sdk/package.json"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "options": {
+        "jestConfig": "packages/client-sdk/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    }
+  },
+  "tags": []
+}

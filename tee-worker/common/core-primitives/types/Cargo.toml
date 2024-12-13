@@ -1,0 +1,48 @@
+[package]
+name = "itp-types"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+homepage = 'https://litentry.com/'
+repository = 'https://github.com/litentry/litentry-parachain'
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+serde = { workspace = true }
+
+itp-sgx-crypto = { workspace = true }
+itp-sgx-runtime-primitives = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-utils = { workspace = true }
+
+substrate-api-client = { workspace = true }
+
+frame-system = { workspace = true }
+pallet-balances = { workspace = true }
+sp-consensus-grandpa = { workspace = true }
+sp-core = { workspace = true, features = ["full_crypto"] }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+litentry-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "itp-sgx-crypto/std",
+    "itp-sgx-runtime-primitives/std",
+    "itp-stf-primitives/std",
+    "itp-utils/std",
+    "substrate-api-client/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "serde/std",
+    "sp-std/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-consensus-grandpa/std",
+    "litentry-primitives/std",
+]
+test = []

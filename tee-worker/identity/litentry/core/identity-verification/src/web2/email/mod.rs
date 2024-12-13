@@ -1,14 +1,9 @@
 mod verification_code_store;
 pub use verification_code_store::*;
-
 mod mailer;
 pub use mailer::*;
 
-use crate::{alloc::string::String, web2::helpers};
-
-pub fn generate_verification_code() -> String {
-	helpers::get_random_string(32)
-}
+use crate::alloc::string::String;
 
 pub fn send_verification_email(
 	mailer: &mut impl Mailer,

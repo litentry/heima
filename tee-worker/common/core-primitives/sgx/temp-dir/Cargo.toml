@@ -1,0 +1,18 @@
+[package]
+name = "itp-sgx-temp-dir"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lazy_static = { workspace = true }
+sgx_tstd = { workspace = true, optional = true }
+
+[dev-dependencies.safe-lock]
+version = "^0.1"
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd",
+]

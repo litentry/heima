@@ -1,0 +1,67 @@
+[package]
+name = "itc-parentchain-light-client"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true, features = ["chain-error"] }
+finality-grandpa = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true, optional = true }
+
+sgx_tstd = { workspace = true, features = ["untrusted_fs"], optional = true }
+sgx_types = { workspace = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+itp-ocall-api = { workspace = true }
+itp-sgx-io = { workspace = true }
+itp-storage = { workspace = true }
+itp-types = { workspace = true }
+
+sp-consensus-grandpa = { workspace = true }
+sp-runtime = { workspace = true }
+
+# test & mock dependencies
+itc-parentchain-test = { workspace = true, optional = true }
+# We can't really make this optional due to feature flag complexities.
+itp-sgx-temp-dir = { workspace = true }
+itp-test = { workspace = true, features = ["sgx"], optional = true }
+
+[dev-dependencies]
+itc-parentchain-test = { workspace = true, features = ["std"] }
+itp-test = { workspace = true, features = ["std"] }
+itp-sgx-temp-dir = { workspace = true, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "log/std",
+    "finality-grandpa/std",
+    "thiserror",
+
+    # substrate deps
+    "sp-consensus-grandpa/std",
+    "sp-runtime/std",
+
+    # local deps
+    "itp-ocall-api/std",
+    "itp-storage/std",
+    "itp-sgx-io/std",
+    "itp-types/std",
+    # mock deps
+    "itp-sgx-temp-dir/std",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror_sgx",
+    "itp-sgx-io/sgx",
+    "itp-storage/sgx",
+    "itp-sgx-temp-dir/sgx",
+]
+mocks = [
+    "itc-parentchain-test",
+]
+
+test = ["mocks", "itp-test"]

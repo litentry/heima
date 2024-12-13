@@ -26,8 +26,7 @@ use lc_credentials_v2::{
 	platform_user::PlatformUserAssertionUpdate, Credential, IssuerRuntimeVersion,
 };
 use lc_service::platform_user::is_user;
-use lc_stf_task_sender::AssertionBuildRequest;
-use litentry_primitives::{PlatformUserType, Web3Network};
+use litentry_primitives::{AssertionBuildRequest, PlatformUserType, Web3Network};
 use log::debug;
 
 use crate::*;

@@ -28,8 +28,9 @@ use lc_credentials::{
 use lc_data_providers::{
 	discord_litentry::DiscordLitentryClient, DataProviderConfig, Error as DataProviderError,
 };
-use lc_stf_task_sender::AssertionBuildRequest;
-use litentry_primitives::{ContestType, GenericDiscordRoleType, SoraQuizType};
+use litentry_primitives::{
+	AssertionBuildRequest, ContestType, GenericDiscordRoleType, SoraQuizType,
+};
 use std::string::ToString;
 
 pub fn build(

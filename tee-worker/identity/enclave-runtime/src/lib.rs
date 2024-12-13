@@ -63,7 +63,6 @@ use core::ffi::c_int;
 use itc_parentchain::{
 	block_import_dispatcher::DispatchBlockImport,
 	light_client::{concurrent_access::ValidatorAccess, Validator},
-	primitives::ParentchainId,
 };
 use itp_component_container::ComponentGetter;
 
@@ -73,7 +72,7 @@ use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerModeProvider};
 use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
-use itp_types::{ShardIdentifier, SignedBlock};
+use itp_types::{parentchain::ParentchainId, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
 use litentry_macros::if_development_or;
 use log::*;
@@ -148,6 +147,11 @@ pub unsafe extern "C" fn init(
 			builder.init();
 		}
 	);
+
+	#[cfg(feature = "dcap")]
+	info!("  DCAP is enabled within enclave");
+	#[cfg(not(feature = "dcap"))]
+	info!("  DCAP is disabled within enclave");
 
 	let mu_ra_url =
 		match String::decode(&mut slice::from_raw_parts(mu_ra_addr, mu_ra_addr_size as usize))
@@ -435,6 +439,25 @@ pub unsafe extern "C" fn migrate_shard(new_shard: *const u8, shard_size: u32) ->
 
 	if let Err(e) = initialization::migrate_shard(shard_identifier) {
 		error!("Failed to migrate shard ({:?}): {:?}", shard_identifier, e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn init_in_memory_state() -> sgx_status_t {
+	if let Err(e) = initialization::init_in_memory_state() {
+		error!("Failed to initialize in-memory state: {:?}", e);
+		return sgx_status_t::SGX_ERROR_UNEXPECTED
+	}
+	sgx_status_t::SGX_SUCCESS
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn upload_id_graph() -> sgx_status_t {
+	if let Err(e) = initialization::upload_id_graph() {
+		error!("Failed to upload IDGraph: {:?}", e);
 		return sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 

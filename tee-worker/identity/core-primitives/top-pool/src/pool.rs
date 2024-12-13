@@ -544,10 +544,10 @@ pub mod tests {
 
 	#[derive(Clone, Debug, Default)]
 	struct TestApi {
-		delay: Arc<Mutex<Option<std::sync::mpsc::Receiver<()>>>>,
-		invalidate: Arc<Mutex<HashSet<H256>>>,
-		clear_requirements: Arc<Mutex<HashSet<H256>>>,
-		add_requirements: Arc<Mutex<HashSet<H256>>>,
+		_delay: Arc<Mutex<Option<std::sync::mpsc::Receiver<()>>>>,
+		_invalidate: Arc<Mutex<HashSet<H256>>>,
+		_clear_requirements: Arc<Mutex<HashSet<H256>>>,
+		_add_requirements: Arc<Mutex<HashSet<H256>>>,
 	}
 
 	impl ChainApi for TestApi {

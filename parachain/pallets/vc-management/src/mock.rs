@@ -14,19 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use crate as pallet_vc_management;
 use frame_support::{
-	assert_ok,
+	assert_ok, derive_impl,
 	pallet_prelude::EnsureOrigin,
 	parameter_types,
-	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything},
+	traits::{ConstU32, ConstU64},
 };
 use frame_system::EnsureRoot;
-use sp_core::H256;
 use sp_runtime::{
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+	traits::{IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
 };
 use sp_std::marker::PhantomData;
@@ -60,11 +57,13 @@ where
 	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
 		use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE, TEST8_SIGNER_PUB};
 		let signer: <T as frame_system::Config>::AccountId = get_signer(TEST8_SIGNER_PUB);
+		let enclave = core_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
+		let _ = pallet_teebag::Pallet::<T>::add_enclave_identifier_internal(
+			enclave.worker_type,
+			&signer,
+		);
 		if !pallet_teebag::EnclaveRegistry::<T>::contains_key(signer.clone()) {
-			assert_ok!(pallet_teebag::Pallet::<T>::add_enclave(
-				&signer,
-				&pallet_teebag::Enclave::default().with_mrenclave(TEST8_MRENCLAVE),
-			));
+			assert_ok!(pallet_teebag::Pallet::<T>::add_enclave(&signer, &enclave,));
 		}
 		Ok(frame_system::RawOrigin::Signed(signer).into())
 	}
@@ -78,39 +77,29 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		Teebag: pallet_teebag,
 		Timestamp: pallet_timestamp,
+		Utility: pallet_utility,
 		VCManagement: pallet_vc_management,
 		VCMPExtrinsicWhitelist: pallet_group,
 	}
 );
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
+impl frame_system::Config for Test {
+	type AccountId = AccountId;
+	type Block = frame_system::mocking::MockBlock<Test>;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
-impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Block = frame_system::mocking::MockBlock<Test>;
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Nonce = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<31>;
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
+impl pallet_balances::Config for Test {
+	type Balance = Balance;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -118,22 +107,6 @@ impl pallet_timestamp::Config for Test {
 	type OnTimestampSet = ();
 	type MinimumPeriod = ConstU64<10000>;
 	type WeightInfo = ();
-}
-
-impl pallet_balances::Config for Test {
-	type MaxLocks = ();
-	type Balance = u128;
-	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
-	type ExistentialDeposit = ConstU128<1>;
-	type AccountStore = System;
-	type WeightInfo = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
-	type FreezeIdentifier = ();
-	type MaxHolds = ();
-	type MaxFreezes = ();
-	type RuntimeHoldReason = ();
 }
 
 impl pallet_vc_management::Config for Test {
@@ -163,6 +136,13 @@ impl pallet_group::Config for Test {
 	type GroupManagerOrigin = frame_system::EnsureRoot<Self::AccountId>;
 }
 
+impl pallet_utility::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = ();
+}
+
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	use pallet_teebag::test_util::{
 		get_signer, TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL,
@@ -179,20 +159,20 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		assert_ok!(Teebag::set_admin(RuntimeOrigin::root(), alice.clone()));
 		assert_ok!(Teebag::set_mode(
 			RuntimeOrigin::signed(alice.clone()),
-			pallet_teebag::OperationalMode::Development
+			core_primitives::OperationalMode::Development
 		));
 		Timestamp::set_timestamp(TEST8_TIMESTAMP);
 		let signer: SystemAccountId = get_signer(TEST8_SIGNER_PUB);
 		if !pallet_teebag::EnclaveRegistry::<Test>::contains_key(signer.clone()) {
 			assert_ok!(Teebag::register_enclave(
 				RuntimeOrigin::signed(signer),
-				pallet_teebag::WorkerType::Identity,
-				pallet_teebag::WorkerMode::Sidechain,
+				core_primitives::WorkerType::Identity,
+				core_primitives::WorkerMode::Sidechain,
 				TEST8_CERT.to_vec(),
 				URL.to_vec(),
 				None,
 				None,
-				pallet_teebag::AttestationType::Ias,
+				core_primitives::AttestationType::Ias,
 			));
 		}
 	});

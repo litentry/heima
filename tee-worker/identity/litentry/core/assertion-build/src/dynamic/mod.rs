@@ -20,7 +20,7 @@ use itp_types::Assertion;
 use lc_credentials::{assertion_logic::AssertionLogic, Credential, IssuerRuntimeVersion};
 use lc_dynamic_assertion::{AssertionExecutor, AssertionLogicRepository};
 use lc_evm_dynamic_assertions::EvmAssertionExecutor;
-use lc_stf_task_sender::AssertionBuildRequest;
+use litentry_primitives::AssertionBuildRequest;
 use log::error;
 use primitive_types::H160;
 
@@ -91,10 +91,10 @@ pub mod assertion_test {
 	use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 	use itp_types::Assertion;
 	use lc_mock_server::run;
-	use lc_stf_task_sender::AssertionBuildRequest;
 	use litentry_hex_utils::decode_hex;
 	use litentry_primitives::{
-		DynamicContractParams, DynamicParams, Identity, IdentityString, Web3Network,
+		AssertionBuildRequest, DynamicContractParams, DynamicParams, Identity, IdentityString,
+		Web3Network,
 	};
 	use sp_core::{crypto::AccountId32, H160};
 	use std::sync::Arc;

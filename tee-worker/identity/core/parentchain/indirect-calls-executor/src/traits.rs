@@ -58,7 +58,7 @@ pub trait ExecuteIndirectCalls {
 }
 
 /// Trait that should be implemented on indirect calls to be executed.
-pub trait IndirectDispatch<E: IndirectExecutor<TCS, Error>, TCS>
+pub trait IndirectDispatch<E: IndirectExecutor<TCS, Error, (), (), ()>, TCS>
 where
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 {

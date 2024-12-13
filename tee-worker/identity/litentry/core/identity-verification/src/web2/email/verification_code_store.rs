@@ -6,6 +6,7 @@ use litentry_primitives::{
 	ErrorDetail, ErrorString, IntoErrorDetail, ParentchainAccountId as AccountId,
 };
 use lru::LruCache;
+use sp_core::H256;
 use std::num::NonZeroUsize;
 #[cfg(feature = "std")]
 use std::sync::RwLock;
@@ -37,7 +38,7 @@ impl IntoErrorDetail for VerificationCodeStoreError {
 
 lazy_static! {
 	static ref STORE: RwLock<LruCache<String, String>> =
-		RwLock::new(LruCache::new(NonZeroUsize::new(250).unwrap()));
+		RwLock::new(LruCache::new(NonZeroUsize::new(500).unwrap()));
 }
 
 pub struct VerificationCodeStore;
@@ -45,24 +46,24 @@ pub struct VerificationCodeStore;
 impl VerificationCodeStore {
 	pub fn insert(
 		account_id: AccountId,
-		email: String,
+		identity_hash: H256,
 		verification_code: String,
 	) -> Result<(), VerificationCodeStoreError> {
 		STORE
 			.write()
 			.map_err(|_| VerificationCodeStoreError::LockPoisoning)?
-			.put(hex::encode((account_id, email).encode()), verification_code);
+			.put(hex::encode((account_id, identity_hash).encode()), verification_code);
 		Ok(())
 	}
 
 	pub fn get(
 		account_id: &AccountId,
-		email: &str,
+		identity_hash: H256,
 	) -> Result<Option<String>, VerificationCodeStoreError> {
 		let code = STORE
 			.write()
 			.map_err(|_| VerificationCodeStoreError::LockPoisoning)?
-			.pop(hex::encode((account_id, email).encode()).as_str());
+			.pop(hex::encode((account_id, identity_hash).encode()).as_str());
 		Ok(code)
 	}
 }

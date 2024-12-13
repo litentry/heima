@@ -8,16 +8,14 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive", "full"] }
-itp-types = { path = "../../core-primitives/types", default-features = false }
-scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
-serde = { version = "1.0.13", default-features = false }
+codec = { package = "parity-scale-codec", workspace = true, features = ["full"] }
+itp-types = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true }
 
-# substrate dependencies
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
 
 [features]
 default = ["std", "full_crypto"]

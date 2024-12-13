@@ -5,13 +5,11 @@ name = "lc-credentials-v2"
 version = "0.1.0"
 
 [dependencies]
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
 
-# litentry
-lc-common = { path = "../common", default-features = false }
-lc-credentials = { path = "../credentials", default-features = false }
-litentry-primitives = { path = "../../primitives", default-features = false }
+lc-common = { workspace = true }
+lc-credentials = { workspace = true }
+litentry-primitives = { workspace = true }
 
 [features]
 default = ["std"]

@@ -5,26 +5,20 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition = "2021"
 
 [dependencies]
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { workspace = true, optional = true }
 
-# no-std dependencies
-log = { version = "0.4", default-features = false }
+log = { workspace = true }
 
-# local dependencies
-itc-direct-rpc-client = { path = "../direct-rpc-client", default-features = false }
-itc-direct-rpc-server = { path = "../direct-rpc-server", default-features = false }
-itp-rpc = { path = "../../core-primitives/rpc", default-features = false }
-itp-stf-primitives = { path = "../../core-primitives/stf-primitives", default-features = false }
-itp-types = { path = "../../core-primitives/types", default-features = false }
-itp-utils = { path = "../../core-primitives/utils", default-features = false }
-
-# litentry
-litentry-primitives = { path = "../../litentry/primitives", default-features = false }
+itc-direct-rpc-client = { package = "id-itc-direct-rpc-client", path = "../direct-rpc-client", default-features = false }
+itc-direct-rpc-server = { package = "id-itc-direct-rpc-server", path = "../direct-rpc-server", default-features = false }
+itp-rpc = { workspace = true }
+itp-stf-primitives = { workspace = true }
+itp-types = { workspace = true }
+itp-utils = { workspace = true }
+litentry-primitives = { workspace = true }
 
 [dev-dependencies]
-itc-direct-rpc-server = { path = "../direct-rpc-server", default-features = false, features = ["mocks"] }
-
+itc-direct-rpc-server = { package = "id-itc-direct-rpc-server", path = "../direct-rpc-server", default-features = false, features = ["mocks"] }
 
 [features]
 default = ["std"]

@@ -13,3 +13,4 @@ export * from './integration-setup';
 export * from './storage';
 export * from './vc-helper';
 export * from './type-creators';
+export * from './native-request-helpers';

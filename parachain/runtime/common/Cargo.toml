@@ -28,7 +28,6 @@ pallet-transaction-payment = { workspace = true }
 pallet-treasury = { workspace = true }
 pallet-vesting = { workspace = true }
 
-cumulus-pallet-parachain-system = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
 parachain-info = { workspace = true }
@@ -39,8 +38,7 @@ xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
 xcm-simulator = { workspace = true, optional = true }
 
-orml-xtokens = { workspace = true }
-
+polkadot-core-primitives = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
 polkadot-primitives = { workspace = true }
 polkadot-runtime-parachains = { workspace = true }
@@ -50,70 +48,98 @@ cumulus-test-relay-sproof-builder = { workspace = true, optional = true }
 pallet-asset-manager = { workspace = true }
 pallet-extrinsic-filter = { workspace = true }
 pallet-group = { workspace = true }
+pallet-omni-account = { workspace = true }
 pallet-teebag = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-    "parity-scale-codec/std",
-    "log/std",
-    "sp-core/std",
-    "sp-io/std",
-    "sp-std/std",
-    "sp-runtime/std",
-    "sp-state-machine/std",
+    "core-primitives/std",
+    "cumulus-primitives-core/std",
+    "cumulus-primitives-parachain-inherent/std",
+    "cumulus-test-relay-sproof-builder/std",
     "frame-support/std",
     "frame-system/std",
+    "log/std",
+    "pallet-asset-manager/std",
     "pallet-assets/std",
     "pallet-authorship/std",
     "pallet-balances/std",
     "pallet-collective/std",
+    "pallet-extrinsic-filter/std",
     "pallet-group/std",
-    "pallet-multisig/std",
     "pallet-membership/std",
     "pallet-message-queue/std",
+    "pallet-multisig/std",
+    "pallet-omni-account/std",
+    "pallet-teebag/std",
     "pallet-transaction-payment/std",
     "pallet-treasury/std",
     "pallet-vesting/std",
+    "pallet-xcm/std",
+    "parachain-info/std",
+    "parity-scale-codec/std",
+    "polkadot-core-primitives/std",
     "polkadot-primitives/std",
     "polkadot-runtime-parachains/std",
-    "cumulus-primitives-parachain-inherent/std",
-    "cumulus-pallet-parachain-system/std",
-    "cumulus-primitives-core/std",
-    "cumulus-test-relay-sproof-builder/std",
-    "pallet-xcm/std",
-    "xcm/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-state-machine/std",
+    "sp-std/std",
     "xcm-builder/std",
     "xcm-executor/std",
-    "parachain-info/std",
-    "core-primitives/std",
-    "pallet-asset-manager/std",
-    "pallet-extrinsic-filter/std",
-    "pallet-teebag/std",
-    "orml-xtokens/std",
+    "xcm/std",
 ]
 
 runtime-benchmarks = [
-    "pallet-group/runtime-benchmarks",
-    "sp-runtime/runtime-benchmarks",
-    "pallet-teebag/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
+    "cumulus-primitives-core/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "cumulus-pallet-parachain-system/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-asset-manager/runtime-benchmarks",
+    "pallet-assets/runtime-benchmarks",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
+    "pallet-extrinsic-filter/runtime-benchmarks",
+    "pallet-group/runtime-benchmarks",
+    "pallet-membership/runtime-benchmarks",
+    "pallet-message-queue/runtime-benchmarks",
+    "pallet-multisig/runtime-benchmarks",
+    "pallet-omni-account/runtime-benchmarks",
+    "pallet-teebag/runtime-benchmarks",
+    "pallet-treasury/runtime-benchmarks",
+    "pallet-vesting/runtime-benchmarks",
+    "pallet-xcm/runtime-benchmarks",
+    "polkadot-parachain-primitives/runtime-benchmarks",
+    "polkadot-primitives/runtime-benchmarks",
+    "polkadot-runtime-parachains/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+    "xcm-builder/runtime-benchmarks",
+    "xcm-executor/runtime-benchmarks",
 ]
 
 try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "pallet-asset-manager/try-runtime",
     "pallet-assets/try-runtime",
     "pallet-authorship/try-runtime",
     "pallet-balances/try-runtime",
+    "pallet-collective/try-runtime",
+    "pallet-extrinsic-filter/try-runtime",
     "pallet-group/try-runtime",
+    "pallet-membership/try-runtime",
+    "pallet-message-queue/try-runtime",
+    "pallet-multisig/try-runtime",
+    "pallet-omni-account/try-runtime",
     "pallet-teebag/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-treasury/try-runtime",
-    "frame-support/try-runtime",
+    "pallet-vesting/try-runtime",
+    "pallet-xcm/try-runtime",
+    "parachain-info/try-runtime",
+    "polkadot-runtime-parachains/try-runtime",
+    "sp-runtime/try-runtime",
 ]
 
-tests = [
-    "std",
-    "xcm-simulator",
-]
+tests = ["std", "xcm-simulator"]

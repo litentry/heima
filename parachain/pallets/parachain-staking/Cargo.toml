@@ -8,6 +8,9 @@ name = "pallet-parachain-staking"
 repository = 'https://github.com/litentry/litentry-parachain'
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
@@ -37,20 +40,22 @@ sp-io = { workspace = true, features = ["std"] }
 default = ["std"]
 runtime-benchmarks = ["frame-benchmarking"]
 std = [
+    "core-primitives/std",
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
+    "log/std",
     "pallet-authorship/std",
     "pallet-balances/std",
     "pallet-session/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "serde/std",
-    "core-primitives/std",
-    "sp-runtime/std",
-    "sp-std/std",
-    "sp-staking/std",
     "sp-core/std",
     "sp-io/std",
+    "sp-runtime/std",
+    "sp-staking/std",
+    "sp-std/std",
+    "substrate-fixed/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

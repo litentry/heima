@@ -92,7 +92,8 @@ mod seal {
 		}
 	}
 
-	impl<Executor: IndirectExecutor<TCS, Error>, TCS> IndirectDispatch<Executor, TCS> for CantExecute
+	impl<Executor: IndirectExecutor<TCS, Error, (), (), ()>, TCS> IndirectDispatch<Executor, TCS>
+		for CantExecute
 	where
 		TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	{

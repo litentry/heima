@@ -4,13 +4,8 @@ name = "lc-common"
 version = "0.1.0"
 
 [dependencies]
-# std dependencies
-
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true, features = ["net", "thread"] }
-
-# Internal dependencies
-litentry-primitives = { path = "../../primitives", default-features = false }
+litentry-primitives = { workspace = true }
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
 
 [features]
 default = ["std"]

@@ -26,7 +26,7 @@ use frame_support::{
 		tokens::{
 			fungible::{Inspect as FInspect, Mutate as FMutate},
 			fungibles::Mutate as FsMutate,
-			Fortitude, Precision,
+			Fortitude, Precision, Preservation,
 		},
 		StorageVersion,
 	},
@@ -217,7 +217,7 @@ where
 		+ Debug
 		+ FullCodec
 		+ 'static,
-	A: Clone,
+	A: Clone + Eq,
 {
 	fn prepare_token_bridge_in(
 		resource_id: ResourceId,
@@ -274,6 +274,7 @@ where
 				let burn_amount = pallet_balances::Pallet::<T>::burn_from(
 					&who,
 					amount,
+					Preservation::Expendable,
 					Precision::Exact,
 					Fortitude::Polite,
 				)?;
@@ -303,6 +304,7 @@ where
 					asset.clone(),
 					&who,
 					amount,
+					Preservation::Expendable,
 					Precision::Exact,
 					Fortitude::Polite,
 				)?;

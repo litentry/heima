@@ -32,7 +32,6 @@ use lc_credentials::{
 };
 use lc_data_providers::build_client_with_cert;
 use litentry_primitives::ParentchainBalance;
-use pallet_parachain_staking::types::Delegator;
 use serde::{Deserialize, Serialize};
 use std::string::ToString;
 
@@ -117,6 +116,47 @@ impl QueryParachainStaking for LitentryStakingClient {
 	}
 }
 
+// primitive types copied from pallet-parachain-staking
+//
+// it's to break the cargo deps to the whole pallet, especially when we
+// expect a `polkadot-v0.9.42` version of pallet within the worker
+mod parachain_staking_primitives {
+	use super::*;
+	use codec::{Decode, Encode};
+
+	#[derive(Clone, Encode, Decode)]
+	pub struct OrderedSet<T>(pub Vec<T>);
+
+	#[derive(Clone, Encode, Decode)]
+	pub struct Bond {
+		pub owner: AccountId,
+		pub amount: ParentchainBalance,
+	}
+
+	#[derive(Clone, PartialEq, Eq, Encode, Decode)]
+	pub enum DelegatorStatus {
+		/// Active with no scheduled exit
+		#[codec(index = 0)]
+		Active,
+	}
+
+	#[derive(Clone, Encode, Decode)]
+	/// Delegator state
+	pub struct Delegator {
+		/// Delegator account
+		pub id: AccountId,
+		/// All current delegations
+		pub delegations: OrderedSet<Bond>,
+		/// Total balance locked for this delegator
+		pub total: ParentchainBalance,
+		/// Sum of pending revocation amounts + bond less amounts
+		pub less_total: ParentchainBalance,
+		/// Status for this delegator
+		pub status: DelegatorStatus,
+	}
+}
+use parachain_staking_primitives::*;
+
 pub struct DelegatorState;
 impl DelegatorState {
 	pub fn query_lit_staking(
@@ -152,20 +192,18 @@ impl DelegatorState {
 		// 0xa686a3043d0adcf2fa655e57bc595a78131da8bc800de21b19b3ba9ed33cfacc
 		let params = "0xa686a3043d0adcf2fa655e57bc595a78131da8bc800de21b19b3ba9ed33cfacc";
 		let acc = identity
-			.to_account_id()
+			.to_native_account()
 			.ok_or(Error::RequestVCFailed(Assertion::LITStaking, ErrorDetail::ParseError))?;
 		let cocat = Twox64Concat::hash(acc.as_ref());
 
 		Ok(params.to_string() + &hex::encode(&cocat))
 	}
 
-	fn decode_delegator(storage_in_hex: &str) -> Result<Delegator<AccountId, ParentchainBalance>> {
+	fn decode_delegator(storage_in_hex: &str) -> Result<Delegator> {
 		// Remove 0x
 		if let Some(storage_in_hex_without_prefix) = storage_in_hex.strip_prefix("0x") {
 			if let Ok(decoded) = hex::decode(storage_in_hex_without_prefix) {
-				if let Ok(delegator) =
-					Delegator::<AccountId, ParentchainBalance>::decode(&mut decoded.as_bytes_ref())
-				{
+				if let Ok(delegator) = Delegator::decode(&mut decoded.as_bytes_ref()) {
 					return Ok(delegator)
 				}
 			}

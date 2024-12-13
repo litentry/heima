@@ -14,10 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod activate_identity;
-pub mod deactivate_identity;
-pub mod id_graph_hash;
-pub mod link_identity;
-pub mod shield_text;
+mod activate_identity;
+pub use activate_identity::*;
+
+mod deactivate_identity;
+pub use deactivate_identity::*;
+
+mod id_graph_hash;
+pub use id_graph_hash::*;
+
+mod link_identity;
+pub use link_identity::*;
+
+mod shield_text;
+pub use shield_text::*;
 
 pub const IMP: &str = "IdentityManagement";

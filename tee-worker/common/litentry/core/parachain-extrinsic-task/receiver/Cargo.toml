@@ -1,0 +1,25 @@
+[package]
+name = "lc-parachain-extrinsic-task-receiver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = { workspace = true }
+
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+itp-extrinsics-factory = { workspace = true }
+itp-ocall-api = { workspace = true }
+itp-types = { workspace = true }
+lc-parachain-extrinsic-task-sender = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "log/std",
+    "lc-parachain-extrinsic-task-sender/std",
+]
+sgx = [
+    "sgx_tstd",
+    "lc-parachain-extrinsic-task-sender/sgx",
+]

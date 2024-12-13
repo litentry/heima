@@ -1,0 +1,32 @@
+[package]
+authors = ["Trust Computing GmbH <info@litentry.com>"]
+edition = "2021"
+name = "lc-omni-account"
+version = "0.1.0"
+
+[dependencies]
+litentry-primitives = { workspace = true }
+
+itp-ocall-api = { workspace = true }
+itp-storage = { workspace = true }
+itp-types = { workspace = true }
+
+frame-support = { workspace = true }
+lazy_static = { workspace = true }
+log = { workspace = true }
+sp-core = { workspace = true }
+
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "litentry-primitives/std",
+    "frame-support/std",
+    "itp-storage/std",
+    "itp-types/std",
+]
+sgx = [
+    "litentry-primitives/sgx",
+    "sgx_tstd",
+]

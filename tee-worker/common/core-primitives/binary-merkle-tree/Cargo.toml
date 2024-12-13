@@ -1,0 +1,16 @@
+[package]
+name = "itp-binary-merkle-tree"
+version = "0.8.0"
+edition = "2021"
+
+[dependencies]
+binary-merkle-tree = { workspace = true }
+codec = { package = "parity-scale-codec", workspace = true }
+serde = { workspace = true }
+
+[features]
+std = [
+    "codec/std",
+    "serde/std",
+    "binary-merkle-tree/std",
+]

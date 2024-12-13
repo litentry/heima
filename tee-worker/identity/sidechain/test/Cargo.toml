@@ -9,22 +9,17 @@ edition = "2021"
 
 [dependencies]
 
-# sgx dependencies
-sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_time"], optional = true }
+sgx_tstd = { workspace = true, features = ["untrusted_time"], optional = true }
+sp-core = { workspace = true }
 
-# Substrate dependencies
-sp-core = { default_features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-
-# local
-itp-types = { path = "../../core-primitives/types", default_features = false }
-its-primitives = { path = "../primitives", default_features = false, features = ["full_crypto"] }
+itp-types = { workspace = true }
+its-primitives = { workspace = true, features = ["full_crypto"] }
 
 [features]
 default = ["std"]
 std = [
     "itp-types/std",
     "its-primitives/std",
-    # substrate
     "sp-core/std",
 ]
 sgx = [

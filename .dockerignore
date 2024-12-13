@@ -7,14 +7,14 @@
 
 # stuff under tee-worker/
 tee-worker/.dockerignore
-tee-worker/bin/*.bin
-tee-worker/bin/key.txt
-tee-worker/bin/spid.txt
-tee-worker/bin/sidechain_db/
-tee-worker/docker/*.yml
-tee-worker/docs/
-tee-worker/scripts/
-tee-worker/target/
-tee-worker/tmp/
-tee-worker/*.Dockerfile
-tee-worker/Dockerfile
+tee-worker/**/bin/*.bin
+tee-worker/**/bin/key.txt
+tee-worker/**/bin/spid.txt
+tee-worker/**/bin/sidechain_db/
+tee-worker/**/docker/*.yml
+tee-worker/**/docs/
+tee-worker/**/scripts/
+tee-worker/**/target/
+tee-worker/**/tmp/
+tee-worker/**/*.Dockerfile
+tee-worker/**/Dockerfile

@@ -238,6 +238,10 @@ extern "C" {
 		shard_size: u32,
 	) -> sgx_status_t;
 
+	pub fn init_in_memory_state(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+
+	pub fn upload_id_graph(eid: sgx_enclave_id_t, retval: *mut sgx_status_t) -> sgx_status_t;
+
 	pub fn ignore_parentchain_block_import_validation_until(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,

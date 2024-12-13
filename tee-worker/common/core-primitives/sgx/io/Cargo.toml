@@ -1,0 +1,14 @@
+[package]
+name = "itp-sgx-io"
+version = "0.8.0"
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { workspace = true, features = ["untrusted_fs"], optional = true }
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd",
+]

@@ -1,0 +1,60 @@
+[package]
+authors = ["Trust Computing GmbH <info@litentry.com>"]
+edition = "2021"
+name = "litentry-primitives"
+version = "0.1.0"
+
+[dependencies]
+bitcoin = { workspace = true, features = ["secp-recovery", "no-std"] }
+codec = { package = "parity-scale-codec", workspace = true }
+hex = { workspace = true }
+log = { workspace = true }
+rand = { workspace = true, optional = true }
+rand-sgx = { workspace = true, optional = true }
+ring = { workspace = true }
+scale-info = { workspace = true }
+secp256k1 = { workspace = true }
+serde = { workspace = true }
+
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+itp-sgx-crypto = { workspace = true }
+itp-sgx-runtime-primitives = { workspace = true }
+parentchain-primitives = { workspace = true }
+
+[dev-dependencies]
+base64 = { workspace = true }
+
+[features]
+default = ["std"]
+development = [
+    "parentchain-primitives/development",
+]
+sgx = [
+    "sgx_tstd",
+    "rand-sgx",
+    "itp-sgx-crypto/sgx",
+]
+std = [
+    "hex/std",
+    "codec/std",
+    "serde/std",
+    "scale-info/std",
+    "itp-sgx-crypto/std",
+    "itp-sgx-runtime-primitives/std",
+    "sp-core/std",
+    "sp-std/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "ring/std",
+    "parentchain-primitives/std",
+    "rand",
+    "log/std",
+    "bitcoin/std",
+    "secp256k1/std",
+]

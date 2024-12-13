@@ -57,6 +57,8 @@
 #![allow(clippy::useless_conversion)]
 #![allow(clippy::needless_borrow)]
 #![allow(clippy::needless_borrows_for_generic_args)]
+#![allow(clippy::explicit_counter_loop)]
+#![allow(clippy::bool_assert_comparison)]
 
 mod auto_compound;
 pub mod delegation_requests;

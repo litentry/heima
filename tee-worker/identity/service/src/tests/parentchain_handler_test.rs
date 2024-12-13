@@ -19,10 +19,7 @@ use crate::{
 	parentchain_handler::{HandleParentchain, ParentchainHandler},
 	tests::mocks::{enclave_api_mock::EnclaveMock, parentchain_api_mock::ParentchainApiMock},
 };
-use itc_parentchain::{
-	light_client::light_client_init_params::SimpleParams,
-	primitives::{ParentchainId, ParentchainInitParams},
-};
+use itp_types::parentchain::{ParentchainId, ParentchainInitParams, SimpleParams};
 use itc_parentchain_test::ParentchainHeaderBuilder;
 use itp_node_api::api_client::ChainApi;
 use std::sync::Arc;

@@ -58,14 +58,13 @@ use itp_types::AccountId;
 use itp_utils::stringify::{account_id_to_string, account_id_to_string_without_prefix};
 use lc_credentials::Credential;
 use lc_data_providers::achainable::web3_network_to_chain;
-use lc_stf_task_sender::AssertionBuildRequest;
 use litentry_primitives::{
 	p2pkh_address, p2sh_address, p2tr_address, p2wpkh_address, AchainableAmount,
 	AchainableAmountHolding, AchainableAmountToken, AchainableAmounts, AchainableBasic,
 	AchainableBetweenPercents, AchainableDate, AchainableDateInterval, AchainableDatePercent,
-	AchainableParams, AchainableToken, Assertion, DynamicParams, ErrorDetail, ErrorString,
-	Identity, IdentityNetworkTuple, IntoErrorDetail, OneBlockCourseType, ParameterString,
-	VCMPError as Error, Web3Network,
+	AchainableParams, AchainableToken, Assertion, AssertionBuildRequest, DynamicParams,
+	ErrorDetail, ErrorString, Identity, IdentityNetworkTuple, IntoErrorDetail, OneBlockCourseType,
+	ParameterString, VCMPError as Error, Web3Network,
 };
 use log::*;
 use rust_base58::ToBase58;

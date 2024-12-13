@@ -8,6 +8,9 @@ name = 'pallet-extrinsic-filter'
 repository = 'https://github.com/litentry/litentry-parachain'
 version = '0.1.0'
 
+[lints]
+workspace = true
+
 [dependencies]
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
@@ -32,16 +35,16 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
 ]
 std = [
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "pallet-timestamp/std",
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-core/std",
     "sp-io/std",
-    "sp-std/std",
     "sp-runtime/std",
-    "sp-io/std",
-    "sp-core/std",
-    "frame-support/std",
-    "frame-system/std",
-    "frame-benchmarking?/std",
+    "sp-std/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

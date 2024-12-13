@@ -36,7 +36,6 @@ pub mod weights;
 pub use crate::weights::WeightInfo;
 
 pub use pallet::*;
-use pallet_teebag::ShardIdentifier;
 use sp_core::H256;
 use sp_std::vec::Vec;
 
@@ -49,7 +48,8 @@ pub type VCIndex = H256;
 pub mod pallet {
 	use super::*;
 	use core_primitives::{
-		Assertion, ErrorDetail, Identity, SchemaIndex, VCMPError, SCHEMA_CONTENT_LEN, SCHEMA_ID_LEN,
+		Assertion, ErrorDetail, Identity, SchemaIndex, ShardIdentifier, VCMPError,
+		SCHEMA_CONTENT_LEN, SCHEMA_ID_LEN,
 	};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
@@ -159,6 +159,12 @@ pub mod pallet {
 		UnclassifiedError {
 			identity: Option<Identity>,
 			detail: ErrorDetail,
+			req_ext_hash: H256,
+		},
+		VCIssuedNew {
+			identity: Identity,
+			assertion: Assertion,
+			omni_account: T::AccountId,
 			req_ext_hash: H256,
 		},
 	}
@@ -384,6 +390,26 @@ pub mod pallet {
 					Self::deposit_event(Event::UnclassifiedError { identity, detail, req_ext_hash })
 				},
 			}
+			Ok(Pays::No.into())
+		}
+
+		// TODO: update the weight info to use on_vc_issued
+		#[pallet::call_index(32)]
+		#[pallet::weight(<T as Config>::WeightInfo::vc_issued())]
+		pub fn on_vc_issued(
+			origin: OriginFor<T>,
+			identity: Identity,
+			assertion: Assertion,
+			omni_account: T::AccountId,
+			req_ext_hash: H256,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::VCIssuedNew {
+				identity,
+				assertion,
+				omni_account,
+				req_ext_hash,
+			});
 			Ok(Pays::No.into())
 		}
 	}

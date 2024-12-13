@@ -16,6 +16,8 @@
 */
 
 #[cfg(feature = "development")]
+use crate::trusted_base_cli::commands::litentry::clean_id_graphs::CleanIDGraphsCommand;
+#[cfg(feature = "development")]
 use crate::trusted_base_cli::commands::litentry::remove_identity::RemoveIdentityCommand;
 use crate::{
 	trusted_base_cli::commands::{
@@ -86,6 +88,10 @@ pub enum TrustedBaseCommand {
 	/// Remove Identity from the prime identity
 	#[cfg(feature = "development")]
 	RemoveIdentity(RemoveIdentityCommand),
+
+	// Remove all id_graph from storage
+	#[cfg(feature = "development")]
+	CleanIDGraphs(CleanIDGraphsCommand),
 }
 
 impl TrustedBaseCommand {
@@ -106,6 +112,8 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::RequestVc(cmd) => cmd.run(cli, trusted_cli),
 			#[cfg(feature = "development")]
 			TrustedBaseCommand::RemoveIdentity(cmd) => cmd.run(cli, trusted_cli),
+			#[cfg(feature = "development")]
+			TrustedBaseCommand::CleanIDGraphs(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

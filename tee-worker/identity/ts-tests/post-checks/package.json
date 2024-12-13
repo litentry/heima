@@ -5,13 +5,13 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "mocha --timeout 20000 --exit --sort -r ts-node/register --loader=ts-node/esm ./tests/**/*.test.ts"
+    "start": "LITENTRY_NETWORK='litentry-dev' mocha --timeout 20000 --exit --sort -r ts-node/register --loader=ts-node/esm ./tests/**/*.test.ts"
   },
   "dependencies": {
     "@litentry/chaindata": "^0.2.0",
-    "@litentry/enclave": "^4.1.0",
-    "@litentry/parachain-api": "0.9.18-11.2",
-    "@litentry/sidechain-api": "0.9.18-11",
+    "@litentry/client-sdk": "^1.0.0",
+    "@litentry/parachain-api": "0.9.20-4.1",
+    "@litentry/sidechain-api": "0.9.20-4",
     "@polkadot/api": "^10.9.1",
     "@polkadot/util": "^12.5.1",
     "@polkadot/util-crypto": "^12.5.1",

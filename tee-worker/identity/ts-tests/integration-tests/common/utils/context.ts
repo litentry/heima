@@ -1,4 +1,4 @@
-import { WsProvider, ApiPromise, PalletTeebagEnclave } from 'parachain-api';
+import { WsProvider, ApiPromise, CorePrimitivesTeebagTypesEnclave } from 'parachain-api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';
@@ -8,7 +8,7 @@ import { KeyObject } from 'crypto';
 import { getSidechainMetadata } from '../call';
 import { createWeb3Wallets } from '../helpers';
 import type { IntegrationTestContext } from '../common-types';
-import { identity, vc, trusted_operations, sidechain } from 'parachain-api';
+import { identity, vc, trusted_operations, sidechain, omniAccount } from 'parachain-api';
 import crypto from 'crypto';
 import type { HexString } from '@polkadot/util/types';
 // maximum block number that we wait in listening events before we timeout
@@ -28,7 +28,7 @@ export async function initWorkerConnection(endpoint: string): Promise<WebSocketA
 }
 
 export async function initIntegrationTestContext(
-    parachainEndpoint: string,
+    parachainEndpoint?: string,
     enclaveEndpoint?: string
 ): Promise<IntegrationTestContext> {
     const provider = new WsProvider(parachainEndpoint);
@@ -36,7 +36,13 @@ export async function initIntegrationTestContext(
 
     const web3Wallets = createWeb3Wallets();
 
-    const types = { ...identity.types, ...vc.types, ...trusted_operations.types, ...sidechain.types };
+    const types = {
+        ...identity.types,
+        ...vc.types,
+        ...trusted_operations.types,
+        ...sidechain.types,
+        ...omniAccount.types,
+    };
 
     const api = await ApiPromise.create({
         provider,
@@ -72,7 +78,7 @@ async function getenclaveEndpoint(api: ApiPromise): Promise<string> {
             return enclaves;
         }
         return [...enclaves, enclave.unwrap()];
-    }, [] as PalletTeebagEnclave[]);
+    }, [] as CorePrimitivesTeebagTypesEnclave[]);
 
     if (identityEnclaves.length === 0) {
         throw new Error('No identity worker found');

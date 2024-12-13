@@ -27,6 +27,8 @@ else
   kill -2 $ZOMBIENET_PID
 fi
 
+docker ps -q -f name=geth | xargs -r docker stop 
+
 rm -rf "$LITENTRY_PARACHAIN_DIR"
 
 echo "cleaned up"

@@ -14,11 +14,6 @@ on:
         description: litentry
         required: true
         default: true
-      rococo:
-        type: boolean
-        description: rococo
-        required: true
-        default: true
       paseo:
         type: boolean
         description: paseo
@@ -39,7 +34,7 @@ jobs:
   ## build docker image with runtime-benchmarks feature and push it to the hub
   build-docker:
     if: ${{ github.event.inputs.rebuild-docker == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ github.ref }}
         uses: actions/checkout@v4
@@ -59,7 +54,7 @@ jobs:
 
       - name: Build docker image
         run: |
-          ./scripts/build-docker.sh production runtime-benchmarks --features=runtime-benchmarks
+          ./parachain/scripts/build-docker.sh production runtime-benchmarks --features=runtime-benchmarks
 
       - name: Dockerhub login
         uses: docker/login-action@v3
@@ -73,7 +68,7 @@ jobs:
 
   ## run the benchmarking remotely
   benchmark:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-docker
     # see https://github.com/actions/runner/issues/491
     if: |
@@ -85,9 +80,6 @@ jobs:
           chain=""
           if [ "${{ github.event.inputs.litentry }}" = "true" ]; then
             chain="$chain litentry"
-          fi
-          if [ "${{ github.event.inputs.rococo }}" = "true" ]; then
-            chain="$chain rococo"
           fi
           if [ "${{ github.event.inputs.paseo }}" = "true" ]; then
             chain="$chain paseo"
@@ -153,9 +145,9 @@ jobs:
           EOF
           chmod 600 ./benchmark-server-key.pem
           for c in $chain; do
-            ssh -x -i ./benchmark-server-key.pem -o StrictHostKeychecking=no "${{ steps.start_instance.outputs.remote_ip }}" -l ${{ env.BENCHMARK_SSH_USER }} 'bash -s' < scripts/benchmark-weight-remote.sh "$c" "${GITHUB_REF#refs/heads/}" "$arg"
+            ssh -x -i ./benchmark-server-key.pem -o StrictHostKeychecking=no "${{ steps.start_instance.outputs.remote_ip }}" -l ${{ env.BENCHMARK_SSH_USER }} 'bash -s' < parachain/scripts/benchmark-weight-remote.sh "$c" "${GITHUB_REF#refs/heads/}" "$arg"
             echo "copy generated weights files back ..."
-            scp -o StrictHostKeychecking=no -i ./benchmark-server-key.pem "${{ env.BENCHMARK_SSH_USER }}"@"${{ steps.start_instance.outputs.remote_ip }}":/tmp/litentry-parachain/runtime/$c/src/weights/*.rs runtime/$c/src/weights/
+            scp -o StrictHostKeychecking=no -i ./benchmark-server-key.pem "${{ env.BENCHMARK_SSH_USER }}"@"${{ steps.start_instance.outputs.remote_ip }}":/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
           done
           rm -f ./benchmark-server-key.pem
           echo "======================"

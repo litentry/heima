@@ -7,7 +7,7 @@ homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
 name = 'litentry-collator'
 repository = 'https://github.com/litentry/litentry-parachain'
-version = '0.9.20'
+version = '0.9.22'
 
 [[bin]]
 name = 'litentry-collator'
@@ -21,11 +21,17 @@ clap = { workspace = true }
 futures = { workspace = true }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
+parity-scale-codec = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 
+frame-support = { workspace = true, features = ["std"] }
+pallet-ethereum = { workspace = true, features = ["std"] }
+pallet-evm = { workspace = true, features = ["std"] }
+pallet-transaction-payment = { workspace = true, features = ["std"] }
 pallet-transaction-payment-rpc = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["std"] }
 sc-basic-authorship = { workspace = true }
 sc-chain-spec = { workspace = true }
 sc-cli = { workspace = true }
@@ -47,13 +53,17 @@ sp-block-builder = { workspace = true, features = ["std"] }
 sp-blockchain = { workspace = true }
 sp-consensus-aura = { workspace = true, features = ["std"] }
 sp-core = { workspace = true, features = ["std"] }
+sp-genesis-builder = { workspace = true, features = ["std"] }
+sp-inherents = { workspace = true, features = ["std"] }
 sp-io = { workspace = true, features = ["std"] }
 sp-keystore = { workspace = true, features = ["std"] }
 sp-offchain = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 sp-session = { workspace = true, features = ["std"] }
+sp-std = { workspace = true, features = ["std"] }
 sp-timestamp = { workspace = true, features = ["std"] }
 sp-transaction-pool = { workspace = true, features = ["std"] }
+sp-version = { workspace = true, features = ["std"] }
 substrate-frame-rpc-system = { workspace = true }
 substrate-prometheus-endpoint = { workspace = true }
 
@@ -74,15 +84,17 @@ moonbeam-rpc-trace = { workspace = true }
 moonbeam-rpc-txpool = { workspace = true }
 
 cumulus-client-cli = { workspace = true }
+cumulus-client-collator = { workspace = true }
 cumulus-client-consensus-aura = { workspace = true }
 cumulus-client-consensus-common = { workspace = true }
+cumulus-client-consensus-proposer = { workspace = true }
 cumulus-client-network = { workspace = true }
+cumulus-client-parachain-inherent = { workspace = true }
 cumulus-client-service = { workspace = true }
+cumulus-primitives-aura = { workspace = true, features = ["std"] }
 cumulus-primitives-core = { workspace = true, features = ["std"] }
 cumulus-primitives-parachain-inherent = { workspace = true, features = ["std"] }
-cumulus-relay-chain-inprocess-interface = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
-cumulus-relay-chain-minimal-node = { workspace = true }
 cumulus-test-relay-sproof-builder = { workspace = true, features = ["std"] }
 
 polkadot-cli = { workspace = true }
@@ -92,12 +104,13 @@ xcm = { workspace = true }
 
 frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }
-try-runtime-cli = { workspace = true }
+frame-system-rpc-runtime-api = { workspace = true }
 
 core-primitives = { workspace = true, features = ["std"] }
 litentry-parachain-runtime = { workspace = true, features = ["std"] }
+pallet-omni-account-runtime-api = { workspace = true, features = ["std"] }
 paseo-parachain-runtime = { workspace = true, features = ["std"] }
-rococo-parachain-runtime = { workspace = true, features = ["std"] }
+runtime-common = { workspace = true, features = ["std"] }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }
@@ -106,20 +119,34 @@ substrate-build-script-utils = { workspace = true }
 default = []
 fast-runtime = [
     "litentry-parachain-runtime/fast-runtime",
-    "rococo-parachain-runtime/fast-runtime",
     "paseo-parachain-runtime/fast-runtime",
 ]
 runtime-benchmarks = [
+    "cumulus-primitives-core/runtime-benchmarks",
+    "frame-benchmarking-cli/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
     "litentry-parachain-runtime/runtime-benchmarks",
-    "rococo-parachain-runtime/runtime-benchmarks",
+    "pallet-ethereum/runtime-benchmarks",
+    "pallet-evm/runtime-benchmarks",
     "paseo-parachain-runtime/runtime-benchmarks",
-    "polkadot-service/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks",
+    "polkadot-primitives/runtime-benchmarks",
+    "polkadot-service/runtime-benchmarks",
+    "runtime-common/runtime-benchmarks",
+    "sc-service/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
 ]
 try-runtime = [
+    "frame-support/try-runtime",
     "litentry-parachain-runtime/try-runtime",
-    "rococo-parachain-runtime/try-runtime",
+    "pallet-ethereum/try-runtime",
+    "pallet-evm/try-runtime",
+    "pallet-transaction-payment/try-runtime",
     "paseo-parachain-runtime/try-runtime",
-    "polkadot-service/try-runtime",
     "polkadot-cli/try-runtime",
+    "polkadot-service/try-runtime",
+    "runtime-common/try-runtime",
+    "sp-runtime/try-runtime",
 ]
+std = []

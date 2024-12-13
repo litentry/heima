@@ -2,10 +2,9 @@ import WebSocket from 'ws';
 import { assert } from 'chai';
 import { webcrypto } from 'crypto';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 import { identity, trusted_operations, sidechain, vc } from '@litentry/parachain-api';
-import { request, createLitentryIdentityType, createLitentryValidationDataType } from '@litentry/enclave';
+import { request, createLitentryIdentityType } from '@litentry/client-sdk';
 
 import { nodeEndpoint, enclaveEndpoint } from '../config';
 import { u8aToHex, u8aToString } from '@polkadot/util';

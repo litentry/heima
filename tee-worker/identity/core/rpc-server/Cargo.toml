@@ -9,17 +9,16 @@ anyhow = "1.0.40"
 jsonrpsee = { version = "0.2.0-alpha.7", features = ["full"] }
 tokio = { version = "1.6.1", features = ["full"] }
 
-# local
-its-peer-fetch = { path = "../../sidechain/peer-fetch" }
-its-primitives = { path = "../../sidechain/primitives" }
-its-storage = { path = "../../sidechain/storage" }
+its-peer-fetch = { workspace = true, features = ["std"] }
+its-primitives = { workspace = true, features = ["std"] }
+its-storage = { workspace = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+sp-core = { workspace = true, features = ["std"] }
+its-test = { path = "../../sidechain/test" }
+codec = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]
 std = []
-
-[dev-dependencies]
-env_logger = { version = "*" }
-sp-core = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
-its-test = { path = "../../sidechain/test" }
-codec = { package = "parity-scale-codec", version = "3.0.0" }

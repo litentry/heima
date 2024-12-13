@@ -1,0 +1,25 @@
+{
+	"name": "@litentry/client-sdk",
+	"description": "This package provides helpers for dApps to interact with the Litentry Protocol.",
+	"version": "1.0.0-next.7",
+	"license": "GPL-3.0-or-later",
+	"dependencies": {},
+	"devDependencies": {
+		"@polkadot/rpc-provider": "^10.9.1"
+	},
+	"peerDependencies": {
+		"@litentry/parachain-api": "0.9.20-next.10",
+		"@litentry/sidechain-api": "0.9.20-next.8",
+		"@litentry/chaindata": "*",
+		"@polkadot/api": "^10.9.1",
+		"@polkadot/types": "^10.9.1",
+		"@polkadot/types-codec": "^10.9.1",
+		"@polkadot/util": "^12.5.1",
+		"@polkadot/util-crypto": "^12.5.1",
+		"tslib": "^2.3.0"
+	},
+	"type": "module",
+	"module": "./src/index.js",
+	"main": "./src/index.js",
+	"typings": "./src/index.d.ts"
+}

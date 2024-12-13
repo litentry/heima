@@ -26,16 +26,16 @@ use crate::{
 		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
 		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
 		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
-		DIRECT_RPC_REQUEST_SINK_COMPONENT, GLOBAL_ASSERTION_REPOSITORY,
-		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_DATA_PROVIDER_CONFIG,
-		GLOBAL_DIRECT_RPC_BROADCASTER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
-		GLOBAL_OCALL_API_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
-		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
-		GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT, GLOBAL_SIDECHAIN_FAIL_SLOT_ON_DEMAND_COMPONENT,
-		GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT,
-		GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-		GLOBAL_STATE_KEY_REPOSITORY_COMPONENT, GLOBAL_STATE_OBSERVER_COMPONENT,
-		GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+		DIRECT_RPC_REQUEST_SINK_COMPONENT, GLOBAL_ACCOUNT_STORE_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_ASSERTION_REPOSITORY, GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+		GLOBAL_DATA_PROVIDER_CONFIG, GLOBAL_DIRECT_RPC_BROADCASTER_COMPONENT,
+		GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_RPC_WS_HANDLER_COMPONENT, GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_SYNCER_COMPONENT,
+		GLOBAL_SIDECHAIN_FAIL_SLOT_ON_DEMAND_COMPONENT, GLOBAL_SIDECHAIN_IMPORT_QUEUE_COMPONENT,
+		GLOBAL_SIDECHAIN_IMPORT_QUEUE_WORKER_COMPONENT, GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_STATE_KEY_REPOSITORY_COMPONENT,
+		GLOBAL_STATE_OBSERVER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 		GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TOP_POOL_AUTHOR_COMPONENT,
 		GLOBAL_WEB_SOCKET_SERVER_COMPONENT,
 	},
@@ -52,7 +52,8 @@ use crate::{
 use base58::ToBase58;
 use codec::Encode;
 use core::str::FromStr;
-use ita_stf::{Getter, TrustedCallSigned};
+use ita_sgx_runtime::Runtime;
+use ita_stf::{aes_encrypt_default, Getter, TrustedCallSigned};
 use itc_direct_rpc_server::{
 	create_determine_watch, rpc_connection_registry::ConnectionRegistry,
 	rpc_ws_handler::RpcWsHandler,
@@ -65,6 +66,12 @@ use itc_tls_websocket_server::{
 };
 use itp_attestation_handler::IntelAttestationHandler;
 use itp_component_container::{ComponentGetter, ComponentInitializer};
+use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::{
+	api_client::XtStatus,
+	metadata::{pallet_omni_account::OmniAccountCallIndexes, provider::AccessNodeMetadata},
+};
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_primitives_cache::GLOBAL_PRIMITIVES_CACHE;
 use itp_settings::files::{
 	ASSERTIONS_FILE, LITENTRY_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, STATE_SNAPSHOTS_CACHE_SIZE,
@@ -73,6 +80,7 @@ use itp_settings::files::{
 use itp_sgx_crypto::{
 	get_aes_repository, get_ed25519_repository, get_rsa3072_repository, key_repository::AccessKey,
 };
+use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_state_handler::{
 	file_io::StateDir, handle_state::HandleState, query_shard_state::QueryShardState,
 	state_snapshot_repository::VersionedStateAccess,
@@ -80,7 +88,7 @@ use itp_stf_state_handler::{
 };
 use itp_top_pool::pool::Options as PoolOptions;
 use itp_top_pool_author::author::{AuthorTopFilter, BroadcastedTopFilter};
-use itp_types::{parentchain::ParentchainId, ShardIdentifier};
+use itp_types::{parentchain::ParentchainId, OpaqueCall, ShardIdentifier};
 use its_sidechain::{
 	block_composer::BlockComposer,
 	slots::{FailSlotMode, FailSlotOnDemand},
@@ -88,21 +96,25 @@ use its_sidechain::{
 use jsonrpc_core::IoHandler;
 use lc_data_providers::DataProviderConfig;
 use lc_evm_dynamic_assertions::repository::EvmAssertionRepository;
+use lc_native_task_receiver::{run_native_task_receiver, NativeTaskContext};
+use lc_omni_account::init_in_memory_omni_account_store;
 use lc_parachain_extrinsic_task_receiver::run_parachain_extrinsic_task_receiver;
 use lc_stf_task_receiver::{run_stf_task_receiver, StfTaskContext};
 use lc_vc_task_receiver::run_vc_handler_runner;
-use litentry_primitives::BroadcastedRequest;
+use litentry_primitives::{
+	sgx::create_aes256_repository, BroadcastedRequest, Identity, MemberAccount,
+};
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::crypto::Pair;
-use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc, vec::Vec};
 
 pub(crate) fn init_enclave(
 	mu_ra_url: String,
 	untrusted_worker_url: String,
 	base_dir: PathBuf,
 ) -> EnclaveResult<()> {
-	let signing_key_repository = Arc::new(get_ed25519_repository(base_dir.clone())?);
+	let signing_key_repository = Arc::new(get_ed25519_repository(base_dir.clone(), None, None)?);
 	GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.initialize(signing_key_repository.clone());
 	let signer = signing_key_repository.retrieve_key()?;
 	info!("[Enclave initialized] Ed25519 prim raw : {:?}", signer.public().0);
@@ -114,6 +126,10 @@ pub(crate) fn init_enclave(
 	// It will be overwritten anyway if mutual remote attestation is performed with the primary worker.
 	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
+
+	let account_store_key_repository =
+		Arc::new(create_aes256_repository(base_dir.clone(), "account_store", None)?);
+	GLOBAL_ACCOUNT_STORE_KEY_REPOSITORY_COMPONENT.initialize(account_store_key_repository);
 
 	let integritee_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
 		base_dir.join(LITENTRY_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
@@ -324,9 +340,47 @@ fn run_vc_issuance() -> Result<(), Error> {
 		data_provider_config,
 		evm_assertion_repository,
 	);
+	let extrinsic_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
 
-	run_vc_handler_runner(Arc::new(stf_task_context), node_metadata_repo);
+	run_vc_handler_runner(Arc::new(stf_task_context), extrinsic_factory, node_metadata_repo);
+
+	Ok(())
+}
+
+fn run_native_task_handler() -> Result<(), Error> {
+	let author_api = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
+	let data_provider_config = GLOBAL_DATA_PROVIDER_CONFIG.get()?;
+	let shielding_key_repository = GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT.get()?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let stf_enclave_signer = Arc::new(EnclaveStfEnclaveSigner::new(
+		GLOBAL_STATE_OBSERVER_COMPONENT.get()?,
+		ocall_api.clone(),
+		shielding_key_repository.clone(),
+		author_api.clone(),
+	));
+	let enclave_account = Arc::new(GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?);
+	let extrinsic_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+	let aes256_key_repository = GLOBAL_ACCOUNT_STORE_KEY_REPOSITORY_COMPONENT.get()?;
+	let evm_assertion_repository = GLOBAL_ASSERTION_REPOSITORY.get()?;
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+
+	let context = NativeTaskContext::new(
+		shielding_key_repository,
+		author_api,
+		stf_enclave_signer,
+		enclave_account,
+		ocall_api,
+		data_provider_config,
+		extrinsic_factory,
+		node_metadata_repo,
+		aes256_key_repository,
+		evm_assertion_repository,
+		state_handler,
+	);
+
+	run_native_task_receiver(Arc::new(context));
 
 	Ok(())
 }
@@ -413,6 +467,12 @@ pub(crate) fn init_enclave_sidechain_components(
 	});
 
 	std::thread::spawn(move || {
+		println!("running native task handler");
+		#[allow(clippy::unwrap_used)]
+		run_native_task_handler().unwrap();
+	});
+
+	std::thread::spawn(move || {
 		println!("running parentchain extrinsic sender");
 		#[allow(clippy::unwrap_used)]
 		run_parachain_extrinsic_sender().unwrap();
@@ -465,9 +525,95 @@ pub(crate) fn init_shard(shard: ShardIdentifier) -> EnclaveResult<()> {
 	Ok(())
 }
 
+pub(crate) fn init_in_memory_state() -> EnclaveResult<()> {
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	init_in_memory_omni_account_store(ocall_api).map_err(|e| Error::Other(e.into()))?;
+	Ok(())
+}
+
 pub(crate) fn migrate_shard(new_shard: ShardIdentifier) -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let _ = state_handler.migrate_shard(new_shard)?;
+	Ok(())
+}
+
+pub(crate) fn upload_id_graph() -> EnclaveResult<()> {
+	const BATCH_SIZE: usize = 400;
+
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let extrinsic_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+
+	let aes_key = GLOBAL_ACCOUNT_STORE_KEY_REPOSITORY_COMPONENT
+		.get()
+		.and_then(|r| {
+			r.retrieve_key()
+				.map_err(|_| itp_component_container::error::Error::Other("".into()))
+		})
+		.map_err(|e| Error::Other(e.into()))?;
+
+	let call_index = node_metadata_repo
+		.get_from_metadata(|m| m.update_account_store_by_one_call_indexes())??;
+
+	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
+
+	let shard = match state_handler.list_shards()? {
+		shards if shards.len() == 1 =>
+			*shards.get(0).ok_or_else(|| Error::Other("Shard len unexpected".into()))?,
+		_ => return Err(Error::Other("Cannot get shard".into())),
+	};
+
+	let identities: Vec<(Identity, Identity)> = match state_handler.load_cloned(&shard) {
+		Ok((mut state, _)) => state.execute_with(|| {
+			pallet_identity_management_tee::IDGraphs::<Runtime>::iter_keys().collect()
+		}),
+		Err(e) => return Err(Error::Other(e.into())),
+	};
+
+	info!("uploading {} identity pairs", identities.len());
+
+	let mut calls: Vec<OpaqueCall> = Default::default();
+	for (prime_id, sub_id) in identities {
+		let member_account: MemberAccount = if prime_id == sub_id {
+			sub_id.into()
+		} else {
+			let enc_id: Vec<u8> = sub_id.encode();
+			MemberAccount::Private(aes_encrypt_default(&aes_key, &enc_id).encode(), sub_id.hash())
+		};
+
+		let call = OpaqueCall::from_tuple(&(call_index, prime_id, member_account));
+		calls.push(call);
+
+		if calls.len() >= BATCH_SIZE {
+			extrinsic_factory
+				.create_batch_extrinsic(calls.drain(..).collect(), None)
+				.map_err(|_| Error::Other("failed to create extrinsic".into()))
+				.and_then(|ext| {
+					ocall_api
+						.send_to_parentchain(
+							vec![ext],
+							&ParentchainId::Litentry,
+							Some(XtStatus::InBlock),
+						)
+						.map_err(|_| Error::Other("failed to send extrinsic".into()))
+				})?;
+		}
+	}
+
+	if !calls.is_empty() {
+		extrinsic_factory
+			.create_batch_extrinsic(calls.drain(..).collect(), None)
+			.map_err(|_| Error::Other("failed to create extrinsic".into()))
+			.and_then(|ext| {
+				ocall_api
+					.send_to_parentchain(
+						vec![ext],
+						&ParentchainId::Litentry,
+						Some(XtStatus::InBlock),
+					)
+					.map_err(|_| Error::Other("failed to send extrinsic".into()))
+			})?;
+	}
 	Ok(())
 }
 

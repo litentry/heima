@@ -15,9 +15,15 @@ These types were auto generated using [Polkadot.js Type Generation](https://polk
 2. Extend and decorate the API's types with:
 
     ```typescript
-    import { identity, vc, trusted_operations, sidechain } from "parachain-api";
+    import { identity, vc, trusted_operations, sidechain, omniAccount } from "parachain-api";
 
-    const types = { ...identity.types, ...vc.types, ...trusted_operations.types, ...sidechain.types };
+    const types = {
+        ...identity.types,
+        ...vc.types,
+        ...omniAccount.types,
+        ...trusted_operations.types,
+        ...sidechain.types,
+    };
 
     const api = await ApiPromise.create({
         provider,
@@ -67,4 +73,4 @@ Versions in the pattern of `x.x.x-next.x` feature the most recent code version t
 
 ## How to regenerate types
 
-Please read the commands of [client-api](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/client-api/README.md).
+Please read the commands of [client-api](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/README.md).

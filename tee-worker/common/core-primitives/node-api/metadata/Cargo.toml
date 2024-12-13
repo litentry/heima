@@ -1,0 +1,26 @@
+[package]
+name = "itp-node-api-metadata"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+derive_more = { workspace = true }
+itp-api-client-types = { workspace = true }
+itp-stf-primitives = { workspace = true }
+sp-core = { workspace = true }
+sp-version = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "itp-api-client-types/std",
+    "sp-core/std",
+    "sp-version/std",
+    "itp-stf-primitives/std",
+]
+
+# used for unit testing only!
+mocks = []

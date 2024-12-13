@@ -21,14 +21,7 @@ use itp_api_client_types::Events;
 
 use itp_node_api::api_client::StaticEvent;
 use itp_types::{
-	parentchain::{
-		events::{
-			ActivateIdentityRequested, AssertionCreated, DeactivateIdentityRequested,
-			EnclaveUnauthorized, LinkIdentityRequested, OpaqueTaskPosted,
-			ParentchainBlockProcessed, VCRequested,
-		},
-		FilterEvents,
-	},
+	parentchain::{events::*, FilterEvents},
 	H256,
 };
 use std::vec::Vec;
@@ -102,6 +95,18 @@ impl FilterEvents for FilterableEvents {
 	fn get_parentchain_block_proccessed_events(
 		&self,
 	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error> {
+		self.filter()
+	}
+
+	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error> {
+		self.filter()
+	}
+
+	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error> {
+		self.filter()
+	}
+
+	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error> {
 		self.filter()
 	}
 }

@@ -22,7 +22,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
 	ensure,
 	pallet_prelude::*,
-	traits::Get,
+	traits::{Get, Time},
 	weights::Weight,
 };
 use frame_system::pallet_prelude::*;
@@ -31,26 +31,12 @@ use sp_core::{ed25519::Public as Ed25519Public, H256};
 use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{prelude::*, str};
 
-mod sgx_verify;
-pub use sgx_verify::{
-	deserialize_enclave_identity, deserialize_tcb_info, extract_certs,
-	extract_tcb_info_from_raw_dcap_quote, verify_certificate_chain, verify_dcap_quote,
-	verify_ias_report, SgxReport,
-};
+use core_primitives::*;
 
 pub use pallet::*;
 
 pub mod weights;
 pub use crate::weights::WeightInfo;
-
-mod types;
-pub use types::*;
-
-mod quoting_enclave;
-pub use quoting_enclave::*;
-
-mod tcb;
-pub use tcb::*;
 
 const MAX_RA_REPORT_LEN: usize = 5244;
 const MAX_DCAP_QUOTE_LEN: usize = 5000;
@@ -65,7 +51,9 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_timestamp::Config {
+	pub trait Config:
+		frame_system::Config + pallet_timestamp::Config + pallet_utility::Config
+	{
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
@@ -343,6 +331,7 @@ pub mod pallet {
 			enclave: Enclave,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
+			Self::add_enclave_identifier_internal(enclave.worker_type, &who)?;
 			Self::add_enclave(&who, &enclave)?;
 			Ok(Pays::No.into())
 		}
@@ -668,6 +657,50 @@ pub mod pallet {
 			Self::finalize_block(sender, shard, confirmation);
 			Ok(Pays::No.into())
 		}
+
+		// A wrapper to utility.call to waive the tx fee if the caller is tee-worker
+		// the weight is copied from pallet_utility
+		#[pallet::call_index(23)]
+		#[pallet::weight({
+			use pallet_utility::WeightInfo;
+			let dispatch_infos = calls.iter().map(|call| call.get_dispatch_info()).collect::<Vec<_>>();
+			let dispatch_weight = dispatch_infos.iter()
+				.map(|di| di.weight)
+				.fold(Weight::zero(), |total: Weight, weight: Weight| total.saturating_add(weight))
+				.saturating_add(<T as pallet_utility::Config>::WeightInfo::batch(calls.len() as u32));
+			let dispatch_class = {
+				let all_operational = dispatch_infos.iter()
+					.map(|di| di.class)
+					.all(|class| class == DispatchClass::Operational);
+				if all_operational {
+					DispatchClass::Operational
+				} else {
+					DispatchClass::Normal
+				}
+			};
+			(dispatch_weight, dispatch_class)
+		})]
+		pub fn batch(
+			origin: OriginFor<T>,
+			calls: Vec<<T as pallet_utility::Config>::RuntimeCall>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin.clone())?;
+			let _ = EnclaveRegistry::<T>::get(&sender).ok_or(Error::<T>::EnclaveNotExist)?;
+			let _ = pallet_utility::Pallet::<T>::batch(origin, calls)?;
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(24)]
+		#[pallet::weight(<T as Config>::WeightInfo::add_enclave_identifier())]
+		pub fn add_enclave_identifier(
+			origin: OriginFor<T>,
+			worker_type: WorkerType,
+			who: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			Self::ensure_admin_or_root(origin)?;
+			Self::add_enclave_identifier_internal(worker_type, &who)?;
+			Ok(Pays::No.into())
+		}
 	}
 }
 
@@ -680,7 +713,10 @@ impl<T: Config> Pallet<T> {
 		Ok(().into())
 	}
 
-	fn add_enclave_identifier(worker_type: WorkerType, who: &T::AccountId) -> Result<(), Error<T>> {
+	pub fn add_enclave_identifier_internal(
+		worker_type: WorkerType,
+		who: &T::AccountId,
+	) -> Result<(), Error<T>> {
 		EnclaveIdentifier::<T>::try_mutate(worker_type, |v| {
 			ensure!(!v.contains(who), Error::<T>::EnclaveIdentifierAlreadyExist);
 			v.try_push(who.clone()).map_err(|_| Error::<T>::MaxEnclaveIdentifierOverflow)
@@ -688,13 +724,27 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn add_enclave(sender: &T::AccountId, enclave: &Enclave) -> Result<(), Error<T>> {
-		match EnclaveRegistry::<T>::get(sender) {
-			Some(old_enclave) => ensure!(
+		if let Some(old_enclave) = EnclaveRegistry::<T>::get(sender) {
+			ensure!(
 				old_enclave.worker_type == enclave.worker_type,
 				Error::<T>::UnexpectedWorkerType
-			),
-			None => Self::add_enclave_identifier(enclave.worker_type, sender)?,
+			);
+		}
+
+		match Self::mode() {
+			OperationalMode::Production | OperationalMode::Maintenance => {
+				ensure!(
+					EnclaveIdentifier::<T>::get(enclave.worker_type).contains(sender),
+					Error::<T>::EnclaveIdentifierNotExist
+				);
+			},
+			OperationalMode::Development => {
+				if EnclaveRegistry::<T>::get(sender).is_none() {
+					Self::add_enclave_identifier_internal(enclave.worker_type, sender)?;
+				}
+			},
 		};
+
 		EnclaveRegistry::<T>::insert(sender, enclave);
 		Self::deposit_event(Event::<T>::EnclaveAdded {
 			who: sender.clone(),

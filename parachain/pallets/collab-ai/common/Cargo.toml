@@ -1,0 +1,39 @@
+[package]
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition = '2021'
+homepage = 'https://litentry.com'
+name = 'pallet-collab-ai-common'
+repository = 'https://github.com/litentry/litentry-parachain'
+version = '0.1.0'
+
+[dependencies]
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+[features]
+default = ["std"]
+runtime-benchmarks = [
+    "frame-support/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+try-runtime = [
+    "frame-support/try-runtime",
+    "frame-system/try-runtime",
+    "sp-runtime/try-runtime",
+]

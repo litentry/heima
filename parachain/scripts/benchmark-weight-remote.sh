@@ -8,7 +8,7 @@ set -eo pipefail
 # important from where we stand as it will be overriden by runtime weight anyway
 
 function usage() {
-  echo "Usage: $0 litentry|rococo branch-or-tag pallet-names"
+  echo "Usage: $0 litentry|paseo branch-or-tag pallet-names"
   echo "       branch-or-tag will be used to checkout codes"
   echo "       pallet-names can be either * or a comma listed pallet names"
   echo "e.g.:  $0 litentry dev *"
@@ -25,7 +25,7 @@ TMPDIR=/tmp
 cd "$TMPDIR"
 [ -d litentry-parachain ] && rm -rf litentry-parachain
 git clone https://github.com/litentry/litentry-parachain
-cd litentry-parachain
+cd litentry-parachain/parachain
 git checkout "$2"
 
 # copy binary out

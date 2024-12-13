@@ -36,11 +36,10 @@ use crate::{
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
-use itp_types::parentchain::ParentchainId;
-use std::{path::PathBuf, sync::Arc};
-
-pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 use itp_stf_interface::ShardCreationInfo;
+use itp_types::parentchain::ParentchainId;
+pub use itp_types::parentchain::{ParachainBlock, ParachainHeader, ParachainParams};
+use std::{path::PathBuf, sync::Arc};
 
 #[derive(Clone)]
 pub struct IntegriteeParachainHandler {

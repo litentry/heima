@@ -1,0 +1,28 @@
+[package]
+name = "itp-node-api"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+itp-api-client-extensions = { workspace = true, optional = true }
+itp-api-client-types = { workspace = true }
+itp-node-api-factory = { workspace = true, optional = true }
+itp-node-api-metadata = { workspace = true }
+itp-node-api-metadata-provider = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "itp-api-client-extensions",
+    "itp-api-client-types/std",
+    "itp-node-api-factory",
+    "itp-node-api-metadata/std",
+    "itp-node-api-metadata-provider/std",
+]
+sgx = [
+    "itp-node-api-metadata-provider/sgx",
+]
+mocks = [
+    "itp-node-api-metadata/mocks",
+]

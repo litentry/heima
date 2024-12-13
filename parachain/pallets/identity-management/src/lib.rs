@@ -43,7 +43,6 @@ pub mod weights;
 pub use crate::weights::WeightInfo;
 pub use pallet::*;
 
-use pallet_teebag::ShardIdentifier;
 use sp_core::H256;
 use sp_std::vec::Vec;
 
@@ -51,8 +50,8 @@ const MAX_REDIRECT_URL_LEN: u32 = 256;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::{ShardIdentifier, Vec, WeightInfo, H256, MAX_REDIRECT_URL_LEN};
-	use core_primitives::{ErrorDetail, IMPError, Identity};
+	use super::{Vec, WeightInfo, H256, MAX_REDIRECT_URL_LEN};
+	use core_primitives::{ErrorDetail, IMPError, Identity, ShardIdentifier};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 

@@ -19,7 +19,6 @@
 //! Inspired by:
 //! - Acala `transaction-pause`
 //! - Moonbeam `maintenance-mode`
-//! implementations.
 //!
 //! This pallet is used to bind to frame_system::BaseCallFilter in runtime,
 //! aiming to provide 3 modes:
@@ -50,7 +49,7 @@
 //!   1. block_extrinsics(pallet_A, fn_A)
 //! and then
 //!   2. unlock_extrinsics(pallet_A, None)
-//! will not work, and vice versa.
+//!   will not work, and vice versa.
 //!
 //! The reasons:
 //! - simplicity

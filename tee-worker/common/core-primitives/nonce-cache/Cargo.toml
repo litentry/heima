@@ -1,0 +1,20 @@
+[package]
+name = "itp-nonce-cache"
+version = "0.8.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+sgx_tstd = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+thiserror_sgx = { workspace = true, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "thiserror",
+]
+sgx = [
+    "sgx_tstd",
+    "thiserror_sgx",
+]

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "development")]
+pub mod clean_id_graphs;
 pub mod get_storage;
 pub mod id_graph;
 pub mod link_identity;

@@ -1,0 +1,40 @@
+services:
+  omni-executor:
+    image: litentry/omni-executor:latest
+    container_name: omni-executor
+    environment:
+      - RUST_LOG=debug
+    depends_on:
+      - ethereum-node
+      - litentry-node
+    command: ["executor-worker", "ws://litentry-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "0"]
+    privileged: true
+    restart: always
+    networks:
+      - litentry-test-network
+  ethereum-node:
+    image: ghcr.io/foundry-rs/foundry
+    container_name: ethereum-node
+    command:
+      - "anvil --host 0.0.0.0 --block-time 1"
+    ports:
+      - "8545:8545"
+  fund-eth-account:
+    image: ghcr.io/foundry-rs/foundry
+    container_name: fund-eth-account
+    command:
+      - "cast send --private-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6 0xf8d392519239c01a3a7a7a85d23abc2094d0ce53 --value 0.1ether -r http://ethereum-node:8545"
+    depends_on:
+      - ethereum-node
+  litentry-node:
+    image: litentry/litentry-parachain:latest
+    container_name: litentry-node
+    ports:
+      - "9944:9944"
+    command: ["--dev", "--rpc-external"]
+    networks:
+      - litentry-test-network
+
+networks:
+  litentry-test-network:
+    driver: bridge

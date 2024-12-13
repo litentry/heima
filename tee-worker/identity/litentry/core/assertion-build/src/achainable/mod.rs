@@ -35,8 +35,7 @@ use lc_data_providers::{
 	achainable_names::{AchainableNameAmountToken, GetAchainableName},
 	DataProviderConfig, Error as DataProviderError, LIT_TOKEN_ADDRESS,
 };
-use lc_stf_task_sender::AssertionBuildRequest;
-use litentry_primitives::AchainableParams;
+use litentry_primitives::{AchainableParams, AssertionBuildRequest};
 use std::string::ToString;
 
 pub mod amount;

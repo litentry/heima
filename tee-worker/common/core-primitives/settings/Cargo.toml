@@ -1,0 +1,15 @@
+[package]
+name = "itp-settings"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+edition = "2021"
+
+[dependencies]
+litentry-primitives = { workspace = true }
+
+[features]
+development = [
+    "litentry-primitives/development",
+]
+sidechain = []
+offchain-worker = []
