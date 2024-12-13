@@ -34,17 +34,22 @@ use crate::{
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
+		get_validator_accessor_from_integritee_solo_or_parachain,
 	},
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
+use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_attestation_handler::{AttestationHandler, RemoteAttestationType, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{
-	pallet_teebag::TeebagCallIndexes,
-	provider::{AccessNodeMetadata, Error as MetadataProviderError},
-	Error as MetadataError,
+use itp_node_api::{
+	api_client::ParentchainAdditionalParams,
+	metadata::{
+		pallet_teebag::TeebagCallIndexes,
+		provider::{AccessNodeMetadata, Error as MetadataProviderError},
+		Error as MetadataError,
+	},
 };
 use itp_node_api_metadata::NodeMetadata;
 use itp_settings::{
@@ -59,7 +64,7 @@ use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::*;
 use sp_core::{ed25519::Public as Ed25519Public, Pair};
-use sp_runtime::OpaqueExtrinsic;
+use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{prelude::v1::*, slice, vec::Vec};
 
 #[no_mangle]
@@ -419,7 +424,12 @@ pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
 
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
+	let params = validator_access
+		.execute_on_validator(|v| v.latest_finalized_header())
+		.ok()
+		.map(|h| ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash()));
+	let extrinsics = extrinsics_factory.create_extrinsics(&[call], params)?;
 
 	match extrinsics.get(0) {
 		Some(xt) => Ok(xt.clone()),

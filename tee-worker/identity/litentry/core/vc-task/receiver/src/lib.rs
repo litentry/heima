@@ -38,9 +38,12 @@ use ita_stf::{
 };
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_node_api::metadata::{
-	pallet_system::SystemConstants, pallet_vcmp::VCMPCallIndexes, provider::AccessNodeMetadata,
-	NodeMetadataTrait,
+use itp_node_api::{
+	api_client::ParentchainAdditionalParams,
+	metadata::{
+		pallet_system::SystemConstants, pallet_vcmp::VCMPCallIndexes, provider::AccessNodeMetadata,
+		NodeMetadataTrait,
+	},
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_sgx_crypto::{key_repository::AccessKey, ShieldingCryptoDecrypt, ShieldingCryptoEncrypt};
@@ -65,6 +68,7 @@ use litentry_primitives::{
 use log::*;
 use pallet_identity_management_tee::{identity_context::sort_id_graph, IdentityContext};
 use sp_core::{blake2_256, H160};
+use sp_runtime::generic::Era;
 use std::{
 	boxed::Box,
 	collections::{HashMap, HashSet},
@@ -615,9 +619,13 @@ where
 			.send((shard, c))
 			.map_err(|e| RequestVcErrorDetail::TrustedCallSendingFailed(e.to_string()))?;
 
+		let params = context.ocall_api.get_header().ok().map(|h: itp_types::Header| {
+			ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+		});
+
 		// this internally fetches nonce from a mutex and then updates it thereby ensuring ordering
 		let xt = extrinsic_factory
-			.create_extrinsics(&[call], None)
+			.create_extrinsics(&[call], params)
 			.map_err(|e| RequestVcErrorDetail::ExtrinsicConstructionFailed(e.to_string()))?;
 
 		context

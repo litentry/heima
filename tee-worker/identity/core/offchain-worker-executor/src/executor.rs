@@ -23,14 +23,17 @@ use itc_parentchain_light_client::{
 	NumberFor,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::api_client::ParentchainAdditionalParams;
 use itp_stf_executor::{traits::StateUpdateProposer, ExecutedOperation};
 use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperationOrHash};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{parentchain::ParentchainCall, OpaqueCall, ShardIdentifier, H256};
+use itp_types::{
+	parentchain::ParentchainCall, Header as ParentchainHeader, OpaqueCall, ShardIdentifier, H256,
+};
 use log::*;
-use sp_runtime::traits::Block;
+use sp_runtime::{generic::Era, traits::Block};
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
 
 /// Off-chain worker executor implementation.
@@ -82,7 +85,7 @@ impl<
 		TCS,
 		G,
 	> where
-	ParentchainBlock: Block<Hash = H256>,
+	ParentchainBlock: Block<Hash = H256, Header = ParentchainHeader>,
 	StfExecutor: StateUpdateProposer<TCS, G>,
 	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash, TCS, G>,
 	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,
@@ -175,7 +178,7 @@ impl<
 		Ok(())
 	}
 
-	fn get_latest_parentchain_header(&self) -> Result<ParentchainBlock::Header> {
+	fn get_latest_parentchain_header(&self) -> Result<ParentchainHeader> {
 		let header = self.validator_accessor.execute_on_validator(|v| {
 			let latest_parentchain_header = v.latest_finalized_header()?;
 			Ok(latest_parentchain_header)
@@ -218,8 +221,11 @@ impl<
 			warn!("sending extrinsics to target B unimplemented")
 		};
 
+		let params = self.get_latest_parentchain_header().ok().map(|h| {
+			ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+		});
 		let extrinsics =
-			self.extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), None)?;
+			self.extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), params)?;
 		self.validator_accessor
 			.execute_on_validator(|v| v.send_extrinsics(extrinsics))?;
 		Ok(())
