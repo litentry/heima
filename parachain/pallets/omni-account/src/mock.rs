@@ -176,33 +176,49 @@ impl pallet_teebag::Config for Test {
 	MaxEncodedLen,
 	scale_info::TypeInfo,
 )]
-pub enum Permission {
+pub enum OmniAccountPermission {
 	All,
-	Balances,
-	AddAccounts,
-	RemoveAccounts,
+	AccountManagement,
+	RequestNativeIntent,
 	RequestEthereumIntent,
+	RequestSolanaIntent,
 }
 
-impl Default for Permission {
+impl Default for OmniAccountPermission {
 	fn default() -> Self {
 		Self::All
 	}
 }
 
-impl InstanceFilter<RuntimeCall> for Permission {
+impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 	fn filter(&self, call: &RuntimeCall) -> bool {
 		match self {
 			Self::All => true,
-			Self::Balances => matches!(call, RuntimeCall::Balances { .. }),
-			Self::RemoveAccounts => matches!(
-				call,
-				RuntimeCall::OmniAccount(pallet_omni_account::Call::remove_accounts { .. })
-			),
-			Self::AddAccounts => matches!(
-				call,
-				RuntimeCall::OmniAccount(pallet_omni_account::Call::add_account { .. })
-			),
+			Self::AccountManagement => {
+				matches!(
+					call,
+					RuntimeCall::OmniAccount(pallet_omni_account::Call::add_account { .. })
+						| RuntimeCall::OmniAccount(
+							pallet_omni_account::Call::remove_accounts { .. }
+						) | RuntimeCall::OmniAccount(
+						pallet_omni_account::Call::publicize_account { .. }
+					)
+				)
+			},
+			Self::RequestNativeIntent => {
+				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
+					intent,
+				}) = call
+				{
+					matches!(
+						intent,
+						pallet_omni_account::Intent::SystemRemark(_)
+							| pallet_omni_account::Intent::TransferNative(_)
+					)
+				} else {
+					false
+				}
+			},
 			Self::RequestEthereumIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
 					intent,
@@ -213,6 +229,16 @@ impl InstanceFilter<RuntimeCall> for Permission {
 						pallet_omni_account::Intent::TransferEthereum(_)
 							| pallet_omni_account::Intent::CallEthereum(_)
 					)
+				} else {
+					false
+				}
+			},
+			Self::RequestSolanaIntent => {
+				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
+					intent,
+				}) = call
+				{
+					matches!(intent, pallet_omni_account::Intent::TransferSolana(_))
 				} else {
 					false
 				}
@@ -229,8 +255,8 @@ impl pallet_omni_account::Config for Test {
 	type MaxAccountStoreLength = ConstU32<3>;
 	type OmniAccountOrigin = EnsureOmniAccount<Self::AccountId>;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
-	type MaxPermissions = ConstU32<3>;
-	type Permission = Permission;
+	type MaxPermissions = ConstU32<4>;
+	type Permission = OmniAccountPermission;
 }
 
 pub fn get_tee_signer() -> SystemAccountId {
