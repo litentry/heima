@@ -11,6 +11,7 @@ members = [
     'pallets/collab-ai/common',
     'pallets/collab-ai/curator',
     'pallets/collab-ai/guardian',
+    'pallets/collab-ai/halving-mint',
     'pallets/collab-ai/pool-proposal',
     'pallets/collab-ai/investing-pool',
     'pallets/extrinsic-filter',
@@ -293,6 +294,7 @@ pallet-evm-precompile-pool-proposal = { path = "precompiles/collab-ai/pool-propo
 pallet-evm-precompile-investing-pool = { path = "precompiles/collab-ai/investing-pool", default-features = false }
 
 pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = false }
+pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 
 # CollabAI local
 pallet-aiusd-convertor = { path = "pallets/collab-ai/aiusd-convertor", default-features = false }
