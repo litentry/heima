@@ -394,8 +394,13 @@ pub mod pallet {
 					.try_push(member_account.clone())
 					.map_err(|_| Error::<T>::AccountStoreLenLimitReached)?;
 			}
+			let mut permissions = BoundedVec::<T::Permission, T::MaxPermissions>::new();
+			permissions
+				.try_push(T::Permission::default())
+				.map_err(|_| Error::<T>::PermissionsLenLimitReached)?;
 
 			MemberAccountHash::<T>::insert(member_account.hash(), who_account.clone());
+			MemberAccountPermissions::<T>::insert(member_account.hash(), permissions);
 			AccountStore::<T>::insert(who_account.clone(), member_accounts.clone());
 			Self::deposit_event(Event::AccountStoreUpdated {
 				who: who_account,
