@@ -469,11 +469,29 @@ pub mod pallet {
 			call: &<T as Config>::RuntimeCall,
 			member_account_hash: H256,
 		) -> Result<(), Error<T>> {
-			let permissions = MemberAccountPermissions::<T>::get(member_account_hash);
+			let member_permissions = MemberAccountPermissions::<T>::get(member_account_hash);
+
 			ensure!(
-				permissions.iter().any(|permission| permission.filter(call)),
+				member_permissions.iter().any(|permission| permission.filter(call)),
 				Error::<T>::NoPermission
 			);
+
+			if let Some(Call::add_account { permissions: ref new_account_permissions, .. }) =
+				call.is_sub_type()
+			{
+				// If member has default permission, they can add accounts with any permission
+				if member_permissions.contains(&T::Permission::default()) {
+					return Ok(());
+				}
+
+				if let Some(new_account_permissions) = new_account_permissions {
+					// an account can only add another account with the same or less permissions
+					ensure!(
+						new_account_permissions.iter().all(|p| member_permissions.contains(p)),
+						Error::<T>::NoPermission
+					)
+				}
+			}
 
 			Ok(())
 		}
