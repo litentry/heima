@@ -34,12 +34,12 @@ impl<I> StandaloneBlockImport<I> {
 impl<Block, I> BlockImport<Block> for StandaloneBlockImport<I>
 where
 	Block: BlockT,
-	I: BlockImport<Block> + Send,
+	I: BlockImport<Block> + Send + std::marker::Sync,
 {
 	type Error = I::Error;
 
 	async fn check_block(
-		&mut self,
+		&self,
 		block: sc_consensus::BlockCheckParams<Block>,
 	) -> Result<sc_consensus::ImportResult, Self::Error> {
 		self.inner.check_block(block).await

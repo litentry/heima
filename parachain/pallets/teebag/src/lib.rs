@@ -22,7 +22,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
 	ensure,
 	pallet_prelude::*,
-	traits::Get,
+	traits::{Get, Time},
 	weights::Weight,
 };
 use frame_system::pallet_prelude::*;
