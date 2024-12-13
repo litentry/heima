@@ -21,7 +21,7 @@ use crate::{
 	mock::*, test_util::*, AttestationType, AuthorizedEnclave, DcapProvider, Enclave,
 	EnclaveRegistry, Error, Event as TeebagEvent, SgxBuildMode, WorkerType, H256,
 };
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::Time};
 use hex_literal::hex;
 use sp_keyring::AccountKeyring;
 use sp_runtime::AccountId32;

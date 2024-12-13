@@ -75,12 +75,12 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		// Litentry
 		"litentry-dev" => Box::new(chain_specs::litentry::get_chain_spec_dev()),
 		"litentry-staging" => Box::new(chain_specs::litentry::get_chain_spec_staging()),
-		"litentry" => Box::new(chain_specs::litentry::ChainSpec::from_json_bytes(
+		"litentry" => Box::new(chain_specs::ChainSpec::from_json_bytes(
 			&include_bytes!("../res/chain_specs/litentry.json")[..],
 		)?),
 		// Paseo
 		"paseo-dev" => Box::new(chain_specs::paseo::get_chain_spec_dev(false)),
-		"paseo" => Box::new(chain_specs::paseo::ChainSpec::from_json_bytes(
+		"paseo" => Box::new(chain_specs::ChainSpec::from_json_bytes(
 			&include_bytes!("../res/chain_specs/paseo.json")[..],
 		)?),
 		// Generate res/chain_specs/litentry.json
@@ -90,7 +90,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		path => {
 			let chain_spec = chain_specs::ChainSpec::from_json_file(path.into())?;
 			if chain_spec.is_paseo() {
-				Box::new(chain_specs::paseo::ChainSpec::from_json_file(path.into())?)
+				Box::new(chain_specs::ChainSpec::from_json_file(path.into())?)
 			} else {
 				// Fallback: use Litentry chain spec
 				Box::new(chain_spec)

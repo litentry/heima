@@ -7,7 +7,7 @@ homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
 name = 'litentry-collator'
 repository = 'https://github.com/litentry/litentry-parachain'
-version = '0.9.21'
+version = '0.9.22'
 
 [[bin]]
 name = 'litentry-collator'
@@ -21,6 +21,7 @@ clap = { workspace = true }
 futures = { workspace = true }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
+parity-scale-codec = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

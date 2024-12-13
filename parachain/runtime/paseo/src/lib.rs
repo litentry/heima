@@ -232,7 +232,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("paseo-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9210,
+	spec_version: 9220,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -711,13 +711,8 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureRootOrTwoThirdsCouncilWrapper {
 impl pallet_treasury::Config for Runtime {
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
-	type ApproveOrigin = EnsureRootOrHalfCouncil;
 	type RejectOrigin = EnsureRootOrHalfCouncil;
 	type RuntimeEvent = RuntimeEvent;
-	type OnSlash = Treasury;
-	type ProposalBond = ProposalBond;
-	type ProposalBondMinimum = ProposalBondMinimum;
-	type ProposalBondMaximum = ProposalBondMaximum;
 	type SpendOrigin = EnsureRootOrTwoThirdsCouncilWrapper; // TODO: is it related to OpenGov only?
 	type SpendPeriod = SpendPeriod;
 	type PayoutPeriod = PayoutPeriod;
@@ -773,6 +768,7 @@ impl pallet_bounties::Config for Runtime {
 	type MaximumReasonLength = MaximumReasonLength;
 	type WeightInfo = ();
 	type ChildBountyManager = ();
+	type OnSlash = Treasury;
 }
 
 impl pallet_tips::Config for Runtime {
@@ -785,6 +781,7 @@ impl pallet_tips::Config for Runtime {
 	type TipReportDepositBase = TipReportDepositBase;
 	type MaxTipAmount = ConstU128<{ 500 * UNIT }>;
 	type WeightInfo = ();
+	type OnSlash = Treasury;
 }
 
 parameter_types! {
@@ -1931,6 +1928,10 @@ impl_runtime_apis! {
 				pallet_ethereum::CurrentBlock::<Runtime>::get(),
 				pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
 			)
+		}
+
+		fn initialize_pending_block(header: &<Block as BlockT>::Header) {
+			Executive::initialize_block(header);
 		}
 	}
 
