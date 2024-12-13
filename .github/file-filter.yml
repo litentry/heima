@@ -31,21 +31,6 @@ identity_src: &identity_src
   - 'tee-worker/identity/build.Dockerfile'
   - 'tee-worker/identity/enclave-runtime/**'
 
-bitacross_src: &bitacross_src
-  - 'common/**'
-  - 'tee-worker/Cargo.toml'
-  - 'tee-worker/Cargo.lock'
-  - 'tee-worker/bitacross/**/*.rs'
-  - 'tee-worker/bitacross/**/rust-toolchain.toml'
-  - 'tee-worker/bitacross/build.Dockerfile'
-  - 'tee-worker/bitacross/enclave-runtime/**'
-
-bitacross_test: &bitacross_test
-  - 'tee-worker/bitacross/ts-tests/**'
-  - 'tee-worker/bitacross/cli/*.sh'
-  - 'parachain/docker/**'
-  - 'tee-worker/bitacross/docker/*.yml'
-
 omni_executor_src: &omni_executor_src
   - 'tee-worker/omni-executor/Cargo.toml'
   - 'tee-worker/omni-executor/Cargo.lock'
