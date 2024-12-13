@@ -188,6 +188,8 @@ pub mod pallet {
 		IntentRequested { who: T::AccountId, intent: Intent },
 		/// Intent is executed
 		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
+		/// Member permission set
+		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
 	}
 
 	#[pallet::error]
@@ -420,6 +422,21 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
 			Self::deposit_event(Event::IntentExecuted { who, intent, result });
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn set_permissions(
+			origin: OriginFor<T>,
+			member_account_hash: H256,
+			permissions: Vec<T::Permission>,
+		) -> DispatchResult {
+			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
+			let member_permissions: BoundedVec<T::Permission, T::MaxPermissions> =
+				{ permissions.try_into().map_err(|_| Error::<T>::PermissionsLenLimitReached)? };
+			MemberAccountPermissions::<T>::insert(member_account_hash, member_permissions);
+			Self::deposit_event(Event::AccountPermissionsSet { who, member_account_hash });
 			Ok(())
 		}
 	}
