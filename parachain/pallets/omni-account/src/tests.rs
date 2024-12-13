@@ -51,6 +51,15 @@ fn make_balance_transfer_call(dest: AccountId, value: Balance) -> Box<RuntimeCal
 	Box::new(call)
 }
 
+fn set_permissions_call(
+	member_account_hash: H256,
+	permissions: Vec<OmniAccountPermission>,
+) -> Box<RuntimeCall> {
+	let call =
+		RuntimeCall::OmniAccount(crate::Call::set_permissions { member_account_hash, permissions });
+	Box::new(call)
+}
+
 #[test]
 fn create_account_store_works() {
 	new_test_ext().execute_with(|| {
@@ -780,6 +789,100 @@ fn ensure_permission_works() {
 			RuntimeOrigin::signed(tee_signer),
 			alice().identity.hash(),
 			call
+		));
+	});
+}
+
+#[test]
+fn set_permissions_works() {
+	new_test_ext().execute_with(|| {
+		// Create account store and add accounts
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		let bob = private_member_account(bob());
+		let bob_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+			OmniAccountPermission::AccountManagement,
+		];
+
+		let call = add_account_call::<Test>(bob.clone(), Some(bob_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+		));
+
+		let charlie = private_member_account(charlie());
+		let charlie_permissions = vec![OmniAccountPermission::RequestNativeIntent];
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+		));
+
+		// Assert Set permissions
+
+		// The caller cannot upgrade his permissions
+		let new_permissions = vec![OmniAccountPermission::All];
+		let call = set_permissions_call(bob.hash(), new_permissions.clone());
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// The caller cannot set a permission that he does not have
+		let new_permissions = vec![OmniAccountPermission::RequestNativeIntent];
+		let call = set_permissions_call(alice().identity.hash(), new_permissions.clone());
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// The caller can set permissions he has
+		let new_permissions = vec![
+			OmniAccountPermission::AccountManagement,
+			OmniAccountPermission::RequestSolanaIntent,
+		];
+		let call = set_permissions_call(charlie.hash(), new_permissions.clone());
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			bob.hash(),
+			call,
+		));
+
+		// The caller most have permission to set_permissions
+		let call = set_permissions_call(bob.hash(), charlie_permissions);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				charlie.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// The caller can set any permissions as if she has default permissions (All)
+		let new_permissions = vec![OmniAccountPermission::All];
+		let call = set_permissions_call(charlie.hash(), new_permissions.clone());
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
 		));
 	});
 }
