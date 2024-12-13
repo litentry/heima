@@ -677,3 +677,92 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
 }
+
+#[test]
+fn ensure_permission_works() {
+	new_test_ext().execute_with(|| {
+		// Create account store
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		// Add account member without permissions to remove accounts
+		let bob = private_member_account(bob());
+		let bob_permissions = vec![Permission::RequestEthereumIntent, Permission::AddAccounts];
+
+		let call = add_account_call::<Test>(bob.clone(), Some(bob_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+		));
+
+		// An account with no permissions cannot remove accounts
+		let call = remove_accounts_call(vec![alice().identity.hash()]);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// An Account cannot be added with more permissions than the account that added it
+		let charlie = private_member_account(charlie());
+		let charlie_permissions = vec![Permission::All];
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
+
+		let mut charlie_permissions = vec![Permission::Balances];
+		charlie_permissions.extend_from_slice(&bob_permissions);
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
+
+		let charlie_permissions = vec![Permission::RequestEthereumIntent, Permission::AddAccounts];
+		let call = add_account_call::<Test>(charlie, Some(charlie_permissions));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			bob.hash(),
+			call,
+		));
+
+		// Permissions should also work for dispatch_as_signed
+		assert_ok!(Balances::transfer_keep_alive(
+			RuntimeOrigin::signed(alice().native_account),
+			alice().omni_account,
+			6
+		));
+		let call = make_balance_transfer_call(dave().native_account, 5);
+		assert_noop!(
+			OmniAccount::dispatch_as_signed(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call.clone()
+			),
+			Error::<Test>::NoPermission
+		);
+		assert_ok!(OmniAccount::dispatch_as_signed(
+			RuntimeOrigin::signed(tee_signer),
+			alice().identity.hash(),
+			call
+		));
+	});
+}
