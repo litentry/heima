@@ -6,7 +6,7 @@ use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_utils::{hex::ToHexPrefixed, stringify::account_id_to_string};
-use litentry_primitives::{Address32, Identity, MemberAccount};
+use litentry_primitives::{Address32, MemberAccount};
 use sp_core::H160;
 use substrate_api_client::ac_node_api::StaticEvent;
 
@@ -305,67 +305,4 @@ impl core::fmt::Display for AssertionCreated {
 impl StaticEvent for AssertionCreated {
 	const PALLET: &'static str = "EvmAssertions";
 	const EVENT: &'static str = "AssertionCreated";
-}
-
-//  Bitacross pallet events
-
-#[derive(Encode, Decode, Debug)]
-pub struct RelayerAdded {
-	pub who: Identity,
-}
-
-impl core::fmt::Display for RelayerAdded {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-		if let Some(account_id) = self.who.to_native_account() {
-			let message = format!("RelayerAdded :: account_id: {:?}", account_id);
-			write!(f, "{}", message)
-		} else {
-			write!(f, "RelayerAdded :: account_id: None")
-		}
-	}
-}
-
-impl StaticEvent for RelayerAdded {
-	const PALLET: &'static str = "Bitacross";
-	const EVENT: &'static str = "RelayerAdded";
-}
-
-#[derive(Encode, Decode, Debug)]
-pub struct RelayerRemoved {
-	pub who: Identity,
-}
-
-impl core::fmt::Display for RelayerRemoved {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-		if let Some(account_id) = self.who.to_native_account() {
-			let message = format!("RelayerRemoved :: account_id: {:?}", account_id);
-			write!(f, "{}", message)
-		} else {
-			write!(f, "RelayerRemoved :: account_id: None")
-		}
-	}
-}
-
-impl StaticEvent for RelayerRemoved {
-	const PALLET: &'static str = "Bitacross";
-	const EVENT: &'static str = "RelayerRemoved";
-}
-
-#[derive(Encode, Decode, Debug)]
-pub struct BtcWalletGenerated {
-	pub pub_key: [u8; 33],
-	pub account_id: AccountId,
-}
-
-impl core::fmt::Display for BtcWalletGenerated {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-		let account_id = account_id_to_string::<AccountId>(&self.account_id);
-		let message = format!("BtcWalletGenerated :: account_id: {:?}", account_id);
-		write!(f, "{}", message)
-	}
-}
-
-impl StaticEvent for BtcWalletGenerated {
-	const PALLET: &'static str = "Bitacross";
-	const EVENT: &'static str = "BtcWalletGenerated";
 }

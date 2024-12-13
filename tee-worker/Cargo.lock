@@ -367,480 +367,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
-name = "bc-enclave-registry"
-version = "0.1.0"
-dependencies = [
- "base64 0.13.1",
- "itp-settings",
- "itp-sgx-io",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sp-std",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-ita-parentchain-interface"
-version = "0.1.0"
-dependencies = [
- "bc-enclave-registry",
- "bc-ita-sgx-runtime",
- "bc-ita-stf",
- "bc-itc-parentchain-indirect-calls-executor",
- "bc-itp-stf-executor",
- "bc-itp-top-pool-author",
- "bc-relayer-registry",
- "bc-signer-registry",
- "env_logger 0.10.2",
- "itc-parentchain-test",
- "itp-api-client-types",
- "itp-node-api",
- "itp-sgx-crypto",
- "itp-stf-primitives",
- "itp-test",
- "itp-types",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "substrate-api-client",
-]
-
-[[package]]
-name = "bc-ita-sgx-runtime"
-version = "0.1.0"
-dependencies = [
- "frame-executive",
- "frame-support",
- "frame-system",
- "itp-sgx-runtime-primitives",
- "pallet-balances",
- "pallet-parentchain",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "sp-version",
-]
-
-[[package]]
-name = "bc-ita-stf"
-version = "0.1.0"
-dependencies = [
- "bc-ita-sgx-runtime",
- "frame-support",
- "frame-system",
- "hex",
- "hex-literal",
- "itp-hashing",
- "itp-node-api",
- "itp-sgx-externalities",
- "itp-stf-interface",
- "itp-stf-primitives",
- "itp-storage",
- "itp-types",
- "itp-utils",
- "litentry-macros",
- "litentry-primitives",
- "log 0.4.20",
- "pallet-balances",
- "pallet-parentchain",
- "pallet-sudo",
- "parity-scale-codec",
- "sgx_tstd",
- "sp-core",
- "sp-io 7.0.0",
- "sp-keyring",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "bc-itc-direct-rpc-client"
-version = "0.1.0"
-dependencies = [
- "itp-rpc",
- "itp-types",
- "itp-utils",
- "log 0.4.20",
- "rustls 0.19.0 (git+https://github.com/mesalock-linux/rustls?tag=sgx_1.1.3)",
- "rustls 0.19.1",
- "serde_json 1.0.133",
- "sgx_tstd",
- "tungstenite 0.14.0",
- "tungstenite 0.15.0",
- "url 2.5.0 (git+https://github.com/domenukk/rust-url?rev=316c868)",
- "webpki 0.21.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "webpki 0.21.4 (git+https://github.com/mesalock-linux/webpki?branch=mesalock_sgx)",
-]
-
-[[package]]
-name = "bc-itc-direct-rpc-server"
-version = "0.1.0"
-dependencies = [
- "itc-tls-websocket-server",
- "itp-rpc",
- "itp-types",
- "itp-utils",
- "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
- "log 0.4.20",
- "parity-scale-codec",
- "serde_json 1.0.133",
- "sgx_tstd",
- "sp-runtime",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-itc-offchain-worker-executor"
-version = "0.1.0"
-dependencies = [
- "bc-itp-stf-executor",
- "bc-itp-top-pool-author",
- "itc-parentchain-light-client",
- "itp-extrinsics-factory",
- "itp-sgx-externalities",
- "itp-stf-interface",
- "itp-stf-primitives",
- "itp-stf-state-handler",
- "itp-test",
- "itp-types",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-itc-parentchain"
-version = "0.1.0"
-dependencies = [
- "bc-itc-parentchain-block-import-dispatcher",
- "bc-itc-parentchain-block-importer",
- "bc-itc-parentchain-indirect-calls-executor",
- "itc-parentchain-light-client",
- "itp-types",
- "parity-scale-codec",
- "sp-runtime",
-]
-
-[[package]]
-name = "bc-itc-parentchain-block-import-dispatcher"
-version = "0.1.0"
-dependencies = [
- "bc-itc-parentchain-block-importer",
- "itp-import-queue",
- "log 0.4.20",
- "sgx_tstd",
- "sgx_types",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-itc-parentchain-block-importer"
-version = "0.1.0"
-dependencies = [
- "bc-ita-stf",
- "bc-itc-parentchain-indirect-calls-executor",
- "bc-itp-stf-executor",
- "itc-parentchain-light-client",
- "itp-enclave-metrics",
- "itp-extrinsics-factory",
- "itp-ocall-api",
- "itp-stf-interface",
- "itp-types",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
- "sp-runtime",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-itc-parentchain-indirect-calls-executor"
-version = "0.1.0"
-dependencies = [
- "bc-enclave-registry",
- "bc-itp-stf-executor",
- "bc-itp-top-pool-author",
- "bc-relayer-registry",
- "bc-signer-registry",
- "binary-merkle-tree",
- "bs58",
- "env_logger 0.10.2",
- "futures 0.3.28",
- "futures 0.3.8",
- "itc-parentchain-test",
- "itp-api-client-types",
- "itp-node-api",
- "itp-sgx-crypto",
- "itp-sgx-runtime-primitives",
- "itp-stf-primitives",
- "itp-test",
- "itp-types",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
- "sp-runtime",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-itp-enclave-api"
-version = "0.1.0"
-dependencies = [
- "bc-itp-enclave-api-ffi",
- "frame-support",
- "hex",
- "itp-settings",
- "itp-sgx-crypto",
- "itp-stf-interface",
- "itp-storage",
- "itp-types",
- "log 0.4.20",
- "parity-scale-codec",
- "serde_json 1.0.133",
- "sgx_crypto_helper",
- "sgx_types",
- "sgx_urts",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.44",
-]
-
-[[package]]
-name = "bc-itp-enclave-api-ffi"
-version = "0.1.0"
-dependencies = [
- "sgx_types",
-]
-
-[[package]]
-name = "bc-itp-stf-executor"
-version = "0.1.0"
-dependencies = [
- "bc-itp-top-pool",
- "bc-itp-top-pool-author",
- "hex",
- "itc-parentchain-test",
- "itp-enclave-metrics",
- "itp-node-api",
- "itp-ocall-api",
- "itp-sgx-crypto",
- "itp-sgx-externalities",
- "itp-stf-interface",
- "itp-stf-primitives",
- "itp-stf-state-handler",
- "itp-stf-state-observer",
- "itp-test",
- "itp-time-utils",
- "itp-types",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sgx_types",
- "sp-core",
- "sp-runtime",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-itp-top-pool"
-version = "0.1.0"
-dependencies = [
- "bc-itc-direct-rpc-server",
- "byteorder 1.4.3",
- "derive_more",
- "itp-stf-primitives",
- "itp-test",
- "itp-types",
- "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
- "linked-hash-map 0.5.2",
- "linked-hash-map 0.5.6",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "parity-util-mem",
- "serde 1.0.210",
- "sgx_tstd",
- "sp-application-crypto",
- "sp-core",
- "sp-runtime",
-]
-
-[[package]]
-name = "bc-itp-top-pool-author"
-version = "0.1.0"
-dependencies = [
- "bc-itp-top-pool",
- "derive_more",
- "futures 0.3.28",
- "itp-enclave-metrics",
- "itp-ocall-api",
- "itp-sgx-crypto",
- "itp-stf-primitives",
- "itp-stf-state-handler",
- "itp-test",
- "itp-types",
- "itp-utils",
- "jsonrpc-core 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "jsonrpc-core 18.0.0 (git+https://github.com/scs/jsonrpc?branch=no_std_v18)",
- "lazy_static",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_crypto_helper",
- "sgx_tstd",
- "sp-core",
- "sp-keyring",
- "sp-runtime",
-]
-
-[[package]]
-name = "bc-musig2-ceremony"
-version = "0.1.0"
-dependencies = [
- "itp-sgx-crypto",
- "k256",
- "litentry-primitives",
- "log 0.4.20",
- "musig2 0.0.8 (git+https://github.com/kziemianek/musig2?branch=master)",
- "musig2 0.0.8 (git+https://github.com/kailai-wang/musig2?branch=use-sha2-0.8)",
- "parity-scale-codec",
- "rand 0.8.5",
- "sgx_rand",
- "sgx_tstd",
- "signature 2.1.0",
-]
-
-[[package]]
-name = "bc-musig2-event"
-version = "0.1.0"
-dependencies = [
- "bc-enclave-registry",
- "bc-itc-direct-rpc-client",
- "bc-itc-direct-rpc-server",
- "bc-musig2-ceremony",
- "itp-ocall-api",
- "itp-rpc",
- "itp-sgx-crypto",
- "itp-types",
- "itp-utils",
- "lc-direct-call",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "rand 0.8.5",
- "sgx_rand",
- "sgx_tstd",
- "sp-core",
- "threadpool 1.8.0",
- "threadpool 1.8.1",
-]
-
-[[package]]
-name = "bc-relayer-registry"
-version = "0.1.0"
-dependencies = [
- "base64 0.13.1",
- "itp-settings",
- "itp-sgx-io",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sp-std",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-signer-registry"
-version = "0.1.0"
-dependencies = [
- "base64 0.13.1",
- "itp-settings",
- "itp-sgx-io",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_tstd",
- "sp-std",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
-]
-
-[[package]]
-name = "bc-task-processor"
-version = "0.1.0"
-dependencies = [
- "bc-enclave-registry",
- "bc-ita-stf",
- "bc-itc-direct-rpc-client",
- "bc-itc-direct-rpc-server",
- "bc-itp-stf-executor",
- "bc-musig2-ceremony",
- "bc-musig2-event",
- "bc-relayer-registry",
- "bc-signer-registry",
- "bc-task-sender",
- "frame-support",
- "futures 0.3.8",
- "itp-enclave-metrics",
- "itp-ocall-api",
- "itp-sgx-crypto",
- "itp-sgx-externalities",
- "itp-stf-state-handler",
- "lc-direct-call",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "sgx_crypto_helper",
- "sgx_tstd",
- "sp-core",
- "thiserror 1.0.44",
- "thiserror 1.0.9",
- "threadpool 1.8.0",
- "threadpool 1.8.1",
-]
-
-[[package]]
-name = "bc-task-sender"
-version = "0.1.0"
-dependencies = [
- "futures 0.3.28",
- "futures 0.3.8",
- "lazy_static",
- "litentry-primitives",
- "parity-scale-codec",
- "sgx_tstd",
-]
-
-[[package]]
 name = "bech32"
 version = "0.10.0-beta"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -898,108 +424,6 @@ name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
-
-[[package]]
-name = "bitacross-cli"
-version = "0.0.1"
-dependencies = [
- "base58",
- "bc-ita-parentchain-interface",
- "bc-ita-stf",
- "bc-musig2-ceremony",
- "chrono 0.4.26",
- "clap 4.1.0",
- "env_logger 0.10.2",
- "hdrhistogram",
- "hex",
- "itc-rpc-client",
- "itp-node-api",
- "itp-rpc",
- "itp-sgx-crypto",
- "itp-stf-primitives",
- "itp-types",
- "itp-utils",
- "lc-direct-call",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "rand 0.8.5",
- "rayon",
- "regex 1.9.5",
- "reqwest",
- "serde 1.0.210",
- "serde_json 1.0.133",
- "sgx_crypto_helper",
- "sp-application-crypto",
- "sp-core",
- "sp-keyring",
- "sp-keystore",
- "sp-runtime",
- "substrate-api-client",
- "substrate-client-keystore",
- "thiserror 1.0.44",
- "urlencoding",
-]
-
-[[package]]
-name = "bitacross-worker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "base58",
- "bc-ita-parentchain-interface",
- "bc-itc-parentchain",
- "bc-itp-enclave-api",
- "clap 2.34.0",
- "config",
- "dirs",
- "env_logger 0.10.2",
- "frame-support",
- "futures 0.3.28",
- "hex",
- "humantime",
- "ipfs-api",
- "itc-parentchain-test",
- "itc-rest-client",
- "itc-rpc-client",
- "itp-api-client-types",
- "itp-enclave-metrics",
- "itp-node-api",
- "itp-settings",
- "itp-sgx-crypto",
- "itp-stf-interface",
- "itp-storage",
- "itp-time-utils",
- "itp-types",
- "itp-utils",
- "jsonrpsee",
- "lazy_static",
- "litentry-primitives",
- "log 0.4.20",
- "mockall",
- "parity-scale-codec",
- "parking_lot 0.12.1",
- "parse_duration",
- "prometheus",
- "rayon",
- "regex 1.9.5",
- "scale-info",
- "serde 1.0.210",
- "serde_derive 1.0.210",
- "serde_json 1.0.133",
- "sgx_crypto_helper",
- "sgx_types",
- "sp-consensus-grandpa",
- "sp-core",
- "sp-keyring",
- "sp-runtime",
- "substrate-api-client",
- "thiserror 1.0.44",
- "tokio",
- "url 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "warp",
-]
 
 [[package]]
 name = "bitcoin"
@@ -1584,7 +1008,7 @@ checksum = "740fe28e594155f10cfc383984cbefd529d7396050557148f79cb0f621204124"
 dependencies = [
  "generic-array 0.14.7",
  "rand_core 0.6.4",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
  "zeroize",
 ]
 
@@ -1605,7 +1029,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b584a330336237c1eecd3e94266efb216c56ed91225d634cb2991c5f3fd1aeab"
 dependencies = [
  "generic-array 0.14.7",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -1615,7 +1039,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25fab6889090c8133f3deb8f73ba3c65a7f456f66436fc012a1b1e272b1e103e"
 dependencies = [
  "generic-array 0.14.7",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -1636,7 +1060,7 @@ dependencies = [
  "byteorder 1.4.3",
  "digest 0.8.1",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
  "zeroize",
 ]
 
@@ -1649,7 +1073,7 @@ dependencies = [
  "byteorder 1.4.3",
  "digest 0.9.0",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
  "zeroize",
 ]
 
@@ -1784,7 +1208,7 @@ dependencies = [
  "block-buffer 0.10.4",
  "const-oid",
  "crypto-common",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -1922,7 +1346,7 @@ dependencies = [
  "pkcs8",
  "rand_core 0.6.4",
  "sec1",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
  "zeroize",
 ]
 
@@ -2249,7 +1673,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
 dependencies = [
  "rand_core 0.6.4",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -2708,7 +2132,7 @@ name = "futures-task"
 version = "0.3.8"
 source = "git+https://github.com/mesalock-linux/futures-rs-sgx#d54882f24ddf7d61327a067b2f608d6940a36444"
 dependencies = [
- "once_cell 1.4.0 (git+https://github.com/mesalock-linux/once_cell-sgx)",
+ "once_cell 1.4.0",
  "sgx_tstd",
 ]
 
@@ -2858,7 +2282,7 @@ checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
 dependencies = [
  "ff",
  "rand_core 0.6.4",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -5082,27 +4506,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lc-direct-call"
-version = "0.1.0"
-dependencies = [
- "bc-enclave-registry",
- "bc-musig2-ceremony",
- "bc-relayer-registry",
- "bc-signer-registry",
- "hex",
- "itp-sgx-crypto",
- "itp-stf-primitives",
- "k256",
- "litentry-primitives",
- "log 0.4.20",
- "parity-scale-codec",
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "sgx_tstd",
- "sp-core",
- "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
-]
-
-[[package]]
 name = "lc-dynamic-assertion"
 version = "0.1.0"
 dependencies = [
@@ -5466,7 +4869,7 @@ checksum = "5be9b9bb642d8522a44d533eab56c16c738301965504753b03ad1de3425d5451"
 dependencies = [
  "crunchy",
  "digest 0.9.0",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -6049,38 +5452,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "musig2"
-version = "0.0.8"
-source = "git+https://github.com/kziemianek/musig2?branch=master#cd5e61ac9ecdf842da58605ac7b07b6e359f08c5"
-dependencies = [
- "base16ct",
- "hmac 0.12.1",
- "k256",
- "once_cell 1.19.0",
- "secp 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "secp256k1 0.28.0",
- "sha2 0.10.8",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "musig2"
-version = "0.0.8"
-source = "git+https://github.com/kailai-wang/musig2?branch=use-sha2-0.8#93857e52abbe8f9898c9ec743eecb1380132abcb"
-dependencies = [
- "base16ct",
- "hmac 0.12.1",
- "k256",
- "once_cell 1.4.0 (git+https://github.com/mesalock-linux/once_cell-sgx?branch=master)",
- "secp 0.2.3 (git+https://github.com/kziemianek/secp.git?branch=sgx)",
- "secp256k1 0.28.0",
- "sgx_tstd",
- "sha2 0.10.8",
- "sha2_v08_wrapper",
- "subtle 2.5.0 (git+https://github.com/kziemianek/subtle-sgx.git?branch=2.5.0-update)",
-]
-
-[[package]]
 name = "nalgebra"
 version = "0.32.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6434,14 +5805,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5e609fc8b72da3dabd56427be9489d8a9f4bd2e4dc41660dd033c3c8e90b93c"
 dependencies = [
  "cipher",
-]
-
-[[package]]
-name = "once_cell"
-version = "1.4.0"
-source = "git+https://github.com/mesalock-linux/once_cell-sgx?branch=master#cefcaa03fed4d85276b3235d875f1b45d399cc3c"
-dependencies = [
- "sgx_tstd",
 ]
 
 [[package]]
@@ -6842,7 +6205,7 @@ version = "0.8.2"
 source = "git+https://github.com/mesalock-linux/pem-rs-sgx#fdfef4f24a9fb3fa72e8a71bb28bd8ff15feff2f"
 dependencies = [
  "base64 0.13.0 (git+https://github.com/mesalock-linux/rust-base64-sgx)",
- "once_cell 1.4.0 (git+https://github.com/mesalock-linux/once_cell-sgx)",
+ "once_cell 1.4.0",
  "regex 1.3.1",
  "sgx_tstd",
 ]
@@ -7475,7 +6838,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
 dependencies = [
  "hmac 0.12.1",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
 ]
 
 [[package]]
@@ -7954,7 +7317,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.2",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
  "zeroize",
 ]
 
@@ -8000,34 +7363,8 @@ dependencies = [
  "der 0.7.8",
  "generic-array 0.14.7",
  "pkcs8",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "secp"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1507279bb0404bb566f85523e48fcf37a158daa5380577ee0d93f3ef4df39ccc"
-dependencies = [
- "base16ct",
- "k256",
- "once_cell 1.19.0",
- "secp256k1 0.28.0",
- "subtle 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "secp"
-version = "0.2.3"
-source = "git+https://github.com/kziemianek/secp.git?branch=sgx#0479a3b12fc204015cdb63c138078fefe7e32341"
-dependencies = [
- "base16ct",
- "k256",
- "once_cell 1.4.0 (git+https://github.com/mesalock-linux/once_cell-sgx?branch=master)",
- "secp256k1 0.28.0",
- "sgx_tstd",
- "subtle 2.5.0 (git+https://github.com/kziemianek/subtle-sgx.git?branch=2.5.0-update)",
 ]
 
 [[package]]
@@ -8443,14 +7780,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
  "digest 0.10.7",
-]
-
-[[package]]
-name = "sha2_v08_wrapper"
-version = "0.1.0"
-source = "git+https://github.com/kailai-wang/sha2_v08#c41176becc675e84cd708e8b18ba2cd0c9cf8eb0"
-dependencies = [
- "sha2 0.8.2",
 ]
 
 [[package]]
@@ -9268,14 +8597,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
-name = "subtle"
-version = "2.5.0"
-source = "git+https://github.com/kziemianek/subtle-sgx.git?branch=2.5.0-update#57c424bdb6b98cbf9cfe19879748f20c3525c80e"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9411,23 +8732,6 @@ checksum = "3fdd6f064ccff2d6567adcb3873ca630700f00b5ad3f060c25b5dcfd9a4ce152"
 dependencies = [
  "cfg-if 1.0.0",
  "once_cell 1.19.0",
-]
-
-[[package]]
-name = "threadpool"
-version = "1.8.0"
-source = "git+https://github.com/mesalock-linux/rust-threadpool-sgx?tag=sgx_1.1.3#098d98a85b7e2b02e2bb451a3dec0b027017ff4c"
-dependencies = [
- "sgx_tstd",
-]
-
-[[package]]
-name = "threadpool"
-version = "1.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d050e60b33d41c19108b32cea32164033a9013fe3b46cbd4457559bfbf77afaa"
-dependencies = [
- "num_cpus 1.16.0",
 ]
 
 [[package]]
