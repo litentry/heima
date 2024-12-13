@@ -22,7 +22,7 @@ use sp_core::H160;
 use sp_runtime::{traits::BadOrigin, ModuleError};
 use sp_std::vec;
 
-fn add_account_call<T: pallet::Config<Permission = mock::Permission>>(
+fn add_account_call<T: pallet::Config<Permission = mock::OmniAccountPermission>>(
 	account: MemberAccount,
 	permissions: Option<Vec<<T as pallet::Config>::Permission>>,
 ) -> Box<RuntimeCall> {
@@ -170,12 +170,12 @@ fn add_account_works() {
 		assert!(MemberAccountPermissions::<Test>::contains_key(bob.hash()));
 		assert_eq!(
 			MemberAccountPermissions::<Test>::get(bob.hash()).to_vec(),
-			vec![Permission::All]
+			vec![OmniAccountPermission::All]
 		);
 		assert!(MemberAccountPermissions::<Test>::contains_key(charlie.hash()));
 		assert_eq!(
 			MemberAccountPermissions::<Test>::get(charlie.hash()).to_vec(),
-			vec![Permission::All]
+			vec![OmniAccountPermission::All]
 		);
 	});
 }
@@ -691,7 +691,11 @@ fn ensure_permission_works() {
 
 		// Add account member without permissions to remove accounts
 		let bob = private_member_account(bob());
-		let bob_permissions = vec![Permission::RequestEthereumIntent, Permission::AddAccounts];
+		let bob_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+			OmniAccountPermission::AccountManagement,
+		];
 
 		let call = add_account_call::<Test>(bob.clone(), Some(bob_permissions.clone()));
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
@@ -700,8 +704,9 @@ fn ensure_permission_works() {
 			call,
 		));
 
-		// An account with no permissions cannot remove accounts
-		let call = remove_accounts_call(vec![alice().identity.hash()]);
+		// An Account cannot be added with more permissions than the account that added it
+		let charlie = private_member_account(charlie());
+		let call = add_account_call::<Test>(charlie.clone(), None); // default permission
 		assert_noop!(
 			OmniAccount::dispatch_as_omni_account(
 				RuntimeOrigin::signed(tee_signer.clone()),
@@ -711,9 +716,7 @@ fn ensure_permission_works() {
 			Error::<Test>::NoPermission
 		);
 
-		// An Account cannot be added with more permissions than the account that added it
-		let charlie = private_member_account(charlie());
-		let charlie_permissions = vec![Permission::All];
+		let charlie_permissions = vec![OmniAccountPermission::All];
 		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
 		assert_noop!(
 			OmniAccount::dispatch_as_omni_account(
@@ -724,7 +727,7 @@ fn ensure_permission_works() {
 			Error::<Test>::NoPermission
 		);
 
-		let mut charlie_permissions = vec![Permission::Balances];
+		let mut charlie_permissions = vec![OmniAccountPermission::RequestNativeIntent];
 		charlie_permissions.extend_from_slice(&bob_permissions);
 		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
 		assert_noop!(
@@ -736,13 +739,27 @@ fn ensure_permission_works() {
 			Error::<Test>::NoPermission
 		);
 
-		let charlie_permissions = vec![Permission::RequestEthereumIntent, Permission::AddAccounts];
-		let call = add_account_call::<Test>(charlie, Some(charlie_permissions));
+		let charlie_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+		];
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			bob.hash(),
 			call,
 		));
+
+		// An account with no permissions cannot remove accounts
+		let call = remove_accounts_call(vec![alice().identity.hash()]);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				charlie.hash(),
+				call,
+			),
+			Error::<Test>::NoPermission
+		);
 
 		// Permissions should also work for dispatch_as_signed
 		assert_ok!(Balances::transfer_keep_alive(
