@@ -5936,7 +5936,6 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-bitacross",
  "pallet-bounties",
  "pallet-bridge-transfer",
  "pallet-chain-bridge",
@@ -7628,22 +7627,6 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.11.0)",
-]
-
-[[package]]
-name = "pallet-bitacross"
-version = "0.1.0"
-dependencies = [
- "core-primitives",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
 ]
 
 [[package]]
@@ -9460,7 +9443,6 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-bitacross",
  "pallet-bounties",
  "pallet-bridge-transfer",
  "pallet-chain-bridge",
