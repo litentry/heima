@@ -1195,7 +1195,7 @@ impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 							pallet_omni_account::Call::remove_accounts { .. }
 						) | RuntimeCall::OmniAccount(
 						pallet_omni_account::Call::publicize_account { .. }
-					)
+					) | RuntimeCall::OmniAccount(pallet_omni_account::Call::set_permissions { .. })
 				)
 			},
 			Self::RequestNativeIntent => {
