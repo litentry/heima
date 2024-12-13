@@ -75,7 +75,7 @@ if [ -n "$release_version" ] && \
    [ -n "$onchain_version" ] && \
    [ "$onchain_version" -ge "$release_version" ]; then
   echo "Current On-chain runtime is up to date, quit"
-  exit 0
+  exit 1
 fi
 
 # 4. do runtime upgrade and verify
@@ -95,50 +95,10 @@ if [ -n "$new_onchain_version" ] && \
    [ "$new_onchain_version" -ne "$release_version" ]; then
   echo "On-chain new: $new_onchain_version"
   echo "Runtime version NOT increased successfully, quit"
-  exit 0
+  exit 1
 fi
 
 print_divider
 
 echo "Done"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # 2. check if the released runtime version is greater than the on-chain runtime version,
-# #    which should be now accessible via localhost:9944
-# onchain_version=$(curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' http://localhost:9944 | jq .result.specVersion)
-# release_version=$(subwasm --json info "$output_wasm" | jq .core_version.specVersion)
-
-# echo "Check runtime version ..."
-# echo "On-chain: $onchain_version"
-# echo "Release:  $release_version"
-
-# if [ -n "$release_version" ] && \
-#    [ -n "$onchain_version" ] && \
-#    [ "$onchain_version" -ge "$release_version" ]; then
-#   echo "Runtime version not increased, quit"
-#   exit 0
-# fi
-
-# print_divider
-
-# # 3. do runtime upgrade and verify
-# echo "Do runtime upgrade and verify ..."
-# cd "$ROOTDIR/parachain/ts-tests"
-# echo "NODE_ENV=ci" > .env
-# pnpm install && pnpm run test-runtime-upgrade 2>&1
-
-# print_divider
-
-# echo "Done"
