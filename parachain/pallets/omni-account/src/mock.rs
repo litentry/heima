@@ -97,6 +97,10 @@ pub fn charlie() -> Accounts {
 	create_accounts(AccountKeyring::Charlie)
 }
 
+pub fn dave() -> Accounts {
+	create_accounts(AccountKeyring::Dave)
+}
+
 pub fn public_member_account(accounts: Accounts) -> MemberAccount {
 	MemberAccount::Public(accounts.identity)
 }
@@ -175,7 +179,8 @@ impl pallet_teebag::Config for Test {
 pub enum Permission {
 	All,
 	Balances,
-	RemoveAccount,
+	AddAccounts,
+	RemoveAccounts,
 	RequestEthereumIntent,
 }
 
@@ -190,9 +195,13 @@ impl InstanceFilter<RuntimeCall> for Permission {
 		match self {
 			Permission::All => true,
 			Permission::Balances => matches!(call, RuntimeCall::Balances { .. }),
-			Permission::RemoveAccount => matches!(
+			Permission::RemoveAccounts => matches!(
 				call,
 				RuntimeCall::OmniAccount(pallet_omni_account::Call::remove_accounts { .. })
+			),
+			Permission::AddAccounts => matches!(
+				call,
+				RuntimeCall::OmniAccount(pallet_omni_account::Call::add_account { .. })
 			),
 			Permission::RequestEthereumIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
