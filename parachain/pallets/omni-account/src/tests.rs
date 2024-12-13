@@ -22,11 +22,12 @@ use sp_core::H160;
 use sp_runtime::{traits::BadOrigin, ModuleError};
 use sp_std::vec;
 
-fn add_account_call(account: MemberAccount) -> Box<RuntimeCall> {
-	let call = RuntimeCall::OmniAccount(crate::Call::add_account {
-		member_account: account,
-		permissions: None,
-	});
+fn add_account_call<T: pallet::Config<Permission = mock::Permission>>(
+	account: MemberAccount,
+	permissions: Option<Vec<<T as pallet::Config>::Permission>>,
+) -> Box<RuntimeCall> {
+	let call =
+		RuntimeCall::OmniAccount(crate::Call::add_account { member_account: account, permissions });
 	Box::new(call)
 }
 
@@ -84,7 +85,7 @@ fn create_account_store_works() {
 fn add_account_without_creating_store_fails() {
 	new_test_ext().execute_with(|| {
 		let tee_signer = get_tee_signer();
-		let call = add_account_call(private_member_account(bob()));
+		let call = add_account_call::<Test>(private_member_account(bob()), None);
 
 		assert_noop!(
 			OmniAccount::dispatch_as_omni_account(
@@ -113,7 +114,7 @@ fn add_account_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -140,7 +141,7 @@ fn add_account_works() {
 			expected_member_accounts
 		);
 
-		let call = add_account_call(charlie.clone());
+		let call = add_account_call::<Test>(charlie.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -208,7 +209,7 @@ fn add_account_with_already_linked_account_fails() {
 			alice().identity.clone(),
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -239,7 +240,7 @@ fn add_account_with_already_linked_account_fails() {
 			charlie().identity,
 		));
 
-		let call = add_account_call(public_member_account(alice()));
+		let call = add_account_call::<Test>(public_member_account(alice()), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			charlie().identity.hash(),
@@ -280,10 +281,10 @@ fn add_account_store_len_limit_reached_works() {
 
 		AccountStore::<Test>::insert(alice().omni_account, member_accounts);
 
-		let call = add_account_call(MemberAccount::Private(
-			vec![7, 8, 9],
-			H256::from(blake2_256(&[7, 8, 9])),
-		));
+		let call = add_account_call::<Test>(
+			MemberAccount::Private(vec![7, 8, 9], H256::from(blake2_256(&[7, 8, 9]))),
+			None,
+		);
 
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
@@ -316,7 +317,7 @@ fn remove_account_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -402,7 +403,7 @@ fn remove_account_empty_account_check_works() {
 		));
 
 		let bob = private_member_account(bob());
-		let call = add_account_call(bob);
+		let call = add_account_call::<Test>(bob, None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -442,7 +443,7 @@ fn publicize_account_works() {
 			alice().identity.clone(),
 		));
 
-		let call = add_account_call(private_bob.clone());
+		let call = add_account_call::<Test>(private_bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -517,7 +518,7 @@ fn publicize_account_identity_not_found_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -555,7 +556,7 @@ fn request_intent_works() {
 			alice().identity
 		));
 
-		let call = add_account_call(bob);
+		let call = add_account_call::<Test>(bob, None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -602,7 +603,7 @@ fn dispatch_as_signed_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(private_member_account(bob()));
+		let call = add_account_call::<Test>(private_member_account(bob()), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
@@ -638,7 +639,7 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 
 		assert_eq!(System::account_nonce(alice().omni_account), 0);
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
