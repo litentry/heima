@@ -493,21 +493,37 @@ pub mod pallet {
 				Error::<T>::NoPermission
 			);
 
-			if let Some(Call::add_account { permissions: ref new_account_permissions, .. }) =
-				call.is_sub_type()
-			{
-				// If member has default permission, they can add accounts with any permission
-				if member_permissions.contains(&T::Permission::default()) {
-					return Ok(());
-				}
-
-				if let Some(new_account_permissions) = new_account_permissions {
-					// an account can only add another account with the same or less permissions
-					ensure!(
-						new_account_permissions.iter().all(|p| member_permissions.contains(p)),
-						Error::<T>::NoPermission
-					)
-				}
+			match call.is_sub_type() {
+				Some(Call::add_account { permissions: ref new_account_permissions, .. }) => {
+					// If member has default permission, they can add accounts with any permission
+					if member_permissions.contains(&T::Permission::default()) {
+						return Ok(());
+					}
+					match new_account_permissions {
+						Some(new_permissions) => {
+							// an account can only add another account with the same or less permissions
+							if !new_permissions.iter().all(|p| member_permissions.contains(p)) {
+								return Err(Error::<T>::NoPermission);
+							}
+						},
+						None => {
+							// None is equivalent to default permission. It should not be allowed
+							// if the member_permissions have no default permission
+							return Err(Error::<T>::NoPermission);
+						},
+					}
+				},
+				Some(Call::set_permissions { permissions: ref new_permissions, .. }) => {
+					// If member has default permission, they can set permissions to any value
+					if member_permissions.contains(&T::Permission::default()) {
+						return Ok(());
+					}
+					// an account can only set permissions to the same or less permissions
+					if !new_permissions.iter().all(|p| member_permissions.contains(p)) {
+						return Err(Error::<T>::NoPermission);
+					}
+				},
+				_ => return Ok(()),
 			}
 
 			Ok(())
