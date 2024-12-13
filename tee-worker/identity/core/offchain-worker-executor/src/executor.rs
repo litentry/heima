@@ -221,7 +221,7 @@ impl<
 		let extrinsics =
 			self.extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), None)?;
 		self.validator_accessor
-			.execute_mut_on_validator(|v| v.send_extrinsics(extrinsics))?;
+			.execute_on_validator(|v| v.send_extrinsics(extrinsics))?;
 		Ok(())
 	}
 

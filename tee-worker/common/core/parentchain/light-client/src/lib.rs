@@ -81,7 +81,7 @@ where
 
 pub trait ExtrinsicSender {
 	/// Sends encoded extrinsics to the parentchain and cache them internally for later confirmation.
-	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error>;
+	fn send_extrinsics(&self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error>;
 }
 
 pub trait LightClientState<Block: ParentchainBlockTrait> {

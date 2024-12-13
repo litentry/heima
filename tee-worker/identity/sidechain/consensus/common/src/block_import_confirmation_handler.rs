@@ -122,7 +122,7 @@ impl<
 
 			debug!("Sending sidechain block import confirmation extrinsic..");
 			self.validator_accessor
-				.execute_mut_on_validator(|v| v.send_extrinsics(xts))
+				.execute_on_validator(|v| v.send_extrinsics(xts))
 				.map_err(|e| Error::Other(e.into()))?;
 		}
 		Ok(())

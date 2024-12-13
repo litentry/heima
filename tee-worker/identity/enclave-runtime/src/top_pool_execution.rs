@@ -366,7 +366,7 @@ where
 		let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 		let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
-		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+		validator_access.execute_on_validator(|v| v.send_extrinsics(xts))?;
 	}
 	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
@@ -377,7 +377,7 @@ where
 		let extrinsics_factory = get_extrinsic_factory_from_target_a_solo_or_parachain()?;
 		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 		let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
-		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+		validator_access.execute_on_validator(|v| v.send_extrinsics(xts))?;
 	}
 	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
@@ -388,7 +388,7 @@ where
 		let extrinsics_factory = get_extrinsic_factory_from_target_b_solo_or_parachain()?;
 		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 		let validator_access = get_validator_accessor_from_target_b_solo_or_parachain()?;
-		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+		validator_access.execute_on_validator(|v| v.send_extrinsics(xts))?;
 	}
 
 	Ok(())

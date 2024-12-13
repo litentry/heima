@@ -1970,6 +1970,7 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-enclave-metrics",
  "itp-extrinsics-factory",
+ "itp-node-api",
  "itp-ocall-api",
  "itp-stf-interface",
  "itp-types",
