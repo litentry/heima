@@ -321,6 +321,7 @@ pub mod pallet {
 			member_accounts.retain(|member| {
 				if member_account_hashes.contains(&member.hash()) {
 					MemberAccountHash::<T>::remove(member.hash());
+					MemberAccountPermissions::<T>::remove(member.hash());
 					false
 				} else {
 					true

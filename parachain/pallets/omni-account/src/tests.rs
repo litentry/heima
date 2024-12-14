@@ -175,13 +175,13 @@ fn add_account_works() {
 		);
 
 		assert!(MemberAccountHash::<Test>::contains_key(bob.hash()));
-		assert!(MemberAccountHash::<Test>::contains_key(charlie.hash()));
 		assert!(MemberAccountPermissions::<Test>::contains_key(bob.hash()));
+		assert!(MemberAccountHash::<Test>::contains_key(charlie.hash()));
+		assert!(MemberAccountPermissions::<Test>::contains_key(charlie.hash()));
 		assert_eq!(
 			MemberAccountPermissions::<Test>::get(bob.hash()).to_vec(),
 			vec![OmniAccountPermission::All]
 		);
-		assert!(MemberAccountPermissions::<Test>::contains_key(charlie.hash()));
 		assert_eq!(
 			MemberAccountPermissions::<Test>::get(charlie.hash()).to_vec(),
 			vec![OmniAccountPermission::All]
@@ -389,6 +389,7 @@ fn remove_account_works() {
 			expected_member_accounts
 		);
 		assert!(!MemberAccountHash::<Test>::contains_key(bob.hash()));
+		assert!(!MemberAccountPermissions::<Test>::contains_key(bob.hash()));
 
 		let call = remove_accounts_call(vec![alice().identity.hash()]);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
