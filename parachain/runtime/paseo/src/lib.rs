@@ -1397,7 +1397,7 @@ construct_runtime! {
 		// New Goverance
 		ConvictionVoting: pallet_conviction_voting = 170,
 		Referenda: pallet_referenda = 171,
-		Origins: governanceV2::pallet_custom_origins::{Origin} = 172,
+		Origins: governance_v2::pallet_custom_origins::{Origin} = 172,
 		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 173,
 
 		// TMP
