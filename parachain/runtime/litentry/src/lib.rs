@@ -1122,12 +1122,6 @@ impl pallet_omni_account::Config for Runtime {
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 }
 
-impl pallet_bitacross::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
-	type SetAdminOrigin = EnsureRootOrHalfCouncil;
-}
-
 impl pallet_evm_assertions::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
@@ -1246,7 +1240,6 @@ construct_runtime! {
 		ExtrinsicFilter: pallet_extrinsic_filter = 63,
 		AssetManager: pallet_asset_manager = 64,
 		Teebag: pallet_teebag = 65,
-		Bitacross: pallet_bitacross = 66,
 		AssetsHandler: pallet_assets_handler = 68,
 		EvmAssertions: pallet_evm_assertions = 71,
 
@@ -1350,7 +1343,6 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			// AccountFix
 			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
-			RuntimeCall::Bitacross(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_)

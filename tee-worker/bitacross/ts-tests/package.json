@@ -1,9 +1,0 @@
-{
-	"type": "module",
-	"license": "ISC",
-	"scripts": {
-		"format": "pnpm run --recursive format",
-		"check-format": "pnpm run --recursive check-format"
-	},
-	"packageManager": "pnpm@8.7.6"
-}

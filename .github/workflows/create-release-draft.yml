@@ -18,11 +18,6 @@ on:
         description: identity-worker
         required: true
         default: true
-      bitacross_worker:
-        type: boolean
-        description: bitacross-worker
-        required: true
-        default: true
       release_tag:
         description: an existing tag for creating release (e.g. v1.2.0)
         required: true
@@ -57,7 +52,6 @@ jobs:
           [ "${{ github.event.inputs.parachain_client }}" = "true" ] && t="${t:0:0}1${t:1}"
           [ "${{ github.event.inputs.parachain_runtime }}" = "true" ] && t="${t:0:1}1${t:2}"
           [ "${{ github.event.inputs.identity_worker }}" = "true" ] && t="${t:0:2}1${t:3}"
-          [ "${{ github.event.inputs.bitacross_worker }}" = "true" ] && t="${t:0:3}1${t:4}"
           if [ $t = "0000"]; then
             echo "::error::Please select at least one release type."
             exit 1
@@ -227,74 +221,6 @@ jobs:
         run: |
           docker push litentry/identity-worker:${{ env.RELEASE_TAG }}
 
-  build-bitacross-worker:
-    if: ${{ github.event.inputs.bitacross_worker == 'true' }}
-    runs-on: ubuntu-22.04
-    environment: production
-    steps:
-      - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_TAG }}
-          fetch-depth: 0
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          # use the docker driver to access the local image
-          # we don't need external caches or multi platforms here
-          # see https://docs.docker.com/build/drivers/
-          driver: docker
-
-      - name: Write enclave signing key
-        run: |
-          cat << EOF > tee-worker/bitacross/enclave_key.pem
-          ${{ secrets.BITACROSS_ENCLAVE_PROD_SIGNING_KEY }}
-          EOF
-
-      - name: Build local builder
-        uses: docker/build-push-action@v6
-        env:
-          DOCKER_BUILD_RECORD_UPLOAD: false
-        with:
-          context: .
-          file: tee-worker/bitacross/build.Dockerfile
-          tags: local-builder:latest
-          target: builder
-          build-args: |
-            WORKER_MODE_ARG=offchain-worker
-            ADDITIONAL_FEATURES_ARG=
-            SGX_PRODUCTION=1
-            SGX_MODE=HW
-            IMAGE_FOR_RELEASE=true
-            SGX_COMMERCIAL_KEY=enclave_key.pem
-
-      - name: Build worker
-        uses: docker/build-push-action@v6
-        env:
-          DOCKER_BUILD_RECORD_UPLOAD: false
-        with:
-          context: .
-          file: tee-worker/bitacross/build.Dockerfile
-          tags: litentry/bitacross-worker:${{ env.RELEASE_TAG }}
-          target: worker-release
-
-      - run: docker images --all
-
-      - name: Dockerhub login
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Push worker image
-        run: |
-          docker push litentry/bitacross-worker:${{ env.RELEASE_TAG }}
-
   parachain-ts-tests:
     runs-on: ubuntu-22.04
     needs: build-parachain-client
@@ -361,11 +287,10 @@ jobs:
       - set-release-type
       - build-parachain-runtime
       - build-identity-worker
-      - build-bitacross-worker
       - parachain-ts-tests
     if: |
       !failure()  &&
-      (success('build-parachain-runtime') || success('parachain-ts-tests') || success('build-identity-worker') || success('build-bitacross-worker'))
+      (success('build-parachain-runtime') || success('parachain-ts-tests') || success('build-identity-worker'))
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
         uses: actions/checkout@v4

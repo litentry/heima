@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     'node',
     'pallets/account-fix',
-    'pallets/bitacross',
     'pallets/bridge/assets-handler',
     'pallets/bridge/chain-bridge',
     'pallets/bridge/bridge-transfer',
@@ -12,6 +11,7 @@ members = [
     'pallets/collab-ai/common',
     'pallets/collab-ai/curator',
     'pallets/collab-ai/guardian',
+    'pallets/collab-ai/halving-mint',
     'pallets/collab-ai/pool-proposal',
     'pallets/collab-ai/investing-pool',
     'pallets/extrinsic-filter',
@@ -270,7 +270,6 @@ paseo-parachain-runtime = { path = "runtime/paseo", default-features = false }
 pallet-account-fix = { path = "pallets/account-fix", default-features = false }
 pallet-asset-manager = { path = "pallets/xcm-asset-manager", default-features = false }
 pallet-assets-handler = { path = "pallets/bridge/assets-handler", default-features = false }
-pallet-bitacross = { path = "pallets/bitacross", default-features = false }
 pallet-chain-bridge = { path = "pallets/bridge/chain-bridge", default-features = false }
 pallet-bridge-common = { path = "pallets/bridge/common", default-features = false }
 pallet-bridge-transfer = { path = "pallets/bridge/bridge-transfer", default-features = false }
@@ -295,6 +294,7 @@ pallet-evm-precompile-pool-proposal = { path = "precompiles/collab-ai/pool-propo
 pallet-evm-precompile-investing-pool = { path = "precompiles/collab-ai/investing-pool", default-features = false }
 
 pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = false }
+pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 
 # CollabAI local
 pallet-aiusd-convertor = { path = "pallets/collab-ai/aiusd-convertor", default-features = false }

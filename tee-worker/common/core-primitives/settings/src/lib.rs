@@ -50,13 +50,6 @@ pub mod files {
 
 	pub const RA_DUMP_CERT_DER_FILE: &str = "ra_dump_cert.der";
 
-	// bitacross
-	pub const RELAYER_REGISTRY_FILE: &str = "relayer_registry_sealed.bin";
-
-	pub const ENCLAVE_REGISTRY_FILE: &str = "enclave_registry_sealed.bin";
-
-	pub const SIGNER_REGISTRY_FILE: &str = "signer_registry_sealed.bin";
-
 	// used by worker and enclave
 	pub const SHARDS_PATH: &str = "shards";
 
