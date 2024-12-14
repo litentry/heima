@@ -99,6 +99,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod asset_config;
 pub mod constants;
+pub mod governance_v2;
 pub mod precompiles;
 
 #[cfg(test)]
@@ -1403,6 +1404,12 @@ construct_runtime! {
 		InvestingPool: pallet_investing_pool = 153,
 		AIUSDConvertor: pallet_aiusd_convertor = 154,
 
+		// New Goverance
+		ConvictionVoting: pallet_conviction_voting = 170,
+		Referenda: pallet_referenda = 171,
+		Origins: governanceV2::pallet_custom_origins::{Origin} = 172,
+		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 173,
+
 		// TMP
 		AccountFix: pallet_account_fix = 254,
 		Sudo: pallet_sudo = 255,
@@ -1540,6 +1547,9 @@ mod benches {
 		[pallet_chain_bridge,ChainBridge]
 		[pallet_bridge_transfer,BridgeTransfer]
 		[pallet_teebag, Teebag]
+		[pallet_conviction_voting, ConvictionVoting]
+		[pallet_referenda, Referenda]
+		[pallet_whitelist, Whitelist]
 	);
 }
 
