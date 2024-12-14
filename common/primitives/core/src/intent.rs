@@ -1,4 +1,4 @@
-use crate::{AccountId, Balance};
+use crate::{AccountId, Address32, Balance};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -18,6 +18,8 @@ pub enum Intent {
     SystemRemark(BoundedVec<u8, ConstU32<MAX_REMARK_LEN>>),
     #[codec(index = 3)]
     TransferNative(TransferNative),
+    #[codec(index = 4)]
+    TransferSolana(TransferSolana),
 }
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
@@ -38,4 +40,10 @@ pub struct CallEthereum {
 pub struct TransferNative {
     pub to: AccountId,
     pub value: Balance,
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+pub struct TransferSolana {
+    pub to: Address32,
+    pub value: u64,
 }

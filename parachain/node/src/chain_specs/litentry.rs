@@ -17,7 +17,7 @@
 use super::*;
 use cumulus_primitives_core::ParaId;
 use litentry_parachain_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
+	AccountId, AuraId, Balance, BalancesConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
 	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, TechnicalCommitteeMembershipConfig,
 	TeebagConfig, TeebagOperationalMode, VCManagementConfig, WASM_BINARY,
@@ -26,9 +26,6 @@ use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::Deserialize;
 use sp_core::sr25519;
-
-/// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -241,7 +238,6 @@ fn generate_genesis(
 			admin: None,
 			mode: TeebagOperationalMode::Development,
 		},
-		bitacross: BitacrossConfig { admin: None },
 		score_staking: Default::default(),
 	};
 

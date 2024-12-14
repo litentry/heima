@@ -43,13 +43,14 @@ use cumulus_primitives_core::{
 	ParaId,
 };
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
+use fc_consensus::FrontierBlockImport;
 use fc_rpc::EthBlockDataCacheTask;
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::{StorageOverride, StorageOverrideHandler};
 use futures::StreamExt;
 use jsonrpsee::RpcModule;
+use parity_scale_codec::Encode;
 use sc_client_api::BlockchainEvents;
-use sc_client_api::HeaderBackend;
 use sc_consensus::{ImportQueue, LongestChain};
 use sc_consensus_aura::StartAuraParams;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
@@ -60,6 +61,7 @@ use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerH
 use sp_api::ConstructRuntimeApi;
 use sp_keystore::KeystorePtr;
 use sp_runtime::app_crypto::AppCrypto;
+use sp_runtime::traits::Header;
 use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 
@@ -80,8 +82,11 @@ type ParachainClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<H
 
 type ParachainBackend = TFullBackend<Block>;
 
-type ParachainBlockImport<RuntimeApi> =
-	TParachainBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainBackend>;
+type ParachainBlockImport<RuntimeApi> = TParachainBlockImport<
+	Block,
+	FrontierBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainClient<RuntimeApi>>,
+	ParachainBackend,
+>;
 
 type MaybeSelectChain = Option<LongestChain<ParachainBackend, Block>>;
 
@@ -177,6 +182,8 @@ where
 
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
+	let frontier_block_import = FrontierBlockImport::new(client.clone(), client.clone());
+
 	// Note: `new_with_delayed_best_block` will cause less `Retracted`/`Invalid` tx,
 	//       especially for rococo-local where the epoch duration is 1m. However, it
 	//       also means the imported block will not be notified as best blocks, instead,
@@ -190,9 +197,9 @@ where
 	//
 	// TODO: re-investigate this after async backing is supported
 	let block_import = if delayed_best_block {
-		ParachainBlockImport::new_with_delayed_best_block(client.clone(), backend.clone())
+		ParachainBlockImport::new_with_delayed_best_block(frontier_block_import, backend.clone())
 	} else {
-		ParachainBlockImport::new(client.clone(), backend.clone())
+		ParachainBlockImport::new(frontier_block_import, backend.clone())
 	};
 
 	let import_queue = build_import_queue(
@@ -283,7 +290,6 @@ where
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
 		Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
-		Arc<SyncingService<Block>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -483,7 +489,6 @@ where
 			&task_manager,
 			relay_chain_interface.clone(),
 			transaction_pool,
-			sync_service.clone(),
 			params.keystore_container.keystore(),
 			relay_chain_slot_duration,
 			para_id,
@@ -574,13 +579,16 @@ where
 				justification_import: None,
 				client,
 				create_inherent_data_providers: move |block: Hash, ()| {
-					let current_para_block = client_for_cidp
-						.number(block)
-						.expect("Header lookup should succeed")
-						.expect("Header passed in as parent should be present in backend.");
-					let client_for_xcm = client_for_cidp.clone();
+					let current_para_head = client_for_cidp
+					.header(block)
+					.expect("Header lookup should succeed")
+					.expect("Header passed in as parent should be present in backend.");
+				let current_para_block_head =
+					Some(polkadot_primitives::HeadData(current_para_head.encode()));
+				let client_for_xcm = client_for_cidp.clone();
 
 					async move {
+						use sp_runtime::traits::UniqueSaturatedInto;
 						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
 						let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
@@ -589,7 +597,13 @@ where
 							);
 
 						let mocked_parachain = MockValidationDataInherentDataProvider {
-							current_para_block,
+						// When using manual seal we start from block 0, and it's very unlikely to
+						// reach a block number > u32::MAX.
+						current_para_block: UniqueSaturatedInto::<u32>::unique_saturated_into(
+							*current_para_head.number(),
+						),
+						para_id: 2013.into(),
+						current_para_block_head,
 							relay_offset: 1000,
 							relay_blocks_per_para_block: 2,
 							para_blocks_per_relay_epoch: 0,
@@ -597,7 +611,6 @@ where
 							xcm_config: MockXcmConfig::new(
 								&*client_for_xcm,
 								block,
-								Default::default(),
 								Default::default(),
 							),
 							raw_downward_messages: vec![],
@@ -767,13 +780,16 @@ where
 			block_import: StandaloneBlockImport::new(client.clone()),
 			proposer_factory,
 			create_inherent_data_providers: move |block: Hash, ()| {
-				let current_para_block = client_for_cidp
-					.number(block)
+				let current_para_head = client_for_cidp
+					.header(block)
 					.expect("Header lookup should succeed")
 					.expect("Header passed in as parent should be present in backend.");
+				let current_para_block_head =
+					Some(polkadot_primitives::HeadData(current_para_head.encode()));
 				let client_for_xcm = client_for_cidp.clone();
 
 				async move {
+					use sp_runtime::traits::UniqueSaturatedInto;
 					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
 					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
@@ -782,17 +798,18 @@ where
 						);
 
 					let mocked_parachain = MockValidationDataInherentDataProvider {
-						current_para_block,
+						// When using manual seal we start from block 0, and it's very unlikely to
+						// reach a block number > u32::MAX.
+						current_para_block: UniqueSaturatedInto::<u32>::unique_saturated_into(
+							*current_para_head.number(),
+						),
+						para_id: 2013.into(),
+						current_para_block_head,
 						relay_offset: 1000,
 						relay_blocks_per_para_block: 2,
 						para_blocks_per_relay_epoch: 0,
 						relay_randomness_config: (),
-						xcm_config: MockXcmConfig::new(
-							&*client_for_xcm,
-							block,
-							Default::default(),
-							Default::default(),
-						),
+						xcm_config: MockXcmConfig::new(&*client_for_xcm, block, Default::default()),
 						raw_downward_messages: vec![],
 						raw_horizontal_messages: vec![],
 						additional_key_values: None,
@@ -1021,7 +1038,6 @@ fn start_lookahead_aura_consensus<RuntimeApi>(
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
 	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
-	sync_oracle: Arc<SyncingService<Block>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
@@ -1067,7 +1083,6 @@ where
 		code_hash_provider: move |block_hash| {
 			client.code_at(block_hash).ok().map(|c| ValidationCode::from(c).hash())
 		},
-		sync_oracle,
 		keystore,
 		collator_key,
 		para_id,
@@ -1079,7 +1094,7 @@ where
 		reinitialize: false,
 	};
 
-	let fut = aura::run::<Block, <AuraId as AppCrypto>::Pair, _, _, _, _, _, _, _, _, _>(params);
+	let fut = aura::run::<Block, <AuraId as AppCrypto>::Pair, _, _, _, _, _, _, _, _>(params);
 	task_manager.spawn_essential_handle().spawn("aura", None, fut);
 
 	Ok(())

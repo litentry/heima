@@ -233,7 +233,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("paseo-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9210,
+	spec_version: 9220,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -712,13 +712,8 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureRootOrTwoThirdsCouncilWrapper {
 impl pallet_treasury::Config for Runtime {
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
-	type ApproveOrigin = EnsureRootOrHalfCouncil;
 	type RejectOrigin = EnsureRootOrHalfCouncil;
 	type RuntimeEvent = RuntimeEvent;
-	type OnSlash = Treasury;
-	type ProposalBond = ProposalBond;
-	type ProposalBondMinimum = ProposalBondMinimum;
-	type ProposalBondMaximum = ProposalBondMaximum;
 	type SpendOrigin = EnsureRootOrTwoThirdsCouncilWrapper; // TODO: is it related to OpenGov only?
 	type SpendPeriod = SpendPeriod;
 	type PayoutPeriod = PayoutPeriod;
@@ -774,6 +769,7 @@ impl pallet_bounties::Config for Runtime {
 	type MaximumReasonLength = MaximumReasonLength;
 	type WeightInfo = ();
 	type ChildBountyManager = ();
+	type OnSlash = Treasury;
 }
 
 impl pallet_tips::Config for Runtime {
@@ -786,6 +782,7 @@ impl pallet_tips::Config for Runtime {
 	type TipReportDepositBase = TipReportDepositBase;
 	type MaxTipAmount = ConstU128<{ 500 * UNIT }>;
 	type WeightInfo = ();
+	type OnSlash = Treasury;
 }
 
 parameter_types! {
@@ -1170,12 +1167,6 @@ impl pallet_omni_account::Config for Runtime {
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 }
 
-impl pallet_bitacross::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
-	type SetAdminOrigin = EnsureRootOrAllCouncil;
-}
-
 impl pallet_evm_assertions::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
@@ -1377,7 +1368,6 @@ construct_runtime! {
 		VCManagement: pallet_vc_management = 66,
 		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 67,
 		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 68,
-		Bitacross: pallet_bitacross = 70,
 		EvmAssertions: pallet_evm_assertions = 71,
 
 		// Developer council
@@ -1507,7 +1497,6 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			// AccountFix
 			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
-			RuntimeCall::Bitacross(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_) |
@@ -1941,6 +1930,10 @@ impl_runtime_apis! {
 				pallet_ethereum::CurrentBlock::<Runtime>::get(),
 				pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
 			)
+		}
+
+		fn initialize_pending_block(header: &<Block as BlockT>::Header) {
+			Executive::initialize_block(header);
 		}
 	}
 

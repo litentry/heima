@@ -16,7 +16,7 @@
 */
 
 use crate::{
-	error::Result, pallet_balances::BalancesCallIndexes, pallet_bitacross::BitAcrossCallIndexes,
+	error::Result, pallet_balances::BalancesCallIndexes,
 	pallet_evm_assertion::EvmAssertionsCallIndexes, pallet_imp::IMPCallIndexes,
 	pallet_omni_account::OmniAccountCallIndexes, pallet_proxy::ProxyCallIndexes,
 	pallet_system::SystemConstants, pallet_teebag::TeebagCallIndexes,
@@ -90,13 +90,6 @@ pub struct NodeMetadataMock {
 	runtime_spec_version: u32,
 	runtime_transaction_version: u32,
 
-	bitacross_module: u8,
-	bitacross_add_relayer: u8,
-	bitacross_remove_relayer: u8,
-	btc_wallet_generated: u8,
-	eth_wallet_generated: u8,
-	ton_wallet_generated: u8,
-
 	omni_account_module: u8,
 	dispatch_as_omni_account: u8,
 	dispatch_as_signed: u8,
@@ -157,13 +150,6 @@ impl NodeMetadataMock {
 			timestamp_set: 0,
 			runtime_spec_version: 25,
 			runtime_transaction_version: 4,
-
-			bitacross_module: 69u8,
-			bitacross_add_relayer: 0u8,
-			bitacross_remove_relayer: 1u8,
-			btc_wallet_generated: 2u8,
-			eth_wallet_generated: 3u8,
-			ton_wallet_generated: 4u8,
 
 			omni_account_module: 70u8,
 			dispatch_as_omni_account: 0u8,
@@ -319,28 +305,6 @@ impl BalancesCallIndexes for NodeMetadataMock {
 
 	fn transfer_allow_death_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.balances_module, self.transfer_allow_death])
-	}
-}
-
-impl BitAcrossCallIndexes for NodeMetadataMock {
-	fn add_relayer_call_indexes(&self) -> Result<[u8; 2]> {
-		Ok([self.bitacross_module, self.bitacross_add_relayer])
-	}
-
-	fn remove_relayer_call_indexes(&self) -> Result<[u8; 2]> {
-		Ok([self.bitacross_module, self.bitacross_remove_relayer])
-	}
-
-	fn btc_wallet_generated_indexes(&self) -> Result<[u8; 2]> {
-		Ok([self.bitacross_module, self.btc_wallet_generated])
-	}
-
-	fn eth_wallet_generated_indexes(&self) -> Result<[u8; 2]> {
-		Ok([self.bitacross_module, self.eth_wallet_generated])
-	}
-
-	fn ton_wallet_generated_indexes(&self) -> Result<[u8; 2]> {
-		Ok([self.bitacross_module, self.ton_wallet_generated])
 	}
 }
 

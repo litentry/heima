@@ -85,7 +85,6 @@ pallet-account-fix = { workspace = true }
 pallet-asset-manager = { workspace = true }
 pallet-assets = { workspace = true }
 pallet-assets-handler = { workspace = true }
-pallet-bitacross = { workspace = true }
 pallet-bridge-transfer = { workspace = true }
 pallet-chain-bridge = { workspace = true }
 pallet-evm-assertions = { workspace = true }
@@ -167,7 +166,6 @@ runtime-benchmarks = [
     "pallet-assets-handler/runtime-benchmarks",
     "pallet-assets/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
-    "pallet-bitacross/runtime-benchmarks",
     "pallet-bounties/runtime-benchmarks",
     "pallet-bridge-transfer/runtime-benchmarks",
     "pallet-chain-bridge/runtime-benchmarks",
@@ -254,7 +252,6 @@ std = [
     "pallet-aura/std",
     "pallet-authorship/std",
     "pallet-balances/std",
-    "pallet-bitacross/std",
     "pallet-bounties/std",
     "pallet-bridge-transfer/std",
     "pallet-chain-bridge/std",
@@ -361,7 +358,6 @@ try-runtime = [
     "pallet-aura/try-runtime",
     "pallet-authorship/try-runtime",
     "pallet-balances/try-runtime",
-    "pallet-bitacross/try-runtime",
     "pallet-bounties/try-runtime",
     "pallet-bridge-transfer/try-runtime",
     "pallet-chain-bridge/try-runtime",

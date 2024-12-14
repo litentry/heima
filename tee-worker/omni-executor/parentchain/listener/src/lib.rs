@@ -83,11 +83,12 @@ impl Config for CustomConfig {
 }
 
 /// Creates parentchain listener
-pub async fn create_listener<EthereumIntentExecutorT: IntentExecutor + Send + Sync>(
+pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	id: &str,
 	handle: Handle,
 	ws_rpc_endpoint: &str,
-	ethereum_intent_executor: EthereumIntentExecutorT,
+	ethereum_intent_executor: EthereumIntentExecutor,
+	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
 ) -> Result<
 	ParentchainListener<
@@ -95,10 +96,15 @@ pub async fn create_listener<EthereumIntentExecutorT: IntentExecutor + Send + Sy
 		SubxtClientFactory<CustomConfig>,
 		FileCheckpointRepository,
 		CustomConfig,
-		EthereumIntentExecutorT,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
 	>,
 	(),
-> {
+>
+where
+	EthereumIntentExecutor: IntentExecutor + Send + Sync,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync,
+{
 	let client_factory: Arc<SubxtClientFactory<CustomConfig>> =
 		Arc::new(SubxtClientFactory::new(ws_rpc_endpoint));
 
@@ -134,6 +140,7 @@ pub async fn create_listener<EthereumIntentExecutorT: IntentExecutor + Send + Sy
 	let intent_event_handler = IntentEventHandler::new(
 		metadata_provider,
 		ethereum_intent_executor,
+		solana_intent_executor,
 		SubxtClientFactory::new(ws_rpc_endpoint),
 		transaction_signer,
 	);

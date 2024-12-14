@@ -16,7 +16,7 @@ import { createRequestType } from '../type-creators/request';
 import type { JsonRpcRequest } from '../util/types';
 
 /**
- * Transfers Ethereum to another account on the Litentry Parachain.
+ * Transfers ETH to another account on Ethereum.
  *
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
  * (if applicable) and a send function.

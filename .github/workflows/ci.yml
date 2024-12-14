@@ -55,11 +55,6 @@ on:
         description: rebuild-identity
         required: true
         default: true
-      rebuild-bitacross:
-        type: boolean
-        description: rebuild-bitacross
-        required: true
-        default: true
       rebuild-omni-executor:
         type: boolean
         description: rebuild-omni-executor
@@ -93,18 +88,16 @@ concurrency:
 
 jobs:
   set-condition:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # see https://github.com/orgs/community/discussions/25722
     if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
     outputs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
-      rebuild_bitacross: ${{ steps.env.outputs.rebuild_bitacross }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
-      run_bitacross_test: ${{ steps.env.outputs.run_bitacross_test }}
       run_omni_executor_test: ${{ steps.env.outputs.run_omni_executor_test }}
     steps:
       - uses: actions/checkout@v4
@@ -124,21 +117,16 @@ jobs:
         run: |
           rebuild_parachain=false
           rebuild_identity=false
-          rebuild_bitacross=false
           rebuild_omni_executor=false
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
-          run_bitacross_test=false
           run_omni_executor_test=false
           if [ "${{ github.event.inputs.rebuild-parachain }}" = "true" ] || [ "${{ steps.filter.outputs.parachain_src }}" = "true" ]; then
             rebuild_parachain=true
           fi
           if [ "${{ github.event.inputs.rebuild-identity }}" = "true" ] || [ "${{ steps.filter.outputs.identity_src }}" = "true" ]; then
             rebuild_identity=true
-          fi
-          if [ "${{ github.event.inputs.rebuild-bitacross }}" = "true" ] || [ "${{ steps.filter.outputs.bitacross_src }}" = "true" ]; then
-            rebuild_bitacross=true
           fi
           if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
             rebuild_omni_executor=true
@@ -154,24 +142,19 @@ jobs:
           if [ "${{ steps.filter.outputs.identity_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_identity" = "true" ]; then
             run_identity_test=true
           fi
-          if [ "${{ steps.filter.outputs.bitacross_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_bitacross" = "true" ]; then
-            run_bitacross_test=true
-          fi
           if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
             run_omni_executor_test=true
           fi
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
           echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_bitacross=$rebuild_bitacross" | tee -a $GITHUB_OUTPUT
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
           echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
-          echo "run_bitacross_test=$run_bitacross_test" | tee -a $GITHUB_OUTPUT
           echo "run_omni_executor_test=$run_omni_executor_test" | tee -a $GITHUB_OUTPUT
 
   fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -204,11 +187,6 @@ jobs:
         run: |
           cargo fmt --all -- --check
 
-      - name: bitacross-worker enclave-runtime fmt check
-        working-directory: ./tee-worker/bitacross/enclave-runtime
-        run: |
-          cargo fmt --all -- --check
-
       - name: omni-executor fmt check
         working-directory: ./tee-worker/omni-executor
         run: |
@@ -233,7 +211,7 @@ jobs:
   # sequentialise the workflow runs on `dev` branch
   # the if condition is applied in step level to make this job always `successful`
   sequentialise:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Wait for previous run
         if: ${{ !failure() && (github.event_name == 'push') && (github.ref == 'refs/heads/dev') }}
@@ -244,7 +222,7 @@ jobs:
           branch: dev
 
   parachain-clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -269,7 +247,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   tee-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -292,7 +270,7 @@ jobs:
         working-directory: ./tee-worker
         shell: bash
         run: |
-          for d in . identity/enclave-runtime bitacross/enclave-runtime; do
+          for d in . identity/enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
             cargo clippy --release -- -D warnings
@@ -330,7 +308,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   omni-executor-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -354,7 +332,7 @@ jobs:
         run: cargo test
 
   parachain-build-dev:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -399,7 +377,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   identity-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -539,86 +517,8 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  bitacross-build:
-    runs-on: ubuntu-latest
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          # use the docker driver to access the local image
-          # we don't need external caches or multi platforms here
-          # see https://docs.docker.com/build/drivers/
-          driver: docker
-
-      - name: Build local builder
-        if: needs.set-condition.outputs.rebuild_bitacross == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/bitacross/build.Dockerfile
-          tags: local-builder:latest
-          target: builder
-          build-args: |
-            WORKER_MODE_ARG=offchain-worker
-            ADDITIONAL_FEATURES_ARG=
-
-      - name: Build worker
-        if: needs.set-condition.outputs.rebuild_bitacross == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/bitacross/build.Dockerfile
-          tags: litentry/bitacross-worker:latest
-          target: deployed-worker
-
-      - name: Build cli
-        if: needs.set-condition.outputs.rebuild_bitacross == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/bitacross/build.Dockerfile
-          tags: litentry/bitacross-cli:latest
-          target: deployed-client
-
-      - name: Pull and tag worker and cli image optionally
-        if: needs.set-condition.outputs.rebuild_bitacross == 'false'
-        run: |
-          docker pull litentry/bitacross-worker:latest
-          docker pull litentry/bitacross-cli:latest
-
-      - run: docker images --all
-
-      - name: Test enclave
-        if: needs.set-condition.outputs.rebuild_bitacross == 'true'
-        # cargo test is not supported in the enclave
-        # see https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run litentry/bitacross-worker:latest test --all
-
-      - name: Save docker images
-        run: docker save litentry/bitacross-worker:latest litentry/bitacross-cli:latest | gzip > litentry-bitacross.tar.gz
-
-      - name: Upload docker images
-        uses: actions/upload-artifact@v4
-        with:
-          name: litentry-bitacross
-          path: litentry-bitacross.tar.gz
-          if-no-files-found: error
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
   omni-executor-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -666,7 +566,7 @@ jobs:
           if-no-files-found: error
 
   parachain-ts-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -727,7 +627,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   parachain-unit-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -755,7 +655,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   parachain-runtime-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
@@ -794,7 +694,7 @@ jobs:
         uses: andymckay/cancel-action@0.5
 
   identity-single-worker-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -879,7 +779,7 @@ jobs:
           retention-days: 3
 
   identity-multi-worker-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: true
     if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
     needs:
@@ -964,88 +864,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
-  bitacross-worker-test:
-    runs-on: ubuntu-latest
-    needs:
-      - set-condition
-      - parachain-build-dev
-      - bitacross-build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test_name: lit-sign-bitcoin
-    name: ${{ matrix.test_name }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-parachain-dev
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-bitacross
-
-      - name: Load docker image
-        run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker load < litentry-bitacross.tar.gz
-          docker images
-
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
-
-      - name: Launch parachain network
-        run: |
-          make launch-network-litentry
-
-      - name: Integration bitacross worker test ${{ matrix.test_name }}
-        working-directory: ./tee-worker/bitacross/docker
-        if: needs.set-condition.outputs.run_bitacross_test == 'true'
-        timeout-minutes: 40
-        run: |
-          docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
-
-      - name: Stop integration multi worker docker containers
-        working-directory: ./tee-worker/bitacross/docker
-        if: needs.set-condition.outputs.run_bitacross_test == 'true'
-        run: |
-          docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-
-      - name: Upload zombienet logs if test fails
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-zombienet-logs
-          path: |
-            /tmp/parachain_dev
-            !/tmp/parachain_dev/polkadot*
-            !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/litentry-collator
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
-
   omni-executor-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-build-dev
@@ -1080,12 +900,6 @@ jobs:
       #   run: |
       #     docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
-      # - name: Stop integration omni executor docker containers
-      #   working-directory: ./tee-worker/bitacross/docker
-      #   if: needs.set-condition.outputs.run_omni_executor_test == 'true'
-      #   run: |
-      #     docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-
       - name: Collect docker logs if test fails
         continue-on-error: true
         uses: jwalton/gh-docker-logs@v2
@@ -1118,12 +932,11 @@ jobs:
   #
   # `!failure()` needs to be used to cover skipped jobs
   push-docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - set-condition
       - parachain-ts-test
       - identity-single-worker-test
-      - bitacross-worker-test
       - omni-executor-test
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
@@ -1134,10 +947,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: litentry-identity
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-bitacross
 
       - uses: actions/download-artifact@v4
         with:
@@ -1162,13 +971,6 @@ jobs:
           docker load < litentry-identity.tar.gz
           docker push litentry/identity-worker
           docker push litentry/identity-cli
-
-      - name: Push bitacross-worker image
-        if: needs.set-condition.outputs.rebuild_bitacross == 'true'
-        run: |
-          docker load < litentry-bitacross.tar.gz
-          docker push litentry/bitacross-worker
-          docker push litentry/bitacross-cli
 
       - name: Push omni-executor image
         if: needs.set-condition.outputs.rebuild_omni_executor == 'true'

@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   runtime-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       runtime: ${{ steps.runtime.outputs.runtime }}
     name: Parse runtime matrix
@@ -28,7 +28,7 @@ jobs:
 
   try-runtime:
     needs: [runtime-matrix]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:

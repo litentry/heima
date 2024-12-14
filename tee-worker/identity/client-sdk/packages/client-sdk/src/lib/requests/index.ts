@@ -6,6 +6,7 @@ export { remark } from './remark.request';
 export { transferNative } from './transfer-native.request';
 export { transferEthereum } from './transfer-ethereum.request';
 export { callEthereum } from './call-ethereum.request';
+export { transferSolana } from './transfer-solana.request';
 
 export { createAccountStore } from './create-account-store.request';
 export { getIdGraph } from './get-id-graph.request';
