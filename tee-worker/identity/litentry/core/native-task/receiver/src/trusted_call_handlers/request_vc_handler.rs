@@ -30,7 +30,7 @@ use ita_stf::{
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
-	api_client::compose_call,
+	api_client::{compose_call, ParentchainAdditionalParams},
 	metadata::{pallet_system::SystemConstants, provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
@@ -56,6 +56,7 @@ use litentry_primitives::{
 	ParentchainBlockNumber, RequestAesKey,
 };
 use sp_core::{H160, H256 as Hash};
+use sp_runtime::generic::Era;
 use std::{collections::HashMap, time::Instant};
 
 pub type HandleRequestVcResult = Result<RequestVcOk, RequestVcErrorDetail>;
@@ -156,9 +157,12 @@ where
 			"create_account_store",
 			who.clone()
 		));
+		let params = context.ocall_api.get_header().ok().map(|h: itp_types::Header| {
+			ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+		});
 		let xt = context
 			.extrinsic_factory
-			.create_extrinsics(&[create_account_store_call], None)
+			.create_extrinsics(&[create_account_store_call], params)
 			.map_err(|e| RequestVcErrorDetail::CreateAccountStoreFailed(e.to_string()))?;
 		context
 			.ocall_api
@@ -238,9 +242,13 @@ where
 		req_ext_hash
 	));
 
+	let params = context.ocall_api.get_header().ok().map(|h: itp_types::Header| {
+		ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+	});
+
 	let xt = context
 		.extrinsic_factory
-		.create_extrinsics(&[on_vc_issued_call], None)
+		.create_extrinsics(&[on_vc_issued_call], params)
 		.map_err(|e| RequestVcErrorDetail::ExtrinsicConstructionFailed(e.to_string()))?;
 
 	context

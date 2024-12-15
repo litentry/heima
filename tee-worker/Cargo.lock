@@ -2817,7 +2817,9 @@ dependencies = [
  "id-itp-top-pool-author",
  "itc-parentchain-light-client",
  "itp-extrinsics-factory",
+ "itp-node-api",
  "itp-sgx-externalities",
+ "itp-sgx-runtime-primitives",
  "itp-stf-interface",
  "itp-stf-primitives",
  "itp-stf-state-handler",
@@ -2868,6 +2870,7 @@ dependencies = [
  "itc-parentchain-light-client",
  "itp-enclave-metrics",
  "itp-extrinsics-factory",
+ "itp-node-api",
  "itp-ocall-api",
  "itp-stf-interface",
  "itp-types",
@@ -3922,6 +3925,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-extrinsics-factory",
  "itp-import-queue",
+ "itp-node-api",
  "itp-node-api-metadata",
  "itp-node-api-metadata-provider",
  "itp-ocall-api",
@@ -4632,6 +4636,7 @@ dependencies = [
  "serde_json 1.0.133",
  "sgx_tstd",
  "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -4793,6 +4798,7 @@ dependencies = [
  "parity-scale-codec",
  "sgx_tstd",
  "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
