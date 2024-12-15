@@ -25,7 +25,7 @@
 extern crate frame_benchmarking;
 
 use core_primitives::LITENTRY_PARA_ID;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	construct_runtime,
@@ -410,8 +410,8 @@ impl pallet_proxy::Config for Runtime {
 
 impl pallet_timestamp::Config for Runtime {
 	type Moment = Moment;
-	type OnTimestampSet = ();
-	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
+	type OnTimestampSet = Aura;
+	type MinimumPeriod = ConstU64<0>;
 	type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
 }
 
@@ -849,7 +849,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
-	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
 	// note here we intentionally use this hook to ignore relay chain proof so that
 	// it's possible to launch as standalone chain
 	//
@@ -884,7 +884,7 @@ impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<250>;
-	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	type AllowMultipleBlocksPerSlot = ConstBool<true>;
 	type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 

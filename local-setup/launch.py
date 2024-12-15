@@ -235,7 +235,7 @@ def main(processes, worker, workers_number, parachain_type, log_config_path, off
         add_collator_ports()        
         os.environ['LITENTRY_PARACHAIN_DIR'] = parachain_dir
         setup_environment(offset, parachain_dir, worker_dir)
-        run(["./parachain/scripts/launch-network.sh", "litentry"], check=True)
+        run(["./parachain/scripts/launch-network.sh", "paseo"], check=True)
     elif parachain_type == "remote":
         setup_environment(offset, "", worker_dir)
         print("Litentry parachain should be started remotely")
