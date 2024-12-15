@@ -850,11 +850,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
-	// note here we intentionally use this hook to ignore relay chain proof so that
-	// it's possible to launch as standalone chain
-	//
-	// Litentry parachain has a different(standard) setting
-	type ConsensusHook = cumulus_pallet_parachain_system::consensus_hook::ExpectParentIncluded;
+	type ConsensusHook = ConsensusHook;
 	type WeightInfo = ();
 }
 
