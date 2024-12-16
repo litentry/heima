@@ -59,7 +59,7 @@ impl Validator<Block> for ValidatorMock {
 }
 
 impl ExtrinsicSender for ValidatorMock {
-	fn send_extrinsics(&mut self, _extrinsics: Vec<OpaqueExtrinsic>) -> Result<()> {
+	fn send_extrinsics(&self, _extrinsics: Vec<OpaqueExtrinsic>) -> Result<()> {
 		Ok(())
 	}
 }
