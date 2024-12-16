@@ -53,8 +53,8 @@ use itp_utils::stringify::account_id_to_string;
 use litentry_hex_utils::hex_encode;
 pub use litentry_primitives::{
 	aes_encrypt_default, all_evm_web3networks, all_substrate_web3networks, AesOutput, Assertion,
-	ErrorDetail, IMPError, Identity, Intent, LitentryMultiSignature, ParentchainBlockNumber,
-	RequestAesKey, VCMPError, ValidationData, Web3Network,
+	ErrorDetail, IMPError, Identity, Intent, LitentryMultiSignature, OmniAccountPermission,
+	ParentchainBlockNumber, RequestAesKey, VCMPError, ValidationData, Web3Network,
 };
 use log::*;
 use sp_core::{
@@ -144,7 +144,7 @@ pub enum TrustedCall {
 	#[codec(index = 27)]
 	create_account_store(Identity),
 	#[codec(index = 28)]
-	add_account(Identity, Identity, ValidationData, bool),
+	add_account(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	#[codec(index = 29)]
 	remove_accounts(Identity, Vec<Identity>),
 	#[codec(index = 30)]

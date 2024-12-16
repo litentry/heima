@@ -322,7 +322,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			"create_account_store",
 			who
 		)),
-		TrustedCall::add_account(who, identity, validation_data, public_account) => {
+		TrustedCall::add_account(who, identity, validation_data, public_account, permissions) => {
 			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
 				Ok(account) => account,
 				Err(e) => {
@@ -383,10 +383,6 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					return
 				},
 			};
-
-			// TOOD: get permissions from the trusted call, this is is temporary hack
-			// it will be fixed in P-1241
-			let permissions: Option<Vec<u32>> = None; // default permissions
 
 			OpaqueCall::from_tuple(&compose_call!(
 				&metadata,

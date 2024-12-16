@@ -57,3 +57,13 @@ impl OmniAccountConverter for DefaultOmniAccountConverter {
         identity.to_omni_account()
     }
 }
+
+// This type must be kept in sync with the `Permission` type used in the runtime.
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum OmniAccountPermission {
+    All,
+    AccountManagement,
+    RequestNativeIntent,
+    RequestEthereumIntent,
+    RequestSolanaIntent,
+}
