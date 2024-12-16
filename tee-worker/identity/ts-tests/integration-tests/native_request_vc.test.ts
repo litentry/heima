@@ -30,6 +30,7 @@ import {
     createAuthenticatedTrustedCallAddAccount,
     createAuthenticatedTrustedCallRequestBatchVc,
     createAuthenticatedTrustedCallRequestVc,
+    createOmniAccountPermission,
     getOmniAccount,
     getOmniAccountNonce,
     sendRequestFromTrustedCall,
@@ -126,7 +127,8 @@ describe('Test native vc_request', function () {
             aliceSubstrateIdentity,
             twitterIdentity,
             twitterValidationData.toHex(),
-            true // public account
+            true, // public account
+            [createOmniAccountPermission(context.api, 'All')]
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addTwitterAccountCall);
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -153,7 +155,8 @@ describe('Test native vc_request', function () {
             aliceSubstrateIdentity,
             evmIdentity,
             evmValidationData.toHex(),
-            true // public account
+            true, // public account
+            [createOmniAccountPermission(context.api, 'All')]
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addEvmAccountCall);
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -180,7 +183,8 @@ describe('Test native vc_request', function () {
             aliceSubstrateIdentity,
             bitcoinIdentity,
             bitcoinValidationData.toHex(),
-            true // public account
+            true, // public account
+            [createOmniAccountPermission(context.api, 'All')]
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addBitcoinAccountCall);
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);

@@ -19,6 +19,7 @@ import {
     createAuthenticatedTrustedCallPublicizeAccount,
     fundAccount,
     createAuthenticatedTrustedCallTransferNativeIntent,
+    createOmniAccountPermission,
 } from './common/utils/native-request-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -87,7 +88,9 @@ describe('Omni Account', function () {
             aliceWallet,
             aliceIdentity,
             bobIdentity,
-            validationData.toHex()
+            validationData.toHex(),
+            false,
+            [createOmniAccountPermission(context.api, 'All')]
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addAccountCall);
 
@@ -126,7 +129,8 @@ describe('Omni Account', function () {
             aliceIdentity,
             twitterIdentity,
             validationData.toHex(),
-            true // public account
+            true, // public account
+            [createOmniAccountPermission(context.api, 'All')]
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addAccountCall);
 

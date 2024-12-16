@@ -12,6 +12,7 @@ import {
     TCAuthentication,
     Intent,
     LitentryValidationData,
+    OmniAccountPermission,
 } from 'parachain-api';
 import { Signer, createLitentryMultiSignature } from '../utils';
 import { aesKey } from '../call';
@@ -125,15 +126,19 @@ export async function createAuthenticatedTrustedCallAddAccount(
     senderIdentity: CorePrimitivesIdentity,
     identity: CorePrimitivesIdentity,
     validationData: string,
-    publicAccount = false
+    publicAccount = false,
+    permissions: OmniAccountPermission[]
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['add_account', '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)'],
+        [
+            'add_account',
+            '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)',
+        ],
         sender,
         mrenclave,
         nonce,
-        [senderIdentity, identity, validationData, publicAccount]
+        [senderIdentity, identity, validationData, publicAccount, permissions]
     );
 }
 
@@ -364,4 +369,18 @@ export async function buildWeb3ValidationData(
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);
+}
+
+type OmniAccountPermissionString =
+    | 'All'
+    | 'AccountManagement'
+    | 'RequestNativeIntent'
+    | 'RequestEthereumIntent'
+    | 'RequestSolanaIntent';
+
+export function createOmniAccountPermission(
+    api: ApiPromise,
+    permission: OmniAccountPermissionString
+): OmniAccountPermission {
+    return api.createType('OmniAccountPermission', permission);
 }
