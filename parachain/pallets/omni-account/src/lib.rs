@@ -285,13 +285,13 @@ pub mod pallet {
 			member_accounts
 				.try_push(member_account)
 				.map_err(|_| Error::<T>::AccountStoreLenLimitReached)?;
-			let member_permissions: BoundedVec<T::Permission, T::MaxPermissions> = {
-				let p = match permissions {
-					Some(p) => p,
-					None => vec![T::Permission::default()],
-				};
-				p.try_into().map_err(|_| Error::<T>::PermissionsLenLimitReached)?
-			};
+			let member_permissions: BoundedVec<T::Permission, T::MaxPermissions> = permissions
+				.map_or_else(
+					|| vec![T::Permission::default()],
+					|p| if p.is_empty() { vec![T::Permission::default()] } else { p },
+				)
+				.try_into()
+				.map_err(|_| Error::<T>::PermissionsLenLimitReached)?;
 
 			MemberAccountHash::<T>::insert(hash, who.clone());
 			MemberAccountPermissions::<T>::insert(hash, member_permissions);
@@ -503,7 +503,9 @@ pub mod pallet {
 					match new_account_permissions {
 						Some(new_permissions) => {
 							// an account can only add another account with the same or less permissions
-							if !new_permissions.iter().all(|p| member_permissions.contains(p)) {
+							if new_permissions.is_empty()
+								|| !new_permissions.iter().all(|p| member_permissions.contains(p))
+							{
 								return Err(Error::<T>::NoPermission);
 							}
 						},

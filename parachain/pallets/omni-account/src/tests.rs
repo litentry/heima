@@ -123,7 +123,7 @@ fn add_account_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call::<Test>(bob.clone(), None);
+		let call = add_account_call::<Test>(bob.clone(), Some(vec![]));
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
