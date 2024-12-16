@@ -22,11 +22,12 @@ use crate::{error::Result, ImportParentchainBlocks};
 use ita_stf::ParentchainHeader;
 use itc_parentchain_indirect_calls_executor::ExecuteIndirectCalls;
 use itc_parentchain_light_client::{
-	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, Validator,
+	concurrent_access::ValidatorAccess, BlockNumberOps, LightClientState, Validator,
 };
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_ocall_api::EnclaveMetricsOCallApi;
+use itp_node_api::api_client::ParentchainAdditionalParams;
+use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_stf_executor::traits::StfUpdateState;
 use itp_stf_interface::ShardCreationInfo;
 use itp_types::{
@@ -35,7 +36,7 @@ use itp_types::{
 };
 use log::*;
 use sp_runtime::{
-	generic::SignedBlock as SignedBlockG,
+	generic::{Era, SignedBlock as SignedBlockG},
 	traits::{Block as ParentchainBlockTrait, Header as HeaderT, NumberFor},
 };
 use std::{marker::PhantomData, sync::Arc, vec, vec::Vec};
@@ -120,7 +121,7 @@ impl<
 	StfExecutor: StfUpdateState<ParentchainHeader, ParentchainId>,
 	ExtrinsicsFactory: CreateExtrinsics,
 	IndirectCallsExecutor: ExecuteIndirectCalls,
-	OcallApi: EnclaveMetricsOCallApi,
+	OcallApi: EnclaveMetricsOCallApi + EnclaveOnChainOCallApi,
 {
 	type SignedBlockType = SignedBlockG<ParentchainBlock>;
 
@@ -143,6 +144,7 @@ impl<
 		} else {
 			events_to_import
 		};
+
 		for (signed_block, raw_events) in
 			blocks_to_import.into_iter().zip(events_to_import_aligned.into_iter())
 		{
@@ -205,13 +207,22 @@ impl<
 			);
 		}
 
-		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
-		let parentchain_extrinsics =
-			self.extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
+		let params = self
+			.validator_accessor
+			.execute_on_validator(|v| v.latest_finalized_header())
+			.ok()
+			.map(|h| {
+				ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+			});
 
-		// Sending the extrinsic requires mut access because the validator caches the sent extrinsics internally.
-		self.validator_accessor
-			.execute_mut_on_validator(|v| v.send_extrinsics(parentchain_extrinsics))?;
+		let parentchain_extrinsics =
+			self.extrinsics_factory.create_extrinsics(calls.as_slice(), params)?;
+
+		self.ocall_api.send_to_parentchain(
+			parentchain_extrinsics,
+			&ParentchainId::Litentry,
+			None,
+		)?;
 
 		Ok(())
 	}
