@@ -98,7 +98,8 @@ if [ -n "$new_onchain_version" ] && \
   exit 1
 fi
 
-print_divider
+echo "Runtime upgrade succeed: $new_onchain_version"
 
+print_divider
 echo "Done"
 
