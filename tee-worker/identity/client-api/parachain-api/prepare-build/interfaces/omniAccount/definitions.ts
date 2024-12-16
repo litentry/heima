@@ -36,5 +36,8 @@ export default {
                 Private: "(Bytes,H256)",
             },
         },
+        OmniAccountPermission: {
+            _enum: ["All", "AccountManagement", "RequestNativeIntent", "RequestEthereumIntent", "RequestSolanaIntent"],
+        },
     },
 };

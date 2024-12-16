@@ -86,7 +86,7 @@ export default {
                 clean_id_graphs: "(LitentryIdentity)",
                 request_intent: "(LitentryIdentity, Intent)",
                 create_account_store: "(LitentryIdentity)",
-                add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)",
+                add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
                 remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
                 publicize_account: "(LitentryIdentity, LitentryIdentity)",
             },
