@@ -422,6 +422,20 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				identity
 			))
 		)),
+		TrustedCall::set_permissions(who, identity, permissions) =>
+			OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"dispatch_as_omni_account",
+				who.hash(),
+				OpaqueCall::from_tuple(&compose_call!(
+					&metadata,
+					"OmniAccount",
+					"set_permissions",
+					identity.hash(),
+					permissions
+				))
+			)),
 		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) => {
 			let result = handle_request_vc(
 				context.clone(),

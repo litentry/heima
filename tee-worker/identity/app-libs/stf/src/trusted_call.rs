@@ -149,6 +149,8 @@ pub enum TrustedCall {
 	remove_accounts(Identity, Vec<Identity>),
 	#[codec(index = 30)]
 	publicize_account(Identity, Identity),
+	#[codec(index = 31)]
+	set_permissions(Identity, Identity, Vec<OmniAccountPermission>),
 
 	// original integritee trusted calls, starting from index 50
 	#[codec(index = 50)]
@@ -244,6 +246,7 @@ impl TrustedCall {
 			Self::add_account(sender_identity, ..) => sender_identity,
 			Self::remove_accounts(sender_identity, ..) => sender_identity,
 			Self::publicize_account(sender_identity, ..) => sender_identity,
+			Self::set_permissions(sender_identity, ..) => sender_identity,
 		}
 	}
 
@@ -262,6 +265,7 @@ impl TrustedCall {
 			Self::add_account(..) => "add_account",
 			Self::remove_accounts(..) => "remove_account",
 			Self::publicize_account(..) => "publicize_account",
+			Self::set_permissions(..) => "set_permissions",
 			_ => "unsupported_trusted_call",
 		}
 	}
@@ -920,7 +924,8 @@ where
 			| TrustedCall::create_account_store(..)
 			| TrustedCall::add_account(..)
 			| TrustedCall::remove_accounts(..)
-			| TrustedCall::publicize_account(..) => {
+			| TrustedCall::publicize_account(..)
+			| TrustedCall::set_permissions(..) => {
 				error!("please use author_submitNativeRequest instead");
 				Ok(TrustedCallResult::Empty)
 			},
