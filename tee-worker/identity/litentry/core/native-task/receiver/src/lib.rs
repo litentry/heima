@@ -66,7 +66,7 @@ use ita_stf::{
 };
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
-	api_client::{compose_call, XtStatus},
+	api_client::{compose_call, ParentchainAdditionalParams, XtStatus},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
@@ -94,6 +94,7 @@ use litentry_primitives::{
 	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
 };
 use sp_core::{blake2_256, H160, H256};
+use sp_runtime::generic::Era;
 use std::collections::HashSet;
 
 const THREAD_POOL_SIZE: usize = 480;
@@ -538,7 +539,11 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		},
 	};
 
-	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[opaque_call], None) {
+	let params = context.ocall_api.get_header().ok().map(|h: itp_types::Header| {
+		ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+	});
+
+	let extrinsic = match context.extrinsic_factory.create_extrinsics(&[opaque_call], params) {
 		Ok(extrinsic) => extrinsic,
 		Err(e) => {
 			log::error!("Failed to create extrinsic: {:?}", e);

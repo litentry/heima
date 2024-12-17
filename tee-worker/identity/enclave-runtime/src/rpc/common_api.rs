@@ -589,7 +589,7 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()
 		.map_err(|e| format!("{:?}", e))?;
 	validator_access
-		.execute_mut_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
+		.execute_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
 		.map_err(|e| format!("{:?}", e))?;
 
 	Ok(ext)
@@ -623,7 +623,7 @@ fn attesteer_forward_ias_attestation_report_inner(
 	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()
 		.map_err(|e| format!("{:?}", e))?;
 	validator_access
-		.execute_mut_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
+		.execute_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
 		.map_err(|e| format!("{:?}", e))?;
 
 	Ok(ext)

@@ -13,6 +13,7 @@ itc-parentchain-indirect-calls-executor = { package = "id-itc-parentchain-indire
 itc-parentchain-light-client = { workspace = true }
 itp-enclave-metrics = { workspace = true }
 itp-extrinsics-factory = { workspace = true }
+itp-node-api = { workspace = true }
 itp-ocall-api = { workspace = true }
 itp-stf-executor = { package = "id-itp-stf-executor", path = "../../../core-primitives/stf-executor", default-features = false }
 itp-stf-interface = { workspace = true }
@@ -41,6 +42,7 @@ std = [
     "sp-runtime/std",
     "thiserror",
     "itp-ocall-api/std",
+    "itp-node-api/std",
 ]
 sgx = [
     "sgx_tstd",
@@ -51,6 +53,7 @@ sgx = [
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
     "thiserror_sgx",
+    "itp-node-api/sgx",
 ]
 
 # feature to export mock implementations, only to be used for dev-dependencies!

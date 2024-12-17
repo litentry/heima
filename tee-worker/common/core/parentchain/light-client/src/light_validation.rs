@@ -210,7 +210,7 @@ where
 	Block: ParentchainBlockTrait,
 	OCallApi: EnclaveOnChainOCallApi,
 {
-	fn send_extrinsics(&mut self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
+	fn send_extrinsics(&self, extrinsics: Vec<OpaqueExtrinsic>) -> Result<(), Error> {
 		self.ocall_api
 			.send_to_parentchain(extrinsics, &self.parentchain_id, None)
 			.map_err(|e| {
