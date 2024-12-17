@@ -9,6 +9,7 @@ import type {
   LitentryValidationData,
   Web3Network,
   Assertion,
+  MemberAccount,
 } from '@litentry/parachain-api';
 
 import * as shieldingKeyUtils from '../util/shielding-key';
@@ -77,6 +78,24 @@ type RequestCreateAccountStoreParams = {
   who: LitentryIdentity;
 };
 
+// LitentryIdentity, MemberAccount
+type RequestAddAccountParams = {
+  who: LitentryIdentity;
+  memberAccount: MemberAccount;
+};
+
+// LitentryIdentity, Array<H256>
+type RequestRemoveAccountsParams = {
+  who: LitentryIdentity;
+  memberAccounts: Array<`0x${string}`>;
+};
+
+// LitentryIdentity, LitentryIdentity
+type RequestPublicizeAccountParams = {
+  who: LitentryIdentity;
+  memberAccount: LitentryIdentity;
+};
+
 /**
  * Creates the TrustedCall for the given method and provide the `param's` types expected for them.
  *
@@ -127,6 +146,27 @@ export async function createTrustedCallType(
   data: {
     method: 'create_account_store';
     params: RequestCreateAccountStoreParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'add_account';
+    params: RequestAddAccountParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'remove_accounts';
+    params: RequestRemoveAccountsParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'publicize_account';
+    params: RequestPublicizeAccountParams;
   }
 ): Promise<{ call: TrustedCall; key: CryptoKey }>;
 export async function createTrustedCallType(
@@ -270,6 +310,45 @@ export async function createTrustedCallType(
     return { call, key };
   }
 
+  if (isRequestAddAccountParams(method, params)) {
+    const { who, memberAccount } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.add_account]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.add_account,
+        [who, memberAccount]
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
+  if (isRequestRemoveAccountsParams(method, params)) {
+    const { who, memberAccounts } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.remove_accounts]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.remove_accounts,
+        [who, memberAccounts]
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
+  if (isRequestPublicizeAccountParams(method, params)) {
+    const { who, memberAccount } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.publicize_account]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.publicize_account,
+        [who, memberAccount]
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
   throw new Error(`trusted call method: ${data.method} is not supported`);
 }
 
@@ -315,4 +394,24 @@ function isRequestCreateAccountStoreParams(
   params: Record<string, unknown>
 ): params is RequestCreateAccountStoreParams {
   return method === 'create_account_store';
+}
+function isRequestAddAccountParams(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestAddAccountParams {
+  return method === 'add_account';
+}
+
+function isRequestRemoveAccountsParams(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestRemoveAccountsParams {
+  return method === 'remove_accounts';
+}
+
+function isRequestPublicizeAccountParams(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestPublicizeAccountParams {
+  return method === 'publicize_account';
 }

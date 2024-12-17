@@ -578,7 +578,7 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:90](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L90)
+[lib/type-creators/trusted-call.ts:109](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L109)
 
 ▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
 
@@ -597,7 +597,7 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:97](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L97)
+[lib/type-creators/trusted-call.ts:116](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L116)
 
 ▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
 
@@ -616,7 +616,7 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:104](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L104)
+[lib/type-creators/trusted-call.ts:123](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L123)
 
 ▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
 
@@ -635,7 +635,7 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:111](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L111)
+[lib/type-creators/trusted-call.ts:130](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L130)
 
 ▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
 
@@ -654,7 +654,7 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:118](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L118)
+[lib/type-creators/trusted-call.ts:137](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L137)
 
 ▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
 
@@ -673,7 +673,64 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:125](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L125)
+[lib/type-creators/trusted-call.ts:144](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L144)
+
+▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
+
+#### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `registry` | `Registry` |
+| `data` | `Object` |
+| `data.method` | ``"add_account"`` |
+| `data.params` | `RequestAddAccountParams` |
+
+#### Returns
+
+`Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
+
+#### Defined in
+
+[lib/type-creators/trusted-call.ts:151](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L151)
+
+▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
+
+#### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `registry` | `Registry` |
+| `data` | `Object` |
+| `data.method` | ``"remove_accounts"`` |
+| `data.params` | `RequestRemoveAccountsParams` |
+
+#### Returns
+
+`Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
+
+#### Defined in
+
+[lib/type-creators/trusted-call.ts:158](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L158)
+
+▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
+
+#### Parameters
+
+| Name | Type |
+| :------ | :------ |
+| `registry` | `Registry` |
+| `data` | `Object` |
+| `data.method` | ``"publicize_account"`` |
+| `data.params` | `RequestPublicizeAccountParams` |
+
+#### Returns
+
+`Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
+
+#### Defined in
+
+[lib/type-creators/trusted-call.ts:165](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L165)
 
 ▸ **createTrustedCallType**(`registry`, `data`): `Promise`\<\{ `call`: `TrustedCall` ; `key`: `CryptoKey`  }\>
 
@@ -692,7 +749,7 @@ Similarly, our types definitions must match also.
 
 #### Defined in
 
-[lib/type-creators/trusted-call.ts:132](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L132)
+[lib/type-creators/trusted-call.ts:172](https://github.com/litentry/client-sdk/blob/develop/lib/type-creators/trusted-call.ts#L172)
 
 ___
 
