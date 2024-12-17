@@ -31,7 +31,7 @@ args = [
   "--force-authoring",
   "--enable-evm-rpc",
   "--state-pruning=archive",
-  "--delayed-best-block",
+  # "--delayed-best-block",
   "-l=parachain=debug,txpool=trace"
 ]
 ws_port = {{COLLATOR_WS_PORT}}
