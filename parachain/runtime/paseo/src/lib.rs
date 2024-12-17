@@ -233,7 +233,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("paseo-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9220,
+	spec_version: 9221,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1167,6 +1167,12 @@ impl pallet_omni_account::Config for Runtime {
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 }
 
+impl pallet_bitacross::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
+	type SetAdminOrigin = EnsureRootOrAllCouncil;
+}
+
 impl pallet_evm_assertions::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
@@ -1368,6 +1374,7 @@ construct_runtime! {
 		VCManagement: pallet_vc_management = 66,
 		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 67,
 		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 68,
+		Bitacross: pallet_bitacross = 70,
 		EvmAssertions: pallet_evm_assertions = 71,
 
 		// Developer council
@@ -1497,6 +1504,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			// AccountFix
 			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
+			RuntimeCall::Bitacross(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_) |
