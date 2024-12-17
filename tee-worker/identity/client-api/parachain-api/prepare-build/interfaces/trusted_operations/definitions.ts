@@ -89,6 +89,7 @@ export default {
                 add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
                 remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
                 publicize_account: "(LitentryIdentity, LitentryIdentity)",
+                set_permissions: "(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)",
             },
         },
         TrustedOperationStatus: {
