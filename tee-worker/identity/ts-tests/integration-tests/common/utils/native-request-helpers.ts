@@ -142,6 +142,25 @@ export async function createAuthenticatedTrustedCallAddAccount(
     );
 }
 
+export async function createAuthenticatedTrustedCallSetPermissions(
+    parachainApi: ApiPromise,
+    mrenclave: string,
+    nonce: Codec,
+    sender: Signer,
+    senderIdentity: CorePrimitivesIdentity,
+    identity: CorePrimitivesIdentity,
+    permissions: OmniAccountPermission[]
+) {
+    return createAuthenticatedTrustedCall(
+        parachainApi,
+        ['set_permissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
+        sender,
+        mrenclave,
+        nonce,
+        [senderIdentity, identity, permissions]
+    );
+}
+
 export async function createAuthenticatedTrustedCallRemoveAccounts(
     parachainApi: ApiPromise,
     mrenclave: string,

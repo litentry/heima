@@ -20,6 +20,7 @@ import {
     fundAccount,
     createAuthenticatedTrustedCallTransferNativeIntent,
     createOmniAccountPermission,
+    createAuthenticatedTrustedCallSetPermissions,
 } from './common/utils/native-request-helpers';
 import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -234,6 +235,50 @@ describe('Omni Account', function () {
             omniAccountData.free.toBigInt(),
             initialBalance.toBigInt() - transferAmount.toBigInt(),
             'omni account balance should be decreased by 10'
+        );
+    });
+
+    step('test set_permissions', async function () {
+        const currentNonce = 5;
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context);
+
+        // current permissions
+        let accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
+        assert.equal(accountPermissions.length, 1, 'permissions length should be 1 before set permissions');
+        assert.equal(
+            accountPermissions[0].toString(),
+            'All',
+            'permission is not the expected permission before set permissions'
+        );
+
+        const newPermissions = [
+            createOmniAccountPermission(context.api, 'RequestNativeIntent'),
+            createOmniAccountPermission(context.api, 'RequestEthereumIntent'),
+        ];
+        const setPermissionsCall = await createAuthenticatedTrustedCallSetPermissions(
+            context.api,
+            context.mrEnclave,
+            context.api.createType('Index', currentNonce),
+            aliceWallet,
+            aliceIdentity,
+            bobIdentity,
+            newPermissions
+        );
+        await sendRequestFromTrustedCall(context, teeShieldingKey, setPermissionsCall);
+
+        accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
+
+        assert.equal(accountPermissions.length, 2, 'permissions length should be 2');
+        assert.equal(
+            accountPermissions[0].toString(),
+            'RequestNativeIntent',
+            'permission 1 is not the expected permission'
+        );
+        assert.equal(
+            accountPermissions[1].toString(),
+            'RequestEthereumIntent',
+            'permission 2 is not the expected permission'
         );
     });
 });
