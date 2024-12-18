@@ -3,7 +3,6 @@ import { hexToU8a } from '@polkadot/util';
 import type { ApiPromise } from '@polkadot/api';
 import type {
   LitentryIdentity,
-  MemberAccount,
   TrustedCallResult,
   WorkerRpcReturnValue,
 } from '@litentry/parachain-api';
@@ -30,10 +29,10 @@ export async function publicizeAccount(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
-    /** The member account for publicizing. Use `createLitentryIdentityType` helper to create this struct */
-    memberAccount: LitentryIdentity;
     /** The user's account. Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
+    /** The member account for publicizing. Use `createLitentryIdentityType` helper to create this struct */
+    identity: LitentryIdentity;
   }
 ): Promise<{
   payloadToSign?: string;
@@ -43,7 +42,7 @@ export async function publicizeAccount(
     extrinsicHash: string;
   }>;
 }> {
-  const { who, memberAccount } = data;
+  const { who, identity } = data;
 
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
@@ -53,7 +52,7 @@ export async function publicizeAccount(
     method: 'publicize_account',
     params: {
       who,
-      memberAccount
+      identity,
     },
   });
 

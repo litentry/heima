@@ -9,7 +9,6 @@ import type {
   LitentryValidationData,
   Web3Network,
   Assertion,
-  MemberAccount,
 } from '@litentry/parachain-api';
 
 import * as shieldingKeyUtils from '../util/shielding-key';
@@ -78,22 +77,24 @@ type RequestCreateAccountStoreParams = {
   who: LitentryIdentity;
 };
 
-// LitentryIdentity, MemberAccount
+// LitentryIdentity, LitentryIdentity, LitentryValidationData, boolean
 type RequestAddAccountParams = {
   who: LitentryIdentity;
-  memberAccount: MemberAccount;
+  identity: LitentryIdentity;
+  validation: LitentryValidationData;
+  isPublic: boolean;
 };
 
-// LitentryIdentity, Array<H256>
+// LitentryIdentity, Array<LitentryIdentity>
 type RequestRemoveAccountsParams = {
   who: LitentryIdentity;
-  memberAccounts: Array<`0x${string}`>;
+  identities: Array<LitentryIdentity>;
 };
 
 // LitentryIdentity, LitentryIdentity
 type RequestPublicizeAccountParams = {
   who: LitentryIdentity;
-  memberAccount: LitentryIdentity;
+  identity: LitentryIdentity;
 };
 
 /**
@@ -311,12 +312,13 @@ export async function createTrustedCallType(
   }
 
   if (isRequestAddAccountParams(method, params)) {
-    const { who, memberAccount } = params;
+    const { who, identity, validation, isPublic } = params;
+
 
     const call = registry.createType('TrustedCall', {
       [trustedCallMethodsMap.add_account]: registry.createType(
         trusted_operations.types.TrustedCall._enum.add_account,
-        [who, memberAccount]
+        [who, identity, validation, isPublic]
       ),
     }) as TrustedCall;
 
@@ -324,12 +326,13 @@ export async function createTrustedCallType(
   }
 
   if (isRequestRemoveAccountsParams(method, params)) {
-    const { who, memberAccounts } = params;
+    const { who, identities } = params;
 
+    const identitiesVec = registry.createType('Vec<LitentryIdentity>', identities);
     const call = registry.createType('TrustedCall', {
       [trustedCallMethodsMap.remove_accounts]: registry.createType(
         trusted_operations.types.TrustedCall._enum.remove_accounts,
-        [who, memberAccounts]
+        [who, identitiesVec]
       ),
     }) as TrustedCall;
 
@@ -337,12 +340,12 @@ export async function createTrustedCallType(
   }
 
   if (isRequestPublicizeAccountParams(method, params)) {
-    const { who, memberAccount } = params;
+    const { who, identity } = params;
 
     const call = registry.createType('TrustedCall', {
       [trustedCallMethodsMap.publicize_account]: registry.createType(
         trusted_operations.types.TrustedCall._enum.publicize_account,
-        [who, memberAccount]
+        [who, identity]
       ),
     }) as TrustedCall;
 

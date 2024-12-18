@@ -27,14 +27,14 @@ import { getEnclaveNonce } from './get-enclave-nonce';
  * an email identity, this is the email verification code. If who is not an email identity, this is the
  * signed payload.
  */
-export async function remove_accounts(
+export async function removeAccounts(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
-    /** Member accounts for removing */
-    memberAccounts: Array<`0x${string}`>;
     /** The user's account. Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
+    /** Accounts for removing */
+    identities: Array<LitentryIdentity>;
   }
 ): Promise<{
   payloadToSign?: string;
@@ -44,7 +44,7 @@ export async function remove_accounts(
     extrinsicHash: string;
   }>;
 }> {
-  const { who, memberAccounts } = data;
+  const { who, identities } = data;
 
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
@@ -54,7 +54,7 @@ export async function remove_accounts(
     method: 'remove_accounts',
     params: {
       who,
-      memberAccounts
+      identities,
     },
   });
 
