@@ -3,7 +3,7 @@ import solc from 'solc';
 const solcWrapper: any = solc;
 const source: string = `
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity ^0.8.26;
 
 contract Hello {
     string public message;
