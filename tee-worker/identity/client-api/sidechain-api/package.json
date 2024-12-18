@@ -5,7 +5,7 @@
     "main": "dist/src/index.js",
     "module": "dist/src/index.js",
     "sideEffects": false,
-    "version": "0.9.20-next.8",
+    "version": "0.9.21-next.0",
     "scripts": {
         "clean": "rm -rf dist build node_modules",
         "update-metadata": "../../bin/litentry-cli print-sgx-metadata-raw > prepare-build/litentry-sidechain-metadata.json",

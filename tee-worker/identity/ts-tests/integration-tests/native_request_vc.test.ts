@@ -84,7 +84,6 @@ describe('Test native vc_request', function () {
                         'RequestVcOk',
                         requestVcResultOrError.result.asOk
                     );
-                    console.log('Asserting VC', requestVcOk);
                     await assertVc(context, aliceSubstrateIdentity, requestVcOk);
                 }
             }
@@ -234,7 +233,6 @@ describe('Test native vc_request', function () {
                             'RequestVcOk',
                             requestVcResultOrError.result.asOk
                         );
-                        console.log('Asserting VC', requestVcOk);
                         await assertVc(context, aliceSubstrateIdentity, requestVcOk);
                     }
                 }

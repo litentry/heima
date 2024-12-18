@@ -51,9 +51,4 @@ pub enum EnclaveMetric {
 	ParentchainEventProcessed(String),
 	DynamicAssertionSaveTime(Duration),
 	DynamicAssertionGetTime(Duration),
-	// bitacross
-	Musig2CeremonyStarted,
-	Musig2CeremonyFailed,
-	Musig2CeremonyTimedout(u8),
-	Musig2CeremonyDuration(Duration),
 }

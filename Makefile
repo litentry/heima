@@ -105,7 +105,6 @@ fmt-cargo:
 	@cd parachain && cargo fmt --all
 	@cd tee-worker && cargo fmt --all
 	@cd tee-worker/identity/enclave-runtime && cargo fmt --all
-	@cd tee-worker/bitacross/enclave-runtime && cargo fmt --all
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:

@@ -42,11 +42,8 @@ pub type EnclaveFingerprint = H256;
 )]
 pub enum OperationalMode {
     #[default]
-    #[codec(index = 0)]
     Production,
-    #[codec(index = 1)]
     Development,
-    #[codec(index = 2)]
     Maintenance,
 }
 
@@ -85,9 +82,7 @@ pub enum WorkerMode {
 #[derive(Encode, Decode, Copy, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum SgxBuildMode {
     #[default]
-    #[codec(index = 0)]
     Production,
-    #[codec(index = 1)]
     Debug,
 }
 

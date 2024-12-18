@@ -118,15 +118,9 @@ pub trait FilterEvents {
 		&self,
 	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error>;
 
-	fn get_relayer_added_events(&self) -> Result<Vec<RelayerAdded>, Self::Error>;
-
-	fn get_relayers_removed_events(&self) -> Result<Vec<RelayerRemoved>, Self::Error>;
-
 	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error>;
 
 	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error>;
-
-	fn get_btc_wallet_generated_events(&self) -> Result<Vec<BtcWalletGenerated>, Self::Error>;
 
 	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error>;
 }

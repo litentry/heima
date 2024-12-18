@@ -70,25 +70,6 @@ members = [
     "identity/sidechain/consensus/slots",
     "identity/sidechain/consensus/common",
     "identity/sidechain/consensus/aura",
-
-    # bitacross-worker
-    "bitacross/app-libs/*",
-    "bitacross/cli",
-    "bitacross/core/parentchain/block-import-dispatcher",
-    "bitacross/core/parentchain/block-importer",
-    "bitacross/core/parentchain/indirect-calls-executor",
-    "bitacross/core/parentchain/parentchain-crate",
-    "bitacross/core/direct-rpc-client",
-    "bitacross/core/direct-rpc-server",
-    "bitacross/core/offchain-worker-executor",
-    "bitacross/core-primitives/stf-executor",
-    "bitacross/core-primitives/top-pool",
-    "bitacross/core-primitives/top-pool-author",
-    "bitacross/core-primitives/enclave-api",
-    "bitacross/core-primitives/enclave-api/ffi",
-    "bitacross/service",
-    "bitacross/litentry/core/direct-call",
-    "bitacross/bitacross/core/*",
 ]
 
 exclude = [
@@ -98,7 +79,6 @@ exclude = [
 
     # enclave-runtime needs to have its own workspace root for patching
     "identity/enclave-runtime",
-    "bitacross/enclave-runtime",
 ]
 
 [workspace.dependencies]

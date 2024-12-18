@@ -195,13 +195,13 @@ def get_flags(index, worker):
 
     return list(filter(None, [
         "--clean-reset",
-        "-T", "wss://localhost" if worker == "bitacross" else "ws://localhost",
+        "-T", "ws://localhost",
         "-P", ports['trusted_worker_port'],
         "-w", ports['untrusted_worker_port'],
         "-r", ports['mura_port'],
         "-h", ports['untrusted_http_port'],
         "-p", ports['collator_ws_port'],
-        "--enable-mock-server" if worker == "identity" else "",
+        "--enable-mock-server",
         "--parentchain-start-block", "0",
         "--enable-metrics" if index == 0 else None
     ]))
@@ -222,14 +222,8 @@ def add_collator_ports():
 
 def main(processes, worker, workers_number, parachain_type, log_config_path, offset, parachain_dir):
     # Litentry
-    if worker == "identity":
-        worker_dir = "tee-worker/identity"
-        worker_bin = "litentry-worker"
-    elif worker == "bitacross":
-        worker_dir = "tee-worker/bitacross"
-        worker_bin = "bitacross-worker"
-    else:
-        sys.exit("Unsupported worker")
+    worker_dir = "tee-worker/identity"
+    worker_bin = "litentry-worker"
 
     print("Starting litentry parachain in background ...")
     if parachain_type == "standalone":
@@ -306,7 +300,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run a setup consisting of a node and some workers"
     )
-    parser.add_argument("-w", "--worker", type=str, default="identity", help="Worker to run: identity / bitacross")
+    parser.add_argument("-w", "--worker", type=str, default="identity", help="Worker to run: identity")
     parser.add_argument("-wn", "--workers-number", type=int, default=1, help="Number of workers to run")
     parser.add_argument(
         "-p",

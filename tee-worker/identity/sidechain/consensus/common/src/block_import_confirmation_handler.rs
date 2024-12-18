@@ -17,16 +17,18 @@
 
 use crate::error::{Error, Result};
 use itc_parentchain_light_client::{
-	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, NumberFor,
+	concurrent_access::ValidatorAccess, BlockNumberOps, ExtrinsicSender, LightClientState,
+	NumberFor,
 };
 use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::api_client::ParentchainAdditionalParams;
 use itp_node_api_metadata::{pallet_teebag::TeebagCallIndexes, NodeMetadataTrait};
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
-use itp_types::{OpaqueCall, ShardIdentifier};
+use itp_types::{Header, OpaqueCall, ShardIdentifier};
 use its_primitives::traits::Header as HeaderTrait;
 use log::*;
-use sp_runtime::traits::Block as ParentchainBlockTrait;
+use sp_runtime::{generic::Era, traits::Block as ParentchainBlockTrait};
 use std::{marker::PhantomData, sync::Arc};
 
 /// Trait to confirm a sidechain block import.
@@ -91,7 +93,7 @@ impl<
 		ExtrinsicsFactory,
 		ValidatorAccessor,
 	> where
-	ParentchainBlock: ParentchainBlockTrait,
+	ParentchainBlock: ParentchainBlockTrait<Header = Header>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SidechainHeader: HeaderTrait,
 	NodeMetadataRepository: AccessNodeMetadata,
@@ -115,14 +117,23 @@ impl<
 				header.hash(),
 			));
 
+			let params = self
+				.validator_accessor
+				.execute_on_validator(|v| v.latest_finalized_header())
+				.ok()
+				.map(|h| {
+					ParentchainAdditionalParams::new()
+						.era(Era::mortal(5, h.number.into()), h.hash())
+				});
+
 			let xts = self
 				.extrinsics_factory
-				.create_extrinsics(&[opaque_call], None)
+				.create_extrinsics(&[opaque_call], params)
 				.map_err(|e| Error::Other(e.into()))?;
 
 			debug!("Sending sidechain block import confirmation extrinsic..");
 			self.validator_accessor
-				.execute_mut_on_validator(|v| v.send_extrinsics(xts))
+				.execute_on_validator(|v| v.send_extrinsics(xts))
 				.map_err(|e| Error::Other(e.into()))?;
 		}
 		Ok(())

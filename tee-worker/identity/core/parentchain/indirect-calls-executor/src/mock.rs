@@ -66,23 +66,11 @@ impl FilterEvents for MockEvents {
 		Ok(Vec::new())
 	}
 
-	fn get_btc_wallet_generated_events(&self) -> Result<Vec<BtcWalletGenerated>, Self::Error> {
-		Ok(Vec::new())
-	}
-
 	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error> {
 		Ok(Vec::new())
 	}
 
 	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error> {
-		Ok(Vec::new())
-	}
-
-	fn get_relayer_added_events(&self) -> Result<Vec<RelayerAdded>, Self::Error> {
-		Ok(Vec::new())
-	}
-
-	fn get_relayers_removed_events(&self) -> Result<Vec<RelayerRemoved>, Self::Error> {
 		Ok(Vec::new())
 	}
 
