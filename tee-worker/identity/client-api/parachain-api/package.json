@@ -5,7 +5,7 @@
     "main": "dist/src/index.js",
     "module": "dist/src/index.js",
     "sideEffects": false,
-    "version": "0.9.20-next.10",
+    "version": "0.9.21-next.0",
     "scripts": {
         "clean": "rm -rf dist build node_modules",
         "update-metadata": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > prepare-build/litentry-parachain-metadata.json",
