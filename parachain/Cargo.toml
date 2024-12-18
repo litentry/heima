@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     'node',
     'pallets/account-fix',
+    'pallets/bitacross',
     'pallets/bridge/assets-handler',
     'pallets/bridge/chain-bridge',
     'pallets/bridge/bridge-transfer',
@@ -273,6 +274,7 @@ paseo-parachain-runtime = { path = "runtime/paseo", default-features = false }
 pallet-account-fix = { path = "pallets/account-fix", default-features = false }
 pallet-asset-manager = { path = "pallets/xcm-asset-manager", default-features = false }
 pallet-assets-handler = { path = "pallets/bridge/assets-handler", default-features = false }
+pallet-bitacross = { path = "pallets/bitacross", default-features = false }
 pallet-chain-bridge = { path = "pallets/bridge/chain-bridge", default-features = false }
 pallet-bridge-common = { path = "pallets/bridge/common", default-features = false }
 pallet-bridge-transfer = { path = "pallets/bridge/bridge-transfer", default-features = false }

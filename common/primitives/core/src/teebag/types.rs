@@ -68,6 +68,7 @@ pub enum AttestationType {
 pub enum WorkerType {
     #[default]
     Identity,
+    BitAcross,
     OmniExecutor,
 }
 
