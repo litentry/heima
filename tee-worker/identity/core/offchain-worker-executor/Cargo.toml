@@ -16,6 +16,8 @@ thiserror_sgx = { workspace = true, optional = true }
 
 itc-parentchain-light-client = { workspace = true }
 itp-extrinsics-factory = { workspace = true }
+itp-node-api = { workspace = true }
+itp-sgx-runtime-primitives = { workspace = true }
 itp-stf-executor = { package = "id-itp-stf-executor", path = "../../core-primitives/stf-executor", default-features = false }
 itp-stf-interface = { workspace = true }
 itp-stf-primitives = { workspace = true }
@@ -40,7 +42,9 @@ sp-core = { workspace = true, features = ["full_crypto"] }
 default = ["std"]
 std = [
     "itc-parentchain-light-client/std",
+    "itp-sgx-runtime-primitives/std",
     "itp-extrinsics-factory/std",
+    "itp-node-api/std",
     "itp-stf-executor/std",
     "itp-stf-interface/std",
     "itp-stf-primitives/std",
@@ -52,6 +56,7 @@ std = [
 ]
 sgx = [
     "itc-parentchain-light-client/sgx",
+    "itp-node-api/sgx",
     "itp-extrinsics-factory/sgx",
     "itp-stf-executor/sgx",
     "itp-stf-state-handler/sgx",

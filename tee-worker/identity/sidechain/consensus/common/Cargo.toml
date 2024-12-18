@@ -14,6 +14,7 @@ itc-parentchain-light-client = { workspace = true }
 itp-enclave-metrics = { workspace = true }
 itp-extrinsics-factory = { workspace = true }
 itp-import-queue = { workspace = true }
+itp-node-api = { workspace = true }
 itp-node-api-metadata = { workspace = true }
 itp-node-api-metadata-provider = { workspace = true }
 itp-ocall-api = { workspace = true }
@@ -51,6 +52,7 @@ std = [
     "itp-import-queue/std",
     "itp-enclave-metrics/std",
     "itp-extrinsics-factory/std",
+    "itp-node-api/std",
     "itp-node-api-metadata/std",
     "itp-node-api-metadata-provider/std",
     "itp-ocall-api/std",
@@ -70,6 +72,7 @@ sgx = [
     "itp-import-queue/sgx",
     "itp-enclave-metrics/sgx",
     "itp-extrinsics-factory/sgx",
+    "itp-node-api/sgx",
     "itp-node-api-metadata-provider/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",

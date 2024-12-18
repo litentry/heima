@@ -99,6 +99,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod asset_config;
 pub mod constants;
+pub mod governance_v2;
 pub mod precompiles;
 
 #[cfg(test)]
@@ -232,7 +233,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("paseo-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9220,
+	spec_version: 9221,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1162,6 +1163,12 @@ impl pallet_omni_account::Config for Runtime {
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 }
 
+impl pallet_bitacross::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
+	type SetAdminOrigin = EnsureRootOrAllCouncil;
+}
+
 impl pallet_evm_assertions::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
@@ -1363,6 +1370,7 @@ construct_runtime! {
 		VCManagement: pallet_vc_management = 66,
 		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 67,
 		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 68,
+		Bitacross: pallet_bitacross = 70,
 		EvmAssertions: pallet_evm_assertions = 71,
 
 		// Developer council
@@ -1388,6 +1396,12 @@ construct_runtime! {
 		PoolProposal: pallet_pool_proposal = 152,
 		InvestingPool: pallet_investing_pool = 153,
 		AIUSDConvertor: pallet_aiusd_convertor = 154,
+
+		// New Goverance
+		ConvictionVoting: pallet_conviction_voting = 170,
+		Referenda: pallet_referenda = 171,
+		Origins: governance_v2::pallet_custom_origins::{Origin} = 172,
+		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 173,
 
 		// TMP
 		AccountFix: pallet_account_fix = 254,
@@ -1486,6 +1500,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			// AccountFix
 			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
+			RuntimeCall::Bitacross(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_) |
@@ -1525,6 +1540,9 @@ mod benches {
 		[pallet_chain_bridge,ChainBridge]
 		[pallet_bridge_transfer,BridgeTransfer]
 		[pallet_teebag, Teebag]
+		[pallet_conviction_voting, ConvictionVoting]
+		[pallet_referenda, Referenda]
+		[pallet_whitelist, Whitelist]
 	);
 }
 

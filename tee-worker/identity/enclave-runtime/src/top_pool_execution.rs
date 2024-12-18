@@ -49,6 +49,7 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
+use itp_node_api::api_client::ParentchainAdditionalParams;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::key_repository::AccessKey;
@@ -72,7 +73,9 @@ use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
-	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
+	generic::{Era, SignedBlock as SignedParentchainBlock},
+	traits::Block as BlockTrait,
+	MultiSignature,
 };
 use std::{sync::Arc, time::Instant, vec::Vec};
 
@@ -364,9 +367,15 @@ where
 	debug!("Enclave wants to send {} extrinsics to Integritee Parentchain", calls.len());
 	if !calls.is_empty() {
 		let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 		let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
-		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+		let params = validator_access
+			.execute_on_validator(|v| v.latest_finalized_header())
+			.ok()
+			.map(|h| {
+				ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+			});
+		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), params)?;
+		validator_access.execute_on_validator(|v| v.send_extrinsics(xts))?;
 	}
 	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
@@ -375,9 +384,15 @@ where
 	debug!("Enclave wants to send {} extrinsics to TargetA Parentchain", calls.len());
 	if !calls.is_empty() {
 		let extrinsics_factory = get_extrinsic_factory_from_target_a_solo_or_parachain()?;
-		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 		let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
-		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+		let params = validator_access
+			.execute_on_validator(|v| v.latest_finalized_header())
+			.ok()
+			.map(|h| {
+				ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+			});
+		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), params)?;
+		validator_access.execute_on_validator(|v| v.send_extrinsics(xts))?;
 	}
 	let calls: Vec<OpaqueCall> = parentchain_calls
 		.iter()
@@ -386,9 +401,15 @@ where
 	debug!("Enclave wants to send {} extrinsics to TargetB Parentchain", calls.len());
 	if !calls.is_empty() {
 		let extrinsics_factory = get_extrinsic_factory_from_target_b_solo_or_parachain()?;
-		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 		let validator_access = get_validator_accessor_from_target_b_solo_or_parachain()?;
-		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
+		let params = validator_access
+			.execute_on_validator(|v| v.latest_finalized_header())
+			.ok()
+			.map(|h| {
+				ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+			});
+		let xts = extrinsics_factory.create_extrinsics(calls.as_slice(), params)?;
+		validator_access.execute_on_validator(|v| v.send_extrinsics(xts))?;
 	}
 
 	Ok(())
