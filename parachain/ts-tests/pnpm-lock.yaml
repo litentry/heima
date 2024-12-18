@@ -39,7 +39,7 @@ dependencies:
     specifier: ^5.7.2
     version: 5.7.2
   solc:
-    specifier: ^0.8.26
+    specifier: ^0.8.28
     version: 0.8.28
   web3:
     specifier: ^4.7.0
