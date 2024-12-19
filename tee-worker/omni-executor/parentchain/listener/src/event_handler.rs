@@ -187,6 +187,9 @@ impl<
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferEthereum(transfer) => {
 				Some(Intent::TransferEthereum(transfer.to.to_fixed_bytes(), transfer.value))
 			},
+            crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferSolana(transfer) => {
+                Some(Intent::TransferSolana(transfer.to, transfer.value))
+            },
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::SystemRemark(_) => None,
 			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferNative(_) => None,
 		};
