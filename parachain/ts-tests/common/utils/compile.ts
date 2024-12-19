@@ -3,7 +3,7 @@ import solc from 'solc';
 const solcWrapper: any = solc;
 const source: string = `
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity ^0.8.28;
 
 contract Hello {
     string public message;
@@ -35,7 +35,11 @@ const input = {
                 '*': ['*'],
             },
         },
-        // evmVersion: "byzantium",
+        evmVersion: "london",
+        optimizer: {
+            enabled: true,
+            runs: 200
+        }
     },
 };
 const result = JSON.parse(solcWrapper.compile(JSON.stringify(input)));

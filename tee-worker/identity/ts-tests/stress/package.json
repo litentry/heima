@@ -11,7 +11,7 @@
     "dependencies": {
         "@noble/ed25519": "^1.7.3",
         "@polkadot/api": "^15.0.1",
-        "@polkadot/keyring": "^12.2.1",
+        "@polkadot/keyring": "^13.2.3",
         "@polkadot/typegen": "^15.0.1",
         "@polkadot/types": "^15.0.1",
         "add": "^2.0.6",
@@ -27,22 +27,22 @@
     "devDependencies": {
         "@ethersproject/providers": "^5.7.2",
         "@types/chai": "^4.3.3",
-        "@types/mocha": "^10.0.0",
+        "@types/mocha": "^10.0.10",
         "@types/node": "^20.4.4",
         "@types/ws": "^8.5.3",
         "@typescript-eslint/eslint-plugin": "^5.60.0",
         "@typescript-eslint/parser": "^5.60.0",
         "chai": "^4.3.6",
         "cross-env": "^7.0.3",
-        "dotenv": "^16.3.1",
-        "eslint": "^8.43.0",
+        "dotenv": "^16.4.5",
+        "eslint": "^8.46.0",
         "ethers": "^5.7.2",
-        "mocha": "^10.1.0",
+        "mocha": "^10.6.0",
         "parachain-api": "../../client-api/parachain-api",
-        "prettier": "2.8.1",
+        "prettier": "^2.8.3",
         "sidechain-api": "../../client-api/sidechain-api",
         "ts-node": "^10.9.1",
-        "typescript": "5.0.4"
+        "typescript": "^5.1.0"
     },
     "packageManager": "pnpm@8.7.6"
 }
