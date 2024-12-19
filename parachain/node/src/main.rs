@@ -19,6 +19,7 @@
 mod chain_specs;
 mod cli;
 mod command;
+mod custom_txpool;
 mod evm_tracing_types;
 mod rpc;
 mod service;

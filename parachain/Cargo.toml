@@ -168,11 +168,11 @@ sc-sysinfo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "sta
 sc-telemetry = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 sc-tracing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 sc-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
-sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 
 # wasm
