@@ -31,6 +31,10 @@ identity_src: &identity_src
   - 'tee-worker/identity/build.Dockerfile'
   - 'tee-worker/identity/enclave-runtime/**'
 
+identity_test: &identity_test
+  - 'tee-worker/identity/client-api/**'
+  - 'tee-worker/identity/ts-tests/**'
+
 omni_executor_src: &omni_executor_src
   - 'tee-worker/omni-executor/Cargo.toml'
   - 'tee-worker/omni-executor/Cargo.lock'
