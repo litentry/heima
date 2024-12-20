@@ -25,6 +25,14 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
 use log::error;
+use parentchain_api_interface::{
+	omni_account::{
+		calls::types::intent_executed::Result as IntentExecutionResult,
+		events as omni_account_events,
+	},
+	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
+	tx as parentchain_tx,
+};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;
@@ -169,45 +177,44 @@ impl<
 			.iter()
 			.map(|f| scale_decode::Field::new(f.ty.id, f.name.as_deref()));
 
-		let decoded =
-			crate::litentry_rococo::omni_account::events::IntentRequested::decode_as_fields(
-				&mut event.field_bytes.clone().as_slice(),
-				&mut fields.clone(),
-				metadata.types(),
-			)
-			.map_err(|e| {
-				log::error!("Could not decode event {:?}, reason: {:?}", event.id, e);
-				Error::NonRecoverableError
-			})?;
+		let decoded = omni_account_events::IntentRequested::decode_as_fields(
+			&mut event.field_bytes.as_slice(),
+			&mut fields.clone(),
+			metadata.types(),
+		)
+		.map_err(|_| {
+			log::error!("Could not decode event {:?}", event.id);
+			Error::NonRecoverableError
+		})?;
 
 		let maybe_intent = match decoded.intent {
-			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::CallEthereum(call_ethereum) => {
-				Some(Intent::CallEthereum(call_ethereum.address.to_fixed_bytes(), call_ethereum.input.0))
-			},
-			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferEthereum(transfer) => {
+			RuntimeIntent::CallEthereum(call_ethereum) => Some(Intent::CallEthereum(
+				call_ethereum.address.to_fixed_bytes(),
+				call_ethereum.input.0,
+			)),
+			RuntimeIntent::TransferEthereum(transfer) => {
 				Some(Intent::TransferEthereum(transfer.to.to_fixed_bytes(), transfer.value))
 			},
-            crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferSolana(transfer) => {
-                Some(Intent::TransferSolana(transfer.to, transfer.value))
-            },
-			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::SystemRemark(_) => None,
-			crate::litentry_rococo::runtime_types::core_primitives::intent::Intent::TransferNative(_) => None,
+			RuntimeIntent::TransferSolana(transfer) => {
+				Some(Intent::TransferSolana(transfer.to, transfer.value))
+			},
+			RuntimeIntent::SystemRemark(_) => None,
+			RuntimeIntent::TransferNative(_) => None,
 		};
-		let mut execution_result =
-			crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Success;
+		let mut execution_result = IntentExecutionResult::Success;
 		if let Some(intent) = maybe_intent {
 			// to explicitly handle all intent variants
 			match intent {
 				Intent::CallEthereum(_, _) | Intent::TransferEthereum(_, _) => {
 					if let Err(e) = self.ethereum_intent_executor.execute(intent).await {
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Failure;
+						execution_result = IntentExecutionResult::Failure;
 					}
 				},
 				Intent::TransferSolana(_, _) => {
 					if let Err(e) = self.solana_intent_executor.execute(intent).await {
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = crate::litentry_rococo::omni_account::calls::types::intent_executed::Result::Failure;
+						execution_result = IntentExecutionResult::Failure;
 					}
 				},
 			}
@@ -216,18 +223,17 @@ impl<
 
 			// todo: the whole signing part should be encapsulated in separate component like `TransactionSigner`
 			//we need to report back to parachain intent result
-			let decoded =
-				crate::litentry_rococo::omni_account::events::IntentRequested::decode_as_fields(
-					&mut event.field_bytes.as_slice(),
-					&mut fields,
-					metadata.types(),
-				)
-				.map_err(|_| {
-					log::error!("Could not decode event {:?}", event.id);
-					Error::NonRecoverableError
-				})?;
+			let decoded = omni_account_events::IntentRequested::decode_as_fields(
+				&mut event.field_bytes.as_slice(),
+				&mut fields,
+				metadata.types(),
+			)
+			.map_err(|_| {
+				log::error!("Could not decode event {:?}", event.id);
+				Error::NonRecoverableError
+			})?;
 
-			let call = crate::litentry_rococo::tx().omni_account().intent_executed(
+			let call = parentchain_tx().omni_account().intent_executed(
 				decoded.who,
 				decoded.intent,
 				execution_result,
