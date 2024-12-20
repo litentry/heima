@@ -3969,6 +3969,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "parentchain-api-interface"
+version = "0.1.0"
+dependencies = [
+ "subxt",
+]
+
+[[package]]
 name = "parentchain-listener"
 version = "0.1.0"
 dependencies = [
@@ -3977,6 +3984,7 @@ dependencies = [
  "executor-core",
  "hex",
  "log",
+ "parentchain-api-interface",
  "parity-scale-codec",
  "scale-encode 0.7.1",
  "subxt",
