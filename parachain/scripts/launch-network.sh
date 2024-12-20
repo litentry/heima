@@ -68,7 +68,7 @@ if [ -f "$PARACHAIN_BIN" ]; then
   echo "found one, version:"
   ./litentry-collator --version
 else
-  echo "not here, copying from docker image if we are on Linux ..." 
+  echo "not here, copying from docker image if we are on Linux ..."
   if [ $(uname -s) = "Linux" ]; then
     docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/litentry-collator" .
     chmod +x litentry-collator
@@ -80,7 +80,7 @@ fi
 print_divider
 
 echo "launching zombienet network (in background), dir = $ZOMBIENET_DIR ..."
-$ZOMBIENET_BIN -d $ZOMBIENET_DIR -l silent spawn config.toml &
+nohup $ZOMBIENET_BIN -d $ZOMBIENET_DIR -l silent spawn config.toml > /dev/null 2>&1 &
 
 cd "$ROOTDIR/parachain/ts-tests"
 
