@@ -142,54 +142,34 @@ impl<
 					Ok(events) => {
 						for event in events {
 							let event_id = event.get_event_id().clone();
-							if let Some(ref checkpoint) =
-								self.checkpoint_repository.get().expect("Could not read checkpoint")
-							{
-								if checkpoint.lt(&event.get_event_id().clone().into()) {
-									log::info!("Handling event: {:?}", event_id);
-									if let Err(e) =
-										self.handle.block_on(self.event_handler.handle(event))
-									{
-										log::error!("Could not handle event: {:?}", e);
-										match e {
-											Error::NonRecoverableError => {
-												error!("Non-recoverable intent handling error, event: {:?}", event_id);
-												break 'main;
-											},
-											Error::RecoverableError => {
-												error!(
-												"Recoverable intent handling error, event: {:?}",
-												event_id
-											);
-												continue 'main;
-											},
-										}
-									}
-								} else {
+							let maybe_checkpoint = self
+								.checkpoint_repository
+								.get()
+								.expect("Could not read checkpoint");
+							if let Some(ref checkpoint) = maybe_checkpoint {
+								if checkpoint.ge(&event.get_event_id().clone().into()) {
 									log::debug!("Skipping event");
+									continue;
 								}
-							} else {
-								log::info!("Handling event: {:?}", event_id);
-								if let Err(e) =
-									self.handle.block_on(self.event_handler.handle(event))
-								{
-									log::error!("Could not handle event: {:?}", e);
-									match e {
-										Error::NonRecoverableError => {
-											error!(
+							}
+							log::info!("Handling event: {:?}", event_id);
+							if let Err(e) = self.handle.block_on(self.event_handler.handle(event)) {
+								log::error!("Could not handle event: {:?}", e);
+								match e {
+									Error::NonRecoverableError => {
+										error!(
 											"Non-recoverable intent handling error, event: {:?}",
 											event_id
 										);
-											break 'main;
-										},
-										Error::RecoverableError => {
-											error!(
-												"Recoverable intent handling error, event: {:?}",
-												event_id
-											);
-											continue 'main;
-										},
-									}
+										break 'main;
+									},
+									Error::RecoverableError => {
+										error!(
+											"Recoverable intent handling error, event: {:?}",
+											event_id
+										);
+										continue 'main;
+									},
 								}
 							}
 							self.checkpoint_repository
