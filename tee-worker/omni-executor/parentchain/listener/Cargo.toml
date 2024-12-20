@@ -15,6 +15,7 @@ subxt = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+parentchain-api-interface = { path = "../api-interface" }
 
 [dev-dependencies]
 env_logger = { workspace = true }
