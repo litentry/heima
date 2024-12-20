@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@polkadot/api": "^10.9.1",
-    "@polkadot/keyring": "^12.3.2",
-    "@polkadot/util-crypto": "^12.3.2"
+    "@polkadot/keyring": "^13.2.3",
+    "@polkadot/util-crypto": "^13.2.3"
   }
 }

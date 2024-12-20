@@ -5,18 +5,18 @@
 	"license": "GPL-3.0-or-later",
 	"dependencies": {},
 	"devDependencies": {
-		"@polkadot/rpc-provider": "^10.9.1"
+		"@polkadot/rpc-provider": "^15.0.1"
 	},
 	"peerDependencies": {
 		"@litentry/parachain-api": "0.9.20-next.10",
 		"@litentry/sidechain-api": "0.9.20-next.8",
 		"@litentry/chaindata": "*",
-		"@polkadot/api": "^10.9.1",
-		"@polkadot/types": "^10.9.1",
-		"@polkadot/types-codec": "^10.9.1",
-		"@polkadot/util": "^12.5.1",
-		"@polkadot/util-crypto": "^12.5.1",
-		"tslib": "^2.3.0"
+		"@polkadot/api": "^15.0.1",
+		"@polkadot/types": "^15.0.1",
+		"@polkadot/types-codec": "^15.0.1",
+		"@polkadot/util": "^13.2.3",
+		"@polkadot/util-crypto": "^13.2.3",
+		"tslib": "^2.5.3"
 	},
 	"type": "module",
 	"module": "./src/index.js",
