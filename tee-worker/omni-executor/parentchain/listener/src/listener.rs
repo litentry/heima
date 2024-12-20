@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::event_handler::IntentEventHandler;
+use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::key_store::SubstrateKeyStore;
 use crate::metadata::SubxtMetadataProvider;
@@ -39,7 +39,7 @@ pub type ParentchainListener<
 	CheckpointRepository,
 	IntentEventId,
 	BlockEvent,
-	IntentEventHandler<
+	EventHandler<
 		ChainConfig,
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,

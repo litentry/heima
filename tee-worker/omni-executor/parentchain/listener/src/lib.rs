@@ -23,7 +23,7 @@ mod primitives;
 mod rpc_client;
 mod transaction_signer;
 
-use crate::event_handler::IntentEventHandler;
+use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::key_store::SubstrateKeyStore;
 use crate::listener::ParentchainListener;
@@ -136,7 +136,7 @@ where
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 
-	let intent_event_handler = IntentEventHandler::new(
+	let event_handler = EventHandler::new(
 		metadata_provider,
 		ethereum_intent_executor,
 		solana_intent_executor,
@@ -144,14 +144,7 @@ where
 		transaction_signer,
 	);
 
-	Listener::new(
-		id,
-		handle,
-		fetcher,
-		intent_event_handler,
-		stop_signal,
-		last_processed_log_repository,
-	)
+	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
 }
 
 #[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]

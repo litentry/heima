@@ -20,7 +20,7 @@ use crate::rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use crate::transaction_signer::TransactionSigner;
 use async_trait::async_trait;
 use executor_core::event_handler::Error::RecoverableError;
-use executor_core::event_handler::{Error, EventHandler};
+use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
@@ -42,7 +42,7 @@ use subxt_core::config::DefaultExtrinsicParams;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_signer::sr25519::SecretKeyBytes;
 
-pub struct IntentEventHandler<
+pub struct EventHandler<
 	ChainConfig: Config,
 	MetadataT,
 	MetadataProviderT: MetadataProvider<MetadataT>,
@@ -79,7 +79,7 @@ impl<
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
 	>
-	IntentEventHandler<
+	EventHandler<
 		ChainConfig,
 		MetadataT,
 		MetadataProviderT,
@@ -130,8 +130,8 @@ impl<
 		KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId> + Send + Sync,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient> + Send + Sync,
-	> EventHandler<BlockEvent>
-	for IntentEventHandler<
+	> EventHandlerTrait<BlockEvent>
+	for EventHandler<
 		ChainConfig,
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,
