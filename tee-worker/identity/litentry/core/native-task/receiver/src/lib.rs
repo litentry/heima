@@ -40,8 +40,8 @@ use std::sync::SgxMutex as Mutex;
 
 mod authentication_utils;
 use authentication_utils::{
-	verify_tca_email_authentication, verify_tca_oauth2_authentication,
-	verify_tca_web3_authentication,
+	verify_tca_auth_token_authentication, verify_tca_email_authentication,
+	verify_tca_oauth2_authentication, verify_tca_web3_authentication,
 };
 
 mod trusted_call_handlers;
@@ -83,6 +83,8 @@ use itp_types::{
 	parentchain::{Address, ParachainHeader, ParentchainId},
 	AccountId, OpaqueCall,
 };
+use itp_utils::stringify::account_id_to_string_without_prefix;
+use lc_authentication::jwt;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_identity_verification::web2::verify as verify_web2_identity;
@@ -211,10 +213,11 @@ where
 		),
 		TCAuthentication::Email(verification_code) => {
 			let sender_identity = tca.call.sender_identity();
-			let omni_account = match get_omni_account(context.ocall_api.clone(), sender_identity) {
-				Ok(account) => account,
-				_ => sender_identity.to_omni_account(),
-			};
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
 			verify_tca_email_authentication(
 				sender_identity.hash(),
 				&omni_account,
@@ -223,15 +226,36 @@ where
 		},
 		TCAuthentication::OAuth2(oauth2_data) => {
 			let sender_identity = tca.call.sender_identity();
-			let omni_account = match get_omni_account(context.ocall_api.clone(), sender_identity) {
-				Ok(account) => account,
-				_ => sender_identity.to_omni_account(),
-			};
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
 			verify_tca_oauth2_authentication(
 				context.data_provider_config.clone(),
 				sender_identity.hash(),
 				&omni_account,
 				oauth2_data,
+			)
+		},
+		TCAuthentication::AuthToken(auth_token) => {
+			let Ok(header)= context.ocall_api.get_header::<ParachainHeader>() else {
+				let res: Result<(), TrustedCallError> = Err(TrustedCallError::ParentchainHeaderRetrievalFailed);
+				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				return Err("Failed to get parachain header")
+			};
+			let current_block = header.number;
+			let sender_identity = tca.call.sender_identity();
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, Some(header)) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
+			verify_tca_auth_token_authentication(
+				&omni_account,
+				current_block,
+				auth_token,
+				context.data_provider_config.jwt_secret.as_bytes(),
 			)
 		},
 	};
@@ -324,7 +348,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			who
 		)),
 		TrustedCall::add_account(who, identity, validation_data, public_account) => {
-			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
@@ -530,6 +554,29 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			}
 			return
 		},
+		TrustedCall::request_auth_token(who, auth_options) => {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
+				Ok(account) => account,
+				Err(e) => {
+					log::error!("Failed to get omni account: {:?}", e);
+					let result: TrustedCallResult = Err(TrustedCallError::UnauthorizedSigner);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+			};
+			let subject = account_id_to_string_without_prefix(&omni_account);
+			let payload = jwt::Payload::new(subject, auth_options);
+			let Ok(auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
+				log::error!("Failed to create jwt token");
+				let result: TrustedCallResult = Err(TrustedCallError::AuthTokenCreationFailed);
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+				return
+			};
+
+			let result: TrustedCallResult = Ok(auth_token.into());
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			return
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
@@ -608,15 +655,19 @@ where
 fn get_omni_account<OCallApi: EnclaveOnChainOCallApi>(
 	ocall_api: Arc<OCallApi>,
 	who: &Identity,
+	header: Option<ParachainHeader>,
 ) -> Result<AccountId, &'static str> {
 	let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 		Ok(Some(account)) => account,
 		_ => {
 			log::warn!("Failed to get omni account from the in-memory store");
-			let header: ParachainHeader = ocall_api.get_header().map_err(|_| {
-				log::error!("Failed to get header");
-				"Failed to get header"
-			})?;
+			let header = match header {
+				Some(h) => h,
+				None => ocall_api.get_header().map_err(|_| {
+					log::error!("Failed to get header");
+					"Failed to get header"
+				})?,
+			};
 			OmniAccountRepository::new(ocall_api)
 				.with_header(header)
 				.get_account_by_member_hash(who.hash())
