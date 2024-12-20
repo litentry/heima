@@ -11,9 +11,9 @@ hex = "0.4.3"
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-encode = "0.7.1"
-subxt = "0.37.0"
-subxt-core = "0.37.0"
-subxt-signer = { version = "0.37.0", features = ["subxt"] }
+subxt = { workspace = true }
+subxt-core = { workspace = true }
+subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
