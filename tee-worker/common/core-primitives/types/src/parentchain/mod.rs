@@ -98,31 +98,34 @@ pub trait IdentifyParentchain {
 pub trait FilterEvents {
 	type Error: From<ParentchainEventProcessingError> + Debug;
 
-	fn get_link_identity_events(&self) -> Result<Vec<LinkIdentityRequested>, Self::Error>;
+	fn get_link_identity_events(&mut self) -> Result<Vec<LinkIdentityRequested>, Self::Error>;
 
-	fn get_vc_requested_events(&self) -> Result<Vec<VCRequested>, Self::Error>;
+	fn get_vc_requested_events(&mut self) -> Result<Vec<VCRequested>, Self::Error>;
 
 	fn get_deactivate_identity_events(
-		&self,
+		&mut self,
 	) -> Result<Vec<DeactivateIdentityRequested>, Self::Error>;
 
-	fn get_activate_identity_events(&self) -> Result<Vec<ActivateIdentityRequested>, Self::Error>;
+	fn get_activate_identity_events(
+		&mut self,
+	) -> Result<Vec<ActivateIdentityRequested>, Self::Error>;
 
-	fn get_enclave_unauthorized_events(&self) -> Result<Vec<EnclaveUnauthorized>, Self::Error>;
+	fn get_enclave_unauthorized_events(&mut self) -> Result<Vec<EnclaveUnauthorized>, Self::Error>;
 
-	fn get_opaque_task_posted_events(&self) -> Result<Vec<OpaqueTaskPosted>, Self::Error>;
+	fn get_opaque_task_posted_events(&mut self) -> Result<Vec<OpaqueTaskPosted>, Self::Error>;
 
-	fn get_assertion_created_events(&self) -> Result<Vec<AssertionCreated>, Self::Error>;
+	fn get_assertion_created_events(&mut self) -> Result<Vec<AssertionCreated>, Self::Error>;
 
 	fn get_parentchain_block_proccessed_events(
-		&self,
+		&mut self,
 	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error>;
 
-	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error>;
+	fn get_enclave_added_events(&mut self) -> Result<Vec<EnclaveAdded>, Self::Error>;
 
-	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error>;
+	fn get_enclave_removed_events(&mut self) -> Result<Vec<EnclaveRemoved>, Self::Error>;
 
-	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error>;
+	fn get_account_store_updated_events(&mut self)
+		-> Result<Vec<AccountStoreUpdated>, Self::Error>;
 }
 
 #[derive(Debug)]
@@ -143,7 +146,7 @@ where
 	fn handle_events<Block>(
 		&self,
 		executor: &Executor,
-		events: impl FilterEvents,
+		events: &mut impl FilterEvents,
 		block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
 	) -> Result<Self::Output, Error>
 	where

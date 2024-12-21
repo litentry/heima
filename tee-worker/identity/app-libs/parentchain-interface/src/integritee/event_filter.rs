@@ -16,25 +16,58 @@
 */
 //! Various way to filter Parentchain events
 
-use itc_parentchain_indirect_calls_executor::event_filter::ToEvents;
-use itp_api_client_types::Events;
-
+use itp_api_client_types::{EventDetails, Events};
 use itp_node_api::api_client::StaticEvent;
 use itp_types::{
 	parentchain::{events::*, FilterEvents},
 	H256,
 };
-use std::vec::Vec;
+use std::{vec, vec::Vec};
 
 #[derive(Clone)]
-pub struct FilterableEvents(pub Events<H256>);
+pub struct FilterableEvents {
+	events: Vec<EventDetails<H256>>,
+}
 
 impl FilterableEvents {
-	fn filter<T: StaticEvent, E>(&self) -> Result<Vec<T>, E> {
+	pub fn new(events: Events<H256>) -> Self {
+		let mut interesting_events = vec![];
+		events.iter().flatten().for_each(|ev| {
+			// lets keep only events worker is interested in
+			if ev.pallet_name() == LinkIdentityRequested::PALLET
+				&& ev.variant_name() == LinkIdentityRequested::EVENT
+				|| ev.pallet_name() == VCRequested::PALLET
+					&& ev.variant_name() == VCRequested::EVENT
+				|| ev.pallet_name() == DeactivateIdentityRequested::PALLET
+					&& ev.variant_name() == DeactivateIdentityRequested::EVENT
+				|| ev.pallet_name() == ActivateIdentityRequested::PALLET
+					&& ev.variant_name() == ActivateIdentityRequested::EVENT
+				|| ev.pallet_name() == EnclaveUnauthorized::PALLET
+					&& ev.variant_name() == EnclaveUnauthorized::EVENT
+				|| ev.pallet_name() == OpaqueTaskPosted::PALLET
+					&& ev.variant_name() == OpaqueTaskPosted::EVENT
+				|| ev.pallet_name() == AssertionCreated::PALLET
+					&& ev.variant_name() == AssertionCreated::EVENT
+				|| ev.pallet_name() == ParentchainBlockProcessed::PALLET
+					&& ev.variant_name() == ParentchainBlockProcessed::EVENT
+				|| ev.pallet_name() == EnclaveAdded::PALLET
+					&& ev.variant_name() == EnclaveAdded::EVENT
+				|| ev.pallet_name() == EnclaveRemoved::PALLET
+					&& ev.variant_name() == EnclaveRemoved::EVENT
+				|| ev.pallet_name() == AccountStoreUpdated::PALLET
+					&& ev.variant_name() == AccountStoreUpdated::EVENT
+			{
+				interesting_events.push(ev)
+			}
+		});
+
+		Self { events: interesting_events }
+	}
+
+	fn filter<T: StaticEvent, E>(&mut self) -> Result<Vec<T>, E> {
 		Ok(self
-			.to_events()
+			.events
 			.iter()
-			.flatten()
 			.filter_map(|ev| match ev.as_event::<T>() {
 				Ok(maybe_event) => maybe_event,
 				Err(e) => {
@@ -46,67 +79,64 @@ impl FilterableEvents {
 	}
 }
 
-// todo: improve: https://github.com/integritee-network/worker/pull/1378#discussion_r1393933766
-impl ToEvents<Events<H256>> for FilterableEvents {
-	fn to_events(&self) -> &Events<H256> {
-		&self.0
-	}
-}
-
 impl From<Events<H256>> for FilterableEvents {
 	fn from(ev: Events<H256>) -> Self {
-		Self(ev)
+		Self::new(ev)
 	}
 }
 
 impl FilterEvents for FilterableEvents {
 	type Error = itc_parentchain_indirect_calls_executor::Error;
 
-	fn get_link_identity_events(&self) -> Result<Vec<LinkIdentityRequested>, Self::Error> {
+	fn get_link_identity_events(&mut self) -> Result<Vec<LinkIdentityRequested>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_vc_requested_events(&self) -> Result<Vec<VCRequested>, Self::Error> {
+	fn get_vc_requested_events(&mut self) -> Result<Vec<VCRequested>, Self::Error> {
 		self.filter()
 	}
 
 	fn get_deactivate_identity_events(
-		&self,
+		&mut self,
 	) -> Result<Vec<DeactivateIdentityRequested>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_activate_identity_events(&self) -> Result<Vec<ActivateIdentityRequested>, Self::Error> {
+	fn get_activate_identity_events(
+		&mut self,
+	) -> Result<Vec<ActivateIdentityRequested>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_enclave_unauthorized_events(&self) -> Result<Vec<EnclaveUnauthorized>, Self::Error> {
+	fn get_enclave_unauthorized_events(&mut self) -> Result<Vec<EnclaveUnauthorized>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_opaque_task_posted_events(&self) -> Result<Vec<OpaqueTaskPosted>, Self::Error> {
+	fn get_opaque_task_posted_events(&mut self) -> Result<Vec<OpaqueTaskPosted>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_assertion_created_events(&self) -> Result<Vec<AssertionCreated>, Self::Error> {
+	fn get_assertion_created_events(&mut self) -> Result<Vec<AssertionCreated>, Self::Error> {
 		self.filter()
 	}
 
 	fn get_parentchain_block_proccessed_events(
-		&self,
+		&mut self,
 	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error> {
+	fn get_enclave_added_events(&mut self) -> Result<Vec<EnclaveAdded>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_enclave_removed_events(&self) -> Result<Vec<EnclaveRemoved>, Self::Error> {
+	fn get_enclave_removed_events(&mut self) -> Result<Vec<EnclaveRemoved>, Self::Error> {
 		self.filter()
 	}
 
-	fn get_account_store_updated_events(&self) -> Result<Vec<AccountStoreUpdated>, Self::Error> {
+	fn get_account_store_updated_events(
+		&mut self,
+	) -> Result<Vec<AccountStoreUpdated>, Self::Error> {
 		self.filter()
 	}
 }

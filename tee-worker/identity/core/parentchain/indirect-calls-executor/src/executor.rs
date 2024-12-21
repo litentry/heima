@@ -164,7 +164,7 @@ impl<
 
 		trace!("Scanning block {:?} for relevant events", block_number);
 
-		let events = self
+		let mut events = self
 			.node_meta_data_provider
 			.get_from_metadata(|metadata| {
 				EventCreator::create_from_metadata(metadata.clone(), block_hash, events)
@@ -173,7 +173,7 @@ impl<
 
 		let (processed_events, successful_assertion_ids, failed_assertion_ids) = self
 			.parentchain_event_handler
-			.handle_events::<ParentchainBlock>(self, events, block_number)?;
+			.handle_events::<ParentchainBlock>(self, &mut events, block_number)?;
 		let mut calls: Vec<OpaqueCall> = Vec::new();
 		if !successful_assertion_ids.is_empty() {
 			calls.extend(self.create_assertion_stored_call(successful_assertion_ids)?);
