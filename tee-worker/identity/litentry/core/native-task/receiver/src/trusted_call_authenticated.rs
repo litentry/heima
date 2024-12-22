@@ -33,6 +33,7 @@ pub enum TCAuthentication {
 	Web3(LitentryMultiSignature),
 	Email(VerificationCode),
 	OAuth2(OAuth2Data),
+	AuthToken(String),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
