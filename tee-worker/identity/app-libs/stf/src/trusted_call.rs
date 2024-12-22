@@ -50,6 +50,7 @@ use itp_types::{
 	Moment, OpaqueCall, H256,
 };
 use itp_utils::stringify::account_id_to_string;
+use lc_authentication::AuthOptions;
 use litentry_hex_utils::hex_encode;
 pub use litentry_primitives::{
 	aes_encrypt_default, all_evm_web3networks, all_substrate_web3networks, AesOutput, Assertion,
@@ -149,6 +150,8 @@ pub enum TrustedCall {
 	remove_accounts(Identity, Vec<Identity>),
 	#[codec(index = 30)]
 	publicize_account(Identity, Identity),
+	#[codec(index = 31)]
+	request_auth_token(Identity, AuthOptions),
 
 	// original integritee trusted calls, starting from index 50
 	#[codec(index = 50)]
@@ -244,6 +247,7 @@ impl TrustedCall {
 			Self::add_account(sender_identity, ..) => sender_identity,
 			Self::remove_accounts(sender_identity, ..) => sender_identity,
 			Self::publicize_account(sender_identity, ..) => sender_identity,
+			Self::request_auth_token(sender_identity, ..) => sender_identity,
 		}
 	}
 
@@ -262,6 +266,7 @@ impl TrustedCall {
 			Self::add_account(..) => "add_account",
 			Self::remove_accounts(..) => "remove_account",
 			Self::publicize_account(..) => "publicize_account",
+			Self::request_auth_token(..) => "request_auth_token",
 			_ => "unsupported_trusted_call",
 		}
 	}
@@ -920,6 +925,7 @@ where
 			| TrustedCall::create_account_store(..)
 			| TrustedCall::add_account(..)
 			| TrustedCall::remove_accounts(..)
+			| TrustedCall::request_auth_token(..)
 			| TrustedCall::publicize_account(..) => {
 				error!("please use author_submitNativeRequest instead");
 				Ok(TrustedCallResult::Empty)

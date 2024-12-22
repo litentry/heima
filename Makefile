@@ -132,3 +132,14 @@ clippyfix:
 .PHONY: cargofix ## cargo fix
 cargofix:
 	cd parachain && cargo fix --locked --allow-dirty --allow-staged --workspace --all
+
+.PHONY: clean-all-build ## clean up all build history
+clean-all-build:
+	@echo "Cleaning parachain..."
+	@cd parachain && cargo clean
+
+	@echo "Clean tee-worker/identity..."
+	@cd tee-worker/identity && make clean
+
+	@echo "Clean tee-worker/omni-worker..."
+	@cd tee-worker/omni-worker && make distclean

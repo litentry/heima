@@ -1,0 +1,28 @@
+[package]
+authors = ["Trust Computing GmbH <info@litentry.com>"]
+edition = "2021"
+name = "lc-authentication"
+version = "0.1.0"
+
+[dependencies]
+base64 = { version = "0.22", default-features = false, features = ["alloc"] } # a newer base64
+codec = { package = "parity-scale-codec", workspace = true }
+parentchain-primitives = { workspace = true }
+ring = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "serde/std",
+    "serde_json/std",
+    "ring/std",
+    "parentchain-primitives/std",
+]
+sgx = [
+    "sgx_tstd",
+]

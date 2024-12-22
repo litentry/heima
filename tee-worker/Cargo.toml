@@ -53,6 +53,7 @@ members = [
     "identity/litentry/core/data-providers",
     "identity/litentry/core/vc-task/sender",
     "identity/litentry/core/vc-task/receiver",
+    "identity/litentry/core/authentication",
     "identity/litentry/core/native-task/sender",
     "identity/litentry/core/native-task/receiver",
     "identity/litentry/core/identity-verification",
@@ -284,6 +285,7 @@ lc-vc-task-receiver = { path = "identity/litentry/core/vc-task/receiver", defaul
 lc-omni-account = { path = "identity/litentry/core/omni-account", default-features = false }
 lc-native-task-sender = { path = "identity/litentry/core/native-task/sender", default-features = false }
 lc-native-task-receiver = { path = "identity/litentry/core/native-task/receiver", default-features = false }
+lc-authentication = { path = "identity/litentry/core/authentication", default-features = false }
 
 itc-peer-top-broadcaster = { path = "identity/core/peer-top-broadcaster", default-features = false }
 itc-rpc-server = { path = "identity/core/rpc-server", default-features = false }
