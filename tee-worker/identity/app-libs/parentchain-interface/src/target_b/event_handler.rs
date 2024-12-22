@@ -36,7 +36,7 @@ where
 	fn handle_events<Block>(
 		&self,
 		_executor: &Executor,
-		_events: &mut impl FilterEvents,
+		_events: impl FilterEvents,
 		_block_number: <<Block as ParentchainBlock>::Header as ParentchainHeader>::Number,
 	) -> Result<ProcessedEventsArtifacts, Error>
 	where

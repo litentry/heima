@@ -255,7 +255,7 @@ where
 	fn handle_events<Block>(
 		&self,
 		executor: &Executor,
-		events: &mut impl FilterEvents,
+		events: impl FilterEvents,
 		block_number: <<Block as ParentchainBlockTrait>::Header as ParentchainHeader>::Number,
 	) -> Result<ProcessedEventsArtifacts, Error>
 	where
