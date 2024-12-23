@@ -40,6 +40,7 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
+use parentchain_storage::AccountStoreStorage;
 use scale_encode::EncodeAsType;
 use std::sync::Arc;
 use subxt::config::signed_extensions;
@@ -97,6 +98,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 		CustomConfig,
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
+		AccountStoreStorage,
 	>,
 	(),
 >
@@ -136,12 +138,15 @@ where
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 
+	let account_store_storage = Arc::new(AccountStoreStorage::new());
+
 	let event_handler = EventHandler::new(
 		metadata_provider,
 		ethereum_intent_executor,
 		solana_intent_executor,
 		SubxtClientFactory::new(ws_rpc_endpoint),
 		transaction_signer,
+		account_store_storage,
 	);
 
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)

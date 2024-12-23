@@ -33,6 +33,7 @@ pub type ParentchainListener<
 	ChainConfig,
 	EthereumIntentExecutor,
 	SolanaIntentExecutor,
+	AccountStoreStorage,
 > = Listener<
 	Fetcher<<ChainConfig as Config>::AccountId, RpcClient, RpcClientFactory>,
 	SyncCheckpoint,
@@ -48,5 +49,6 @@ pub type ParentchainListener<
 		SubstrateKeyStore,
 		RpcClient,
 		RpcClientFactory,
+		AccountStoreStorage,
 	>,
 >;

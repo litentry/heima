@@ -24,10 +24,13 @@ use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
+use executor_core::storage::Storage;
 use log::error;
 use parentchain_api_interface::{
 	omni_account::{
-		calls::types::intent_executed::Result as IntentExecutionResult, events::IntentRequested,
+		calls::types::intent_executed::Result as IntentExecutionResult,
+		events::{AccountStoreUpdated, IntentRequested},
+		storage::types::account_store::AccountStore,
 	},
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
@@ -50,6 +53,7 @@ pub struct EventHandler<
 	KeyStoreT: KeyStore<SecretKeyBytes>,
 	RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
+	AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
@@ -65,6 +69,7 @@ pub struct EventHandler<
 			MetadataProviderT,
 		>,
 	>,
+	account_store_storage: Arc<AccountStoreStorage>,
 	phantom_data: PhantomData<(MetadataT, RpcClient)>,
 }
 
@@ -77,6 +82,7 @@ impl<
 		KeyStoreT: KeyStore<SecretKeyBytes>,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
+		AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore>,
 	>
 	EventHandler<
 		ChainConfig,
@@ -87,6 +93,7 @@ impl<
 		KeyStoreT,
 		RpcClient,
 		RpcClientFactory,
+		AccountStoreStorage,
 	>
 {
 	pub fn new(
@@ -104,6 +111,7 @@ impl<
 				MetadataProviderT,
 			>,
 		>,
+		account_store_storage: Arc<AccountStoreStorage>,
 	) -> Self {
 		Self {
 			metadata_provider,
@@ -111,6 +119,7 @@ impl<
 			solana_intent_executor,
 			rpc_client_factory,
 			transaction_signer,
+			account_store_storage,
 			phantom_data: Default::default(),
 		}
 	}
@@ -129,6 +138,7 @@ impl<
 		KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId> + Send + Sync,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient> + Send + Sync,
+		AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore> + Send + Sync,
 	> EventHandlerTrait<BlockEvent>
 	for EventHandler<
 		ChainConfig,
@@ -139,6 +149,7 @@ impl<
 		KeyStoreT,
 		RpcClient,
 		RpcClientFactory,
+		AccountStoreStorage,
 	>
 {
 	async fn handle(&self, event: BlockEvent) -> Result<(), Error> {
@@ -196,6 +207,25 @@ impl<
 					intent_requested,
 				)
 				.await?;
+			},
+			AccountStoreUpdated::EVENT => {
+				let account_store_updated: AccountStoreUpdated =
+					AccountStoreUpdated::decode_as_fields(
+						&mut event.field_bytes.as_slice(),
+						&mut fields.clone(),
+						metadata.types(),
+					)
+					.map_err(|_| {
+						log::error!("Could not decode event {:?}", event.id);
+						Error::NonRecoverableError
+					})?;
+
+				self.account_store_storage
+					.insert(account_store_updated.who, account_store_updated.account_store)
+					.map_err(|_| {
+						log::error!("Could not insert account store into storage");
+						Error::NonRecoverableError
+					})?;
 			},
 			_ => {
 				log::debug!("Not interested in {} events", event.variant_name);
