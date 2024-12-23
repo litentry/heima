@@ -6,7 +6,6 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-executor-core = { path = "../../executor-core" }
 hex = "0.4.3"
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
@@ -15,6 +14,9 @@ subxt = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+executor-core = { path = "../../executor-core" }
+parentchain-storage = { path = "../storage" }
 parentchain-api-interface = { path = "../api-interface" }
 
 [dev-dependencies]

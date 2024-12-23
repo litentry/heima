@@ -4089,6 +4089,7 @@ dependencies = [
  "hex",
  "log",
  "parentchain-api-interface",
+ "parentchain-storage",
  "parity-scale-codec",
  "scale-encode 0.7.1",
  "subxt",
