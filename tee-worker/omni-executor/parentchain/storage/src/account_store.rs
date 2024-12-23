@@ -1,5 +1,5 @@
 use executor_core::storage::Storage;
-use parentchain_api_interface::runtime_types::core_primitives::omni_account::MemberAccount;
+use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
 use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::path::Path;
@@ -25,10 +25,10 @@ impl Default for AccountStoreStorage {
 	}
 }
 
-impl Storage<AccountId, Vec<MemberAccount>> for AccountStoreStorage {
-	fn get(&self, account_id: &AccountId) -> Option<Vec<MemberAccount>> {
+impl Storage<AccountId, AccountStore> for AccountStoreStorage {
+	fn get(&self, account_id: &AccountId) -> Option<AccountStore> {
 		match self.db.get(account_id) {
-			Ok(Some(value)) => Vec::<MemberAccount>::decode(&mut &value[..])
+			Ok(Some(value)) => AccountStore::decode(&mut &value[..])
 				.map_err(|e| {
 					log::error!("Error decoding value from storage: {:?}", e);
 				})
@@ -41,8 +41,8 @@ impl Storage<AccountId, Vec<MemberAccount>> for AccountStoreStorage {
 		}
 	}
 
-	fn insert(&self, account_id: AccountId, members: Vec<MemberAccount>) -> Result<(), ()> {
-		self.db.put(account_id, members.encode()).map_err(|e| {
+	fn insert(&self, account_id: AccountId, account_store: AccountStore) -> Result<(), ()> {
+		self.db.put(account_id, account_store.encode()).map_err(|e| {
 			log::error!("Error inserting value into storage: {:?}", e);
 		})
 	}
