@@ -4,6 +4,7 @@ members = [
     "executor-worker",
     "parentchain/listener",
     "parentchain/api-interface",
+    "parentchain/storage",
     "ethereum/intent-executor",
     "solana/intent-executor",
 ]

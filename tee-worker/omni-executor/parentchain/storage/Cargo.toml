@@ -1,0 +1,20 @@
+[package]
+name = "parentchain-storage"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+rocksdb = "0.22.0"
+subxt-core = { workspace = true }
+
+executor-core = { path = "../../executor-core" }
+parentchain-api-interface = { path = "../api-interface" }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+
+[lints]
+workspace = true
