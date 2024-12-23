@@ -48,8 +48,6 @@ impl FilterableEvents {
 					&& ev.variant_name() == OpaqueTaskPosted::EVENT
 				|| ev.pallet_name() == AssertionCreated::PALLET
 					&& ev.variant_name() == AssertionCreated::EVENT
-				|| ev.pallet_name() == ParentchainBlockProcessed::PALLET
-					&& ev.variant_name() == ParentchainBlockProcessed::EVENT
 				|| ev.pallet_name() == EnclaveAdded::PALLET
 					&& ev.variant_name() == EnclaveAdded::EVENT
 				|| ev.pallet_name() == EnclaveRemoved::PALLET
@@ -115,12 +113,6 @@ impl FilterEvents for FilterableEvents {
 	}
 
 	fn get_assertion_created_events(&self) -> Result<Vec<AssertionCreated>, Self::Error> {
-		self.filter()
-	}
-
-	fn get_parentchain_block_proccessed_events(
-		&self,
-	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error> {
 		self.filter()
 	}
 
