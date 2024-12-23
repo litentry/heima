@@ -81,8 +81,8 @@ stop-local:
 
 .PHONY: get-pallet-metadata
 get-pallet-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/artifacts/rococo-omni-account.scale
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/api-interface/artifacts/rococo-omni-account.scale
 
 .PHONY: generate-api-interface
 generate-api-interface:
-	subxt codegen --file parentchain/artifacts/rococo-omni-account.scale | rustfmt > parentchain/api-interface/src/interface.rs
+	subxt codegen --file parentchain/api-interface/artifacts/rococo-omni-account.scale | rustfmt > parentchain/api-interface/src/interface.rs
