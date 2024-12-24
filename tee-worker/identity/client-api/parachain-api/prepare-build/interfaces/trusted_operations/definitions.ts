@@ -89,6 +89,7 @@ export default {
                 add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)",
                 remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
                 publicize_account: "(LitentryIdentity, LitentryIdentity)",
+                request_auth_token: "(LitentryIdentity, AuthOptions)",
             },
         },
         TrustedOperationStatus: {
