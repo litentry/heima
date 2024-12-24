@@ -3002,7 +3002,7 @@ dependencies = [
  "parity-scale-codec",
  "ring 0.16.20",
  "serde 1.0.204",
- "serde_json 1.0.120",
+ "serde_json 1.0.133",
  "sgx_tstd",
 ]
 

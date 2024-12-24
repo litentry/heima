@@ -372,15 +372,6 @@ where
 				.map_err(|_| ParentchainEventProcessingError::AssertionCreatedFailure)?;
 		}
 
-		if let Ok(events) = events.get_parentchain_block_proccessed_events() {
-			debug!("Handling ParentchainBlockProcessed events");
-			events.iter().for_each(|event| {
-				debug!("found ParentchainBlockProcessed event: {:?}", event);
-				// This is for monitoring purposes
-				handled_events.push(hash_of(&event));
-			});
-		}
-
 		if let Ok(events) = events.get_account_store_updated_events() {
 			debug!("Handling AccountStoreUpdated events");
 			events

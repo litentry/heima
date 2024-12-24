@@ -90,12 +90,6 @@ impl FilterEvents for FilterableEvents {
 		self.filter()
 	}
 
-	fn get_parentchain_block_proccessed_events(
-		&self,
-	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error> {
-		Ok(Vec::new())
-	}
-
 	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error> {
 		self.filter()
 	}
