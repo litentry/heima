@@ -582,6 +582,23 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				return
 			};
 
+			let auth_token_requested_call = OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"auth_token_requested",
+				omni_account,
+				payload.exp
+			));
+			if let Ok(extrinsic) =
+				context.extrinsic_factory.create_extrinsics(&[auth_token_requested_call], None)
+			{
+				if let Err(e) =
+					context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, None)
+				{
+					log::error!("Failed to send extrinsic to parentchain: {:?}", e);
+				}
+			}
+
 			let result: TrustedCallResult = Ok(auth_token.into());
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
 			return
