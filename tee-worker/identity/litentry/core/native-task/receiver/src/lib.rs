@@ -589,15 +589,26 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				omni_account,
 				payload.exp
 			));
-			if let Ok(extrinsic) =
-				context.extrinsic_factory.create_extrinsics(&[auth_token_requested_call], None)
+			let params = context.ocall_api.get_header().ok().map(|h: itp_types::Header| {
+				ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+			});
+			match context
+				.extrinsic_factory
+				.create_extrinsics(&[auth_token_requested_call], params)
 			{
-				if let Err(e) =
-					context.ocall_api.send_to_parentchain(extrinsic, &ParentchainId::Litentry, None)
-				{
-					log::error!("Failed to send extrinsic to parentchain: {:?}", e);
-				}
-			}
+				Ok(extrinsic) => {
+					if let Err(e) = context.ocall_api.send_to_parentchain(
+						extrinsic,
+						&ParentchainId::Litentry,
+						None,
+					) {
+						log::error!("Failed to send extrinsic to parentchain: {:?}", e);
+					}
+				},
+				Err(e) => {
+					log::error!("Failed to create extrinsic: {:?}", e);
+				},
+			};
 
 			let result: TrustedCallResult = Ok(auth_token.into());
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
