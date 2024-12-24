@@ -663,3 +663,21 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
 }
+
+#[test]
+fn auth_token_requested_works() {
+	new_test_ext().execute_with(|| {
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::auth_token_requested(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.to_omni_account(),
+			10
+		));
+
+		System::assert_last_event(
+			Event::AuthTokenRequested { who: alice().identity.to_omni_account(), expires_at: 10 }
+				.into(),
+		);
+	});
+}

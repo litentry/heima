@@ -143,6 +143,8 @@ pub mod pallet {
 		IntentRequested { who: T::AccountId, intent: Intent },
 		/// Intent is executed
 		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
+		/// An auth token is requested
+		AuthTokenRequested { who: T::AccountId, expires_at: BlockNumberFor<T> },
 	}
 
 	#[pallet::error]
@@ -357,6 +359,18 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
 			Self::deposit_event(Event::IntentExecuted { who, intent, result });
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn auth_token_requested(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			expires_at: BlockNumberFor<T>,
+		) -> DispatchResult {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::AuthTokenRequested { who, expires_at });
 			Ok(())
 		}
 	}
