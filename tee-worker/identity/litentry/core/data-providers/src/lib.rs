@@ -219,6 +219,7 @@ pub struct DataProviderConfig {
 	pub blockchain_info_api_url: String,
 	pub sendgrid_api_key: String,
 	pub sendgrid_from_email: String,
+	pub jwt_secret: String,
 }
 
 impl DataProviderConfig {
@@ -278,6 +279,7 @@ impl DataProviderConfig {
 			blockchain_info_api_url: "https://blockchain.info/".to_string(),
 			sendgrid_api_key: "".to_string(),
 			sendgrid_from_email: "".to_string(),
+			jwt_secret: "".to_string(),
 		};
 
 		// we allow to override following config properties for non prod dev
@@ -434,6 +436,9 @@ impl DataProviderConfig {
 		}
 		if let Ok(v) = env::var("SENDGRID_FROM_EMAIL") {
 			config.set_sendgrid_from_email(v);
+		}
+		if let Ok(v) = env::var("JWT_SECRET") {
+			config.set_jwt_secret(v);
 		}
 
 		Ok(config)
@@ -669,6 +674,9 @@ impl DataProviderConfig {
 	pub fn set_sendgrid_from_email(&mut self, v: String) {
 		debug!("set_sendgrid_from_email: {:?}", v);
 		self.sendgrid_from_email = v;
+	}
+	pub fn set_jwt_secret(&mut self, v: String) {
+		self.jwt_secret = v;
 	}
 }
 

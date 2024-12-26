@@ -32,8 +32,6 @@ use sp_runtime::{
 	MultiAddress, MultiSignature,
 };
 
-use self::events::ParentchainBlockProcessed;
-
 pub type StorageProof = Vec<Vec<u8>>;
 
 // Basic Types.
@@ -113,10 +111,6 @@ pub trait FilterEvents {
 	fn get_opaque_task_posted_events(&self) -> Result<Vec<OpaqueTaskPosted>, Self::Error>;
 
 	fn get_assertion_created_events(&self) -> Result<Vec<AssertionCreated>, Self::Error>;
-
-	fn get_parentchain_block_proccessed_events(
-		&self,
-	) -> Result<Vec<ParentchainBlockProcessed>, Self::Error>;
 
 	fn get_enclave_added_events(&self) -> Result<Vec<EnclaveAdded>, Self::Error>;
 

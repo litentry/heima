@@ -21,7 +21,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub use core_primitives::{Identity, Intent, MemberAccount, OmniAccountConverter};
+pub use core_primitives::{
+	Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountConverter,
+};
 pub use frame_system::{self as system, pallet_prelude::BlockNumberFor};
 pub use pallet::*;
 
@@ -136,13 +138,23 @@ pub mod pallet {
 		/// An account store is updated
 		AccountStoreUpdated { who: T::AccountId, account_store: MemberAccounts<T> },
 		/// Some call is dispatched as omni-account origin
-		DispatchedAsOmniAccount { who: T::AccountId, result: DispatchResult },
+		DispatchedAsOmniAccount {
+			who: T::AccountId,
+			auth_type: OmniAccountAuthType,
+			result: DispatchResult,
+		},
 		/// Some call is dispatched as signed origin
-		DispatchedAsSigned { who: T::AccountId, result: DispatchResult },
+		DispatchedAsSigned {
+			who: T::AccountId,
+			auth_type: OmniAccountAuthType,
+			result: DispatchResult,
+		},
 		/// Intent is requested
 		IntentRequested { who: T::AccountId, intent: Intent },
 		/// Intent is executed
 		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
+		/// An auth token is requested
+		AuthTokenRequested { who: T::AccountId, expires_at: BlockNumberFor<T> },
 	}
 
 	#[pallet::error]
@@ -164,6 +176,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
+			auth_type: OmniAccountAuthType,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
@@ -172,6 +185,7 @@ pub mod pallet {
 			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsOmniAccount {
 				who: omni_account,
+				auth_type,
 				result: result.map(|_| ()).map_err(|e| e.error),
 			});
 			Ok(Pays::No.into())
@@ -185,6 +199,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
+			auth_type: OmniAccountAuthType,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
@@ -196,6 +211,7 @@ pub mod pallet {
 			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsSigned {
 				who: omni_account,
+				auth_type,
 				result: result.map(|_| ()).map_err(|e| e.error),
 			});
 			Ok(Pays::No.into())
@@ -357,6 +373,18 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
 			Self::deposit_event(Event::IntentExecuted { who, intent, result });
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn auth_token_requested(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			expires_at: BlockNumberFor<T>,
+		) -> DispatchResult {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::AuthTokenRequested { who, expires_at });
 			Ok(())
 		}
 	}
