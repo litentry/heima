@@ -30,13 +30,13 @@ pub use pallet::*;
 use frame_support::pallet_prelude::*;
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
-	traits::{IsSubType, UnfilteredDispatchable},
+	traits::{InstanceFilter, IsSubType, UnfilteredDispatchable},
 };
 use frame_system::pallet_prelude::*;
 use sp_core::H256;
 use sp_runtime::traits::Dispatchable;
 use sp_std::boxed::Box;
-use sp_std::vec::Vec;
+use sp_std::{vec, vec::Vec};
 
 pub type MemberCount = u32;
 
@@ -68,7 +68,6 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -106,6 +105,36 @@ pub mod pallet {
 
 		/// Convert an `Identity` to OmniAccount type
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
+
+		/// The permissions that a member account can have
+		/// The instance filter determines whether a given call may can be dispatched under this type.
+		///
+		/// IMPORTANT: `Default` must be provided and MUST BE the the *most permissive* value.
+		type Permission: Parameter
+			+ Member
+			+ Ord
+			+ PartialOrd
+			+ Default
+			+ InstanceFilter<<Self as Config>::RuntimeCall>
+			+ MaxEncodedLen;
+
+		/// The maximum number of permissions that a member account can have
+		#[pallet::constant]
+		type MaxPermissions: Get<u32>;
+	}
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn integrity_test() {
+			assert!(
+				<T as Config>::MaxAccountStoreLength::get() > 0,
+				"MaxAccountStoreLength must be greater than 0"
+			);
+			assert!(
+				<T as Config>::MaxPermissions::get() > 0,
+				"MaxPermissions must be greater than 0"
+			);
+		}
 	}
 
 	pub type MemberAccounts<T> = BoundedVec<MemberAccount, <T as Config>::MaxAccountStoreLength>;
@@ -115,6 +144,7 @@ pub mod pallet {
 
 	/// A map between OmniAccount and its MemberAccounts (a bounded vector of MemberAccount)
 	#[pallet::storage]
+	#[pallet::unbounded]
 	#[pallet::getter(fn account_store)]
 	pub type AccountStore<T: Config> =
 		StorageMap<Hasher = Blake2_128Concat, Key = T::AccountId, Value = MemberAccounts<T>>;
@@ -123,6 +153,21 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type MemberAccountHash<T: Config> =
 		StorageMap<Hasher = Blake2_128Concat, Key = H256, Value = T::AccountId>;
+
+	#[pallet::type_value]
+	pub fn DefaultPermissions<T: Config>() -> BoundedVec<T::Permission, T::MaxPermissions> {
+		BoundedVec::try_from(vec![T::Permission::default()]).expect("default permission")
+	}
+
+	/// A map between hash of MemberAccount and its permissions
+	#[pallet::storage]
+	pub type MemberAccountPermissions<T: Config> = StorageMap<
+		Hasher = Blake2_128Concat,
+		Key = H256,
+		Value = BoundedVec<T::Permission, T::MaxPermissions>,
+		QueryKind = ValueQuery,
+		OnEmpty = DefaultPermissions<T>,
+	>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -153,6 +198,8 @@ pub mod pallet {
 		IntentRequested { who: T::AccountId, intent: Intent },
 		/// Intent is executed
 		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
+		/// Member permission set
+		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
 		/// An auth token is requested
 		AuthTokenRequested { who: T::AccountId, expires_at: BlockNumberFor<T> },
 	}
@@ -165,6 +212,8 @@ pub mod pallet {
 		InvalidAccount,
 		UnknownAccountStore,
 		EmptyAccount,
+		NoPermission,
+		PermissionsLenLimitReached,
 	}
 
 	#[pallet::call]
@@ -181,6 +230,7 @@ pub mod pallet {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
 				.ok_or(Error::<T>::AccountNotFound)?;
+			Self::ensure_permission(call.as_ref(), member_account_hash)?;
 			let result = call.dispatch(RawOrigin::OmniAccount(omni_account.clone()).into());
 			system::Pallet::<T>::inc_account_nonce(&omni_account);
 			Self::deposit_event(Event::DispatchedAsOmniAccount {
@@ -204,6 +254,7 @@ pub mod pallet {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
 				.ok_or(Error::<T>::AccountNotFound)?;
+			Self::ensure_permission(call.as_ref(), member_account_hash)?;
 			let result: Result<
 				PostDispatchInfo,
 				sp_runtime::DispatchErrorWithPostInfo<PostDispatchInfo>,
@@ -233,7 +284,8 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn add_account(
 			origin: OriginFor<T>,
-			member_account: MemberAccount, // account to be added
+			member_account: MemberAccount,           // account to be added
+			permissions: Option<Vec<T::Permission>>, // permissions for the account
 		) -> DispatchResult {
 			// mutation of AccountStore requires `OmniAccountOrigin`, same as "remove" and "publicize"
 			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
@@ -249,8 +301,16 @@ pub mod pallet {
 			member_accounts
 				.try_push(member_account)
 				.map_err(|_| Error::<T>::AccountStoreLenLimitReached)?;
+			let member_permissions: BoundedVec<T::Permission, T::MaxPermissions> = permissions
+				.map_or_else(
+					|| vec![T::Permission::default()],
+					|p| if p.is_empty() { vec![T::Permission::default()] } else { p },
+				)
+				.try_into()
+				.map_err(|_| Error::<T>::PermissionsLenLimitReached)?;
 
 			MemberAccountHash::<T>::insert(hash, who.clone());
+			MemberAccountPermissions::<T>::insert(hash, member_permissions);
 			AccountStore::<T>::insert(who.clone(), member_accounts.clone());
 
 			Self::deposit_event(Event::AccountAdded {
@@ -277,6 +337,7 @@ pub mod pallet {
 			member_accounts.retain(|member| {
 				if member_account_hashes.contains(&member.hash()) {
 					MemberAccountHash::<T>::remove(member.hash());
+					MemberAccountPermissions::<T>::remove(member.hash());
 					false
 				} else {
 					true
@@ -352,8 +413,13 @@ pub mod pallet {
 					.try_push(member_account.clone())
 					.map_err(|_| Error::<T>::AccountStoreLenLimitReached)?;
 			}
+			let mut permissions = BoundedVec::<T::Permission, T::MaxPermissions>::new();
+			permissions
+				.try_push(T::Permission::default())
+				.map_err(|_| Error::<T>::PermissionsLenLimitReached)?;
 
 			MemberAccountHash::<T>::insert(member_account.hash(), who_account.clone());
+			MemberAccountPermissions::<T>::insert(member_account.hash(), permissions);
 			AccountStore::<T>::insert(who_account.clone(), member_accounts.clone());
 			Self::deposit_event(Event::AccountStoreUpdated {
 				who: who_account,
@@ -377,6 +443,21 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(9)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn set_permissions(
+			origin: OriginFor<T>,
+			member_account_hash: H256,
+			permissions: Vec<T::Permission>,
+		) -> DispatchResult {
+			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
+			let member_permissions: BoundedVec<T::Permission, T::MaxPermissions> =
+				{ permissions.try_into().map_err(|_| Error::<T>::PermissionsLenLimitReached)? };
+			MemberAccountPermissions::<T>::insert(member_account_hash, member_permissions);
+			Self::deposit_event(Event::AccountPermissionsSet { who, member_account_hash });
+			Ok(())
+		}
+
+		#[pallet::call_index(10)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn auth_token_requested(
 			origin: OriginFor<T>,
@@ -412,8 +493,13 @@ pub mod pallet {
 			member_accounts
 				.try_push(identity.into())
 				.map_err(|_| Error::<T>::AccountStoreLenLimitReached)?;
+			let mut permissions = BoundedVec::<T::Permission, T::MaxPermissions>::new();
+			permissions
+				.try_push(T::Permission::default())
+				.map_err(|_| Error::<T>::PermissionsLenLimitReached)?;
 
 			MemberAccountHash::<T>::insert(hash, omni_account.clone());
+			MemberAccountPermissions::<T>::insert(hash, permissions);
 			AccountStore::<T>::insert(omni_account.clone(), member_accounts.clone());
 
 			Self::deposit_event(Event::AccountStoreCreated { who: omni_account.clone() });
@@ -423,6 +509,55 @@ pub mod pallet {
 			});
 
 			Ok(member_accounts)
+		}
+
+		fn ensure_permission(
+			call: &<T as Config>::RuntimeCall,
+			member_account_hash: H256,
+		) -> Result<(), Error<T>> {
+			let member_permissions = MemberAccountPermissions::<T>::get(member_account_hash);
+
+			ensure!(
+				member_permissions.iter().any(|permission| permission.filter(call)),
+				Error::<T>::NoPermission
+			);
+
+			match call.is_sub_type() {
+				Some(Call::add_account { permissions: ref new_account_permissions, .. }) => {
+					// If member has default permission, they can add accounts with any permission
+					if member_permissions.contains(&T::Permission::default()) {
+						return Ok(());
+					}
+					match new_account_permissions {
+						Some(new_permissions) => {
+							// an account can only add another account with the same or less permissions
+							if new_permissions.is_empty()
+								|| !new_permissions.iter().all(|p| member_permissions.contains(p))
+							{
+								return Err(Error::<T>::NoPermission);
+							}
+						},
+						None => {
+							// None is equivalent to default permission. It should not be allowed
+							// if the member_permissions have no default permission
+							return Err(Error::<T>::NoPermission);
+						},
+					}
+				},
+				Some(Call::set_permissions { permissions: ref new_permissions, .. }) => {
+					// If member has default permission, they can set permissions to any value
+					if member_permissions.contains(&T::Permission::default()) {
+						return Ok(());
+					}
+					// an account can only set permissions to the same or less permissions
+					if !new_permissions.iter().all(|p| member_permissions.contains(p)) {
+						return Err(Error::<T>::NoPermission);
+					}
+				},
+				_ => return Ok(()),
+			}
+
+			Ok(())
 		}
 	}
 }
