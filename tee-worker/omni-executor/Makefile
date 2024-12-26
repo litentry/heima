@@ -79,10 +79,10 @@ start-local:
 stop-local:
 	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml down
 
-.PHONY: get-pallet-metadata
-get-pallet-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/api-interface/artifacts/rococo-omni-account.scale
+.PHONY: get-metadata
+get-metadata:
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
 
 .PHONY: generate-api-interface
 generate-api-interface:
-	subxt codegen --file parentchain/api-interface/artifacts/rococo-omni-account.scale | rustfmt > parentchain/api-interface/src/interface.rs
+	subxt codegen --file parentchain/api-interface/artifacts/metadata.scale | rustfmt > parentchain/api-interface/src/interface.rs
