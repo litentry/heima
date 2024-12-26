@@ -133,7 +133,6 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-	migration::MigrateStorageVersionPatch<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -160,6 +159,7 @@ pub type Executive = frame_executive::Executive<
 	// it was reverse order before.
 	// See the comment before collation related pallets too.
 	AllPalletsWithSystem,
+	migration::MigrateStorageVersionPatch<Runtime>,
 >;
 
 impl fp_self_contained::SelfContainedCall for RuntimeCall {
