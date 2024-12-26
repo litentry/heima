@@ -102,6 +102,7 @@ pub mod constants;
 pub mod governance_v2;
 pub mod precompiles;
 
+pub mod migration;
 #[cfg(test)]
 mod tests;
 pub mod weights;
@@ -132,6 +133,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	migration::MigrateStorageVersionPatch,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.

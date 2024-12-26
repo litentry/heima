@@ -99,6 +99,7 @@ pub mod asset_config;
 pub mod constants;
 pub mod precompiles;
 
+pub mod migration;
 pub mod weights;
 pub mod xcm_config;
 
