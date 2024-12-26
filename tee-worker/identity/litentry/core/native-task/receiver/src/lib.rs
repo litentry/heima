@@ -415,6 +415,10 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				},
 			};
 
+			// TOOD: get permissions from the trusted call, this is is temporary hack
+			// it will be fixed in P-1241
+			let permissions: Option<Vec<u32>> = None; // default permissions
+
 			OpaqueCall::from_tuple(&compose_call!(
 				&metadata,
 				"OmniAccount",
@@ -424,7 +428,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					&metadata,
 					"OmniAccount",
 					"add_account",
-					member_account
+					member_account,
+					permissions
 				)),
 				auth_type
 			))
