@@ -133,7 +133,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-	migration::MigrateStorageVersionPatch,
+	migration::MigrateStorageVersionPatch<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -1975,7 +1975,7 @@ impl_runtime_apis! {
 			for ext in extrinsics.into_iter() {
 				let _ = match &ext.0.function {
 					RuntimeCall::Ethereum(pallet_ethereum::Call::transact { transaction }) => {
-						if transaction == traced_transaction {
+						if transaction == *traced_transaction {
 							EvmTracer::new().trace(|| Executive::apply_extrinsic(ext));
 							return Ok(());
 						} else {

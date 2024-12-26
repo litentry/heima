@@ -28,7 +28,7 @@
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
 
-use frame_support::{pallet_prelude::*, traits::OnRuntimeUpgrade};
+use frame_support::traits::OnRuntimeUpgrade;
 use sp_std::marker::PhantomData;
 
 pub struct MigrateStorageVersionPatch<T>(PhantomData<T>);
@@ -40,7 +40,7 @@ where
 	fn pre_upgrade() -> Result<alloc::vec::Vec<u8>, sp_runtime::TryRuntimeError> {
 		// Only checking the lowest storage version
 		let xcmp_queue_storage_version_check =
-			cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4::pre_upgrade()?;
+			cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4::<T>::pre_upgrade()?;
 
 		Ok(VersionedPostUpgradeData::MigrationExecuted(Inner::pre_upgrade()?).encode())
 	}
@@ -52,13 +52,15 @@ where
 		// Migration targeting at changing storage value to new default value if old value matched
 		// Our current Paseo setting has already hard-coded
 		// This migration should have no effect except bumping storage version
-		weight += cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4::on_runtime_upgrade();
+		weight +=
+			cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4::<T>::on_runtime_upgrade();
 		// V4 to V5
 		// Did nothing to storage
 		// Just checking MaxActiveOutboundChannels is not exceeded
 		// Our current Paseo Storage is 0
 		// This migration should have no effect except bumping storage version
-		weight += cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5::on_runtime_upgrade();
+		weight +=
+			cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5::<T>::on_runtime_upgrade();
 
 		weight
 	}
@@ -68,7 +70,7 @@ where
 		versioned_post_upgrade_data_bytes: alloc::vec::Vec<u8>,
 	) -> Result<(), sp_runtime::TryRuntimeError> {
 		// Only checking the lowest storage version
-		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4::post_upgrade(
+		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4::<T>::post_upgrade(
 			versioned_post_upgrade_data_bytes,
 		)
 	}
