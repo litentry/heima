@@ -34,7 +34,9 @@ use sp_std::marker::PhantomData;
 pub struct MigrateStorageVersionPatch<T>(PhantomData<T>);
 impl<T> OnRuntimeUpgrade for MigrateStorageVersionPatch<T>
 where
-	T: frame_system::Config + cumulus_pallet_xcmp_queue::Config,
+	T: frame_system::Config
+		+ cumulus_pallet_xcmp_queue::Config
+		+ cumulus_pallet_xcmp_queue::migration::v5::V5Config,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<alloc::vec::Vec<u8>, sp_runtime::TryRuntimeError> {

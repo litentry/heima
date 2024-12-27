@@ -46,11 +46,5 @@
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
 
-#![allow(clippy::type_complexity)]
-
-use frame_support::{
-	migration::storage_key_iter,
-	pallet_prelude::*,
-	traits::{Get, OnRuntimeUpgrade},
-	Twox64Concat,
-};
+use frame_support::traits::OnRuntimeUpgrade;
+use sp_std::marker::PhantomData;
