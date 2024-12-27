@@ -159,7 +159,7 @@ pub type Executive = frame_executive::Executive<
 	// it was reverse order before.
 	// See the comment before collation related pallets too.
 	AllPalletsWithSystem,
-	migration::MigrateStorageVersionPatch<Runtime>,
+	migration::Migrations<Runtime>,
 >;
 
 impl fp_self_contained::SelfContainedCall for RuntimeCall {
