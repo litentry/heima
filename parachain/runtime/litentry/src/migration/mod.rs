@@ -45,8 +45,8 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
-use frame_support::traits::{Get, OnRuntimeUpgrade};
-use frame_system::pallet_prelude::{BlockNumberFor, StorageVersion};
+use frame_support::traits::{Get, OnRuntimeUpgrade, StorageVersion};
+use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_scheduler::Agenda;
 use sp_std::marker::PhantomData;
 #[cfg(feature = "try-runtime")]
