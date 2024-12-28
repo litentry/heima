@@ -45,6 +45,85 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
-
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{
+	traits::{Get, OnRuntimeUpgrade},
+	StorageHasher, Twox128,
+};
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_std::marker::PhantomData;
+#[cfg(feature = "try-runtime")]
+use sp_std::vec::Vec;
+use xcm::Version;
+
+use pallet_scheduler::Agenda;
+
+pub type Migrations<Runtime> = (
+	// Scheduler V0 => V4
+	// The official pallet does not provide any available migration
+	// We, Litentry Storage have two old unexecuted expired root tasks.
+	// This storage should be clean up and update storage version to V4 directly.
+	// PS: Looks like two old tasks fits V2/V3 structure
+	RemoveSchedulerOldStorage,
+	// V3 to V4
+	// XCMP QueueConfig has different default value
+	// Migration targeting at changing storage value to new default value if old value matched
+	// Our current Paseo setting has already hard-coded
+	// This migration should have no effect except bumping storage version
+	cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+	// V4 to V5
+	// Did nothing to storage
+	// Just checking MaxActiveOutboundChannels is not exceeded
+	// Our current Paseo Storage is 0
+	// This migration should have no effect except bumping storage version
+	cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+);
+
+pub struct RemoveSchedulerOldStorage<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for RemoveSchedulerOldStorage<T>
+where
+	T: frame_system::Config + pallet_scheduler::Config,
+	BlockNumberFor<T>: From<u128>,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		log::info!("Pre check pallet scheduler storage only has two precise tasks leftover");
+		for (when, vec_schedule) in <Agenda<T>>::iter() {
+			assert!(
+				when == 3067200u128.into() || when == 2995200u128.into(),
+				"Extra schedule exists"
+			);
+		}
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		// Remove Scheduler Storage precisely of according block agenda only
+		// TODO: Very Weak safety
+		Agenda::<T>::remove(2995200u128.into());
+		Agenda::<T>::remove(3067200u128.into());
+
+		#[allow(deprecated)]
+		frame_support::storage::migration::remove_storage_prefix(
+			b"Scheduler",
+			b"StorageVersion",
+			&[],
+		);
+		StorageVersion::new(4).put::<pallet_scheduler::Pallet<T>>();
+		<T as frame_system::Config>::DbWeight::get().reads_writes(2, 4)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		use sp_io::KillStorageResult;
+		for (when, vec_schedule) in <Agenda<T>>::iter() {
+			assert!(
+				when != 3067200u128.into() && when != 2995200u128.into(),
+				"Old schedule still exists"
+			);
+		}
+
+		ensure!(StorageVersion::get::<pallet_scheduler::Pallet<T>>() == 4, "Must upgrade");
+
+		Ok(())
+	}
+}
