@@ -90,11 +90,10 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 		log::info!("Pre check pallet scheduler storage only has two precise tasks leftover");
+		let one: BlockNumberFor<T> = 3067200u128.into();
+		let two: BlockNumberFor<T> = 2995200u128.into();
 		for (when, vec_schedule) in <Agenda<T>>::iter() {
-			assert!(
-				when == 3067200u128.into() || when == 2995200u128.into(),
-				"Extra schedule exists"
-			);
+			assert!(when == one || when == two, "Extra schedule exists");
 		}
 		Ok(Vec::<u8>::new())
 	}
@@ -102,8 +101,10 @@ where
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		// Remove Scheduler Storage precisely of according block agenda only
 		// TODO: Very Weak safety
-		Agenda::<T>::remove(2995200u128.into());
-		Agenda::<T>::remove(3067200u128.into());
+		let one: BlockNumberFor<T> = 3067200u128.into();
+		let two: BlockNumberFor<T> = 2995200u128.into();
+		Agenda::<T>::remove(one);
+		Agenda::<T>::remove(two);
 
 		#[allow(deprecated)]
 		frame_support::storage::migration::remove_storage_prefix(
@@ -117,12 +118,10 @@ where
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
-		use sp_io::KillStorageResult;
+		let one: BlockNumberFor<T> = 3067200u128.into();
+		let two: BlockNumberFor<T> = 2995200u128.into();
 		for (when, vec_schedule) in <Agenda<T>>::iter() {
-			assert!(
-				when != 3067200u128.into() && when != 2995200u128.into(),
-				"Old schedule still exists"
-			);
+			assert!(when != one && when != two, "Old schedule still exists");
 		}
 
 		ensure!(StorageVersion::get::<pallet_scheduler::Pallet<T>>() == 4, "Must upgrade");
