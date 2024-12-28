@@ -45,17 +45,12 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
-use frame_support::{
-	traits::{Get, OnRuntimeUpgrade},
-	StorageHasher, Twox128,
-};
-use frame_system::pallet_prelude::BlockNumberFor;
+use frame_support::traits::{Get, OnRuntimeUpgrade};
+use frame_system::pallet_prelude::{BlockNumberFor, StorageVersion};
+use pallet_scheduler::Agenda;
 use sp_std::marker::PhantomData;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
-use xcm::Version;
-
-use pallet_scheduler::Agenda;
 
 pub type Migrations<Runtime> = (
 	// Scheduler V0 => V4
@@ -63,7 +58,15 @@ pub type Migrations<Runtime> = (
 	// We, Litentry Storage have two old unexecuted expired root tasks.
 	// This storage should be clean up and update storage version to V4 directly.
 	// PS: Looks like two old tasks fits V2/V3 structure
-	RemoveSchedulerOldStorage,
+	RemoveSchedulerOldStorage<Runtime>,
+	// Multsig V0 => V1
+	// Remove old unsettled call storage and do the refund
+	// Does not matter if we do have old storage or not
+	// Should simply works
+	pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+	// Preimage V0 => V1
+	//
+	pallet_preimage::migration::v1::Migration<Runtime>,
 	// V3 to V4
 	// XCMP QueueConfig has different default value
 	// Migration targeting at changing storage value to new default value if old value matched
