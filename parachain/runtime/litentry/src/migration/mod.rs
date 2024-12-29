@@ -223,7 +223,7 @@ where
 	}
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		let on_chain_version = pallet_bounties::Pallet::<T, I>::on_chain_storage_version();
+		let on_chain_version = pallet_bounties::Pallet::<T>::on_chain_storage_version();
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
