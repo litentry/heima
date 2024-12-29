@@ -45,8 +45,9 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
-use super::{DeveloperCommittee, DeveloperCommitteeMembership};
-use frame_support::traits::{Get, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion};
+use frame_support::traits::{
+	Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion,
+};
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_balances::InactiveIssuance;
 use pallet_scheduler::Agenda;
@@ -113,13 +114,13 @@ pub struct RemoveSchedulerOldStorage<T>(PhantomData<T>);
 impl<T> OnRuntimeUpgrade for RemoveSchedulerOldStorage<T>
 where
 	T: frame_system::Config + pallet_scheduler::Config,
-	BlockNumberFor<T>: From<u128>,
+	BlockNumberFor<T>: From<u32>,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 		log::info!("Pre check pallet scheduler storage only has two precise tasks leftover");
-		let one: BlockNumberFor<T> = 3067200u128.into();
-		let two: BlockNumberFor<T> = 2995200u128.into();
+		let one: BlockNumberFor<T> = 3067200u32.into();
+		let two: BlockNumberFor<T> = 2995200u32.into();
 		for (when, vec_schedule) in <Agenda<T>>::iter() {
 			assert!(when == one || when == two, "Extra schedule exists");
 		}
@@ -129,8 +130,8 @@ where
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		// Remove Scheduler Storage precisely of according block agenda only
 		// TODO: Very Weak safety
-		let one: BlockNumberFor<T> = 3067200u128.into();
-		let two: BlockNumberFor<T> = 2995200u128.into();
+		let one: BlockNumberFor<T> = 3067200u32.into();
+		let two: BlockNumberFor<T> = 2995200u32.into();
 		Agenda::<T>::remove(one);
 		Agenda::<T>::remove(two);
 
@@ -146,8 +147,8 @@ where
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
-		let one: BlockNumberFor<T> = 3067200u128.into();
-		let two: BlockNumberFor<T> = 2995200u128.into();
+		let one: BlockNumberFor<T> = 3067200u32.into();
+		let two: BlockNumberFor<T> = 2995200u32.into();
 		for (when, vec_schedule) in <Agenda<T>>::iter() {
 			assert!(when != one && when != two, "Old schedule still exists");
 		}
@@ -159,10 +160,10 @@ where
 }
 
 const BALANCES_LOG_TARGET: &str = "runtime::balances";
-pub struct BalancesUpdateStorageVersionResetInactive<T, I = ()>(PhantomData<(T, I)>);
-impl<T, I: 'static> OnRuntimeUpgrade for BalancesUpdateStorageVersionResetInactive<T, I>
+pub struct BalancesUpdateStorageVersionResetInactive<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for BalancesUpdateStorageVersionResetInactive<T, I>
 where
-	T: frame_system::Config + pallet_balances::Config<I>,
+	T: frame_system::Config + pallet_balances::Config,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
@@ -174,19 +175,19 @@ where
 	}
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		let on_chain_version = pallet_balances::Pallet::<T, I>::on_chain_storage_version();
+		let on_chain_version = pallet_balances::Pallet::<T>::on_chain_storage_version();
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
 			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
-				pallet_balances::Pallet::<T, I>::name().as_bytes(),
+				pallet_balances::Pallet::<T>::name().as_bytes(),
 				"StorageVersion".as_bytes(),
 			));
 
-			InactiveIssuance::<T, I>::kill();
+			InactiveIssuance::<T>::kill();
 
 			// Set storage version to `1`.
-			StorageVersion::new(1).put::<pallet_balances::Pallet<T, I>>();
+			StorageVersion::new(1).put::<pallet_balances::Pallet<T>>();
 
 			log::info!(target: BALANCES_LOG_TARGET, "Storage to version 1");
 			T::DbWeight::get().reads_writes(1, 3)
@@ -231,8 +232,6 @@ where
 				"StorageVersion".as_bytes(),
 			));
 
-			InactiveIssuance::<T, I>::kill();
-
 			// Set storage version to `4`.
 			StorageVersion::new(4).put::<pallet_bounties::Pallet<T>>();
 
@@ -263,26 +262,28 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 		ensure!(
-			StorageVersion::get::<DeveloperCommittee>() == 0,
+			StorageVersion::get::<pallet_collective::Pallet<T, pallet_membership::Instance3>>()
+				== 0,
 			"Already upgrade to some non-zero version"
 		);
 		Ok(Vec::<u8>::new())
 	}
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		let on_chain_version = DeveloperCommittee::on_chain_storage_version();
+		let on_chain_version =
+			pallet_collective::Pallet::<T, pallet_membership::Instance3>::on_chain_storage_version(
+			);
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
 			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
-				DeveloperCommittee::name().as_bytes(),
+				pallet_collective::Pallet::<T, pallet_membership::Instance3>::name().as_bytes(),
 				"StorageVersion".as_bytes(),
 			));
 
-			InactiveIssuance::<T, I>::kill();
-
 			// Set storage version to `4`.
-			StorageVersion::new(4).put::<DeveloperCommittee>();
+			StorageVersion::new(4)
+				.put::<pallet_collective::Pallet<T, pallet_membership::Instance3>>();
 
 			log::info!(target: DEVELOPER_COMMITTEE_LOG_TARGET, "Storage to version 4");
 			T::DbWeight::get().reads_writes(1, 3)
@@ -297,7 +298,11 @@ where
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
-		ensure!(StorageVersion::get::<DeveloperCommittee>() == 4, "Must upgrade");
+		ensure!(
+			StorageVersion::get::<pallet_collective::Pallet<T, pallet_membership::Instance3>>()
+				== 4,
+			"Must upgrade"
+		);
 		Ok(())
 	}
 }
@@ -311,26 +316,28 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 		ensure!(
-			StorageVersion::get::<DeveloperCommitteeMembership>() == 0,
+			StorageVersion::get::<pallet_membership::Pallet<T, pallet_membership::Instance3>>()
+				== 0,
 			"Already upgrade to some non-zero version"
 		);
 		Ok(Vec::<u8>::new())
 	}
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		let on_chain_version = DeveloperCommitteeMembership::on_chain_storage_version();
+		let on_chain_version =
+			pallet_membership::Pallet::<T, pallet_membership::Instance3>::on_chain_storage_version(
+			);
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
 			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
-				DeveloperCommitteeMembership::name().as_bytes(),
+				pallet_membership::Pallet::<T, pallet_membership::Instance3>::name().as_bytes(),
 				"StorageVersion".as_bytes(),
 			));
 
-			InactiveIssuance::<T, I>::kill();
-
 			// Set storage version to `4`.
-			StorageVersion::new(4).put::<DeveloperCommitteeMembership>();
+			StorageVersion::new(4)
+				.put::<pallet_membership::Pallet<T, pallet_membership::Instance3>>();
 
 			log::info!(target: DEVELOPER_COMMITTEE_MEMBERSHIP_LOG_TARGET, "Storage to version 4");
 			T::DbWeight::get().reads_writes(1, 3)
@@ -345,7 +352,11 @@ where
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
-		ensure!(StorageVersion::get::<DeveloperCommitteeMembership>() == 4, "Must upgrade");
+		ensure!(
+			StorageVersion::get::<pallet_membership::Pallet<T, pallet_membership::Instance3>>()
+				== 4,
+			"Must upgrade"
+		);
 		Ok(())
 	}
 }
