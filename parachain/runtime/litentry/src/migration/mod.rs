@@ -161,7 +161,7 @@ where
 
 const BALANCES_LOG_TARGET: &str = "runtime::balances";
 pub struct BalancesUpdateStorageVersionResetInactive<T>(PhantomData<T>);
-impl<T> OnRuntimeUpgrade for BalancesUpdateStorageVersionResetInactive<T, I>
+impl<T> OnRuntimeUpgrade for BalancesUpdateStorageVersionResetInactive<T>
 where
 	T: frame_system::Config + pallet_balances::Config,
 {
@@ -208,10 +208,10 @@ where
 }
 
 const BOUNTIES_LOG_TARGET: &str = "runtime::bounties";
-pub struct BountiesUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
-impl<T, I: 'static> OnRuntimeUpgrade for BountiesUpdateStorageVersion<T, I>
+pub struct BountiesUpdateStorageVersion<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for BountiesUpdateStorageVersion<T>
 where
-	T: frame_system::Config + pallet_bounties::Config<I>,
+	T: frame_system::Config + pallet_bounties::Config,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
@@ -254,15 +254,15 @@ where
 }
 
 const DEVELOPER_COMMITTEE_LOG_TARGET: &str = "runtime::collective3";
-pub struct DeveloperCommitteeUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
-impl<T, I: 'static> OnRuntimeUpgrade for DeveloperCommitteeUpdateStorageVersion<T, I>
+pub struct DeveloperCommitteeUpdateStorageVersion<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for DeveloperCommitteeUpdateStorageVersion<T>
 where
-	T: frame_system::Config + pallet_collective::Config<I>,
+	T: frame_system::Config + pallet_collective::Config<pallet_collective::Instance3>,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
 		ensure!(
-			StorageVersion::get::<pallet_collective::Pallet<T, pallet_membership::Instance3>>()
+			StorageVersion::get::<pallet_collective::Pallet<T, pallet_collective::Instance3>>()
 				== 0,
 			"Already upgrade to some non-zero version"
 		);
@@ -271,19 +271,19 @@ where
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
 		let on_chain_version =
-			pallet_collective::Pallet::<T, pallet_membership::Instance3>::on_chain_storage_version(
+			pallet_collective::Pallet::<T, pallet_collective::Instance3>::on_chain_storage_version(
 			);
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
 			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
-				pallet_collective::Pallet::<T, pallet_membership::Instance3>::name().as_bytes(),
+				pallet_collective::Pallet::<T, pallet_collective::Instance3>::name().as_bytes(),
 				"StorageVersion".as_bytes(),
 			));
 
 			// Set storage version to `4`.
 			StorageVersion::new(4)
-				.put::<pallet_collective::Pallet<T, pallet_membership::Instance3>>();
+				.put::<pallet_collective::Pallet<T, pallet_collective::Instance3>>();
 
 			log::info!(target: DEVELOPER_COMMITTEE_LOG_TARGET, "Storage to version 4");
 			T::DbWeight::get().reads_writes(1, 3)
@@ -299,7 +299,7 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
 		ensure!(
-			StorageVersion::get::<pallet_collective::Pallet<T, pallet_membership::Instance3>>()
+			StorageVersion::get::<pallet_collective::Pallet<T, pallet_collective::Instance3>>()
 				== 4,
 			"Must upgrade"
 		);
@@ -308,10 +308,10 @@ where
 }
 
 const DEVELOPER_COMMITTEE_MEMBERSHIP_LOG_TARGET: &str = "runtime::membership3";
-pub struct DeveloperCommitteeMembershipUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
-impl<T, I: 'static> OnRuntimeUpgrade for DeveloperCommitteeMembershipUpdateStorageVersion<T, I>
+pub struct DeveloperCommitteeMembershipUpdateStorageVersion<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for DeveloperCommitteeMembershipUpdateStorageVersion<T>
 where
-	T: frame_system::Config + pallet_collective::Config<I>,
+	T: frame_system::Config + pallet_membership::Config<pallet_membership::Instance3>,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
