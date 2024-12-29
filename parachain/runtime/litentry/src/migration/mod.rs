@@ -46,8 +46,9 @@
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
 use super::{DeveloperCommittee, DeveloperCommitteeMembership};
-use frame_support::traits::{Get, OnRuntimeUpgrade, StorageVersion};
+use frame_support::traits::{Get, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion};
 use frame_system::pallet_prelude::BlockNumberFor;
+use pallet_balances::InactiveIssuance;
 use pallet_scheduler::Agenda;
 use sp_std::marker::PhantomData;
 #[cfg(feature = "try-runtime")]
@@ -76,7 +77,7 @@ pub type Migrations<Runtime> = (
 	// Democracy V0 => V1
 	// This migration only effects onging proposal/referedum, NextExternal
 	// The referedum info's proposal hash is migrated if the hash is in old form (In our case, even for an onging one it will do nothing)
-	pallet_democracy::migrations::v1::Migration<Runtime>,
+	pallet_democracy::migrations::v1::v1::Migration<Runtime>,
 	// Bounties V0 => V4
 	// The official migration does nothing but change pallet name and bump version
 	// So we just bump version storage instead
@@ -97,7 +98,7 @@ pub type Migrations<Runtime> = (
 	// Our storage is already correct
 	// This migration is for can old weightInfo into new weightInfo form
 	// Should do nothing but bump version storage for us
-	pallet_xcm::migration::v1::MigrateToV1<T>,
+	pallet_xcm::migration::v1::MigrateToV1<Runtime>,
 	// DeveloperCommittee V0 => V4
 	// The official migration does nothing but change pallet name and bump version
 	// So we just bump version storage instead
@@ -157,6 +158,7 @@ where
 	}
 }
 
+const BALANCES_LOG_TARGET: &str = "runtime::balances";
 pub struct BalancesUpdateStorageVersionResetInactive<T, I = ()>(PhantomData<(T, I)>);
 impl<T, I: 'static> OnRuntimeUpgrade for BalancesUpdateStorageVersionResetInactive<T, I>
 where
@@ -171,8 +173,8 @@ where
 		Ok(Vec::<u8>::new())
 	}
 
-	fn on_runtime_upgrade() -> Weight {
-		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let on_chain_version = pallet_balances::Pallet::<T, I>::on_chain_storage_version();
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
@@ -186,11 +188,11 @@ where
 			// Set storage version to `1`.
 			StorageVersion::new(1).put::<pallet_balances::Pallet<T, I>>();
 
-			log::info!(target: LOG_TARGET, "Storage to version 1");
+			log::info!(target: BALANCES_LOG_TARGET, "Storage to version 1");
 			T::DbWeight::get().reads_writes(1, 3)
 		} else {
 			log::info!(
-				target: LOG_TARGET,
+				target: BALANCES_LOG_TARGET,
 				"Migration did not execute. This probably should be removed"
 			);
 			T::DbWeight::get().reads(1)
@@ -204,10 +206,11 @@ where
 	}
 }
 
-pub struct BountiesUpdateStorageVersion<T>(PhantomData<T>);
-impl<T> OnRuntimeUpgrade for BountiesUpdateStorageVersion<T>
+const BOUNTIES_LOG_TARGET: &str = "runtime::bounties";
+pub struct BountiesUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
+impl<T, I: 'static> OnRuntimeUpgrade for BountiesUpdateStorageVersion<T, I>
 where
-	T: frame_system::Config + pallet_bounties::Config,
+	T: frame_system::Config + pallet_bounties::Config<I>,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
@@ -218,8 +221,8 @@ where
 		Ok(Vec::<u8>::new())
 	}
 
-	fn on_runtime_upgrade() -> Weight {
-		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let on_chain_version = pallet_bounties::Pallet::<T, I>::on_chain_storage_version();
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
@@ -233,11 +236,11 @@ where
 			// Set storage version to `4`.
 			StorageVersion::new(4).put::<pallet_bounties::Pallet<T>>();
 
-			log::info!(target: LOG_TARGET, "Storage to version 4");
+			log::info!(target: BOUNTIES_LOG_TARGET, "Storage to version 4");
 			T::DbWeight::get().reads_writes(1, 3)
 		} else {
 			log::info!(
-				target: LOG_TARGET,
+				target: BOUNTIES_LOG_TARGET,
 				"Migration did not execute. This probably should be removed"
 			);
 			T::DbWeight::get().reads(1)
@@ -251,6 +254,7 @@ where
 	}
 }
 
+const DEVELOPER_COMMITTEE_LOG_TARGET: &str = "runtime::collective3";
 pub struct DeveloperCommitteeUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
 impl<T, I: 'static> OnRuntimeUpgrade for DeveloperCommitteeUpdateStorageVersion<T, I>
 where
@@ -265,8 +269,8 @@ where
 		Ok(Vec::<u8>::new())
 	}
 
-	fn on_runtime_upgrade() -> Weight {
-		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let on_chain_version = DeveloperCommittee::on_chain_storage_version();
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
@@ -280,11 +284,11 @@ where
 			// Set storage version to `4`.
 			StorageVersion::new(4).put::<DeveloperCommittee>();
 
-			log::info!(target: LOG_TARGET, "Storage to version 4");
+			log::info!(target: DEVELOPER_COMMITTEE_LOG_TARGET, "Storage to version 4");
 			T::DbWeight::get().reads_writes(1, 3)
 		} else {
 			log::info!(
-				target: LOG_TARGET,
+				target: DEVELOPER_COMMITTEE_LOG_TARGET,
 				"Migration did not execute. This probably should be removed"
 			);
 			T::DbWeight::get().reads(1)
@@ -298,6 +302,7 @@ where
 	}
 }
 
+const DEVELOPER_COMMITTEE_MEMBERSHIP_LOG_TARGET: &str = "runtime::membership3";
 pub struct DeveloperCommitteeMembershipUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
 impl<T, I: 'static> OnRuntimeUpgrade for DeveloperCommitteeMembershipUpdateStorageVersion<T, I>
 where
@@ -312,8 +317,8 @@ where
 		Ok(Vec::<u8>::new())
 	}
 
-	fn on_runtime_upgrade() -> Weight {
-		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let on_chain_version = DeveloperCommitteeMembership::on_chain_storage_version();
 
 		if on_chain_version == 0 {
 			// Remove the old `StorageVersion` type.
@@ -327,11 +332,11 @@ where
 			// Set storage version to `4`.
 			StorageVersion::new(4).put::<DeveloperCommitteeMembership>();
 
-			log::info!(target: LOG_TARGET, "Storage to version 4");
+			log::info!(target: DEVELOPER_COMMITTEE_MEMBERSHIP_LOG_TARGET, "Storage to version 4");
 			T::DbWeight::get().reads_writes(1, 3)
 		} else {
 			log::info!(
-				target: LOG_TARGET,
+				target: DEVELOPER_COMMITTEE_MEMBERSHIP_LOG_TARGET,
 				"Migration did not execute. This probably should be removed"
 			);
 			T::DbWeight::get().reads(1)
