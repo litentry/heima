@@ -45,6 +45,7 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
+use super::{DeveloperCommittee, DeveloperCommitteeMembership};
 use frame_support::traits::{Get, OnRuntimeUpgrade, StorageVersion};
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_scheduler::Agenda;
@@ -65,8 +66,21 @@ pub type Migrations<Runtime> = (
 	// Should simply works
 	pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
 	// Preimage V0 => V1
-	//
+	// Migrate old StatusFor and PreimageFor Storage into new Storage
 	pallet_preimage::migration::v1::Migration<Runtime>,
+	// Balances V0 => V1
+	// The official pallet migration is not need since we do not have any XCM deactive accounts
+	// But our onchain inactiveIssuance storage of pallet_balance is non-negative
+	// TODO: Where does this number come from?
+	BalancesUpdateStorageVersionResetInactive<Runtime>,
+	// Democracy V0 => V1
+	// This migration only effects onging proposal/referedum, NextExternal
+	// The referedum info's proposal hash is migrated if the hash is in old form (In our case, even for an onging one it will do nothing)
+	pallet_democracy::migrations::v1::Migration<Runtime>,
+	// Bounties V0 => V4
+	// The official migration does nothing but change pallet name and bump version
+	// So we just bump version storage instead
+	BountiesUpdateStorageVersion<Runtime>,
 	// V3 to V4
 	// XCMP QueueConfig has different default value
 	// Migration targeting at changing storage value to new default value if old value matched
@@ -79,6 +93,19 @@ pub type Migrations<Runtime> = (
 	// Our current Paseo Storage is 0
 	// This migration should have no effect except bumping storage version
 	cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+	// PolkadotXcm V0 => V1
+	// Our storage is already correct
+	// This migration is for can old weightInfo into new weightInfo form
+	// Should do nothing but bump version storage for us
+	pallet_xcm::migration::v1::MigrateToV1<T>,
+	// DeveloperCommittee V0 => V4
+	// The official migration does nothing but change pallet name and bump version
+	// So we just bump version storage instead
+	DeveloperCommitteeUpdateStorageVersion<Runtime>,
+	// DeveloperCommitteeMembership V0 => V4
+	// The official migration does nothing but change pallet name and bump version
+	// So we just bump version storage instead
+	DeveloperCommitteeMembershipUpdateStorageVersion<Runtime>,
 );
 
 pub struct RemoveSchedulerOldStorage<T>(PhantomData<T>);
@@ -126,6 +153,194 @@ where
 
 		ensure!(StorageVersion::get::<pallet_scheduler::Pallet<T>>() == 4, "Must upgrade");
 
+		Ok(())
+	}
+}
+
+pub struct BalancesUpdateStorageVersionResetInactive<T, I = ()>(PhantomData<(T, I)>);
+impl<T, I: 'static> OnRuntimeUpgrade for BalancesUpdateStorageVersionResetInactive<T, I>
+where
+	T: frame_system::Config + pallet_balances::Config<I>,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		ensure!(
+			StorageVersion::get::<pallet_balances::Pallet<T>>() == 0,
+			"Already upgrade to some non-zero version"
+		);
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+
+		if on_chain_version == 0 {
+			// Remove the old `StorageVersion` type.
+			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
+				pallet_balances::Pallet::<T, I>::name().as_bytes(),
+				"StorageVersion".as_bytes(),
+			));
+
+			InactiveIssuance::<T, I>::kill();
+
+			// Set storage version to `1`.
+			StorageVersion::new(1).put::<pallet_balances::Pallet<T, I>>();
+
+			log::info!(target: LOG_TARGET, "Storage to version 1");
+			T::DbWeight::get().reads_writes(1, 3)
+		} else {
+			log::info!(
+				target: LOG_TARGET,
+				"Migration did not execute. This probably should be removed"
+			);
+			T::DbWeight::get().reads(1)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		ensure!(StorageVersion::get::<pallet_balances::Pallet<T>>() == 1, "Must upgrade");
+		Ok(())
+	}
+}
+
+pub struct BountiesUpdateStorageVersion<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for BountiesUpdateStorageVersion<T>
+where
+	T: frame_system::Config + pallet_bounties::Config,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		ensure!(
+			StorageVersion::get::<pallet_bounties::Pallet<T>>() == 0,
+			"Already upgrade to some non-zero version"
+		);
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+
+		if on_chain_version == 0 {
+			// Remove the old `StorageVersion` type.
+			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
+				pallet_bounties::Pallet::<T>::name().as_bytes(),
+				"StorageVersion".as_bytes(),
+			));
+
+			InactiveIssuance::<T, I>::kill();
+
+			// Set storage version to `4`.
+			StorageVersion::new(4).put::<pallet_bounties::Pallet<T>>();
+
+			log::info!(target: LOG_TARGET, "Storage to version 4");
+			T::DbWeight::get().reads_writes(1, 3)
+		} else {
+			log::info!(
+				target: LOG_TARGET,
+				"Migration did not execute. This probably should be removed"
+			);
+			T::DbWeight::get().reads(1)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		ensure!(StorageVersion::get::<pallet_bounties::Pallet<T>>() == 4, "Must upgrade");
+		Ok(())
+	}
+}
+
+pub struct DeveloperCommitteeUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
+impl<T, I: 'static> OnRuntimeUpgrade for DeveloperCommitteeUpdateStorageVersion<T, I>
+where
+	T: frame_system::Config + pallet_collective::Config<I>,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		ensure!(
+			StorageVersion::get::<DeveloperCommittee>() == 0,
+			"Already upgrade to some non-zero version"
+		);
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+
+		if on_chain_version == 0 {
+			// Remove the old `StorageVersion` type.
+			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
+				DeveloperCommittee::name().as_bytes(),
+				"StorageVersion".as_bytes(),
+			));
+
+			InactiveIssuance::<T, I>::kill();
+
+			// Set storage version to `4`.
+			StorageVersion::new(4).put::<DeveloperCommittee>();
+
+			log::info!(target: LOG_TARGET, "Storage to version 4");
+			T::DbWeight::get().reads_writes(1, 3)
+		} else {
+			log::info!(
+				target: LOG_TARGET,
+				"Migration did not execute. This probably should be removed"
+			);
+			T::DbWeight::get().reads(1)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		ensure!(StorageVersion::get::<DeveloperCommittee>() == 4, "Must upgrade");
+		Ok(())
+	}
+}
+
+pub struct DeveloperCommitteeMembershipUpdateStorageVersion<T, I = ()>(PhantomData<(T, I)>);
+impl<T, I: 'static> OnRuntimeUpgrade for DeveloperCommitteeMembershipUpdateStorageVersion<T, I>
+where
+	T: frame_system::Config + pallet_collective::Config<I>,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		ensure!(
+			StorageVersion::get::<DeveloperCommitteeMembership>() == 0,
+			"Already upgrade to some non-zero version"
+		);
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		let on_chain_version = Pallet::<T, I>::on_chain_storage_version();
+
+		if on_chain_version == 0 {
+			// Remove the old `StorageVersion` type.
+			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
+				DeveloperCommitteeMembership::name().as_bytes(),
+				"StorageVersion".as_bytes(),
+			));
+
+			InactiveIssuance::<T, I>::kill();
+
+			// Set storage version to `4`.
+			StorageVersion::new(4).put::<DeveloperCommitteeMembership>();
+
+			log::info!(target: LOG_TARGET, "Storage to version 4");
+			T::DbWeight::get().reads_writes(1, 3)
+		} else {
+			log::info!(
+				target: LOG_TARGET,
+				"Migration did not execute. This probably should be removed"
+			);
+			T::DbWeight::get().reads(1)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		ensure!(StorageVersion::get::<DeveloperCommitteeMembership>() == 4, "Must upgrade");
 		Ok(())
 	}
 }
