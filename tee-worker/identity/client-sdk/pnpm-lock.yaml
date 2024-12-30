@@ -133,8 +133,8 @@ importers:
         specifier: '*'
         version: link:../chaindata
       '@litentry/parachain-api':
-        specifier: 0.9.20-next.10
-        version: 0.9.20-next.10
+        specifier: 0.9.21-next.1
+        version: 0.9.21-next.1
       '@litentry/sidechain-api':
         specifier: 0.9.20-next.8
         version: 0.9.20-next.8
@@ -1821,14 +1821,14 @@ packages:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  /@litentry/parachain-api@0.9.20-next.10:
-    resolution: {integrity: sha512-kf5a3V4AOyUerZNOM67Js3zNx4lPfqYGvNNQoPIknDKmJ2/QKEyo/DvS+5KYkZp3PV1Q3AJyeobkJm5g7gjwTg==}
+  /@litentry/parachain-api@0.9.21-next.1:
+    resolution: {integrity: sha512-Z858gIrQ39f7B3e5z3nN5ZEutmbYQsxNbfwZ6iyMFBlAlAUueyAFnesmciy0725dkR8IToCzg+tThd+thnkkfg==}
     dependencies:
       '@polkadot/api': 15.0.2
       '@polkadot/api-augment': 15.0.2
       '@polkadot/api-base': 15.0.2
       '@polkadot/api-derive': 15.0.2
-      '@polkadot/keyring': 12.6.2(@polkadot/util-crypto@12.6.2)(@polkadot/util@12.6.2)
+      '@polkadot/keyring': 13.2.3(@polkadot/util-crypto@13.2.3)(@polkadot/util@13.2.3)
       '@polkadot/rpc-core': 15.0.2
       '@polkadot/types': 15.0.2
       '@polkadot/types-augment': 15.0.2
@@ -1836,8 +1836,8 @@ packages:
       '@polkadot/types-create': 15.0.2
       '@polkadot/types-known': 15.0.2
       '@polkadot/types-support': 15.0.2
-      '@polkadot/util': 12.6.2
-      '@polkadot/util-crypto': 12.6.2(@polkadot/util@12.6.2)
+      '@polkadot/util': 13.2.3
+      '@polkadot/util-crypto': 13.2.3(@polkadot/util@13.2.3)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
