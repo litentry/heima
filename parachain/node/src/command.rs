@@ -32,7 +32,8 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_runtime::traits::AccountIdConversion;
 use std::net::SocketAddr;
 
-const UNSUPPORTED_CHAIN_MESSAGE: &str = "Unsupported chain spec, please use heima* or litentry-paseo*";
+const UNSUPPORTED_CHAIN_MESSAGE: &str =
+	"Unsupported chain spec, please use heima* or litentry-paseo*";
 
 trait IdentifyChain {
 	fn is_heima(&self) -> bool;
