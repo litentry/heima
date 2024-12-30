@@ -20,6 +20,7 @@ requests
 - [publicizeAccount](request.md#publicizeaccount)
 - [remark](request.md#remark)
 - [removeAccounts](request.md#removeaccounts)
+- [requestAuthToken](request.md#requestauthtoken)
 - [requestBatchVC](request.md#requestbatchvc)
 - [requestVerificationCode](request.md#requestverificationcode)
 - [setIdentityNetworks](request.md#setidentitynetworks)
@@ -241,7 +242,7 @@ Return the Enclave registry information of the latest registered TEE worker.
 | Name | Type | Default value |
 | :------ | :------ | :------ |
 | `api` | `ApiPromise` | `undefined` |
-| `workerType` | ``"Identity"`` \| ``"BitAcross"`` \| ``"OmniExecutor"`` | `'Identity'` |
+| `workerType` | ``"Identity"`` \| ``"OmniExecutor"`` | `'Identity'` |
 
 #### Returns
 
@@ -418,6 +419,41 @@ signed payload.
 #### Defined in
 
 [lib/requests/remove-accounts.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/remove-accounts.request.ts#L30)
+
+___
+
+### requestAuthToken
+
+▸ **requestAuthToken**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+Requests an authentication token from the Enclave.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.expiresAt` | `number` | The block number at which the token expires |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+
+A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
+
+[payloadToSign] The payload to sign if the identity is not an email.
+
+send A function to send the request to the Enclave.
+
+send.args The arguments required to send the request.
+
+send.args.authentication The authentication string. For email identities, this is the verification code. For non-email identities, this is the signed payload.
+
+#### Defined in
+
+[lib/requests/request_auth_token.request.ts:26](https://github.com/litentry/client-sdk/blob/develop/lib/requests/request_auth_token.request.ts#L26)
 
 ___
 
