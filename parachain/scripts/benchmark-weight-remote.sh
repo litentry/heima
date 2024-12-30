@@ -8,28 +8,28 @@ set -eo pipefail
 # important from where we stand as it will be overriden by runtime weight anyway
 
 function usage() {
-  echo "Usage: $0 litentry|paseo branch-or-tag pallet-names"
+  echo "Usage: $0 heima|paseo branch-or-tag pallet-names"
   echo "       branch-or-tag will be used to checkout codes"
   echo "       pallet-names can be either * or a comma listed pallet names"
-  echo "e.g.:  $0 litentry dev *"
-  echo "       $0 litentry dev frame-system,pallet-proxy,pallet-collective"
+  echo "e.g.:  $0 heima dev *"
+  echo "       $0 heima dev frame-system,pallet-proxy,pallet-collective"
 }
 
 [ $# -ne 3 ] && (usage; exit 1)
 
 # pull docker image
-docker pull litentry/litentry-parachain:runtime-benchmarks
+docker pull litentry/heima:runtime-benchmarks
 
 # clone the repo
 TMPDIR=/tmp
 cd "$TMPDIR"
-[ -d litentry-parachain ] && rm -rf litentry-parachain
+[ -d heima ] && rm -rf heima
 git clone https://github.com/litentry/heima
-cd litentry-parachain/parachain
+cd heima/parachain
 git checkout "$2"
 
 # copy binary out
-docker cp "$(docker create --rm litentry/litentry-parachain:runtime-benchmarks):/usr/local/bin/heima-node" .
+docker cp "$(docker create --rm litentry/heima:runtime-benchmarks):/usr/local/bin/heima-node" .
 chmod a+x heima-node
 
 # populate PALLETS

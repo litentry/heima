@@ -6,7 +6,7 @@
 set -eo pipefail
 
 function usage() {
-  echo "Usage: $0 litentry|paseo"
+  echo "Usage: $0 heima|paseo"
 }
 
 function print_divider() {
@@ -20,8 +20,8 @@ CHAIN=$1
 ZOMBIENET_VERSION=v1.3.117
 ZOMBIENET_DIR=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 8; echo)
 
-LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
-[ -d "$LITENTRY_PARACHAIN_DIR" ] || mkdir -p "$LITENTRY_PARACHAIN_DIR"
+HEIMA_DIR=${HEIMA_DIR:-"/tmp/parachain_dev"}
+[ -d "$HEIMA_DIR" ] || mkdir -p "$HEIMA_DIR"
 
 ROOTDIR=$(git rev-parse --show-toplevel)
 PARACHAIN_BIN="$ROOTDIR/parachain/target/release/heima-node"
@@ -45,8 +45,8 @@ esac
 
 ZOMBIENET_BIN=zombienet-${os}-${arch}
 
-cd "$LITENTRY_PARACHAIN_DIR"
-export PATH="$LITENTRY_PARACHAIN_DIR:$PATH"
+cd "$HEIMA_DIR"
+export PATH="$HEIMA_DIR:$PATH"
 cp "$ROOTDIR/parachain/zombienet/config.toml" .
 
 if ! $ZOMBIENET_BIN version &> /dev/null; then
@@ -70,7 +70,7 @@ if [ -f "$PARACHAIN_BIN" ]; then
 else
   echo "not here, copying from docker image if we are on Linux ..."
   if [ $(uname -s) = "Linux" ]; then
-    docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/heima-node" .
+    docker cp "$(docker create --rm litentry/heima:latest):/usr/local/bin/heima-node" .
     chmod +x heima-node
     echo "done, version:"
     ./heima-node --version

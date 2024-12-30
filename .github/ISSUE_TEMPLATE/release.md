@@ -1,11 +1,11 @@
 ---
 name: Release issue template
 about: Tracking issue for new releases
-title: Litentry-parachain {{ env.VERSION }} Release checklist
+title: Heima {{ env.VERSION }} Release checklist
 ---
 ## Release Checklist
 
-Here is a release checklist for Litentry-parachain {{ env.VERSION }}.
+Here is a release checklist for Heima {{ env.VERSION }}.
 
 The current release candidate can be checked out with `git checkout release-{{ env.VERSION }}`
 

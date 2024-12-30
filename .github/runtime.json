@@ -6,9 +6,9 @@
       "uri": "wss://rpc.litentry-parachain.litentry.io:443"
     },
     {
-      "name": "litentry",
-      "package": "litentry-parachain-runtime",
-      "path": "runtime/litentry",
+      "name": "heima",
+      "package": "heima-parachain-runtime",
+      "path": "runtime/heima",
       "uri": "wss://rpc.litentry-parachain.litentry.io:443"
     }  
 ]

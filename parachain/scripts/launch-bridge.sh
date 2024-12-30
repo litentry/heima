@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
-[ -d "$LITENTRY_PARACHAIN_DIR" ] || mkdir -p "$LITENTRY_PARACHAIN_DIR"
+HEIMA_DIR=${HEIMA_DIR:-"/tmp/parachain_dev"}
+[ -d "$HEIMA_DIR" ] || mkdir -p "$HEIMA_DIR"
 
 ROOTDIR=$(git rev-parse --show-toplevel)
 
@@ -13,8 +13,8 @@ fi
 echo "------------------------------------------------------------"
 
 docker run -d --rm --name chainbridge litentry/chainbridge bash -c 'ls /go/bin/ && sleep 5'
-docker cp chainbridge:/go/bin/chainbridge ${LITENTRY_PARACHAIN_DIR}/
-echo "copy binary:chainbridge to ${LITENTRY_PARACHAIN_DIR}"
+docker cp chainbridge:/go/bin/chainbridge ${HEIMA_DIR}/
+echo "copy binary:chainbridge to ${HEIMA_DIR}"
 
 echo "------------------------------------------------------------"
 

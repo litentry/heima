@@ -2,7 +2,7 @@
 
 # no `set -e` here as we allow commands to fail in this script
 
-LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
+HEIMA_DIR=${HEIMA_DIR:-"/tmp/parachain_dev"}
 
 case $(uname -s) in
   Darwin) os=macos ;;
@@ -29,6 +29,6 @@ fi
 
 docker ps -q -f name=geth | xargs -r docker stop 
 
-rm -rf "$LITENTRY_PARACHAIN_DIR"
+rm -rf "$HEIMA_DIR"
 
 echo "cleaned up"

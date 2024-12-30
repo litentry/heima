@@ -358,18 +358,18 @@ jobs:
       - name: Pull docker image optionally
         if: needs.set-condition.outputs.rebuild_parachain == 'false'
         run: |
-          docker pull litentry/litentry-parachain:latest
-          docker pull litentry/litentry-chain-aio:latest
+          docker pull litentry/heima:latest
+          docker pull litentry/heima-aio:latest
 
       - name: Save docker image
         run: |
-          docker save litentry/litentry-parachain:latest litentry/litentry-chain-aio:latest | gzip > litentry-parachain-dev.tar.gz
+          docker save litentry/heima:latest litentry/heima-aio:latest | gzip > litentry-heima.tar.gz
 
       - name: Upload parachain docker image
         uses: actions/upload-artifact@v4
         with:
-          name: litentry-parachain-dev
-          path: litentry-parachain-dev.tar.gz
+          name: litentry-heima
+          path: litentry-heima.tar.gz
           if-no-files-found: error
 
       - name: Fail early
@@ -573,7 +573,7 @@ jobs:
     strategy:
       matrix:
         chain:
-          - litentry
+          - heima
           - paseo
     name: ${{ matrix.chain }}
     steps:
@@ -581,11 +581,11 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-parachain-dev
+          name: litentry-heima
 
       - name: Load docker image
         run: |
-          docker load < litentry-parachain-dev.tar.gz
+          docker load < litentry-heima.tar.gz
 
       - name: Enable corepack and pnpm
         run: corepack enable && corepack enable pnpm
@@ -685,8 +685,8 @@ jobs:
           echo "::group::paseo runtime test"
           cargo test --locked -p paseo-parachain-runtime --lib
           echo "::endgroup::"
-          echo "::group::litentry runtime test"
-          cargo test --locked -p litentry-parachain-runtime --lib
+          echo "::group::heima runtime test"
+          cargo test --locked -p heima-parachain-runtime --lib
           echo "::endgroup::"
 
       - name: Fail early
@@ -715,7 +715,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-parachain-dev
+          name: litentry-heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -723,7 +723,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-parachain-dev.tar.gz
+          docker load < litentry-heima.tar.gz
           docker load < litentry-identity.tar.gz
           docker images
 
@@ -732,7 +732,7 @@ jobs:
 
       - name: Launch parachain network
         run: |
-          make launch-network-litentry
+          make launch-network-heima
 
       - name: Integration single worker test ${{ matrix.test_name }}
         working-directory: ./tee-worker/identity/docker
@@ -801,7 +801,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-parachain-dev
+          name: litentry-heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -809,7 +809,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-parachain-dev.tar.gz
+          docker load < litentry-heima.tar.gz
           docker load < litentry-identity.tar.gz
           docker images
 
@@ -818,7 +818,7 @@ jobs:
 
       - name: Launch parachain network
         run: |
-          make launch-network-litentry
+          make launch-network-heima
 
       - name: Integration multi worker test ${{ matrix.test_name }}
         working-directory: ./tee-worker/identity/docker
@@ -881,7 +881,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-parachain-dev
+          name: litentry-heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -889,7 +889,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-parachain-dev.tar.gz
+          docker load < litentry-heima.tar.gz
           docker load < litentry-omni.tar.gz
           docker images
 
@@ -942,7 +942,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-parachain-dev
+          name: litentry-heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -961,9 +961,9 @@ jobs:
       - name: Push parachain image
         if: needs.set-condition.outputs.rebuild_parachain == 'true'
         run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker push litentry/litentry-parachain
-          docker push litentry/litentry-chain-aio
+          docker load < litentry-heima.tar.gz
+          docker push litentry/heima
+          docker push litentry/heima-aio
 
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'

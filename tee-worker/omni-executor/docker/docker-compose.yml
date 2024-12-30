@@ -27,7 +27,7 @@ services:
     depends_on:
       - ethereum-node
   litentry-node:
-    image: litentry/litentry-parachain:latest
+    image: litentry/heima:latest
     container_name: litentry-node
     ports:
       - "9944:9944"

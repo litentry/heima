@@ -61,8 +61,8 @@ jobs:
           EOF
           chmod 600 ./benchmark-server-key.pem
           ssh -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem "${{ env.BENCHMARK_SSH_USER }}@${{ steps.start_instance.outputs.remote_ip }}" \
-            "docker pull litentry/litentry-parachain:${{ github.event.inputs.docker_tag }} && \
-            docker run --rm litentry/litentry-parachain:${{ github.event.inputs.docker_tag }} benchmark machine --allow-fail --chain=litentry-dev"
+            "docker pull litentry/heima:${{ github.event.inputs.docker_tag }} && \
+            docker run --rm litentry/heima:${{ github.event.inputs.docker_tag }} benchmark machine --allow-fail --chain=heima-dev"
           rm -f ./benchmark-server-key.pem
 
       - name: Stop remote instance

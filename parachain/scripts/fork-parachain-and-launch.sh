@@ -27,12 +27,12 @@ function usage() {
   print_divider
   echo "Usage: $0 [chain] [ws-rpc-endpoint] [binary]"
   echo
-  echo "chain:             rococo|litentry"
+  echo "chain:             rococo|heima"
   echo "                   default: rococo"
   echo "ws-rpc-endpoint:   the ws rpc endpoint of the parachain"
   echo "                   default: litentry-rococo's rpc endpoint"
-  echo "binary:            path to the litentry parachain binary"
-  echo "                   default: the binary copied from litentry/litentry-parachain:latest"
+  echo "binary:            path to the heima-node binary"
+  echo "                   default: the binary copied from litentry/heima:latest"
   print_divider
 }
 
@@ -71,7 +71,7 @@ mkdir data && cd data
 
 # copy the binary
 if [ -z "$3" ]; then
-  docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/heima-node" binary
+  docker cp "$(docker create --rm litentry/heima:latest):/usr/local/bin/heima-node" binary
 else
   cp -f "$3" binary
 fi

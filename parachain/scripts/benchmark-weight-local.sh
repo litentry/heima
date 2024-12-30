@@ -10,7 +10,7 @@ set -eo pipefail
 # The `heima-node` binary must be compiled with `runtime-benchmarks` feature.
 
 function usage() {
-    echo "Usage: $0 litentry|paseo pallet-name runtime|pallet"
+    echo "Usage: $0 heima|paseo pallet-name runtime|pallet"
 }
 
 [ $# -ne 3 ] && (usage; exit 1)
@@ -29,7 +29,7 @@ case "$3" in
         CHAIN="--chain=$1-dev"
         ;;
     pallet)
-        OUTPUT="$(cargo pkgid -q $2 | sed 's/.*litentry-parachain/\./;s/#.*/\/src\/weights.rs/')"
+        OUTPUT="$(cargo pkgid -q $2 | sed 's/.*heima\/parachain/\./;s/#.*/\/src\/weights.rs/')"
         TEMPLATE="--template=./templates/benchmark/pallet-weight-template.hbs"
         CHAIN="--chain=$1-dev"
         if [[ $OUTPUT == *"github.com"* ]]; then

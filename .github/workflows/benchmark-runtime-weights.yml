@@ -9,9 +9,9 @@ on:
         description: rebuild-docker
         required: true
         default: true
-      litentry:
+      heima:
         type: boolean
-        description: litentry
+        description: heima
         required: true
         default: true
       paseo:
@@ -64,7 +64,7 @@ jobs:
 
       - name: Push docker image
         run: |
-          docker push litentry/litentry-parachain:runtime-benchmarks
+          docker push litentry/heima:runtime-benchmarks
 
   ## run the benchmarking remotely
   benchmark:
@@ -78,8 +78,8 @@ jobs:
       - name: Set env
         run: |
           chain=""
-          if [ "${{ github.event.inputs.litentry }}" = "true" ]; then
-            chain="$chain litentry"
+          if [ "${{ github.event.inputs.heima }}" = "true" ]; then
+            chain="$chain heima"
           fi
           if [ "${{ github.event.inputs.paseo }}" = "true" ]; then
             chain="$chain paseo"
@@ -97,7 +97,7 @@ jobs:
 
       - name: Pull docker image
         run: |
-          docker pull litentry/litentry-parachain:runtime-benchmarks
+          docker pull litentry/heima:runtime-benchmarks
 
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v4
@@ -147,7 +147,7 @@ jobs:
           for c in $chain; do
             ssh -x -i ./benchmark-server-key.pem -o StrictHostKeychecking=no "${{ steps.start_instance.outputs.remote_ip }}" -l ${{ env.BENCHMARK_SSH_USER }} 'bash -s' < parachain/scripts/benchmark-weight-remote.sh "$c" "${GITHUB_REF#refs/heads/}" "$arg"
             echo "copy generated weights files back ..."
-            scp -o StrictHostKeychecking=no -i ./benchmark-server-key.pem "${{ env.BENCHMARK_SSH_USER }}"@"${{ steps.start_instance.outputs.remote_ip }}":/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
+            scp -o StrictHostKeychecking=no -i ./benchmark-server-key.pem "${{ env.BENCHMARK_SSH_USER }}"@"${{ steps.start_instance.outputs.remote_ip }}":/tmp/heima/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
           done
           rm -f ./benchmark-server-key.pem
           echo "======================"

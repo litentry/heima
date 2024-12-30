@@ -44,7 +44,7 @@ echo "ARGS: $ARGS"
 
 # ===================================================================================
 GITUSER=litentry
-GITREPO=litentry-parachain
+GITREPO=heima
 PROXY="${HTTP_PROXY//localhost/host.docker.internal}"
 
 # Build the local-builder image
@@ -90,7 +90,7 @@ docker images | grep ${GITREPO}
 # ===================================================================================
 if [ -z "$2" ] || [ "$TAG" = "latest" ]; then
     GITUSER=litentry
-    GITREPO=litentry-chain-aio
+    GITREPO=heima-aio
     PROXY="${HTTP_PROXY//localhost/host.docker.internal}"
 
     # Build the image

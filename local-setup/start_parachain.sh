@@ -4,7 +4,7 @@ set -euo pipefail
 # check the port before launching the parachain
 # this script is called in bothe launch.sh and launch.py
 #
-# please note this check doesn't apply to standalone litentry-node
+# please note this check doesn't apply to standalone heima-node
 # as it's started without any pre-check script bound
 #
 # 9944: default ws port for parachain node

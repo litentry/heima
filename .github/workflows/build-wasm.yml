@@ -7,7 +7,7 @@ on:
         type: choice
         description: The chain whose runtime-wasm is built
         options:
-          - litentry
+          - heima
           - paseo
       ref:
         description: The commit SHA or tag for checking out code
