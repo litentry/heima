@@ -20,7 +20,7 @@ use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::parentchain::Index as ParentchainIndex;
-use litentry_primitives::{Identity, ShardIdentifier};
+use litentry_primitives::{Identity, OmniAccountAuthType, ShardIdentifier};
 use sp_core::{
 	crypto::{AccountId32 as AccountId, UncheckedFrom},
 	ed25519,
@@ -34,6 +34,17 @@ pub enum TCAuthentication {
 	Email(VerificationCode),
 	OAuth2(OAuth2Data),
 	AuthToken(String),
+}
+
+impl From<TCAuthentication> for OmniAccountAuthType {
+	fn from(value: TCAuthentication) -> Self {
+		match value {
+			TCAuthentication::Web3(_) => OmniAccountAuthType::Web3,
+			TCAuthentication::Email(_) => OmniAccountAuthType::Email,
+			TCAuthentication::OAuth2(_) => OmniAccountAuthType::OAuth2,
+			TCAuthentication::AuthToken(_) => OmniAccountAuthType::AuthToken,
+		}
+	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

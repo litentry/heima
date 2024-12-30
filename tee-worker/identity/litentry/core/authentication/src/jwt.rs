@@ -48,7 +48,7 @@ pub struct Header {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Payload {
 	sub: String,
-	exp: BlockNumber,
+	pub exp: BlockNumber,
 }
 
 impl Payload {

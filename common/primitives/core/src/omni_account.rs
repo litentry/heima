@@ -20,6 +20,14 @@ use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
 #[derive(Encode, Decode, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
+pub enum OmniAccountAuthType {
+    Web3,
+    Email,
+    OAuth2,
+    AuthToken,
+}
+
+#[derive(Encode, Decode, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
 pub enum MemberAccount {
     Public(Identity),
     Private(Vec<u8>, Hash),

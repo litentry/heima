@@ -22,8 +22,12 @@ use sp_core::H160;
 use sp_runtime::{traits::BadOrigin, ModuleError};
 use sp_std::vec;
 
-fn add_account_call(account: MemberAccount) -> Box<RuntimeCall> {
-	let call = RuntimeCall::OmniAccount(crate::Call::add_account { member_account: account });
+fn add_account_call<T: pallet::Config<Permission = mock::OmniAccountPermission>>(
+	account: MemberAccount,
+	permissions: Option<Vec<<T as pallet::Config>::Permission>>,
+) -> Box<RuntimeCall> {
+	let call =
+		RuntimeCall::OmniAccount(crate::Call::add_account { member_account: account, permissions });
 	Box::new(call)
 }
 
@@ -44,6 +48,15 @@ fn request_intent_call(intent: Intent) -> Box<RuntimeCall> {
 
 fn make_balance_transfer_call(dest: AccountId, value: Balance) -> Box<RuntimeCall> {
 	let call = RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive { dest, value });
+	Box::new(call)
+}
+
+fn set_permissions_call(
+	member_account_hash: H256,
+	permissions: Vec<OmniAccountPermission>,
+) -> Box<RuntimeCall> {
+	let call =
+		RuntimeCall::OmniAccount(crate::Call::set_permissions { member_account_hash, permissions });
 	Box::new(call)
 }
 
@@ -81,13 +94,14 @@ fn create_account_store_works() {
 fn add_account_without_creating_store_fails() {
 	new_test_ext().execute_with(|| {
 		let tee_signer = get_tee_signer();
-		let call = add_account_call(private_member_account(bob()));
+		let call = add_account_call::<Test>(private_member_account(bob()), None);
 
 		assert_noop!(
 			OmniAccount::dispatch_as_omni_account(
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
 				call,
+				OmniAccountAuthType::Web3
 			),
 			Error::<Test>::AccountNotFound
 		);
@@ -110,11 +124,12 @@ fn add_account_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), Some(vec![]));
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
@@ -137,11 +152,12 @@ fn add_account_works() {
 			expected_member_accounts
 		);
 
-		let call = add_account_call(charlie.clone());
+		let call = add_account_call::<Test>(charlie.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 		let expected_member_accounts: MemberAccounts<Test> = BoundedVec::truncate_from(vec![
 			public_member_account(alice()),
@@ -162,7 +178,17 @@ fn add_account_works() {
 		);
 
 		assert!(MemberAccountHash::<Test>::contains_key(bob.hash()));
+		assert!(MemberAccountPermissions::<Test>::contains_key(bob.hash()));
 		assert!(MemberAccountHash::<Test>::contains_key(charlie.hash()));
+		assert!(MemberAccountPermissions::<Test>::contains_key(charlie.hash()));
+		assert_eq!(
+			MemberAccountPermissions::<Test>::get(bob.hash()).to_vec(),
+			vec![OmniAccountPermission::All]
+		);
+		assert_eq!(
+			MemberAccountPermissions::<Test>::get(charlie.hash()).to_vec(),
+			vec![OmniAccountPermission::All]
+		);
 	});
 }
 
@@ -173,12 +199,12 @@ fn add_account_origin_check_works() {
 		let bob = private_member_account(bob());
 
 		assert_noop!(
-			OmniAccount::add_account(RuntimeOrigin::signed(tee_signer), bob.clone()),
+			OmniAccount::add_account(RuntimeOrigin::signed(tee_signer), bob.clone(), None),
 			BadOrigin
 		);
 
 		assert_noop!(
-			OmniAccount::add_account(RuntimeOrigin::signed(alice().omni_account), bob),
+			OmniAccount::add_account(RuntimeOrigin::signed(alice().omni_account), bob, None),
 			BadOrigin
 		);
 	});
@@ -195,22 +221,25 @@ fn add_account_with_already_linked_account_fails() {
 			alice().identity.clone(),
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call.clone(),
+			OmniAccountAuthType::Web3
 		));
 
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [0, 0, 0, 0],
@@ -226,16 +255,18 @@ fn add_account_with_already_linked_account_fails() {
 			charlie().identity,
 		));
 
-		let call = add_account_call(public_member_account(alice()));
+		let call = add_account_call::<Test>(public_member_account(alice()), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			charlie().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [0, 0, 0, 0],
@@ -267,20 +298,22 @@ fn add_account_store_len_limit_reached_works() {
 
 		AccountStore::<Test>::insert(alice().omni_account, member_accounts);
 
-		let call = add_account_call(MemberAccount::Private(
-			vec![7, 8, 9],
-			H256::from(blake2_256(&[7, 8, 9])),
-		));
+		let call = add_account_call::<Test>(
+			MemberAccount::Private(vec![7, 8, 9], H256::from(blake2_256(&[7, 8, 9]))),
+			None,
+		);
 
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [1, 0, 0, 0],
@@ -303,11 +336,12 @@ fn remove_account_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		// normal signed origin should give `BadOrigin`, no matter
@@ -333,11 +367,13 @@ fn remove_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -366,12 +402,14 @@ fn remove_account_works() {
 			expected_member_accounts
 		);
 		assert!(!MemberAccountHash::<Test>::contains_key(bob.hash()));
+		assert!(!MemberAccountPermissions::<Test>::contains_key(bob.hash()));
 
 		let call = remove_accounts_call(vec![alice().identity.hash()]);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		assert!(!AccountStore::<Test>::contains_key(alice().omni_account));
@@ -389,11 +427,12 @@ fn remove_account_empty_account_check_works() {
 		));
 
 		let bob = private_member_account(bob());
-		let call = add_account_call(bob);
+		let call = add_account_call::<Test>(bob, None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		let call = remove_accounts_call(vec![]);
@@ -402,10 +441,12 @@ fn remove_account_empty_account_check_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [5, 0, 0, 0],
@@ -429,11 +470,12 @@ fn publicize_account_works() {
 			alice().identity.clone(),
 		));
 
-		let call = add_account_call(private_bob.clone());
+		let call = add_account_call::<Test>(private_bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		let expected_member_accounts: MemberAccounts<Test> =
@@ -448,11 +490,13 @@ fn publicize_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -495,6 +539,7 @@ fn publicize_account_identity_not_found_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
 				call,
+				OmniAccountAuthType::Web3
 			),
 			Error::<Test>::AccountNotFound
 		);
@@ -504,11 +549,12 @@ fn publicize_account_identity_not_found_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		let call = publicize_account_call(charlie().identity);
@@ -516,10 +562,12 @@ fn publicize_account_identity_not_found_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [2, 0, 0, 0],
@@ -542,11 +590,12 @@ fn request_intent_works() {
 			alice().identity
 		));
 
-		let call = add_account_call(bob);
+		let call = add_account_call::<Test>(bob, None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		let intent =
@@ -557,11 +606,13 @@ fn request_intent_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -589,22 +640,28 @@ fn dispatch_as_signed_works() {
 			alice().identity,
 		));
 
-		let call = add_account_call(private_member_account(bob()));
+		let call = add_account_call::<Test>(private_member_account(bob()), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 
 		let call = make_balance_transfer_call(bob().native_account, 5);
 		assert_ok!(OmniAccount::dispatch_as_signed(
 			RuntimeOrigin::signed(tee_signer),
 			alice().identity.hash(),
-			call
+			call,
+			OmniAccountAuthType::Web3
 		));
 		System::assert_has_event(
-			Event::DispatchedAsSigned { who: alice().omni_account, result: DispatchResult::Ok(()) }
-				.into(),
+			Event::DispatchedAsSigned {
+				who: alice().omni_account,
+				auth_type: OmniAccountAuthType::Web3,
+				result: DispatchResult::Ok(()),
+			}
+			.into(),
 		);
 
 		assert_eq!(Balances::free_balance(bob().native_account), 5);
@@ -625,11 +682,12 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 
 		assert_eq!(System::account_nonce(alice().omni_account), 0);
 
-		let call = add_account_call(bob.clone());
+		let call = add_account_call::<Test>(bob.clone(), None);
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
+			OmniAccountAuthType::Web3
 		));
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
@@ -658,8 +716,242 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 		assert_ok!(OmniAccount::dispatch_as_signed(
 			RuntimeOrigin::signed(tee_signer),
 			alice().identity.hash(),
-			call
+			call,
+			OmniAccountAuthType::Web3
 		));
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
+	});
+}
+
+#[test]
+fn ensure_permission_works() {
+	new_test_ext().execute_with(|| {
+		// Create account store
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		// Add account member without permissions to remove accounts
+		let bob = private_member_account(bob());
+		let bob_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+			OmniAccountPermission::AccountManagement,
+		];
+
+		let call = add_account_call::<Test>(bob.clone(), Some(bob_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+
+		// An Account cannot be added with more permissions than the account that added it
+		let charlie = private_member_account(charlie());
+		let call = add_account_call::<Test>(charlie.clone(), None); // default permission
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		let charlie_permissions = vec![OmniAccountPermission::All];
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		let mut charlie_permissions = vec![OmniAccountPermission::RequestNativeIntent];
+		charlie_permissions.extend_from_slice(&bob_permissions);
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		let charlie_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+		];
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			bob.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+
+		// An account with no permissions cannot remove accounts
+		let call = remove_accounts_call(vec![alice().identity.hash()]);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				charlie.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// Permissions should also work for dispatch_as_signed
+		assert_ok!(Balances::transfer_keep_alive(
+			RuntimeOrigin::signed(alice().native_account),
+			alice().omni_account,
+			6
+		));
+		let call = make_balance_transfer_call(dave().native_account, 5);
+		assert_noop!(
+			OmniAccount::dispatch_as_signed(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call.clone(),
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+		assert_ok!(OmniAccount::dispatch_as_signed(
+			RuntimeOrigin::signed(tee_signer),
+			alice().identity.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+	});
+}
+
+#[test]
+fn set_permissions_works() {
+	new_test_ext().execute_with(|| {
+		// Create account store and add accounts
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		let bob = private_member_account(bob());
+		let bob_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+			OmniAccountPermission::AccountManagement,
+		];
+
+		let call = add_account_call::<Test>(bob.clone(), Some(bob_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+
+		let charlie = private_member_account(charlie());
+		let charlie_permissions = vec![OmniAccountPermission::RequestNativeIntent];
+		let call = add_account_call::<Test>(charlie.clone(), Some(charlie_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+
+		// Assert Set permissions
+
+		// The caller cannot upgrade his permissions
+		let new_permissions = vec![OmniAccountPermission::All];
+		let call = set_permissions_call(bob.hash(), new_permissions.clone());
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// The caller cannot set a permission that he does not have
+		let new_permissions = vec![OmniAccountPermission::RequestNativeIntent];
+		let call = set_permissions_call(alice().identity.hash(), new_permissions.clone());
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				bob.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// The caller can set permissions he has
+		let new_permissions = vec![
+			OmniAccountPermission::AccountManagement,
+			OmniAccountPermission::RequestSolanaIntent,
+		];
+		let call = set_permissions_call(charlie.hash(), new_permissions.clone());
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			bob.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+
+		// The caller most have permission to set_permissions
+		let call = set_permissions_call(bob.hash(), charlie_permissions);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				charlie.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+
+		// The caller can set any permissions as if she has default permissions (All)
+		let new_permissions = vec![OmniAccountPermission::All];
+		let call = set_permissions_call(charlie.hash(), new_permissions.clone());
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+	});
+}
+
+#[test]
+fn auth_token_requested_works() {
+	new_test_ext().execute_with(|| {
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::auth_token_requested(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.to_omni_account(),
+			10
+		));
+
+		System::assert_last_event(
+			Event::AuthTokenRequested { who: alice().identity.to_omni_account(), expires_at: 10 }
+				.into(),
+		);
 	});
 }
