@@ -238,12 +238,12 @@ pub fn recover_evm_address(
 	Ok(addr)
 }
 
-// see https://github.com/litentry/litentry-parachain/issues/1137
+// see https://github.com/litentry/heima/issues/1137
 fn substrate_wrap(msg: &[u8]) -> Vec<u8> {
 	["<Bytes>".as_bytes(), msg, "</Bytes>".as_bytes()].concat()
 }
 
-// see https://github.com/litentry/litentry-parachain/issues/1970
+// see https://github.com/litentry/heima/issues/1970
 fn evm_eip191_wrap(msg: &[u8]) -> Vec<u8> {
 	["\x19Ethereum Signed Message:\n".as_bytes(), msg.len().to_string().as_bytes(), msg].concat()
 }

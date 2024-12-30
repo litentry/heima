@@ -16,7 +16,7 @@ function usage() {
 ROOTDIR=$(git rev-parse --show-toplevel)
 cd "$ROOTDIR"
 
-REPO=https://github.com/litentry/litentry-parachain
+REPO=https://github.com/litentry/heima
 
 type=$2
 

@@ -5,7 +5,7 @@ edition = '2021'
 homepage = 'https://www.heima.network/'
 license = 'GPL-3.0'
 name = 'pallet-investing-pool'
-repository = 'https://github.com/litentry/litentry-parachain'
+repository = 'https://github.com/litentry/heima'
 version = '0.1.0'
 
 [package.metadata.docs.rs]

@@ -3,9 +3,9 @@
 
 ![](https://res.cloudinary.com/brandpad/image/upload/c_scale,dpr_auto,f_auto,w_768/v1673016042/19618/parachain-logo-color-black-t)
 
-[![general ci](https://github.com/litentry/litentry-parachain/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/litentry/litentry-parachain/actions/workflows/ci.yml)
-[![release](https://github.com/litentry/litentry-parachain/actions/workflows/create-release-draft.yml/badge.svg)](https://github.com/litentry/litentry-parachain/actions/workflows/create-release-draft.yml)
-[![runtime upgrade](https://github.com/litentry/litentry-parachain/actions/workflows/check-runtime-upgrade.yml/badge.svg)](https://github.com/litentry/litentry-parachain/actions/workflows/check-runtime-upgrade.yml)
+[![general ci](https://github.com/litentry/heima/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/litentry/heima/actions/workflows/ci.yml)
+[![release](https://github.com/litentry/heima/actions/workflows/create-release-draft.yml/badge.svg)](https://github.com/litentry/heima/actions/workflows/create-release-draft.yml)
+[![runtime upgrade](https://github.com/litentry/heima/actions/workflows/check-runtime-upgrade.yml/badge.svg)](https://github.com/litentry/heima/actions/workflows/check-runtime-upgrade.yml)
 
 </div>
 
@@ -64,7 +64,7 @@ to stop the processes and tidy things up.
 ### Launch a standalone parachain node
 
 To speed up the development, the parachain can be launched without relaychain nodes.
-In this case, parachain will author blocks by itself with instant block finalisation, please refer to [this PR](https://github.com/litentry/litentry-parachain/pull/1059).
+In this case, parachain will author blocks by itself with instant block finalisation, please refer to [this PR](https://github.com/litentry/heima/pull/1059).
 
 ```
 make launch-standalone
@@ -110,7 +110,7 @@ If you see the screenshot below, you can tell the worker is running:
 
 ### TEE worker tests 
 
-Refer to [tee-worker ts-tests](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/ts-tests/README.md)
+Refer to [tee-worker ts-tests](https://github.com/litentry/heima/blob/dev/tee-worker/identity/ts-tests/README.md)
 
 ### Teardown
 

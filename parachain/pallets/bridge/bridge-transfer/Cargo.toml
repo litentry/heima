@@ -3,7 +3,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition = '2021'
 homepage = 'https://litentry.com'
 name = 'pallet-bridge-transfer'
-repository = 'https://github.com/litentry/litentry-parachain'
+repository = 'https://github.com/litentry/heima'
 version = '0.1.0'
 
 [dependencies]

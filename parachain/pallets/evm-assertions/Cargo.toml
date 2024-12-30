@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 homepage = 'https://litentry.com'
 name = 'pallet-evm-assertions'
-repository = 'https://github.com/litentry/litentry-parachain'
+repository = 'https://github.com/litentry/heima'
 
 [dependencies]
 parity-scale-codec = { workspace = true }

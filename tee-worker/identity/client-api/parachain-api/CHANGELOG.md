@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.21-next.0] - 2024-12-17
 
--   Update for version [parachain-release v0.9.21-01](https://github.com/litentry/litentry-parachain/releases/tag/v0.9.21-01)
+-   Update for version [parachain-release v0.9.21-01](https://github.com/litentry/heima/releases/tag/v0.9.21-01)
 
 ## Added
 
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.20-4.1] - 2024-09-30
 
--   Update for version [parachain-release v0.9.20-04](https://github.com/litentry/litentry-parachain/releases/tag/v0.9.20-04)
+-   Update for version [parachain-release v0.9.20-04](https://github.com/litentry/heima/releases/tag/v0.9.20-04)
 
 ### Added
 
@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.19-07] - 2024-08-26
 
-Matching version for [parachain-release v0.9.19-07](https://github.com/litentry/litentry-parachain/releases/tag/v0.9.19-07)
+Matching version for [parachain-release v0.9.19-07](https://github.com/litentry/heima/releases/tag/v0.9.19-07)
 
 ## [0.9.18-11.2] - 2024-07-26
 
@@ -55,7 +55,7 @@ Matching version for [parachain-release v0.9.19-07](https://github.com/litentry/
 
 ## [0.9.18-10] - 2024-07-15
 
-Matching version for [parachain-release v0.9.18-10](https://github.com/litentry/litentry-parachain/releases/tag/v0.9.18-10)
+Matching version for [parachain-release v0.9.18-10](https://github.com/litentry/heima/releases/tag/v0.9.18-10)
 
 ## [0.9.18-next.11] - 2024-07-12
 

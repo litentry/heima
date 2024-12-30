@@ -267,7 +267,7 @@ impl Debug for Address33 {
 
 /// Web2 and Web3 Identity based on handle/public key
 /// We only include the network categories (substrate/evm) without concrete types
-/// see https://github.com/litentry/litentry-parachain/issues/1841
+/// see https://github.com/litentry/heima/issues/1841
 #[derive(
     Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, EnumIter, Ord, PartialOrd,
 )]

@@ -33,4 +33,4 @@ These checks should be performed after forking to a release branch, that is, on 
 These are the general checks for the releasing process.
 
 - [ ] Verify a **`tag`** has been correctly acquired on `release-{{ env.VERSION }}` branch.
-- [ ] Verify **`release-draft`** has been created by [create-release-draft.yml](https://github.com/litentry/litentry-parachain/blob/dev/.github/workflows/create-release-draft.yml) and is ready to publish.
+- [ ] Verify **`release-draft`** has been created by [create-release-draft.yml](https://github.com/litentry/heima/blob/dev/.github/workflows/create-release-draft.yml) and is ready to publish.

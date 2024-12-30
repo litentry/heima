@@ -32,7 +32,7 @@ export const mockBatchAssertion = [
     },
 ];
 
-// https://github.com/litentry/litentry-parachain/tree/dev/tee-worker/litentry/core/assertion-build/src
+// https://github.com/litentry/heima/tree/dev/tee-worker/litentry/core/assertion-build/src
 export const mockAssertions = [
     {
         description: 'Have identified at least one account/address in both Web2 and Web3.',

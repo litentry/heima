@@ -4,7 +4,7 @@ edition = '2021'
 homepage = 'https://litentry.com'
 name = 'pallet-teebag'
 description = 'Pallet for tee-worker registration and management'
-repository = 'https://github.com/litentry/litentry-parachain'
+repository = 'https://github.com/litentry/heima'
 license = 'GPL-3.0'
 version = '0.1.0'
 

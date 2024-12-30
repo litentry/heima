@@ -1302,7 +1302,7 @@ construct_runtime! {
 		// I assume it's the desired behavior though or it doesn't really matter.
 		//
 		// also see the comment above `AllPalletsWithSystem` and
-		// https://github.com/litentry/litentry-parachain/issues/336
+		// https://github.com/litentry/heima/issues/336
 		Authorship: pallet_authorship = 40,
 		//41 is for old CollatorSelection, replaced by ParachainSTaking
 		Session: pallet_session = 42,

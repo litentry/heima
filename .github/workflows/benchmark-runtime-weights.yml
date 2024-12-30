@@ -177,7 +177,7 @@ jobs:
 
             Pallets: "${{ github.event.inputs.pallets }}"
             Chain: "${{ env.CHAIN }}"
-            Github action run: https://github.com/litentry/litentry-parachain/actions/runs/${{ github.run_id }}
+            Github action run: https://github.com/litentry/heima/actions/runs/${{ github.run_id }}
           labels: |
             automated-pr
           assignees: ${{ github.actor }}

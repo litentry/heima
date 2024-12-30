@@ -5,7 +5,7 @@ set -eo pipefail
 ROOTDIR=$(git rev-parse --show-toplevel)
 
 # the script is used to simulate runtime upgrade, see:
-# https://github.com/litentry/litentry-parachain/issues/378
+# https://github.com/litentry/heima/issues/378
 
 # The latest state of the blockchain is scraped and used to bootstrap a chain locally via fork-off-substrate,
 # see ./scripts/fork-parachain-and-launch.sh

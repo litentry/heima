@@ -17,7 +17,7 @@ jobs:
         with:
           args: |
             Hi @everyone,
-            🚀 A new client release has been built: https://github.com/litentry/litentry-parachain/releases/tag/${{ github.event.release.tag_name }}
+            🚀 A new client release has been built: https://github.com/litentry/heima/releases/tag/${{ github.event.release.tag_name }}
             ✨ Please update the client using the docker image litentry/litentry-parachain:${{ github.event.release.tag_name }}
 
       - name: Update litentry image version

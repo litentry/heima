@@ -569,10 +569,10 @@ This must match the Rust implementation of the TrustedCall
 
 **`See`**
 
- - https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/app-libs/stf/src/trusted_call.rs
+ - https://github.com/litentry/heima/blob/dev/tee-worker/identity/app-libs/stf/src/trusted_call.rs
 
 Similarly, our types definitions must match also.
- - https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/parachain-api/prepare-build/interfaces/trusted_operations/definitions.ts
+ - https://github.com/litentry/heima/blob/dev/tee-worker/identity/client-api/parachain-api/prepare-build/interfaces/trusted_operations/definitions.ts
 
 #### Defined in
 

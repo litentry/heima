@@ -4,7 +4,7 @@
 
 ## Step 0: Preparation
 
-This package is generated from [litentry-parachain](https://github.com/litentry/litentry-parachain)
+This package is generated from [litentry-parachain](https://github.com/litentry/heima)
 From the root folder ~/litentry-parachain/tee-worker/:
 ```
 make release-pkg

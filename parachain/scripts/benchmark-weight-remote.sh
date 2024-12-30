@@ -24,7 +24,7 @@ docker pull litentry/litentry-parachain:runtime-benchmarks
 TMPDIR=/tmp
 cd "$TMPDIR"
 [ -d litentry-parachain ] && rm -rf litentry-parachain
-git clone https://github.com/litentry/litentry-parachain
+git clone https://github.com/litentry/heima
 cd litentry-parachain/parachain
 git checkout "$2"
 
