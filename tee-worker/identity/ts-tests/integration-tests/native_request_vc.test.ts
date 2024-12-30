@@ -34,6 +34,7 @@ import {
     getOmniAccountNonce,
     sendRequestFromTrustedCall,
 } from './common/utils/native-request-helpers';
+import { sleep } from './common/utils';
 
 describe('Test native vc_request', function () {
     this.timeout(6000000);
@@ -129,6 +130,7 @@ describe('Test native vc_request', function () {
             true // public account
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addTwitterAccountCall);
+        await sleep(12);
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
@@ -156,6 +158,8 @@ describe('Test native vc_request', function () {
             true // public account
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addEvmAccountCall);
+        await sleep(12);
+
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 3, 'account store members count should be 3');
@@ -183,6 +187,8 @@ describe('Test native vc_request', function () {
             true // public account
         );
         await sendRequestFromTrustedCall(context, teeShieldingKey, addBitcoinAccountCall);
+        await sleep(12);
+
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 4, 'account store members count should be 4');

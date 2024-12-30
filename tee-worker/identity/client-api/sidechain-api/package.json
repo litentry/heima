@@ -5,7 +5,7 @@
     "main": "dist/src/index.js",
     "module": "dist/src/index.js",
     "sideEffects": false,
-    "version": "0.9.20-next.8",
+    "version": "0.9.21-next.0",
     "scripts": {
         "clean": "rm -rf dist build node_modules",
         "update-metadata": "../../bin/litentry-cli print-sgx-metadata-raw > prepare-build/litentry-sidechain-metadata.json",
@@ -23,23 +23,23 @@
         "@polkadot/api-augment": "^15.0.1",
         "@polkadot/api-derive": "^15.0.1",
         "@polkadot/api-base": "^15.0.1",
-        "@polkadot/keyring": "^12.2.1",
+        "@polkadot/keyring": "^13.2.3",
         "@polkadot/types": "^15.0.1",
         "@polkadot/types-augment": "^15.0.1",
         "@polkadot/types-create": "^15.0.1",
         "@polkadot/types-known": "^15.0.1",
         "@polkadot/types-support": "^15.0.1",
-        "@polkadot/util": "^12.5.1",
-        "@polkadot/util-crypto": "^12.5.1",
+        "@polkadot/util": "^13.2.3",
+        "@polkadot/util-crypto": "^13.2.3",
         "@polkadot/types-codec": "^15.0.1",
         "@polkadot/rpc-core": "^15.0.1"
     },
     "devDependencies": {
         "@polkadot/typegen": "^15.0.1",
-        "@types/node": "^20.3.1",
-        "prettier": "2.8.1",
+        "@types/node": "^20.4.4",
+        "prettier": "^2.8.3",
         "ts-node": "^10.9.1",
-        "typescript": "^5.0.4"
+        "typescript": "^5.1.0"
     },
     "publishConfig": {
         "access": "public"

@@ -129,6 +129,9 @@ pub enum TrustedCallError {
 	ExtrinsicConstructionFailed(String), // Stringified itp_extrinsics_factory::Error
 	ExtrinsicSendingFailed(String),      // Stringified sgx_status_t
 	InvalidRequest,
+	NativeRequestSendFailed,
+	AuthTokenCreationFailed,
+	ParentchainHeaderRetrievalFailed,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -148,6 +151,7 @@ pub enum TrustedCallOk<Hash: Decode> {
 		idx: u8,
 		len: u8,
 	},
+	AuthToken(String),
 }
 
 impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for TrustedCallOk<Hash> {
@@ -157,6 +161,12 @@ impl<Hash: Decode + Clone> From<&ExtrinsicReport<Hash>> for TrustedCallOk<Hash> 
 			block_hash: report.block_hash.clone(),
 			status: report.status.clone(),
 		}
+	}
+}
+
+impl<Hash: Decode> From<String> for TrustedCallOk<Hash> {
+	fn from(auth_token: String) -> Self {
+		TrustedCallOk::AuthToken(auth_token)
 	}
 }
 

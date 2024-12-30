@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     'node',
     'pallets/account-fix',
+    'pallets/bitacross',
     'pallets/bridge/assets-handler',
     'pallets/bridge/chain-bridge',
     'pallets/bridge/bridge-transfer',
@@ -167,11 +168,11 @@ sc-sysinfo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "sta
 sc-telemetry = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 sc-tracing = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 sc-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
-sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 
 # wasm
@@ -207,6 +208,7 @@ pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-bounties = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-conviction-voting = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-democracy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-membership = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
@@ -214,12 +216,14 @@ pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk", bra
 pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-preimage = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-referenda = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-whitelist = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-tips = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
@@ -270,6 +274,7 @@ paseo-parachain-runtime = { path = "runtime/paseo", default-features = false }
 pallet-account-fix = { path = "pallets/account-fix", default-features = false }
 pallet-asset-manager = { path = "pallets/xcm-asset-manager", default-features = false }
 pallet-assets-handler = { path = "pallets/bridge/assets-handler", default-features = false }
+pallet-bitacross = { path = "pallets/bitacross", default-features = false }
 pallet-chain-bridge = { path = "pallets/bridge/chain-bridge", default-features = false }
 pallet-bridge-common = { path = "pallets/bridge/common", default-features = false }
 pallet-bridge-transfer = { path = "pallets/bridge/bridge-transfer", default-features = false }

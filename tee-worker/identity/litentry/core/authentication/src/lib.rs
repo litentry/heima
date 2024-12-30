@@ -14,18 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-#![warn(unused_extern_crates)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-mod chain_specs;
-mod cli;
-mod command;
-mod custom_txpool;
-mod evm_tracing_types;
-mod rpc;
-mod service;
-mod standalone_block_import;
-mod tracing;
+extern crate alloc;
+extern crate core;
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
 
-fn main() -> sc_cli::Result<()> {
-	command::run()
+#[cfg(all(feature = "std", feature = "sgx"))]
+compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
+
+pub mod jwt;
+
+use codec::{Decode, Encode};
+use parentchain_primitives::BlockNumber;
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub struct AuthOptions {
+	expires_at: BlockNumber,
 }

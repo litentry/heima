@@ -2,7 +2,9 @@ use crate::VerificationCode;
 use alloc::{format, string::String, sync::Arc};
 use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
-use itp_types::parentchain::Index as ParentchainIndex;
+use itp_types::{parentchain::Index as ParentchainIndex, BlockNumber};
+use itp_utils::stringify::account_id_to_string_without_prefix;
+use lc_authentication::jwt;
 use lc_data_providers::{google::GoogleOAuth2Client, DataProviderConfig};
 use lc_identity_verification::web2::{email::VerificationCodeStore, google};
 use lc_omni_account::InMemoryStore as OmniAccountStore;
@@ -29,6 +31,7 @@ pub enum AuthenticationError {
 	EmailVerificationCodeNotFound,
 	EmailInvalidVerificationCode,
 	OAuth2Error(String),
+	AuthTokenError(String),
 }
 
 pub fn verify_tca_web3_authentication(
@@ -64,23 +67,35 @@ pub fn verify_tca_web3_authentication(
 pub fn verify_tca_email_authentication(
 	sender_identity_hash: H256,
 	omni_account: &AccountId,
-	verification_code: VerificationCode,
+	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
 	let Ok(Some(code)) = VerificationCodeStore::get(omni_account, sender_identity_hash) else {
 		return Err(AuthenticationError::EmailVerificationCodeNotFound);
 	};
-	if code == verification_code {
+	if code == *verification_code {
 		Ok(())
 	} else {
 		Err(AuthenticationError::EmailInvalidVerificationCode)
 	}
 }
 
+pub fn verify_tca_auth_token_authentication(
+	omni_account: &AccountId,
+	current_block: BlockNumber,
+	auth_token: &str,
+	secret: &[u8],
+) -> Result<(), AuthenticationError> {
+	let expected_subject = account_id_to_string_without_prefix(&omni_account);
+	let validation = jwt::Validation::new(expected_subject, current_block);
+	jwt::verify(auth_token, secret, validation)
+		.map_err(|e| AuthenticationError::AuthTokenError(format!("{:?}", e)))
+}
+
 pub fn verify_tca_oauth2_authentication(
 	data_providers_config: Arc<DataProviderConfig>,
 	sender_identity_hash: H256,
 	omni_account: &AccountId,
-	payload: OAuth2Data,
+	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	match payload.provider {
 		OAuth2Provider::Google =>
@@ -92,7 +107,7 @@ fn verify_google_oauth2(
 	data_providers_config: Arc<DataProviderConfig>,
 	sender_identity_hash: H256,
 	omni_account: &AccountId,
-	payload: OAuth2Data,
+	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	let state_verifier_result = google::OAuthStateStore::get(omni_account, sender_identity_hash);
 	let Ok(Some(state_verifier)) = state_verifier_result else {
@@ -109,7 +124,7 @@ fn verify_google_oauth2(
 		data_providers_config.google_client_secret.clone(),
 	);
 	let code = payload.code.clone();
-	let redirect_uri = payload.redirect_uri;
+	let redirect_uri = payload.redirect_uri.clone();
 	let token = google_client.exchange_code_for_token(code, redirect_uri).map_err(|e| {
 		AuthenticationError::OAuth2Error(format!("Failed to exchange code for token: {:?}", e))
 	})?;

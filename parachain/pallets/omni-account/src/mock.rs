@@ -14,17 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_omni_account, Encode, EnsureOmniAccount};
+use crate::{self as pallet_omni_account, Decode, Encode, EnsureOmniAccount, MaxEncodedLen};
 use core_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 use frame_support::{
 	assert_ok, derive_impl,
 	pallet_prelude::EnsureOrigin,
 	parameter_types,
-	traits::{ConstU32, ConstU64},
+	traits::{ConstU32, ConstU64, InstanceFilter},
 };
 use frame_system::EnsureRoot;
 pub use pallet_teebag::test_util::get_signer;
 use pallet_teebag::test_util::{TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL};
+use sp_core::RuntimeDebug;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	traits::{IdentifyAccount, IdentityLookup, Verify},
@@ -96,6 +97,10 @@ pub fn charlie() -> Accounts {
 	create_accounts(AccountKeyring::Charlie)
 }
 
+pub fn dave() -> Accounts {
+	create_accounts(AccountKeyring::Dave)
+}
+
 pub fn public_member_account(accounts: Accounts) -> MemberAccount {
 	MemberAccount::Public(accounts.identity)
 }
@@ -158,6 +163,90 @@ impl pallet_teebag::Config for Test {
 	type WeightInfo = ();
 }
 
+#[derive(
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	RuntimeDebug,
+	MaxEncodedLen,
+	scale_info::TypeInfo,
+)]
+pub enum OmniAccountPermission {
+	All,
+	AccountManagement,
+	RequestNativeIntent,
+	RequestEthereumIntent,
+	RequestSolanaIntent,
+}
+
+impl Default for OmniAccountPermission {
+	fn default() -> Self {
+		Self::All
+	}
+}
+
+impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
+	fn filter(&self, call: &RuntimeCall) -> bool {
+		match self {
+			Self::All => true,
+			Self::AccountManagement => {
+				matches!(
+					call,
+					RuntimeCall::OmniAccount(pallet_omni_account::Call::add_account { .. })
+						| RuntimeCall::OmniAccount(
+							pallet_omni_account::Call::remove_accounts { .. }
+						) | RuntimeCall::OmniAccount(
+						pallet_omni_account::Call::publicize_account { .. }
+					) | RuntimeCall::OmniAccount(pallet_omni_account::Call::set_permissions { .. })
+				)
+			},
+			Self::RequestNativeIntent => {
+				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
+					intent,
+				}) = call
+				{
+					matches!(
+						intent,
+						pallet_omni_account::Intent::SystemRemark(_)
+							| pallet_omni_account::Intent::TransferNative(_)
+					)
+				} else {
+					false
+				}
+			},
+			Self::RequestEthereumIntent => {
+				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
+					intent,
+				}) = call
+				{
+					matches!(
+						intent,
+						pallet_omni_account::Intent::TransferEthereum(_)
+							| pallet_omni_account::Intent::CallEthereum(_)
+					)
+				} else {
+					false
+				}
+			},
+			Self::RequestSolanaIntent => {
+				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
+					intent,
+				}) = call
+				{
+					matches!(intent, pallet_omni_account::Intent::TransferSolana(_))
+				} else {
+					false
+				}
+			},
+		}
+	}
+}
+
 impl pallet_omni_account::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -166,6 +255,8 @@ impl pallet_omni_account::Config for Test {
 	type MaxAccountStoreLength = ConstU32<3>;
 	type OmniAccountOrigin = EnsureOmniAccount<Self::AccountId>;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
+	type MaxPermissions = ConstU32<4>;
+	type Permission = OmniAccountPermission;
 }
 
 pub fn get_tee_signer() -> SystemAccountId {

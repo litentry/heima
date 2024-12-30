@@ -40,3 +40,7 @@ pub mod pallet_timestamp;
 // pub mod pallet_treasury;
 pub mod pallet_utility;
 pub mod pallet_vc_management;
+
+pub mod pallet_conviction_voting;
+pub mod pallet_referenda;
+pub mod pallet_whitelist;

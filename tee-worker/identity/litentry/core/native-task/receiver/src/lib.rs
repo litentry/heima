@@ -40,8 +40,8 @@ use std::sync::SgxMutex as Mutex;
 
 mod authentication_utils;
 use authentication_utils::{
-	verify_tca_email_authentication, verify_tca_oauth2_authentication,
-	verify_tca_web3_authentication,
+	verify_tca_auth_token_authentication, verify_tca_email_authentication,
+	verify_tca_oauth2_authentication, verify_tca_web3_authentication,
 };
 
 mod trusted_call_handlers;
@@ -83,6 +83,8 @@ use itp_types::{
 	parentchain::{Address, ParachainHeader, ParentchainId},
 	AccountId, OpaqueCall,
 };
+use itp_utils::stringify::account_id_to_string_without_prefix;
+use lc_authentication::jwt;
 use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_identity_verification::web2::verify as verify_web2_identity;
@@ -91,7 +93,8 @@ use lc_omni_account::{
 	GetOmniAccountInfo, InMemoryStore as OmniAccountStore, OmniAccountRepository,
 };
 use litentry_primitives::{
-	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, ValidationData,
+	AesRequest, DecryptableRequest, Identity, Intent, MemberAccount, OmniAccountAuthType,
+	ValidationData,
 };
 use sp_core::{blake2_256, H160, H256};
 use sp_runtime::generic::Era;
@@ -131,9 +134,10 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 				let request = &mut req.request;
 				let connection_hash = request.using_encoded(|x| H256::from(blake2_256(x)));
 				match handle_request(request, context.clone()) {
-					Ok(trusted_call) => handle_trusted_call(
+					Ok((trusted_call, auth_type)) => handle_trusted_call(
 						context.clone(),
 						trusted_call,
+						auth_type,
 						connection_hash,
 						request.shard,
 						thread_pool,
@@ -153,7 +157,7 @@ pub fn run_native_task_receiver<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AK
 fn handle_request<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	request: &mut AesRequest,
 	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
-) -> Result<TrustedCall, &'static str>
+) -> Result<(TrustedCall, OmniAccountAuthType), &'static str>
 where
 	ShieldingKeyRepository: AccessKey + Send + Sync + 'static,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoEncrypt + ShieldingCryptoDecrypt,
@@ -202,31 +206,33 @@ where
 	};
 
 	let authentication_result = match tca.authentication {
-		TCAuthentication::Web3(signature) => verify_tca_web3_authentication(
-			&signature,
+		TCAuthentication::Web3(ref signature) => verify_tca_web3_authentication(
+			signature,
 			&tca.call,
 			tca.nonce,
 			&mrenclave,
 			&request.shard,
 		),
-		TCAuthentication::Email(verification_code) => {
+		TCAuthentication::Email(ref verification_code) => {
 			let sender_identity = tca.call.sender_identity();
-			let omni_account = match get_omni_account(context.ocall_api.clone(), sender_identity) {
-				Ok(account) => account,
-				_ => sender_identity.to_omni_account(),
-			};
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
 			verify_tca_email_authentication(
 				sender_identity.hash(),
 				&omni_account,
 				verification_code,
 			)
 		},
-		TCAuthentication::OAuth2(oauth2_data) => {
+		TCAuthentication::OAuth2(ref oauth2_data) => {
 			let sender_identity = tca.call.sender_identity();
-			let omni_account = match get_omni_account(context.ocall_api.clone(), sender_identity) {
-				Ok(account) => account,
-				_ => sender_identity.to_omni_account(),
-			};
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
 			verify_tca_oauth2_authentication(
 				context.data_provider_config.clone(),
 				sender_identity.hash(),
@@ -234,10 +240,30 @@ where
 				oauth2_data,
 			)
 		},
+		TCAuthentication::AuthToken(ref auth_token) => {
+			let Ok(header)= context.ocall_api.get_header::<ParachainHeader>() else {
+				let res: Result<(), TrustedCallError> = Err(TrustedCallError::ParentchainHeaderRetrievalFailed);
+				context.author_api.send_rpc_response(connection_hash, res.encode(), false);
+				return Err("Failed to get parachain header")
+			};
+			let current_block = header.number;
+			let sender_identity = tca.call.sender_identity();
+			let omni_account =
+				match get_omni_account(context.ocall_api.clone(), sender_identity, Some(header)) {
+					Ok(account) => account,
+					_ => sender_identity.to_omni_account(),
+				};
+			verify_tca_auth_token_authentication(
+				&omni_account,
+				current_block,
+				auth_token,
+				context.data_provider_config.jwt_secret.as_bytes(),
+			)
+		},
 	};
 
 	match authentication_result {
-		Ok(_) => Ok(tca.call),
+		Ok(_) => Ok((tca.call, tca.authentication.into())),
 		Err(e) => {
 			log::error!("Failed to verify authentication: {:?}", e);
 			let res: TrustedCallResult = Err(TrustedCallError::AuthenticationVerificationFailed);
@@ -252,6 +278,7 @@ type TrustedCallResult = Result<TrustedCallOk<H256>, TrustedCallError>;
 fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>(
 	context: Context<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH>,
 	call: TrustedCall,
+	auth_type: OmniAccountAuthType,
 	connection_hash: H256,
 	shard: H256,
 	thread_pool: ThreadPool,
@@ -288,7 +315,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				"OmniAccount",
 				"dispatch_as_signed",
 				who.hash(),
-				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark))
+				OpaqueCall::from_tuple(&compose_call!(&metadata, "System", "remark", remark)),
+				auth_type
 			)),
 			Intent::TransferNative(transfer) => OpaqueCall::from_tuple(&compose_call!(
 				&metadata,
@@ -301,7 +329,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					"transfer_allow_death",
 					Address::Id(transfer.to),
 					Compact(transfer.value)
-				))
+				)),
+				auth_type
 			)),
 			Intent::CallEthereum(_) | Intent::TransferEthereum(_) | Intent::TransferSolana(_) =>
 				OpaqueCall::from_tuple(&compose_call!(
@@ -314,7 +343,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 						"OmniAccount",
 						"request_intent",
 						intent
-					))
+					)),
+					auth_type
 				)),
 		},
 		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
@@ -324,7 +354,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			who
 		)),
 		TrustedCall::add_account(who, identity, validation_data, public_account) => {
-			let omni_account = match get_omni_account(context.ocall_api.clone(), &who) {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
 				Ok(account) => account,
 				Err(e) => {
 					log::error!("Failed to get omni account: {:?}", e);
@@ -385,6 +415,10 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				},
 			};
 
+			// TOOD: get permissions from the trusted call, this is is temporary hack
+			// it will be fixed in P-1241
+			let permissions: Option<Vec<u32>> = None; // default permissions
+
 			OpaqueCall::from_tuple(&compose_call!(
 				&metadata,
 				"OmniAccount",
@@ -394,8 +428,10 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					&metadata,
 					"OmniAccount",
 					"add_account",
-					member_account
-				))
+					member_account,
+					permissions
+				)),
+				auth_type
 			))
 		},
 		TrustedCall::remove_accounts(who, identities) => OpaqueCall::from_tuple(&compose_call!(
@@ -408,7 +444,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				"OmniAccount",
 				"remove_accounts",
 				identities.iter().map(|i| i.hash()).collect::<Vec<H256>>()
-			))
+			)),
+			auth_type
 		)),
 		TrustedCall::publicize_account(who, identity) => OpaqueCall::from_tuple(&compose_call!(
 			&metadata,
@@ -420,7 +457,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				"OmniAccount",
 				"publicize_account",
 				identity
-			))
+			)),
+			auth_type
 		)),
 		TrustedCall::request_vc(signer, who, assertion, maybe_key, req_ext_hash) => {
 			let result = handle_request_vc(
@@ -530,6 +568,57 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			}
 			return
 		},
+		TrustedCall::request_auth_token(who, auth_options) => {
+			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
+				Ok(account) => account,
+				Err(e) => {
+					log::error!("Failed to get omni account: {:?}", e);
+					let result: TrustedCallResult = Err(TrustedCallError::UnauthorizedSigner);
+					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+					return
+				},
+			};
+			let subject = account_id_to_string_without_prefix(&omni_account);
+			let payload = jwt::Payload::new(subject, auth_options);
+			let Ok(auth_token) = jwt::create(&payload, context.data_provider_config.jwt_secret.as_bytes()) else {
+				log::error!("Failed to create jwt token");
+				let result: TrustedCallResult = Err(TrustedCallError::AuthTokenCreationFailed);
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+				return
+			};
+
+			let auth_token_requested_call = OpaqueCall::from_tuple(&compose_call!(
+				&metadata,
+				"OmniAccount",
+				"auth_token_requested",
+				omni_account,
+				payload.exp
+			));
+			let params = context.ocall_api.get_header().ok().map(|h: itp_types::Header| {
+				ParentchainAdditionalParams::new().era(Era::mortal(5, h.number.into()), h.hash())
+			});
+			match context
+				.extrinsic_factory
+				.create_extrinsics(&[auth_token_requested_call], params)
+			{
+				Ok(extrinsic) => {
+					if let Err(e) = context.ocall_api.send_to_parentchain(
+						extrinsic,
+						&ParentchainId::Litentry,
+						None,
+					) {
+						log::error!("Failed to send extrinsic to parentchain: {:?}", e);
+					}
+				},
+				Err(e) => {
+					log::error!("Failed to create extrinsic: {:?}", e);
+				},
+			};
+
+			let result: TrustedCallResult = Ok(auth_token.into());
+			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+			return
+		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
@@ -608,15 +697,19 @@ where
 fn get_omni_account<OCallApi: EnclaveOnChainOCallApi>(
 	ocall_api: Arc<OCallApi>,
 	who: &Identity,
+	header: Option<ParachainHeader>,
 ) -> Result<AccountId, &'static str> {
 	let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 		Ok(Some(account)) => account,
 		_ => {
 			log::warn!("Failed to get omni account from the in-memory store");
-			let header: ParachainHeader = ocall_api.get_header().map_err(|_| {
-				log::error!("Failed to get header");
-				"Failed to get header"
-			})?;
+			let header = match header {
+				Some(h) => h,
+				None => ocall_api.get_header().map_err(|_| {
+					log::error!("Failed to get header");
+					"Failed to get header"
+				})?,
+			};
 			OmniAccountRepository::new(ocall_api)
 				.with_header(header)
 				.get_account_by_member_hash(who.hash())
