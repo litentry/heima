@@ -71,7 +71,7 @@ mkdir data && cd data
 
 # copy the binary
 if [ -z "$3" ]; then
-  docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/litentry-collator" binary
+  docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/heima-node" binary
 else
   cp -f "$3" binary
 fi

@@ -7,7 +7,7 @@ set -eo pipefail
 # Benchmarking pallet weight only works for the local pallets. Substrate (or other github) pallets are not supported:
 # they are already benchmarked anyway (e.g. SubstrateWeigt)
 #
-# The `litentry-collator` binary must be compiled with `runtime-benchmarks` feature.
+# The `heima-node` binary must be compiled with `runtime-benchmarks` feature.
 
 function usage() {
     echo "Usage: $0 litentry|paseo pallet-name runtime|pallet"
@@ -55,7 +55,7 @@ else
     REPEAT=50
 fi
 
-./target/release/litentry-collator benchmark pallet \
+./target/release/heima-node benchmark pallet \
           $CHAIN \
           --execution=wasm  \
           --db-cache=20 \

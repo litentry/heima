@@ -4,7 +4,7 @@ all:
 
 # variant declaration
 
-NODE_BIN=litentry-collator
+NODE_BIN=heima-node
 
 .PHONY: help ## Display help commands
 help:
@@ -28,7 +28,7 @@ help:
 
 .PHONY: build-node ## Build release node
 build-node:
-	cd parachain && cargo build --locked -p litentry-collator --release
+	cd parachain && cargo build --locked -p heima-node --release
 
 .PHONY: build-runtime-litentry ## Build litentry release runtime
 build-runtime-litentry:

@@ -2,7 +2,7 @@
 authors = ['Litentry Dev']
 description = 'Pallet for managing investing pool'
 edition = '2021'
-homepage = 'https://litentry.com/'
+homepage = 'https://www.heima.network/'
 license = 'GPL-3.0'
 name = 'pallet-investing-pool'
 repository = 'https://github.com/litentry/litentry-parachain'

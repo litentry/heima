@@ -2,7 +2,7 @@
 authors = ["Litentry"]
 description = "parachain staking pallet for collator selection and reward distribution"
 edition = '2021'
-homepage = 'https://litentry.com/'
+homepage = 'https://www.heima.network/'
 license = 'GPL-3.0'
 name = "pallet-parachain-staking"
 repository = 'https://github.com/litentry/litentry-parachain'

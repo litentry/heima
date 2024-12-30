@@ -45,7 +45,7 @@ const vc = {
             },
         ],
         values: [true],
-        endpoint: 'https://litentry.com/parachain/extrinsic',
+        endpoint: 'https://www.heima.network/parachain/extrinsic',
     },
     issuer: {
         id: '21e2bf9b4637cee6be6fc3f68412212c6bdf47f895edbb4f44b937b7bb1d6a64',

@@ -112,7 +112,7 @@ impl SubstrateCli for Cli {
 		"Litentry node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		litentry-collator <parachain-args> -- <relay-chain-args>"
+		heima-node <parachain-args> -- <relay-chain-args>"
 			.into()
 	}
 
@@ -146,7 +146,7 @@ impl SubstrateCli for RelayChainCli {
 		"Litentry node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		litentry-collator <parachain-args> -- <relay-chain-args>"
+		heima-node <parachain-args> -- <relay-chain-args>"
 			.into()
 	}
 

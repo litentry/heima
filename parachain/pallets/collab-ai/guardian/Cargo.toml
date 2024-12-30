@@ -2,7 +2,7 @@
 authors = ['Litentry Dev']
 description = 'Pallet for managing guardian'
 edition = '2021'
-homepage = 'https://litentry.com/'
+homepage = 'https://www.heima.network/'
 license = 'GPL-3.0'
 name = 'pallet-guardian'
 repository = 'https://github.com/litentry/litentry-parachain'

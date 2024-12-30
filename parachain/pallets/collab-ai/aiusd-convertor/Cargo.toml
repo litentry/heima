@@ -2,7 +2,7 @@
 authors = ['Trust Computing GmbH <info@litentry.com>']
 description = 'Pallet for converting among AIUSD and other stable token'
 edition = '2021'
-homepage = 'https://litentry.com/'
+homepage = 'https://www.heima.network/'
 license = 'GPL-3.0'
 name = 'pallet-aiusd-convertor'
 repository = 'https://github.com/litentry/litentry-parachain'

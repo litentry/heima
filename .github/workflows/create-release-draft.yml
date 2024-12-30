@@ -135,7 +135,7 @@ jobs:
 
       - name: Copy client binary to disk
         run: |
-          docker cp $(docker create --rm litentry/litentry-parachain:${{ env.RELEASE_TAG }}):/usr/local/bin/litentry-collator .
+          docker cp $(docker create --rm litentry/litentry-parachain:${{ env.RELEASE_TAG }}):/usr/local/bin/heima-node .
 
       - name: Save docker image
         run: |
@@ -144,10 +144,10 @@ jobs:
       - name: Upload the client binary
         uses: actions/upload-artifact@v4
         with:
-          name: litentry-collator
+          name: heima-node
           if-no-files-found: ignore
           path: |
-            litentry-collator
+            heima-node
             litentry-parachain-dev.tar.gz
             ${{ env.GENESIS_RELEASE }}-genesis-state
             ${{ env.GENESIS_RELEASE }}-genesis-wasm
@@ -237,7 +237,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-collator
+          name: heima-node
 
       - name: Load docker image
         run: |
@@ -318,6 +318,6 @@ jobs:
           files: |
             *-parachain-runtime/*-parachain-srtool-digest.json
             *-parachain-runtime/*-parachain-runtime.compact.compressed.wasm
-            litentry-collator/litentry-collator
-            litentry-collator/*-genesis-state
-            litentry-collator/*-genesis-wasm
+            heima-node/heima-node
+            heima-node/*-genesis-state
+            heima-node/*-genesis-wasm

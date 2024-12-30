@@ -6,7 +6,7 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("./source/local.json"), DB CACHE: 20
 
 // Executed Command:
-// ./target/release/litentry-collator
+// ./target/release/heima-node
 // benchmark
 // --chain=./source/local.json
 // --execution=wasm

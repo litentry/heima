@@ -22,7 +22,7 @@ ZOMBIENET_PID=$(pidof $ZOMBIENET_BIN)
 if [ -z $ZOMBIENET_PID ]; then
   # the network might not be started with zombienet
   killall polkadot || true
-  killall litentry-collator || true
+  killall heima-node || true
 else
   kill -2 $ZOMBIENET_PID
 fi

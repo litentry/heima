@@ -757,7 +757,7 @@ jobs:
             /tmp/parachain_dev
             !/tmp/parachain_dev/polkadot*
             !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/litentry-collator
+            !/tmp/parachain_dev/heima-node
           if-no-files-found: ignore
           retention-days: 3
 
@@ -843,7 +843,7 @@ jobs:
             /tmp/parachain_dev
             !/tmp/parachain_dev/polkadot*
             !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/litentry-collator
+            !/tmp/parachain_dev/heima-node
           if-no-files-found: ignore
           retention-days: 3
 

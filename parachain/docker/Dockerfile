@@ -26,7 +26,7 @@ LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ARG PROFILE
 
-COPY --from=local-builder:latest /litentry/parachain/target/$PROFILE/litentry-collator /usr/local/bin/
+COPY --from=local-builder:latest /litentry/parachain/target/$PROFILE/heima-node /usr/local/bin/
 
 # install netcat for healthcheck
 RUN apt-get update && \
@@ -39,15 +39,15 @@ RUN apt-get update && \
 RUN useradd -m -u 1000 -U -s /bin/sh -d /litentry litentry && \
     mkdir -p /data /litentry/.local/share && \
     chown -R litentry:litentry /data && \
-    ln -s /data /litentry/.local/share/litentry-collator && \
+    ln -s /data /litentry/.local/share/heima-node && \
     # check if executable works in this container
-    /usr/local/bin/litentry-collator --version
+    /usr/local/bin/heima-node --version
 
 USER litentry
 EXPOSE 30333 9944 9615
 VOLUME ["/data"]
 
-ENTRYPOINT ["/usr/local/bin/litentry-collator"]
+ENTRYPOINT ["/usr/local/bin/heima-node"]
 CMD ["--help"]
 
 # ==========================
@@ -96,10 +96,10 @@ RUN useradd -m -u 1000 -U -s /bin/sh -d /litentry litentry && \
 	mkdir -p /opt/litentry/parachain /code && \
 	chown -R litentry:litentry /opt/litentry
 
-COPY --from=local-builder:latest /litentry/parachain/target/$PROFILE/litentry-collator /usr/local/bin/
-RUN chmod +x /usr/local/bin/litentry-collator && \
+COPY --from=local-builder:latest /litentry/parachain/target/$PROFILE/heima-node /usr/local/bin/
+RUN chmod +x /usr/local/bin/heima-node && \
     # check if executable works in this container
-    /usr/local/bin/litentry-collator --version
+    /usr/local/bin/heima-node --version
 
 COPY ./parachain /code/parachain
 COPY ./parachain/docker/entrypoint.sh /usr/local/bin/

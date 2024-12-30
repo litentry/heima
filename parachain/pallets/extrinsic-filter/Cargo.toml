@@ -2,7 +2,7 @@
 authors = ['Trust Computing GmbH <info@litentry.com>']
 description = 'Pallet for dynamically filtering extrinsics'
 edition = '2021'
-homepage = 'https://litentry.com/'
+homepage = 'https://www.heima.network/'
 license = 'GPL-3.0'
 name = 'pallet-extrinsic-filter'
 repository = 'https://github.com/litentry/litentry-parachain'

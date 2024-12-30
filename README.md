@@ -47,7 +47,7 @@ Litentry uses [zombinet](https://github.com/paritytech/zombienet) to spin up a l
 ```
 make launch-network-litentry
 ```
-It will firstly look for the `target/release/litentry-collator` binary - and if not found - copy the binary out from `litentry/litentry-parachain:latest` image if you are on Linux.
+It will firstly look for the `target/release/heima-node` binary - and if not found - copy the binary out from `litentry/litentry-parachain:latest` image if you are on Linux.
 
 If you see the screenshot below, you can tell the network is successfully spun up and you can access the [polkadot-js block explorer](https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9944#/explorer) locally:
 
