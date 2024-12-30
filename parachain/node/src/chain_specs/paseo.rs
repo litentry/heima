@@ -33,7 +33,7 @@ use sp_core::sr25519;
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Get default parachain properties for paseo which will be filled into chain spec
-/// We use 31 as the SS58Prefix (same as Litentry)
+/// We use 31 as the SS58Prefix (same as Heima)
 fn default_parachain_properties() -> Properties {
 	parachain_properties("LIT", 18, 31)
 }
@@ -96,6 +96,7 @@ pub fn get_chain_spec_prod() -> ChainSpec {
 		include_bytes!("../../res/genesis_info/paseo.json"),
 		"Litentry-paseo",
 		"litentry-paseo",
+		"litentry-paseo",
 		ChainType::Live,
 		"paseo".into(),
 		PASEO_PARA_ID.into(),
@@ -108,6 +109,7 @@ fn get_chain_spec_from_genesis_info(
 	genesis_info_bytes: &[u8],
 	name: &str,
 	id: &str,
+	protocol_id: &str,
 	chain_type: ChainType,
 	relay_chain_name: String,
 	para_id: ParaId,
@@ -128,7 +130,7 @@ fn get_chain_spec_from_genesis_info(
 	.with_name(name)
 	.with_id(id)
 	.with_chain_type(chain_type)
-	.with_protocol_id("litentry-paseo")
+	.with_protocol_id(protocol_id)
 	.with_properties(default_parachain_properties())
 	.with_boot_nodes(
 		boot_nodes

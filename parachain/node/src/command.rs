@@ -32,16 +32,16 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_runtime::traits::AccountIdConversion;
 use std::net::SocketAddr;
 
-const UNSUPPORTED_CHAIN_MESSAGE: &str = "Unsupported chain spec, please use litentry*";
+const UNSUPPORTED_CHAIN_MESSAGE: &str = "Unsupported chain spec, please use heima* or litentry-paseo*";
 
 trait IdentifyChain {
-	fn is_litentry(&self) -> bool;
+	fn is_heima(&self) -> bool;
 	fn is_paseo(&self) -> bool;
 	fn is_standalone(&self) -> bool;
 }
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
-	fn is_litentry(&self) -> bool {
+	fn is_heima(&self) -> bool {
 		// we need the combined condition as the id in our paseo spec starts with `litentry-paseo`
 		// simply renaming `litentry-paseo` to `paseo` everywhere would have an impact on the
 		// existing litentry-paseo chain
@@ -56,8 +56,8 @@ impl IdentifyChain for dyn sc_service::ChainSpec {
 }
 
 impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
-	fn is_litentry(&self) -> bool {
-		<dyn sc_service::ChainSpec>::is_litentry(self)
+	fn is_heima(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_heima(self)
 	}
 	fn is_paseo(&self) -> bool {
 		<dyn sc_service::ChainSpec>::is_paseo(self)
@@ -72,19 +72,19 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		// `--chain=standalone or --chain=dev` to start a standalone node with paseo-dev chain spec
 		// mainly based on Acala's `dev` implementation
 		"dev" | "standalone" => Box::new(chain_specs::paseo::get_chain_spec_dev(true)),
-		// Litentry
-		"litentry-dev" => Box::new(chain_specs::litentry::get_chain_spec_dev()),
-		"litentry-staging" => Box::new(chain_specs::litentry::get_chain_spec_staging()),
-		"litentry" => Box::new(chain_specs::ChainSpec::from_json_bytes(
-			&include_bytes!("../res/chain_specs/litentry.json")[..],
+		// Heima
+		"heima-dev" => Box::new(chain_specs::heima::get_chain_spec_dev()),
+		"heima-staging" => Box::new(chain_specs::heima::get_chain_spec_staging()),
+		"heima" => Box::new(chain_specs::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/chain_specs/heima.json")[..],
 		)?),
 		// Paseo
 		"paseo-dev" => Box::new(chain_specs::paseo::get_chain_spec_dev(false)),
 		"paseo" => Box::new(chain_specs::ChainSpec::from_json_bytes(
 			&include_bytes!("../res/chain_specs/paseo.json")[..],
 		)?),
-		// Generate res/chain_specs/litentry.json
-		"generate-litentry" => Box::new(chain_specs::litentry::get_chain_spec_prod()),
+		// Generate res/chain_specs/heima.json
+		"generate-heima" => Box::new(chain_specs::heima::get_chain_spec_prod()),
 		// Generate res/chain_specs/paseo.json
 		"generate-paseo" => Box::new(chain_specs::paseo::get_chain_spec_prod()),
 		path => {
@@ -92,7 +92,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 			if chain_spec.is_paseo() {
 				Box::new(chain_specs::ChainSpec::from_json_file(path.into())?)
 			} else {
-				// Fallback: use Litentry chain spec
+				// Fallback: use heima chain spec
 				Box::new(chain_spec)
 			}
 		},
@@ -101,7 +101,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Litentry node".into()
+		"Heima node".into()
 	}
 
 	fn impl_version() -> String {
@@ -109,7 +109,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn description() -> String {
-		"Litentry node\n\nThe command-line arguments provided first will be \
+		"Heima node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
 		heima-node <parachain-args> -- <relay-chain-args>"
@@ -125,7 +125,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2019
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -135,7 +135,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Litentry node".into()
+		"Heima node".into()
 	}
 
 	fn impl_version() -> String {
@@ -143,7 +143,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Litentry node\n\nThe command-line arguments provided first will be \
+		"Heima node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
 		heima-node <parachain-args> -- <relay-chain-args>"
@@ -159,7 +159,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2019
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -170,10 +170,10 @@ impl SubstrateCli for RelayChainCli {
 /// Creates partial components for the runtimes that are supported by the benchmarks.
 macro_rules! construct_benchmark_partials {
 	($config:expr, |$partials:ident| $code:expr) => {
-		if $config.chain_spec.is_litentry() {
-			let $partials = new_partial::<litentry_parachain_runtime::RuntimeApi, _>(
+		if $config.chain_spec.is_heima() {
+			let $partials = new_partial::<heima_parachain_runtime::RuntimeApi, _>(
 				&$config,
-				build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
+				build_import_queue::<heima_parachain_runtime::RuntimeApi>,
 				false,
 				true,
 			)?;
@@ -196,14 +196,14 @@ macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 
-		if runner.config().chain_spec.is_litentry() {
+		if runner.config().chain_spec.is_heima() {
 			runner.async_run(|$config| {
 				let $components = new_partial::<
-					litentry_parachain_runtime::RuntimeApi,
+					heima_parachain_runtime::RuntimeApi,
 					_
 				>(
 					&$config,
-					build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
+					build_import_queue::<heima_parachain_runtime::RuntimeApi>,
 					false,
 					$cli.delayed_best_block,
 				)?;
@@ -284,12 +284,12 @@ pub fn run() -> Result<()> {
 
 		Some(Subcommand::ExportGenesisHead(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			if runner.config().chain_spec.is_litentry() {
+			if runner.config().chain_spec.is_heima() {
 				runner.sync_run(|config| {
 					let sc_service::PartialComponents { client, .. } =
-						new_partial::<litentry_parachain_runtime::RuntimeApi, _>(
+						new_partial::<heima_parachain_runtime::RuntimeApi, _>(
 							&config,
-							build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
+							build_import_queue::<heima_parachain_runtime::RuntimeApi>,
 							false,
 							cli.delayed_best_block,
 						)?;
@@ -428,8 +428,8 @@ pub fn run() -> Result<()> {
 				let additional_config =
 					AdditionalConfig { evm_tracing_config, enable_evm_rpc: cli.enable_evm_rpc };
 
-				if config.chain_spec.is_litentry() {
-					start_node::<litentry_parachain_runtime::RuntimeApi>(
+				if config.chain_spec.is_heima() {
+					start_node::<heima_parachain_runtime::RuntimeApi>(
 						config,
 						polkadot_config,
 						collator_options,
