@@ -9,7 +9,7 @@ The crate exports the generated interface from a scale encoded metadata file. Th
 #### When to regenerate the interface?
 Whenever the types of the relevant pallets (OmniAccount, Teebag) change, the interface should be regenerated. This can be done by following the steps in the Generation Process section.
 
-Please note that the metadata fetched from the local node may not be the same as the metadata of the live chains. Therefore, when running the worker agains the live chains, the metadata should be fetched from the live chain and the interface should be regenerated.
+Please note that the metadata fetched from the local node may not be the same as the metadata of the live chains. Therefore, when running the worker against the live chains, the metadata should be fetched from the live chain and the interface should be regenerated.
 
 ## Generation Process
 
