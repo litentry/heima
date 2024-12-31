@@ -133,8 +133,8 @@ importers:
         specifier: '*'
         version: link:../chaindata
       '@litentry/parachain-api':
-        specifier: 0.9.21-next.1
-        version: 0.9.21-next.1
+        specifier: 0.9.21-next.2
+        version: 0.9.21-next.2
       '@litentry/sidechain-api':
         specifier: 0.9.20-next.8
         version: 0.9.20-next.8
@@ -1821,8 +1821,8 @@ packages:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  /@litentry/parachain-api@0.9.21-next.1:
-    resolution: {integrity: sha512-Z858gIrQ39f7B3e5z3nN5ZEutmbYQsxNbfwZ6iyMFBlAlAUueyAFnesmciy0725dkR8IToCzg+tThd+thnkkfg==}
+  /@litentry/parachain-api@0.9.21-next.2:
+    resolution: {integrity: sha512-UfQBLU7iPuuFWcVZUd2Gaz9uGR3FgmTTTn4jUiE5s6c97HlNcuafghPz3W8Qcsc8d6ONdL3/KzGppVyjs6oCnQ==}
     dependencies:
       '@polkadot/api': 15.0.2
       '@polkadot/api-augment': 15.0.2
