@@ -13,19 +13,13 @@ Please note that the metadata fetched from the local node may not be the same as
 
 ## Generation Process
 
-The API interface can be generated using the following commands:
+The API interface can be generated using the following command (requires a running node):
 
-1. First, get the pallet metadata (requires a running node):
-```bash
-make get-metadata
-```
-This will fetch the metadata from a local node (http://localhost:9944) and save it as a scale file.
-
-2. Then generate the interface:
 ```bash
 make generate-api-interface
 ```
-This will generate the Rust interface code using `subxt` and save it to `src/interface.rs`.
+This will fetch the metadata from a local node (http://localhost:9944) and save it as a scale file,
+then it will generate the Rust interface code using `subxt` and save it to `src/interface.rs`.
 
 ## Dependencies
 
