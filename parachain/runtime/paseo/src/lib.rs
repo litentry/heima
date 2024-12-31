@@ -24,7 +24,7 @@
 #[macro_use]
 extern crate frame_benchmarking;
 
-use core_primitives::{LITENTRY_PARA_ID};
+use core_primitives::LITENTRY_PARA_ID;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
@@ -1255,7 +1255,7 @@ impl pallet_omni_account::Config for Runtime {
 
 impl pallet_omni_bridge::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
+	type Balance = u64;
 	type SetAdminOrigin = EnsureRootOrAllCouncil;
 }
 

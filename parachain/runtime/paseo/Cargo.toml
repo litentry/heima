@@ -219,7 +219,7 @@ runtime-benchmarks = [
     "pallet-guardian/runtime-benchmarks",
     "pallet-investing-pool/runtime-benchmarks",
     "pallet-pool-proposal/runtime-benchmarks",
-    "pallet-omni-bridge/runtime-benchmarks"
+    "pallet-omni-bridge/runtime-benchmarks",
 ]
 std = [
     "core-primitives/std",
@@ -343,7 +343,7 @@ std = [
     "pallet-guardian/std",
     "pallet-investing-pool/std",
     "pallet-pool-proposal/std",
-    "pallet-omni-bridge/std"
+    "pallet-omni-bridge/std",
 ]
 try-runtime = [
     "cumulus-pallet-aura-ext/try-runtime",
@@ -411,5 +411,5 @@ try-runtime = [
     "pallet-guardian/try-runtime",
     "pallet-investing-pool/try-runtime",
     "pallet-pool-proposal/try-runtime",
-    "pallet-omni-bridge/try-runtime"
+    "pallet-omni-bridge/try-runtime",
 ]
