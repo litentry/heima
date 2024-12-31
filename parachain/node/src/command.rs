@@ -46,7 +46,7 @@ impl IdentifyChain for dyn sc_service::ChainSpec {
 		// we need the combined condition as the id in our paseo spec starts with `litentry-paseo`
 		// simply renaming `litentry-paseo` to `paseo` everywhere would have an impact on the
 		// existing litentry-paseo chain
-		self.id().starts_with("litentry") && !self.id().starts_with("litentry-paseo")
+		self.id().starts_with("heima") && !self.id().starts_with("litentry-paseo")
 	}
 	fn is_paseo(&self) -> bool {
 		self.id().starts_with("litentry-paseo")
