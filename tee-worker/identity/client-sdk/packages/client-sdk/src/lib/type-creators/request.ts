@@ -6,10 +6,8 @@ import { enclave } from '../enclave';
 
 import type {
   TrustedCall,
-  LitentryIdentity,
   AesRequest,
   AesOutput,
-  TCAuthentication,
 } from '@litentry/parachain-api';
 import {
   encrypt,
@@ -19,7 +17,10 @@ import {
 } from '../util/shielding-key';
 import { createKeyAesOutputType } from './key-aes-output';
 import { createLitentryMultiSignature } from './litentry-multi-signature';
-import { createTCAuthenticationType } from './tc-authentication';
+import {
+  createTCAuthenticationType,
+  AuthenticationData,
+} from './tc-authentication';
 
 /**
  * Creates a Request struct type for the `TrustedCall` operation.
@@ -32,15 +33,13 @@ import { createTCAuthenticationType } from './tc-authentication';
 export async function createRequestType(
   api: ApiPromise,
   data: {
-    sender: LitentryIdentity;
-    /** signature or verification code based on the identity type */
-    authentication: string;
+    authentication: AuthenticationData;
     call: TrustedCall;
     nonce: Index;
     shard: Uint8Array;
   }
 ): Promise<AesRequest> {
-  const { sender, shard, authentication, nonce, call } = data;
+  const { shard, authentication, nonce, call } = data;
 
   // generate ephemeral shielding key to encrypt the operation
   const encryptionKey = await generate();
@@ -49,14 +48,14 @@ export async function createRequestType(
   let operationU8a = new Uint8Array();
 
   if (isNativeRequest(call)) {
+    const tcAuthentication = createTCAuthenticationType(
+      api.registry,
+      authentication
+    );
     const callAuthenticated = api.createType('TrustedCallAuthenticated', {
       call,
       nonce,
-      authentication: createAuthenticationForSender(
-        api,
-        sender,
-        authentication
-      ),
+      authentication: tcAuthentication,
     });
 
     const operation = api.createType('TrustedOperationAuthenticated', {
@@ -65,12 +64,17 @@ export async function createRequestType(
 
     operationU8a = operation.toU8a();
   } else {
+    if (authentication.type !== 'Web3') {
+      throw new Error(
+        'Only Web3 authentication is supported for non-native requests'
+      );
+    }
     const signedCall = api.createType('TrustedCallSigned', {
       call,
       index: nonce,
       signature: createLitentryMultiSignature(api.registry, {
-        who: sender,
-        signature: authentication,
+        who: authentication.signer,
+        signature: authentication.signature,
       }),
     });
 
@@ -112,22 +116,4 @@ export async function createRequestType(
 
 function isNativeRequest(call: TrustedCall): boolean {
   return call.isRequestIntent || call.isCreateAccountStore;
-}
-
-function createAuthenticationForSender(
-  api: ApiPromise,
-  signer: LitentryIdentity,
-  authentication: string
-): TCAuthentication {
-  if (signer.isEmail) {
-    return createTCAuthenticationType(api.registry, {
-      type: 'Email',
-      verificationCode: authentication,
-    });
-  }
-  return createTCAuthenticationType(api.registry, {
-    type: 'Web3',
-    signer,
-    signature: authentication,
-  });
 }
