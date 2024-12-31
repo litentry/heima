@@ -430,7 +430,7 @@ ___
 
 ### requestAuthToken
 
-▸ **requestAuthToken**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **requestAuthToken**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `token`: `string`  }\>  }\>
 
 Requests an authentication token from the Enclave.
 
@@ -446,7 +446,7 @@ Requests an authentication token from the Enclave.
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `token`: `string`  }\>  }\>
 
 A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
 
@@ -460,7 +460,7 @@ send.args.authentication The authentication string. For email identities, this i
 
 #### Defined in
 
-[lib/requests/request_auth_token.request.ts:27](https://github.com/litentry/client-sdk/blob/develop/lib/requests/request_auth_token.request.ts#L27)
+[lib/requests/request_auth_token.request.ts:26](https://github.com/litentry/client-sdk/blob/develop/lib/requests/request_auth_token.request.ts#L26)
 
 ___
 
