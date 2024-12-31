@@ -119,6 +119,7 @@ export default {
             _enum: {
                 ExtrinsicReport: "ExtrinsicReport",
                 RequestVcResult: "RequestVcResultOrError",
+                AuthToken: "Text",
             },
         },
         ExtrinsicReport: {
