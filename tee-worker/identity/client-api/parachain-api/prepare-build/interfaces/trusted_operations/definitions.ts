@@ -28,6 +28,7 @@ export default {
             _enum: {
                 Web3: "LitentryMultiSignature",
                 Email: "Text",
+                AuthToken: "Text",
             },
         },
         TrustedCallAuthenticated: {
