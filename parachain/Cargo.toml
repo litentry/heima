@@ -283,6 +283,7 @@ pallet-group = { path = "pallets/group", default-features = false }
 pallet-identity-management = { path = "pallets/identity-management", default-features = false }
 pallet-omni-account = { path = "pallets/omni-account", default-features = false }
 pallet-omni-account-runtime-api = { path = "pallets/omni-account/runtime-api", default-features = false }
+pallet-omni-bridge = { path = "pallets/omni-bridge", default-features = false }
 pallet-parachain-staking = { path = "pallets/parachain-staking", default-features = false }
 pallet-score-staking = { path = "pallets/score-staking", default-features = false }
 pallet-teebag = { path = "pallets/teebag", default-features = false }

@@ -8506,6 +8506,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-omni-bridge"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-parachain-staking"
 version = "0.1.0"
 dependencies = [
@@ -9305,6 +9319,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-omni-account",
  "pallet-omni-account-runtime-api",
+ "pallet-omni-bridge",
  "pallet-parachain-staking",
  "pallet-pool-proposal",
  "pallet-preimage",

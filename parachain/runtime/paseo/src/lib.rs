@@ -1253,6 +1253,12 @@ impl pallet_omni_account::Config for Runtime {
 	type Permission = OmniAccountPermission;
 }
 
+impl pallet_omni_bridge::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type SetAdminOrigin = EnsureRootOrAllCouncil;
+}
+
 impl pallet_bitacross::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
@@ -1472,6 +1478,7 @@ construct_runtime! {
 		AssetsHandler: pallet_assets_handler = 76,
 
 		OmniAccount: pallet_omni_account = 84,
+		OmniBridge: pallet_omni_bridge = 85,
 
 		// TEE
 		Teebag: pallet_teebag = 93,
@@ -1594,6 +1601,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_) |
+			RuntimeCall::OmniBridge(_) |
 			// CollabAI
 			RuntimeCall::Curator(_) |
 			RuntimeCall::Guardian(_) |
