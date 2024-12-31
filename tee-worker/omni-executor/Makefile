@@ -84,5 +84,5 @@ get-metadata:
 	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
 
 .PHONY: generate-api-interface
-generate-api-interface:
+generate-api-interface: get-metadata
 	subxt codegen --file parentchain/api-interface/artifacts/metadata.scale | rustfmt > parentchain/api-interface/src/interface.rs
