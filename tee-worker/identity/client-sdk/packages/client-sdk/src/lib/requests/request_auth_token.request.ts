@@ -13,6 +13,7 @@ import { createPayloadToSign } from '../util/create-payload-to-sign';
 import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
 import { getEnclaveNonce } from './get-enclave-nonce';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * Requests an authentication token from the Enclave.
@@ -31,10 +32,12 @@ export async function requestAuthToken(
     who: LitentryIdentity;
     /** The block number at which the token expires */
     expiresAt: number;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -56,7 +59,7 @@ export async function requestAuthToken(
   });
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -64,7 +67,6 @@ export async function requestAuthToken(
   }> => {
     // prepare and encrypt request
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -102,7 +104,7 @@ export async function requestAuthToken(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return { send };
   }
 
