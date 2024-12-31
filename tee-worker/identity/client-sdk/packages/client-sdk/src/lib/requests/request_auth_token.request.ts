@@ -2,7 +2,6 @@ import type { ApiPromise } from '@polkadot/api';
 import type {
   LitentryIdentity,
   TrustedCallResult,
-  WorkerRpcReturnValue,
 } from '@litentry/parachain-api';
 import type { JsonRpcRequest } from '../util/types';
 
@@ -38,9 +37,7 @@ export async function requestAuthToken(
 ): Promise<{
   payloadToSign?: string;
   send: (args: { authentication: AuthenticationData }) => Promise<{
-    response: WorkerRpcReturnValue;
-    blockHash: string;
-    extrinsicHash: string;
+    token: string;
   }>;
 }> {
   const { who, expiresAt } = data;
@@ -61,9 +58,7 @@ export async function requestAuthToken(
   const send = async (args: {
     authentication: AuthenticationData;
   }): Promise<{
-    response: WorkerRpcReturnValue;
-    blockHash: string;
-    extrinsicHash: string;
+    token: string;
   }> => {
     // prepare and encrypt request
     const request = await createRequestType(api, {
@@ -91,16 +86,14 @@ export async function requestAuthToken(
       throw new Error(codecToString(result.asErr));
     }
 
-    if (!result.asOk.isExtrinsicReport) {
+    if (!result.asOk.isAuthToken) {
       throw new Error('Unexpected response type');
     }
 
-    const { extrinsic_hash, block_hash } = result.asOk.asExtrinsicReport;
+    const token = result.asOk.asAuthToken.toHuman();
 
     return {
-      response,
-      extrinsicHash: extrinsic_hash.toString(),
-      blockHash: block_hash.toString(),
+      token,
     };
   };
 
