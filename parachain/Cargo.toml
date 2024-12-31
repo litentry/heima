@@ -27,6 +27,7 @@ members = [
     'pallets/xcm-asset-manager',
     'pallets/omni-account',
     'pallets/omni-account/runtime-api',
+    'pallets/omni-bridge',
     'precompiles/assets-erc20',
     'precompiles/bridge-transfer',
     'precompiles/collab-ai/aiusd-convertor',
