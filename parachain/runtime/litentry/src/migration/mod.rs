@@ -149,7 +149,7 @@ where
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		let one: BlockNumberFor<T> = 3067200u32.into();
 		let two: BlockNumberFor<T> = 2995200u32.into();
-		for (when, vec_schedule) in <Agenda<T>>::iter() {
+		for (when, _vec_schedule) in <Agenda<T>>::iter() {
 			assert!(when != one && when != two, "Old schedule still exists");
 		}
 
