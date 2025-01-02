@@ -45,11 +45,11 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
-use frame_support::traits::{
-	Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion,
+use frame_support::{
+	ensure,
+	traits::{Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion},
 };
 use frame_system::pallet_prelude::BlockNumberFor;
-use pallet_balances::InactiveIssuance;
 use pallet_scheduler::Agenda;
 use sp_std::marker::PhantomData;
 #[cfg(feature = "try-runtime")]
@@ -117,11 +117,11 @@ where
 	BlockNumberFor<T>: From<u32>,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
 		log::info!("Pre check pallet scheduler storage only has two precise tasks leftover");
 		let one: BlockNumberFor<T> = 3067200u32.into();
 		let two: BlockNumberFor<T> = 2995200u32.into();
-		for (when, vec_schedule) in <Agenda<T>>::iter() {
+		for (when, _vec_schedule) in <Agenda<T>>::iter() {
 			assert!(when == one || when == two, "Extra schedule exists");
 		}
 		Ok(Vec::<u8>::new())
@@ -146,7 +146,7 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		let one: BlockNumberFor<T> = 3067200u32.into();
 		let two: BlockNumberFor<T> = 2995200u32.into();
 		for (when, vec_schedule) in <Agenda<T>>::iter() {
@@ -166,7 +166,7 @@ where
 	T: frame_system::Config + pallet_balances::Config,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_balances::Pallet<T>>() == 0,
 			"Already upgrade to some non-zero version"
@@ -202,7 +202,7 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		ensure!(StorageVersion::get::<pallet_balances::Pallet<T>>() == 1, "Must upgrade");
 		Ok(())
 	}
@@ -215,7 +215,7 @@ where
 	T: frame_system::Config + pallet_bounties::Config,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_bounties::Pallet<T>>() == 0,
 			"Already upgrade to some non-zero version"
@@ -248,7 +248,7 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		ensure!(StorageVersion::get::<pallet_bounties::Pallet<T>>() == 4, "Must upgrade");
 		Ok(())
 	}
@@ -261,7 +261,7 @@ where
 	T: frame_system::Config + pallet_collective::Config<pallet_collective::Instance3>,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_collective::Pallet<T, pallet_collective::Instance3>>()
 				== 0,
@@ -298,7 +298,7 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_collective::Pallet<T, pallet_collective::Instance3>>()
 				== 4,
@@ -315,7 +315,7 @@ where
 	T: frame_system::Config + pallet_membership::Config<pallet_membership::Instance3>,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_membership::Pallet<T, pallet_membership::Instance3>>()
 				== 0,
@@ -352,7 +352,7 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_membership::Pallet<T, pallet_membership::Instance3>>()
 				== 4,
