@@ -32,7 +32,7 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		fungible::{Balanced, Credit, HoldConsideration},
+		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
 		tokens::imbalance::ResolveTo,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
@@ -721,7 +721,7 @@ impl pallet_treasury::Config for Runtime {
 	type BurnDestination = ();
 	type SpendFunds = Bounties;
 	type MaxApprovals = ConstU32<64>;
-	type AssetKind = (); // Only native asset is supported
+	type AssetKind = (); // Only native asset is supported - TODO: expand it to MultiAssets when required
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
 	type Paymaster = PayFromAccount<Balances, TreasuryAccountId<Runtime>>;
@@ -1255,8 +1255,12 @@ impl pallet_omni_account::Config for Runtime {
 
 impl pallet_omni_bridge::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u64;
-	type SetAdminOrigin = EnsureRootOrAllCouncil;
+	type Balance = Balance;
+	type AssetKind = NativeOrWithId<AssetId>; // No XCM assets for now
+	type Assets =
+		fungible::UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<AssetId>, AccountId>;
+	type TreasuryAccount = TreasuryAccount;
+	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 }
 
 impl pallet_bitacross::Config for Runtime {

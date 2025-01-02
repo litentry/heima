@@ -254,6 +254,7 @@ cumulus-primitives-parachain-inherent = { git = 'https://github.com/paritytech/p
 pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 parachain-info = { package = "staging-parachain-info", git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+assets-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 
