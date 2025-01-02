@@ -34,7 +34,7 @@ const MODULE_ID: PalletId = PalletId(*b"hm/ombrg");
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum ForeignChain {
-	Ethereum(u32),
+	Ethereum(u32), // chain id
 }
 
 // We assume "chain + token_symbol" can uniquely identify a foreign asset
