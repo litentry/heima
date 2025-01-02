@@ -171,20 +171,10 @@ impl SubstrateCli for RelayChainCli {
 macro_rules! construct_benchmark_partials {
 	($config:expr, |$partials:ident| $code:expr) => {
 		if $config.chain_spec.is_litentry() {
-			let $partials = new_partial::<litentry_parachain_runtime::RuntimeApi, _>(
-				&$config,
-				build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
-				false,
-				true,
-			)?;
+			let $partials = new_partial::<_>(&$config, build_import_queue, false, true)?;
 			$code
 		} else if $config.chain_spec.is_paseo() {
-			let $partials = new_partial::<paseo_parachain_runtime::RuntimeApi, _>(
-				&$config,
-				build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
-				false,
-				true,
-			)?;
+			let $partials = new_partial::<_>(&$config, build_import_queue, false, true)?;
 			$code
 		} else {
 			panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
@@ -199,11 +189,10 @@ macro_rules! construct_async_run {
 		if runner.config().chain_spec.is_litentry() {
 			runner.async_run(|$config| {
 				let $components = new_partial::<
-					litentry_parachain_runtime::RuntimeApi,
 					_
 				>(
 					&$config,
-					build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
+					build_import_queue,
 					false,
 					$cli.delayed_best_block,
 				)?;
@@ -213,11 +202,10 @@ macro_rules! construct_async_run {
 		} else if runner.config().chain_spec.is_paseo() {
 			runner.async_run(|$config| {
 				let $components = new_partial::<
-					paseo_parachain_runtime::RuntimeApi,
 					_
 				>(
 					&$config,
-					build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
+					build_import_queue,
 					false,
 					$cli.delayed_best_block,
 				)?;
@@ -286,24 +274,22 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			if runner.config().chain_spec.is_litentry() {
 				runner.sync_run(|config| {
-					let sc_service::PartialComponents { client, .. } =
-						new_partial::<litentry_parachain_runtime::RuntimeApi, _>(
-							&config,
-							build_import_queue::<litentry_parachain_runtime::RuntimeApi>,
-							false,
-							cli.delayed_best_block,
-						)?;
+					let sc_service::PartialComponents { client, .. } = new_partial::<_>(
+						&config,
+						build_import_queue,
+						false,
+						cli.delayed_best_block,
+					)?;
 					cmd.run(client)
 				})
 			} else if runner.config().chain_spec.is_paseo() {
 				runner.sync_run(|config| {
-					let sc_service::PartialComponents { client, .. } =
-						new_partial::<paseo_parachain_runtime::RuntimeApi, _>(
-							&config,
-							build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
-							false,
-							cli.delayed_best_block,
-						)?;
+					let sc_service::PartialComponents { client, .. } = new_partial::<_>(
+						&config,
+						build_import_queue,
+						false,
+						cli.delayed_best_block,
+					)?;
 					cmd.run(client)
 				})
 			} else {
@@ -383,12 +369,9 @@ pub fn run() -> Result<()> {
 
 			runner.run_node_until_exit(|config| async move {
 				if is_standalone {
-					return start_standalone_node::<paseo_parachain_runtime::RuntimeApi>(
-						config,
-						evm_tracing_config,
-					)
-					.await
-					.map_err(Into::into);
+					return start_standalone_node(config, evm_tracing_config)
+						.await
+						.map_err(Into::into);
 				}
 
 				let hwbench = if !cli.no_hardware_benchmarks {
@@ -429,7 +412,7 @@ pub fn run() -> Result<()> {
 					AdditionalConfig { evm_tracing_config, enable_evm_rpc: cli.enable_evm_rpc };
 
 				if config.chain_spec.is_litentry() {
-					start_node::<litentry_parachain_runtime::RuntimeApi>(
+					start_node(
 						config,
 						polkadot_config,
 						collator_options,
@@ -442,7 +425,7 @@ pub fn run() -> Result<()> {
 					.map(|r| r.0)
 					.map_err(Into::into)
 				} else if config.chain_spec.is_paseo() {
-					start_node::<paseo_parachain_runtime::RuntimeApi>(
+					start_node(
 						config,
 						polkadot_config,
 						collator_options,

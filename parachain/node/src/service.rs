@@ -22,10 +22,11 @@
 
 use crate::{
 	evm_tracing_types::{EthApi as EthApiCmd, EvmTracingConfig},
+	fake_runtime_api::RuntimeApi as FakeRuntimeApi,
 	standalone_block_import::StandaloneBlockImport,
 	tracing::{self, RpcRequesters},
 };
-pub use core_primitives::{AccountId, AuraId, Balance, Block, Hash, Nonce};
+pub use core_primitives::{AuraId, Block, Hash};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params as AuraParams};
@@ -58,7 +59,6 @@ use sc_network::{config::FullNetworkConfiguration, service::traits::NetworkBacke
 use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::ConstructRuntimeApi;
 use sp_keystore::KeystorePtr;
 use sp_runtime::app_crypto::AppCrypto;
 use sp_runtime::traits::Header;
@@ -78,13 +78,13 @@ pub type HostFunctions = (
 	moonbeam_primitives_ext::moonbeam_ext::HostFunctions,
 );
 
-type ParachainClient<RuntimeApi> = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
+type ParachainClient = TFullClient<Block, FakeRuntimeApi, WasmExecutor<HostFunctions>>;
 
 type ParachainBackend = TFullBackend<Block>;
 
-type ParachainBlockImport<RuntimeApi> = TParachainBlockImport<
+type ParachainBlockImport = TParachainBlockImport<
 	Block,
-	FrontierBlockImport<Block, Arc<ParachainClient<RuntimeApi>>, ParachainClient<RuntimeApi>>,
+	FrontierBlockImport<Block, Arc<ParachainClient>, ParachainClient>,
 	ParachainBackend,
 >;
 
@@ -94,39 +94,31 @@ type MaybeSelectChain = Option<LongestChain<ParachainBackend, Block>>;
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
-pub fn new_partial<RuntimeApi, BIQ>(
+pub fn new_partial<BIQ>(
 	config: &Configuration,
 	build_import_queue: BIQ,
 	is_standalone: bool,
 	delayed_best_block: bool,
 ) -> Result<
 	PartialComponents<
-		ParachainClient<RuntimeApi>,
+		ParachainClient,
 		ParachainBackend,
 		MaybeSelectChain,
 		sc_consensus::DefaultImportQueue<Block>,
-		sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>,
+		sc_transaction_pool::FullPool<Block, ParachainClient>,
 		(
-			ParachainBlockImport<RuntimeApi>,
+			ParachainBlockImport,
 			Option<Telemetry>,
 			Option<TelemetryWorkerHandle>,
-			Arc<fc_db::kv::Backend<Block, ParachainClient<RuntimeApi>>>,
+			Arc<fc_db::kv::Backend<Block, ParachainClient>>,
 		),
 	>,
 	sc_service::Error,
 >
 where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>,
 	BIQ: FnOnce(
-		Arc<ParachainClient<RuntimeApi>>,
-		ParachainBlockImport<RuntimeApi>,
+		Arc<ParachainClient>,
+		ParachainBlockImport,
 		&Configuration,
 		Option<TelemetryHandle>,
 		&TaskManager,
@@ -157,7 +149,7 @@ where
 		.build();
 
 	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts_record_import::<Block, RuntimeApi, _>(
+		sc_service::new_full_parts_record_import::<Block, _, _>(
 			config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
 			executor,
@@ -237,7 +229,7 @@ pub struct AdditionalConfig {
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
-async fn start_node_impl<RuntimeApi, RB, BIQ, SC, Net>(
+async fn start_node_impl<RB, BIQ, SC, Net>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -249,47 +241,31 @@ async fn start_node_impl<RuntimeApi, RB, BIQ, SC, Net>(
 	hwbench: Option<sc_sysinfo::HwBench>,
 	additional_config: AdditionalConfig,
 	delayed_best_block: bool,
-) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient<RuntimeApi>>)>
+) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient>)>
 where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_aura::AuraUnincludedSegmentApi<Block>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>
-		+ fp_rpc::ConvertTransactionRuntimeApi<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>
-		+ moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block>
-		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>,
 	RB: Fn(
 			sc_rpc::DenyUnsafe,
-			Arc<ParachainClient<RuntimeApi>>,
+			Arc<ParachainClient>,
 			Arc<ParachainBackend>,
-			Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
+			Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
 		) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>
 		+ 'static,
 	BIQ: FnOnce(
-		Arc<ParachainClient<RuntimeApi>>,
-		ParachainBlockImport<RuntimeApi>,
+		Arc<ParachainClient>,
+		ParachainBlockImport,
 		&Configuration,
 		Option<TelemetryHandle>,
 		&TaskManager,
 		bool,
 	) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error>,
 	SC: FnOnce(
-		Arc<ParachainClient<RuntimeApi>>,
-		ParachainBlockImport<RuntimeApi>,
+		Arc<ParachainClient>,
+		ParachainBlockImport,
 		Option<&Registry>,
 		Option<TelemetryHandle>,
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
+		Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -302,12 +278,8 @@ where
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial::<RuntimeApi, BIQ>(
-		&parachain_config,
-		build_import_queue,
-		false,
-		delayed_best_block,
-	)?;
+	let params =
+		new_partial::<BIQ>(&parachain_config, build_import_queue, false, delayed_best_block)?;
 	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
@@ -364,7 +336,7 @@ where
 		storage_override,
 		tracing_requesters,
 		ethapi_cmd,
-	) = start_node_evm_impl::<RuntimeApi>(
+	) = start_node_evm_impl(
 		client.clone(),
 		backend.clone(),
 		frontier_backend.clone(),
@@ -505,7 +477,7 @@ where
 }
 
 /// Start a litentry/rococo node.
-pub async fn start_node<RuntimeApi>(
+pub async fn start_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	collator_options: CollatorOptions,
@@ -513,34 +485,16 @@ pub async fn start_node<RuntimeApi>(
 	hwbench: Option<sc_sysinfo::HwBench>,
 	additional_config: AdditionalConfig,
 	delayed_best_block: bool,
-) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient<RuntimeApi>>)>
-where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_aura::AuraUnincludedSegmentApi<Block>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>
-		+ fp_rpc::ConvertTransactionRuntimeApi<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>
-		+ moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block>
-		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>,
-{
-	start_node_impl::<RuntimeApi, _, _, _, sc_network::NetworkWorker<_, _>>(
+) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient>)> {
+	start_node_impl::<_, _, _, sc_network::NetworkWorker<_, _>>(
 		parachain_config,
 		polkadot_config,
 		collator_options,
 		CollatorSybilResistance::Resistant, // Aura
 		para_id,
 		|_, _, _, _| Ok(RpcModule::new(())),
-		build_import_queue::<RuntimeApi>,
-		start_lookahead_aura_consensus::<RuntimeApi>,
+		build_import_queue,
+		start_lookahead_aura_consensus,
 		hwbench,
 		additional_config.clone(),
 		delayed_best_block,
@@ -549,25 +503,14 @@ where
 }
 
 /// Build the import queue for the litentry/rococo runtime.
-pub fn build_import_queue<RuntimeApi>(
-	client: Arc<ParachainClient<RuntimeApi>>,
-	block_import: ParachainBlockImport<RuntimeApi>,
+pub fn build_import_queue(
+	client: Arc<ParachainClient>,
+	block_import: ParachainBlockImport,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	is_standalone: bool,
-) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error>
-where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>,
-{
+) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error> {
 	if is_standalone {
 		// aura import queue
 		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
@@ -662,28 +605,10 @@ where
 }
 
 // start a standalone node which doesn't need to connect to relaychain
-pub async fn start_standalone_node<RuntimeApi>(
+pub async fn start_standalone_node(
 	config: Configuration,
 	evm_tracing_config: crate::evm_tracing_types::EvmTracingConfig,
-) -> Result<TaskManager, sc_service::Error>
-where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_aura::AuraUnincludedSegmentApi<Block>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>
-		+ fp_rpc::ConvertTransactionRuntimeApi<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>
-		+ moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block>
-		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>,
-{
+) -> Result<TaskManager, sc_service::Error> {
 	let sc_service::PartialComponents {
 		client,
 		backend,
@@ -693,7 +618,7 @@ where
 		select_chain: maybe_select_chain,
 		transaction_pool,
 		other: (_, _, _, frontier_backend),
-	} = new_partial::<RuntimeApi, _>(&config, build_import_queue::<RuntimeApi>, true, true)?;
+	} = new_partial::<_>(&config, build_import_queue, true, true)?;
 
 	// Sinks for pubsub notifications.
 	// Everytime a new subscription is created, a new mpsc channel is added to the sink pool.
@@ -735,7 +660,7 @@ where
 		storage_override,
 		tracing_requesters,
 		ethapi_cmd,
-	) = start_node_evm_impl::<RuntimeApi>(
+	) = start_node_evm_impl(
 		client.clone(),
 		backend.clone(),
 		frontier_backend.clone(),
@@ -908,10 +833,10 @@ where
 	Ok(task_manager)
 }
 
-pub fn start_node_evm_impl<RuntimeApi>(
-	client: Arc<ParachainClient<RuntimeApi>>,
+pub fn start_node_evm_impl(
+	client: Arc<ParachainClient>,
 	backend: Arc<ParachainBackend>,
-	frontier_backend: Arc<fc_db::kv::Backend<Block, ParachainClient<RuntimeApi>>>,
+	frontier_backend: Arc<fc_db::kv::Backend<Block, ParachainClient>>,
 	task_manager: &mut TaskManager,
 	config: &Configuration,
 	evm_tracing_config: crate::evm_tracing_types::EvmTracingConfig,
@@ -929,23 +854,7 @@ pub fn start_node_evm_impl<RuntimeApi>(
 	Arc<dyn StorageOverride<Block>>,
 	RpcRequesters,
 	Vec<EthApiCmd>,
-)
-where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>
-		+ fp_rpc::ConvertTransactionRuntimeApi<Block>
-		+ moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block>
-		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>,
-{
+) {
 	let prometheus_registry = config.prometheus_registry().cloned();
 	let filter_pool: FilterPool = Arc::new(std::sync::Mutex::new(BTreeMap::new()));
 	let fee_history_cache: FeeHistoryCache = Arc::new(std::sync::Mutex::new(BTreeMap::new()));
@@ -1036,14 +945,14 @@ where
 }
 
 /// Start consensus using the lookahead aura collator.
-fn start_lookahead_aura_consensus<RuntimeApi>(
-	client: Arc<ParachainClient<RuntimeApi>>,
-	block_import: ParachainBlockImport<RuntimeApi>,
+fn start_lookahead_aura_consensus(
+	client: Arc<ParachainClient>,
+	block_import: ParachainBlockImport,
 	prometheus_registry: Option<&Registry>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient<RuntimeApi>>>,
+	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
@@ -1051,20 +960,7 @@ fn start_lookahead_aura_consensus<RuntimeApi>(
 	overseer_handle: OverseerHandle,
 	announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 	backend: Arc<ParachainBackend>,
-) -> Result<(), sc_service::Error>
-where
-	RuntimeApi: ConstructRuntimeApi<Block, ParachainClient<RuntimeApi>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<Block>
-		+ sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ fp_rpc::EthereumRuntimeRPCApi<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>
-		+ cumulus_primitives_aura::AuraUnincludedSegmentApi<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>,
-{
+) -> Result<(), sc_service::Error> {
 	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
 	//       presumably in stable2412
 	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
