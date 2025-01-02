@@ -86,13 +86,13 @@ pub type Migrations<Runtime> = (
 	// V3 to V4
 	// XCMP QueueConfig has different default value
 	// Migration targeting at changing storage value to new default value if old value matched
-	// Our current Paseo setting has already hard-coded
+	// Our current Litentry setting has already hard-coded
 	// This migration should have no effect except bumping storage version
 	cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
 	// V4 to V5
 	// Did nothing to storage
 	// Just checking MaxActiveOutboundChannels is not exceeded
-	// Our current Paseo Storage is 0
+	// Our current Litentry Storage is 0
 	// This migration should have no effect except bumping storage version
 	cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
 	// PolkadotXcm V0 => V1
@@ -184,7 +184,8 @@ where
 				"StorageVersion".as_bytes(),
 			));
 
-			InactiveIssuance::<T>::kill();
+			// For security purpose, we may not want to do this now
+			// InactiveIssuance::<T>::kill();
 
 			// Set storage version to `1`.
 			StorageVersion::new(1).put::<pallet_balances::Pallet<T>>();
