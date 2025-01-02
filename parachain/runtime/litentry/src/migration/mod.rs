@@ -45,9 +45,10 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
-use frame_support::{
-	ensure,
-	traits::{Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion},
+#[cfg(feature = "try-runtime")]
+use frame_support::ensure;
+use frame_support::traits::{
+	Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_scheduler::Agenda;
