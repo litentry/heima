@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments)]
 
 use frame_support::{
 	pallet_prelude::*,
@@ -27,10 +28,12 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use sp_runtime::traits::AccountIdConversion;
+use sp_std::{prelude::*, vec};
 
 pub use pallet::*;
 
 const MODULE_ID: PalletId = PalletId(*b"hm/ombrg");
+const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum ForeignChain {
@@ -41,10 +44,31 @@ pub enum ForeignChain {
 pub type ForeignAsset = (ForeignChain, Vec<u8>);
 pub type Nonce = u64;
 
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct PayInRequest<AssetKind, Balance> {
+	pub asset: AssetKind,
+	pub dest_chain: ForeignChain,
+	pub dest_address: Vec<u8>,
+	pub amount: Balance,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct PayOutRequest<AccountId, AssetKind, Balance> {
+	pub to: AccountId,
+	pub asset: AssetKind,
+	pub amount: Balance,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct PayOutProposal<AccountId, AssetKind, Balance> {
+	pub req: PayOutRequest<AccountId, AssetKind, Balance>,
+	pub ayes: Vec<AccountId>,
+	pub nays: Vec<AccountId>,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use sp_std::{prelude::*, vec};
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -83,7 +107,16 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn relayer)]
-	pub type Relayer<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, (), OptionQuery>;
+	pub type Relayer<T: Config> = CountedStorageMap<_, Twox64Concat, T::AccountId, (), OptionQuery>;
+
+	#[pallet::type_value]
+	pub fn DefaultRelayerThresholdValue() -> u32 {
+		DEFAULT_RELAYER_THRESHOLD
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn relayer_threshold)]
+	pub type RelayerThreshold<T> = StorageValue<_, u32, ValueQuery, DefaultRelayerThresholdValue>;
 
 	// A map from AssetKind to its metadata
 	// It's a simplified version of the standard asset metadata
@@ -93,10 +126,6 @@ pub mod pallet {
 	#[pallet::getter(fn asset_symbol)]
 	pub type AssetSymbol<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AssetKind, Vec<u8>, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn pay_in_nonce)]
-	pub type PayInNonce<T: Config> = StorageValue<_, Nonce, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn supported_pay_in_pair)]
@@ -116,6 +145,51 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn pay_in_nonce)]
+	pub type PayInNonce<T: Config> = StorageMap<_, Twox64Concat, ForeignChain, Nonce, ValueQuery>;
+
+	/// Per-relayer nonce for a given `ForeignChain`.
+	///
+	/// Payout request with smaller or equal nonce has been processed by this specific relayer already
+	/// and thus should be ignored by this relayer.
+	///
+	/// This nonce mechanism relies on the monotonically increased nonce submitted from relayers, so
+	/// relayers must submit payout requests in the same order as foreign chain emits the requests.
+	/// Out of order may cause loss of payout requests.
+	#[pallet::storage]
+	#[pallet::getter(fn relayer_pay_out_nonce)]
+	pub type RelayerPayOutNonce<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		T::AccountId,
+		Twox64Concat,
+		ForeignChain,
+		Nonce,
+		ValueQuery,
+	>;
+
+	/// Finalized (global) nonce for a given `ForeignChain`.
+	///
+	/// Payout request with smaller or equal nonce has been finalized already and thus should be ignored
+	/// by all relayers.
+	#[pallet::storage]
+	#[pallet::getter(fn finalized_pay_out_nonce)]
+	pub type FinalizedPayOutNonce<T: Config> =
+		StorageMap<_, Twox64Concat, ForeignChain, Nonce, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn pay_out_proposals)]
+	pub type PayOutProposals<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		ForeignChain,
+		Twox64Concat,
+		Nonce,
+		PayOutProposal<T::AccountId, T::AssetKind, T::Balance>,
+		OptionQuery,
+	>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -125,6 +199,8 @@ pub mod pallet {
 		RelayerAdded { relayer: T::AccountId },
 		/// Relayer removed
 		RelayerRemoved { relayer: T::AccountId },
+		/// Relayer threshold set
+		RelayerThresholdSet { threshold: u32 },
 		/// Some asset symbl is set
 		AssetSymbolSet { asset: T::AssetKind, symbol: Vec<u8> },
 		/// PayIn fee is set
@@ -138,19 +214,51 @@ pub mod pallet {
 			dest_address: Vec<u8>,
 			amount: T::Balance,
 		},
-		/// Tokens were paid out to the account after being paid in on the other side of the bridge.
-		PaidOut { to: T::AccountId, asset: T::AssetKind, amount: T::Balance },
+		/// Some payout request is proposed and awaits other relayers' votes
+		PayOutProposed {
+			who: T::AccountId, // relayer
+			aye: bool,
+			to: T::AccountId,
+			nonce: Nonce,
+			asset: T::AssetKind,
+			source_asset: ForeignAsset, // to track bridging same type of token from different chains
+			source_address: Vec<u8>,    // TODO: tracking purpose - might not be necessary
+			amount: T::Balance,
+		},
+		/// Some payout request is rejected
+		PayOutRejected {
+			to: T::AccountId,
+			nonce: Nonce,
+			asset: T::AssetKind,
+			source_asset: ForeignAsset, // to track bridging same type of token from different chains
+			source_address: Vec<u8>,    // TODO: tracking purpose - might not be necessary
+			amount: T::Balance,
+		},
+		/// Some payout request is successfully executed
+		PaidOut {
+			to: T::AccountId,
+			nonce: Nonce,
+			asset: T::AssetKind,
+			source_asset: ForeignAsset, // to track bridging same type of token from different chains
+			source_address: Vec<u8>,    // TODO: tracking purpose - might not be necessary
+			amount: T::Balance,
+		},
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		RequireAdminOrRoot,
 		RequireRelayer,
+		ThresholdInvalid,
 		AssetSymbolNotExist,
+		AssetSymbolInvalid,
 		PayInNonceOverflow,
 		PayInPairNotSupported,
 		PayInFeeNotSet,
 		PayInAmountTooLow,
+		PayOutNonceAlreadyProcessedByRelayer,
+		PayOutNonceAlreadyFinalized,
+		PayOutRequestMismatch,
 	}
 
 	#[pallet::genesis_config]
@@ -195,25 +303,23 @@ pub mod pallet {
 		#[pallet::weight((T::DbWeight::get().write, DispatchClass::Normal, Pays::Yes))]
 		pub fn pay_in(
 			origin: OriginFor<T>,
-			asset_id: T::AssetKind,
-			dest_chain: ForeignChain,
-			dest_address: Vec<u8>,
-			amount: T::Balance,
+			req: PayInRequest<T::AssetKind, T::Balance>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let nonce = Self::next_pay_in_nonce()?;
-			let symbol = AssetSymbol::<T>::get(&asset_id).ok_or(Error::<T>::AssetSymbolNotExist)?;
-			let foreign_asset: ForeignAsset = (dest_chain.clone(), symbol);
+			let nonce = Self::next_pay_in_nonce(&req.dest_chain)?;
+			let symbol =
+				AssetSymbol::<T>::get(&req.asset).ok_or(Error::<T>::AssetSymbolNotExist)?;
+			let foreign_asset: ForeignAsset = (req.dest_chain.clone(), symbol);
 			ensure!(
-				SupportedPayInPair::<T>::get(asset_id.clone()).contains(&foreign_asset),
+				SupportedPayInPair::<T>::get(req.asset.clone()).contains(&foreign_asset),
 				Error::<T>::PayInPairNotSupported
 			);
-			let fee = PayInFee::<T>::get(asset_id.clone(), dest_chain)
+			let fee = PayInFee::<T>::get(req.asset.clone(), req.dest_chain)
 				.ok_or(Error::<T>::PayInFeeNotSet)?;
 			let burn_amount = T::Assets::burn_from(
-				asset_id.clone(),
+				req.asset.clone(),
 				&who,
-				amount,
+				req.amount,
 				Preservation::Expendable,
 				Precision::Exact,
 				Fortitude::Polite,
@@ -221,14 +327,14 @@ pub mod pallet {
 			ensure!(burn_amount > fee, Error::<T>::PayInAmountTooLow);
 
 			// TODO: we could define a `OnChargeFee` trait and outsource the fee charging to runtime
-			T::Assets::mint_into(asset_id.clone(), &T::TreasuryAccount::get(), fee)?;
+			T::Assets::mint_into(req.asset.clone(), &T::TreasuryAccount::get(), fee)?;
 
 			Self::deposit_event(Event::PaidIn {
 				from: who,
 				nonce,
-				asset: asset_id,
+				asset: req.asset,
 				dest_asset: foreign_asset,
-				dest_address,
+				dest_address: req.dest_address,
 				amount: burn_amount - fee,
 			});
 			Ok(().into())
@@ -236,17 +342,85 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight((T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
-		pub fn pay_out(
+		pub fn propose_pay_out(
 			origin: OriginFor<T>,
+			source_asset: ForeignAsset,
+			source_address: Vec<u8>,
+			nonce: Nonce,
 			to: T::AccountId,
-			asset_id: T::AssetKind,
+			asset: T::AssetKind,
 			amount: T::Balance,
+			aye: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_relayer(&who), Error::<T>::RequireRelayer);
+			let symbol = AssetSymbol::<T>::get(&asset).ok_or(Error::<T>::AssetSymbolNotExist)?;
+			ensure!(symbol == source_asset.1, Error::<T>::AssetSymbolInvalid);
+			// we can't require nonce == finalized_pay_out_nonce + 1, as a relayer could be way ahead
+			// of finalized payout nonce
+			ensure!(
+				nonce > FinalizedPayOutNonce::<T>::get(&source_asset.0),
+				Error::<T>::PayOutNonceAlreadyFinalized
+			);
+			ensure!(
+				nonce > RelayerPayOutNonce::<T>::get(&who, &source_asset.0),
+				Error::<T>::PayOutNonceAlreadyProcessedByRelayer
+			);
 
-			T::Assets::mint_into(asset_id.clone(), &to, amount)?;
-			Self::deposit_event(Event::PaidOut { to, asset: asset_id, amount });
+			let threshold = Self::relayer_threshold();
+			let total = Relayer::<T>::count();
+
+			if threshold == 1 && aye {
+				// update per-relayer payout nonce
+				RelayerPayOutNonce::<T>::insert(&who, &source_asset.0, nonce);
+				// immediately do the payout
+				Self::do_pay_out(source_asset, source_address, nonce, to, asset, amount)?;
+			} else {
+				let req = PayOutRequest { to: to.clone(), asset: asset.clone(), amount };
+				let mut prop = match PayOutProposals::<T>::get(&source_asset.0, nonce) {
+					Some(p) => p,
+					None => PayOutProposal { req: req.clone(), ayes: vec![], nays: vec![] },
+				};
+
+				// TODO: what if the faulty relayer creates the entry first?
+				// righteous relayers won't have a chance to fix it
+				ensure!(req == prop.req, Error::<T>::PayOutRequestMismatch);
+
+				// TODO: what if this relayer voted already?
+				if aye {
+					prop.ayes.push(who.clone());
+				} else {
+					prop.nays.push(who.clone());
+				}
+				// update per-relayer payout nonce
+				RelayerPayOutNonce::<T>::insert(&who, &source_asset.0, nonce);
+
+				// Try to finalize
+				if prop.ayes.len() >= threshold as usize {
+					Self::do_pay_out(source_asset, source_address, nonce, to, asset, amount)?;
+				} else if total >= threshold && prop.nays.len() as u32 + threshold > total {
+					Self::deposit_event(Event::PayOutRejected {
+						to,
+						nonce,
+						asset,
+						source_asset,
+						source_address,
+						amount,
+					});
+				} else {
+					Self::deposit_event(Event::PayOutProposed {
+						who: who.clone(),
+						aye,
+						to,
+						nonce,
+						asset,
+						source_asset,
+						source_address,
+						amount,
+					});
+				}
+			}
+
 			Ok(Pays::No.into())
 		}
 
@@ -279,13 +453,13 @@ pub mod pallet {
 		#[pallet::weight((T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
 		pub fn set_pay_in_fee(
 			origin: OriginFor<T>,
-			asset_id: T::AssetKind,
+			asset: T::AssetKind,
 			dest_chain: ForeignChain,
 			fee: T::Balance,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
-			PayInFee::<T>::insert(asset_id.clone(), dest_chain.clone(), fee);
-			Self::deposit_event(Event::PayInFeeSet { asset: asset_id, dest_chain, fee });
+			PayInFee::<T>::insert(asset.clone(), dest_chain.clone(), fee);
+			Self::deposit_event(Event::PayInFeeSet { asset, dest_chain, fee });
 			Ok(Pays::No.into())
 		}
 
@@ -293,14 +467,14 @@ pub mod pallet {
 		#[pallet::weight((2 * T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
 		pub fn create_asset(
 			origin: OriginFor<T>,
-			asset_id: T::AssetKind,
+			asset: T::AssetKind,
 			is_sufficient: bool,
 			min_balance: T::Balance,
 			symbol: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin.clone())?;
-			T::Assets::create(asset_id.clone(), Self::account_id(), is_sufficient, min_balance)?;
-			Self::set_asset_symbol(origin, asset_id, symbol)?;
+			T::Assets::create(asset.clone(), Self::account_id(), is_sufficient, min_balance)?;
+			Self::set_asset_symbol(origin, asset, symbol)?;
 			Ok(Pays::No.into())
 		}
 
@@ -308,12 +482,25 @@ pub mod pallet {
 		#[pallet::weight((2 * T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
 		pub fn set_asset_symbol(
 			origin: OriginFor<T>,
-			asset_id: T::AssetKind,
+			asset: T::AssetKind,
 			symbol: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
-			AssetSymbol::<T>::insert(&asset_id, symbol.clone());
-			Self::deposit_event(Event::AssetSymbolSet { asset: asset_id, symbol });
+			AssetSymbol::<T>::insert(&asset, symbol.clone());
+			Self::deposit_event(Event::AssetSymbolSet { asset, symbol });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight((2 * T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
+		pub fn set_relayer_threshold(
+			origin: OriginFor<T>,
+			threshold: u32,
+		) -> DispatchResultWithPostInfo {
+			Self::ensure_admin_or_root(origin)?;
+			ensure!(threshold > 0, Error::<T>::ThresholdInvalid);
+			RelayerThreshold::<T>::put(threshold);
+			Self::deposit_event(Event::RelayerThresholdSet { threshold });
 			Ok(Pays::No.into())
 		}
 	}
@@ -337,11 +524,38 @@ pub mod pallet {
 			Relayer::<T>::contains_key(who)
 		}
 
-		fn next_pay_in_nonce() -> Result<Nonce, Error<T>> {
-			let nonce = Self::pay_in_nonce();
+		fn next_pay_in_nonce(chain: &ForeignChain) -> Result<Nonce, Error<T>> {
+			let nonce = Self::pay_in_nonce(chain);
 			let nonce = nonce.checked_add(1).ok_or(Error::<T>::PayInNonceOverflow)?;
-			PayInNonce::<T>::put(nonce);
+			PayInNonce::<T>::insert(chain, nonce);
 			Ok(nonce)
+		}
+
+		fn do_pay_out(
+			source_asset: ForeignAsset,
+			source_address: Vec<u8>,
+			nonce: Nonce,
+			to: T::AccountId,
+			asset: T::AssetKind,
+			amount: T::Balance,
+		) -> DispatchResult {
+			// update finalized payout nonce
+			FinalizedPayOutNonce::<T>::insert(&source_asset.0, nonce);
+			// do actual payout
+			T::Assets::mint_into(asset.clone(), &to, amount)?;
+			// remove it from proposal pool if exists
+			if PayOutProposals::<T>::get(&source_asset.0, nonce).is_some() {
+				PayOutProposals::<T>::remove(&source_asset.0, nonce)
+			}
+			Self::deposit_event(Event::PaidOut {
+				to,
+				nonce,
+				asset,
+				source_asset,
+				source_address,
+				amount,
+			});
+			Ok(())
 		}
 	}
 }
