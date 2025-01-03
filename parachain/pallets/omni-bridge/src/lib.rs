@@ -205,9 +205,9 @@ pub mod pallet {
 		/// Admins was set
 		AdminSet { new_admin: Option<T::AccountId> },
 		/// Relayer added
-		RelayerAdded { relayer: T::AccountId },
+		RelayerAdded { who: T::AccountId },
 		/// Relayer removed
-		RelayerRemoved { relayer: T::AccountId },
+		RelayerRemoved { who: T::AccountId },
 		/// Relayer threshold set
 		RelayerThresholdSet { threshold: u32 },
 		/// Some pay in pair is added
@@ -218,6 +218,10 @@ pub mod pallet {
 		AssetSymbolSet { asset: T::AssetKind, symbol: Vec<u8> },
 		/// PayIn fee is set
 		PayInFeeSet { asset: T::AssetKind, dest_chain: ForeignChain, fee: T::Balance },
+		/// The payout nonce for a specific relayer is updated
+		RelayerPayOutNonceUpdated { who: T::AccountId, source_chain: ForeignChain, nonce: Nonce },
+		/// The payout nonce for global finalization is updated
+		FinalizedPayOutNonceUpdated { source_chain: ForeignChain, nonce: Nonce },
 		/// Account paid in tokens, they will be paid out on the other side of the bridge.
 		PaidIn {
 			from: T::AccountId,
@@ -385,10 +389,9 @@ pub mod pallet {
 			let total = Relayer::<T>::count();
 
 			if threshold == 1 && aye {
-				// update per-relayer payout nonce
-				RelayerPayOutNonce::<T>::insert(&who, &source_asset.0, nonce);
-				// immediately do the payout
-				Self::do_pay_out(source_asset, source_address, nonce, to, asset, amount)?;
+				// immediately do and finalize the payout
+				Self::do_pay_out(source_asset.clone(), source_address, nonce, to, asset, amount)?;
+				Self::finalize_pay_out(source_asset.0.clone(), nonce);
 			} else {
 				let req = PayOutRequest { to: to.clone(), asset: asset.clone(), amount };
 				let mut prop = match PayOutProposals::<T>::get(&source_asset.0, nonce) {
@@ -406,47 +409,61 @@ pub mod pallet {
 				} else {
 					prop.nays.push(who.clone());
 				}
-				// update per-relayer payout nonce
-				RelayerPayOutNonce::<T>::insert(&who, &source_asset.0, nonce);
 
-				// Try to finalize
 				if prop.ayes.len() >= threshold as usize {
-					Self::do_pay_out(source_asset, source_address, nonce, to, asset, amount)?;
+					// prop is approved, do and finalize the pay out
+					Self::do_pay_out(
+						source_asset.clone(),
+						source_address,
+						nonce,
+						to,
+						asset,
+						amount,
+					)?;
+					Self::finalize_pay_out(source_asset.0.clone(), nonce);
 				} else if total >= threshold && prop.nays.len() as u32 + threshold > total {
+					// prop is rejected, finalize the pay out
 					Self::deposit_event(Event::PayOutRejected {
 						to,
 						nonce,
 						asset,
-						source_asset,
+						source_asset: source_asset.clone(),
 						source_address,
 						amount,
 					});
+					Self::finalize_pay_out(source_asset.0.clone(), nonce);
 				} else {
+					// prop is pending, we probably need to wait for tallother relayers
 					Self::deposit_event(Event::PayOutProposed {
 						who: who.clone(),
 						aye,
 						to,
 						nonce,
 						asset,
-						source_asset,
+						source_asset: source_asset.clone(),
 						source_address,
 						amount,
 					});
 				}
 			}
 
+			// update per-relayer payout nonce
+			RelayerPayOutNonce::<T>::insert(&who, &source_asset.0, nonce);
+			Self::deposit_event(Event::RelayerPayOutNonceUpdated {
+				who,
+				source_chain: source_asset.0,
+				nonce,
+			});
+
 			Ok(Pays::No.into())
 		}
 
 		#[pallet::call_index(3)]
 		#[pallet::weight((T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
-		pub fn add_relayer(
-			origin: OriginFor<T>,
-			relayer: T::AccountId,
-		) -> DispatchResultWithPostInfo {
+		pub fn add_relayer(origin: OriginFor<T>, who: T::AccountId) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
-			Relayer::<T>::insert(relayer.clone(), ());
-			Self::deposit_event(Event::RelayerAdded { relayer });
+			Relayer::<T>::insert(who.clone(), ());
+			Self::deposit_event(Event::RelayerAdded { who });
 			Ok(Pays::No.into())
 		}
 
@@ -454,12 +471,12 @@ pub mod pallet {
 		#[pallet::weight((T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
 		pub fn remove_relayer(
 			origin: OriginFor<T>,
-			relayer: T::AccountId,
+			who: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
-			ensure!(Self::is_relayer(&relayer), Error::<T>::RequireRelayer);
-			Relayer::<T>::remove(relayer.clone());
-			Self::deposit_event(Event::RelayerRemoved { relayer });
+			ensure!(Self::is_relayer(&who), Error::<T>::RequireRelayer);
+			Relayer::<T>::remove(who.clone());
+			Self::deposit_event(Event::RelayerRemoved { who });
 			Ok(Pays::No.into())
 		}
 
@@ -575,6 +592,15 @@ pub mod pallet {
 			Ok(nonce)
 		}
 
+		fn finalize_pay_out(source_chain: ForeignChain, nonce: Nonce) {
+			FinalizedPayOutNonce::<T>::insert(&source_chain, nonce);
+			// remove it from proposal pool if exists
+			if PayOutProposals::<T>::get(&source_chain, nonce).is_some() {
+				PayOutProposals::<T>::remove(&source_chain, nonce);
+			}
+			Self::deposit_event(Event::FinalizedPayOutNonceUpdated { source_chain, nonce });
+		}
+
 		fn do_pay_out(
 			source_asset: ForeignAsset,
 			source_address: Vec<u8>,
@@ -583,14 +609,8 @@ pub mod pallet {
 			asset: T::AssetKind,
 			amount: T::Balance,
 		) -> DispatchResult {
-			// update finalized payout nonce
-			FinalizedPayOutNonce::<T>::insert(&source_asset.0, nonce);
 			// do actual payout
 			T::Assets::mint_into(asset.clone(), &to, amount)?;
-			// remove it from proposal pool if exists
-			if PayOutProposals::<T>::get(&source_asset.0, nonce).is_some() {
-				PayOutProposals::<T>::remove(&source_asset.0, nonce)
-			}
 			Self::deposit_event(Event::PaidOut {
 				to,
 				nonce,
