@@ -53,7 +53,6 @@ use frame_support::traits::{
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_scheduler::Agenda;
 use sp_std::marker::PhantomData;
-#[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
 extern crate alloc;
