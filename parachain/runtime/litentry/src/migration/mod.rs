@@ -167,7 +167,11 @@ where
 /// The original data layout of the preimage pallet without a specific version number.
 mod preimage_helper {
 	use alloc::collections::btree_map::BTreeMap;
-	use frame_support::{pallet_prelude::*, storage_alias};
+	use frame_support::{pallet_prelude::*, storage_alias, traits::Currency};
+
+	type BalanceOf<T> = <<T as pallet_preimage::Config>::Currency as Currency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
 
 	#[derive(Clone, Eq, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen, RuntimeDebug)]
 	pub enum OldRequestStatus<AccountId, Balance> {
@@ -178,7 +182,7 @@ mod preimage_helper {
 	#[storage_alias]
 	pub type PreimageFor<T: pallet_preimage::Config> = StorageMap<
 		pallet_preimage::Pallet<T>,
-		pallet_preimage::Identity,
+		Identity,
 		<T as frame_system::Config>::Hash,
 		BoundedVec<u8, ConstU32<{ 4u32 * 1024u32 * 1024u32 }>>,
 	>;
@@ -186,9 +190,9 @@ mod preimage_helper {
 	#[storage_alias]
 	pub type StatusFor<T: pallet_preimage::Config> = StorageMap<
 		pallet_preimage::Pallet<T>,
-		pallet_preimage::Identity,
+		Identity,
 		<T as frame_system::Config>::Hash,
-		OldRequestStatus<<T as frame_system::Config>::AccountId, pallet_preimage::BalanceOf<T>>,
+		OldRequestStatus<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
 	>;
 
 	/// Returns the number of images or `None` if the storage is corrupted.
