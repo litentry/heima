@@ -130,9 +130,16 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::AssetKind, Vec<u8>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn supported_pay_in_pair)]
-	pub type SupportedPayInPair<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AssetKind, Vec<ForeignAsset>, ValueQuery>;
+	#[pallet::getter(fn pay_in_pair)]
+	pub type PayInPair<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		T::AssetKind,
+		Blake2_128Concat,
+		ForeignAsset,
+		(),
+		OptionQuery,
+	>;
 
 	// TODO: later we can allow pay the fee with other assets
 	#[pallet::storage]
@@ -203,6 +210,10 @@ pub mod pallet {
 		RelayerRemoved { relayer: T::AccountId },
 		/// Relayer threshold set
 		RelayerThresholdSet { threshold: u32 },
+		/// Some pay in pair is added
+		PayInPairAdded { asset: T::AssetKind, foreign_asset: ForeignAsset },
+		/// Some pay in pair is removed
+		PayInPairRemoved { asset: T::AssetKind, foreign_asset: ForeignAsset },
 		/// Some asset symbl is set
 		AssetSymbolSet { asset: T::AssetKind, symbol: Vec<u8> },
 		/// PayIn fee is set
@@ -255,7 +266,8 @@ pub mod pallet {
 		AssetSymbolNotExist,
 		AssetSymbolInvalid,
 		PayInNonceOverflow,
-		PayInPairNotSupported,
+		PayInPairNotAllowed,
+		PayInPairNotExist,
 		PayInFeeNotSet,
 		PayInAmountTooLow,
 		PayOutNonceAlreadyProcessedByRelayer,
@@ -313,8 +325,8 @@ pub mod pallet {
 				AssetSymbol::<T>::get(&req.asset).ok_or(Error::<T>::AssetSymbolNotExist)?;
 			let foreign_asset: ForeignAsset = (req.dest_chain.clone(), symbol);
 			ensure!(
-				SupportedPayInPair::<T>::get(req.asset.clone()).contains(&foreign_asset),
-				Error::<T>::PayInPairNotSupported
+				PayInPair::<T>::get(&req.asset, &foreign_asset).is_some(),
+				Error::<T>::PayInPairNotAllowed
 			);
 			let fee = PayInFee::<T>::get(req.asset.clone(), req.dest_chain)
 				.ok_or(Error::<T>::PayInFeeNotSet)?;
@@ -503,6 +515,36 @@ pub mod pallet {
 			ensure!(threshold > 0, Error::<T>::ThresholdInvalid);
 			RelayerThreshold::<T>::put(threshold);
 			Self::deposit_event(Event::RelayerThresholdSet { threshold });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight((2 * T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
+		pub fn add_pay_in_pair(
+			origin: OriginFor<T>,
+			asset: T::AssetKind,
+			foreign_asset: ForeignAsset,
+		) -> DispatchResultWithPostInfo {
+			Self::ensure_admin_or_root(origin)?;
+			PayInPair::<T>::insert(&asset, &foreign_asset, ());
+			Self::deposit_event(Event::PayInPairAdded { asset, foreign_asset });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight((2 * T::DbWeight::get().write, DispatchClass::Normal, Pays::No))]
+		pub fn remove_pay_in_pair(
+			origin: OriginFor<T>,
+			asset: T::AssetKind,
+			foreign_asset: ForeignAsset,
+		) -> DispatchResultWithPostInfo {
+			Self::ensure_admin_or_root(origin)?;
+			ensure!(
+				PayInPair::<T>::get(&asset, &foreign_asset).is_some(),
+				Error::<T>::PayInPairNotExist
+			);
+			PayInPair::<T>::remove(&asset, &foreign_asset);
+			Self::deposit_event(Event::PayInPairRemoved { asset, foreign_asset });
 			Ok(Pays::No.into())
 		}
 	}
