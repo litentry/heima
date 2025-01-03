@@ -44,6 +44,7 @@ pub enum ForeignChain {
 pub type ForeignAsset = (ForeignChain, Vec<u8>);
 pub type Nonce = u64;
 
+// payin request by user (from user to foreign chain) - better name?
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct PayInRequest<AssetKind, Balance> {
 	pub asset: AssetKind,
@@ -52,6 +53,7 @@ pub struct PayInRequest<AssetKind, Balance> {
 	pub amount: Balance,
 }
 
+// payout request by relayer (from foreign chain to user) - better name?
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct PayOutRequest<AccountId, AssetKind, Balance> {
 	pub to: AccountId,
