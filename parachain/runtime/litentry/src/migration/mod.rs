@@ -55,7 +55,9 @@ use pallet_scheduler::Agenda;
 use sp_std::marker::PhantomData;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
+
 extern crate alloc;
+use alloc::collections::btree_map::BTreeMap;
 
 pub type Migrations<Runtime> = (
 	// Scheduler V0 => V4
@@ -167,7 +169,6 @@ where
 
 /// The original data layout of the preimage pallet without a specific version number.
 mod preimage_helper {
-	use alloc::collections::btree_map::BTreeMap;
 	use frame_support::{pallet_prelude::*, storage_alias, traits::Currency};
 
 	type BalanceOf<T> = <<T as pallet_preimage::Config>::Currency as Currency<
@@ -220,13 +221,12 @@ where
 	}
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		use alloc::collections::btree_map::BTreeMap;
 		// Remove preimage correpted storage
 		// TODO: Very Weak safety
 		let mut weight = T::DbWeight::get().reads(1);
 		if StorageVersion::get::<pallet_preimage::Pallet<T>>() != 0 {
 			log::warn!(
-				target: TARGET,
+				target: PREIMAGE_LOG_TARGET,
 				"skipping MovePreimagesIntoBuckets: executed on wrong storage version.\
 			Expected version 0"
 			);
