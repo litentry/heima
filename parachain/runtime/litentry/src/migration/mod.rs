@@ -239,7 +239,7 @@ where
 		let preimages = preimage_helper::PreimageFor::<T>::drain().collect::<BTreeMap<_, _>>();
 		weight.saturating_accrue(T::DbWeight::get().reads(preimages.len() as u64));
 
-		for (hash, status) in status.into_iter() {
+		for (hash, _status) in status.into_iter() {
 			if preimages.get(&hash).is_none() {
 				log::info!(target: PREIMAGE_LOG_TARGET, "Clean status for hash {:?}", &hash);
 				preimage_helper::StatusFor::<T>::remove(hash);
