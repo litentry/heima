@@ -240,7 +240,7 @@ where
 		weight.saturating_accrue(T::DbWeight::get().reads(preimages.len() as u64));
 
 		for (hash, _status) in status.into_iter() {
-			if preimages.get(&hash).is_none() {
+			if !preimages.contains_key(&hash) {
 				log::info!(target: PREIMAGE_LOG_TARGET, "Clean status for hash {:?}", &hash);
 				preimage_helper::StatusFor::<T>::remove(hash);
 			};
