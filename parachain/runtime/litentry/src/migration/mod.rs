@@ -166,8 +166,8 @@ where
 
 /// The original data layout of the preimage pallet without a specific version number.
 mod preimage_helper {
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+	use alloc::collections::btree_map::BTreeMap;
+	use frame_support::{pallet_prelude::*, storage_alias};
 
 	#[derive(Clone, Eq, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen, RuntimeDebug)]
 	pub enum OldRequestStatus<AccountId, Balance> {
@@ -176,24 +176,24 @@ mod preimage_helper {
 	}
 
 	#[storage_alias]
-	pub type PreimageFor<T: Config> = StorageMap<
-		Pallet<T>,
-		Identity,
+	pub type PreimageFor<T: pallet_preimage::Config> = StorageMap<
+		pallet_preimage::Pallet<T>,
+		pallet_preimage::Identity,
 		<T as frame_system::Config>::Hash,
-		BoundedVec<u8, ConstU32<pallet_preimage::MAX_SIZE>>,
+		BoundedVec<u8, ConstU32<{ 4u32 * 1024u32 * 1024u32 }>>,
 	>;
 
 	#[storage_alias]
 	pub type StatusFor<T: pallet_preimage::Config> = StorageMap<
-		Pallet<T>,
-		Identity,
+		pallet_preimage::Pallet<T>,
+		pallet_preimage::Identity,
 		<T as frame_system::Config>::Hash,
-		OldRequestStatus<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
+		OldRequestStatus<<T as frame_system::Config>::AccountId, pallet_preimage::BalanceOf<T>>,
 	>;
 
 	/// Returns the number of images or `None` if the storage is corrupted.
 	#[cfg(feature = "try-runtime")]
-	pub fn image_count<T: Config>() -> (u32, u32) {
+	pub fn image_count<T: pallet_preimage::Config>() -> (u32, u32) {
 		let images = PreimageFor::<T>::iter_values().count() as u32;
 		let status = StatusFor::<T>::iter_values().count() as u32;
 
