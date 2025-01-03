@@ -68,6 +68,8 @@ pub type Migrations<Runtime> = (
 	// Does not matter if we do have old storage or not
 	// Should simply works
 	pallet_multisig::migrations::v1::MigrateToV1<Runtime>,
+	// Clean correpted preimage storage
+	RemoveCorreptedPreimageStorage<Runtime>,
 	// Preimage V0 => V1
 	// Migrate old StatusFor and PreimageFor Storage into new Storage
 	pallet_preimage::migration::v1::Migration<Runtime>,
@@ -129,6 +131,7 @@ where
 	}
 
 	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		log::info!("Begin cleaning pallet scheduler storage two precise tasks leftover");
 		// Remove Scheduler Storage precisely of according block agenda only
 		// TODO: Very Weak safety
 		let one: BlockNumberFor<T> = 3067200u32.into();
@@ -148,6 +151,7 @@ where
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+		log::info!("Post check pallet scheduler storage two precise tasks cleaned");
 		let one: BlockNumberFor<T> = 3067200u32.into();
 		let two: BlockNumberFor<T> = 2995200u32.into();
 		for (when, _vec_schedule) in <Agenda<T>>::iter() {
@@ -155,6 +159,95 @@ where
 		}
 
 		ensure!(StorageVersion::get::<pallet_scheduler::Pallet<T>>() == 4, "Must upgrade");
+
+		Ok(())
+	}
+}
+
+/// The original data layout of the preimage pallet without a specific version number.
+mod preimage_helper {
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
+
+	#[derive(Clone, Eq, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen, RuntimeDebug)]
+	pub enum OldRequestStatus<AccountId, Balance> {
+		Unrequested(Option<(AccountId, Balance)>),
+		Requested(u32),
+	}
+
+	#[storage_alias]
+	pub type PreimageFor<T: Config> = StorageMap<
+		Pallet<T>,
+		Identity,
+		<T as frame_system::Config>::Hash,
+		BoundedVec<u8, ConstU32<pallet_preimage::MAX_SIZE>>,
+	>;
+
+	#[storage_alias]
+	pub type StatusFor<T: pallet_preimage::Config> = StorageMap<
+		Pallet<T>,
+		Identity,
+		<T as frame_system::Config>::Hash,
+		OldRequestStatus<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
+	>;
+
+	/// Returns the number of images or `None` if the storage is corrupted.
+	#[cfg(feature = "try-runtime")]
+	pub fn image_count<T: Config>() -> (u32, u32) {
+		let images = PreimageFor::<T>::iter_values().count() as u32;
+		let status = StatusFor::<T>::iter_values().count() as u32;
+
+		(images, status)
+	}
+}
+
+const PREIMAGE_LOG_TARGET: &str = "runtime::preimage";
+pub struct RemoveCorreptedPreimageStorage<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for RemoveCorreptedPreimageStorage<T>
+where
+	T: frame_system::Config + pallet_preimage::Config,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
+		let (image, status) = preimage_helper::image_count::<T>();
+		assert!(image != status, "Preimage storage not correpted");
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		// Remove preimage correpted storage
+		// TODO: Very Weak safety
+		let mut weight = T::DbWeight::get().reads(1);
+		if StorageVersion::get::<Pallet<T>>() != 0 {
+			log::warn!(
+				target: TARGET,
+				"skipping MovePreimagesIntoBuckets: executed on wrong storage version.\
+			Expected version 0"
+			);
+			return weight;
+		}
+
+		let status = preimage_helper::StatusFor::<T>::drain().collect::<Vec<_>>();
+		weight.saturating_accrue(T::DbWeight::get().reads(status.len() as u64));
+
+		let preimages = preimage_helper::PreimageFor::<T>::drain().collect::<BTreeMap<_, _>>();
+		weight.saturating_accrue(T::DbWeight::get().reads(preimages.len() as u64));
+
+		for (hash, status) in status.into_iter() {
+			if preimages.get(&hash).is_none() {
+				log::info!(target: PREIMAGE_LOG_TARGET, "Clean status for hash {:?}", &hash);
+				preimage_helper::StatusFor::<T>::remove(hash);
+			};
+			weight
+				.saturating_accrue(<T as frame_system::Config>::DbWeight::get().reads_writes(1, 1));
+		}
+		weight
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+		let (image, status) = preimage_helper::image_count::<T>();
+		assert!(image == status, "Preimage storage still correpted");
 
 		Ok(())
 	}
