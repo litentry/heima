@@ -32,6 +32,12 @@ use sp_std::{prelude::*, vec};
 
 pub use pallet::*;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 const MODULE_ID: PalletId = PalletId(*b"hm/ombrg");
 const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
 
@@ -45,6 +51,8 @@ pub type ForeignAsset = (ForeignChain, Vec<u8>);
 pub type Nonce = u64;
 
 // payin request by user (from user to foreign chain) - better name?
+// note the asset symbol is retrieved by lookup, not as parameter, it
+// prevents mismatch between given and registered asset symbol
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct PayInRequest<AssetKind, Balance> {
 	pub asset: AssetKind,

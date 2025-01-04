@@ -16,6 +16,14 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
+[dev-dependencies]
+sp-keyring = { workspace = true }
+sp-io = { workspace = true, features = ["std"] }
+frame-system = { workspace = true, features = ["std"] }
+pallet-assets = { workspace = true, features = ["std"] }
+pallet-balances = { workspace = true, features = ["std"] }
+pallet-timestamp = { workspace = true, features = ["std"] }
+
 [features]
 default = ["std"]
 runtime-benchmarks = [
