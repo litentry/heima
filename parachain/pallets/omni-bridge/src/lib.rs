@@ -70,10 +70,41 @@ pub struct PayOutRequest<AccountId, AssetKind, Balance> {
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct PayOutProposal<AccountId, AssetKind, Balance> {
-	pub req: PayOutRequest<AccountId, AssetKind, Balance>,
+pub struct PayOutVote<AccountId> {
 	pub ayes: Vec<AccountId>,
 	pub nays: Vec<AccountId>,
+	pub status: VoteStatus,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Default, Decode, RuntimeDebug, TypeInfo)]
+pub enum VoteStatus {
+	#[default]
+	Pending,
+	Passed,
+	Failed,
+}
+
+impl<AccountId: PartialEq> PayOutVote<AccountId> {
+	/// Try to finalize the vote, return the updated status
+	pub fn try_finalize(&mut self, threshold: u32, total: u32) -> VoteStatus {
+		if self.ayes.len() >= threshold as usize {
+			self.status = VoteStatus::Passed;
+			VoteStatus::Passed
+		} else if total >= threshold && self.nays.len() as u32 + threshold > total {
+			self.status = VoteStatus::Failed;
+			VoteStatus::Failed
+		} else {
+			VoteStatus::Pending
+		}
+	}
+
+	pub fn is_finalized(&self) -> bool {
+		self.status == VoteStatus::Passed || self.status == VoteStatus::Failed
+	}
+
+	pub fn has_voted(&self, who: &AccountId) -> bool {
+		self.ayes.contains(who) || self.nays.contains(who)
+	}
 }
 
 #[frame_support::pallet]
@@ -166,44 +197,41 @@ pub mod pallet {
 	#[pallet::getter(fn pay_in_nonce)]
 	pub type PayInNonce<T: Config> = StorageMap<_, Twox64Concat, ForeignChain, Nonce, ValueQuery>;
 
-	/// Per-relayer nonce for a given `ForeignChain`.
+	/// Finalized nonce for a given `ForeignChain` - we track this to avoid storing finalized
+	/// requests in the chain storage indefinitely.
 	///
-	/// Payout request with smaller or equal nonce has been processed by this specific relayer already
-	/// and thus should be ignored by this relayer.
+	/// Payout request whose nonce is smaller or equal to this nonce, should be considered finalized
+	/// and can thus be removed from storage.
 	///
-	/// This nonce mechanism relies on the monotonically increased nonce submitted from relayers, so
-	/// relayers must submit payout requests in the same order as foreign chain emits the requests.
-	/// Out of order may cause loss of payout requests.
-	#[pallet::storage]
-	#[pallet::getter(fn relayer_pay_out_nonce)]
-	pub type RelayerPayOutNonce<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		T::AccountId,
-		Twox64Concat,
-		ForeignChain,
-		Nonce,
-		ValueQuery,
-	>;
-
-	/// Finalized (global) nonce for a given `ForeignChain`.
-	///
-	/// Payout request with smaller or equal nonce has been finalized already and thus should be ignored
-	/// by all relayers.
+	/// This nonce should only be pumped if **all** previous requests are finalized too.
 	#[pallet::storage]
 	#[pallet::getter(fn finalized_pay_out_nonce)]
 	pub type FinalizedPayOutNonce<T: Config> =
 		StorageMap<_, Twox64Concat, ForeignChain, Nonce, ValueQuery>;
 
+	/// Finalized (highest) nonce for a vote, it should always be greater than or equal to FinalizedPayOutNonce
+	/// It doesn't mean all votes with smaller nonce are finalized, it just provides an upper bound
+	/// when bumping FinalizedPayOutNonce
 	#[pallet::storage]
-	#[pallet::getter(fn pay_out_proposals)]
-	pub type PayOutProposals<T: Config> = StorageDoubleMap<
+	#[pallet::getter(fn finalized_vote_nonce)]
+	pub type FinalizedVoteNonce<T: Config> =
+		StorageMap<_, Twox64Concat, ForeignChain, Nonce, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn pay_out_votes)]
+	pub type PayOutVotes<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
-		ForeignChain,
+		(ForeignChain, Nonce),
 		Twox64Concat,
-		Nonce,
-		PayOutProposal<T::AccountId, T::AssetKind, T::Balance>,
+		// Theoretically there should be only 1 request per (ForeignChain, Nonce),
+		// but buggy/faulty relayer might report a different request
+		//
+		// We key this item to rectify such case if the majority of relayers behaves correctly.
+		//
+		// We could have used PayOutRequest hash but `PayOutRequest` isn't much more complicated.
+		PayOutRequest<T::AccountId, T::AssetKind, T::Balance>,
+		PayOutVote<T::AccountId>,
 		OptionQuery,
 	>;
 
@@ -226,10 +254,10 @@ pub mod pallet {
 		AssetSymbolSet { asset: T::AssetKind, symbol: Vec<u8> },
 		/// PayIn fee is set
 		PayInFeeSet { asset: T::AssetKind, dest_chain: ForeignChain, fee: T::Balance },
-		/// The payout nonce for a specific relayer is updated
-		RelayerPayOutNonceUpdated { who: T::AccountId, source_chain: ForeignChain, nonce: Nonce },
 		/// The payout nonce for global finalization is updated
 		FinalizedPayOutNonceUpdated { source_chain: ForeignChain, nonce: Nonce },
+		/// The finalized vote nonce is updated
+		FinalizedVoteNonceUpdated { source_chain: ForeignChain, nonce: Nonce },
 		/// Account paid in tokens, they will be paid out on the other side of the bridge.
 		PaidIn {
 			from: T::AccountId,
@@ -239,16 +267,13 @@ pub mod pallet {
 			dest_address: Vec<u8>,
 			amount: T::Balance,
 		},
-		/// Some payout request is proposed and awaits other relayers' votes
-		PayOutProposed {
+		/// Some payout request is voted
+		PayOutVoted {
 			who: T::AccountId, // relayer
-			aye: bool,
-			to: T::AccountId,
+			source_chain: ForeignChain,
 			nonce: Nonce,
-			asset: T::AssetKind,
-			source_asset: ForeignAsset, // to track bridging same type of token from different chains
-			source_address: Vec<u8>,    // TODO: tracking purpose - might not be necessary
-			amount: T::Balance,
+			req: PayOutRequest<T::AccountId, T::AssetKind, T::Balance>,
+			aye: bool,
 		},
 		/// Some payout request is rejected
 		PayOutRejected {
@@ -282,9 +307,10 @@ pub mod pallet {
 		PayInPairNotExist,
 		PayInFeeNotSet,
 		PayInAmountTooLow,
-		PayOutNonceAlreadyProcessedByRelayer,
-		PayOutNonceAlreadyFinalized,
-		PayOutRequestMismatch,
+		PayOutNonceFinalized,
+		PayOutVoteFinalized,
+		PayOutVoteCommitted,
+		FinalizedPayOutNonceOverflow,
 	}
 
 	#[pallet::genesis_config]
@@ -373,95 +399,69 @@ pub mod pallet {
 			source_asset: ForeignAsset,
 			source_address: Vec<u8>,
 			nonce: Nonce,
-			to: T::AccountId,
-			asset: T::AssetKind,
-			amount: T::Balance,
+			req: PayOutRequest<T::AccountId, T::AssetKind, T::Balance>,
 			aye: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::is_relayer(&who), Error::<T>::RequireRelayer);
-			let symbol = AssetSymbol::<T>::get(&asset).ok_or(Error::<T>::AssetSymbolNotExist)?;
+			let symbol =
+				AssetSymbol::<T>::get(&req.asset).ok_or(Error::<T>::AssetSymbolNotExist)?;
 			ensure!(symbol == source_asset.1, Error::<T>::AssetSymbolInvalid);
 			// we can't require nonce == finalized_pay_out_nonce + 1, as a relayer could be way ahead
 			// of finalized payout nonce
 			ensure!(
 				nonce > FinalizedPayOutNonce::<T>::get(&source_asset.0),
-				Error::<T>::PayOutNonceAlreadyFinalized
-			);
-			ensure!(
-				nonce > RelayerPayOutNonce::<T>::get(&who, &source_asset.0),
-				Error::<T>::PayOutNonceAlreadyProcessedByRelayer
+				Error::<T>::PayOutNonceFinalized
 			);
 
+			// vote
+			let mut vote = match PayOutVotes::<T>::get(&(source_asset.0.clone(), nonce), &req) {
+				Some(v) => v,
+				None => PayOutVote { ayes: vec![], nays: vec![], status: VoteStatus::Pending },
+			};
+
+			ensure!(!vote.is_finalized(), Error::<T>::PayOutVoteFinalized);
+			ensure!(!vote.has_voted(&who), Error::<T>::PayOutVoteCommitted);
+
+			if aye {
+				vote.ayes.push(who.clone());
+			} else {
+				vote.nays.push(who.clone());
+			}
+
+			Self::deposit_event(Event::PayOutVoted {
+				who: who.clone(),
+				source_chain: source_asset.0.clone(),
+				nonce,
+				req: req.clone(),
+				aye,
+			});
+
+			// try to finalise
 			let threshold = Self::relayer_threshold();
 			let total = Relayer::<T>::count();
 
-			if threshold == 1 && aye {
-				// immediately do and finalize the payout
-				Self::do_pay_out(source_asset.clone(), source_address, nonce, to, asset, amount)?;
-				Self::finalize_pay_out(source_asset.0.clone(), nonce);
-			} else {
-				let req = PayOutRequest { to: to.clone(), asset: asset.clone(), amount };
-				let mut prop = match PayOutProposals::<T>::get(&source_asset.0, nonce) {
-					Some(p) => p,
-					None => PayOutProposal { req: req.clone(), ayes: vec![], nays: vec![] },
-				};
+			let status = vote.try_finalize(threshold, total);
+			PayOutVotes::<T>::insert(&(source_asset.0.clone(), nonce), &req, vote.clone());
 
-				// TODO: what if the faulty relayer creates the entry first?
-				// righteous relayers won't have a chance to fix it
-				ensure!(req == prop.req, Error::<T>::PayOutRequestMismatch);
-
-				// TODO: what if this relayer voted already?
-				if aye {
-					prop.ayes.push(who.clone());
-				} else {
-					prop.nays.push(who.clone());
-				}
-
-				if prop.ayes.len() >= threshold as usize {
-					// prop is approved, do and finalize the pay out
-					Self::do_pay_out(
-						source_asset.clone(),
-						source_address,
-						nonce,
-						to,
-						asset,
-						amount,
-					)?;
-					Self::finalize_pay_out(source_asset.0.clone(), nonce);
-				} else if total >= threshold && prop.nays.len() as u32 + threshold > total {
-					// prop is rejected, finalize the pay out
-					Self::deposit_event(Event::PayOutRejected {
-						to,
-						nonce,
-						asset,
-						source_asset: source_asset.clone(),
-						source_address,
-						amount,
-					});
-					Self::finalize_pay_out(source_asset.0.clone(), nonce);
-				} else {
-					// prop is pending, we probably need to wait for tallother relayers
-					Self::deposit_event(Event::PayOutProposed {
-						who: who.clone(),
-						aye,
-						to,
-						nonce,
-						asset,
-						source_asset: source_asset.clone(),
-						source_address,
-						amount,
-					});
-				}
+			match status {
+				VoteStatus::Passed => {
+					Self::do_pay_out(source_asset.clone(), source_address, nonce, &req)?
+				},
+				VoteStatus::Failed => Self::deposit_event(Event::PayOutRejected {
+					to: req.to.clone(),
+					nonce,
+					asset: req.asset.clone(),
+					source_asset: source_asset.clone(),
+					source_address,
+					amount: req.amount,
+				}),
+				_ => (),
 			}
 
-			// update per-relayer payout nonce
-			RelayerPayOutNonce::<T>::insert(&who, &source_asset.0, nonce);
-			Self::deposit_event(Event::RelayerPayOutNonceUpdated {
-				who,
-				source_chain: source_asset.0,
-				nonce,
-			});
+			if vote.is_finalized() {
+				Self::do_post_finalize(&source_asset.0, nonce, &req)?;
+			}
 
 			Ok(Pays::No.into())
 		}
@@ -600,33 +600,68 @@ pub mod pallet {
 			Ok(nonce)
 		}
 
-		fn finalize_pay_out(source_chain: ForeignChain, nonce: Nonce) {
-			FinalizedPayOutNonce::<T>::insert(&source_chain, nonce);
-			// remove it from proposal pool if exists
-			if PayOutProposals::<T>::get(&source_chain, nonce).is_some() {
-				PayOutProposals::<T>::remove(&source_chain, nonce);
-			}
-			Self::deposit_event(Event::FinalizedPayOutNonceUpdated { source_chain, nonce });
-		}
-
 		fn do_pay_out(
 			source_asset: ForeignAsset,
 			source_address: Vec<u8>,
 			nonce: Nonce,
-			to: T::AccountId,
-			asset: T::AssetKind,
-			amount: T::Balance,
+			req: &PayOutRequest<T::AccountId, T::AssetKind, T::Balance>,
 		) -> DispatchResult {
 			// do actual payout
-			T::Assets::mint_into(asset.clone(), &to, amount)?;
+			T::Assets::mint_into(req.asset.clone(), &req.to, req.amount)?;
 			Self::deposit_event(Event::PaidOut {
-				to,
+				to: req.to.clone(),
 				nonce,
-				asset,
+				asset: req.asset.clone(),
 				source_asset,
 				source_address,
-				amount,
+				amount: req.amount,
 			});
+			Ok(())
+		}
+
+		fn do_post_finalize(
+			source_chain: &ForeignChain,
+			nonce: Nonce,
+			req: &PayOutRequest<T::AccountId, T::AssetKind, T::Balance>,
+		) -> DispatchResult {
+			if nonce > Self::finalized_vote_nonce(source_chain) {
+				FinalizedVoteNonce::<T>::insert(source_chain, nonce);
+				Self::deposit_event(Event::FinalizedVoteNonceUpdated {
+					source_chain: source_chain.clone(),
+					nonce,
+				});
+			}
+			// Try to bump FinalizedPayOutNonce until a non-finalized vote
+			// TODO: weight-related: shall we set a max diff to avoid infinite/too many loops?
+			let mut n = Self::finalized_pay_out_nonce(source_chain);
+			while n < Self::finalized_vote_nonce(source_chain) {
+				let next_n = n.checked_add(1).ok_or(Error::<T>::FinalizedPayOutNonceOverflow)?;
+				// we are lenient that we don't require `vote` to exist - in practice, it would mean
+				// some relayer didn't follow monotonically increasing pay out nonce (for some reason)
+				//
+				// TODO: shall we look for all possible values of `PayOutRequest`?
+				if let Some(vote) = PayOutVotes::<T>::get((source_chain, next_n), req) {
+					if vote.is_finalized() {
+						// this vote can be removed
+						// TODO: shall we remove votes with all possible PayOutRequests?
+						PayOutVotes::<T>::remove((source_chain, next_n), req);
+						n = next_n;
+					} else {
+						// nothing to do
+						break;
+					}
+				} else {
+					break;
+				}
+			}
+
+			if n > Self::finalized_pay_out_nonce(source_chain) {
+				FinalizedPayOutNonce::<T>::insert(source_chain, n);
+				Self::deposit_event(Event::FinalizedPayOutNonceUpdated {
+					source_chain: source_chain.clone(),
+					nonce: n,
+				});
+			}
 			Ok(())
 		}
 	}

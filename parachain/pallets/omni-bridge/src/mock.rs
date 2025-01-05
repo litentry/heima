@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_omni_bridge, ForeignAsset, ForeignChain, PayInRequest, PayOutRequest};
+use crate::{self as pallet_omni_bridge, ForeignChain, PayInRequest, PayOutRequest};
 pub use frame_support::{
 	assert_ok, derive_impl, parameter_types,
 	traits::{
