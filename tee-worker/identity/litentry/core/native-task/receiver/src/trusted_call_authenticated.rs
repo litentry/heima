@@ -32,8 +32,8 @@ pub type VerificationCode = String;
 pub enum TCAuthentication {
 	Web3(LitentryMultiSignature),
 	Email(VerificationCode),
-	OAuth2(OAuth2Data),
 	AuthToken(String),
+	OAuth2(OAuth2Data),
 }
 
 impl From<TCAuthentication> for OmniAccountAuthType {
