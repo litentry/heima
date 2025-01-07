@@ -9,6 +9,6 @@
       "name": "litentry",
       "package": "litentry-parachain-runtime",
       "path": "runtime/litentry",
-      "uri": "wss://rpc2.litentry-parachain-de.litentry.io:443"
+      "uri": "wss://rpc.litentry-parachain.litentry.io:443"
     }
 ]
