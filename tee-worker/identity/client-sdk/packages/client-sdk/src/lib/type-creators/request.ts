@@ -115,5 +115,12 @@ export async function createRequestType(
 }
 
 function isNativeRequest(call: TrustedCall): boolean {
-  return call.isRequestIntent || call.isCreateAccountStore;
+  return (
+    call.isRequestIntent ||
+    call.isCreateAccountStore ||
+    call.isAddAccount ||
+    call.isRemoveAccounts ||
+    call.isPublicizeAccount ||
+    call.isRequestAuthToken
+  );
 }
