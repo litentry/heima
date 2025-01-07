@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "LITENTRY_NETWORK='litentry-dev' mocha --timeout 20000 --exit --sort -r ts-node/register --loader=ts-node/esm ./tests/**/*.test.ts"
+    "start": "LITENTRY_NETWORK=${LITENTRY_NETWORK:-litentry-dev} mocha --timeout 20000 --exit --sort -r ts-node/register --loader=ts-node/esm ./tests/**/*.test.ts"
   },
   "dependencies": {
     "@litentry/chaindata": "^0.2.0",
