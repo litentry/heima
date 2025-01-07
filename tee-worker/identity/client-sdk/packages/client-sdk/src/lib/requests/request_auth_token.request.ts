@@ -6,12 +6,11 @@ import type {
 import type { JsonRpcRequest } from '../util/types';
 
 import { codecToString } from '../util/codec-to-string';
-import { hexToU8a } from '@polkadot/util';
+import { hexToU8a, assert } from '@polkadot/util';
 import { enclave } from '../enclave';
 import { createPayloadToSign } from '../util/create-payload-to-sign';
 import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
-import { getEnclaveNonce } from './get-enclave-nonce';
 import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
@@ -27,6 +26,8 @@ export async function requestAuthToken(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
+    /** The user's omniAccount.  Use `createLitentryIdentityType` helper to create this struct */
+    omniAccount: LitentryIdentity;
     /** The user's account. Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
     /** The block number at which the token expires */
@@ -40,11 +41,16 @@ export async function requestAuthToken(
     token: string;
   }>;
 }> {
-  const { who, expiresAt } = data;
+  const { who, expiresAt, omniAccount } = data;
+
+  assert(omniAccount.isSubstrate, 'OmniAccount must be a Substrate identity');
+
+  const nonce = await api.rpc.system.accountNextIndex(
+    omniAccount.asSubstrate.toHex()
+  );
 
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
-  const nonce = await getEnclaveNonce(api, { who });
   const authOptions = api.createType('AuthOptions', { expires_at: expiresAt });
 
   const { call } = await createTrustedCallType(api.registry, {
