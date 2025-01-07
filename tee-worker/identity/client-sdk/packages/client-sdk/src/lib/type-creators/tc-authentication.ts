@@ -21,15 +21,28 @@ export function createTCAuthenticationType(
   registry: Registry,
   data: AuthenticationData
 ): TCAuthentication {
-  return registry.createType('TCAuthentication', {
-    [data.type]:
-      data.type === 'Email'
-        ? data.verificationCode
-        : data.type === 'Web3'
-        ? createLitentryMultiSignature(registry, {
-            who: data.signer,
-            signature: data.signature,
-          })
-        : data.token,
-  });
+  let authentication;
+  switch (data.type) {
+    case 'Email':
+      authentication = {
+        Email: data.verificationCode,
+      };
+      break;
+    case 'Web3':
+      authentication = {
+        Web3: createLitentryMultiSignature(registry, {
+          who: data.signer,
+          signature: data.signature,
+        }),
+      };
+      break;
+    case 'AuthToken':
+      authentication = {
+        AuthToken: data.token,
+      };
+      break;
+    default:
+      throw new Error('Unsupported authentication type');
+  }
+  return registry.createType('TCAuthentication', authentication);
 }
