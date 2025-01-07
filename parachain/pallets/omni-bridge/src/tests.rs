@@ -21,17 +21,11 @@ use frame_support::{assert_noop, assert_ok};
 fn default_threshold_works() {
 	new_test_ext(false).execute_with(|| {
 		assert_eq!(OmniBridge::relayer_threshold(), 1);
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 0);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 0);
-	});
-}
-
-#[test]
-fn pay_in_with_no_symbol_fails() {
-	new_test_ext(false).execute_with(|| {
-		assert_noop!(
-			OmniBridge::pay_in(RuntimeOrigin::signed(alice()), native_pay_in_request()),
-			Error::<Test>::AssetSymbolNotExist
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 0);
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 0);
+		assert_eq!(
+			hex::encode(native_resource_id()),
+			"9ee6dfb61a2fb903df487c401663825643bb825d41695e63df8af6162ab145a6".to_string()
 		);
 	});
 }
@@ -39,11 +33,6 @@ fn pay_in_with_no_symbol_fails() {
 #[test]
 fn pay_in_with_pay_in_pair_not_listed_fails() {
 	new_test_ext(false).execute_with(|| {
-		assert_ok!(OmniBridge::set_asset_symbol(
-			RuntimeOrigin::signed(alice()),
-			NativeOrWithId::Native,
-			native_symbol()
-		));
 		assert_noop!(
 			OmniBridge::pay_in(RuntimeOrigin::signed(alice()), native_pay_in_request()),
 			Error::<Test>::PayInPairNotAllowed
@@ -54,15 +43,10 @@ fn pay_in_with_pay_in_pair_not_listed_fails() {
 #[test]
 fn pay_in_with_pay_in_fee_not_set_fails() {
 	new_test_ext(false).execute_with(|| {
-		assert_ok!(OmniBridge::set_asset_symbol(
-			RuntimeOrigin::signed(alice()),
-			NativeOrWithId::Native,
-			native_symbol()
-		));
 		assert_ok!(OmniBridge::add_pay_in_pair(
 			RuntimeOrigin::signed(alice()),
 			NativeOrWithId::Native,
-			(foreign_chain(), native_symbol())
+			ChainType::Ethereum(0)
 		));
 		assert_noop!(
 			OmniBridge::pay_in(RuntimeOrigin::signed(alice()), native_pay_in_request()),
@@ -73,21 +57,11 @@ fn pay_in_with_pay_in_fee_not_set_fails() {
 
 #[test]
 fn pay_in_with_too_low_pay_in_amount_fails() {
-	new_test_ext(false).execute_with(|| {
-		assert_ok!(OmniBridge::set_asset_symbol(
-			RuntimeOrigin::signed(alice()),
-			NativeOrWithId::Native,
-			native_symbol()
-		));
-		assert_ok!(OmniBridge::add_pay_in_pair(
-			RuntimeOrigin::signed(alice()),
-			NativeOrWithId::Native,
-			(foreign_chain(), native_symbol())
-		));
+	new_test_ext(true).execute_with(|| {
 		assert_ok!(OmniBridge::set_pay_in_fee(
 			RuntimeOrigin::signed(alice()),
 			NativeOrWithId::Native,
-			foreign_chain(),
+			ChainType::Ethereum(0),
 			11 // the requested pay-in amount can't cover the fee
 		));
 		assert_noop!(
@@ -114,11 +88,12 @@ fn pay_in_works() {
 		assert_ok!(OmniBridge::pay_in(RuntimeOrigin::signed(alice()), native_pay_in_request()));
 		System::assert_last_event(
 			Event::PaidIn {
-				from: alice(),
+				source_account: alice(),
 				nonce: 1,
 				asset: NativeOrWithId::Native,
-				dest_asset: (foreign_chain(), native_symbol()),
-				dest_address: [1u8; 20].to_vec(),
+				resource_id: native_resource_id(),
+				dest_chain: ChainType::Ethereum(0),
+				dest_account: [1u8; 20].to_vec(),
 				amount: 8, // 10(amount) - 2(fee)
 			}
 			.into(),
@@ -127,11 +102,12 @@ fn pay_in_works() {
 		assert_ok!(OmniBridge::pay_in(RuntimeOrigin::signed(alice()), asset_pay_in_request()));
 		System::assert_last_event(
 			Event::PaidIn {
-				from: alice(),
+				source_account: alice(),
 				nonce: 2, // increased
 				asset: NativeOrWithId::WithId(TEST_ASSET),
-				dest_asset: (foreign_chain(), asset_symbol()),
-				dest_address: [1u8; 20].to_vec(),
+				resource_id: asset_resource_id(),
+				dest_chain: ChainType::Ethereum(0),
+				dest_account: [1u8; 20].to_vec(),
 				amount: 7, // 10(amount) - 3(fee)
 			}
 			.into(),
@@ -149,12 +125,9 @@ fn pay_in_works() {
 fn pay_out_with_not_relayer_fails() {
 	new_test_ext(true).execute_with(|| {
 		assert_noop!(
-			OmniBridge::propose_pay_out(
+			OmniBridge::request_pay_out(
 				RuntimeOrigin::signed(dave()),
-				(foreign_chain(), native_symbol()),
-				[1u8; 20].to_vec(),
-				1,
-				native_pay_out_request(),
+				native_pay_out_request(1),
 				true,
 			),
 			Error::<Test>::RequireRelayer
@@ -163,18 +136,13 @@ fn pay_out_with_not_relayer_fails() {
 }
 
 #[test]
-fn pay_out_with_wrong_symbol_fails() {
+fn pay_out_with_wrong_source_chain_fails() {
 	new_test_ext(true).execute_with(|| {
+		let mut req = native_pay_out_request(1);
+		req.source_chain = ChainType::Heima;
 		assert_noop!(
-			OmniBridge::propose_pay_out(
-				RuntimeOrigin::signed(alice()),
-				(foreign_chain(), asset_symbol()), // wrong symbol
-				[1u8; 20].to_vec(),
-				1,
-				native_pay_out_request(),
-				true,
-			),
-			Error::<Test>::AssetSymbolInvalid
+			OmniBridge::request_pay_out(RuntimeOrigin::signed(alice()), req, true,),
+			Error::<Test>::ChainTypeInvalid
 		);
 	});
 }
@@ -182,102 +150,104 @@ fn pay_out_with_wrong_symbol_fails() {
 #[test]
 fn pay_out_with_threshold_1_works() {
 	new_test_ext(true).execute_with(|| {
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(alice()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			true,
 		));
+		let hash1 = native_pay_out_request(1).hash();
 		assert_eq!(Balances::free_balance(alice()), 60);
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 1);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 1);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()), None);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 1);
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 1);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 1), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash1), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash1), None);
+
 		System::assert_has_event(
 			Event::PayOutVoted {
 				who: alice(),
-				source_chain: foreign_chain(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
-				req: native_pay_out_request(),
+				asset: NativeOrWithId::Native,
+				dest_account: alice(),
+				amount: 10,
 				aye: true,
 			}
 			.into(),
 		);
 		System::assert_has_event(
 			Event::PaidOut {
-				to: alice(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
 				asset: NativeOrWithId::Native,
-				source_asset: (foreign_chain(), native_symbol()),
-				source_address: [1u8; 20].to_vec(),
+				dest_account: alice(),
 				amount: 10,
 			}
 			.into(),
 		);
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(bob()),
-			(foreign_chain(), asset_symbol()),
-			[1u8; 20].to_vec(),
-			2,
-			asset_pay_out_request(),
+			asset_pay_out_request(2),
 			true,
 		));
+		let hash2 = asset_pay_out_request(2).hash();
 		assert_eq!(Assets::balance(TEST_ASSET, alice()), 110);
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 2);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 2);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 2), asset_pay_out_request()), None);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 2);
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 2);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 2), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash2), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash2), None);
 
 		// alice relaying the same request will error out
 		assert_noop!(
-			OmniBridge::propose_pay_out(
+			OmniBridge::request_pay_out(
 				RuntimeOrigin::signed(alice()),
-				(foreign_chain(), asset_symbol()),
-				[1u8; 20].to_vec(),
-				2,
-				asset_pay_out_request(),
+				asset_pay_out_request(2),
 				true,
 			),
 			Error::<Test>::PayOutNonceFinalized
 		);
 
 		// bob requests with nay
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(bob()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			3,
-			native_pay_out_request(),
+			native_pay_out_request(3),
 			false,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 2);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 2);
+		let hash3 = native_pay_out_request(3).hash();
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 2);
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 2);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 3), Some(vec![hash3]));
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 3), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hash3),
 			Some(PayOutVote { ayes: vec![], nays: vec![bob()], status: VoteStatus::Pending })
 		);
+		assert_eq!(OmniBridge::pay_out_requests(hash3), Some(native_pay_out_request(3)));
 
 		// charlie approves it
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(charlie()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			3,
-			native_pay_out_request(),
+			native_pay_out_request(3),
 			true,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 3);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 3);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 3), native_pay_out_request()), None,);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 3);
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 3);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 2), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash3), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash3), None);
+
 		assert_eq!(Balances::free_balance(alice()), 70);
 		System::assert_has_event(
 			Event::PaidOut {
-				to: alice(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 3,
 				asset: NativeOrWithId::Native,
-				source_asset: (foreign_chain(), native_symbol()),
-				source_address: [1u8; 20].to_vec(),
+				dest_account: alice(),
 				amount: 10,
 			}
 			.into(),
@@ -285,58 +255,78 @@ fn pay_out_with_threshold_1_works() {
 
 		// charlie sends request with non-consecutive nonce (3 -> 6), which is allowed here,
 		// but it probably implies some internal error with charlie
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(charlie()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			6,
-			native_pay_out_request(),
+			native_pay_out_request(6),
 			true,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 3); // blocked at 3
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 6); // updated
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 4), native_pay_out_request()), None,);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 5), native_pay_out_request()), None,);
+		let hash4 = native_pay_out_request(4).hash();
+		let hash5 = native_pay_out_request(5).hash();
+		let hash6 = native_pay_out_request(6).hash();
+
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 3); // blocked at 3
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 6); // updated
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 4), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash4), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash4), None);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 5), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash5), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash5), None);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 6), Some(vec![hash6]));
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 6), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hash6),
 			Some(PayOutVote { ayes: vec![charlie()], nays: vec![], status: VoteStatus::Passed })
 		);
+		assert_eq!(OmniBridge::pay_out_requests(hash6), Some(native_pay_out_request(6)));
+
 		assert_eq!(Balances::free_balance(alice()), 80);
 
 		// alice sends request with nonce 4
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(alice()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			4,
-			native_pay_out_request(),
+			native_pay_out_request(4),
 			true,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 4); // updated to 4
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 6); // unchanged
-		assert_eq!(Balances::free_balance(alice()), 90);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 4), native_pay_out_request()), None,);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 5), native_pay_out_request()), None,);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 4); // updated to 4
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 6); // unchanged
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 4), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash4), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash4), None);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 5), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash5), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash5), None);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 6), Some(vec![hash6]));
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 6), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hash6),
 			Some(PayOutVote { ayes: vec![charlie()], nays: vec![], status: VoteStatus::Passed })
 		);
+		assert_eq!(OmniBridge::pay_out_requests(hash6), Some(native_pay_out_request(6)));
+
+		assert_eq!(Balances::free_balance(alice()), 90);
 
 		// bob sends request with nonce 5
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(alice()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			5,
-			native_pay_out_request(),
+			native_pay_out_request(5),
 			true,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 6); // updated to 6
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 6);
+
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 6); // updated to 6
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 6);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 4), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash4), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash4), None);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 5), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash5), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash5), None);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 6), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash6), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash6), None);
+
 		assert_eq!(Balances::free_balance(alice()), 100);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 4), native_pay_out_request()), None,);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 5), native_pay_out_request()), None,);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 6), native_pay_out_request()), None,);
 	});
 }
 
@@ -344,140 +334,148 @@ fn pay_out_with_threshold_1_works() {
 fn pay_out_with_threshold_2_works() {
 	new_test_ext(true).execute_with(|| {
 		assert_ok!(OmniBridge::set_relayer_threshold(RuntimeOrigin::root(), 2));
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(alice()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			true,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 0);
+		let hash1 = native_pay_out_request(1).hash();
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 0);
 		assert_eq!(Balances::free_balance(alice()), 50);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 1), Some(vec![hash1]));
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hash1),
 			Some(PayOutVote { ayes: vec![alice()], nays: vec![], status: VoteStatus::Pending })
 		);
+		assert_eq!(OmniBridge::pay_out_requests(hash1), Some(native_pay_out_request(1)));
 		System::assert_has_event(
 			Event::PayOutVoted {
 				who: alice(),
-				source_chain: foreign_chain(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
-				req: native_pay_out_request(),
+				asset: NativeOrWithId::Native,
+				dest_account: alice(),
+				amount: 10,
 				aye: true,
 			}
 			.into(),
 		);
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(bob()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			false,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 0);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 0);
 		assert_eq!(Balances::free_balance(alice()), 50);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 1), Some(vec![hash1]));
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hash1),
 			Some(PayOutVote {
 				ayes: vec![alice()],
 				nays: vec![bob()],
 				status: VoteStatus::Pending,
 			})
 		);
+		assert_eq!(OmniBridge::pay_out_requests(hash1), Some(native_pay_out_request(1)));
 		System::assert_has_event(
 			Event::PayOutVoted {
 				who: bob(),
-				source_chain: foreign_chain(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
-				req: native_pay_out_request(),
+				asset: NativeOrWithId::Native,
+				dest_account: alice(),
+				amount: 10,
 				aye: false,
 			}
 			.into(),
 		);
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(charlie()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			true,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 1);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 1);
 		assert_eq!(Balances::free_balance(alice()), 60);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()), None);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 1), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash1), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash1), None);
 		System::assert_has_event(
 			Event::PayOutVoted {
 				who: charlie(),
-				source_chain: foreign_chain(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
-				req: native_pay_out_request(),
+				asset: NativeOrWithId::Native,
+				dest_account: alice(),
+				amount: 10,
 				aye: true,
 			}
 			.into(),
 		);
 		System::assert_has_event(
 			Event::PaidOut {
-				to: alice(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
 				asset: NativeOrWithId::Native,
-				source_asset: (foreign_chain(), native_symbol()),
-				source_address: [1u8; 20].to_vec(),
+				dest_account: alice(),
 				amount: 10,
 			}
 			.into(),
 		);
 
 		// alice requests with nonce 2, but a different request (with bob and charlie)
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(alice()),
-			(foreign_chain(), asset_symbol()),
-			[1u8; 20].to_vec(),
-			2,
-			asset_pay_out_request(),
+			asset_pay_out_request(2),
 			true,
 		));
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(bob()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			2,
-			native_pay_out_request(),
+			native_pay_out_request(2),
 			true,
 		));
 
-		// both requests are recorded in different vote entries
+		let hash2_asset = asset_pay_out_request(2).hash();
+		let hash2_native = native_pay_out_request(2).hash();
+
+		// both requests are recorded
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 2), asset_pay_out_request()),
+			OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 2),
+			Some(vec![hash2_asset, hash2_native])
+		);
+		assert_eq!(
+			OmniBridge::pay_out_votes(hash2_asset),
 			Some(PayOutVote { ayes: vec![alice()], nays: vec![], status: VoteStatus::Pending })
 		);
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 2), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hash2_native),
 			Some(PayOutVote { ayes: vec![bob()], nays: vec![], status: VoteStatus::Pending })
 		);
+		assert_eq!(OmniBridge::pay_out_requests(hash2_asset), Some(asset_pay_out_request(2)));
+		assert_eq!(OmniBridge::pay_out_requests(hash2_native), Some(native_pay_out_request(2)));
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(charlie()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			2,
-			native_pay_out_request(),
+			native_pay_out_request(2),
 			true,
 		));
 
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 2); // updated to 2
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 2);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 2); // updated to 2
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 2);
+
 		assert_eq!(Balances::free_balance(alice()), 70);
 		assert_eq!(Assets::balance(TEST_ASSET, alice()), 100);
-		// native payout request is removed, but asset payout request still exists (and never gets removed)
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 2), native_pay_out_request()), None);
-		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 2), asset_pay_out_request()),
-			Some(PayOutVote { ayes: vec![alice()], nays: vec![], status: VoteStatus::Pending })
-		);
+
+		// should be fully cleaned up
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 2), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash2_asset), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash2_native), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash2_asset), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash2_native), None);
 	});
 }
 
@@ -485,39 +483,33 @@ fn pay_out_with_threshold_2_works() {
 fn pay_out_with_threshold_2_fail_fast_works() {
 	new_test_ext(true).execute_with(|| {
 		assert_ok!(OmniBridge::set_relayer_threshold(RuntimeOrigin::root(), 2));
-		assert_ok!(OmniBridge::propose_pay_out(
+		let hash1 = native_pay_out_request(1).hash();
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(alice()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			false,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 0);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 0);
 		assert_eq!(Balances::free_balance(alice()), 50);
-		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()),
-			Some(PayOutVote { ayes: vec![], nays: vec![alice()], status: VoteStatus::Pending })
-		);
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(bob()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			false,
 		));
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 1);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 1);
 		assert_eq!(Balances::free_balance(alice()), 50);
-		assert_eq!(OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()), None);
+
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 1), None);
+		assert_eq!(OmniBridge::pay_out_votes(hash1), None);
+		assert_eq!(OmniBridge::pay_out_requests(hash1), None);
+
 		System::assert_has_event(
 			Event::PayOutRejected {
-				to: alice(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
 				asset: NativeOrWithId::Native,
-				source_asset: (foreign_chain(), native_symbol()),
-				source_address: [1u8; 20].to_vec(),
+				dest_account: alice(),
 				amount: 10,
 			}
 			.into(),
@@ -532,34 +524,40 @@ fn pay_out_with_threshold_2_fail_fast_works() {
 #[test]
 fn pay_out_with_ahead_of_relayer_works() {
 	new_test_ext(true).execute_with(|| {
+		use std::collections::HashMap;
+
+		let mut hashes = HashMap::new();
+		for i in 1..4 {
+			hashes.insert(i, native_pay_out_request(i).hash());
+		}
+
 		assert_ok!(OmniBridge::set_relayer_threshold(RuntimeOrigin::root(), 2));
 		for i in 1..4 {
-			assert_ok!(OmniBridge::propose_pay_out(
+			assert_ok!(OmniBridge::request_pay_out(
 				RuntimeOrigin::signed(alice()),
-				(foreign_chain(), native_symbol()),
-				[1u8; 20].to_vec(),
-				i,
-				native_pay_out_request(),
+				native_pay_out_request(i),
 				true,
 			));
-			assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 0);
+			assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 0);
 			assert_eq!(Balances::free_balance(alice()), 50);
 			assert_eq!(
-				OmniBridge::pay_out_votes((foreign_chain(), i), native_pay_out_request()),
+				OmniBridge::pay_out_votes(hashes[&i]),
 				Some(PayOutVote { ayes: vec![alice()], nays: vec![], status: VoteStatus::Pending })
+			);
+			assert_eq!(OmniBridge::pay_out_requests(hashes[&i]), Some(native_pay_out_request(i)));
+			assert_eq!(
+				OmniBridge::pay_out_hashes(ChainType::Ethereum(0), i),
+				Some(vec![hashes[&i]])
 			);
 		}
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(charlie()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			false,
 		));
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hashes[&1]),
 			Some(PayOutVote {
 				ayes: vec![alice()],
 				nays: vec![charlie()],
@@ -568,67 +566,69 @@ fn pay_out_with_ahead_of_relayer_works() {
 		);
 
 		for i in 2..4 {
-			assert_ok!(OmniBridge::propose_pay_out(
+			assert_ok!(OmniBridge::request_pay_out(
 				RuntimeOrigin::signed(charlie()),
-				(foreign_chain(), native_symbol()),
-				[1u8; 20].to_vec(),
-				i,
-				native_pay_out_request(),
+				native_pay_out_request(i),
 				true,
 			));
-			assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 0); // not updated
-																		// request with nonce 2 and 3 should be passed and executed
+			assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 0); // not updated
+																			   // request with nonce 2 and 3 should be passed and executed
 			assert_eq!(
-				OmniBridge::pay_out_votes((foreign_chain(), i), native_pay_out_request()),
+				OmniBridge::pay_out_votes(hashes[&i]),
 				Some(PayOutVote {
 					ayes: vec![alice(), charlie()],
 					nays: vec![],
 					status: VoteStatus::Passed,
 				})
 			);
-			assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), i);
+			assert_eq!(
+				OmniBridge::pay_out_hashes(ChainType::Ethereum(0), i),
+				Some(vec![hashes[&i]])
+			);
+			assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), i);
 			System::assert_has_event(
-				Event::FinalizedVoteNonceUpdated { source_chain: foreign_chain(), nonce: i }.into(),
+				Event::FinalizedVoteNonceUpdated { source_chain: ChainType::Ethereum(0), nonce: i }
+					.into(),
 			);
 		}
 		assert_eq!(
-			OmniBridge::pay_out_votes((foreign_chain(), 1), native_pay_out_request()),
+			OmniBridge::pay_out_votes(hashes[&1]),
 			Some(PayOutVote {
 				ayes: vec![alice()],
 				nays: vec![charlie()],
 				status: VoteStatus::Pending,
 			})
 		);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 3);
+		assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), 1), Some(vec![hashes[&1]]));
+
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 3);
 		assert_eq!(Balances::free_balance(alice()), 70);
 
-		assert_ok!(OmniBridge::propose_pay_out(
+		assert_ok!(OmniBridge::request_pay_out(
 			RuntimeOrigin::signed(bob()),
-			(foreign_chain(), native_symbol()),
-			[1u8; 20].to_vec(),
-			1,
-			native_pay_out_request(),
+			native_pay_out_request(1),
 			false,
 		));
 		assert_eq!(Balances::free_balance(alice()), 70);
-		assert_eq!(OmniBridge::finalized_vote_nonce(foreign_chain()), 3);
-		assert_eq!(OmniBridge::finalized_pay_out_nonce(foreign_chain()), 3); // updated to 3
+		assert_eq!(OmniBridge::finalized_vote_nonce(ChainType::Ethereum(0)), 3);
+		assert_eq!(OmniBridge::finalized_pay_out_nonce(ChainType::Ethereum(0)), 3); // updated to 3
+
+		// should be fully cleaned up
 		for i in 1..4 {
-			assert_eq!(
-				OmniBridge::pay_out_votes((foreign_chain(), i), native_pay_out_request()),
-				None
-			);
+			assert_eq!(OmniBridge::pay_out_hashes(ChainType::Ethereum(0), i), None);
+			assert_eq!(OmniBridge::pay_out_votes(hashes[&i]), None);
+			assert_eq!(OmniBridge::pay_out_requests(hashes[&i]), None);
 		}
 		System::assert_has_event(
-			Event::FinalizedPayOutNonceUpdated { source_chain: foreign_chain(), nonce: 3 }.into(),
+			Event::FinalizedPayOutNonceUpdated { source_chain: ChainType::Ethereum(0), nonce: 3 }
+				.into(),
 		);
 		System::assert_has_event(
 			Event::PayOutRejected {
-				to: alice(),
+				source_chain: ChainType::Ethereum(0),
 				nonce: 1,
 				asset: NativeOrWithId::Native,
-				source_asset: (foreign_chain(), native_symbol()),
-				source_address: [1u8; 20].to_vec(),
+				dest_account: alice(),
 				amount: 10,
 			}
 			.into(),

@@ -313,7 +313,7 @@ where
 	fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
 		o.into().and_then(|o| match o {
 			frame_system::RawOrigin::Signed(who)
-				if pallet_omni_bridge::Relayer::<T>::contains_key(&who) =>
+				if pallet_omni_bridge::Relayers::<T>::contains_key(&who) =>
 			{
 				Ok(who)
 			},

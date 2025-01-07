@@ -8533,6 +8533,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "hex",
  "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",

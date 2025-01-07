@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_omni_bridge, ForeignChain, PayInRequest, PayOutRequest};
+use crate::{
+	self as pallet_omni_bridge, ChainAsset, ChainType, Nonce, PayInRequest, PayOutRequest,
+	ResourceId,
+};
 pub use frame_support::{
 	assert_ok, derive_impl, parameter_types,
 	traits::{
@@ -59,24 +62,24 @@ pub fn asset_pay_in_request() -> PayInRequest<NativeOrWithId<AssetId>, Balance> 
 	new_pay_in_request(NativeOrWithId::WithId(TEST_ASSET), 10)
 }
 
-pub fn native_symbol() -> Vec<u8> {
-	b"HEI".to_vec()
+pub fn new_chain_asset(asset: NativeOrWithId<AssetId>) -> ChainAsset<NativeOrWithId<AssetId>> {
+	ChainAsset { chain: ChainType::Heima, asset }
 }
 
-pub fn asset_symbol() -> Vec<u8> {
-	b"TST".to_vec()
+pub fn native_resource_id() -> ResourceId {
+	new_chain_asset(NativeOrWithId::Native).to_resource_id()
 }
 
-pub fn foreign_chain() -> ForeignChain {
-	ForeignChain::Ethereum(0)
+pub fn asset_resource_id() -> ResourceId {
+	new_chain_asset(NativeOrWithId::WithId(TEST_ASSET)).to_resource_id()
 }
 
-pub fn native_pay_out_request() -> PayOutRequest<AccountId, NativeOrWithId<AssetId>, Balance> {
-	new_pay_out_request(NativeOrWithId::Native, 10)
+pub fn native_pay_out_request(nonce: Nonce) -> PayOutRequest<AccountId, Balance> {
+	new_pay_out_request(nonce, NativeOrWithId::Native, 10)
 }
 
-pub fn asset_pay_out_request() -> PayOutRequest<AccountId, NativeOrWithId<AssetId>, Balance> {
-	new_pay_out_request(NativeOrWithId::WithId(TEST_ASSET), 10)
+pub fn asset_pay_out_request(nonce: Nonce) -> PayOutRequest<AccountId, Balance> {
+	new_pay_out_request(nonce, NativeOrWithId::WithId(TEST_ASSET), 10)
 }
 
 frame_support::construct_runtime!(
@@ -174,36 +177,36 @@ pub fn new_test_ext(should_init: bool) -> sp_io::TestExternalities {
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(bob()), TEST_ASSET, bob(), 100));
 
 		if should_init {
-			assert_ok!(OmniBridge::set_asset_symbol(
+			assert_ok!(OmniBridge::set_resource_id(
 				RuntimeOrigin::signed(alice()),
-				NativeOrWithId::Native,
-				native_symbol()
+				new_chain_asset(NativeOrWithId::Native).to_resource_id(),
+				new_chain_asset(NativeOrWithId::Native)
 			));
 			assert_ok!(OmniBridge::add_pay_in_pair(
 				RuntimeOrigin::signed(alice()),
 				NativeOrWithId::Native,
-				(foreign_chain(), native_symbol())
+				ChainType::Ethereum(0)
 			));
 			assert_ok!(OmniBridge::set_pay_in_fee(
 				RuntimeOrigin::signed(alice()),
 				NativeOrWithId::Native,
-				foreign_chain(),
+				ChainType::Ethereum(0),
 				2
 			));
-			assert_ok!(OmniBridge::set_asset_symbol(
+			assert_ok!(OmniBridge::set_resource_id(
 				RuntimeOrigin::signed(alice()),
-				NativeOrWithId::WithId(TEST_ASSET),
-				asset_symbol()
+				new_chain_asset(NativeOrWithId::WithId(TEST_ASSET)).to_resource_id(),
+				new_chain_asset(NativeOrWithId::WithId(TEST_ASSET))
 			));
 			assert_ok!(OmniBridge::add_pay_in_pair(
 				RuntimeOrigin::signed(alice()),
 				NativeOrWithId::WithId(TEST_ASSET),
-				(foreign_chain(), asset_symbol())
+				ChainType::Ethereum(0)
 			));
 			assert_ok!(OmniBridge::set_pay_in_fee(
 				RuntimeOrigin::signed(alice()),
 				NativeOrWithId::WithId(TEST_ASSET),
-				foreign_chain(),
+				ChainType::Ethereum(0),
 				3
 			));
 		}
@@ -217,15 +220,22 @@ pub fn new_pay_in_request(
 ) -> PayInRequest<NativeOrWithId<AssetId>, Balance> {
 	PayInRequest {
 		asset,
-		dest_chain: ForeignChain::Ethereum(0),
-		dest_address: [1u8; 20].to_vec(),
+		dest_chain: ChainType::Ethereum(0),
+		dest_account: [1u8; 20].to_vec(),
 		amount,
 	}
 }
 
 pub fn new_pay_out_request(
+	nonce: Nonce,
 	asset: NativeOrWithId<AssetId>,
 	amount: Balance,
-) -> PayOutRequest<AccountId, NativeOrWithId<AssetId>, Balance> {
-	PayOutRequest { amount, to: alice(), asset }
+) -> PayOutRequest<AccountId, Balance> {
+	PayOutRequest {
+		source_chain: ChainType::Ethereum(0),
+		nonce,
+		resource_id: new_chain_asset(asset).to_resource_id(),
+		dest_account: alice(),
+		amount,
+	}
 }
