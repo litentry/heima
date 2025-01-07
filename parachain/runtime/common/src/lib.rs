@@ -313,7 +313,7 @@ where
 	fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
 		o.into().and_then(|o| match o {
 			frame_system::RawOrigin::Signed(who)
-				if pallet_omni_bridge::Relayers::<T>::contains_key(&who) =>
+				if pallet_omni_bridge::Relayers::<T>::get(&who).is_some() =>
 			{
 				Ok(who)
 			},
@@ -323,9 +323,7 @@ where
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
-		let zero_account_id =
-			T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
-				.expect("infinite length input; no invalid inputs for type; qed");
-		Ok((RawOrigin::OmniAccount(zero_account_id)).into())
+		let zero_account_id: T::AccountId = [0u8; 32].into();
+		Ok((frame_system::RawOrigin::Signed(zero_account_id)).into())
 	}
 }
