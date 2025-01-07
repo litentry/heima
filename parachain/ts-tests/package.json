@@ -15,7 +15,6 @@
         "test-filter": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/base-filter.test.ts'",
         "test-bridge": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/bridge.test.ts'",
         "test-evm-contract": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/evm-contract.test.ts'",
-        "test-runtime-upgrade": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/runtime-upgrade.test.ts'",
         "test-all": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/**/*.test.ts'",
         "test-precompile-contract": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/precompile-contract.test.ts'",
         "format": "pnpm exec prettier --write '**.ts'"
