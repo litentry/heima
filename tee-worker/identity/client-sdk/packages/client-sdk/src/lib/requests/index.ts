@@ -16,3 +16,4 @@ export { getIdGraph } from './get-id-graph.request';
 export { getIdGraphHash } from './get-id-graph-hash';
 export { getLastRegisteredEnclave } from './get-last-registered-enclave';
 export { requestVerificationCode } from './request-verification-code.request';
+export { requestAuthToken } from './request_auth_token.request';

@@ -28,6 +28,7 @@ export default {
             _enum: {
                 Web3: "LitentryMultiSignature",
                 Email: "Text",
+                AuthToken: "Text",
             },
         },
         TrustedCallAuthenticated: {
@@ -89,6 +90,7 @@ export default {
                 add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)",
                 remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
                 publicize_account: "(LitentryIdentity, LitentryIdentity)",
+                request_auth_token: "(LitentryIdentity, AuthOptions)",
             },
         },
         TrustedOperationStatus: {
@@ -117,6 +119,7 @@ export default {
             _enum: {
                 ExtrinsicReport: "ExtrinsicReport",
                 RequestVcResult: "RequestVcResultOrError",
+                AuthToken: "Text",
             },
         },
         ExtrinsicReport: {

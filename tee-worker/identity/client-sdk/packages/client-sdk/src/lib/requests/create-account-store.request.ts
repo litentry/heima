@@ -14,6 +14,7 @@ import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
 
 import type { JsonRpcRequest } from '../util/types';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * Creates an account store on the Litentry Parachain.
@@ -34,10 +35,12 @@ export async function createAccountStore(
     omniAccount: LitentryIdentity;
     /** The user's account.  Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -60,7 +63,7 @@ export async function createAccountStore(
   );
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -69,7 +72,6 @@ export async function createAccountStore(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -107,7 +109,7 @@ export async function createAccountStore(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return { send };
   }
 

@@ -1,87 +1,72 @@
-import { assert, hexToU8a } from '@polkadot/util';
-
 import type { ApiPromise } from '@polkadot/api';
 import type {
   LitentryIdentity,
   TrustedCallResult,
-  WorkerRpcReturnValue,
 } from '@litentry/parachain-api';
+import type { JsonRpcRequest } from '../util/types';
 
-import { enclave } from '../enclave';
 import { codecToString } from '../util/codec-to-string';
+import { hexToU8a, assert } from '@polkadot/util';
+import { enclave } from '../enclave';
 import { createPayloadToSign } from '../util/create-payload-to-sign';
 import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
-
-import type { JsonRpcRequest } from '../util/types';
 import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
- * Transfers SOL to another account on Solana.
+ * Requests an authentication token from the Enclave.
  *
- * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
- * (if applicable) and a send function.
- * @returns {string} [payloadToSign] - The payload to sign if who is not an email identity.
- * @returns {Function} send - A function to send the request to the Enclave.
- * @returns {Promise<Object>} send.args - The arguments required to send the request.
- * @returns {string} send.args.authentication - The authentication string. If who is
- * an email identity, this is the email verification code. If the who is not an email identity,
- * this is the signed payload.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
+ * @returns {string} [payloadToSign] The payload to sign if the identity is not an email.
+ * @returns {Function} send A function to send the request to the Enclave.
+ * @returns {Promise<Object>} send.args The arguments required to send the request.
+ * @returns {string} send.args.authentication The authentication string. For email identities, this is the verification code. For non-email identities, this is the signed payload.
  */
-export async function transferSolana(
+export async function requestAuthToken(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
     /** The user's omniAccount.  Use `createLitentryIdentityType` helper to create this struct */
     omniAccount: LitentryIdentity;
-    /** The user's account.  Use `createLitentryIdentityType` helper to create this struct */
+    /** The user's account. Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
-    /** Solana address destination */
-    to: string;
-    /** Amount to send in lamports */
-    amount: bigint;
+    /** The block number at which the token expires */
+    expiresAt: number;
   },
   /** Whether the user is using Web3 authentication */
   isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
   send: (args: { authentication: AuthenticationData }) => Promise<{
-    response: WorkerRpcReturnValue;
-    blockHash: string;
-    extrinsicHash: string;
+    token: string;
   }>;
 }> {
-  const { who, omniAccount } = data;
+  const { who, expiresAt, omniAccount } = data;
 
   assert(omniAccount.isSubstrate, 'OmniAccount must be a Substrate identity');
 
+  const nonce = await api.rpc.system.accountNextIndex(
+    omniAccount.asSubstrate.toHex()
+  );
+
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
+  const authOptions = api.createType('AuthOptions', { expires_at: expiresAt });
 
   const { call } = await createTrustedCallType(api.registry, {
-    method: 'request_intent',
+    method: 'request_auth_token',
     params: {
       who,
-      intent: api.createType('Intent', {
-        TransferSolana: api.createType('IntentTransferSolana', {
-          to: data.to,
-          value: data.amount,
-        }),
-      }),
+      options: authOptions,
     },
   });
-
-  const nonce = await api.rpc.system.accountNextIndex(omniAccount.asSubstrate);
 
   const send = async (args: {
     authentication: AuthenticationData;
   }): Promise<{
-    response: WorkerRpcReturnValue;
-    blockHash: string;
-    extrinsicHash: string;
+    token: string;
   }> => {
     // prepare and encrypt request
-
     const request = await createRequestType(api, {
       authentication: args.authentication,
       call,
@@ -107,16 +92,14 @@ export async function transferSolana(
       throw new Error(codecToString(result.asErr));
     }
 
-    if (!result.asOk.isExtrinsicReport) {
+    if (!result.asOk.isAuthToken) {
       throw new Error('Unexpected response type');
     }
 
-    const { extrinsic_hash, block_hash } = result.asOk.asExtrinsicReport;
+    const token = result.asOk.asAuthToken.toHuman();
 
     return {
-      response,
-      extrinsicHash: extrinsic_hash.toString(),
-      blockHash: block_hash.toString(),
+      token,
     };
   };
 
