@@ -23,7 +23,7 @@ mod primitives;
 mod rpc_client;
 mod transaction_signer;
 
-use crate::event_handler::IntentEventHandler;
+use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::key_store::SubstrateKeyStore;
 use crate::listener::ParentchainListener;
@@ -35,8 +35,12 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
-use litentry_rococo::runtime_types::core_primitives::teebag;
 use log::{error, info};
+use parentchain_api_interface::{
+	runtime_types::core_primitives::teebag::types::DcapProvider,
+	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
+};
+use parentchain_storage::AccountStoreStorage;
 use scale_encode::EncodeAsType;
 use std::sync::Arc;
 use subxt::config::signed_extensions;
@@ -46,10 +50,6 @@ use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
-
-// Generate an interface that we can use from the node's metadata.
-#[subxt::subxt(runtime_metadata_path = "../artifacts/rococo-omni-account.scale")]
-pub mod litentry_rococo {}
 
 // We don't need to construct this at runtime,
 // so an empty enum is appropriate:
@@ -98,6 +98,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 		CustomConfig,
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
+		AccountStoreStorage,
 	>,
 	(),
 >
@@ -137,22 +138,18 @@ where
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 
-	let intent_event_handler = IntentEventHandler::new(
+	let account_store_storage = Arc::new(AccountStoreStorage::new());
+
+	let event_handler = EventHandler::new(
 		metadata_provider,
 		ethereum_intent_executor,
 		solana_intent_executor,
 		SubxtClientFactory::new(ws_rpc_endpoint),
 		transaction_signer,
+		account_store_storage,
 	);
 
-	Listener::new(
-		id,
-		handle,
-		fetcher,
-		intent_event_handler,
-		stop_signal,
-		last_processed_log_repository,
-	)
+	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
 }
 
 #[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]
@@ -171,10 +168,7 @@ async fn perform_attestation(
 	>,
 ) -> Result<(), ()> {
 	let mut quote = vec![];
-	let mut attestation_type =
-		litentry_rococo::teebag::calls::types::register_enclave::AttestationType::Dcap(
-			teebag::types::DcapProvider::Intel,
-		);
+	let mut attestation_type = AttestationType::Dcap(DcapProvider::Intel);
 
 	#[cfg(feature = "gramine-quote")]
 	{
@@ -190,13 +184,12 @@ async fn perform_attestation(
 	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
-		attestation_type =
-			litentry_rococo::teebag::calls::types::register_enclave::AttestationType::Ignore;
+		attestation_type = AttestationType::Ignore;
 	}
 
-	let registration_call = litentry_rococo::tx().teebag().register_enclave(
-		litentry_rococo::teebag::calls::types::register_enclave::WorkerType::OmniExecutor,
-		litentry_rococo::teebag::calls::types::register_enclave::WorkerMode::OffChainWorker,
+	let registration_call = parentchain_api_interface::tx().teebag().register_enclave(
+		WorkerType::OmniExecutor,
+		WorkerMode::OffChainWorker,
 		quote,
 		vec![],
 		None,

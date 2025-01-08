@@ -37,12 +37,12 @@ pub struct Listener<
 	CheckpointRepository,
 	BlockEventId,
 	BlockEvent,
-	IntentEventHandler,
+	EventHandlerT,
 > {
 	id: String,
 	handle: Handle,
 	fetcher: Fetcher,
-	intent_event_handler: IntentEventHandler,
+	event_handler: EventHandlerT,
 	stop_signal: Receiver<()>,
 	checkpoint_repository: CheckpointRepository,
 	_phantom: PhantomData<(Checkpoint, BlockEventId, BlockEvent)>,
@@ -54,14 +54,14 @@ impl<
 		Fetcher: LastFinalizedBlockNumFetcher + EventsFetcher<EventId, BlockEventT>,
 		CheckpointT: PartialOrd + Checkpoint + From<u64>,
 		CheckpointRepositoryT: CheckpointRepository<CheckpointT>,
-		IntentEventHandler: EventHandler<BlockEventT>,
-	> Listener<Fetcher, CheckpointT, CheckpointRepositoryT, EventId, BlockEventT, IntentEventHandler>
+		EventHandlerT: EventHandler<BlockEventT>,
+	> Listener<Fetcher, CheckpointT, CheckpointRepositoryT, EventId, BlockEventT, EventHandlerT>
 {
 	pub fn new(
 		id: &str,
 		handle: Handle,
 		fetcher: Fetcher,
-		intent_event_handler: IntentEventHandler,
+		event_handler: EventHandlerT,
 		stop_signal: Receiver<()>,
 		last_processed_log_repository: CheckpointRepositoryT,
 	) -> Result<Self, ()> {
@@ -69,7 +69,7 @@ impl<
 			id: id.to_string(),
 			handle,
 			fetcher,
-			intent_event_handler,
+			event_handler,
 			stop_signal,
 			checkpoint_repository: last_processed_log_repository,
 			_phantom: PhantomData,
@@ -142,55 +142,34 @@ impl<
 					Ok(events) => {
 						for event in events {
 							let event_id = event.get_event_id().clone();
-							if let Some(ref checkpoint) =
-								self.checkpoint_repository.get().expect("Could not read checkpoint")
-							{
-								if checkpoint.lt(&event.get_event_id().clone().into()) {
-									log::info!("Handling event: {:?}", event_id);
-									if let Err(e) = self
-										.handle
-										.block_on(self.intent_event_handler.handle(event))
-									{
-										log::error!("Could not handle event: {:?}", e);
-										match e {
-											Error::NonRecoverableError => {
-												error!("Non-recoverable intent handling error, event: {:?}", event_id);
-												break 'main;
-											},
-											Error::RecoverableError => {
-												error!(
-												"Recoverable intent handling error, event: {:?}",
-												event_id
-											);
-												continue 'main;
-											},
-										}
-									}
-								} else {
+							let maybe_checkpoint = self
+								.checkpoint_repository
+								.get()
+								.expect("Could not read checkpoint");
+							if let Some(ref checkpoint) = maybe_checkpoint {
+								if checkpoint.ge(&event.get_event_id().clone().into()) {
 									log::debug!("Skipping event");
+									continue;
 								}
-							} else {
-								log::info!("Handling event: {:?}", event_id);
-								if let Err(e) =
-									self.handle.block_on(self.intent_event_handler.handle(event))
-								{
-									log::error!("Could not handle event: {:?}", e);
-									match e {
-										Error::NonRecoverableError => {
-											error!(
+							}
+							log::info!("Handling event: {:?}", event_id);
+							if let Err(e) = self.handle.block_on(self.event_handler.handle(event)) {
+								log::error!("Could not handle event: {:?}", e);
+								match e {
+									Error::NonRecoverableError => {
+										error!(
 											"Non-recoverable intent handling error, event: {:?}",
 											event_id
 										);
-											break 'main;
-										},
-										Error::RecoverableError => {
-											error!(
-												"Recoverable intent handling error, event: {:?}",
-												event_id
-											);
-											continue 'main;
-										},
-									}
+										break 'main;
+									},
+									Error::RecoverableError => {
+										error!(
+											"Recoverable intent handling error, event: {:?}",
+											event_id
+										);
+										continue 'main;
+									},
 								}
 							}
 							self.checkpoint_repository

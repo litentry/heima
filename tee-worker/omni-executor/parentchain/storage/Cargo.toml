@@ -1,29 +1,20 @@
 [package]
-name = "parentchain-listener"
+name = "parentchain-storage"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-async-trait = { workspace = true }
-hex = "0.4.3"
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
-scale-encode = "0.7.1"
-subxt = { workspace = true }
+rocksdb = "0.22.0"
 subxt-core = { workspace = true }
-subxt-signer = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 executor-core = { path = "../../executor-core" }
 parentchain-api-interface = { path = "../api-interface" }
-parentchain-storage = { path = "../storage" }
 
 [dev-dependencies]
 env_logger = { workspace = true }
 
 [lints]
 workspace = true
-
-[features]
-gramine-quote = []

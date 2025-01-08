@@ -3,6 +3,8 @@ members = [
     "executor-core",
     "executor-worker",
     "parentchain/listener",
+    "parentchain/api-interface",
+    "parentchain/storage",
     "ethereum/intent-executor",
     "solana/intent-executor",
 ]
@@ -23,6 +25,9 @@ alloy = "0.3.6"
 clap = "4.5.17"
 solana-sdk = "2.1.5"
 solana-client = "2.1.5"
+subxt = "0.38.0"
+subxt-core = "0.38.0"
+subxt-signer = { version = "0.38.0", features = ["subxt"] }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"

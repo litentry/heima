@@ -1,4 +1,4 @@
-use crate::{AccountId, Address32, Balance};
+use crate::{AccountId, Balance};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -44,6 +44,6 @@ pub struct TransferNative {
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct TransferSolana {
-    pub to: Address32,
+    pub to: [u8; 32],
     pub value: u64,
 }
