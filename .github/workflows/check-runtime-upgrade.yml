@@ -76,11 +76,6 @@ jobs:
       - name: Enable corepack and pnpm
         run: corepack enable && corepack enable pnpm
 
-      - name: Fork ${{ matrix.runtime.name }} and launch parachain
-        timeout-minutes: 20
-        run: |
-          ./scripts/fork-parachain-and-launch.sh ${{ matrix.runtime.name }}
-
       - name: Install subwasm ${{ env.SUBWASM_VERSION }}
         run: |
           wget https://github.com/chevdor/subwasm/releases/download/v${{ env.SUBWASM_VERSION }}/subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
@@ -92,24 +87,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 10
         run: |
-          ./scripts/runtime-upgrade.sh ${{ matrix.runtime.name }}-parachain-runtime.compact.compressed.wasm ${{ env.RELEASE_TAG }}
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.runtime.name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
+          ./parachain/scripts/runtime-upgrade.sh ${{ matrix.runtime.name }} ${{ matrix.runtime.uri }} ${{ env.RELEASE_TAG }}
 
   try-runtime:
     runs-on: ubuntu-22.04
@@ -128,7 +106,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run ${{ matrix.runtime.name }} try-runtime check
-        uses: paritytech/try-runtime-gha@v0.2.0
+        uses: BillyWooo/try-runtime-gha@v0.3.0
         with:
           runtime-package: ${{ matrix.runtime.package }}
           node-uri: ${{ matrix.runtime.uri }}

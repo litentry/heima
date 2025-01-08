@@ -105,6 +105,7 @@ xcm = { workspace = true }
 frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
+frame-try-runtime = { workspace = true, optional = true }
 
 core-primitives = { workspace = true, features = ["std"] }
 litentry-parachain-runtime = { workspace = true, features = ["std"] }
@@ -148,5 +149,6 @@ try-runtime = [
     "polkadot-service/try-runtime",
     "runtime-common/try-runtime",
     "sp-runtime/try-runtime",
+    "frame-try-runtime",
 ]
 std = []
