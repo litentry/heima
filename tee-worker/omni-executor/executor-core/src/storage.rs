@@ -14,11 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod event_handler;
-pub mod fetcher;
-pub mod intent_executor;
-pub mod key_store;
-pub mod listener;
-pub mod primitives;
-pub mod storage;
-pub mod sync_checkpoint_repository;
+pub trait Storage<K, V> {
+	fn get(&self, key: &K) -> Option<V>;
+	fn insert(&self, key: K, value: V) -> Result<(), ()>;
+	fn remove(&self, key: &K) -> Result<(), ()>;
+	fn contains_key(&self, key: &K) -> bool;
+}
