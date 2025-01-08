@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.21-next.0] - 2024-12-17
+## [0.9.21-next.3] - 2024-12-31
+
+### Added
+
+-   Add `request_auth_token` trusted call.
+-   Add `AuthToken` variant to `TrustedCallOk` and `TCAuthentication`.
+-   Add `AuthOptions` type definition.
 
 -   Update for version [parachain-release v0.9.21-01](https://github.com/litentry/litentry-parachain/releases/tag/v0.9.21-01)
 

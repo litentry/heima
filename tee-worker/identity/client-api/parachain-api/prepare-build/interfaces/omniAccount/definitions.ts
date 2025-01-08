@@ -36,5 +36,9 @@ export default {
                 Private: "(Bytes,H256)",
             },
         },
+
+        AuthOptions: {
+            expires_at: "u32",
+        },
     },
 };

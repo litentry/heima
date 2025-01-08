@@ -2,7 +2,7 @@ import { LitentryIdentity, TCAuthentication } from '@litentry/parachain-api';
 import { Registry } from '@polkadot/types-codec/types';
 import { createLitentryMultiSignature } from './litentry-multi-signature';
 
-type AuthenticationData =
+export type AuthenticationData =
   | {
       type: 'Email';
       verificationCode: string;
@@ -11,19 +11,38 @@ type AuthenticationData =
       type: 'Web3';
       signer: LitentryIdentity;
       signature: string;
+    }
+  | {
+      type: 'AuthToken';
+      token: string;
     };
 
 export function createTCAuthenticationType(
   registry: Registry,
   data: AuthenticationData
 ): TCAuthentication {
-  return registry.createType('TCAuthentication', {
-    [data.type]:
-      data.type === 'Email'
-        ? data.verificationCode
-        : createLitentryMultiSignature(registry, {
-            who: data.signer,
-            signature: data.signature,
-          }),
-  });
+  let authentication;
+  switch (data.type) {
+    case 'Email':
+      authentication = {
+        Email: data.verificationCode,
+      };
+      break;
+    case 'Web3':
+      authentication = {
+        Web3: createLitentryMultiSignature(registry, {
+          who: data.signer,
+          signature: data.signature,
+        }),
+      };
+      break;
+    case 'AuthToken':
+      authentication = {
+        AuthToken: data.token,
+      };
+      break;
+    default:
+      throw new Error('Unsupported authentication type');
+  }
+  return registry.createType('TCAuthentication', authentication);
 }
