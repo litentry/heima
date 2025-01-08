@@ -57,6 +57,7 @@ pallet-utility = { workspace = true }
 pallet-vesting = { workspace = true }
 pallet-whitelist = { workspace = true }
 
+assets-common = { workspace = true }
 cumulus-pallet-aura-ext = { workspace = true }
 cumulus-pallet-dmp-queue = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
@@ -94,6 +95,7 @@ pallet-group = { workspace = true }
 pallet-identity-management = { workspace = true }
 pallet-omni-account = { workspace = true }
 pallet-omni-account-runtime-api = { workspace = true }
+pallet-omni-bridge = { workspace = true }
 pallet-parachain-staking = { workspace = true }
 pallet-score-staking = { workspace = true }
 pallet-teebag = { workspace = true }
@@ -218,8 +220,11 @@ runtime-benchmarks = [
     "pallet-guardian/runtime-benchmarks",
     "pallet-investing-pool/runtime-benchmarks",
     "pallet-pool-proposal/runtime-benchmarks",
+    "pallet-omni-bridge/runtime-benchmarks",
+    "assets-common/runtime-benchmarks",
 ]
 std = [
+    "assets-common/std",
     "core-primitives/std",
     "cumulus-pallet-aura-ext/std",
     "cumulus-pallet-dmp-queue/std",
@@ -341,6 +346,7 @@ std = [
     "pallet-guardian/std",
     "pallet-investing-pool/std",
     "pallet-pool-proposal/std",
+    "pallet-omni-bridge/std",
 ]
 try-runtime = [
     "cumulus-pallet-aura-ext/try-runtime",
@@ -407,4 +413,5 @@ try-runtime = [
     "pallet-guardian/try-runtime",
     "pallet-investing-pool/try-runtime",
     "pallet-pool-proposal/try-runtime",
+    "pallet-omni-bridge/try-runtime",
 ]

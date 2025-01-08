@@ -19,8 +19,8 @@ use core_primitives::PASEO_PARA_ID;
 use cumulus_primitives_core::ParaId;
 use paseo_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
-	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
+	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
 	TechnicalCommitteeMembershipConfig, TeebagConfig, TeebagOperationalMode, VCManagementConfig,
 	WASM_BINARY,
 };
@@ -227,8 +227,12 @@ fn generate_genesis(
 			admin: Some(root_key.clone()),
 			mode: TeebagOperationalMode::Development,
 		},
-		bitacross: BitacrossConfig { admin: Some(root_key) },
+		bitacross: BitacrossConfig { admin: Some(root_key.clone()) },
 		score_staking: Default::default(),
+		omni_bridge: OmniBridgeConfig {
+			admin: Some(root_key.clone()),
+			default_relayers: vec![root_key],
+		},
 	};
 
 	serde_json::to_value(&config).expect("Could not build genesis config")

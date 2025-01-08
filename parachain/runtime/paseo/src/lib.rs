@@ -32,7 +32,7 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		fungible::{Balanced, Credit, HoldConsideration},
+		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
 		tokens::imbalance::ResolveTo,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
@@ -235,7 +235,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("paseo-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9221,
+	spec_version: 9223,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -723,7 +723,7 @@ impl pallet_treasury::Config for Runtime {
 	type BurnDestination = ();
 	type SpendFunds = Bounties;
 	type MaxApprovals = ConstU32<64>;
-	type AssetKind = (); // Only native asset is supported
+	type AssetKind = (); // Only native asset is supported - TODO: expand it to MultiAssets when required
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
 	type Paymaster = PayFromAccount<Balances, TreasuryAccountId<Runtime>>;
@@ -1255,6 +1255,16 @@ impl pallet_omni_account::Config for Runtime {
 	type Permission = OmniAccountPermission;
 }
 
+impl pallet_omni_bridge::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetKind = NativeOrWithId<AssetId>; // No XCM assets for now
+	type Assets =
+		fungible::UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<AssetId>, AccountId>;
+	type TreasuryAccount = TreasuryAccount;
+	type SetAdminOrigin = EnsureRootOrHalfCouncil;
+}
+
 impl pallet_bitacross::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
@@ -1474,6 +1484,7 @@ construct_runtime! {
 		AssetsHandler: pallet_assets_handler = 76,
 
 		OmniAccount: pallet_omni_account = 84,
+		OmniBridge: pallet_omni_bridge = 85,
 
 		// TEE
 		Teebag: pallet_teebag = 93,
@@ -1596,6 +1607,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_) |
+			RuntimeCall::OmniBridge(_) |
 			// CollabAI
 			RuntimeCall::Curator(_) |
 			RuntimeCall::Guardian(_) |

@@ -27,6 +27,7 @@ members = [
     'pallets/xcm-asset-manager',
     'pallets/omni-account',
     'pallets/omni-account/runtime-api',
+    'pallets/omni-bridge',
     'precompiles/assets-erc20',
     'precompiles/bridge-transfer',
     'precompiles/collab-ai/aiusd-convertor',
@@ -253,6 +254,7 @@ cumulus-primitives-parachain-inherent = { git = 'https://github.com/paritytech/p
 pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 parachain-info = { package = "staging-parachain-info", git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+assets-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 
@@ -283,6 +285,7 @@ pallet-group = { path = "pallets/group", default-features = false }
 pallet-identity-management = { path = "pallets/identity-management", default-features = false }
 pallet-omni-account = { path = "pallets/omni-account", default-features = false }
 pallet-omni-account-runtime-api = { path = "pallets/omni-account/runtime-api", default-features = false }
+pallet-omni-bridge = { path = "pallets/omni-bridge", default-features = false }
 pallet-parachain-staking = { path = "pallets/parachain-staking", default-features = false }
 pallet-score-staking = { path = "pallets/score-staking", default-features = false }
 pallet-teebag = { path = "pallets/teebag", default-features = false }

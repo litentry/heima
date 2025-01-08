@@ -14,9 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::{
-	weights, AccountId, AssetId, Balance, Balances, Runtime, RuntimeEvent, TreasuryPalletId,
-};
+use super::{weights, AccountId, AssetId, Balance, Balances, Runtime, RuntimeEvent};
 use crate::{
 	constants::currency::deposit, precompiles::ASSET_PRECOMPILE_ADDRESS_PREFIX, Decode, Encode,
 };
@@ -33,7 +31,6 @@ use runtime_common::{
 };
 use scale_info::TypeInfo;
 use sp_core::{ConstU128, H160};
-use sp_runtime::traits::AccountIdConversion;
 use sp_std::prelude::*;
 
 pub fn get_all_module_accounts() -> Vec<AccountId> {
@@ -49,10 +46,6 @@ impl<AssetIdParameter: From<u128>> pallet_assets::BenchmarkHelper<AssetIdParamet
 	fn create_asset_id_parameter(id: u32) -> AssetIdParameter {
 		AssetId::from(id).into()
 	}
-}
-
-parameter_types! {
-	pub LitTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 parameter_types! {
