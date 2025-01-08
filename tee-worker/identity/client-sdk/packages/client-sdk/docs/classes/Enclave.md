@@ -102,7 +102,7 @@ ___
 
 ### encrypt
 
-▸ **encrypt**(`api`, `args`): `Promise`\<\{ `ciphertext`: `Uint8Array`\<`ArrayBufferLike`\>  }\>
+▸ **encrypt**(`api`, `args`): `Promise`\<\{ `ciphertext`: `Uint8Array`  }\>
 
 #### Parameters
 
@@ -110,11 +110,11 @@ ___
 | :------ | :------ |
 | `api` | `ApiPromise` |
 | `args` | `Object` |
-| `args.cleartext` | `Uint8Array`\<`ArrayBufferLike`\> |
+| `args.cleartext` | `Uint8Array` |
 
 #### Returns
 
-`Promise`\<\{ `ciphertext`: `Uint8Array`\<`ArrayBufferLike`\>  }\>
+`Promise`\<\{ `ciphertext`: `Uint8Array`  }\>
 
 #### Defined in
 

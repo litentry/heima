@@ -16,6 +16,7 @@ import { createRequestType } from '../type-creators/request';
 
 import type { JsonRpcRequest } from '../util/types';
 import { getEnclaveNonce } from './get-enclave-nonce';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * Adds an account to the Litentry Parachain.
@@ -40,10 +41,12 @@ export async function addAccount(
     validation: LitentryValidationData;
     /** Whether the account is public */
     isPublic: boolean;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -66,7 +69,7 @@ export async function addAccount(
   });
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -74,7 +77,6 @@ export async function addAccount(
   }> => {
     // prepare and encrypt request
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -112,7 +114,7 @@ export async function addAccount(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return { send };
   }
 

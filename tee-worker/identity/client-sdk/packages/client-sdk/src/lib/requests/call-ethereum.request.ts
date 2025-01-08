@@ -15,6 +15,7 @@ import { createRequestType } from '../type-creators/request';
 
 import type { JsonRpcRequest } from '../util/types';
 import type { U8aLike } from '@polkadot/util/types';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * OmniAccount: Call an Ethereum contract.
@@ -40,10 +41,12 @@ export async function callEthereum(
     address: string;
     /** Contract input data */
     input: U8aLike;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -72,7 +75,7 @@ export async function callEthereum(
   const nonce = await api.rpc.system.accountNextIndex(omniAccount.asSubstrate);
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -81,7 +84,6 @@ export async function callEthereum(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -119,7 +121,7 @@ export async function callEthereum(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return {
       send,
     };
