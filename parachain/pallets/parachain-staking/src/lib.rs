@@ -1248,7 +1248,12 @@ pub mod pallet {
 		/// Success forbids future delegation requests until the request is invoked or cancelled.
 		pub fn schedule_leave_delegators(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			Self::delegator_schedule_revoke_all(delegator)
+			let _ = Self::delegator_schedule_revoke_all(delegator.clone())?;
+			if T::LeaveDelegatorsDelay::get() == 0u32 {
+				Self::delegator_execute_scheduled_revoke_all(delegator)
+			} else {
+				Ok(().into())
+			}
 		}
 		#[pallet::call_index(22)]
 		#[pallet::weight(< T as Config >::WeightInfo::execute_leave_delegators(
@@ -1281,7 +1286,12 @@ pub mod pallet {
 			collator: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			Self::delegation_schedule_revoke(collator, delegator)
+			let _ = Self::delegation_schedule_revoke(collator.clone(), delegator.clone())?;
+			if T::RevokeDelegationDelay::get() == 0u32 {
+				Self::delegation_execute_scheduled_request(collator, delegator)
+			} else {
+				Ok(().into())
+			}
 		}
 
 		#[pallet::call_index(25)]
@@ -1317,7 +1327,16 @@ pub mod pallet {
 			less: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			Self::delegation_schedule_bond_decrease(candidate, delegator, less)
+			let _ = Self::delegation_schedule_bond_decrease(
+				candidate.clone(),
+				delegator.clone(),
+				less,
+			)?;
+			if T::DelegationBondLessDelay::get() == 0u32 {
+				Self::delegation_execute_scheduled_request(collator, delegator)
+			} else {
+				Ok(().into())
+			}
 		}
 
 		#[pallet::call_index(27)]

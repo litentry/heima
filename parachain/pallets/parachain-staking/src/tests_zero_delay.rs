@@ -13,8 +13,10 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
-use crate::mock_zero_delay::{ExtBuilder, RuntimeCall, RuntimeOrigin, Utility};
-use frame_support::assert_ok;
+use crate::mock_zero_delay::{
+	ExtBuilder, ParachainStaking, RuntimeCall, RuntimeOrigin, Test, Utility,
+};
+use frame_support::{assert_noop, assert_ok};
 
 use crate::Call as ParachainStakingCall;
 
@@ -26,18 +28,13 @@ fn batch_unstake_and_leave_delegators_works_if_zero_delay() {
 		.with_delegations(vec![(2, 1, 10)])
 		.build()
 		.execute_with(|| {
-			// can execute immediately
-			assert_ok!(Utility::batch_all(
-				RuntimeOrigin::signed(2),
-				vec![
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::schedule_leave_delegators {}
-					),
-					RuntimeCall::ParachainStaking(ParachainStakingCall::execute_leave_delegators {
-						delegator: 2
-					}),
-				]
-			));
+			// Execute immediately
+			assert_ok!(ParachainStaking::schedule_leave_delegators(RuntimeOrigin::signed(2)));
+
+			assert_noop!(
+				ParachainStaking::execute_leave_delegators(RuntimeOrigin::signed(2)),
+				Error::<Test>::PendingDelegationRequestDNE
+			);
 		});
 }
 
@@ -71,24 +68,17 @@ fn batch_unstake_and_delegator_bond_less_works_if_zero_delay() {
 		.with_delegations(vec![(2, 1, 10)])
 		.build()
 		.execute_with(|| {
-			// can execute immediately
-			assert_ok!(Utility::batch_all(
+			// Execute immediately
+			assert_ok!(ParachainStaking::schedule_delegator_bond_less(
 				RuntimeOrigin::signed(2),
-				vec![
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::schedule_delegator_bond_less {
-							candidate: 1,
-							less: 1
-						}
-					),
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::execute_delegation_request {
-							delegator: 2,
-							candidate: 1
-						}
-					),
-				]
+				1,
+				1
 			));
+
+			assert_noop!(
+				ParachainStaking::execute_delegation_request(RuntimeOrigin::signed(2), 2, 1),
+				Error::<Test>::PendingDelegationRequestDNE
+			);
 		});
 }
 
@@ -100,21 +90,13 @@ fn batch_unstake_and_revoke_delegation_works_if_zero_delay() {
 		.with_delegations(vec![(2, 1, 10)])
 		.build()
 		.execute_with(|| {
-			// can execute immediately
-			assert_ok!(Utility::batch_all(
-				RuntimeOrigin::signed(2),
-				vec![
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::schedule_revoke_delegation { collator: 1 }
-					),
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::execute_delegation_request {
-							delegator: 2,
-							candidate: 1
-						}
-					),
-				]
-			));
+			// Execute immediately
+			assert_ok!(ParachainStaking::schedule_revoke_delegation(RuntimeOrigin::signed(2), 1));
+
+			assert_noop!(
+				ParachainStaking::execute_delegation_request(RuntimeOrigin::signed(2), 2, 1),
+				Error::<Test>::PendingDelegationRequestDNE
+			);
 		});
 }
 
