@@ -13,8 +13,9 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
-use crate::mock_zero_delay::{
-	ExtBuilder, ParachainStaking, RuntimeCall, RuntimeOrigin, Test, Utility,
+use crate::{
+	mock_zero_delay::{ExtBuilder, ParachainStaking, RuntimeCall, RuntimeOrigin, Test, Utility},
+	Error,
 };
 use frame_support::{assert_noop, assert_ok};
 
@@ -30,9 +31,8 @@ fn batch_unstake_and_leave_delegators_works_if_zero_delay() {
 		.execute_with(|| {
 			// Execute immediately
 			assert_ok!(ParachainStaking::schedule_leave_delegators(RuntimeOrigin::signed(2)));
-
 			assert_noop!(
-				ParachainStaking::execute_leave_delegators(RuntimeOrigin::signed(2)),
+				ParachainStaking::execute_leave_delegators(RuntimeOrigin::signed(2), 2),
 				Error::<Test>::PendingDelegationRequestDNE
 			);
 		});
@@ -74,7 +74,6 @@ fn batch_unstake_and_delegator_bond_less_works_if_zero_delay() {
 				1,
 				1
 			));
-
 			assert_noop!(
 				ParachainStaking::execute_delegation_request(RuntimeOrigin::signed(2), 2, 1),
 				Error::<Test>::PendingDelegationRequestDNE
@@ -92,7 +91,6 @@ fn batch_unstake_and_revoke_delegation_works_if_zero_delay() {
 		.execute_with(|| {
 			// Execute immediately
 			assert_ok!(ParachainStaking::schedule_revoke_delegation(RuntimeOrigin::signed(2), 1));
-
 			assert_noop!(
 				ParachainStaking::execute_delegation_request(RuntimeOrigin::signed(2), 2, 1),
 				Error::<Test>::PendingDelegationRequestDNE
