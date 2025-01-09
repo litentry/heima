@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
-use crate::mock_zero_delay::{ExtBuilder, RuntimeCall, RuntimeOrigin, Test, Utility};
+use crate::mock_zero_delay::{ExtBuilder, RuntimeCall, RuntimeOrigin, Utility};
 use frame_support::assert_ok;
 
 use crate::Call as ParachainStakingCall;
