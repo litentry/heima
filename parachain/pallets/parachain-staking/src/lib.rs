@@ -75,6 +75,12 @@ pub mod set;
 #[cfg(test)]
 mod tests;
 
+// Dedicated test for unbond delay = 0
+#[cfg(test)]
+mod mock_zero_delay;
+#[cfg(test)]
+mod tests_zero_delay;
+
 pub use inflation::{InflationInfo, Range};
 pub use weights::WeightInfo;
 

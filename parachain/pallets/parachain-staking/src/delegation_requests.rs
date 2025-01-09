@@ -144,7 +144,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(decrease_amount <= max_subtracted_amount, <Error<T>>::DelegatorBondBelowMin);
 
 		let now = <Round<T>>::get().current;
-		let when = now.saturating_add(T::RevokeDelegationDelay::get());
+		let when = now.saturating_add(T::DelegationBondLessDelay::get());
 		scheduled_requests.push(ScheduledRequest {
 			delegator: delegator.clone(),
 			action: DelegationAction::Decrease(decrease_amount),
