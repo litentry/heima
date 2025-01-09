@@ -15,8 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::metadata::{MetadataProvider, SubxtMetadataProvider};
-use crate::primitives::BlockEvent;
-use crate::rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use crate::transaction_signer::TransactionSigner;
 use async_trait::async_trait;
 use executor_core::event_handler::Error::RecoverableError;
@@ -35,6 +33,8 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
 };
+use parentchain_primitives::BlockEvent;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;

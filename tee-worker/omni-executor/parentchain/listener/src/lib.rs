@@ -19,8 +19,7 @@ mod fetcher;
 mod key_store;
 mod listener;
 mod metadata;
-mod primitives;
-mod rpc_client;
+mod sync_checkpoint;
 mod transaction_signer;
 
 use crate::event_handler::EventHandler;
@@ -28,8 +27,6 @@ use crate::fetcher::Fetcher;
 use crate::key_store::SubstrateKeyStore;
 use crate::listener::ParentchainListener;
 use crate::metadata::SubxtMetadataProvider;
-use crate::rpc_client::SubstrateRpcClient;
-use crate::rpc_client::{SubxtClient, SubxtClientFactory};
 use crate::transaction_signer::TransactionSigner;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
@@ -40,6 +37,8 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
+use parentchain_rpc_client::SubstrateRpcClient;
+use parentchain_rpc_client::{SubxtClient, SubxtClientFactory};
 use parentchain_storage::AccountStoreStorage;
 use scale_encode::EncodeAsType;
 use std::sync::Arc;

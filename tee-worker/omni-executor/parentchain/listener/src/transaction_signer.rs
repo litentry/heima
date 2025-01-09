@@ -1,7 +1,7 @@
 use crate::metadata::{MetadataProvider, SubxtMetadataProvider};
-use crate::rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use executor_core::key_store::KeyStore;
 use log::error;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use std::marker::PhantomData;
 use std::sync::Arc;

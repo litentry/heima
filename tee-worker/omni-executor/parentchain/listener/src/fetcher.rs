@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::primitives::{BlockEvent, EventId};
-use crate::rpc_client::SubstrateRpcClient;
-use crate::rpc_client::SubstrateRpcClientFactory;
 use async_trait::async_trait;
 use executor_core::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
 use log::error;
+use parentchain_primitives::{BlockEvent, EventId};
+use parentchain_rpc_client::SubstrateRpcClient;
+use parentchain_rpc_client::SubstrateRpcClientFactory;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
