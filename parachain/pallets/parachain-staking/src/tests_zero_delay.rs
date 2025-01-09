@@ -14,12 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	mock_zero_delay::{ExtBuilder, ParachainStaking, RuntimeCall, RuntimeOrigin, Test, Utility},
+	mock_zero_delay::{ExtBuilder, ParachainStaking, RuntimeCall, RuntimeOrigin, Test},
 	Error,
 };
 use frame_support::{assert_noop, assert_ok};
-
-use crate::Call as ParachainStakingCall;
 
 #[test]
 fn batch_unstake_and_leave_delegators_works_if_zero_delay() {
@@ -45,18 +43,12 @@ fn batch_unstake_and_leave_candidates_works_if_zero_delay() {
 		.with_candidates(vec![(1, 10)])
 		.build()
 		.execute_with(|| {
-			// can execute immediately
-			assert_ok!(Utility::batch_all(
-				RuntimeOrigin::signed(1),
-				vec![
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::schedule_leave_candidates {}
-					),
-					RuntimeCall::ParachainStaking(ParachainStakingCall::execute_leave_candidates {
-						candidate: 1
-					}),
-				]
-			));
+			// Execute immediately
+			assert_ok!(ParachainStaking::schedule_leave_candidates(RuntimeOrigin::signed(1)));
+			assert_noop!(
+				ParachainStaking::execute_leave_candidates(RuntimeOrigin::signed(1), 1),
+				Error::<Test>::CandidateDNE
+			);
 		});
 }
 
@@ -105,17 +97,11 @@ fn batch_unstake_and_candidate_bond_less_works_if_zero_delay() {
 		.with_candidates(vec![(1, 20)])
 		.build()
 		.execute_with(|| {
-			// can execute immediately
-			assert_ok!(Utility::batch_all(
-				RuntimeOrigin::signed(1),
-				vec![
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::schedule_candidate_bond_less { less: 1 }
-					),
-					RuntimeCall::ParachainStaking(
-						ParachainStakingCall::execute_candidate_bond_less { candidate: 1 }
-					),
-				]
-			));
+			// Execute immediately
+			assert_ok!(ParachainStaking::schedule_candidate_bond_less(RuntimeOrigin::signed(1), 1));
+			assert_noop!(
+				ParachainStaking::execute_candidate_bond_less(RuntimeOrigin::signed(1), 1),
+				Error::<Test>::PendingCandidateRequestNotDueYet
+			);
 		});
 }
