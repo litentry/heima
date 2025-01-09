@@ -984,9 +984,9 @@ pub mod pallet {
 		/// removed from the candidate pool to prevent selection as a collator.
 		pub fn schedule_leave_candidates(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
-			let _ = Self::candidate_schedule_revoke(collator)?;
+			let _ = Self::candidate_schedule_revoke(collator.clone())?;
 			if T::LeaveCandidatesDelay::get() == 0u32 {
-				Self::candidate_execute_schedule_revoke(candidate)
+				Self::candidate_execute_schedule_revoke(collator)
 			} else {
 				Ok(().into())
 			}
@@ -1086,9 +1086,9 @@ pub mod pallet {
 			less: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
-			let _ = Self::candidate_schedule_bond_decrease(collator, less)?;
-			if T::CandidateBondLessDelay::get() {
-				Self::candidate_execute_bond_decrease(candidate)?
+			let _ = Self::candidate_schedule_bond_decrease(collator.clone(), less)?;
+			if T::CandidateBondLessDelay::get() == 0u32 {
+				Self::candidate_execute_bond_decrease(collator)
 			} else {
 				Ok(().into())
 			}

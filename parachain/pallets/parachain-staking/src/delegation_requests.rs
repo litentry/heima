@@ -22,21 +22,23 @@
 
 use crate::{
 	pallet::{
-		BalanceOf, CandidateInfo, Config, DelegationScheduledRequests, DelegatorState, Error,
-		Event, Pallet, Round, RoundIndex, Total,
+		AutoCompoundingDelegations, BalanceOf, BottomDelegations, CandidateInfo, CandidatePool,
+		Config, DelegationScheduledRequests, DelegatorState, Error, Event, Pallet, Round,
+		RoundIndex, TopDelegations, Total,
 	},
 	weights::WeightInfo,
-	AutoCompoundDelegations, Delegator, OnAllDelegationRemoved,
+	AutoCompoundDelegations, Bond, Delegator, OnAllDelegationRemoved,
 };
 use frame_support::{
 	dispatch::DispatchResultWithPostInfo,
 	ensure,
+	pallet_prelude::DispatchResult,
 	traits::{Get, ReservableCurrency},
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{Saturating, Zero};
 use sp_std::{vec, vec::Vec};
 
 /// An action that can be performed upon a delegation
