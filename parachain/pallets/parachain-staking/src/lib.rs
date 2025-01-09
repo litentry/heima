@@ -1333,7 +1333,7 @@ pub mod pallet {
 				less,
 			)?;
 			if T::DelegationBondLessDelay::get() == 0u32 {
-				Self::delegation_execute_scheduled_request(collator, delegator)
+				Self::delegation_execute_scheduled_request(candidate, delegator)
 			} else {
 				Ok(().into())
 			}
