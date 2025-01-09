@@ -4089,6 +4089,7 @@ dependencies = [
  "hex",
  "log",
  "parentchain-api-interface",
+ "parentchain-primitives",
  "parentchain-storage",
  "parity-scale-codec",
  "scale-encode 0.7.1",
@@ -4096,6 +4097,13 @@ dependencies = [
  "subxt-core",
  "subxt-signer",
  "tokio",
+]
+
+[[package]]
+name = "parentchain-primitives"
+version = "0.1.0"
+dependencies = [
+ "executor-core",
 ]
 
 [[package]]
