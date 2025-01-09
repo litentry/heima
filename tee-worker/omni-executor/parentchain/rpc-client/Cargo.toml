@@ -8,6 +8,7 @@ edition.workspace = true
 async-trait = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-encode = { workspace = true }
 subxt = { workspace = true }
 subxt-core = { workspace = true }
 

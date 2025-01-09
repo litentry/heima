@@ -18,17 +18,50 @@ use async_trait::async_trait;
 use log::{error, info};
 use parentchain_primitives::{BlockEvent, EventId};
 use parity_scale_codec::Encode;
+use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::thread;
 use std::time::Duration;
 use subxt::backend::legacy::LegacyRpcMethods;
 use subxt::backend::BlockRef;
+use subxt::config::signed_extensions;
 use subxt::config::Header;
 use subxt::events::EventsClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
 use subxt_core::utils::AccountId32;
+
+// We don't need to construct this at runtime,
+// so an empty enum is appropriate:
+#[derive(EncodeAsType)]
+pub enum CustomConfig {}
+
+//todo: adjust if needed
+impl Config for CustomConfig {
+	type Hash = subxt::utils::H256;
+	type AccountId = subxt::utils::AccountId32;
+	type Address = subxt::utils::MultiAddress<Self::AccountId, u32>;
+	type Signature = subxt::utils::MultiSignature;
+	type Hasher = subxt::config::substrate::BlakeTwo256;
+	type Header = subxt::config::substrate::SubstrateHeader<u32, Self::Hasher>;
+	type ExtrinsicParams = signed_extensions::AnyOf<
+		Self,
+		(
+			// Load in the existing signed extensions we're interested in
+			// (if the extension isn't actually needed it'll just be ignored):
+			signed_extensions::CheckSpecVersion,
+			signed_extensions::CheckTxVersion,
+			signed_extensions::CheckNonce,
+			signed_extensions::CheckGenesis<Self>,
+			signed_extensions::CheckMortality<Self>,
+			signed_extensions::ChargeAssetTxPayment<Self>,
+			signed_extensions::ChargeTransactionPayment,
+			signed_extensions::CheckMetadataHash,
+		),
+	>;
+	type AssetId = u32;
+}
 
 pub struct RuntimeVersion {
 	pub spec_version: u32,

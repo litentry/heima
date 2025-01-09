@@ -9,7 +9,6 @@ async-trait = { workspace = true }
 hex = "0.4.3"
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
-scale-encode = "0.7.1"
 subxt = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }

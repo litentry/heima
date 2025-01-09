@@ -38,48 +38,14 @@ use parentchain_api_interface::{
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
 use parentchain_rpc_client::SubstrateRpcClient;
-use parentchain_rpc_client::{SubxtClient, SubxtClientFactory};
+use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
 use parentchain_storage::AccountStoreStorage;
-use scale_encode::EncodeAsType;
 use std::sync::Arc;
-use subxt::config::signed_extensions;
-use subxt::Config;
 use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
-
-// We don't need to construct this at runtime,
-// so an empty enum is appropriate:
-#[derive(EncodeAsType)]
-pub enum CustomConfig {}
-
-//todo: adjust if needed
-impl Config for CustomConfig {
-	type Hash = subxt::utils::H256;
-	type AccountId = subxt::utils::AccountId32;
-	type Address = subxt::utils::MultiAddress<Self::AccountId, u32>;
-	type Signature = subxt::utils::MultiSignature;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
-	type Header = subxt::config::substrate::SubstrateHeader<u32, Self::Hasher>;
-	type ExtrinsicParams = signed_extensions::AnyOf<
-		Self,
-		(
-			// Load in the existing signed extensions we're interested in
-			// (if the extension isn't actually needed it'll just be ignored):
-			signed_extensions::CheckSpecVersion,
-			signed_extensions::CheckTxVersion,
-			signed_extensions::CheckNonce,
-			signed_extensions::CheckGenesis<Self>,
-			signed_extensions::CheckMortality<Self>,
-			signed_extensions::ChargeAssetTxPayment<Self>,
-			signed_extensions::ChargeTransactionPayment,
-			signed_extensions::CheckMetadataHash,
-		),
-	>;
-	type AssetId = u32;
-}
 
 /// Creates parentchain listener
 pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
