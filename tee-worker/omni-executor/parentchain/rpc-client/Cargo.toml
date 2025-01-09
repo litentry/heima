@@ -1,0 +1,22 @@
+[package]
+name = "parentchain-rpc-client"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+subxt = { workspace = true }
+subxt-core = { workspace = true }
+
+parentchain-primitives = { path = "../primitives" }
+# executor-core = { path = "../../executor-core" }
+# parentchain-api-interface = { path = "../api-interface" }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+
+[lints]
+workspace = true

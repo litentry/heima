@@ -4090,6 +4090,7 @@ dependencies = [
  "log",
  "parentchain-api-interface",
  "parentchain-primitives",
+ "parentchain-rpc-client",
  "parentchain-storage",
  "parity-scale-codec",
  "scale-encode 0.7.1",
@@ -4104,6 +4105,19 @@ name = "parentchain-primitives"
 version = "0.1.0"
 dependencies = [
  "executor-core",
+]
+
+[[package]]
+name = "parentchain-rpc-client"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "env_logger",
+ "log",
+ "parentchain-primitives",
+ "parity-scale-codec",
+ "subxt",
+ "subxt-core",
 ]
 
 [[package]]

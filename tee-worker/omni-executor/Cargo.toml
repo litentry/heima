@@ -4,6 +4,7 @@ members = [
     "executor-worker",
     "parentchain/listener",
     "parentchain/api-interface",
+    "parentchain/rpc-client",
     "parentchain/storage",
     "parentchain/primitives",
     "ethereum/intent-executor",
