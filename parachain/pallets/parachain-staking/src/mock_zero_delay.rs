@@ -19,9 +19,7 @@
 
 use crate as pallet_parachain_staking;
 use crate::{pallet, Config, InflationInfo, Points, Range};
-use frame_support::{
-	construct_runtime, derive_impl, parameter_types,
-};
+use frame_support::{construct_runtime, derive_impl, parameter_types};
 use sp_runtime::{BuildStorage, Perbill, Percent};
 
 pub type AccountId = u64;
