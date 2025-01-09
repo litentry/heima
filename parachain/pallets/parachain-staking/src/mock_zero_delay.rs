@@ -18,7 +18,7 @@
 //! - Moonbeam `pallet_parachain_staking`
 
 use crate as pallet_parachain_staking;
-use crate::{pallet, Config, InflationInfo, Points, Range};
+use crate::{Config, InflationInfo, Range};
 use frame_support::{construct_runtime, derive_impl, parameter_types};
 use sp_runtime::{BuildStorage, Perbill, Percent};
 
@@ -170,14 +170,6 @@ impl ExtBuilder {
 	) -> Self {
 		self.delegations =
 			delegations.into_iter().map(|d| (d.0, d.1, d.2, Percent::zero())).collect();
-		self
-	}
-
-	pub(crate) fn with_auto_compounding_delegations(
-		mut self,
-		delegations: Vec<(AccountId, AccountId, Balance, Percent)>,
-	) -> Self {
-		self.delegations = delegations;
 		self
 	}
 
