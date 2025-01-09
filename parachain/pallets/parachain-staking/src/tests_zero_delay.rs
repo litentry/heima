@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	mock_zero_delay::{ExtBuilder, ParachainStaking, RuntimeCall, RuntimeOrigin, Test},
+	mock_zero_delay::{ExtBuilder, ParachainStaking, RuntimeOrigin, Test},
 	Error,
 };
 use frame_support::{assert_noop, assert_ok};
@@ -101,7 +101,7 @@ fn batch_unstake_and_candidate_bond_less_works_if_zero_delay() {
 			assert_ok!(ParachainStaking::schedule_candidate_bond_less(RuntimeOrigin::signed(1), 1));
 			assert_noop!(
 				ParachainStaking::execute_candidate_bond_less(RuntimeOrigin::signed(1), 1),
-				Error::<Test>::PendingCandidateRequestNotDueYet
+				Error::<Test>::PendingCandidateRequestsDNE
 			);
 		});
 }
