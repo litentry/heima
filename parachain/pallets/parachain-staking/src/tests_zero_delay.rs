@@ -33,7 +33,7 @@ fn batch_unstake_and_leave_delegators_works_if_zero_delay() {
 			assert_ok!(ParachainStaking::schedule_leave_delegators(RuntimeOrigin::signed(2)));
 			assert_noop!(
 				ParachainStaking::execute_leave_delegators(RuntimeOrigin::signed(2), 2),
-				Error::<Test>::PendingDelegationRequestDNE
+				Error::<Test>::DelegatorDNE
 			);
 		});
 }
@@ -93,7 +93,7 @@ fn batch_unstake_and_revoke_delegation_works_if_zero_delay() {
 			assert_ok!(ParachainStaking::schedule_revoke_delegation(RuntimeOrigin::signed(2), 1));
 			assert_noop!(
 				ParachainStaking::execute_delegation_request(RuntimeOrigin::signed(2), 2, 1),
-				Error::<Test>::PendingDelegationRequestDNE
+				Error::<Test>::DelegatorDNE
 			);
 		});
 }
