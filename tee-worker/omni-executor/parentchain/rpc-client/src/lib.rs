@@ -28,6 +28,7 @@ use subxt::backend::BlockRef;
 use subxt::config::signed_extensions;
 use subxt::config::Header;
 use subxt::events::EventsClient;
+use subxt::storage::StorageClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
 use subxt_core::utils::AccountId32;
@@ -84,9 +85,14 @@ pub struct SubxtClient<ChainConfig: Config> {
 	legacy: LegacyRpcMethods<ChainConfig>,
 	events: EventsClient<ChainConfig, OnlineClient<ChainConfig>>,
 	tx: TxClient<ChainConfig, OnlineClient<ChainConfig>>,
+	storage: StorageClient<ChainConfig, OnlineClient<ChainConfig>>,
 }
 
-impl<ChainConfig: Config> SubxtClient<ChainConfig> {}
+impl<ChainConfig: Config> SubxtClient<ChainConfig> {
+	pub fn storage(&self) -> &StorageClient<ChainConfig, OnlineClient<ChainConfig>> {
+		&self.storage
+	}
+}
 
 #[async_trait]
 impl<ChainConfig: Config<AccountId = AccountId32>> SubstrateRpcClient<ChainConfig::AccountId>
@@ -251,7 +257,8 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 
 		let events = online_client.events();
 		let tx = online_client.tx();
+		let storage = online_client.storage();
 
-		Ok(SubxtClient { legacy, events, tx })
+		Ok(SubxtClient { legacy, events, tx, storage })
 	}
 }
