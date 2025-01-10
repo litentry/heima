@@ -27,6 +27,7 @@ members = [
     "common/core/parentchain/test",
     "common/core/rest-client",
     "common/core/rpc-client",
+    "common/core/system-version",
     "common/core/tls-websocket-server",
 
     # identity-worker
@@ -220,6 +221,7 @@ itc-parentchain-test = { path = "common/core/parentchain/test", default-features
 itc-rest-client = { path = "common/core/rest-client", default-features = false }
 itc-rpc-client = { path = "common/core/rpc-client" }
 itc-tls-websocket-server = { path = "common/core/tls-websocket-server", default-features = false }
+itc-system-version = { path = "common/core/system-version", default-features = false }
 
 itp-attestation-handler = { path = "common/core-primitives/attestation-handler", default-features = false }
 itp-import-queue = { path = "common/core-primitives/import-queue", default-features = false }

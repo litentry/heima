@@ -16,42 +16,15 @@
 
 use crate::{Cli, CliResult, CliResultOk};
 
-mod built_info {
-	include!(concat!(env!("OUT_DIR"), "/built.rs"));
-}
-
-// Dispnay the current worker version detail
+// Dispnay the current system version detail
 // usage example:
-// ./litentry-cli worker-version
+// ./litentry-cli system-version
 #[derive(Parser)]
-pub struct WorkerVersionCommand {}
+pub struct SystemVersionCommand {}
 
-impl WorkerVersionCommand {
-	pub(crate) fn run(&self, cli: &Cli) -> CliResult {
-		println!(
-			r#"
-Version Information:
-------------------
-Package version: {}
-Target: {}
-Rustc version: {}
-
-Git Information:
---------------
-Version: {}
-Commit Hash: {}
-
-Build Time:
----------
-{}
-            "#,
-			built_info::PKG_VERSION,
-			built_info::TARGET,
-			built_info::RUSTC_VERSION,
-			built_info::GIT_VERSION.unwrap_or("unknown"),
-			built_info::GIT_COMMIT_HASH.unwrap_or("unknown"),
-			built::util::strptime(built_info::BUILT_TIME_UTC),
-		);
-		Ok(CliResultOk::Bytes { bytes: () })
+impl SystemVersionCommand {
+	pub(crate) fn run(&self, _cli: &Cli) -> CliResult {
+		itc_system_version::print_system_version();
+		Ok(CliResultOk::Bytes { bytes: vec![] })
 	}
 }

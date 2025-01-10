@@ -18,8 +18,8 @@
 use crate::{
 	base_cli::commands::{
 		balance::BalanceCommand, faucet::FaucetCommand, listen::ListenCommand, litentry::*,
-		register_tcb_info::RegisterTcbInfoCommand, transfer::TransferCommand,
-		worker_version::WorkerVersionCommand,
+		register_tcb_info::RegisterTcbInfoCommand, system_version::SystemVersionCommand,
+		transfer::TransferCommand,
 	},
 	command_utils::*,
 	Cli, CliResult, CliResultOk, ED25519_KEY_TYPE, SR25519_KEY_TYPE,
@@ -72,8 +72,8 @@ pub enum BaseCommand {
 	/// Register TCB info for FMSPC
 	RegisterTcbInfo(RegisterTcbInfoCommand),
 
-	/// Worker version
-	WorkerVersion(WorkerVersionCommand),
+	/// System version
+	SystemVersion(SystemVersionCommand),
 
 	// Litentry's commands below
 	/// query sgx-runtime metadata and print the raw (hex-encoded) metadata to stdout
@@ -110,7 +110,7 @@ impl BaseCommand {
 			BaseCommand::ListWorkers => list_workers(cli),
 			BaseCommand::Listen(cmd) => cmd.run(cli),
 			BaseCommand::RegisterTcbInfo(cmd) => cmd.run(cli),
-			BaseCommand::WorkerVersion(cmd) => cmd.run(cli),
+			BaseCommand::SystemVersion(cmd) => cmd.run(cli),
 			// Litentry's commands below
 			BaseCommand::PrintSgxMetadataRaw => print_sgx_metadata_raw(cli),
 			BaseCommand::LinkIdentity(cmd) => cmd.run(cli),

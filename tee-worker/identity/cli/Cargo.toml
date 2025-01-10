@@ -7,7 +7,6 @@ edition = "2021"
 [dependencies]
 array-bytes = { version = "6.0.0" }
 base58 = { workspace = true }
-built = { workspace = true, features = ["git2", "chrono", "semver"] }
 chrono = "*"
 clap = { version = "=4.1.0", features = ["derive"] }
 codec = { package = "parity-scale-codec", workspace = true, features = ["std"] }
@@ -40,6 +39,7 @@ ita-parentchain-interface = { package = "id-ita-parentchain-interface", path = "
 ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../app-libs/sgx-runtime" }
 ita-stf = { package = "id-ita-stf", path = "../app-libs/stf" }
 itc-rpc-client = { workspace = true }
+itc-system-version = { workspace = true, features = ["std"] }
 itp-node-api = { workspace = true, features = ["std"] }
 itp-rpc = { workspace = true, features = ["std"] }
 itp-sgx-crypto = { workspace = true, features = ["std"] }
@@ -51,9 +51,6 @@ frame-metadata = "15.0.0"
 litentry-hex-utils = { workspace = true }
 litentry-primitives = { workspace = true, features = ["std"] }
 scale-value = "0.6.0"
-
-[build-dependencies]
-built = { workspace = true, features = ["git2", "chrono", "semver"] }
 
 [features]
 default = []
