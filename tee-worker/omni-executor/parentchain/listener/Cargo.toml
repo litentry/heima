@@ -15,9 +15,9 @@ subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 executor-core = { path = "../../executor-core" }
+parentchain-api-interface = { path = "../api-interface" }
 parentchain-primitives = { path = "../primitives" }
 parentchain-rpc-client = { path = "../rpc-client" }
-parentchain-api-interface = { path = "../api-interface" }
 parentchain-storage = { path = "../storage" }
 
 [dev-dependencies]
