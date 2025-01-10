@@ -12,6 +12,7 @@ executor-core = { path = "../executor-core" }
 hex = "0.4.3"
 log = { workspace = true }
 parentchain-listener = { path = "../parentchain/listener" }
+parentchain-storage = { path = "../parentchain/storage" }
 scale-encode = { workspace = true }
 serde_json = "1.0.127"
 solana-intent-executor = { path = "../solana/intent-executor" }
