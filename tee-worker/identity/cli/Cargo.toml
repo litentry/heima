@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 array-bytes = { version = "6.0.0" }
 base58 = { workspace = true }
+built = { workspace = true, features = ["git2", "chrono", "semver"] }
 chrono = "*"
 clap = { version = "=4.1.0", features = ["derive"] }
 codec = { package = "parity-scale-codec", workspace = true, features = ["std"] }
@@ -50,6 +51,9 @@ frame-metadata = "15.0.0"
 litentry-hex-utils = { workspace = true }
 litentry-primitives = { workspace = true, features = ["std"] }
 scale-value = "0.6.0"
+
+[build-dependencies]
+built = { workspace = true, features = ["git2", "chrono", "semver"] }
 
 [features]
 default = []
