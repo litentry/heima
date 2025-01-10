@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::{weights, AccountId, AssetId, Balance, Balances, Runtime, RuntimeEvent};
+use super::{
+	weights, AccountId, AssetId, Balance, Balances, EnsureRootOrAllTechnicalCommittee, Runtime,
+	RuntimeEvent,
+};
 use crate::{
 	constants::currency::deposit, precompiles::ASSET_PRECOMPILE_ADDRESS_PREFIX, Decode, Encode,
 };
@@ -22,13 +25,9 @@ use frame_support::{
 	parameter_types,
 	traits::{AsEnsureOriginWithArg, ConstU32, NeverEnsureOrigin},
 };
-use frame_system::EnsureRoot;
 use pallet_evm_precompile_assets_erc20::AddressToAssetId;
 use parity_scale_codec::Compact;
-use runtime_common::{
-	currency::{DOLLARS, EXISTENTIAL_DEPOSIT},
-	EnsureRootOrHalfCouncil,
-};
+use runtime_common::currency::{DOLLARS, EXISTENTIAL_DEPOSIT};
 use scale_info::TypeInfo;
 use sp_core::{ConstU128, H160};
 use sp_std::prelude::*;
@@ -83,10 +82,8 @@ impl pallet_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
-	// We do not allow creating by regular users
-	// CollabAI derivative token do not want it that way
-	type CreateOrigin = AsEnsureOriginWithArg<NeverEnsureOrigin<AccountId>>;
-	type ForceOrigin = EnsureRoot<AccountId>;
+	type CreateOrigin = AsEnsureOriginWithArg<NeverEnsureOrigin<AccountId>>; // will be created internally for now
+	type ForceOrigin = EnsureRootOrAllTechnicalCommittee;
 	type AssetDeposit = AssetDeposit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
@@ -95,7 +92,7 @@ impl pallet_assets::Config for Runtime {
 	type StringLimit = AssetsStringLimit;
 	type Freezer = ();
 	type Extra = ();
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = ();
 	type RemoveItemsLimit = ConstU32<1000>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CallbackHandle = ();
@@ -113,7 +110,7 @@ impl pallet_asset_manager::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type ForeignAssetType = ForeignAssetType; // TODO
-	type ForeignAssetModifierOrigin = EnsureRootOrHalfCouncil;
+	type ForeignAssetModifierOrigin = EnsureRootOrAllTechnicalCommittee;
 	type Currency = Balances;
 	type WeightInfo = weights::pallet_asset_manager::WeightInfo<Runtime>;
 }

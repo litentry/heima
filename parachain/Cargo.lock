@@ -448,28 +448,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
-name = "assets-common"
-version = "0.17.1"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2407#826bb49da6104daabff9cecd139efa9a74cfc8c2"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "impl-trait-for-tuples",
- "log",
- "pallet-asset-conversion",
- "pallet-xcm",
- "parachains-common",
- "parity-scale-codec",
- "scale-info",
- "sp-api",
- "sp-runtime",
- "staging-xcm",
- "staging-xcm-builder",
- "staging-xcm-executor",
- "substrate-wasm-builder",
-]
-
-[[package]]
 name = "async-channel"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6037,6 +6015,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-omni-account",
  "pallet-omni-account-runtime-api",
+ "pallet-omni-bridge",
  "pallet-parachain-staking",
  "pallet-preimage",
  "pallet-proxy",
@@ -9463,7 +9442,6 @@ checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
 name = "paseo-parachain-runtime"
 version = "0.1.0"
 dependencies = [
- "assets-common",
  "core-primitives",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",

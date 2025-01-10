@@ -31,7 +31,7 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		fungible::{Balanced, Credit, HoldConsideration},
+		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
 		tokens::imbalance::ResolveTo,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, EnsureOrigin, Everything,
@@ -711,7 +711,7 @@ impl pallet_treasury::Config for Runtime {
 	type BurnDestination = ();
 	type SpendFunds = Bounties;
 	type MaxApprovals = ConstU32<64>;
-	type AssetKind = (); // Only native asset is supported
+	type AssetKind = (); // Only native asset is supported - TODO: expand it to MultiAssets when required
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
 	type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
@@ -1210,6 +1210,16 @@ impl pallet_omni_account::Config for Runtime {
 	type Permission = OmniAccountPermission;
 }
 
+impl pallet_omni_bridge::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetKind = NativeOrWithId<AssetId>; // No XCM assets for now
+	type Assets =
+		fungible::UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<AssetId>, AccountId>;
+	type TreasuryAccount = TreasuryAccount;
+	type SetAdminOrigin = EnsureRootOrHalfCouncil;
+}
+
 impl pallet_evm_assertions::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
@@ -1340,6 +1350,7 @@ construct_runtime! {
 		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 82,
 		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 83,
 		OmniAccount: pallet_omni_account = 84,
+		OmniBridge: pallet_omni_bridge = 85,
 
 		// Frontier
 		EVM: pallet_evm = 120,
@@ -1433,7 +1444,8 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::AssetsHandler(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
-			RuntimeCall::OmniAccount(_)
+			RuntimeCall::OmniAccount(_) |
+			RuntimeCall::OmniBridge(_)
 		)
 	}
 }
