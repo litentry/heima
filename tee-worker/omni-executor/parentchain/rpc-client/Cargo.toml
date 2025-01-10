@@ -13,8 +13,6 @@ subxt = { workspace = true }
 subxt-core = { workspace = true }
 
 parentchain-primitives = { path = "../primitives" }
-# executor-core = { path = "../../executor-core" }
-# parentchain-api-interface = { path = "../api-interface" }
 
 [dev-dependencies]
 env_logger = { workspace = true }
