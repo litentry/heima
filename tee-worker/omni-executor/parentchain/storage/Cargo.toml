@@ -7,7 +7,7 @@ edition.workspace = true
 [dependencies]
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
-rocksdb = "0.22.0"
+rocksdb = "0.23.0"
 subxt-core = { workspace = true }
 
 executor-core = { path = "../../executor-core" }
