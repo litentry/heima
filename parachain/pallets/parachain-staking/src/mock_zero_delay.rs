@@ -32,7 +32,6 @@ construct_runtime!(
 		System: frame_system,
 		Balances: pallet_balances,
 		ParachainStaking: pallet_parachain_staking,
-		Utility: pallet_utility,
 	}
 );
 
@@ -51,13 +50,6 @@ impl pallet_balances::Config for Test {
 	type Balance = Balance;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-}
-
-impl pallet_utility::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeCall = RuntimeCall;
-	type PalletsOrigin = OriginCaller;
-	type WeightInfo = ();
 }
 
 parameter_types! {
