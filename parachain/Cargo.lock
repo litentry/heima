@@ -8559,7 +8559,6 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-session",
- "pallet-utility",
  "parity-scale-codec",
  "scale-info",
  "serde",
