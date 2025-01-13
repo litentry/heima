@@ -14,11 +14,11 @@ subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
-executor-core = { path = "../../executor-core" }
-parentchain-api-interface = { path = "../api-interface" }
-parentchain-primitives = { path = "../primitives" }
-parentchain-rpc-client = { path = "../rpc-client" }
-parentchain-storage = { path = "../storage" }
+executor-core = { workspace = true }
+parentchain-api-interface = { workspace = true }
+parentchain-primitives = { workspace = true }
+parentchain-rpc-client = { workspace = true }
+parentchain-storage = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

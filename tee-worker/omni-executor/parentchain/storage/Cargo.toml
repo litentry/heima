@@ -10,9 +10,9 @@ parity-scale-codec = { workspace = true, features = ["derive"] }
 rocksdb = "0.23.0"
 subxt-core = { workspace = true }
 
-executor-core = { path = "../../executor-core" }
-parentchain-api-interface = { path = "../api-interface" }
-parentchain-rpc-client = { path = "../rpc-client" }
+executor-core = { workspace = true }
+parentchain-api-interface = { workspace = true }
+parentchain-rpc-client = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

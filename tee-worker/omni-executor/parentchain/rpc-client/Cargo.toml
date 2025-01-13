@@ -12,7 +12,7 @@ scale-encode = { workspace = true }
 subxt = { workspace = true }
 subxt-core = { workspace = true }
 
-parentchain-primitives = { path = "../primitives" }
+parentchain-primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

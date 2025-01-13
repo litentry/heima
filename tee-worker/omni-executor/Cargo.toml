@@ -31,5 +31,14 @@ subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 
+executor-core = { path = "executor-core" }
+ethereum-intent-executor = { path = "ethereum/intent-executor" }
+solana-intent-executor = { path = "solana/intent-executor" }
+parentchain-listener = { path = "parentchain/listener" }
+parentchain-api-interface = { path = "parentchain/api-interface" }
+parentchain-primitives = { path = "parentchain/primitives" }
+parentchain-rpc-client = { path = "parentchain/rpc-client" }
+parentchain-storage = { path = "parentchain/storage" }
+
 [workspace.lints.clippy]
 result_unit_err = "allow"
