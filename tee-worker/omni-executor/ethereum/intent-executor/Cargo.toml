@@ -7,7 +7,7 @@ edition.workspace = true
 [dependencies]
 alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types"] }
 async-trait = { workspace = true }
-executor-core = {  workspace = true }
+executor-core = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]
