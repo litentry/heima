@@ -1038,11 +1038,11 @@ impl pallet_parachain_staking::Config for Runtime {
 	/// Rounds before the candidate bond increase/decrease can be executed
 	type CandidateBondLessDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
 	/// Rounds before the delegator exit can be executed
-	type LeaveDelegatorsDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type LeaveDelegatorsDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the delegator revocation can be executed
-	type RevokeDelegationDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type RevokeDelegationDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the delegator bond increase/decrease can be executed
-	type DelegationBondLessDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type DelegationBondLessDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the reward is paid
 	type RewardPaymentDelay = ConstU32<2>;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
