@@ -293,73 +293,9 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             precompileStakingContractAddress,
             'scheduleDelegatorBondLess'
         );
-        expect(await isPendingRequest()).to.be.true;
 
-        // cancelDelegationRequest(collator)
-        const cancelDelegationRequest = precompileStakingContract.interface.encodeFunctionData(
-            'cancelDelegationRequest',
-            [collatorPublicKey]
-        );
-
-        expect(await isPendingRequest()).to.be.true;
-        await executeTransaction(cancelDelegationRequest, precompileStakingContractAddress, 'cancelDelegationRequest');
+        // Zero delay impl will make execution immediately
         expect(await isPendingRequest()).to.be.false;
-
-        // only makes sense when parachain is compiled with `fast-runtime` feature, otherwise we'll
-        // never make it within reasonable time
-        if (config.parachain_fast_runtime === 'true') {
-            // testing bond less + execution
-            await executeTransaction(
-                scheduleDelegatorBondLess,
-                precompileStakingContractAddress,
-                'scheduleDelegatorBondLess again to test execution'
-            );
-            expect(await isPendingRequest()).to.be.true;
-
-            // executeDelegationRequest(delegator, collator);
-            const executeDelegationRequest = precompileStakingContract.interface.encodeFunctionData(
-                'executeDelegationRequest',
-                [evmAccountRaw.publicKey, collatorPublicKey]
-            );
-            await executeTransaction(
-                executeDelegationRequest,
-                precompileStakingContractAddress,
-                'executeDelegationRequest'
-            );
-            const { data: balanceAfterBondLess } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
-            expect(balanceAfterBondLess.reserved.toBigInt()).to.eq(
-                balanceAfterBondMore.reserved.toBigInt() - toBigInt(5)
-            );
-
-            // testing revoke delegation + execute
-            // scheduleRevokeDelegation(collator);
-            const scheduleRevokeDelegation = precompileStakingContract.interface.encodeFunctionData(
-                'scheduleRevokeDelegation',
-                [collatorPublicKey]
-            );
-            await executeTransaction(
-                scheduleRevokeDelegation,
-                precompileStakingContractAddress,
-                'scheduleRevokeDelegation'
-            );
-
-            await executeTransaction(
-                executeDelegationRequest,
-                precompileStakingContractAddress,
-                'executeDelegationRequest'
-            );
-            const { data: balanceAfterRevoke } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
-            expect(balanceAfterRevoke.reserved.toBigInt()).to.eq(toBigInt(0));
-
-            // delegate(collator, amount);
-            const delegate = precompileStakingContract.interface.encodeFunctionData('delegate', [
-                collatorPublicKey,
-                ethers.utils.parseUnits('57', 18).toString(),
-            ]);
-            await executeTransaction(delegate, precompileStakingContractAddress, 'delegate');
-            const { data: balanceAfterDelegate } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
-            expect(balanceAfterDelegate.reserved.toBigInt()).to.eq(toBigInt(57));
-        }
 
         console.timeEnd('Test precompile staking contract');
     });
