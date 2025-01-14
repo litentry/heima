@@ -6,6 +6,8 @@ edition.workspace = true
 
 [dependencies]
 log = { workspace = true }
+jsonrpsee = { workspace = true }
+tokio = { workspace = true }
 
 [lints]
 workspace = true
