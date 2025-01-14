@@ -31,7 +31,7 @@ subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 sp-state-machine = { version = "0.44.0", features = ["std"] }
-frame-support = {version = "39.0.0", features = ["std"]}
+frame-support = { version = "39.0.0", features = ["std"] }
 
 executor-core = { path = "executor-core" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
