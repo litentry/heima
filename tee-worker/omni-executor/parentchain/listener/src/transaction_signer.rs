@@ -13,8 +13,8 @@ use subxt_signer::sr25519::SecretKeyBytes;
 
 pub struct TransactionSigner<
 	KeyStoreT,
-	RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
-	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
+	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
 	ChainConfig: Config,
 	MetadataT,
 	MetadataProviderT: MetadataProvider<MetadataT>,
@@ -27,8 +27,8 @@ pub struct TransactionSigner<
 
 impl<
 		KeyStoreT: KeyStore<SecretKeyBytes>,
-		RpcClient: SubstrateRpcClient<ChainConfig::AccountId>,
-		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, RpcClient>,
+		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
 		ChainConfig: Config<
 			ExtrinsicParams = DefaultExtrinsicParams<ChainConfig>,
 			AccountId = AccountId32,

@@ -23,6 +23,7 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::thread;
 use std::time::Duration;
+use std::vec::Vec;
 use subxt::backend::legacy::LegacyRpcMethods;
 use subxt::backend::BlockRef;
 use subxt::config::signed_extensions;
@@ -71,7 +72,8 @@ pub struct RuntimeVersion {
 
 /// For fetching data from Substrate RPC node
 #[async_trait]
-pub trait SubstrateRpcClient<AccountId> {
+pub trait SubstrateRpcClient<AccountId, Header> {
+	async fn get_last_finalized_header(&mut self) -> Result<Option<Header>, ()>;
 	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
@@ -79,6 +81,13 @@ pub trait SubstrateRpcClient<AccountId> {
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()>;
 	async fn get_genesis_hash(&mut self) -> Result<Vec<u8>, ()>;
 	async fn get_account_nonce(&mut self, account_id: &AccountId) -> Result<u64, ()>;
+	async fn get_storage_keys_paged(
+		&mut self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()>;
+	async fn get_storage_proof_by_keys(&mut self, keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()>;
 }
 
 pub struct SubxtClient<ChainConfig: Config> {
@@ -95,14 +104,17 @@ impl<ChainConfig: Config> SubxtClient<ChainConfig> {
 }
 
 #[async_trait]
-impl<ChainConfig: Config<AccountId = AccountId32>> SubstrateRpcClient<ChainConfig::AccountId>
-	for SubxtClient<ChainConfig>
+impl<ChainConfig: Config<AccountId = AccountId32>>
+	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for SubxtClient<ChainConfig>
 {
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
 		let finalized_header = self.legacy.chain_get_finalized_head().await.map_err(|_| ())?;
-		match self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())? {
-			Some(header) => Ok(header.number().into()),
-			None => Err(()),
+		self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())
+	}
+	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+		match self.get_last_finalized_header().await {
+			Ok(Some(header)) => Ok(header.number().into()),
+			_ => Err(()),
 		}
 	}
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
@@ -166,14 +178,44 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubstrateRpcClient<ChainConfi
 	async fn get_account_nonce(&mut self, account_id: &ChainConfig::AccountId) -> Result<u64, ()> {
 		self.tx.account_nonce(account_id).await.map_err(|_| ())
 	}
+
+	async fn get_storage_keys_paged(
+		&mut self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()> {
+		self.legacy
+			.state_get_keys_paged(key_prefix.as_slice(), count, start_key.as_deref(), None)
+			.await
+			.map_err(|_| ())
+	}
+
+	async fn get_storage_proof_by_keys(&mut self, keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()> {
+		let keys: Vec<&[u8]> = keys.iter().map(|k| k.as_slice()).collect();
+		let storage_proof = self
+			.legacy
+			.state_get_read_proof(keys, None)
+			.await
+			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.to_vec()).collect())
+			.map_err(|_| ())?;
+
+		Ok(storage_proof)
+	}
 }
 
-pub struct MockedRpcClient {
+pub struct MockedRpcClient<ChainConfig: Config> {
 	block_num: u64,
+	_phantom: PhantomData<ChainConfig>,
 }
 
 #[async_trait]
-impl SubstrateRpcClient<String> for MockedRpcClient {
+impl<ChainConfig: Config<AccountId = String>>
+	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for MockedRpcClient<ChainConfig>
+{
+	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
+		Ok(None)
+	}
 	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
 		Ok(self.block_num)
 	}
@@ -198,13 +240,31 @@ impl SubstrateRpcClient<String> for MockedRpcClient {
 		Ok(vec![])
 	}
 
-	async fn get_account_nonce(&mut self, _account_id: &String) -> Result<u64, ()> {
+	async fn get_account_nonce(&mut self, _account_id: &ChainConfig::AccountId) -> Result<u64, ()> {
 		Ok(0)
+	}
+
+	async fn get_storage_keys_paged(
+		&mut self,
+		_key_prefix: Vec<u8>,
+		_count: u32,
+		_start_key: Option<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(vec![])
+	}
+
+	async fn get_storage_proof_by_keys(&mut self, _keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(vec![])
 	}
 }
 
 #[async_trait]
-pub trait SubstrateRpcClientFactory<AccountId, RpcClient: SubstrateRpcClient<AccountId>> {
+pub trait SubstrateRpcClientFactory<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+>
+{
 	async fn new_client(&self) -> Result<RpcClient, ()>;
 }
 
@@ -239,7 +299,7 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubxtClientFactory<ChainConfi
 
 #[async_trait]
 impl<ChainConfig: Config<AccountId = AccountId32>>
-	SubstrateRpcClientFactory<ChainConfig::AccountId, SubxtClient<ChainConfig>>
+	SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, SubxtClient<ChainConfig>>
 	for SubxtClientFactory<ChainConfig>
 {
 	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, ()> {

@@ -35,7 +35,12 @@ pub type ParentchainListener<
 	SolanaIntentExecutor,
 	AccountStoreStorage,
 > = Listener<
-	Fetcher<<ChainConfig as Config>::AccountId, RpcClient, RpcClientFactory>,
+	Fetcher<
+		<ChainConfig as Config>::AccountId,
+		<ChainConfig as Config>::Header,
+		RpcClient,
+		RpcClientFactory,
+	>,
 	SyncCheckpoint,
 	CheckpointRepository,
 	IntentEventId,
