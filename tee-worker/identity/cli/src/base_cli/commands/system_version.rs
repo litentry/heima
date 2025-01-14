@@ -16,7 +16,7 @@
 
 use crate::{Cli, CliResult, CliResultOk};
 
-// Dispnay the current system version detail
+// Display the current system version detail
 // usage example:
 // ./litentry-cli system-version
 #[derive(Parser)]
