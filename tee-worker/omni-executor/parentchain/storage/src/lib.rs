@@ -12,7 +12,7 @@ use parity_scale_codec::Decode;
 use sp_state_machine::{read_proof_check, StorageProof};
 use subxt_core::utils::AccountId32 as AccountId;
 
-const STORAGE_PATH: &str = "storage";
+const STORAGE_PATH: &str = "storage_db";
 
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<(), ()> {
 	let client_factory: SubxtClientFactory<CustomConfig> = SubxtClientFactory::new(ws_rpc_endpoint);
