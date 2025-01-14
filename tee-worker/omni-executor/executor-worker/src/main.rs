@@ -18,6 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
+use rpc::server::{start_server as start_rpc_server, RpcContext};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
 use std::thread::JoinHandle;
@@ -48,6 +49,12 @@ async fn main() -> Result<(), ()> {
 
 	fs::create_dir_all("data/").map_err(|e| {
 		error!("Could not create data dir: {:?}", e);
+	})?;
+
+	// TODO: init context
+	let server_context = RpcContext {};
+	start_rpc_server(&cli.worker_rpc_port, server_context).await.map_err(|e| {
+		error!("Could not start server: {:?}", e);
 	})?;
 
 	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
