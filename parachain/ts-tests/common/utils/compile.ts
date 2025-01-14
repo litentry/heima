@@ -35,11 +35,11 @@ const input = {
                 '*': ['*'],
             },
         },
-        evmVersion: "london",
+        evmVersion: 'london',
         optimizer: {
             enabled: true,
-            runs: 200
-        }
+            runs: 200,
+        },
     },
 };
 const result = JSON.parse(solcWrapper.compile(JSON.stringify(input)));

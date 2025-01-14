@@ -39,6 +39,7 @@ ita-parentchain-interface = { package = "id-ita-parentchain-interface", path = "
 ita-sgx-runtime = { package = "id-ita-sgx-runtime", path = "../app-libs/sgx-runtime" }
 ita-stf = { package = "id-ita-stf", path = "../app-libs/stf" }
 itc-rpc-client = { workspace = true }
+itc-system-version = { workspace = true, features = ["std"] }
 itp-node-api = { workspace = true, features = ["std"] }
 itp-rpc = { workspace = true, features = ["std"] }
 itp-sgx-crypto = { workspace = true, features = ["std"] }

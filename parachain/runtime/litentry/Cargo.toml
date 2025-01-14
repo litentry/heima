@@ -90,6 +90,7 @@ pallet-group = { workspace = true }
 pallet-identity-management = { workspace = true }
 pallet-omni-account = { workspace = true }
 pallet-omni-account-runtime-api = { workspace = true }
+pallet-omni-bridge = { workspace = true }
 pallet-parachain-staking = { workspace = true }
 pallet-score-staking = { workspace = true }
 pallet-teebag = { workspace = true }
@@ -167,6 +168,7 @@ runtime-benchmarks = [
     "pallet-message-queue/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-omni-account/runtime-benchmarks",
+    "pallet-omni-bridge/runtime-benchmarks",
     "pallet-parachain-staking/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
     "pallet-proxy/runtime-benchmarks",
@@ -253,6 +255,7 @@ std = [
     "pallet-multisig/std",
     "pallet-omni-account-runtime-api/std",
     "pallet-omni-account/std",
+    "pallet-omni-bridge/std",
     "pallet-parachain-staking/std",
     "pallet-preimage/std",
     "pallet-proxy/std",

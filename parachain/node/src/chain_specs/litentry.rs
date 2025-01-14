@@ -18,9 +18,10 @@ use super::*;
 use cumulus_primitives_core::ParaId;
 use litentry_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, CouncilMembershipConfig,
-	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, TechnicalCommitteeMembershipConfig,
-	TeebagConfig, TeebagOperationalMode, VCManagementConfig, WASM_BINARY,
+	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig,
+	TechnicalCommitteeMembershipConfig, TeebagConfig, TeebagOperationalMode, VCManagementConfig,
+	WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -239,6 +240,7 @@ fn generate_genesis(
 			mode: TeebagOperationalMode::Development,
 		},
 		score_staking: Default::default(),
+		omni_bridge: OmniBridgeConfig { admin: None, default_relayers: Default::default() },
 	};
 
 	serde_json::to_value(&config).expect("Could not build genesis config")
