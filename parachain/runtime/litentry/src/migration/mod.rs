@@ -332,10 +332,10 @@ where
 				"StorageVersion".as_bytes(),
 			));
 
-			// Set storage version to `4`.
-			StorageVersion::new(4).put::<pallet_democracy::Pallet<T>>();
+			// Set storage version to `1`.
+			StorageVersion::new(1).put::<pallet_democracy::Pallet<T>>();
 
-			log::info!(target: DEMOCRACY_LOG_TARGET, "Storage to version 4");
+			log::info!(target: DEMOCRACY_LOG_TARGET, "Storage to version 1");
 			T::DbWeight::get().reads_writes(1, 3)
 		} else {
 			log::info!(
@@ -348,7 +348,7 @@ where
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
-		ensure!(StorageVersion::get::<pallet_democracy::Pallet<T>>() == 4, "Must upgrade");
+		ensure!(StorageVersion::get::<pallet_democracy::Pallet<T>>() == 1, "Must upgrade");
 		Ok(())
 	}
 }
