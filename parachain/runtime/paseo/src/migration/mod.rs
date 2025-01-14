@@ -35,6 +35,8 @@ use frame_support::traits::{
 	Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion,
 };
 use sp_std::marker::PhantomData;
+#[cfg(feature = "try-runtime")]
+use sp_std::vec::Vec;
 
 pub type Migrations<Runtime> = (
 	// Identity V0 => V1
