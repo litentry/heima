@@ -3,9 +3,14 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX_MODE ?= HW
+WORKER_DEV ?= 0
 
 SELF_EXE = omni-executor-worker
 COMPILATION_FEATURES =
+
+ifeq ($(WORKER_DEV), 1)
+	COMPILATION_FEATURES := $(COMPILATION_FEATURES),development
+endif
 
 ROOTDIR := $(shell git rev-parse --show-toplevel)
 OMNI_DIR := $(ROOTDIR)/tee-worker/omni-executor
@@ -13,7 +18,7 @@ OMNI_DIR := $(ROOTDIR)/tee-worker/omni-executor
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
 ifeq ($(SGX_MODE), HW)
-COMPILATION_FEATURES = gramine-quote
+COMPILATION_FEATURES := $(COMPILATION_FEATURES),gramine-quote
 all: omni-executor.manifest.sgx omni-executor.sig
 endif
 

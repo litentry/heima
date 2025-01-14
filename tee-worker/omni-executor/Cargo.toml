@@ -15,19 +15,20 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-log = "0.4.22"
-tokio = "1.40.0"
-async-trait = "0.1.82"
-env_logger = "0.11.5"
-scale-encode = "0.7.1"
-parity-scale-codec = "3.6.12"
 alloy = "0.3.6"
+async-trait = "0.1.82"
 clap = "4.5.17"
-solana-sdk = "2.1.5"
+env_logger = "0.11.5"
+log = "0.4.22"
+parity-scale-codec = "3.6.12"
+scale-encode = "0.7.1"
 solana-client = "2.1.5"
+solana-sdk = "2.1.5"
+sp-core = "35.0.0"
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
+tokio = "1.40.0"
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
