@@ -13,6 +13,8 @@ subxt-core = { workspace = true }
 executor-core = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
+sp-state-machine = { workspace = true, features = ["std"] }
+frame-support = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 env_logger = { workspace = true }
