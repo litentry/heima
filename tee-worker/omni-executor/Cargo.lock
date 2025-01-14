@@ -4858,6 +4858,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rpc"
+version = "0.1.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "ruint"
 version = "1.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

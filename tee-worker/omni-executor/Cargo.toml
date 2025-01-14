@@ -7,6 +7,7 @@ members = [
     "parentchain/storage",
     "ethereum/intent-executor",
     "solana/intent-executor",
+    "rpc",
 ]
 
 resolver = "2"
