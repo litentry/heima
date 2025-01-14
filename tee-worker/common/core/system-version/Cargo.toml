@@ -1,0 +1,20 @@
+[package]
+name = "itc-system-version"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
+build = 'build.rs'
+edition = "2021"
+
+[dependencies]
+# sgx dependencies
+sgx_tstd = { workspace = true, optional = true }
+
+[build-dependencies]
+built = { workspace = true, features = ["chrono", "semver"] }
+
+[features]
+default = ["std"]
+std = []
+sgx = [
+    "sgx_tstd",
+]
