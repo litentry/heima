@@ -16,11 +16,13 @@
 
 // By the time of this migration on Paseo 9221 (polkadot stable2407)
 // The current storage version:      pallet version:
+// parachainIdentity         -                     0
 // xcmpQueue:                -                     3
 // transactionPayment:       V2                    0
 // vesting:                  V1                    0
 
 // Our target  storage version:      pallet version: (stable2407)
+// parachainIdentity         -                     1
 // xcmpQueue:                -                     3 => 5
 // transactionPayment:       V2                    0
 // vesting:                  V1                    0
@@ -29,6 +31,11 @@
 // Pallet version is used instead.
 
 pub type Migrations<Runtime> = (
+	// Identity V0 => V1
+	// Our storage is empty
+	// The official migration is for can old IdentityFor into new IdentityFor
+	// Should do nothing but bump version storage for us
+	IdentityUpdateStorageVersion<Runtime>,
 	// V3 to V4
 	// XCMP QueueConfig has different default value
 	// Migration targeting at changing storage value to new default value if old value matched
@@ -42,3 +49,49 @@ pub type Migrations<Runtime> = (
 	// This migration should have no effect except bumping storage version
 	cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
 );
+
+const IDENTITY_LOG_TARGET: &str = "runtime::identity";
+pub struct IdentityUpdateStorageVersion<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for IdentityUpdateStorageVersion<T>
+where
+	T: frame_system::Config + pallet_identity::Config,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
+		ensure!(
+			StorageVersion::get::<pallet_identity::Pallet<T>>() == 0,
+			"Already upgrade to some non-zero version"
+		);
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let on_chain_version = pallet_identity::Pallet::<T>::on_chain_storage_version();
+
+		if on_chain_version == 0 {
+			// Remove the old `StorageVersion` type.
+			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
+				pallet_identity::Pallet::<T>::name().as_bytes(),
+				"StorageVersion".as_bytes(),
+			));
+
+			// Set storage version to `1`.
+			StorageVersion::new(1).put::<pallet_identity::Pallet<T>>();
+
+			log::info!(target: BOUNTIES_LOG_TARGET, "Storage to version 1");
+			T::DbWeight::get().reads_writes(1, 3)
+		} else {
+			log::info!(
+				target: BOUNTIES_LOG_TARGET,
+				"Migration did not execute. This probably should be removed"
+			);
+			T::DbWeight::get().reads(1)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+		ensure!(StorageVersion::get::<pallet_identity::Pallet<T>>() == 1, "Must upgrade");
+		Ok(())
+	}
+}

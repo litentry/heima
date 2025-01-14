@@ -81,9 +81,9 @@ pub type Migrations<Runtime> = (
 	// TODO: Where does this number come from?
 	BalancesUpdateStorageVersionResetInactive<Runtime>,
 	// Democracy V0 => V1
-	// This migration only effects onging proposal/referedum, NextExternal
-	// The referedum info's proposal hash is migrated if the hash is in old form (In our case, even for an onging one it will do nothing)
-	pallet_democracy::migrations::v1::v1::Migration<Runtime>,
+	// The ofifical migration only effects onging proposal/referedum, NextExternal, which we are already good
+	// So we just bump version storage instead
+	DemocracyUpdateStorageVersion<Runtime>,
 	// Bounties V0 => V4
 	// The official migration does nothing but change pallet name and bump version
 	// So we just bump version storage instead
@@ -303,6 +303,52 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 		ensure!(StorageVersion::get::<pallet_balances::Pallet<T>>() == 1, "Must upgrade");
+		Ok(())
+	}
+}
+
+const DEMOCRACY_LOG_TARGET: &str = "runtime::democracy";
+pub struct DemocracyUpdateStorageVersion<T>(PhantomData<T>);
+impl<T> OnRuntimeUpgrade for DemocracyUpdateStorageVersion<T>
+where
+	T: frame_system::Config + pallet_democracy::Config,
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
+		ensure!(
+			StorageVersion::get::<pallet_democracy::Pallet<T>>() == 0,
+			"Already upgrade to some non-zero version"
+		);
+		Ok(Vec::<u8>::new())
+	}
+
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		let on_chain_version = pallet_democracy::Pallet::<T>::on_chain_storage_version();
+
+		if on_chain_version == 0 {
+			// Remove the old `StorageVersion` type.
+			frame_support::storage::unhashed::kill(&frame_support::storage::storage_prefix(
+				pallet_democracy::Pallet::<T>::name().as_bytes(),
+				"StorageVersion".as_bytes(),
+			));
+
+			// Set storage version to `4`.
+			StorageVersion::new(4).put::<pallet_democracy::Pallet<T>>();
+
+			log::info!(target: DEMOCRACY_LOG_TARGET, "Storage to version 4");
+			T::DbWeight::get().reads_writes(1, 3)
+		} else {
+			log::info!(
+				target: DEMOCRACY_LOG_TARGET,
+				"Migration did not execute. This probably should be removed"
+			);
+			T::DbWeight::get().reads(1)
+		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+		ensure!(StorageVersion::get::<pallet_democracy::Pallet<T>>() == 4, "Must upgrade");
 		Ok(())
 	}
 }
