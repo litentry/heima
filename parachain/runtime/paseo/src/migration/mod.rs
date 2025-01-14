@@ -29,6 +29,13 @@
 
 // In try-runtime, current implementation, the storage version is not checked,
 // Pallet version is used instead.
+#[cfg(feature = "try-runtime")]
+use frame_support::ensure;
+use frame_support::traits::{
+	Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion,
+};
+use sp_std::marker::PhantomData;
+use sp_std::vec::Vec;
 
 pub type Migrations<Runtime> = (
 	// Identity V0 => V1
@@ -78,11 +85,11 @@ where
 			// Set storage version to `1`.
 			StorageVersion::new(1).put::<pallet_identity::Pallet<T>>();
 
-			log::info!(target: BOUNTIES_LOG_TARGET, "Storage to version 1");
+			log::info!(target: IDENTITY_LOG_TARGET, "Storage to version 1");
 			T::DbWeight::get().reads_writes(1, 3)
 		} else {
 			log::info!(
-				target: BOUNTIES_LOG_TARGET,
+				target: IDENTITY_LOG_TARGET,
 				"Migration did not execute. This probably should be removed"
 			);
 			T::DbWeight::get().reads(1)
