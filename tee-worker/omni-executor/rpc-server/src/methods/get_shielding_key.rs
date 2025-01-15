@@ -1,6 +1,5 @@
-use crate::server::RpcContext;
+use crate::{server::RpcContext, utils::hex::ToHexPrefixed};
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Encode;
 use rsa::traits::PublicKeyParts;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
@@ -21,21 +20,18 @@ pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
 			})
 			.expect("Failed to serialize public key");
 
-			hex::encode(public_key_json.encode())
+			public_key_json.to_hex()
 		})
 		.expect("Failed to register author_getShieldingKey method");
 }
 
 #[cfg(test)]
 mod test {
-	use super::Rsa3072PubKey;
-	use crate::server::start_server;
-	use crate::ShieldingKey;
+	use super::*;
+	use crate::{start_server, utils::hex::FromHexPrefixed, ShieldingKey};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use parity_scale_codec::Decode;
-	use rsa::traits::PublicKeyParts;
 	use std::sync::Arc;
 
 	#[tokio::test]
@@ -48,8 +44,7 @@ mod test {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 		let response: String =
 			client.request("author_getShieldingKey", rpc_params![]).await.unwrap();
-		let scale_encoded_json = hex::decode(response).unwrap();
-		let decoded_json = String::decode(&mut scale_encoded_json.as_slice()).unwrap();
+		let decoded_json = String::from_hex(&response).unwrap();
 		let pubkey: Rsa3072PubKey = serde_json::from_str(&decoded_json).unwrap();
 
 		assert_eq!(pubkey.n, shielding_key.public_key().n().to_bytes_le());
