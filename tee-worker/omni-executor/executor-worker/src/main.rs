@@ -16,6 +16,7 @@
 
 use crate::cli::Cli;
 use clap::Parser;
+use cli::*;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
 use solana_intent_executor::SolanaIntentExecutor;
@@ -46,50 +47,48 @@ async fn main() -> Result<(), ()> {
 
 	let cli = Cli::parse();
 
-	fs::create_dir_all("data/").map_err(|e| {
-		error!("Could not create data dir: {:?}", e);
-	})?;
+	match cli.cmd {
+		Commands::Run(args) => {
+			listen_to_parentchain(args).await.unwrap();
 
-	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
-		.await
-		.unwrap();
-
-	match signal::ctrl_c().await {
-		Ok(()) => {},
-		Err(err) => {
-			eprintln!("Unable to listen for shutdown signal: {}", err);
-			// we also shut down in case of error
+			match signal::ctrl_c().await {
+				Ok(()) => {},
+				Err(err) => {
+					eprintln!("Unable to listen for shutdown signal: {}", err);
+					// we also shut down in case of error
+				},
+			}
+		},
+		Commands::GenKey(args) => {
+			let _ = parentchain_listener::get_signer(&args.keystore_path);
 		},
 	}
 
 	Ok(())
 }
 
-async fn listen_to_parentchain(
-	parentchain_url: String,
-	ethereum_url: String,
-	solana_url: String,
-	start_block: u64,
-) -> Result<JoinHandle<()>, ()> {
+async fn listen_to_parentchain(args: RunArgs) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
-		EthereumIntentExecutor::new(&ethereum_url).map_err(|e| log::error!("{:?}", e))?;
+		EthereumIntentExecutor::new(&args.ethereum_url).map_err(|e| log::error!("{:?}", e))?;
 	let solana_intent_executor =
-		SolanaIntentExecutor::new(solana_url).map_err(|e| log::error!("{:?}", e))?;
+		SolanaIntentExecutor::new(args.solana_url).map_err(|e| log::error!("{:?}", e))?;
 
 	let mut parentchain_listener =
 		parentchain_listener::create_listener::<EthereumIntentExecutor, SolanaIntentExecutor>(
 			"litentry_rococo",
 			Handle::current(),
-			&parentchain_url,
+			&args.parentchain_url,
 			ethereum_intent_executor,
 			solana_intent_executor,
 			sub_stop_receiver,
+			&args.keystore_path,
+			&args.log_path,
 		)
 		.await?;
 
 	Ok(thread::Builder::new()
 		.name("litentry_rococo_sync".to_string())
-		.spawn(move || parentchain_listener.sync(start_block))
+		.spawn(move || parentchain_listener.sync(args.start_block))
 		.unwrap())
 }

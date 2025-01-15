@@ -90,6 +90,8 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	ethereum_intent_executor: EthereumIntentExecutor,
 	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
+	keystore_path: &str,
+	log_path: &str,
 ) -> Result<
 	ParentchainListener<
 		SubxtClient<CustomConfig>,
@@ -110,25 +112,12 @@ where
 		Arc::new(SubxtClientFactory::new(ws_rpc_endpoint));
 
 	let fetcher = Fetcher::new(client_factory.clone());
-	let last_processed_log_repository =
-		FileCheckpointRepository::new("data/parentchain_last_log.bin");
+	let last_processed_log_repository = FileCheckpointRepository::new(log_path);
 
 	let metadata_provider =
 		Arc::new(SubxtMetadataProvider::new(SubxtClientFactory::new(ws_rpc_endpoint)));
-	let key_store = Arc::new(SubstrateKeyStore::new("data/parentchain_key.bin".to_string()));
-	let secret_key_bytes = key_store
-		.read()
-		.map_err(|e| {
-			error!("Could not unseal key: {:?}", e);
-		})
-		.unwrap();
-	let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
-		.map_err(|e| {
-			error!("Could not create secret key: {:?}", e);
-		})
-		.unwrap();
 
-	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
+	let (key_store, signer) = get_signer(keystore_path);
 
 	let transaction_signer = Arc::new(TransactionSigner::new(
 		metadata_provider.clone(),
@@ -150,6 +139,24 @@ where
 	);
 
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
+}
+
+pub fn get_signer(path: &str) -> (Arc<SubstrateKeyStore>, Keypair) {
+	let key_store = Arc::new(SubstrateKeyStore::new(path.to_string()));
+	let secret_key_bytes = key_store
+		.read()
+		.map_err(|e| {
+			error!("Could not unseal key: {:?}", e);
+		})
+		.unwrap();
+	let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
+		.map_err(|e| {
+			error!("Could not create secret key: {:?}", e);
+		})
+		.unwrap();
+
+	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
+	(key_store, signer)
 }
 
 #[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]

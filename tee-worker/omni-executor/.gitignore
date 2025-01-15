@@ -3,6 +3,8 @@ target/
 .idea/
 **/*.bin
 
+storage
+
 cache
 omni-executor.manifest
 omni-executor.manifest.sgx

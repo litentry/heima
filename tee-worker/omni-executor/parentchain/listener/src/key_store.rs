@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use executor_core::key_store::KeyStore;
+use sp_core::{sr25519, Pair};
 use subxt_signer::sr25519::SecretKeyBytes;
 
 /// Generates and stores keys used by for communication with parentchain`
@@ -24,27 +25,20 @@ pub struct SubstrateKeyStore {
 
 impl SubstrateKeyStore {
 	pub fn new(path: String) -> Self {
-		let key = Self::generate_key().unwrap();
-		let store = Self { path };
-		store.write(&key).unwrap();
-
-		store
+		if std::path::Path::new(&path).exists() {
+			Self { path }
+		} else {
+			let key = Self::generate_key().unwrap();
+			let store = Self { path };
+			store.write(&key).unwrap();
+			store
+		}
 	}
 }
 
 impl KeyStore<SecretKeyBytes> for SubstrateKeyStore {
 	fn generate_key() -> Result<SecretKeyBytes, ()> {
-		// Secret Key URI `//Alice` is account:
-		// Network ID:        substrate
-		// Secret seed:       0xe5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a
-		// Public key (hex):  0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-		// Account ID:        0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-		// Public key (SS58): 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
-		// SS58 Address:      5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
-		Ok([
-			229, 190, 154, 80, 146, 184, 27, 202, 100, 190, 129, 210, 18, 231, 242, 249, 235, 161,
-			131, 187, 122, 144, 149, 79, 123, 118, 54, 31, 110, 219, 92, 10,
-		])
+		Ok(sr25519::Pair::generate().1)
 	}
 
 	fn serialize(k: &SecretKeyBytes) -> Result<Vec<u8>, ()> {
