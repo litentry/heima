@@ -18,6 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
+use parentchain_storage::init_storage;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
 use std::thread::JoinHandle;
@@ -49,6 +50,8 @@ async fn main() -> Result<(), ()> {
 	fs::create_dir_all("data/").map_err(|e| {
 		error!("Could not create data dir: {:?}", e);
 	})?;
+
+	init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
 
 	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
 		.await

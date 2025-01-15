@@ -1,16 +1,11 @@
 [package]
-name = "solana-intent-executor"
+name = "parentchain-primitives"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-async-trait = { workspace = true }
 executor-core = { workspace = true }
-log = { workspace = true }
-solana-client = { workspace = true }
-solana-sdk = { workspace = true }
-
 
 [lints]
 workspace = true

@@ -14,21 +14,56 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::primitives::{BlockEvent, EventId};
 use async_trait::async_trait;
 use log::{error, info};
+use parentchain_primitives::{BlockEvent, EventId};
 use parity_scale_codec::Encode;
+use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::thread;
 use std::time::Duration;
+use std::vec::Vec;
 use subxt::backend::legacy::LegacyRpcMethods;
 use subxt::backend::BlockRef;
+use subxt::config::signed_extensions;
 use subxt::config::Header;
 use subxt::events::EventsClient;
+use subxt::storage::StorageClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
 use subxt_core::utils::AccountId32;
+
+// We don't need to construct this at runtime,
+// so an empty enum is appropriate:
+#[derive(EncodeAsType)]
+pub enum CustomConfig {}
+
+//todo: adjust if needed
+impl Config for CustomConfig {
+	type Hash = subxt::utils::H256;
+	type AccountId = subxt::utils::AccountId32;
+	type Address = subxt::utils::MultiAddress<Self::AccountId, u32>;
+	type Signature = subxt::utils::MultiSignature;
+	type Hasher = subxt::config::substrate::BlakeTwo256;
+	type Header = subxt::config::substrate::SubstrateHeader<u32, Self::Hasher>;
+	type ExtrinsicParams = signed_extensions::AnyOf<
+		Self,
+		(
+			// Load in the existing signed extensions we're interested in
+			// (if the extension isn't actually needed it'll just be ignored):
+			signed_extensions::CheckSpecVersion,
+			signed_extensions::CheckTxVersion,
+			signed_extensions::CheckNonce,
+			signed_extensions::CheckGenesis<Self>,
+			signed_extensions::CheckMortality<Self>,
+			signed_extensions::ChargeAssetTxPayment<Self>,
+			signed_extensions::ChargeTransactionPayment,
+			signed_extensions::CheckMetadataHash,
+		),
+	>;
+	type AssetId = u32;
+}
 
 pub struct RuntimeVersion {
 	pub spec_version: u32,
@@ -37,7 +72,8 @@ pub struct RuntimeVersion {
 
 /// For fetching data from Substrate RPC node
 #[async_trait]
-pub trait SubstrateRpcClient<AccountId> {
+pub trait SubstrateRpcClient<AccountId, Header> {
+	async fn get_last_finalized_header(&mut self) -> Result<Option<Header>, ()>;
 	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
@@ -45,25 +81,40 @@ pub trait SubstrateRpcClient<AccountId> {
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()>;
 	async fn get_genesis_hash(&mut self) -> Result<Vec<u8>, ()>;
 	async fn get_account_nonce(&mut self, account_id: &AccountId) -> Result<u64, ()>;
+	async fn get_storage_keys_paged(
+		&mut self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()>;
+	async fn get_storage_proof_by_keys(&mut self, keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()>;
 }
 
 pub struct SubxtClient<ChainConfig: Config> {
 	legacy: LegacyRpcMethods<ChainConfig>,
 	events: EventsClient<ChainConfig, OnlineClient<ChainConfig>>,
 	tx: TxClient<ChainConfig, OnlineClient<ChainConfig>>,
+	storage: StorageClient<ChainConfig, OnlineClient<ChainConfig>>,
 }
 
-impl<ChainConfig: Config> SubxtClient<ChainConfig> {}
+impl<ChainConfig: Config> SubxtClient<ChainConfig> {
+	pub fn storage(&self) -> &StorageClient<ChainConfig, OnlineClient<ChainConfig>> {
+		&self.storage
+	}
+}
 
 #[async_trait]
-impl<ChainConfig: Config<AccountId = AccountId32>> SubstrateRpcClient<ChainConfig::AccountId>
-	for SubxtClient<ChainConfig>
+impl<ChainConfig: Config<AccountId = AccountId32>>
+	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for SubxtClient<ChainConfig>
 {
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
 		let finalized_header = self.legacy.chain_get_finalized_head().await.map_err(|_| ())?;
-		match self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())? {
-			Some(header) => Ok(header.number().into()),
-			None => Err(()),
+		self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())
+	}
+	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+		match self.get_last_finalized_header().await {
+			Ok(Some(header)) => Ok(header.number().into()),
+			_ => Err(()),
 		}
 	}
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
@@ -127,14 +178,44 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubstrateRpcClient<ChainConfi
 	async fn get_account_nonce(&mut self, account_id: &ChainConfig::AccountId) -> Result<u64, ()> {
 		self.tx.account_nonce(account_id).await.map_err(|_| ())
 	}
+
+	async fn get_storage_keys_paged(
+		&mut self,
+		key_prefix: Vec<u8>,
+		count: u32,
+		start_key: Option<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()> {
+		self.legacy
+			.state_get_keys_paged(key_prefix.as_slice(), count, start_key.as_deref(), None)
+			.await
+			.map_err(|_| ())
+	}
+
+	async fn get_storage_proof_by_keys(&mut self, keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()> {
+		let keys: Vec<&[u8]> = keys.iter().map(|k| k.as_slice()).collect();
+		let storage_proof = self
+			.legacy
+			.state_get_read_proof(keys, None)
+			.await
+			.map(|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.to_vec()).collect())
+			.map_err(|_| ())?;
+
+		Ok(storage_proof)
+	}
 }
 
-pub struct MockedRpcClient {
+pub struct MockedRpcClient<ChainConfig: Config> {
 	block_num: u64,
+	_phantom: PhantomData<ChainConfig>,
 }
 
 #[async_trait]
-impl SubstrateRpcClient<String> for MockedRpcClient {
+impl<ChainConfig: Config<AccountId = String>>
+	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for MockedRpcClient<ChainConfig>
+{
+	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
+		Ok(None)
+	}
 	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
 		Ok(self.block_num)
 	}
@@ -159,13 +240,31 @@ impl SubstrateRpcClient<String> for MockedRpcClient {
 		Ok(vec![])
 	}
 
-	async fn get_account_nonce(&mut self, _account_id: &String) -> Result<u64, ()> {
+	async fn get_account_nonce(&mut self, _account_id: &ChainConfig::AccountId) -> Result<u64, ()> {
 		Ok(0)
+	}
+
+	async fn get_storage_keys_paged(
+		&mut self,
+		_key_prefix: Vec<u8>,
+		_count: u32,
+		_start_key: Option<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(vec![])
+	}
+
+	async fn get_storage_proof_by_keys(&mut self, _keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()> {
+		Ok(vec![])
 	}
 }
 
 #[async_trait]
-pub trait SubstrateRpcClientFactory<AccountId, RpcClient: SubstrateRpcClient<AccountId>> {
+pub trait SubstrateRpcClientFactory<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+>
+{
 	async fn new_client(&self) -> Result<RpcClient, ()>;
 }
 
@@ -200,7 +299,7 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubxtClientFactory<ChainConfi
 
 #[async_trait]
 impl<ChainConfig: Config<AccountId = AccountId32>>
-	SubstrateRpcClientFactory<ChainConfig::AccountId, SubxtClient<ChainConfig>>
+	SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, SubxtClient<ChainConfig>>
 	for SubxtClientFactory<ChainConfig>
 {
 	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, ()> {
@@ -218,7 +317,8 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 
 		let events = online_client.events();
 		let tx = online_client.tx();
+		let storage = online_client.storage();
 
-		Ok(SubxtClient { legacy, events, tx })
+		Ok(SubxtClient { legacy, events, tx, storage })
 	}
 }

@@ -18,9 +18,9 @@ use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::key_store::SubstrateKeyStore;
 use crate::metadata::SubxtMetadataProvider;
-use crate::primitives::SyncCheckpoint;
-use crate::primitives::{BlockEvent, EventId};
+use crate::sync_checkpoint::SyncCheckpoint;
 use executor_core::listener::Listener;
+use parentchain_primitives::{BlockEvent, EventId};
 use subxt::Metadata;
 use subxt_core::Config;
 
@@ -35,7 +35,12 @@ pub type ParentchainListener<
 	SolanaIntentExecutor,
 	AccountStoreStorage,
 > = Listener<
-	Fetcher<<ChainConfig as Config>::AccountId, RpcClient, RpcClientFactory>,
+	Fetcher<
+		<ChainConfig as Config>::AccountId,
+		<ChainConfig as Config>::Header,
+		RpcClient,
+		RpcClientFactory,
+	>,
 	SyncCheckpoint,
 	CheckpointRepository,
 	IntentEventId,

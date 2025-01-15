@@ -4,7 +4,9 @@ members = [
     "executor-worker",
     "parentchain/listener",
     "parentchain/api-interface",
+    "parentchain/rpc-client",
     "parentchain/storage",
+    "parentchain/primitives",
     "ethereum/intent-executor",
     "solana/intent-executor",
 ]
@@ -19,7 +21,7 @@ log = "0.4.22"
 tokio = "1.40.0"
 async-trait = "0.1.82"
 env_logger = "0.11.5"
-scale-encode = "0.7.1"
+scale-encode = "0.10.0"
 parity-scale-codec = "3.6.12"
 alloy = "0.3.6"
 clap = "4.5.17"
@@ -28,6 +30,17 @@ solana-client = "2.1.5"
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
+sp-state-machine = { version = "0.44.0", features = ["std"] }
+frame-support = { version = "39.0.0", features = ["std"] }
+
+executor-core = { path = "executor-core" }
+ethereum-intent-executor = { path = "ethereum/intent-executor" }
+solana-intent-executor = { path = "solana/intent-executor" }
+parentchain-listener = { path = "parentchain/listener" }
+parentchain-api-interface = { path = "parentchain/api-interface" }
+parentchain-primitives = { path = "parentchain/primitives" }
+parentchain-rpc-client = { path = "parentchain/rpc-client" }
+parentchain-storage = { path = "parentchain/storage" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
