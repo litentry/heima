@@ -2495,7 +2495,7 @@ dependencies = [
  "hex",
  "log",
  "parentchain-listener",
- "rpc",
+ "rpc-server",
  "scale-encode 0.7.1",
  "serde_json",
  "solana-intent-executor",
@@ -4963,7 +4963,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 
 [[package]]
-name = "rpc"
+name = "rpc-server"
 version = "0.1.0"
 dependencies = [
  "hex",

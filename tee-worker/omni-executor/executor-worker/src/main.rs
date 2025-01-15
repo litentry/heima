@@ -18,9 +18,10 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
-use rpc::server::{start_server as start_rpc_server, RpcContext};
+use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::{fs, thread};
 use tokio::runtime::Handle;
@@ -51,9 +52,9 @@ async fn main() -> Result<(), ()> {
 		error!("Could not create data dir: {:?}", e);
 	})?;
 
-	// TODO: init context
-	let server_context = RpcContext {};
-	start_rpc_server(&cli.worker_rpc_port, server_context).await.map_err(|e| {
+	let shielding_key = Arc::new(ShieldingKey::new());
+
+	start_rpc_server(&cli.worker_rpc_port, shielding_key).await.map_err(|e| {
 		error!("Could not start server: {:?}", e);
 	})?;
 
