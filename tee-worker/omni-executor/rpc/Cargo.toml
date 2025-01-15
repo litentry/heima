@@ -8,6 +8,12 @@ edition.workspace = true
 log = { workspace = true }
 jsonrpsee = { workspace = true }
 tokio = { workspace = true }
+rsa = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parity-scale-codec = { workspace = true }
+hex = { workspace = true }
 
 [lints]
 workspace = true
