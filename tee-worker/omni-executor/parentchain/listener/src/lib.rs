@@ -83,6 +83,7 @@ impl Config for CustomConfig {
 }
 
 /// Creates parentchain listener
+#[allow(clippy::too_many_arguments)]
 pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	id: &str,
 	handle: Handle,
