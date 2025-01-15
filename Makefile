@@ -141,5 +141,5 @@ clean-all-build:
 	@echo "Clean tee-worker/identity..."
 	@cd tee-worker/identity && make clean
 
-	@echo "Clean tee-worker/omni-worker..."
-	@cd tee-worker/omni-worker && make distclean
+	@echo "Clean tee-worker/omni-executor..."
+	@cd tee-worker/omni-executor && make distclean
