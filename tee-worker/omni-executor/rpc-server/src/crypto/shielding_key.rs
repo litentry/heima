@@ -1,4 +1,6 @@
-use rsa::{RsaPrivateKey, RsaPublicKey};
+use crate::crypto::traits::ShieldingCryptoDecrypt;
+use rsa::{Oaep, RsaPrivateKey, RsaPublicKey};
+use sha2::Sha256;
 
 pub struct ShieldingKey {
 	key: RsaPrivateKey,
@@ -15,6 +17,14 @@ impl ShieldingKey {
 
 	pub fn private_key(&self) -> &RsaPrivateKey {
 		&self.key
+	}
+}
+
+impl ShieldingCryptoDecrypt for ShieldingKey {
+	type Error = rsa::errors::Error;
+
+	fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
+		self.private_key().decrypt(Oaep::new::<Sha256>(), data)
 	}
 }
 
