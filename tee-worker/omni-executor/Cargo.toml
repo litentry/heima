@@ -44,6 +44,7 @@ crypto = { path = "crypto" }
 native-call-executor = { path = "native-call-executor" }
 executor-core = { path = "executor-core" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
+parentchain-primitives = { package = "core-primitives", path = "../../common/primitives/core" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
