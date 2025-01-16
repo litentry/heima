@@ -1,0 +1,14 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+rsa = { workspace = true, features = ["sha2"] }
+rand = { workspace = true }
+ring = { workspace = true }
+parity-scale-codec = { workspace = true }
+
+[lints]
+workspace = true

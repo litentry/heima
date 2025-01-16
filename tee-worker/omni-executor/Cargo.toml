@@ -8,6 +8,7 @@ members = [
     "ethereum/intent-executor",
     "solana/intent-executor",
     "rpc-server",
+    "crypto",
 ]
 
 resolver = "2"
@@ -38,6 +39,7 @@ hex = "0.4"
 ring = "0.17.8"
 
 rpc-server = { path = "rpc-server" }
+crypto = { path = "crypto" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
