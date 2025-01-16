@@ -30,13 +30,12 @@ subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 jsonrpsee = { version = "0.24", features = ["server"] }
-rsa = { version = "0.9.7", features = ["serde"] }
+rsa = "0.9.7"
 rand = "0.8.5"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0"
 hex = "0.4"
 ring = "0.17.8"
-sha2 = "0.10.8"
 
 rpc-server = { path = "rpc-server" }
 

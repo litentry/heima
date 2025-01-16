@@ -3942,7 +3942,6 @@ dependencies = [
  "num-iter",
  "num-traits",
  "rand 0.8.5",
- "serde",
  "smallvec",
  "zeroize",
 ]
@@ -4975,7 +4974,6 @@ dependencies = [
  "rsa",
  "serde",
  "serde_json",
- "sha2 0.10.8",
  "tokio",
 ]
 
@@ -4993,7 +4991,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core 0.6.4",
- "serde",
+ "sha2 0.10.8",
  "signature 2.2.0",
  "spki",
  "subtle",
