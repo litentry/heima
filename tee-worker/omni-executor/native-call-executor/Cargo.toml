@@ -1,0 +1,15 @@
+[package]
+name = "native-call-executor"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+log = { workspace = true }
+tokio = { workspace = true }
+parity-scale-codec = { workspace = true }
+
+parentchain-api-interface = { workspace = true }
+
+[lints]
+workspace = true

@@ -2504,6 +2504,7 @@ dependencies = [
  "executor-core",
  "hex",
  "log",
+ "native-call-executor",
  "parentchain-listener",
  "rpc-server",
  "scale-encode 0.7.1",
@@ -3847,6 +3848,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "685a9ac4b61f4e728e1d2c6a7844609c16527aeb5e6c865915c08e619c16410f"
 
 [[package]]
+name = "native-call-executor"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "parentchain-api-interface",
+ "parity-scale-codec",
+ "tokio",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4979,6 +4990,7 @@ dependencies = [
  "hex",
  "jsonrpsee",
  "log",
+ "native-call-executor",
  "parity-scale-codec",
  "rand 0.8.5",
  "serde",
