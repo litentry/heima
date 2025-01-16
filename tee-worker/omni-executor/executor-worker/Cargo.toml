@@ -18,6 +18,7 @@ solana-intent-executor = { path = "../solana/intent-executor" }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 
 rpc-server = { workspace = true }
+native-call-executor = { workspace = true }
 
 [lints]
 workspace = true

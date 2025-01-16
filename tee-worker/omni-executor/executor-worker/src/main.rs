@@ -18,6 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
+use native_call_executor::run_native_call_executor;
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
@@ -52,11 +53,20 @@ async fn main() -> Result<(), ()> {
 		error!("Could not create data dir: {:?}", e);
 	})?;
 
+	// TODO: make buffer size configurable
+	let buffer = 1024;
+	let native_call_sender = run_native_call_executor(buffer).await;
+	let native_call_sender = Arc::new(native_call_sender);
 	let shielding_key = Arc::new(ShieldingKey::new());
 
-	start_rpc_server(&cli.worker_rpc_port, shielding_key).await.map_err(|e| {
-		error!("Could not start server: {:?}", e);
-	})?;
+	// TODO: get mrenclave from enclave
+	let mrenclave = [0u8; 32];
+
+	start_rpc_server(&cli.worker_rpc_port, shielding_key, native_call_sender, mrenclave)
+		.await
+		.map_err(|e| {
+			error!("Could not start server: {:?}", e);
+		})?;
 
 	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
 		.await
