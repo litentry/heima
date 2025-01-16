@@ -21,7 +21,7 @@ pub async fn run_native_call_executor(buffer: usize) -> NativeCallSender {
 
 async fn execute_native_call(call: NativeCall, response_sender: ResponseSender) {
 	match call {
-		NativeCall::noop => {
+		NativeCall::noop(_) => {
 			let _ = response_sender.send("noop".encode());
 		},
 	}
