@@ -24,6 +24,15 @@ pub enum Error {
 	Codec(CodecError),
 }
 
+impl std::fmt::Display for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Error::Hex(e) => write!(f, "Hex error: {}", e),
+			Error::Codec(e) => write!(f, "Codec error: {}", e),
+		}
+	}
+}
+
 /// Trait to encode a given value to a hex string, prefixed with "0x".
 pub trait ToHexPrefixed {
 	fn to_hex(&self) -> String;
