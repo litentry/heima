@@ -15,7 +15,7 @@ struct Rsa3072PubKey {
 
 pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("author_getShieldingKey", |_params, ctx, _| async move {
+		.register_async_method("native_getShieldingKey", |_params, ctx, _| async move {
 			let public_key = ctx.shielding_key.public_key();
 			let public_key_json = serde_json::to_string(&Rsa3072PubKey {
 				n: public_key.n().to_bytes_le(),
@@ -25,7 +25,7 @@ pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
 
 			Ok::<String, ErrorObject>(public_key_json.to_hex())
 		})
-		.expect("Failed to register author_getShieldingKey method");
+		.expect("Failed to register native_getShieldingKey method");
 }
 
 #[cfg(test)]
@@ -52,7 +52,7 @@ mod test {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 		let response: String =
-			client.request("author_getShieldingKey", rpc_params![]).await.unwrap();
+			client.request("native_getShieldingKey", rpc_params![]).await.unwrap();
 		let decoded_json = String::from_hex(&response).unwrap();
 		let pubkey: Rsa3072PubKey = serde_json::from_str(&decoded_json).unwrap();
 
