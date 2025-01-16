@@ -1,15 +1,15 @@
 [workspace]
 members = [
+    "crypto",
     "native-call-executor",
     "executor-core",
     "executor-worker",
+    "ethereum/intent-executor",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/storage",
-    "ethereum/intent-executor",
-    "solana/intent-executor",
     "rpc-server",
-    "crypto",
+    "solana/intent-executor",
 ]
 
 resolver = "2"
@@ -42,6 +42,8 @@ ring = "0.17.8"
 rpc-server = { path = "rpc-server" }
 crypto = { path = "crypto" }
 native-call-executor = { path = "native-call-executor" }
+executor-core = { path = "executor-core" }
+parentchain-api-interface = { path = "parentchain/api-interface" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
