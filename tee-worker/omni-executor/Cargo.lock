@@ -4622,7 +4622,6 @@ version = "0.1.0"
 dependencies = [
  "core-primitives",
  "log",
- "parentchain-api-interface",
  "parity-scale-codec",
  "tokio",
 ]
@@ -5993,7 +5992,6 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "crypto",
  "hex",
  "jsonrpsee",

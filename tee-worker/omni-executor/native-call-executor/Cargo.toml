@@ -9,7 +9,6 @@ log = { workspace = true }
 tokio = { workspace = true }
 parity-scale-codec = { workspace = true }
 
-parentchain-api-interface = { workspace = true }
 parentchain-primitives = { workspace = true }
 
 [lints]
