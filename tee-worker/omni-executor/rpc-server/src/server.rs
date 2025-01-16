@@ -1,4 +1,4 @@
-use crate::{crypto::shielding_key::ShieldingKey, methods::register_methods};
+use crate::{methods::register_methods, ShieldingKey};
 use jsonrpsee::{server::Server, RpcModule};
 use std::net::SocketAddr;
 use std::sync::Arc;

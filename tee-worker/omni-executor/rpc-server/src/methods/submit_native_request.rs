@@ -1,10 +1,7 @@
-use crate::{
-	crypto::{
-		aes256::{aes_decrypt, Aes256Key, AesOutput},
-		traits::ShieldingCryptoDecrypt,
-	},
-	server::RpcContext,
-	utils::hex::FromHexPrefixed,
+use crate::{server::RpcContext, utils::hex::FromHexPrefixed};
+use crypto::{
+	aes256::{aes_decrypt, Aes256Key, AesOutput},
+	traits::Decrypt,
 };
 use jsonrpsee::{types::Params, RpcModule};
 use parity_scale_codec::{Decode, Encode};
@@ -22,7 +19,7 @@ pub struct AesRequest {
 impl AesRequest {
 	fn decrypt<T: Debug>(
 		&mut self,
-		shielding_key: Arc<impl ShieldingCryptoDecrypt<Error = T>>,
+		shielding_key: Arc<impl Decrypt<Error = T>>,
 	) -> Result<Vec<u8>, ()> {
 		let aes_key: Aes256Key =
 			shielding_key.decrypt(&self.key).map_err(|_| ())?.try_into().map_err(|_| ())?;

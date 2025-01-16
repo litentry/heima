@@ -1,6 +1,6 @@
 use crate::{server::RpcContext, utils::hex::ToHexPrefixed};
+use crypto::rsa::traits::PublicKeyParts;
 use jsonrpsee::RpcModule;
-use rsa::traits::PublicKeyParts;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
