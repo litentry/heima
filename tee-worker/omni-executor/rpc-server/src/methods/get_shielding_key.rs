@@ -32,13 +32,19 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
+	use native_call_executor::{NativeCall, ResponseSender};
 	use std::sync::Arc;
+	use tokio::sync::mpsc;
 
 	#[tokio::test]
 	pub async fn get_shielding_key_works() {
 		let port = "2000";
 		let shielding_key = Arc::new(ShieldingKey::new());
-		start_server(port, shielding_key.clone()).await.unwrap();
+		let (sender, _) = mpsc::channel::<(NativeCall, ResponseSender)>(1);
+
+		start_server(port, shielding_key.clone(), Arc::new(sender), [0u8; 32])
+			.await
+			.unwrap();
 
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
