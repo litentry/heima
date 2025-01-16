@@ -1,6 +1,9 @@
 use crate::{server::RpcContext, utils::hex::ToHexPrefixed};
 use crypto::rsa::traits::PublicKeyParts;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{
+	types::{ErrorCode, ErrorObject},
+	RpcModule,
+};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
@@ -18,9 +21,9 @@ pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
 				n: public_key.n().to_bytes_le(),
 				e: public_key.e().to_bytes_le(),
 			})
-			.expect("Failed to serialize public key");
+			.map_err(|_| ErrorCode::InternalError)?;
 
-			public_key_json.to_hex()
+			Ok::<String, ErrorObject>(public_key_json.to_hex())
 		})
 		.expect("Failed to register author_getShieldingKey method");
 }
