@@ -17,8 +17,8 @@ serde_json = "1.0.127"
 solana-intent-executor = { path = "../solana/intent-executor" }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 
-rpc-server = { workspace = true }
 native-call-executor = { workspace = true }
+rpc-server = { workspace = true }
 
 [lints]
 workspace = true

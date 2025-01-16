@@ -5,14 +5,14 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-log = { workspace = true }
+hex = { workspace = true }
 jsonrpsee = { workspace = true }
-tokio = { workspace = true }
+log = { workspace = true }
+parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-parity-scale-codec = { workspace = true }
-hex = { workspace = true }
+tokio = { workspace = true }
 
 crypto = { workspace = true }
 native-call-executor = { workspace = true }

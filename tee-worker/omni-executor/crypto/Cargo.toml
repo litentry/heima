@@ -5,10 +5,10 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-rsa = { workspace = true, features = ["sha2"] }
+parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 ring = { workspace = true }
-parity-scale-codec = { workspace = true }
+rsa = { workspace = true, features = ["sha2"] }
 
 [lints]
 workspace = true

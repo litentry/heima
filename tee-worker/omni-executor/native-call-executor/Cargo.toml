@@ -6,8 +6,8 @@ edition.workspace = true
 
 [dependencies]
 log = { workspace = true }
-tokio = { workspace = true }
 parity-scale-codec = { workspace = true }
+tokio = { workspace = true }
 
 parentchain-primitives = { workspace = true }
 
