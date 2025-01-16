@@ -1,3 +1,4 @@
+mod error_code;
 mod methods;
 mod server;
 mod shielding_key;
