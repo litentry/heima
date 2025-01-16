@@ -56,17 +56,19 @@ async fn main() -> Result<(), ()> {
 	// TODO: make buffer size configurable
 	let buffer = 1024;
 	let native_call_sender = run_native_call_executor(buffer).await;
-	let native_call_sender = Arc::new(native_call_sender);
-	let shielding_key = Arc::new(ShieldingKey::new());
-
-	// TODO: get mrenclave from enclave
+	// TODO: get mrenclave from quote
 	let mrenclave = [0u8; 32];
 
-	start_rpc_server(&cli.worker_rpc_port, shielding_key, native_call_sender, mrenclave)
-		.await
-		.map_err(|e| {
-			error!("Could not start server: {:?}", e);
-		})?;
+	start_rpc_server(
+		&cli.worker_rpc_port,
+		Arc::new(ShieldingKey::new()),
+		Arc::new(native_call_sender),
+		mrenclave,
+	)
+	.await
+	.map_err(|e| {
+		error!("Could not start server: {:?}", e);
+	})?;
 
 	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
 		.await
