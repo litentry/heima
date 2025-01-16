@@ -63,11 +63,11 @@ pub fn register_native_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 			let Ok(mut request) = AesRequest::from_hex(&hex_request) else {
 				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
 			};
-			let call = get_call_from_aes_request(&mut request, ctx.clone())?;
+			let native_call = get_native_call_from_aes_request(&mut request, ctx.clone())?;
 
 			let (response_sender, response_receiver) = oneshot::channel();
 
-			if ctx.native_call_sender.send((call, response_sender)).await.is_err() {
+			if ctx.native_call_sender.send((native_call, response_sender)).await.is_err() {
 				log::error!("Failed to send request to native call executor");
 			}
 
@@ -82,7 +82,7 @@ pub fn register_native_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register submitNativeRequest method");
 }
 
-fn get_call_from_aes_request<'a>(
+fn get_native_call_from_aes_request<'a>(
 	request: &mut AesRequest,
 	ctx: Arc<RpcContext>,
 ) -> Result<NativeCall, ErrorObject<'a>> {
@@ -92,15 +92,16 @@ fn get_call_from_aes_request<'a>(
 		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
 	}
 
-	let Ok(encoded_acall) = request.decrypt(ctx.shielding_key.clone()) else {
+	let Ok(encoded_auth_call) = request.decrypt(ctx.shielding_key.clone()) else {
 		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
 	};
 
-	let Ok(acall) = AuthenticatedCall::decode(&mut encoded_acall.as_slice()) else {
+	let Ok(auth_call) = AuthenticatedCall::decode(&mut encoded_auth_call.as_slice()) else {
 		return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
 	};
 
-	let authentication_result: Result<(), &str> = match acall.authentication {
+	let authentication_result: Result<(), &str> = match auth_call.authentication {
+		// TODO:
 		Authentication::Email(ref _verification_code) => {
 			// Verify code
 			// If code is valid, submit call
@@ -117,5 +118,5 @@ fn get_call_from_aes_request<'a>(
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}
 
-	Ok(acall.call)
+	Ok(auth_call.call)
 }
