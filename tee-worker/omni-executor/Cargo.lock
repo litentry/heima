@@ -2047,6 +2047,7 @@ dependencies = [
  "rand 0.8.5",
  "ring 0.17.8",
  "rsa",
+ "secp256k1 0.28.2",
 ]
 
 [[package]]
