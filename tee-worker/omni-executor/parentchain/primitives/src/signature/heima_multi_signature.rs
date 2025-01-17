@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(
 	Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, Serialize, Deserialize,
 )]
-pub enum MultiSignature {
+pub enum HeimaMultiSignature {
 	/// An Ed25519 signature.
 	#[codec(index = 0)]
 	Ed25519(ed25519::Signature),
