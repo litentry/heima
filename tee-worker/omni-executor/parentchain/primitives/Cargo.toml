@@ -5,14 +5,14 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+base64 = { workspace = true }
+bitcoin = { workspace = true, features = ["secp-recovery"] }
 executor-core = { workspace = true }
+hex = { workspace = true }
+log = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
-hex = { workspace = true }
-log = { workspace = true }
-bitcoin = { workspace = true, features = ["secp-recovery"] }
-base64 = { workspace = true }
 
 crypto = { workspace = true }
 heima-primitives = { workspace = true }
