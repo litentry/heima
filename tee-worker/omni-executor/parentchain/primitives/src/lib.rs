@@ -15,9 +15,9 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod signature;
+pub use heima_primitives::identity::Identity;
 
 use executor_core::primitives::GetEventId;
-use parity_scale_codec::{Decode, Encode};
 
 /// Used to uniquely identify intent event on parentchain.
 #[derive(Clone, Debug)]
@@ -57,7 +57,3 @@ impl GetEventId<EventId> for BlockEvent {
 		self.id.clone()
 	}
 }
-
-// TODO: use actual identity type
-#[derive(Encode, Decode, PartialEq, Eq, Debug, Clone)]
-pub enum Identity {}

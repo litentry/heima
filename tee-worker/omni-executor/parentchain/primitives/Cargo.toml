@@ -12,6 +12,7 @@ serde = { workspace = true }
 hex = { workspace = true }
 
 crypto = { workspace = true }
+heima-primitives = { workspace = true }
 
 [lints]
 workspace = true
