@@ -3,4 +3,4 @@ pub mod secp256k1;
 pub mod traits;
 
 pub use rsa;
-pub use sp_core::{ecdsa, ed25519, sr25519, ByteArray};
+pub use sp_core::{crypto::Pair as PairTrait, ecdsa, ed25519, hashing, sr25519, ByteArray};

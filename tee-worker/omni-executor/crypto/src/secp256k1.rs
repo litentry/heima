@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub use secp256k1::Secp256k1;
 use secp256k1::{
 	ecdsa::{RecoverableSignature, RecoveryId},
 	Message, SECP256K1,
