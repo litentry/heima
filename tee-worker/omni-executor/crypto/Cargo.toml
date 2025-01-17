@@ -9,6 +9,7 @@ parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 ring = { workspace = true }
 rsa = { workspace = true, features = ["sha2"] }
+sp-core = { workspace = true }
 secp256k1 = { workspace = true, features = ["std", "global-context"] }
 
 [lints]
