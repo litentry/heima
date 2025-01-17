@@ -25,7 +25,7 @@ pub enum AuthenticationError {
 	AuthTokenError(String),
 }
 
-pub fn verify_tca_web3_authentication(
+pub fn verify_web3_authentication(
 	signature: &HeimaMultiSignature,
 	call: &NativeCall,
 	nonce: u32,
@@ -55,7 +55,7 @@ pub fn verify_tca_web3_authentication(
 	}
 }
 
-pub async fn verify_tca_email_authentication(
+pub async fn verify_email_authentication(
 	ctx: Arc<RpcContext>,
 	sender_identity: &Identity,
 	verification_code: &VerificationCode,
@@ -63,7 +63,7 @@ pub async fn verify_tca_email_authentication(
 	todo!()
 }
 
-pub async fn verify_tca_auth_token_authentication(
+pub async fn verify_auth_token_authentication(
 	ctx: Arc<RpcContext>,
 	sender_identity: &Identity,
 	auth_token: &str,
