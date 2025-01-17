@@ -21,6 +21,7 @@ fs.mounts = [
   { path = "/data", uri = "file:data", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
   { path = "/etc", uri = "file:/etc" },
   { path = "/usr", uri = "file:/usr" },
+  { path = "/storage_db", uri = "file:storage_db" },
 ]
 
 sgx.debug = true
@@ -37,6 +38,10 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
   "file:/etc/ssl/certs/ca-certificates.crt",
   "file:/usr/lib/ssl/certs/ca-certificates.crt",
+]
+
+sgx.allowed_files = [
+  "file:storage_db/",
 ]
 
 # The maximum number of threads in a single process needs to be declared in advance.
