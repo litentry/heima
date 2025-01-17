@@ -5132,9 +5132,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core 35.0.0",
- "strum",
- "strum_macros",
 ]
 
 [[package]]
