@@ -6166,6 +6166,7 @@ dependencies = [
  "jsonrpsee",
  "log",
  "native-call-executor",
+ "parentchain-primitives",
  "parity-scale-codec",
  "rand 0.8.5",
  "serde",

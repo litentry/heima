@@ -15,9 +15,10 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod signature;
-pub use heima_primitives::identity::Identity;
+pub use heima_primitives::*;
 
 use executor_core::primitives::GetEventId;
+use std::fmt::Debug;
 
 /// Used to uniquely identify intent event on parentchain.
 #[derive(Clone, Debug)]
