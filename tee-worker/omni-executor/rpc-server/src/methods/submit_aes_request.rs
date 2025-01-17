@@ -42,7 +42,6 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 				log::error!("Failed to send request to native call executor");
 				return Err(ErrorCode::InternalError.into());
 			}
-
 			match response_receiver.await {
 				Ok(response) => Ok::<String, ErrorObject>(response.to_hex()),
 				Err(e) => {
@@ -51,7 +50,7 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 				},
 			}
 		})
-		.expect("Failed to register submitNativeRequest method");
+		.expect("Failed to register native_submitAesRequest method");
 }
 
 async fn get_native_call_from_aes_request<'a>(
