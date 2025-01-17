@@ -10,6 +10,9 @@ parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
 hex = { workspace = true }
+log = { workspace = true }
+bitcoin = { workspace = true, features = ["secp-recovery"] }
+base64 = { workspace = true }
 
 crypto = { workspace = true }
 heima-primitives = { workspace = true }
