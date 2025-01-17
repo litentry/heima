@@ -69,6 +69,7 @@ pub fn register_native_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 
 			if ctx.native_call_sender.send((native_call, response_sender)).await.is_err() {
 				log::error!("Failed to send request to native call executor");
+				return Err(ErrorCode::InternalError.into());
 			}
 
 			match response_receiver.await {
@@ -86,7 +87,6 @@ fn get_native_call_from_aes_request<'a>(
 	request: &mut AesRequest,
 	ctx: Arc<RpcContext>,
 ) -> Result<NativeCall, ErrorObject<'a>> {
-	#[cfg(feature = "gramine-quote")]
 	if request.mrenclave != ctx.mrenclave {
 		log::error!("Invalid mrenclave");
 		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
@@ -104,12 +104,10 @@ fn get_native_call_from_aes_request<'a>(
 		// TODO:
 		Authentication::Email(ref _verification_code) => {
 			// Verify code
-			// If code is valid, submit call
 			Ok(())
 		},
 		Authentication::AuthToken(ref _token) => {
 			// Verify token
-			// If token is valid, submit call
 			Ok(())
 		},
 	};
