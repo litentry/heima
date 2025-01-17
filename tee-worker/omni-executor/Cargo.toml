@@ -58,6 +58,7 @@ solana-intent-executor = { path = "solana/intent-executor" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-storage = { path = "parentchain/storage" }
+heima-primitives = { package = "core-primitives", path = "../../common/primitives/core" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
