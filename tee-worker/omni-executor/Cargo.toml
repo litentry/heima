@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "crypto",
-    "heima-primitives",
     "native-call-executor",
     "executor-core",
     "executor-worker",
@@ -52,7 +51,6 @@ native-call-executor = { path = "native-call-executor" }
 executor-core = { path = "executor-core" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-primitives = { path = "parentchain/primitives" }
-heima-primitives = { path = "heima-primitives" }
 sp-state-machine = { version = "0.44.0", features = ["std"] }
 frame-support = { version = "39.0.0", features = ["std"] }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
