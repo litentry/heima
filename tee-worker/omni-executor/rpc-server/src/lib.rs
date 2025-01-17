@@ -1,3 +1,4 @@
+mod authentication;
 mod error_code;
 mod methods;
 mod request;
