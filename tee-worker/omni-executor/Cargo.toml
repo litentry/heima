@@ -6,9 +6,12 @@ members = [
     "executor-core",
     "executor-worker",
     "ethereum/intent-executor",
+    "ethereum/intent-executor",
     "parentchain/listener",
     "parentchain/api-interface",
+    "parentchain/rpc-client",
     "parentchain/storage",
+    "parentchain/primitives",
     "rpc-server",
     "solana/intent-executor",
 ]
@@ -23,7 +26,7 @@ log = "0.4.22"
 tokio = "1.43.0"
 async-trait = "0.1.82"
 env_logger = "0.11.5"
-scale-encode = "0.7.1"
+scale-encode = "0.10.0"
 parity-scale-codec = "3.6.12"
 alloy = "0.3.6"
 clap = "4.5.17"
@@ -43,13 +46,20 @@ scale-info = "2.11.6"
 sp-core = "35.0.0"
 secp256k1 = "=0.28.2"
 
-rpc-server = { path = "rpc-server" }
 crypto = { path = "crypto" }
+rpc-server = { path = "rpc-server" }
 native-call-executor = { path = "native-call-executor" }
 executor-core = { path = "executor-core" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
-parentchain-primitives = { package = "core-primitives", path = "../../common/primitives/core" }
+parentchain-primitives = { path = "parentchain/primitives" }
 heima-primitives = { path = "heima-primitives" }
+sp-state-machine = { version = "0.44.0", features = ["std"] }
+frame-support = { version = "39.0.0", features = ["std"] }
+ethereum-intent-executor = { path = "ethereum/intent-executor" }
+solana-intent-executor = { path = "solana/intent-executor" }
+parentchain-listener = { path = "parentchain/listener" }
+parentchain-rpc-client = { path = "parentchain/rpc-client" }
+parentchain-storage = { path = "parentchain/storage" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
