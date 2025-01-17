@@ -1,0 +1,10 @@
+[package]
+name = "heima-primitives"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
