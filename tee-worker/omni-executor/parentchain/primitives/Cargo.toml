@@ -7,6 +7,11 @@ edition.workspace = true
 [dependencies]
 executor-core = { workspace = true }
 parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true }
+hex = { workspace = true }
+
+crypto = { workspace = true }
 
 [lints]
 workspace = true

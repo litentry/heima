@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+pub mod signature;
+
 use executor_core::primitives::GetEventId;
 use parity_scale_codec::{Decode, Encode};
 

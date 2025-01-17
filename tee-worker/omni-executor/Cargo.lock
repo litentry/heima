@@ -4662,8 +4662,12 @@ dependencies = [
 name = "parentchain-primitives"
 version = "0.1.0"
 dependencies = [
+ "crypto",
  "executor-core",
+ "hex",
  "parity-scale-codec",
+ "scale-info",
+ "serde",
 ]
 
 [[package]]
