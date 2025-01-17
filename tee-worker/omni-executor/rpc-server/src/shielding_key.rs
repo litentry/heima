@@ -3,6 +3,7 @@ use crypto::{
 	traits::Decrypt,
 };
 
+#[derive(Debug, Clone)]
 pub struct ShieldingKey {
 	key: RsaPrivateKey,
 }

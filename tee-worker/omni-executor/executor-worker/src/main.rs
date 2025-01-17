@@ -64,7 +64,7 @@ async fn main() -> Result<(), ()> {
 
 	start_rpc_server(
 		&cli.worker_rpc_port,
-		Arc::new(ShieldingKey::new()),
+		ShieldingKey::new(),
 		Arc::new(native_call_sender),
 		mrenclave,
 	)

@@ -5,14 +5,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 pub(crate) struct RpcContext {
-	pub shielding_key: Arc<ShieldingKey>,
+	pub shielding_key: ShieldingKey,
 	pub native_call_sender: Arc<NativeCallSender>,
 	pub mrenclave: [u8; 32],
 }
 
 pub async fn start_server(
 	port: &str,
-	shielding_key: Arc<ShieldingKey>,
+	shielding_key: ShieldingKey,
 	native_call_sender: Arc<NativeCallSender>,
 	mrenclave: [u8; 32],
 ) -> Result<(), Box<dyn std::error::Error>> {

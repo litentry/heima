@@ -42,7 +42,7 @@ mod test {
 	#[tokio::test]
 	pub async fn get_shielding_key_works() {
 		let port = "2000";
-		let shielding_key = Arc::new(ShieldingKey::new());
+		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<(NativeCall, ResponseSender)>(1);
 
 		start_server(port, shielding_key.clone(), Arc::new(sender), [0u8; 32])
