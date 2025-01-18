@@ -18,6 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
 use ethereum_intent_executor::EthereumIntentExecutor;
+use parentchain_storage::init_storage;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
 use std::thread;
@@ -48,6 +49,7 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 			listen_to_parentchain(args).await.unwrap();
 
 			match signal::ctrl_c().await {
