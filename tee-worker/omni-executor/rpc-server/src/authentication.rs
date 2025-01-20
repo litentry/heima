@@ -2,7 +2,7 @@ use crate::{server::RpcContext, utils::hex::hex_encode};
 use crypto::hashing::blake2_256;
 use native_task_handler::NativeCall;
 use parentchain_primitives::{
-	signature::HeimaMultiSignature, AccountId, BlockNumber, Hash, Identity, ShardIdentifier,
+	signature::HeimaMultiSignature, AccountId, Hash, Identity, OmniAccountAuthType, ShardIdentifier,
 };
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
@@ -15,6 +15,17 @@ pub enum Authentication {
 	Email(VerificationCode),
 	AuthToken(String),
 	OAuth2(OAuth2Data),
+}
+
+impl From<Authentication> for OmniAccountAuthType {
+	fn from(value: Authentication) -> Self {
+		match value {
+			Authentication::Web3(_) => OmniAccountAuthType::Web3,
+			Authentication::Email(_) => OmniAccountAuthType::Email,
+			Authentication::OAuth2(_) => OmniAccountAuthType::OAuth2,
+			Authentication::AuthToken(_) => OmniAccountAuthType::AuthToken,
+		}
+	}
 }
 
 #[derive(Debug)]

@@ -12,8 +12,8 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use native_call_executor::NativeCall;
-use parentchain_primitives::Nonce;
+use native_task_handler::{NativeCall, NativeTask};
+use parentchain_primitives::{Nonce, OmniAccountAuthType};
 use parity_scale_codec::{Decode, Encode};
 use std::{fmt::Debug, sync::Arc};
 use tokio::sync::oneshot;
@@ -34,14 +34,15 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 			let Ok(mut request) = AesRequest::from_hex(&hex_request) else {
 				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
 			};
-			let native_call = get_native_call_from_aes_request(&mut request, ctx.clone()).await?;
-
+			let (native_call, auth_type) = handle_aes_request(&mut request, ctx.clone()).await?;
 			let (response_sender, response_receiver) = oneshot::channel();
+			let native_task = NativeTask { call: native_call, auth_type, response_sender };
 
-			if ctx.native_call_sender.send((native_call, response_sender)).await.is_err() {
+			if ctx.native_task_sender.send(native_task).await.is_err() {
 				log::error!("Failed to send request to native call executor");
 				return Err(ErrorCode::InternalError.into());
 			}
+
 			match response_receiver.await {
 				Ok(response) => Ok::<String, ErrorObject>(response.to_hex()),
 				Err(e) => {
@@ -53,18 +54,16 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register native_submitAesRequest method");
 }
 
-async fn get_native_call_from_aes_request<'a>(
+async fn handle_aes_request<'a>(
 	request: &mut AesRequest,
 	ctx: Arc<RpcContext>,
-) -> Result<NativeCall, ErrorObject<'a>> {
+) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.shard().encode() != ctx.mrenclave.encode() {
 		return Err(ErrorCode::ServerError(INVALID_SHARD_CODE).into());
 	}
-
 	let Ok(encoded_auth_call) = request.decrypt(Box::new(ctx.shielding_key.clone())) else {
 		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
 	};
-
 	let authenticated_call: AuthenticatedCall =
 		match AuthenticatedCall::decode(&mut encoded_auth_call.as_slice()) {
 			Ok(auth_call) => auth_call,
@@ -73,7 +72,6 @@ async fn get_native_call_from_aes_request<'a>(
 				return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
 			},
 		};
-
 	let authentication_result = match authenticated_call.authentication {
 		Authentication::Web3(ref signature) => verify_web3_authentication(
 			signature,
@@ -112,5 +110,5 @@ async fn get_native_call_from_aes_request<'a>(
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}
 
-	Ok(authenticated_call.call)
+	Ok((authenticated_call.call, authenticated_call.authentication.into()))
 }
