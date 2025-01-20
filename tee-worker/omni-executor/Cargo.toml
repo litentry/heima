@@ -1,17 +1,17 @@
 [workspace]
 members = [
     "crypto",
-    "native-task-handler",
     "executor-core",
     "executor-worker",
     "ethereum/intent-executor",
     "ethereum/intent-executor",
+    "native-task-handler",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
-    "storage",
     "parentchain/primitives",
     "rpc-server",
+    "storage",
     "solana/intent-executor",
 ]
 
@@ -21,46 +21,47 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-log = "0.4.22"
-tokio = "1.43.0"
-async-trait = "0.1.82"
-env_logger = "0.11.5"
-scale-encode = "0.10.0"
-parity-scale-codec = "3.6.12"
 alloy = "0.3.6"
+async-trait = "0.1.82"
+base64 = "0.22.1"
+bitcoin = "0.32.5"
 clap = "4.5.17"
-solana-sdk = "2.1.5"
+env_logger = "0.11.5"
+frame-support = { version = "39.0.0", features = ["std"] }
+hex = "0.4"
+jsonrpsee = { version = "0.24", features = ["server"] }
+log = "0.4.22"
+parity-scale-codec = "3.6.12"
+rand = "0.8.5"
+ring = "0.17.8"
+rsa = "0.9.7"
+scale-encode = "0.10.0"
+scale-info = "2.11.6"
+secp256k1 = "=0.29.1"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0"
 solana-client = "2.1.5"
+solana-sdk = "2.1.5"
+sp-core = "35.0.0"
+sp-state-machine = { version = "0.44.0", features = ["std"] }
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
-jsonrpsee = { version = "0.24", features = ["server"] }
-rsa = "0.9.7"
-rand = "0.8.5"
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0"
-hex = "0.4"
-ring = "0.17.8"
-scale-info = "2.11.6"
-sp-core = "35.0.0"
-secp256k1 = "=0.29.1"
-bitcoin = "0.32.5"
-base64 = "0.22.1"
+tokio = "1.43.0"
 
+# Local dependencies
 crypto = { path = "crypto" }
-rpc-server = { path = "rpc-server" }
-native-task-handler = { path = "native-task-handler" }
-executor-core = { path = "executor-core" }
-parentchain-api-interface = { path = "parentchain/api-interface" }
-parentchain-primitives = { path = "parentchain/primitives" }
-sp-state-machine = { version = "0.44.0", features = ["std"] }
-frame-support = { version = "39.0.0", features = ["std"] }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
-solana-intent-executor = { path = "solana/intent-executor" }
-parentchain-listener = { path = "parentchain/listener" }
-parentchain-rpc-client = { path = "parentchain/rpc-client" }
-storage = { path = "storage" }
+executor-core = { path = "executor-core" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core" }
+native-task-handler = { path = "native-task-handler" }
+parentchain-api-interface = { path = "parentchain/api-interface" }
+parentchain-listener = { path = "parentchain/listener" }
+parentchain-primitives = { path = "parentchain/primitives" }
+parentchain-rpc-client = { path = "parentchain/rpc-client" }
+rpc-server = { path = "rpc-server" }
+solana-intent-executor = { path = "solana/intent-executor" }
+storage = { path = "storage" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
