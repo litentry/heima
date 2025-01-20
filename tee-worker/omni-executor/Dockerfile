@@ -20,7 +20,7 @@ RUN cargo build --release
 ##################################################
 FROM node:20-bookworm-slim AS executor-worker
 
-ENV SRC_DIR=/home/ubuntu/omni-executor
+ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
 ENV BIN_DIR=/usr/local/bin
 WORKDIR $BIN_DIR
 
