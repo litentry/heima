@@ -1,7 +1,7 @@
 use crate::{
 	authentication::{
-		verify_auth_token_authentication, verify_email_authentication, verify_web3_authentication,
-		Authentication,
+		verify_auth_token_authentication, verify_email_authentication,
+		verify_oauth2_authentication, verify_web3_authentication, Authentication,
 	},
 	error_code::*,
 	request::{AesRequest, DecryptableRequest},
@@ -87,6 +87,14 @@ async fn get_native_call_from_aes_request<'a>(
 				ctx,
 				authenticated_call.call.sender_identity(),
 				verification_code,
+			)
+			.await
+		},
+		Authentication::OAuth2(ref oauth2_data) => {
+			verify_oauth2_authentication(
+				ctx,
+				authenticated_call.call.sender_identity().hash(),
+				oauth2_data,
 			)
 			.await
 		},

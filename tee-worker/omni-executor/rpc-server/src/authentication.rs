@@ -14,7 +14,7 @@ pub enum Authentication {
 	Web3(HeimaMultiSignature),
 	Email(VerificationCode),
 	AuthToken(String),
-	// OAuth2(OAuth2Data),
+	OAuth2(OAuth2Data),
 }
 
 #[derive(Debug)]
@@ -22,7 +22,21 @@ pub enum AuthenticationError {
 	Web3InvalidSignature,
 	EmailVerificationCodeNotFound,
 	EmailInvalidVerificationCode,
+	OAuth2Error(String),
 	AuthTokenError(String),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum OAuth2Provider {
+	Google,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub struct OAuth2Data {
+	pub provider: OAuth2Provider,
+	pub code: String,
+	pub state: String,
+	pub redirect_uri: String,
 }
 
 pub fn verify_web3_authentication(
@@ -67,6 +81,29 @@ pub async fn verify_auth_token_authentication(
 	ctx: Arc<RpcContext>,
 	sender_identity: &Identity,
 	auth_token: &str,
+) -> Result<(), AuthenticationError> {
+	todo!()
+}
+
+pub async fn verify_oauth2_authentication(
+	ctx: Arc<RpcContext>,
+	sender_identity_hash: Hash,
+	payload: &OAuth2Data,
+) -> Result<(), AuthenticationError> {
+	// TODO: get OmniAccount from storage
+	let omni_account = todo!();
+	match payload.provider {
+		OAuth2Provider::Google => {
+			verify_google_oauth2(ctx, sender_identity_hash, omni_account, payload).await
+		},
+	}
+}
+
+async fn verify_google_oauth2(
+	ctx: Arc<RpcContext>,
+	sender_identity_hash: Hash,
+	omni_account: AccountId,
+	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	todo!()
 }
