@@ -65,7 +65,7 @@ async fn get_native_call_from_aes_request<'a>(
 		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
 	};
 
-	let auth_call: AuthenticatedCall =
+	let authenticated_call: AuthenticatedCall =
 		match AuthenticatedCall::decode(&mut encoded_auth_call.as_slice()) {
 			Ok(auth_call) => auth_call,
 			Err(e) => {
@@ -74,21 +74,29 @@ async fn get_native_call_from_aes_request<'a>(
 			},
 		};
 
-	let authentication_result = match auth_call.authentication {
+	let authentication_result = match authenticated_call.authentication {
 		Authentication::Web3(ref signature) => verify_web3_authentication(
 			signature,
-			&auth_call.call,
-			auth_call.nonce,
+			&authenticated_call.call,
+			authenticated_call.nonce,
 			&ctx.mrenclave,
 			&request.shard,
 		),
 		Authentication::Email(ref verification_code) => {
-			verify_email_authentication(ctx, auth_call.call.sender_identity(), verification_code)
-				.await
+			verify_email_authentication(
+				ctx,
+				authenticated_call.call.sender_identity(),
+				verification_code,
+			)
+			.await
 		},
 		Authentication::AuthToken(ref auth_token) => {
-			verify_auth_token_authentication(ctx, auth_call.call.sender_identity(), auth_token)
-				.await
+			verify_auth_token_authentication(
+				ctx,
+				authenticated_call.call.sender_identity(),
+				auth_token,
+			)
+			.await
 		},
 	};
 
@@ -96,5 +104,5 @@ async fn get_native_call_from_aes_request<'a>(
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}
 
-	Ok(auth_call.call)
+	Ok(authenticated_call.call)
 }
