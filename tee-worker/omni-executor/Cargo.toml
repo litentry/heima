@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "crypto",
-    "native-call-executor",
+    "native-task-handler",
     "executor-core",
     "executor-worker",
     "ethereum/intent-executor",
@@ -49,7 +49,7 @@ base64 = "0.22.1"
 
 crypto = { path = "crypto" }
 rpc-server = { path = "rpc-server" }
-native-call-executor = { path = "native-call-executor" }
+native-task-handler = { path = "native-task-handler" }
 executor-core = { path = "executor-core" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-primitives = { path = "parentchain/primitives" }

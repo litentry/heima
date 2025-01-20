@@ -2894,7 +2894,7 @@ dependencies = [
  "executor-core",
  "hex",
  "log",
- "native-call-executor",
+ "native-task-handler",
  "parentchain-listener",
  "rpc-server",
  "scale-encode 0.10.0",
@@ -4761,7 +4761,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "native-call-executor"
+name = "native-task-handler"
 version = "0.1.0"
 dependencies = [
  "log",
@@ -6146,11 +6146,10 @@ name = "rpc-server"
 version = "0.1.0"
 dependencies = [
  "crypto",
- "executor-core",
  "hex",
  "jsonrpsee",
  "log",
- "native-call-executor",
+ "native-task-handler",
  "parentchain-primitives",
  "parity-scale-codec",
  "rand 0.8.5",
