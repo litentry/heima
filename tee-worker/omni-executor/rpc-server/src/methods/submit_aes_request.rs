@@ -8,11 +8,12 @@ use crate::{
 	server::RpcContext,
 	utils::hex::{FromHexPrefixed, ToHexPrefixed},
 };
+use executor_core::native_call::NativeCall;
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use native_task_handler::{NativeCall, NativeTask};
+use native_task_handler::NativeTask;
 use parentchain_primitives::{Nonce, OmniAccountAuthType};
 use parity_scale_codec::{Decode, Encode};
 use std::{fmt::Debug, sync::Arc};

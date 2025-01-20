@@ -17,6 +17,7 @@ tokio = { workspace = true }
 crypto = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-primitives = { workspace = true }
+executor-core = { workspace = true }
 
 [lints]
 workspace = true
