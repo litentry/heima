@@ -7,7 +7,6 @@ edition.workspace = true
 [dependencies]
 base64 = { workspace = true }
 bitcoin = { workspace = true, features = ["secp-recovery"] }
-executor-core = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }

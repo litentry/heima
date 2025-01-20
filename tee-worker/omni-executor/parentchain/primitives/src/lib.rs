@@ -20,8 +20,11 @@ pub use heima_primitives::{
 	ShardIdentifier,
 };
 
-use executor_core::primitives::GetEventId;
 use std::fmt::Debug;
+
+pub trait GetEventId<Id> {
+	fn get_event_id(&self) -> Id;
+}
 
 /// Used to uniquely identify intent event on parentchain.
 #[derive(Clone, Debug)]

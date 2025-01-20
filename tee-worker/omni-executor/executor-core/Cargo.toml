@@ -10,5 +10,7 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 tokio = { workspace = true }
 
+parentchain-primitives = { workspace = true }
+
 [lints]
 workspace = true
