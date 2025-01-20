@@ -2017,7 +2017,7 @@ dependencies = [
  "pallet-evm",
  "parity-scale-codec",
  "ring 0.16.20",
- "rustls-webpki 0.102.8",
+ "rustls-webpki 0.102.0-alpha.3",
  "scale-info",
  "serde",
  "serde_json",
@@ -2104,7 +2104,7 @@ version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
  "rand 0.8.5",
- "ring 0.17.8",
+ "ring 0.16.20",
  "rsa",
  "secp256k1 0.29.1",
  "sp-core 35.0.0",
@@ -4224,7 +4224,7 @@ dependencies = [
  "jsonrpsee-core",
  "pin-project",
  "rustls 0.23.19",
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
  "rustls-platform-verifier 0.3.4",
  "soketto",
  "thiserror 1.0.69",
@@ -5739,7 +5739,7 @@ dependencies = [
  "ring 0.17.8",
  "rustc-hash 2.0.0",
  "rustls 0.23.19",
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
  "rustls-platform-verifier 0.4.0",
  "slab",
  "thiserror 2.0.6",
@@ -6296,7 +6296,7 @@ dependencies = [
  "log",
  "once_cell",
  "ring 0.17.8",
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
  "rustls-webpki 0.102.8",
  "subtle",
  "zeroize",
@@ -6310,7 +6310,7 @@ checksum = "e5bfb394eeed242e909609f56089eecfe5fda225042e8b171791b9c95f5931e5"
 dependencies = [
  "openssl-probe",
  "rustls-pemfile 2.2.0",
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
  "schannel",
  "security-framework",
 ]
@@ -6330,8 +6330,14 @@ version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
 dependencies = [
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
 ]
+
+[[package]]
+name = "rustls-pki-types"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0d3edd6cdcdf26eda538757038343986e666d0b8ba4b5ac1de663b78475550d"
 
 [[package]]
 name = "rustls-pki-types"
@@ -6402,12 +6408,22 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
+version = "0.102.0-alpha.3"
+source = "git+https://github.com/rustls/webpki?rev=da923ed#da923edaab56f599971e58773617fb574cd019dc"
+dependencies = [
+ "ring 0.16.20",
+ "rustls-pki-types 0.2.3",
+ "untrusted 0.9.0",
+]
+
+[[package]]
+name = "rustls-webpki"
 version = "0.102.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64ca1bc8749bd4cf37b5ce386cc146580777b4e8572c7b97baf22c83f444bee9"
 dependencies = [
  "ring 0.17.8",
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
  "untrusted 0.9.0",
 ]
 
@@ -10230,7 +10246,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c7bc40d0e5a97695bb96e27995cd3a08538541b0a846f65bba7a359f36700d4"
 dependencies = [
  "rustls 0.23.19",
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
  "tokio",
 ]
 
@@ -10875,7 +10891,7 @@ version = "0.26.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cd5da49bdf1f30054cfe0b8ce2958b8fbeb67c4d82c8967a598af481bef255c"
 dependencies = [
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
 ]
 
 [[package]]
@@ -10899,7 +10915,7 @@ version = "0.26.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841c67bff177718f1d4dfefde8d8f0e78f9b6589319ba88312f567fc5841a958"
 dependencies = [
- "rustls-pki-types",
+ "rustls-pki-types 1.10.0",
 ]
 
 [[package]]

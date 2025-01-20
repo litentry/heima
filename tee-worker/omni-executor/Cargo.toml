@@ -33,7 +33,7 @@ jsonrpsee = { version = "0.24", features = ["server"] }
 log = "0.4.22"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
-ring = "0.17.8"
+ring = "0.16.20"
 rsa = "0.9.7"
 scale-encode = "0.10.0"
 scale-info = "2.11.6"
@@ -53,7 +53,7 @@ tokio = "1.43.0"
 crypto = { path = "crypto" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
-heima-primitives = { package = "core-primitives", path = "../../common/primitives/core" }
+heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
