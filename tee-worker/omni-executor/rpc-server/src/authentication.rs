@@ -2,7 +2,12 @@ use crate::{server::RpcContext, utils::hex::hex_encode};
 use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
 use parentchain_primitives::{
-	signature::HeimaMultiSignature, AccountId, Hash, Identity, OmniAccountAuthType, ShardIdentifier,
+	signature::HeimaMultiSignature,
+	// AccountId,
+	Hash,
+	Identity,
+	OmniAccountAuthType,
+	ShardIdentifier,
 };
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
@@ -31,10 +36,10 @@ impl From<Authentication> for OmniAccountAuthType {
 #[derive(Debug)]
 pub enum AuthenticationError {
 	Web3InvalidSignature,
-	EmailVerificationCodeNotFound,
-	EmailInvalidVerificationCode,
-	OAuth2Error(String),
-	AuthTokenError(String),
+	// EmailVerificationCodeNotFound,
+	// EmailInvalidVerificationCode,
+	// OAuth2Error(String),
+	// AuthTokenError(String),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -81,40 +86,40 @@ pub fn verify_web3_authentication(
 }
 
 pub async fn verify_email_authentication(
-	ctx: Arc<RpcContext>,
-	sender_identity: &Identity,
-	verification_code: &VerificationCode,
+	_ctx: Arc<RpcContext>,
+	_sender_identity: &Identity,
+	_verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
 	todo!()
 }
 
 pub async fn verify_auth_token_authentication(
-	ctx: Arc<RpcContext>,
-	sender_identity: &Identity,
-	auth_token: &str,
+	_ctx: Arc<RpcContext>,
+	_sender_identity: &Identity,
+	_auth_token: &str,
 ) -> Result<(), AuthenticationError> {
 	todo!()
 }
 
 pub async fn verify_oauth2_authentication(
-	ctx: Arc<RpcContext>,
-	sender_identity_hash: Hash,
-	payload: &OAuth2Data,
+	_ctx: Arc<RpcContext>,
+	_sender_identity_hash: Hash,
+	_payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	// TODO: get OmniAccount from storage
-	let omni_account = todo!();
-	match payload.provider {
-		OAuth2Provider::Google => {
-			verify_google_oauth2(ctx, sender_identity_hash, omni_account, payload).await
-		},
-	}
+	todo!()
+	// match payload.provider {
+	// 	OAuth2Provider::Google => {
+	// 		verify_google_oauth2(ctx, sender_identity_hash, omni_account, payload).await
+	// 	},
+	// }
 }
 
-async fn verify_google_oauth2(
-	ctx: Arc<RpcContext>,
-	sender_identity_hash: Hash,
-	omni_account: AccountId,
-	payload: &OAuth2Data,
-) -> Result<(), AuthenticationError> {
-	todo!()
-}
+// async fn verify_google_oauth2(
+// 	_ctx: Arc<RpcContext>,
+// 	_sender_identity_hash: Hash,
+// 	_omni_account: AccountId,
+// 	_payload: &OAuth2Data,
+// ) -> Result<(), AuthenticationError> {
+// 	todo!()
+// }
