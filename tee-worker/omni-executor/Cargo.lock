@@ -2880,6 +2880,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "log",
+ "parentchain-primitives",
  "parity-scale-codec",
  "tokio",
 ]
@@ -4764,6 +4765,7 @@ dependencies = [
 name = "native-task-handler"
 version = "0.1.0"
 dependencies = [
+ "executor-core",
  "log",
  "parentchain-primitives",
  "parity-scale-codec",
@@ -5183,7 +5185,6 @@ dependencies = [
  "bitcoin",
  "core-primitives",
  "crypto",
- "executor-core",
  "hex",
  "log",
  "parity-scale-codec",
@@ -6146,6 +6147,7 @@ name = "rpc-server"
 version = "0.1.0"
 dependencies = [
  "crypto",
+ "executor-core",
  "hex",
  "jsonrpsee",
  "log",
