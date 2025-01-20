@@ -2896,11 +2896,11 @@ dependencies = [
  "log",
  "native-call-executor",
  "parentchain-listener",
- "parentchain-storage",
  "rpc-server",
  "scale-encode 0.10.0",
  "serde_json",
  "solana-intent-executor",
+ "storage",
  "tokio",
 ]
 
@@ -5167,8 +5167,8 @@ dependencies = [
  "parentchain-api-interface",
  "parentchain-primitives",
  "parentchain-rpc-client",
- "parentchain-storage",
  "parity-scale-codec",
+ "storage",
  "subxt",
  "subxt-core",
  "subxt-signer",
@@ -5202,22 +5202,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-encode 0.10.0",
  "subxt",
- "subxt-core",
-]
-
-[[package]]
-name = "parentchain-storage"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "executor-core",
- "frame-support 39.0.0",
- "log",
- "parentchain-api-interface",
- "parentchain-rpc-client",
- "parity-scale-codec",
- "rocksdb",
- "sp-state-machine 0.44.0",
  "subxt-core",
 ]
 
@@ -6162,6 +6146,7 @@ name = "rpc-server"
 version = "0.1.0"
 dependencies = [
  "crypto",
+ "executor-core",
  "hex",
  "jsonrpsee",
  "log",
@@ -9701,6 +9686,22 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "storage"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "executor-core",
+ "frame-support 39.0.0",
+ "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
+ "parity-scale-codec",
+ "rocksdb",
+ "sp-state-machine 0.44.0",
+ "subxt-core",
+]
 
 [[package]]
 name = "string-interner"

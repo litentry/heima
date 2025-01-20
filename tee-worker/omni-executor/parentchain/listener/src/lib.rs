@@ -39,8 +39,8 @@ use parentchain_api_interface::{
 };
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
-use parentchain_storage::AccountStoreStorage;
 use std::sync::Arc;
+use storage::AccountStoreStorage;
 use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;

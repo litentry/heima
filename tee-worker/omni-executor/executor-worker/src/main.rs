@@ -19,7 +19,7 @@ use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
 use native_call_executor::run_native_call_executor;
-use parentchain_storage::init_storage;
+use storage::init_storage;
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;

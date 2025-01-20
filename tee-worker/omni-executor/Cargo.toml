@@ -9,7 +9,7 @@ members = [
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
-    "parentchain/storage",
+    "storage",
     "parentchain/primitives",
     "rpc-server",
     "solana/intent-executor",
@@ -59,7 +59,7 @@ ethereum-intent-executor = { path = "ethereum/intent-executor" }
 solana-intent-executor = { path = "solana/intent-executor" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
-parentchain-storage = { path = "parentchain/storage" }
+storage = { path = "storage" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core" }
 
 [workspace.lints.clippy]
