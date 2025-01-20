@@ -1,10 +1,8 @@
-mod native_call;
-
+use executor_core::native_call::NativeCall;
 use parentchain_primitives::OmniAccountAuthType;
 use parity_scale_codec::Encode;
 use tokio::sync::{mpsc, oneshot};
 
-pub use native_call::NativeCall;
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 pub type NativeTaskSender = mpsc::Sender<NativeTask>;
 

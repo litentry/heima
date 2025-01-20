@@ -9,6 +9,7 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true }
 tokio = { workspace = true }
 
+executor-core = { workspace = true }
 parentchain-primitives = { workspace = true }
 
 [lints]
