@@ -8,9 +8,7 @@ use crypto::{
 	},
 	sr25519, ByteArray, PairTrait,
 };
-use heima_primitives::{
-	assertion::network::Web3Network, Address20, Address32, Address33, Identity,
-};
+use heima_primitives::{Address20, Address32, Address33, Identity};
 use log::error;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -173,8 +171,6 @@ fn substrate_wrap(msg: &[u8]) -> Vec<u8> {
 fn evm_eip191_wrap(msg: &[u8]) -> Vec<u8> {
 	["\x19Ethereum Signed Message:\n".as_bytes(), msg.len().to_string().as_bytes(), msg].concat()
 }
-
-pub type IdentityNetworkTuple = (Identity, Vec<Web3Network>);
 
 #[cfg(test)]
 mod tests {
