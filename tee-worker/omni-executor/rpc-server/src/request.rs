@@ -27,8 +27,6 @@ pub trait DecryptableRequest {
 	type Error;
 	// the shard getter
 	fn shard(&self) -> ShardIdentifier;
-	// the raw payload - AFAICT only used in mock
-	fn payload(&self) -> &[u8];
 	// how to decrypt the payload
 	fn decrypt<T: Debug>(
 		&mut self,
@@ -48,10 +46,6 @@ impl DecryptableRequest for AesRequest {
 
 	fn shard(&self) -> ShardIdentifier {
 		self.shard
-	}
-
-	fn payload(&self) -> &[u8] {
-		self.payload.ciphertext.as_slice()
 	}
 
 	fn decrypt<T: Debug>(
