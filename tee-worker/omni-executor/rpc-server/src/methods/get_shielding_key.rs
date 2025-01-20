@@ -35,7 +35,7 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use native_call_executor::{NativeCall, ResponseSender};
+	use native_task_handler::NativeTask;
 	use std::sync::Arc;
 	use tokio::sync::mpsc;
 
@@ -43,7 +43,7 @@ mod test {
 	pub async fn get_shielding_key_works() {
 		let port = "2000";
 		let shielding_key = ShieldingKey::new();
-		let (sender, _) = mpsc::channel::<(NativeCall, ResponseSender)>(1);
+		let (sender, _) = mpsc::channel::<NativeTask>(1);
 
 		start_server(port, shielding_key.clone(), Arc::new(sender), [0u8; 32])
 			.await
