@@ -15,7 +15,10 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod signature;
-pub use heima_primitives::{AccountId, BlockNumber, Hash, Identity, Nonce, ShardIdentifier};
+pub use heima_primitives::{
+	omni_account::OmniAccountAuthType, AccountId, BlockNumber, Hash, Identity, Nonce,
+	ShardIdentifier,
+};
 
 use executor_core::primitives::GetEventId;
 use std::fmt::Debug;
