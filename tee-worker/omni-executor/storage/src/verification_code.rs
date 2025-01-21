@@ -1,5 +1,5 @@
 use executor_core::storage::Storage;
-use heima_primitives::Hash;
+use parentchain_primitives::Hash;
 use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::path::Path;
