@@ -1,3 +1,5 @@
+mod member_account_hash;
+pub use member_account_hash::MemberAccountHashStorage;
 mod verification_code;
 pub use verification_code::VerificationCodeStorage;
 mod account_store;
