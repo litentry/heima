@@ -5200,6 +5200,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-core 35.0.0",
 ]
 
 [[package]]
@@ -9732,12 +9733,12 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "storage"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "env_logger",
  "executor-core",
  "frame-support 39.0.0",
  "log",
  "parentchain-api-interface",
+ "parentchain-primitives",
  "parentchain-rpc-client",
  "parity-scale-codec",
  "rocksdb",
