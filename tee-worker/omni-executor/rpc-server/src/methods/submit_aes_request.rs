@@ -30,7 +30,7 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("native_submitAesRequest", |params, ctx, _| async move {
 			let Ok(hex_request) = params.one::<String>() else {
-				return Err(ErrorCode::InvalidParams.into());
+				return Err(ErrorCode::ParseError.into());
 			};
 			let Ok(mut request) = AesRequest::from_hex(&hex_request) else {
 				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
