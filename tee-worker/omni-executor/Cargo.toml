@@ -11,6 +11,7 @@ members = [
     "parentchain/rpc-client",
     "parentchain/primitives",
     "rpc-server",
+    "services/mailer",
     "storage",
     "solana/intent-executor",
 ]
@@ -54,6 +55,7 @@ crypto = { path = "crypto" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
+mailer = { path = "services/mailer" }
 native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
