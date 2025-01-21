@@ -16,11 +16,12 @@
 
 pub mod signature;
 pub use heima_primitives::{
-	omni_account::OmniAccountAuthType, BlockNumber, Hash, Identity, Nonce, ShardIdentifier,
-	Web2IdentityType,
+	omni_account::{MemberAccount, OmniAccountAuthType},
+	BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
 };
 pub use sp_core::crypto::AccountId32 as AccountId;
 
+use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
 pub trait GetEventId<Id> {
@@ -63,5 +64,23 @@ impl BlockEvent {
 impl GetEventId<EventId> for BlockEvent {
 	fn get_event_id(&self) -> EventId {
 		self.id.clone()
+	}
+}
+
+pub trait TryFromType<T: Encode>: Sized {
+	fn try_from_type(t: T) -> Result<Self, ()>;
+}
+
+impl<T: Encode> TryFromType<T> for Identity {
+	fn try_from_type(t: T) -> Result<Self, ()> {
+		let bytes = t.encode();
+		Identity::decode(&mut &bytes[..]).map_err(|_| ())
+	}
+}
+
+impl<T: Encode> TryFromType<T> for MemberAccount {
+	fn try_from_type(t: T) -> Result<Self, ()> {
+		let bytes = t.encode();
+		MemberAccount::decode(&mut &bytes[..]).map_err(|_| ())
 	}
 }
