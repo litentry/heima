@@ -7,9 +7,10 @@ FROM rust:1.82-bookworm AS plain-builder
 
 RUN apt-get update && apt-get install -y clang
 
-ENV SRC_DIR=/home/ubuntu/omni-executor
 
-COPY . $SRC_DIR
+ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
+COPY tee-worker/omni-executor $SRC_DIR
+COPY common /home/ubuntu/common
 WORKDIR $SRC_DIR
 
 RUN cargo build --release
@@ -19,7 +20,7 @@ RUN cargo build --release
 ##################################################
 FROM node:20-bookworm-slim AS executor-worker
 
-ENV SRC_DIR=/home/ubuntu/omni-executor
+ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
 ENV BIN_DIR=/usr/local/bin
 WORKDIR $BIN_DIR
 

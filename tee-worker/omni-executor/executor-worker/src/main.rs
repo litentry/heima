@@ -18,11 +18,14 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
-use parentchain_storage::init_storage;
+use native_task_handler::run_native_task_handler;
+use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::{fs, thread};
+use storage::init_storage;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
@@ -52,6 +55,23 @@ async fn main() -> Result<(), ()> {
 	})?;
 
 	init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
+
+	// TODO: make buffer size configurable
+	let buffer = 1024;
+	let native_task_sender = run_native_task_handler(buffer).await;
+	// TODO: get mrenclave from quote
+	let mrenclave = [0u8; 32];
+
+	start_rpc_server(
+		&cli.worker_rpc_port,
+		ShieldingKey::new(),
+		Arc::new(native_task_sender),
+		mrenclave,
+	)
+	.await
+	.map_err(|e| {
+		error!("Could not start server: {:?}", e);
+	})?;
 
 	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
 		.await

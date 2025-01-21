@@ -1,15 +1,15 @@
 [package]
-name = "executor-core"
+name = "native-task-handler"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-async-trait = { workspace = true }
 log = { workspace = true }
-parity-scale-codec = { workspace = true, features = ["derive"] }
+parity-scale-codec = { workspace = true }
 tokio = { workspace = true }
 
+executor-core = { workspace = true }
 parentchain-primitives = { workspace = true }
 
 [lints]

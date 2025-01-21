@@ -25,7 +25,7 @@ sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
 
 itp-sgx-crypto = { workspace = true }
 itp-sgx-runtime-primitives = { workspace = true }
-parentchain-primitives = { workspace = true }
+parentchain-primitives = { workspace = true, features = ["webpki"] }
 
 [dev-dependencies]
 base64 = { workspace = true }

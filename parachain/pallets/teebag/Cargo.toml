@@ -33,7 +33,7 @@ sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-core-primitives = { workspace = true }
+core-primitives = { workspace = true, features = ["webpki"] }
 
 [dev-dependencies]
 env_logger = { workspace = true }

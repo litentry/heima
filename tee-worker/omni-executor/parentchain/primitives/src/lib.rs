@@ -14,7 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use executor_core::primitives::GetEventId;
+pub mod signature;
+pub use heima_primitives::{
+	omni_account::OmniAccountAuthType, AccountId, BlockNumber, Hash, Identity, Nonce,
+	ShardIdentifier,
+};
+
+use std::fmt::Debug;
+
+pub trait GetEventId<Id> {
+	fn get_event_id(&self) -> Id;
+}
 
 /// Used to uniquely identify intent event on parentchain.
 #[derive(Clone, Debug)]
