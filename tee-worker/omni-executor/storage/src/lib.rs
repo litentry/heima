@@ -13,7 +13,7 @@ use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parity_scale_codec::Decode;
-use primitives::AccountId;
+use primitives::{AccountId, MemberAccount, TryFromType};
 use sp_state_machine::{read_proof_check, StorageProof};
 
 const STORAGE_PATH: &str = "storage_db";
@@ -24,12 +24,12 @@ pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<(), ()> {
 		log::error!("Could not create client: {:?}", e);
 	})?;
 
-	init_account_store_storage(&mut client).await?;
+	init_omni_account_storages(&mut client).await?;
 
 	Ok(())
 }
 
-async fn init_account_store_storage(client: &mut SubxtClient<CustomConfig>) -> Result<(), ()> {
+async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> Result<(), ()> {
 	let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
 	let page_size = 300;
 	let mut start_key: Option<Vec<u8>> = None;
@@ -68,7 +68,10 @@ async fn init_account_store_storage(client: &mut SubxtClient<CustomConfig>) -> R
 		.map_err(|e| {
 			log::error!("Could not read proof check: {:?}", e);
 		})?;
+
 		let account_store_storage = AccountStoreStorage::new();
+		let member_account_hash_storage = MemberAccountHashStorage::new();
+
 		for key in storage_keys_paged.iter() {
 			match storage_map.get(key) {
 				Some(Some(value)) => {
@@ -93,9 +96,20 @@ async fn init_account_store_storage(client: &mut SubxtClient<CustomConfig>) -> R
 						log::error!("Storage value mismatch for account_id: {:?}", account_id);
 						return Err(());
 					}
-					let account_store = AccountStore::decode(&mut &value[..]).map_err(|e| {
-						log::error!("Error decoding account store: {:?}", e);
-					})?;
+					let account_store: AccountStore =
+						Decode::decode(&mut &value[..]).map_err(|e| {
+							log::error!("Error decoding account store: {:?}", e);
+						})?;
+					for member in account_store.0.iter() {
+						let member_account = MemberAccount::try_from_type(member).map_err(|e| {
+							log::error!("Error decoding member account: {:?}", e);
+						})?;
+						member_account_hash_storage
+							.insert(member_account.hash(), account_id.clone())
+							.map_err(|e| {
+								log::error!("Error inserting member account hash: {:?}", e);
+							})?;
+					}
 					account_store_storage.insert(account_id, account_store).map_err(|e| {
 						log::error!("Error inserting account store: {:?}", e);
 					})?;
