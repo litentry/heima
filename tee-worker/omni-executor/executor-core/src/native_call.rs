@@ -1,5 +1,5 @@
-use parentchain_primitives::Identity;
 use parity_scale_codec::{Decode, Encode};
+use primitives::Identity;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

@@ -16,8 +16,8 @@
 
 use async_trait::async_trait;
 use log::{error, info};
-use parentchain_primitives::{BlockEvent, EventId};
 use parity_scale_codec::Encode;
+use primitives::{BlockEvent, EventId};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;

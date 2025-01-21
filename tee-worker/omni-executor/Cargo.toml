@@ -9,7 +9,7 @@ members = [
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
-    "parentchain/primitives",
+    "primitives",
     "rpc-server",
     "services/mailer",
     "storage",
@@ -54,13 +54,12 @@ tokio = "1.43.0"
 crypto = { path = "crypto" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
-heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 mailer = { path = "services/mailer" }
 native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
-parentchain-primitives = { path = "parentchain/primitives" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
+primitives = { path = "primitives" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }
 storage = { path = "storage" }

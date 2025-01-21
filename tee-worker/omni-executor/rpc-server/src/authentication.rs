@@ -1,7 +1,8 @@
 use crate::{server::RpcContext, utils::hex::hex_encode};
 use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
-use parentchain_primitives::{
+use parity_scale_codec::{Decode, Encode};
+use primitives::{
 	signature::HeimaMultiSignature,
 	// AccountId,
 	Hash,
@@ -9,7 +10,6 @@ use parentchain_primitives::{
 	OmniAccountAuthType,
 	ShardIdentifier,
 };
-use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 
 pub type VerificationCode = String;

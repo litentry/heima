@@ -1,6 +1,6 @@
 use executor_core::native_call::NativeCall;
-use parentchain_primitives::OmniAccountAuthType;
 use parity_scale_codec::Encode;
+use primitives::OmniAccountAuthType;
 use tokio::sync::{mpsc, oneshot};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;

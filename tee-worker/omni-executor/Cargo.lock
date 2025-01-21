@@ -2880,8 +2880,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "log",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "tokio",
 ]
 
@@ -4777,8 +4777,8 @@ version = "0.1.0"
 dependencies = [
  "executor-core",
  "log",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "tokio",
 ]
 
@@ -5177,30 +5177,14 @@ dependencies = [
  "hex",
  "log",
  "parentchain-api-interface",
- "parentchain-primitives",
  "parentchain-rpc-client",
  "parity-scale-codec",
+ "primitives",
  "storage",
  "subxt",
  "subxt-core",
  "subxt-signer",
  "tokio",
-]
-
-[[package]]
-name = "parentchain-primitives"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "bitcoin",
- "core-primitives",
- "crypto",
- "hex",
- "log",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core 35.0.0",
 ]
 
 [[package]]
@@ -5210,8 +5194,8 @@ dependencies = [
  "async-trait",
  "env_logger",
  "log",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "scale-encode 0.10.0",
  "subxt",
  "subxt-core",
@@ -5584,6 +5568,22 @@ dependencies = [
  "impl-serde 0.5.0",
  "scale-info",
  "uint 0.10.0",
+]
+
+[[package]]
+name = "primitives"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bitcoin",
+ "core-primitives",
+ "crypto",
+ "hex",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 35.0.0",
 ]
 
 [[package]]
@@ -6163,8 +6163,8 @@ dependencies = [
  "jsonrpsee",
  "log",
  "native-task-handler",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -9738,9 +9738,9 @@ dependencies = [
  "frame-support 39.0.0",
  "log",
  "parentchain-api-interface",
- "parentchain-primitives",
  "parentchain-rpc-client",
  "parity-scale-codec",
+ "primitives",
  "rocksdb",
  "sp-state-machine 0.44.0",
  "subxt-core",

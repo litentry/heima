@@ -16,7 +16,7 @@ sp-state-machine = { workspace = true, features = ["std"] }
 executor-core = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-parentchain-primitives = { workspace = true }
+primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

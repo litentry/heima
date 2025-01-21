@@ -14,8 +14,8 @@ use jsonrpsee::{
 	RpcModule,
 };
 use native_task_handler::NativeTask;
-use parentchain_primitives::{Nonce, OmniAccountAuthType};
 use parity_scale_codec::{Decode, Encode};
+use primitives::{Nonce, OmniAccountAuthType};
 use std::{fmt::Debug, sync::Arc};
 use tokio::sync::oneshot;
 

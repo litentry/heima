@@ -1,6 +1,6 @@
 use executor_core::storage::Storage;
-use parentchain_primitives::{AccountId, Hash};
 use parity_scale_codec::{Decode, Encode};
+use primitives::{AccountId, Hash};
 use rocksdb::DB;
 use std::path::Path;
 

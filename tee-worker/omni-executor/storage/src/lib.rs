@@ -9,11 +9,11 @@ use executor_core::storage::Storage;
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
-use parentchain_primitives::AccountId;
 use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parity_scale_codec::Decode;
+use primitives::AccountId;
 use sp_state_machine::{read_proof_check, StorageProof};
 
 const STORAGE_PATH: &str = "storage_db";

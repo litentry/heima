@@ -33,8 +33,8 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
 };
-use parentchain_primitives::{AccountId, BlockEvent};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use primitives::{AccountId, BlockEvent};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;
