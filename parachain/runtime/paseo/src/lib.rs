@@ -102,7 +102,6 @@ pub mod constants;
 pub mod governance_v2;
 pub mod precompiles;
 
-pub mod migration;
 #[cfg(test)]
 mod tests;
 pub mod weights;
@@ -159,7 +158,6 @@ pub type Executive = frame_executive::Executive<
 	// it was reverse order before.
 	// See the comment before collation related pallets too.
 	AllPalletsWithSystem,
-	migration::Migrations<Runtime>,
 >;
 
 impl fp_self_contained::SelfContainedCall for RuntimeCall {

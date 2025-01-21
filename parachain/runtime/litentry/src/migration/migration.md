@@ -39,3 +39,8 @@ https://github.com/litentry/litentry-parachain/releases/tag/p0.9.17-9175-w0.0.2-
 This migration is for the sudo remove on Litentry Parachain
 
 The main purpose of runtime upgrade is for killing sudo storage
+
+# A set of migrations
+P9223.rs
+https://github.com/litentry/heima/releases/tag/v0.9.22-03
+This migration is for updating storage version for Litentry
