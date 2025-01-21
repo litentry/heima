@@ -1,3 +1,5 @@
+mod verification_code;
+pub use verification_code::VerificationCodeStorage;
 mod account_store;
 pub use account_store::AccountStoreStorage;
 
