@@ -33,7 +33,7 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
 };
-use parentchain_primitives::BlockEvent;
+use parentchain_primitives::{AccountId, BlockEvent};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -53,7 +53,7 @@ pub struct EventHandler<
 	KeyStoreT: KeyStore<SecretKeyBytes>,
 	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
-	AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore>,
+	AccountStoreStorage: Storage<AccountId, AccountStore>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
@@ -82,7 +82,7 @@ impl<
 		KeyStoreT: KeyStore<SecretKeyBytes>,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
-		AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore>,
+		AccountStoreStorage: Storage<AccountId, AccountStore>,
 	>
 	EventHandler<
 		ChainConfig,
@@ -140,7 +140,7 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>
 			+ Send
 			+ Sync,
-		AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore> + Send + Sync,
+		AccountStoreStorage: Storage<AccountId, AccountStore> + Send + Sync,
 	> EventHandlerTrait<BlockEvent>
 	for EventHandler<
 		ChainConfig,
@@ -223,7 +223,10 @@ impl<
 					})?;
 
 				self.account_store_storage
-					.insert(account_store_updated.who, account_store_updated.account_store)
+					.insert(
+						AccountId::new(account_store_updated.who.0),
+						account_store_updated.account_store,
+					)
 					.map_err(|_| {
 						log::error!("Could not insert account store into storage");
 						Error::NonRecoverableError

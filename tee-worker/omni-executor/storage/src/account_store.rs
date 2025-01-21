@@ -1,9 +1,9 @@
 use executor_core::storage::Storage;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
+use parentchain_primitives::AccountId;
 use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::path::Path;
-use subxt_core::utils::AccountId32 as AccountId;
 
 const STORAGE_NAME: &str = "account_store_storage";
 
