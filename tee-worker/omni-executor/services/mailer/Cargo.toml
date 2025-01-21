@@ -5,7 +5,9 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+sendgrid = "0.23.0"
 log = { workspace = true }
+async-trait = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
