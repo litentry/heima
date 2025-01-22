@@ -54,7 +54,7 @@ pub struct EventHandler<
 	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
 	AccountStoreStorage: Storage<AccountId, AccountStore>,
-	MemberAccountStorage: Storage<Hash, AccountId>,
+	MemberOmniAccountStorage: Storage<Hash, AccountId>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
@@ -71,7 +71,7 @@ pub struct EventHandler<
 		>,
 	>,
 	account_store_storage: Arc<AccountStoreStorage>,
-	member_account_storage: Arc<MemberAccountStorage>,
+	member_account_storage: Arc<MemberOmniAccountStorage>,
 	phantom_data: PhantomData<(MetadataT, RpcClient)>,
 }
 
@@ -85,7 +85,7 @@ impl<
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
 		AccountStoreStorage: Storage<AccountId, AccountStore>,
-		MemberAccountStorage: Storage<Hash, AccountId>,
+		MemberOmniAccountStorage: Storage<Hash, AccountId>,
 	>
 	EventHandler<
 		ChainConfig,
@@ -97,7 +97,7 @@ impl<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
-		MemberAccountStorage,
+		MemberOmniAccountStorage,
 	>
 {
 	pub fn new(
@@ -116,7 +116,7 @@ impl<
 			>,
 		>,
 		account_store_storage: Arc<AccountStoreStorage>,
-		member_account_storage: Arc<MemberAccountStorage>,
+		member_account_storage: Arc<MemberOmniAccountStorage>,
 	) -> Self {
 		Self {
 			metadata_provider,
@@ -147,7 +147,7 @@ impl<
 			+ Send
 			+ Sync,
 		AccountStoreStorage: Storage<AccountId, AccountStore> + Send + Sync,
-		MemberAccountStorage: Storage<Hash, AccountId> + Send + Sync,
+		MemberOmniAccountStorage: Storage<Hash, AccountId> + Send + Sync,
 	> EventHandlerTrait<BlockEvent>
 	for EventHandler<
 		ChainConfig,
@@ -159,7 +159,7 @@ impl<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
-		MemberAccountStorage,
+		MemberOmniAccountStorage,
 	>
 {
 	async fn handle(&self, event: BlockEvent) -> Result<(), Error> {

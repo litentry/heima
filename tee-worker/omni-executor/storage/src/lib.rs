@@ -1,5 +1,5 @@
-mod member_account;
-pub use member_account::MemberAccountStorage;
+mod member_omni_account;
+pub use member_omni_account::MemberOmniAccountStorage;
 mod verification_code;
 pub use verification_code::VerificationCodeStorage;
 mod account_store;
@@ -70,12 +70,12 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 		})?;
 
 		let account_store_storage = AccountStoreStorage::new();
-		let member_account_hash_storage = MemberAccountStorage::new();
+		let member_omni_account_storage = MemberOmniAccountStorage::new();
 
 		for key in storage_keys_paged.iter() {
 			match storage_map.get(key) {
 				Some(Some(value)) => {
-					let account_id: AccountId = extract_account_id_from_storage_key(key)?;
+					let omni_account: AccountId = extract_account_id_from_storage_key(key)?;
 					let maybe_storage_value = client
 						.storage()
 						.at_latest()
@@ -89,11 +89,11 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 							log::error!("Could not fetch storage value: {:?}", e);
 						})?;
 					let Some(storage_value) = maybe_storage_value else {
-						log::error!("Storage value not found for account_id: {:?}", account_id);
+						log::error!("Storage value not found for account_id: {:?}", omni_account);
 						return Err(());
 					};
 					if storage_value != *value {
-						log::error!("Storage value mismatch for account_id: {:?}", account_id);
+						log::error!("Storage value mismatch for account_id: {:?}", omni_account);
 						return Err(());
 					}
 					let account_store: AccountStore =
@@ -105,13 +105,13 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 							MemberAccount::try_from_subxt_type(member).map_err(|e| {
 								log::error!("Error decoding member account: {:?}", e);
 							})?;
-						member_account_hash_storage
-							.insert(member_account.hash(), account_id.clone())
+						member_omni_account_storage
+							.insert(member_account.hash(), omni_account.clone())
 							.map_err(|e| {
 								log::error!("Error inserting member account hash: {:?}", e);
 							})?;
 					}
-					account_store_storage.insert(account_id, account_store).map_err(|e| {
+					account_store_storage.insert(omni_account, account_store).map_err(|e| {
 						log::error!("Error inserting account store: {:?}", e);
 					})?;
 				},

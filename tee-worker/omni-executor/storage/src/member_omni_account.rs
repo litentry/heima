@@ -4,19 +4,19 @@ use primitives::{AccountId, Hash};
 use rocksdb::DB;
 use std::path::Path;
 
-const STORAGE_NAME: &str = "member_account_hash";
+const STORAGE_NAME: &str = "member_omni_account";
 
-pub struct MemberAccountStorage {
+pub struct MemberOmniAccountStorage {
 	db: DB,
 }
 
-impl MemberAccountStorage {
+impl MemberOmniAccountStorage {
 	pub fn new() -> Self {
 		Self::default()
 	}
 }
 
-impl Default for MemberAccountStorage {
+impl Default for MemberOmniAccountStorage {
 	fn default() -> Self {
 		let path = Path::new(crate::STORAGE_PATH).join(STORAGE_NAME);
 		let db = DB::open_default(path).expect("Failed to open database");
@@ -24,7 +24,7 @@ impl Default for MemberAccountStorage {
 	}
 }
 
-impl Storage<Hash, AccountId> for MemberAccountStorage {
+impl Storage<Hash, AccountId> for MemberOmniAccountStorage {
 	fn get(&self, member_identity: &Hash) -> Option<AccountId> {
 		match self.db.get(member_identity.encode()) {
 			Ok(Some(value)) => AccountId::decode(&mut &value[..]).ok(),
