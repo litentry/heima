@@ -11,6 +11,7 @@ use primitives::{
 	ShardIdentifier,
 };
 use std::sync::Arc;
+use storage::{Storage, VerificationCodeStorage};
 
 pub type VerificationCode = String;
 
@@ -36,8 +37,8 @@ impl From<Authentication> for OmniAccountAuthType {
 #[derive(Debug)]
 pub enum AuthenticationError {
 	Web3InvalidSignature,
-	// EmailVerificationCodeNotFound,
-	// EmailInvalidVerificationCode,
+	EmailVerificationCodeNotFound,
+	EmailInvalidVerificationCode,
 	// OAuth2Error(String),
 	// AuthTokenError(String),
 }
@@ -86,11 +87,19 @@ pub fn verify_web3_authentication(
 }
 
 pub async fn verify_email_authentication(
-	_ctx: Arc<RpcContext>,
-	_sender_identity: &Identity,
-	_verification_code: &VerificationCode,
+	ctx: Arc<RpcContext>,
+	sender_identity: &Identity,
+	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	todo!()
+	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
+	let Some(code) = verification_code_storage.get(&sender_identity.hash()) else {
+		return Err(AuthenticationError::EmailVerificationCodeNotFound);
+	};
+	if code != *verification_code {
+		return Err(AuthenticationError::EmailInvalidVerificationCode);
+	}
+
+	Ok(())
 }
 
 pub async fn verify_auth_token_authentication(
