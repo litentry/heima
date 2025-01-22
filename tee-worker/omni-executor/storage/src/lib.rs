@@ -1,5 +1,5 @@
-mod member_account_hash;
-pub use member_account_hash::MemberAccountHashStorage;
+mod member_account;
+pub use member_account::MemberAccountStorage;
 mod verification_code;
 pub use verification_code::VerificationCodeStorage;
 mod account_store;
@@ -70,7 +70,7 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 		})?;
 
 		let account_store_storage = AccountStoreStorage::new();
-		let member_account_hash_storage = MemberAccountHashStorage::new();
+		let member_account_hash_storage = MemberAccountStorage::new();
 
 		for key in storage_keys_paged.iter() {
 			match storage_map.get(key) {
@@ -100,6 +100,8 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 						Decode::decode(&mut &value[..]).map_err(|e| {
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
+					// TODO: Check if this is works, can be tested with actual data and printing
+					// the values
 					for member in account_store.0.iter() {
 						let member_account =
 							MemberAccount::try_from_subxt_type(member).map_err(|e| {

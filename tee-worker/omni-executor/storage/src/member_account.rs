@@ -6,17 +6,17 @@ use std::path::Path;
 
 const STORAGE_NAME: &str = "member_account_hash";
 
-pub struct MemberAccountHashStorage {
+pub struct MemberAccountStorage {
 	db: DB,
 }
 
-impl MemberAccountHashStorage {
+impl MemberAccountStorage {
 	pub fn new() -> Self {
 		Self::default()
 	}
 }
 
-impl Default for MemberAccountHashStorage {
+impl Default for MemberAccountStorage {
 	fn default() -> Self {
 		let path = Path::new(crate::STORAGE_PATH).join(STORAGE_NAME);
 		let db = DB::open_default(path).expect("Failed to open database");
@@ -24,7 +24,7 @@ impl Default for MemberAccountHashStorage {
 	}
 }
 
-impl Storage<Hash, AccountId> for MemberAccountHashStorage {
+impl Storage<Hash, AccountId> for MemberAccountStorage {
 	fn get(&self, member_identity: &Hash) -> Option<AccountId> {
 		match self.db.get(member_identity.encode()) {
 			Ok(Some(value)) => AccountId::decode(&mut &value[..]).ok(),
