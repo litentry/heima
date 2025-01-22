@@ -5,7 +5,6 @@ pub use verification_code::VerificationCodeStorage;
 mod account_store;
 pub use account_store::AccountStoreStorage;
 
-use executor_core::storage::Storage;
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
@@ -21,6 +20,13 @@ use std::sync::Arc;
 const STORAGE_DB_PATH: &str = "storage_db";
 
 pub type StorageDB = DB;
+
+pub trait Storage<K, V> {
+	fn get(&self, key: &K) -> Option<V>;
+	fn insert(&self, key: K, value: V) -> Result<(), ()>;
+	fn remove(&self, key: &K) -> Result<(), ()>;
+	fn contains_key(&self, key: &K) -> bool;
+}
 
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	let db = Arc::new(StorageDB::open_default(STORAGE_DB_PATH).map_err(|e| {

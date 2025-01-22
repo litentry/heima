@@ -1,4 +1,4 @@
-use executor_core::storage::Storage;
+use crate::Storage;
 use parity_scale_codec::{Decode, Encode};
 use primitives::{AccountId, Hash};
 use rocksdb::DB;

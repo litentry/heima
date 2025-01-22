@@ -13,7 +13,6 @@ subxt-core = { workspace = true }
 sp-state-machine = { workspace = true, features = ["std"] }
 
 # Local dependencies
-executor-core = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 primitives = { workspace = true }

@@ -8,7 +8,7 @@ use jsonrpsee::{
 	RpcModule,
 };
 use primitives::{Identity, Web2IdentityType};
-use storage::VerificationCodeStorage;
+use storage::{Storage, VerificationCodeStorage};
 
 pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContext>) {
 	module

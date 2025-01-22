@@ -1,4 +1,4 @@
-use executor_core::storage::Storage;
+use crate::Storage;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
 use parity_scale_codec::{Decode, Encode};
 use primitives::AccountId;

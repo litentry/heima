@@ -9736,7 +9736,6 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "executor-core",
  "frame-support 39.0.0",
  "log",
  "parentchain-api-interface",
