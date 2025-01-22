@@ -34,7 +34,7 @@ use parentchain_api_interface::{
 	tx as parentchain_tx,
 };
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use primitives::{AccountId, BlockEvent};
+use primitives::{AccountId, BlockEvent, Hash};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;
@@ -54,6 +54,7 @@ pub struct EventHandler<
 	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
 	AccountStoreStorage: Storage<AccountId, AccountStore>,
+	MemberAccountStorage: Storage<Hash, AccountId>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
@@ -70,6 +71,7 @@ pub struct EventHandler<
 		>,
 	>,
 	account_store_storage: Arc<AccountStoreStorage>,
+	member_account_storage: Arc<MemberAccountStorage>,
 	phantom_data: PhantomData<(MetadataT, RpcClient)>,
 }
 
@@ -83,6 +85,7 @@ impl<
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
 		AccountStoreStorage: Storage<AccountId, AccountStore>,
+		MemberAccountStorage: Storage<Hash, AccountId>,
 	>
 	EventHandler<
 		ChainConfig,
@@ -94,6 +97,7 @@ impl<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
+		MemberAccountStorage,
 	>
 {
 	pub fn new(
@@ -112,6 +116,7 @@ impl<
 			>,
 		>,
 		account_store_storage: Arc<AccountStoreStorage>,
+		member_account_storage: Arc<MemberAccountStorage>,
 	) -> Self {
 		Self {
 			metadata_provider,
@@ -120,6 +125,7 @@ impl<
 			rpc_client_factory,
 			transaction_signer,
 			account_store_storage,
+			member_account_storage,
 			phantom_data: Default::default(),
 		}
 	}
@@ -141,6 +147,7 @@ impl<
 			+ Send
 			+ Sync,
 		AccountStoreStorage: Storage<AccountId, AccountStore> + Send + Sync,
+		MemberAccountStorage: Storage<Hash, AccountId> + Send + Sync,
 	> EventHandlerTrait<BlockEvent>
 	for EventHandler<
 		ChainConfig,
@@ -152,6 +159,7 @@ impl<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
+		MemberAccountStorage,
 	>
 {
 	async fn handle(&self, event: BlockEvent) -> Result<(), Error> {

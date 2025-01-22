@@ -34,6 +34,7 @@ pub type ParentchainListener<
 	EthereumIntentExecutor,
 	SolanaIntentExecutor,
 	AccountStoreStorage,
+	MemberAccountStorage,
 > = Listener<
 	Fetcher<
 		<ChainConfig as Config>::AccountId,
@@ -55,5 +56,6 @@ pub type ParentchainListener<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
+		MemberAccountStorage,
 	>,
 >;
