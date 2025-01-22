@@ -1,6 +1,8 @@
 use rand::{thread_rng, Rng};
 use std::string::String;
 
+// This will be used for oauth2 authentication
+#[allow(dead_code)]
 pub(crate) fn generate_alphanumeric_otp(length: usize) -> String {
 	let mut rng = thread_rng();
 	let charset: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
