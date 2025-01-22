@@ -17,7 +17,7 @@ use native_task_handler::NativeTask;
 use parity_scale_codec::{Decode, Encode};
 use primitives::{Nonce, OmniAccountAuthType};
 use std::{fmt::Debug, sync::Arc};
-use tokio::sync::oneshot;
+use tokio::{sync::oneshot, task};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthenticatedCall {
@@ -32,10 +32,16 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 			let Ok(hex_request) = params.one::<String>() else {
 				return Err(ErrorCode::ParseError.into());
 			};
-			let Ok(mut request) = AesRequest::from_hex(&hex_request) else {
+			let Ok(request) = AesRequest::from_hex(&hex_request) else {
 				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
 			};
-			let (native_call, auth_type) = handle_aes_request(&mut request, ctx.clone()).await?;
+			let context = ctx.clone();
+			let aes_request = request.clone();
+			let join_handle = task::spawn_blocking(|| handle_aes_request(aes_request, context));
+			let (native_call, auth_type) = join_handle.await.map_err(|e| {
+				log::error!("Failed to handle AES request: {:?}", e);
+				ErrorCode::InternalError
+			})??;
 			let (response_sender, response_receiver) = oneshot::channel();
 			let native_task = NativeTask { call: native_call, auth_type, response_sender };
 
@@ -55,8 +61,8 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register native_submitAesRequest method");
 }
 
-async fn handle_aes_request<'a>(
-	request: &mut AesRequest,
+fn handle_aes_request<'a>(
+	mut request: AesRequest,
 	ctx: Arc<RpcContext>,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.shard().encode() != ctx.mrenclave.encode() {
@@ -81,30 +87,21 @@ async fn handle_aes_request<'a>(
 			&ctx.mrenclave,
 			&request.shard,
 		),
-		Authentication::Email(ref verification_code) => {
-			verify_email_authentication(
-				ctx,
-				authenticated_call.call.sender_identity(),
-				verification_code,
-			)
-			.await
-		},
-		Authentication::OAuth2(ref oauth2_data) => {
-			verify_oauth2_authentication(
-				ctx,
-				authenticated_call.call.sender_identity().hash(),
-				oauth2_data,
-			)
-			.await
-		},
-		Authentication::AuthToken(ref auth_token) => {
-			verify_auth_token_authentication(
-				ctx,
-				authenticated_call.call.sender_identity(),
-				auth_token,
-			)
-			.await
-		},
+		Authentication::Email(ref verification_code) => verify_email_authentication(
+			ctx,
+			authenticated_call.call.sender_identity(),
+			verification_code,
+		),
+		Authentication::OAuth2(ref oauth2_data) => verify_oauth2_authentication(
+			ctx,
+			authenticated_call.call.sender_identity().hash(),
+			oauth2_data,
+		),
+		Authentication::AuthToken(ref auth_token) => verify_auth_token_authentication(
+			ctx,
+			authenticated_call.call.sender_identity(),
+			auth_token,
+		),
 	};
 
 	if authentication_result.is_err() {

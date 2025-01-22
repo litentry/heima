@@ -86,7 +86,7 @@ pub fn verify_web3_authentication(
 	}
 }
 
-pub async fn verify_email_authentication(
+pub fn verify_email_authentication(
 	ctx: Arc<RpcContext>,
 	sender_identity: &Identity,
 	verification_code: &VerificationCode,
@@ -102,7 +102,7 @@ pub async fn verify_email_authentication(
 	Ok(())
 }
 
-pub async fn verify_auth_token_authentication(
+pub fn verify_auth_token_authentication(
 	_ctx: Arc<RpcContext>,
 	_sender_identity: &Identity,
 	_auth_token: &str,
@@ -110,7 +110,7 @@ pub async fn verify_auth_token_authentication(
 	todo!()
 }
 
-pub async fn verify_oauth2_authentication(
+pub fn verify_oauth2_authentication(
 	_ctx: Arc<RpcContext>,
 	_sender_identity_hash: Hash,
 	_payload: &OAuth2Data,
