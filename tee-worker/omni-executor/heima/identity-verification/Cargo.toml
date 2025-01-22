@@ -5,8 +5,11 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+async-trait = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }
+sendgrid = "0.23.0"
+
 
 [lints]
 workspace = true
