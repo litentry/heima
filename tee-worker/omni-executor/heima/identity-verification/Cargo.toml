@@ -1,0 +1,11 @@
+[package]
+name = "heima-identity-verification"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+log = { workspace = true }
+
+[lints]
+workspace = true

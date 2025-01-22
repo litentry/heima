@@ -5,6 +5,7 @@ members = [
     "executor-worker",
     "ethereum/intent-executor",
     "ethereum/intent-executor",
+    "heima/identity-verification",
     "native-task-handler",
     "parentchain/listener",
     "parentchain/api-interface",
@@ -54,6 +55,7 @@ tokio = "1.43.0"
 crypto = { path = "crypto" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
+heima-identity-verification = { path = "heima/identity-verification" }
 mailer = { path = "services/mailer" }
 native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
