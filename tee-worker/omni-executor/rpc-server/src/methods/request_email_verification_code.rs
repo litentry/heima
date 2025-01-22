@@ -1,5 +1,4 @@
 use crate::server::RpcContext;
-use executor_core::storage::Storage;
 use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email,
 };
