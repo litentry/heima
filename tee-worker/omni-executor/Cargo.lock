@@ -6159,6 +6159,7 @@ version = "0.1.0"
 dependencies = [
  "crypto",
  "executor-core",
+ "heima-identity-verification",
  "hex",
  "jsonrpsee",
  "log",
