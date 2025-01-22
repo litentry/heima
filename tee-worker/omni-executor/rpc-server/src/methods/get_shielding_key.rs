@@ -37,6 +37,7 @@ mod test {
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTask;
 	use std::sync::Arc;
+	use storage::StorageDB;
 	use tokio::sync::mpsc;
 
 	#[tokio::test]
@@ -44,8 +45,9 @@ mod test {
 		let port = "2000";
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTask>(1);
+		let db = StorageDB::open_default("test_storage_db").unwrap();
 
-		start_server(port, shielding_key.clone(), Arc::new(sender), [0u8; 32])
+		start_server(port, shielding_key.clone(), Arc::new(sender), Arc::new(db), [0u8; 32])
 			.await
 			.unwrap();
 

@@ -25,7 +25,7 @@ use std::io::Write;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::{fs, thread};
-use storage::init_storage;
+use storage::{init_storage, StorageDB};
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
@@ -54,7 +54,8 @@ async fn main() -> Result<(), ()> {
 		error!("Could not create data dir: {:?}", e);
 	})?;
 
-	init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
+	let storage_db =
+		init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
 
 	// TODO: make buffer size configurable
 	let buffer = 1024;
@@ -66,6 +67,7 @@ async fn main() -> Result<(), ()> {
 		&cli.worker_rpc_port,
 		ShieldingKey::new(),
 		Arc::new(native_task_sender),
+		storage_db.clone(),
 		mrenclave,
 	)
 	.await
@@ -73,9 +75,15 @@ async fn main() -> Result<(), ()> {
 		error!("Could not start server: {:?}", e);
 	})?;
 
-	listen_to_parentchain(cli.parentchain_url, cli.ethereum_url, cli.solana_url, cli.start_block)
-		.await
-		.unwrap();
+	listen_to_parentchain(
+		cli.parentchain_url,
+		cli.ethereum_url,
+		cli.solana_url,
+		cli.start_block,
+		storage_db,
+	)
+	.await
+	.unwrap();
 
 	match signal::ctrl_c().await {
 		Ok(()) => {},
@@ -93,6 +101,7 @@ async fn listen_to_parentchain(
 	ethereum_url: String,
 	solana_url: String,
 	start_block: u64,
+	storage_db: Arc<StorageDB>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
@@ -108,6 +117,7 @@ async fn listen_to_parentchain(
 			ethereum_intent_executor,
 			solana_intent_executor,
 			sub_stop_receiver,
+			storage_db,
 		)
 		.await?;
 

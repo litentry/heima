@@ -14,22 +14,34 @@ use parentchain_rpc_client::{
 };
 use parity_scale_codec::Decode;
 use primitives::{AccountId, MemberAccount, TryFromSubxtType};
+use rocksdb::DB;
 use sp_state_machine::{read_proof_check, StorageProof};
+use std::sync::Arc;
 
-const STORAGE_PATH: &str = "storage_db";
+const STORAGE_DB_PATH: &str = "storage_db";
 
-pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<(), ()> {
+pub type StorageDB = DB;
+
+pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
+	let db = Arc::new(StorageDB::open_default(STORAGE_DB_PATH).map_err(|e| {
+		log::error!("Could not open db: {:?}", e);
+	})?);
 	let client_factory: SubxtClientFactory<CustomConfig> = SubxtClientFactory::new(ws_rpc_endpoint);
 	let mut client = client_factory.new_client().await.map_err(|e| {
 		log::error!("Could not create client: {:?}", e);
 	})?;
 
-	init_omni_account_storages(&mut client).await?;
+	init_omni_account_storages(&mut client, db.clone()).await?;
 
-	Ok(())
+	Ok(db)
 }
 
-async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> Result<(), ()> {
+async fn init_omni_account_storages(
+	client: &mut SubxtClient<CustomConfig>,
+	storage_db: Arc<StorageDB>,
+) -> Result<(), ()> {
+	let account_store_storage = AccountStoreStorage::new(storage_db.clone());
+	let member_omni_account_storage = MemberOmniAccountStorage::new(storage_db.clone());
 	let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
 	let page_size = 300;
 	let mut start_key: Option<Vec<u8>> = None;
@@ -68,9 +80,6 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 		.map_err(|e| {
 			log::error!("Could not read proof check: {:?}", e);
 		})?;
-
-		let account_store_storage = AccountStoreStorage::new();
-		let member_omni_account_storage = MemberOmniAccountStorage::new();
 
 		for key in storage_keys_paged.iter() {
 			match storage_map.get(key) {

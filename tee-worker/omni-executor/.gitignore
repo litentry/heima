@@ -9,3 +9,4 @@ omni-executor.manifest.sgx
 omni-executor.sig
 omni-executor-worker
 storage_db
+test_storage_db

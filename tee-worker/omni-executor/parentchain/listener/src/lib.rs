@@ -40,7 +40,7 @@ use parentchain_api_interface::{
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
 use std::sync::Arc;
-use storage::{AccountStoreStorage, MemberOmniAccountStorage};
+use storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
 use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
@@ -55,6 +55,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	ethereum_intent_executor: EthereumIntentExecutor,
 	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
+	storage_db: Arc<StorageDB>,
 ) -> Result<
 	ParentchainListener<
 		SubxtClient<CustomConfig>,
@@ -104,8 +105,8 @@ where
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 
-	let account_store_storage = Arc::new(AccountStoreStorage::new());
-	let member_account_storage = Arc::new(MemberOmniAccountStorage::new());
+	let account_store_storage = Arc::new(AccountStoreStorage::new(storage_db.clone()));
+	let member_account_storage = Arc::new(MemberOmniAccountStorage::new(storage_db.clone()));
 
 	let event_handler = EventHandler::new(
 		metadata_provider,
