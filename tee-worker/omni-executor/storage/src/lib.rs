@@ -100,8 +100,6 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 						Decode::decode(&mut &value[..]).map_err(|e| {
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
-					// TODO: Check if this is works, can be tested with actual data and printing
-					// the values
 					for member in account_store.0.iter() {
 						let member_account =
 							MemberAccount::try_from_subxt_type(member).map_err(|e| {
