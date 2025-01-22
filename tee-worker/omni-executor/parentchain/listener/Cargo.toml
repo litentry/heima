@@ -17,8 +17,8 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 # Local dependencies
 executor-core = { workspace = true }
 parentchain-api-interface = { workspace = true }
-primitives = { workspace = true }
 parentchain-rpc-client = { workspace = true }
+primitives = { workspace = true }
 storage = { workspace = true }
 
 [dev-dependencies]

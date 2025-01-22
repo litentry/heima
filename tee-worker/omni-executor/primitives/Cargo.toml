@@ -14,8 +14,8 @@ scale-info = { workspace = true }
 serde = { workspace = true }
 
 crypto = { workspace = true }
-sp-core = { workspace = true }
 heima-primitives = { package = "core-primitives", path = "../../../common/primitives/core", default-features = false, features = ["std"] }
+sp-core = { workspace = true }
 
 [lints]
 workspace = true
