@@ -34,7 +34,7 @@ use parentchain_api_interface::{
 	tx as parentchain_tx,
 };
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use primitives::{AccountId, BlockEvent, Hash};
+use primitives::{AccountId, BlockEvent, Hash, MemberAccount, TryFromSubxtType};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;
@@ -230,11 +230,24 @@ impl<
 						Error::NonRecoverableError
 					})?;
 
+				let omni_account = AccountId::new(account_store_updated.who.0);
+
+				for member in account_store_updated.account_store.0.iter() {
+					let member_account =
+						MemberAccount::try_from_subxt_type(member).map_err(|e| {
+							log::error!("Error decoding member account: {:?}", e);
+							Error::NonRecoverableError
+						})?;
+					self.member_account_storage
+						.insert(member_account.hash(), omni_account.clone())
+						.map_err(|e| {
+							log::error!("Error inserting member account hash: {:?}", e);
+							Error::NonRecoverableError
+						})?;
+				}
+
 				self.account_store_storage
-					.insert(
-						AccountId::new(account_store_updated.who.0),
-						account_store_updated.account_store,
-					)
+					.insert(omni_account, account_store_updated.account_store)
 					.map_err(|_| {
 						log::error!("Could not insert account store into storage");
 						Error::NonRecoverableError
