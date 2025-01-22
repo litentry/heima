@@ -13,7 +13,7 @@ use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parity_scale_codec::Decode;
-use primitives::{AccountId, MemberAccount, TryFromType};
+use primitives::{AccountId, MemberAccount, TryFromSubxtType};
 use sp_state_machine::{read_proof_check, StorageProof};
 
 const STORAGE_PATH: &str = "storage_db";
@@ -101,9 +101,10 @@ async fn init_omni_account_storages(client: &mut SubxtClient<CustomConfig>) -> R
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
 					for member in account_store.0.iter() {
-						let member_account = MemberAccount::try_from_type(member).map_err(|e| {
-							log::error!("Error decoding member account: {:?}", e);
-						})?;
+						let member_account =
+							MemberAccount::try_from_subxt_type(member).map_err(|e| {
+								log::error!("Error decoding member account: {:?}", e);
+							})?;
 						member_account_hash_storage
 							.insert(member_account.hash(), account_id.clone())
 							.map_err(|e| {

@@ -67,19 +67,19 @@ impl GetEventId<EventId> for BlockEvent {
 	}
 }
 
-pub trait TryFromType<T: Encode>: Sized {
-	fn try_from_type(t: T) -> Result<Self, ()>;
+pub trait TryFromSubxtType<T: Encode>: Sized {
+	fn try_from_subxt_type(t: T) -> Result<Self, ()>;
 }
 
-impl<T: Encode> TryFromType<T> for Identity {
-	fn try_from_type(t: T) -> Result<Self, ()> {
+impl<T: Encode> TryFromSubxtType<T> for Identity {
+	fn try_from_subxt_type(t: T) -> Result<Self, ()> {
 		let bytes = t.encode();
 		Identity::decode(&mut &bytes[..]).map_err(|_| ())
 	}
 }
 
-impl<T: Encode> TryFromType<T> for MemberAccount {
-	fn try_from_type(t: T) -> Result<Self, ()> {
+impl<T: Encode> TryFromSubxtType<T> for MemberAccount {
+	fn try_from_subxt_type(t: T) -> Result<Self, ()> {
 		let bytes = t.encode();
 		MemberAccount::decode(&mut &bytes[..]).map_err(|_| ())
 	}
