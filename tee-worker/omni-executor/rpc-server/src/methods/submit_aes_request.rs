@@ -6,7 +6,6 @@ use crate::{
 	error_code::*,
 	request::{AesRequest, DecryptableRequest},
 	server::RpcContext,
-	utils::hex::{FromHexPrefixed, ToHexPrefixed},
 };
 use executor_core::native_call::NativeCall;
 use jsonrpsee::{
@@ -15,7 +14,10 @@ use jsonrpsee::{
 };
 use native_task_handler::NativeTask;
 use parity_scale_codec::{Decode, Encode};
-use primitives::{Nonce, OmniAccountAuthType};
+use primitives::{
+	utils::hex::{FromHexPrefixed, ToHexPrefixed},
+	Nonce, OmniAccountAuthType,
+};
 use std::{fmt::Debug, sync::Arc};
 use tokio::{sync::oneshot, task};
 

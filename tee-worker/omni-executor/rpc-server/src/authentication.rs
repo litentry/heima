@@ -1,9 +1,10 @@
-use crate::{server::RpcContext, utils::hex::hex_encode};
+use crate::server::RpcContext;
 use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	signature::HeimaMultiSignature,
+	utils::hex::hex_encode,
 	// AccountId,
 	Hash,
 	Identity,
