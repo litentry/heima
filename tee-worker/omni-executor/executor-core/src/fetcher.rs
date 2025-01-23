@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
-use parentchain_primitives::GetEventId;
+use primitives::GetEventId;
 
 /// Returns the last finalized block number
 #[async_trait]

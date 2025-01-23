@@ -16,8 +16,10 @@ tokio = { workspace = true }
 
 crypto = { workspace = true }
 executor-core = { workspace = true }
+heima-identity-verification = { workspace = true }
 native-task-handler = { workspace = true }
-parentchain-primitives = { workspace = true }
+primitives = { workspace = true }
+storage = { workspace = true }
 
 [lints]
 workspace = true

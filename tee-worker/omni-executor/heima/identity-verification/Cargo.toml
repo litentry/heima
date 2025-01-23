@@ -1,5 +1,5 @@
 [package]
-name = "executor-core"
+name = "heima-identity-verification"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
@@ -7,11 +7,9 @@ edition.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 log = { workspace = true }
-parity-scale-codec = { workspace = true, features = ["derive"] }
-tokio = { workspace = true }
+rand = { workspace = true }
+sendgrid = "0.23.0"
 
-# Local dependencies
-primitives = { workspace = true }
 
 [lints]
 workspace = true

@@ -2880,8 +2880,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "log",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "tokio",
 ]
 
@@ -3665,6 +3665,16 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "heima-identity-verification"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "log",
+ "rand 0.8.5",
+ "sendgrid",
+]
 
 [[package]]
 name = "hermit-abi"
@@ -4767,8 +4777,8 @@ version = "0.1.0"
 dependencies = [
  "executor-core",
  "log",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "tokio",
 ]
 
@@ -5167,29 +5177,14 @@ dependencies = [
  "hex",
  "log",
  "parentchain-api-interface",
- "parentchain-primitives",
  "parentchain-rpc-client",
  "parity-scale-codec",
+ "primitives",
  "storage",
  "subxt",
  "subxt-core",
  "subxt-signer",
  "tokio",
-]
-
-[[package]]
-name = "parentchain-primitives"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "bitcoin",
- "core-primitives",
- "crypto",
- "hex",
- "log",
- "parity-scale-codec",
- "scale-info",
- "serde",
 ]
 
 [[package]]
@@ -5199,8 +5194,8 @@ dependencies = [
  "async-trait",
  "env_logger",
  "log",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "scale-encode 0.10.0",
  "subxt",
  "subxt-core",
@@ -5573,6 +5568,22 @@ dependencies = [
  "impl-serde 0.5.0",
  "scale-info",
  "uint 0.10.0",
+]
+
+[[package]]
+name = "primitives"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bitcoin",
+ "core-primitives",
+ "crypto",
+ "hex",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 35.0.0",
 ]
 
 [[package]]
@@ -6148,15 +6159,17 @@ version = "0.1.0"
 dependencies = [
  "crypto",
  "executor-core",
+ "heima-identity-verification",
  "hex",
  "jsonrpsee",
  "log",
  "native-task-handler",
- "parentchain-primitives",
  "parity-scale-codec",
+ "primitives",
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "storage",
  "tokio",
 ]
 
@@ -6862,6 +6875,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0bef5b7f9e0df16536d3961cfb6e84331c065b4066afb39768d0e319411f7"
 dependencies = [
  "pest",
+]
+
+[[package]]
+name = "sendgrid"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c3c66709377c4d2bcbf46c298c5e07db62398793d20a69ca99b4ec6f9bfe5fd"
+dependencies = [
+ "data-encoding",
+ "reqwest 0.12.8",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "url",
 ]
 
 [[package]]
@@ -9709,12 +9736,12 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "executor-core",
  "frame-support 39.0.0",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parity-scale-codec",
+ "primitives",
  "rocksdb",
  "sp-state-machine 0.44.0",
  "subxt-core",

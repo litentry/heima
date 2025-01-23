@@ -9,8 +9,9 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true }
 tokio = { workspace = true }
 
+# Local dependencies
 executor-core = { workspace = true }
-parentchain-primitives = { workspace = true }
+primitives = { workspace = true }
 
 [lints]
 workspace = true

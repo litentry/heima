@@ -1,7 +1,8 @@
 use crate::{server::RpcContext, utils::hex::hex_encode};
 use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
-use parentchain_primitives::{
+use parity_scale_codec::{Decode, Encode};
+use primitives::{
 	signature::HeimaMultiSignature,
 	// AccountId,
 	Hash,
@@ -9,8 +10,8 @@ use parentchain_primitives::{
 	OmniAccountAuthType,
 	ShardIdentifier,
 };
-use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
+use storage::{Storage, VerificationCodeStorage};
 
 pub type VerificationCode = String;
 
@@ -36,8 +37,8 @@ impl From<Authentication> for OmniAccountAuthType {
 #[derive(Debug)]
 pub enum AuthenticationError {
 	Web3InvalidSignature,
-	// EmailVerificationCodeNotFound,
-	// EmailInvalidVerificationCode,
+	EmailVerificationCodeNotFound,
+	EmailInvalidVerificationCode,
 	// OAuth2Error(String),
 	// AuthTokenError(String),
 }
@@ -85,15 +86,24 @@ pub fn verify_web3_authentication(
 	}
 }
 
-pub async fn verify_email_authentication(
-	_ctx: Arc<RpcContext>,
-	_sender_identity: &Identity,
-	_verification_code: &VerificationCode,
+pub fn verify_email_authentication(
+	ctx: Arc<RpcContext>,
+	sender_identity: &Identity,
+	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	todo!()
+	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
+	let Some(code) = verification_code_storage.get(&sender_identity.hash()) else {
+		return Err(AuthenticationError::EmailVerificationCodeNotFound);
+	};
+	if code != *verification_code {
+		return Err(AuthenticationError::EmailInvalidVerificationCode);
+	}
+	let _ = verification_code_storage.remove(&sender_identity.hash());
+
+	Ok(())
 }
 
-pub async fn verify_auth_token_authentication(
+pub fn verify_auth_token_authentication(
 	_ctx: Arc<RpcContext>,
 	_sender_identity: &Identity,
 	_auth_token: &str,
@@ -101,7 +111,7 @@ pub async fn verify_auth_token_authentication(
 	todo!()
 }
 
-pub async fn verify_oauth2_authentication(
+pub fn verify_oauth2_authentication(
 	_ctx: Arc<RpcContext>,
 	_sender_identity_hash: Hash,
 	_payload: &OAuth2Data,

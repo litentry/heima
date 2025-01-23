@@ -12,7 +12,8 @@ scale-encode = { workspace = true }
 subxt = { workspace = true }
 subxt-core = { workspace = true }
 
-parentchain-primitives = { workspace = true }
+# Local dependencies
+primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
