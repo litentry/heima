@@ -2640,6 +2640,7 @@ dependencies = [
  "async-trait",
  "log",
  "parity-scale-codec",
+ "regex",
  "tokio",
 ]
 
@@ -4551,6 +4552,8 @@ dependencies = [
  "parentchain-rpc-client",
  "parentchain-storage",
  "parity-scale-codec",
+ "scale-encode 0.10.0",
+ "sp-core",
  "subxt",
  "subxt-core",
  "subxt-signer",
