@@ -73,8 +73,8 @@ pub struct RuntimeVersion {
 /// For fetching data from Substrate RPC node
 #[async_trait]
 pub trait SubstrateRpcClient<AccountId, Header> {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<Header>, ()>;
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()>;
+	async fn get_last_finalized_header(&self) -> Result<Option<Header>, ()>;
+	async fn get_last_finalized_block_num(&self) -> Result<u64, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
 	async fn submit_tx(&mut self, raw_tx: &[u8]) -> Result<(), ()>;
@@ -107,11 +107,11 @@ impl<ChainConfig: Config> SubxtClient<ChainConfig> {
 impl<ChainConfig: Config<AccountId = AccountId32>>
 	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for SubxtClient<ChainConfig>
 {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
+	async fn get_last_finalized_header(&self) -> Result<Option<ChainConfig::Header>, ()> {
 		let finalized_header = self.legacy.chain_get_finalized_head().await.map_err(|_| ())?;
 		self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())
 	}
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u64, ()> {
 		match self.get_last_finalized_header().await {
 			Ok(Some(header)) => Ok(header.number().into()),
 			_ => Err(()),
@@ -213,10 +213,10 @@ pub struct MockedRpcClient<ChainConfig: Config> {
 impl<ChainConfig: Config<AccountId = String>>
 	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for MockedRpcClient<ChainConfig>
 {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
+	async fn get_last_finalized_header(&self) -> Result<Option<ChainConfig::Header>, ()> {
 		Ok(None)
 	}
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u64, ()> {
 		Ok(self.block_num)
 	}
 
