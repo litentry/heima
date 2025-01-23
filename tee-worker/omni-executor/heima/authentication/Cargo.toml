@@ -1,0 +1,15 @@
+[package]
+name = "heima-authentication"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+log = { workspace = true }
+parity-scale-codec = { workspace = true }
+serde = { workspace = true }
+
+crypto = { workspace = true }
+
+[lints]
+workspace = true

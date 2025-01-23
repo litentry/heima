@@ -3670,6 +3670,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
+name = "heima-authentication"
+version = "0.1.0"
+dependencies = [
+ "crypto",
+ "log",
+ "parity-scale-codec",
+ "serde",
+]
+
+[[package]]
 name = "heima-identity-verification"
 version = "0.1.0"
 dependencies = [
@@ -6187,6 +6197,7 @@ version = "0.1.0"
 dependencies = [
  "crypto",
  "executor-core",
+ "heima-authentication",
  "heima-identity-verification",
  "hex",
  "jsonrpsee",
