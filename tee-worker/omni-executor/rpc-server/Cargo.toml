@@ -16,6 +16,7 @@ tokio = { workspace = true }
 
 crypto = { workspace = true }
 executor-core = { workspace = true }
+heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
 native-task-handler = { workspace = true }
 primitives = { workspace = true }

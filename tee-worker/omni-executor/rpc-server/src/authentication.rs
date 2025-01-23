@@ -1,9 +1,7 @@
 use crate::server::RpcContext;
-use crypto::{
-	hashing::blake2_256,
-	jwt::{Jwt, Validation},
-};
+use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
+use heima_authentication::auth_token::{AuthTokenValidator, Validation};
 use parentchain_rpc_client::SubstrateRpcClient;
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
@@ -15,7 +13,6 @@ use primitives::{
 	OmniAccountAuthType,
 	ShardIdentifier,
 };
-use serde::Deserialize;
 use std::sync::Arc;
 use storage::{MemberOmniAccountStorage, Storage, VerificationCodeStorage};
 use tokio::runtime::Handle;
@@ -28,13 +25,6 @@ pub enum Authentication {
 	Email(VerificationCode),
 	AuthToken(String),
 	OAuth2(OAuth2Data),
-}
-
-#[derive(Deserialize)]
-pub struct AuthTokenClaims {
-	#[allow(dead_code)]
-	pub sub: String,
-	pub exp: u64,
 }
 
 impl From<Authentication> for OmniAccountAuthType {
@@ -60,7 +50,6 @@ pub enum AuthenticationError {
 
 #[derive(Debug)]
 pub enum AuthTokenError {
-	TokenExpired,
 	InvalidToken,
 	OmniAccountNotFound,
 	BlockNumberError,
@@ -144,17 +133,10 @@ pub fn verify_auth_token_authentication(
 	let Some(omni_account) = member_omni_account_storage.get(&sender_identity.hash()) else {
 		return Err(AuthenticationError::AuthTokenError(AuthTokenError::OmniAccountNotFound));
 	};
-	let mut validation = Validation::default();
-	validation.set_required_spec_claims(&["sub"]);
-	validation.sub = Some(omni_account.to_hex());
+	let validation = Validation::new(omni_account.to_hex(), current_block);
 
-	match auth_token.verify::<AuthTokenClaims>(ctx.jwt_secret.as_bytes(), &mut validation) {
-		Ok(claims) => {
-			if claims.exp < current_block {
-				return Err(AuthenticationError::AuthTokenError(AuthTokenError::TokenExpired));
-			}
-		},
-		_ => return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken)),
+	if auth_token.validate(ctx.jwt_secret.as_bytes(), validation).is_err() {
+		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));
 	}
 
 	Ok(())
