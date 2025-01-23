@@ -29,6 +29,18 @@ impl Jwt for String {
 	}
 }
 
+impl Jwt for &str {
+	fn verify<T: DeserializeOwned>(
+		&self,
+		secret: &[u8],
+		validation: &mut Validation,
+	) -> Result<T, String> {
+		decode::<T>(self, &DecodingKey::from_secret(secret), validation)
+			.map(|data| data.claims)
+			.map_err(|e| e.to_string())
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -46,6 +58,7 @@ mod tests {
 
 		let token = create_token(&claims, secret).unwrap();
 		let mut validation = Validation::default();
+		validation.sub = Some("test".to_string());
 		validation.set_required_spec_claims(&["sub"]);
 		let decoded = token.verify::<JwtClaims>(secret, &mut validation).unwrap();
 
@@ -60,7 +73,7 @@ mod tests {
 		let token = create_token(&claims, secret).unwrap();
 		let mut validation = Validation::default();
 		validation.algorithms = vec![Algorithm::RS256];
-		let decoded = token.verify::<JwtClaims>(secret, &mut validation);
+		let decoded = Jwt::verify::<JwtClaims>(&token, secret, &mut validation);
 
 		assert_eq!(decoded, Err("InvalidAlgorithm".to_string()));
 	}
