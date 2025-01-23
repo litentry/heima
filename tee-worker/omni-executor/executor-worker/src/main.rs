@@ -65,6 +65,7 @@ async fn main() -> Result<(), ()> {
 
 	start_rpc_server(
 		&cli.worker_rpc_port,
+		&cli.parentchain_url,
 		ShieldingKey::new(),
 		Arc::new(native_task_sender),
 		storage_db.clone(),

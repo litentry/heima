@@ -6192,6 +6192,7 @@ dependencies = [
  "jsonrpsee",
  "log",
  "native-task-handler",
+ "parentchain-rpc-client",
  "parity-scale-codec",
  "primitives",
  "rand 0.8.5",
