@@ -98,6 +98,7 @@ pub fn verify_email_authentication(
 	if code != *verification_code {
 		return Err(AuthenticationError::EmailInvalidVerificationCode);
 	}
+	let _ = verification_code_storage.remove(&sender_identity.hash());
 
 	Ok(())
 }
