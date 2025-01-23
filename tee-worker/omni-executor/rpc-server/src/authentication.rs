@@ -1,18 +1,24 @@
 use crate::server::RpcContext;
-use crypto::hashing::blake2_256;
+use crypto::{
+	hashing::blake2_256,
+	jwt::{Jwt, Validation},
+};
 use executor_core::native_call::NativeCall;
+use parentchain_rpc_client::SubstrateRpcClient;
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	signature::HeimaMultiSignature,
-	utils::hex::hex_encode,
+	utils::hex::{hex_encode, ToHexPrefixed},
 	// AccountId,
 	Hash,
 	Identity,
 	OmniAccountAuthType,
 	ShardIdentifier,
 };
+use serde::Deserialize;
 use std::sync::Arc;
-use storage::{Storage, VerificationCodeStorage};
+use storage::{MemberOmniAccountStorage, Storage, VerificationCodeStorage};
+use tokio::runtime::Handle;
 
 pub type VerificationCode = String;
 
@@ -22,6 +28,13 @@ pub enum Authentication {
 	Email(VerificationCode),
 	AuthToken(String),
 	OAuth2(OAuth2Data),
+}
+
+#[derive(Deserialize)]
+pub struct AuthTokenClaims {
+	#[allow(dead_code)]
+	pub sub: String,
+	pub exp: u64,
 }
 
 impl From<Authentication> for OmniAccountAuthType {
@@ -41,7 +54,16 @@ pub enum AuthenticationError {
 	EmailVerificationCodeNotFound,
 	EmailInvalidVerificationCode,
 	// OAuth2Error(String),
-	// AuthTokenError(String),
+	#[allow(dead_code)]
+	AuthTokenError(AuthTokenError),
+}
+
+#[derive(Debug)]
+pub enum AuthTokenError {
+	TokenExpired,
+	InvalidToken,
+	OmniAccountNotFound,
+	BlockNumberError,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -105,11 +127,37 @@ pub fn verify_email_authentication(
 }
 
 pub fn verify_auth_token_authentication(
-	_ctx: Arc<RpcContext>,
-	_sender_identity: &Identity,
-	_auth_token: &str,
+	ctx: Arc<RpcContext>,
+	handle: Handle,
+	sender_identity: &Identity,
+	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
-	todo!()
+	let rpc_client = ctx.rpc_client.clone();
+	let current_block = handle
+		.block_on(async {
+			rpc_client.get_last_finalized_block_num().await.map_err(|e| {
+				log::error!("Could not get last finalized block number: {:?}", e);
+			})
+		})
+		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
+	let member_omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+	let Some(omni_account) = member_omni_account_storage.get(&sender_identity.hash()) else {
+		return Err(AuthenticationError::AuthTokenError(AuthTokenError::OmniAccountNotFound));
+	};
+	let mut validation = Validation::default();
+	validation.set_required_spec_claims(&["sub"]);
+	validation.sub = Some(omni_account.to_hex());
+
+	match auth_token.verify::<AuthTokenClaims>(ctx.jwt_secret.as_bytes(), &mut validation) {
+		Ok(claims) => {
+			if claims.exp < current_block {
+				return Err(AuthenticationError::AuthTokenError(AuthTokenError::TokenExpired));
+			}
+		},
+		_ => return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken)),
+	}
+
+	Ok(())
 }
 
 pub fn verify_oauth2_authentication(

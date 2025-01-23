@@ -19,7 +19,7 @@ use primitives::{
 	Nonce, OmniAccountAuthType,
 };
 use std::{fmt::Debug, sync::Arc};
-use tokio::{sync::oneshot, task};
+use tokio::{runtime::Handle, sync::oneshot, task};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthenticatedCall {
@@ -39,7 +39,9 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 			};
 			let context = ctx.clone();
 			let aes_request = request.clone();
-			let join_handle = task::spawn_blocking(|| handle_aes_request(aes_request, context));
+			let handle = Handle::current();
+			let join_handle =
+				task::spawn_blocking(|| handle_aes_request(aes_request, context, handle));
 			let (native_call, auth_type) = join_handle.await.map_err(|e| {
 				log::error!("Failed to handle AES request: {:?}", e);
 				ErrorCode::InternalError
@@ -66,6 +68,7 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 fn handle_aes_request<'a>(
 	mut request: AesRequest,
 	ctx: Arc<RpcContext>,
+	handle: Handle,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.shard().encode() != ctx.mrenclave.encode() {
 		return Err(ErrorCode::ServerError(INVALID_SHARD_CODE).into());
@@ -101,6 +104,7 @@ fn handle_aes_request<'a>(
 		),
 		Authentication::AuthToken(ref auth_token) => verify_auth_token_authentication(
 			ctx,
+			handle,
 			authenticated_call.call.sender_identity(),
 			auth_token,
 		),
