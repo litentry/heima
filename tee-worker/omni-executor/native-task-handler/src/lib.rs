@@ -22,6 +22,15 @@ pub type NativeTaskSender = mpsc::Sender<NativeTask>;
 
 type NativeCallResponse = Result<NativeCallOk, NativeCallError>;
 
+type ParentchainTxSigner = TransactionSigner<
+	SubstrateKeyStore,
+	SubxtClient<CustomConfig>,
+	SubxtClientFactory<CustomConfig>,
+	CustomConfig,
+	Metadata,
+	SubxtMetadataProvider<CustomConfig>,
+>;
+
 pub struct NativeTask {
 	pub call: NativeCall,
 	pub auth_type: OmniAccountAuthType,
@@ -37,16 +46,7 @@ pub struct TaskHandlerContext<
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_secret: String,
-	pub transaction_signer: Arc<
-		TransactionSigner<
-			SubstrateKeyStore,
-			SubxtClient<CustomConfig>,
-			SubxtClientFactory<CustomConfig>,
-			CustomConfig,
-			Metadata,
-			SubxtMetadataProvider<CustomConfig>,
-		>,
-	>,
+	pub transaction_signer: Arc<ParentchainTxSigner>,
 	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -61,16 +61,7 @@ impl<
 {
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-		transaction_signer: Arc<
-			TransactionSigner<
-				SubstrateKeyStore,
-				SubxtClient<CustomConfig>,
-				SubxtClientFactory<CustomConfig>,
-				CustomConfig,
-				Metadata,
-				SubxtMetadataProvider<CustomConfig>,
-			>,
-		>,
+		transaction_signer: Arc<ParentchainTxSigner>,
 		storage_db: Arc<StorageDB>,
 		jwt_secret: String,
 	) -> Self {
