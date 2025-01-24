@@ -31,12 +31,12 @@ use subxt::events::EventsClient;
 use subxt::storage::StorageClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
-use subxt_core::utils::AccountId32;
+pub use subxt_core::utils::AccountId32;
 use tokio::time::{sleep, Duration};
 
 // We don't need to construct this at runtime,
 // so an empty enum is appropriate:
-#[derive(EncodeAsType)]
+#[derive(EncodeAsType, Clone)]
 pub enum CustomConfig {}
 
 //todo: adjust if needed
@@ -273,6 +273,7 @@ pub trait SubstrateRpcClientFactory<
 	async fn new_client(&self) -> Result<RpcClient, ()>;
 }
 
+#[derive(Clone)]
 pub struct SubxtClientFactory<ChainConfig: Config> {
 	url: String,
 	_phantom: PhantomData<ChainConfig>,

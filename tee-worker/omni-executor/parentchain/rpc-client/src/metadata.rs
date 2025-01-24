@@ -17,8 +17,10 @@
 use crate::{SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory};
 use async_trait::async_trait;
 use parity_scale_codec::Decode;
-use subxt::{Config, Metadata};
+use subxt::Config;
 use subxt_core::utils::AccountId32;
+
+pub use subxt::Metadata;
 
 #[async_trait]
 pub trait MetadataProvider<M> {
