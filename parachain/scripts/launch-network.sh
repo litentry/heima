@@ -24,7 +24,7 @@ LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
 [ -d "$LITENTRY_PARACHAIN_DIR" ] || mkdir -p "$LITENTRY_PARACHAIN_DIR"
 
 ROOTDIR=$(git rev-parse --show-toplevel)
-PARACHAIN_BIN="$ROOTDIR/parachain/target/release/litentry-collator"
+PARACHAIN_BIN="$ROOTDIR/parachain/target/release/heima-collator"
 cd "$ROOTDIR"
 
 export PARA_ID=$(grep -i "${CHAIN}_para_id" common/primitives/core/src/lib.rs | sed 's/.* = //;s/\;.*//')
@@ -61,19 +61,19 @@ $ZOMBIENET_BIN version
 echo "downloading polkadot ..."
 $ZOMBIENET_BIN setup polkadot -y || true
 
-echo "searching litentry-collator binary in target/release/ ..."
+echo "searching heima-collator binary in target/release/ ..."
 
 if [ -f "$PARACHAIN_BIN" ]; then
   cp "$PARACHAIN_BIN" .
   echo "found one, version:"
-  ./litentry-collator --version
+  ./heima-collator --version
 else
   echo "not here, copying from docker image if we are on Linux ..."
   if [ $(uname -s) = "Linux" ]; then
-    docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/litentry-collator" .
-    chmod +x litentry-collator
+    docker cp "$(docker create --rm litentry/litentry-parachain:latest):/usr/local/bin/heima-collator" .
+    chmod +x heima-collator
     echo "done, version:"
-    ./litentry-collator --version
+    ./heima-collator --version
   fi
 fi
 

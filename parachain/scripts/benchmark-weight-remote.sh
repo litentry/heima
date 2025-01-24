@@ -29,8 +29,8 @@ cd litentry-parachain/parachain
 git checkout "$2"
 
 # copy binary out
-docker cp "$(docker create --rm litentry/litentry-parachain:runtime-benchmarks):/usr/local/bin/litentry-collator" .
-chmod a+x litentry-collator
+docker cp "$(docker create --rm litentry/litentry-parachain:runtime-benchmarks):/usr/local/bin/heima-collator" .
+chmod a+x heima-collator
 
 # populate PALLETS
 PALLETS=
@@ -69,7 +69,7 @@ for p in $PALLETS; do
   # filter out the flooding warnings from pallet_scheduler:
   # Warning: There are more items queued in the Scheduler than expected from the runtime configuration.
   #          An update might be needed
-  RUST_LOG=runtime::scheduler=error ./litentry-collator benchmark pallet \
+  RUST_LOG=runtime::scheduler=error ./heima-collator benchmark pallet \
         --chain=$1-dev \
         --execution=wasm  \
         --db-cache=20 \

@@ -1,5 +1,5 @@
 {
-  "name": "Litentry",
+  "name": "Heima",
   "id": "litentry",
   "chainType": "Live",
   "bootNodes": [
@@ -13,11 +13,11 @@
       0
     ]
   ],
-  "protocolId": "litentry",
+  "protocolId": "heima",
   "properties": {
     "ss58Format": 31,
     "tokenDecimals": 18,
-    "tokenSymbol": "LIT"
+    "tokenSymbol": "HEI"
   },
   "relayChain": "polkadot",
   "paraId": 2013,

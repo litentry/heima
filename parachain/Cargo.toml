@@ -37,7 +37,7 @@ members = [
     'precompiles/collab-ai/investing-pool',
     'precompiles/parachain-staking',
     'precompiles/score-staking',
-    'runtime/litentry',
+    'runtime/heima',
     'runtime/paseo',
     'runtime/common',
 ]
@@ -271,7 +271,7 @@ litentry-macros = { path = "../common/primitives/core/macros" }
 litentry-proc-macros = { path = "../common/primitives/core/proc-macros" }
 litentry-hex-utils = { path = "../common/utils/hex", default-features = false }
 runtime-common = { path = "runtime/common", default-features = false }
-litentry-parachain-runtime = { path = "runtime/litentry", default-features = false }
+heima-parachain-runtime = { path = "runtime/heima", default-features = false }
 paseo-parachain-runtime = { path = "runtime/paseo", default-features = false }
 pallet-account-fix = { path = "pallets/account-fix", default-features = false }
 pallet-asset-manager = { path = "pallets/xcm-asset-manager", default-features = false }

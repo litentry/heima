@@ -25,7 +25,7 @@ function parachain_check() {
     cargo test --locked --release -p pallet-* --lib
     cargo test --locked --release -p pallet-* --lib --features=runtime-benchmarks
     cargo test --locked --release -p paseo-parachain-runtime --lib
-    cargo test --locked --release -p litentry-parachain-runtime --lib
+    cargo test --locked --release -p heima-parachain-runtime --lib
 }
 
 function clean_up() {

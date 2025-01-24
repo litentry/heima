@@ -53,11 +53,11 @@ jobs:
 
       - name: Copy client binary to disk
         run: |
-          docker cp $(docker create --rm litentry/litentry-parachain:${{ github.event.inputs.docker_tag }}):/usr/local/bin/litentry-collator .
+          docker cp $(docker create --rm litentry/litentry-parachain:${{ github.event.inputs.docker_tag }}):/usr/local/bin/heima-collator .
 
       - name: Upload the client binary
         uses: actions/upload-artifact@v4
         with:
-          name: litentry-collator
+          name: heima-collator
           path: |
-            litentry-collator
+            heima-collator

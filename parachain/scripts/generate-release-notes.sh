@@ -52,9 +52,9 @@ if is_client_release; then
   docker pull "litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG"
 
   NODE_VERSION=$(grep version parachain/node/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
-  NODE_BIN=litentry-collator
+  NODE_BIN=heima-collator
   # if is_client_release, files are downloaded in the upper layer
-  NODE_SHA1SUM=$(shasum litentry-collator/"$NODE_BIN" | awk '{print $1}')
+  NODE_SHA1SUM=$(shasum heima-collator/"$NODE_BIN" | awk '{print $1}')
   if [ -f rust-toolchain.toml ]; then
     NODE_RUSTC_VERSION=$(rustc --version)
   else
@@ -151,15 +151,15 @@ if [ "$GENESIS_RELEASE" != "none" ]; then
     exit 1
   fi
 
-  GENESIS_STATE_HASH=$(shasum litentry-collator/$GENESIS_RELEASE-genesis-state | awk '{print $1}')
-  GENESIS_WASM_HASH=$(shasum litentry-collator/$GENESIS_RELEASE-genesis-wasm | awk '{print $1}')
+  GENESIS_STATE_HASH=$(shasum heima-collator/$GENESIS_RELEASE-genesis-state | awk '{print $1}')
+  GENESIS_WASM_HASH=$(shasum heima-collator/$GENESIS_RELEASE-genesis-wasm | awk '{print $1}')
 
   # double check that exported wasm matches what's written in chain-spec
   # intentionally use 'generate-prod' as chain type
   docker run --rm "litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG" build-spec --chain=generate-$GENESIS_RELEASE --raw | \
   grep -F '"0x3a636f6465"' | sed 's/.*"0x3a636f6465": "//;s/",$//' | tr -d '\n' > /tmp/built-wasm
 
-  if cmp /tmp/built-wasm litentry-collator/$GENESIS_RELEASE-genesis-wasm; then
+  if cmp /tmp/built-wasm heima-collator/$GENESIS_RELEASE-genesis-wasm; then
     echo "genesis-wasm equal, all good."
     rm -f /tmp/built-wasm
   else

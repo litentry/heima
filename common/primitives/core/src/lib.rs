@@ -94,7 +94,7 @@ mod types {
 mod constants {
     use super::types::BlockNumber;
 
-    pub const LITENTRY_PARA_ID: u32 = 2013;
+    pub const HEIMA_PARA_ID: u32 = 2013;
     pub const PASEO_PARA_ID: u32 = 2106;
 
     /// This determines the average expected block time that we are targeting.

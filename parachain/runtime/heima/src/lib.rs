@@ -105,8 +105,8 @@ pub mod xcm_config;
 #[cfg(test)]
 mod tests;
 
-pub use precompiles::LitentryNetworkPrecompiles;
-pub type Precompiles = LitentryNetworkPrecompiles<Runtime>;
+pub use precompiles::HeimaNetworkPrecompiles;
+pub type Precompiles = HeimaNetworkPrecompiles<Runtime>;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -225,9 +225,9 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// It's important to match `litentry-parachain-runtime`, which is runtime pkg name
-	spec_name: create_runtime_str!("litentry-parachain"),
-	impl_name: create_runtime_str!("litentry-parachain"),
+	// It's important to match `heima-parachain-runtime`, which is runtime pkg name
+	spec_name: create_runtime_str!("heima-parachain"),
+	impl_name: create_runtime_str!("heima-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
 	spec_version: 9223,
@@ -522,13 +522,13 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 parameter_types! {
-	pub LaunchPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "LITENTRY_LAUNCHPERIOD");
-	pub VotingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "LITENTRY_VOTINGPERIOD");
-	pub FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS, 2 * MINUTES, "LITENTRY_FASTTRACKVOTINGPERIOD");
+	pub LaunchPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "HEIMA_LAUNCHPERIOD");
+	pub VotingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "HEIMA_VOTINGPERIOD");
+	pub FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS, 2 * MINUTES, "HEIMA_FASTTRACKVOTINGPERIOD");
 	pub const InstantAllowed: bool = true;
 	pub const MinimumDeposit: Balance = 100 * DOLLARS;
-	pub EnactmentPeriod: BlockNumber = prod_or_fast!(1 * DAYS, 2 * MINUTES, "LITENTRY_ENACTMENTPERIOD");
-	pub CooloffPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_COOLOFFPERIOD");
+	pub EnactmentPeriod: BlockNumber = prod_or_fast!(1 * DAYS, 2 * MINUTES, "HEIMA_ENACTMENTPERIOD");
+	pub CooloffPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "HEIMA_COOLOFFPERIOD");
 }
 
 impl pallet_democracy::Config for Runtime {
@@ -668,8 +668,8 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 20 * DOLLARS;
-	pub SpendPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_SPENDPERIOD");
-	pub PayoutPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_PAYOUTPERIOD");
+	pub SpendPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "HEIMA_SPENDPERIOD");
+	pub PayoutPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "HEIMA_PAYOUTPERIOD");
 
 	pub BountyDepositBase: Balance = deposit(1, 0);
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
@@ -895,7 +895,7 @@ parameter_types! {
 	pub BlockGasLimit: U256 = U256::from(
 		NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT.ref_time() / WEIGHT_PER_GAS
 	);
-	pub PrecompilesValue: Precompiles = LitentryNetworkPrecompiles::<_>::new();
+	pub PrecompilesValue: Precompiles = HeimaNetworkPrecompiles::<_>::new();
 	// BlockGasLimit / MAX_POV_SIZE
 	pub GasLimitPovSizeRatio: u64 = 4;
 }
@@ -974,7 +974,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub Period: u32 = prod_or_fast!(6 * HOURS, 2, "LITENTRY_PERIOD");
+	pub Period: u32 = prod_or_fast!(6 * HOURS, 2, "HEIMA_PERIOD");
 }
 
 impl pallet_parachain_staking::Config for Runtime {
@@ -1312,7 +1312,7 @@ construct_runtime! {
 		// I assume it's the desired behavior though or it doesn't really matter.
 		//
 		// also see the comment above `AllPalletsWithSystem` and
-		// https://github.com/litentry/litentry-parachain/issues/336
+		// https://github.com/litentry/heima/issues/336
 		Authorship: pallet_authorship = 40,
 		//41 is for old CollatorSelection, replaced by ParachainSTaking
 		Session: pallet_session = 42,
@@ -1330,7 +1330,7 @@ construct_runtime! {
 		Assets: pallet_assets = 56,
 		MessageQueue: pallet_message_queue = 57,
 
-		// Litentry pallets
+		// Heima pallets
 		ChainBridge: pallet_chain_bridge= 60,
 		BridgeTransfer: pallet_bridge_transfer = 61,
 		ExtrinsicFilter: pallet_extrinsic_filter = 63,

@@ -27,7 +27,7 @@ export function signAndSend(tx: SubmittableExtrinsic<ApiTypes>, account: Address
 }
 
 // After removing the sudo module, we use `EnsureRootOrHalfTechnicalCommittee` instead of `Sudo`,
-// and there are only one council members in rococo-dev/litentry-dev.
+// and there are only one council members in rococo-dev/heima-dev.
 // So only `propose` is required, no vote.
 //
 // TODO: support to send the `vote extrinsic`, if the number of council members is greater than 2.
@@ -43,7 +43,7 @@ export async function sudoWrapperTC(api: ApiPromise, tx: SubmittableExtrinsic<Ap
 }
 
 // After removing the sudo module, we use `EnsureRootOrHalfCouncil` instead of `Sudo`,
-// and there are only two council members in rococo-dev/litentry-dev.
+// and there are only two council members in rococo-dev/heima-dev.
 // So only `propose` is required, no vote.
 //
 // TODO: support to send the `vote extrinsic`, if the number of council members is greater than 2.

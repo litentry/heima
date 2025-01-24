@@ -8,12 +8,12 @@ LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
 [ -d "$LITENTRY_PARACHAIN_DIR" ] || mkdir -p "$LITENTRY_PARACHAIN_DIR"
 
 ROOTDIR=$(git rev-parse --show-toplevel)
-PARACHAIN_BIN="$ROOTDIR/parachain/target/release/litentry-collator"
+PARACHAIN_BIN="$ROOTDIR/parachain/target/release/heima-collator"
 
 cd "$ROOTDIR"
 
 if [ ! -f "$PARACHAIN_BIN" ]; then
-  echo "no litentry-collator found, build it now ..."
+  echo "no heima-collator found, build it now ..."
   make build-node
 fi
 
@@ -26,7 +26,7 @@ function print_divider() {
   echo "------------------------------------------------------------"
 }
 
-echo "Starting litentry-collator in standalone mode ..."
+echo "Starting heima-collator in standalone mode ..."
 
 $PARACHAIN_BIN --dev --rpc-external --port "${CollatorPort:-30333}" --rpc-port "${CollatorWSPort:-9944}" \
   &> "$LITENTRY_PARACHAIN_DIR/para.alice.log" &

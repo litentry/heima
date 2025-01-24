@@ -25,7 +25,7 @@ cumulus_based = true
 
 [[parachains.collators]]
 name = "collator1"
-command = "litentry-collator"
+command = "heima-collator"
 args = [
   "--no-hardware-benchmarks",
   "--force-authoring",
