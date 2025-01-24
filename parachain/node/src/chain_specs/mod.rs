@@ -16,7 +16,7 @@
 
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use core_primitives::{AccountId, Signature, LITENTRY_PARA_ID};
+use core_primitives::{AccountId, Signature, HEIMA_PARA_ID};
 use runtime_common::currency::UNIT;
 pub use sc_chain_spec::Properties;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -25,7 +25,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
-pub mod litentry;
+pub mod heima;
 pub mod paseo;
 
 pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;

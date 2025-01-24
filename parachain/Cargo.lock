@@ -5841,7 +5841,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee93343901ab17bd981295f2cf0026d4ad018c7c31ba84549a4ddbb47a45104"
 
 [[package]]
-name = "litentry-collator"
+name = "heima-collator"
 version = "0.9.22"
 dependencies = [
  "async-trait",
@@ -5875,7 +5875,7 @@ dependencies = [
  "frame-try-runtime",
  "futures 0.3.31",
  "jsonrpsee",
- "litentry-parachain-runtime",
+ "heima-parachain-runtime",
  "log",
  "moonbeam-primitives-ext",
  "moonbeam-rpc-debug",
@@ -5948,7 +5948,7 @@ name = "litentry-macros"
 version = "0.1.0"
 
 [[package]]
-name = "litentry-parachain-runtime"
+name = "heima-parachain-runtime"
 version = "0.1.0"
 dependencies = [
  "core-primitives",

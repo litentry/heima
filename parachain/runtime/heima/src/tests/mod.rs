@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-// TODO: enable tests for litentry-runtime, it requires that the `setup/mod.rs` to be
+// TODO: enable tests for heima-runtime, it requires that the `setup/mod.rs` to be
 //       parameterized (or generalized) with Runtime
 
 /*

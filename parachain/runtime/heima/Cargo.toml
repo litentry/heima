@@ -1,7 +1,7 @@
 [package]
 authors = ["Trust Computing GmbH <info@litentry.com>"]
 edition = '2021'
-name = 'litentry-parachain-runtime'
+name = 'heima-parachain-runtime'
 version = '0.1.0'
 
 [dependencies]

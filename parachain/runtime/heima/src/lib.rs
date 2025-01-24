@@ -105,8 +105,8 @@ pub mod xcm_config;
 #[cfg(test)]
 mod tests;
 
-pub use precompiles::LitentryNetworkPrecompiles;
-pub type Precompiles = LitentryNetworkPrecompiles<Runtime>;
+pub use precompiles::HeimaNetworkPrecompiles;
+pub type Precompiles = HeimaNetworkPrecompiles<Runtime>;
 
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
@@ -895,7 +895,7 @@ parameter_types! {
 	pub BlockGasLimit: U256 = U256::from(
 		NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT.ref_time() / WEIGHT_PER_GAS
 	);
-	pub PrecompilesValue: Precompiles = LitentryNetworkPrecompiles::<_>::new();
+	pub PrecompilesValue: Precompiles = HeimaNetworkPrecompiles::<_>::new();
 	// BlockGasLimit / MAX_POV_SIZE
 	pub GasLimitPovSizeRatio: u64 = 4;
 }
@@ -974,7 +974,7 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub Period: u32 = prod_or_fast!(6 * HOURS, 2, "LITENTRY_PERIOD");
+	pub Period: u32 = prod_or_fast!(6 * HOURS, 2, "HEIMA_PERIOD");
 }
 
 impl pallet_parachain_staking::Config for Runtime {
@@ -1312,7 +1312,7 @@ construct_runtime! {
 		// I assume it's the desired behavior though or it doesn't really matter.
 		//
 		// also see the comment above `AllPalletsWithSystem` and
-		// https://github.com/litentry/litentry-parachain/issues/336
+		// https://github.com/litentry/heima/issues/336
 		Authorship: pallet_authorship = 40,
 		//41 is for old CollatorSelection, replaced by ParachainSTaking
 		Session: pallet_session = 42,
@@ -1330,7 +1330,7 @@ construct_runtime! {
 		Assets: pallet_assets = 56,
 		MessageQueue: pallet_message_queue = 57,
 
-		// Litentry pallets
+		// Heima pallets
 		ChainBridge: pallet_chain_bridge= 60,
 		BridgeTransfer: pallet_bridge_transfer = 61,
 		ExtrinsicFilter: pallet_extrinsic_filter = 63,

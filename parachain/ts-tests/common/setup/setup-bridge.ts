@@ -59,8 +59,8 @@ async function deployBridgeContracts(wallet: Wallet) {
     const burnableContractAddresses = new Array<String>();
     const initialDepositFunctionSignatures = new Array<String>();
     const initialExecuteFunctionSignatures = new Array<String>();
-    const tokenName = 'Litentry';
-    const symbol = 'LIT';
+    const tokenName = 'Heima';
+    const symbol = 'HEI';
     const initialSupply = 0;
     const owner = wallet.address;
 

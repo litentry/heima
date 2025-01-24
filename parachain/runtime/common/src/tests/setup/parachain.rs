@@ -16,7 +16,7 @@
 
 //! Parachain runtime mock.
 
-// TODO: use Litentry primitives
+// TODO: use common primitives
 
 use core::marker::PhantomData;
 use frame_support::{

@@ -32,7 +32,7 @@ run_zombienet(){
     cp ${REPO_DIR}/parachain/zombienet/config.toml .
     zombienet setup polkadot -y || true
     export PATH=${PATH}:${PARACHAIN_BASEDIR}
-    cp /usr/local/bin/litentry-collator .
+    cp /usr/local/bin/heima-collator .
     nohup zombienet -d $ZOMBIENET_DIR -l silent spawn config.toml >> ${PARACHAIN_BASEDIR}/zombienet.log 2>&1 &
     zombienet_pid=$!
 }

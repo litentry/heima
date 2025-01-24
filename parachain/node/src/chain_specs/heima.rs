@@ -16,7 +16,7 @@
 
 use super::*;
 use cumulus_primitives_core::ParaId;
-use litentry_parachain_runtime::{
+use heima_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
 	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig,
@@ -31,9 +31,9 @@ use sp_core::sr25519;
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
-/// Get default parachain properties for Litentry which will be filled into chain spec
+/// Get default parachain properties for Heima which will be filled into chain spec
 fn default_parachain_properties() -> Properties {
-	parachain_properties("LIT", 18, 31)
+	parachain_properties("HEI", 18, 31)
 }
 
 const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 1000 * UNIT;
@@ -54,11 +54,11 @@ struct GenesisInfo {
 pub fn get_chain_spec_dev() -> ChainSpec {
 	ChainSpec::builder(
 		WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		Extensions { relay_chain: "rococo-local".into(), para_id: LITENTRY_PARA_ID },
+		Extensions { relay_chain: "rococo-local".into(), para_id: HEIMA_PARA_ID },
 	)
-	.with_name("Litentry-dev")
-	.with_id("litentry-dev")
-	.with_protocol_id("litentry")
+	.with_name("Heima-dev")
+	.with_id("heima-dev")
+	.with_protocol_id("heima")
 	.with_chain_type(ChainType::Development)
 	.with_properties(default_parachain_properties())
 	.with_genesis_config(generate_genesis(
@@ -84,7 +84,7 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 		],
 		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
 		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-		LITENTRY_PARA_ID.into(),
+		HEIMA_PARA_ID.into(),
 	))
 	.build()
 }
@@ -97,22 +97,22 @@ pub fn get_chain_spec_staging() -> ChainSpec {
 	// aura: 	$SECRET//collator//<id>//aura
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/staging.json"),
-		"Litentry-staging",
-		"litentry-staging",
+		"Heima-staging",
+		"heima-staging",
 		ChainType::Local,
 		"rococo-local".into(),
-		LITENTRY_PARA_ID.into(),
+		HEIMA_PARA_ID.into(),
 	)
 }
 
 pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
-		include_bytes!("../../res/genesis_info/litentry.json"),
-		"Litentry",
-		"litentry",
+		include_bytes!("../../res/genesis_info/heima.json"),
+		"Heima",
+		"heima",
 		ChainType::Live,
 		"polkadot".into(),
-		LITENTRY_PARA_ID.into(),
+		HEIMA_PARA_ID.into(),
 	)
 }
 
@@ -142,7 +142,7 @@ fn get_chain_spec_from_genesis_info(
 	.with_name(name)
 	.with_id(id)
 	.with_chain_type(chain_type)
-	.with_protocol_id("litentry")
+	.with_protocol_id("heima")
 	.with_properties(default_parachain_properties())
 	.with_boot_nodes(
 		boot_nodes
@@ -187,7 +187,7 @@ fn generate_genesis(
 		balances: BalancesConfig { balances: endowed_accounts },
 		parachain_info: ParachainInfoConfig { parachain_id: id, ..Default::default() },
 		parachain_staking: ParachainStakingConfig {
-			// Should be enough for both Litentry and rococo
+			// Should be enough for both Heima and rococo
 			candidates: invulnerables.iter().cloned().map(|(acc, _)| (acc, 5000 * UNIT)).collect(),
 			..Default::default()
 		},
@@ -197,9 +197,9 @@ fn generate_genesis(
 				.cloned()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                      // account id
-						acc,                                              // validator id
-						litentry_parachain_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                                   // account id
+						acc,                                           // validator id
+						heima_parachain_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),

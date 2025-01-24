@@ -5,12 +5,12 @@ description = 'Litentry parachain collator implementation.'
 edition = '2021'
 homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
-name = 'litentry-collator'
+name = 'heima-collator'
 repository = 'https://github.com/litentry/litentry-parachain'
 version = '0.9.22'
 
 [[bin]]
-name = 'litentry-collator'
+name = 'heima-collator'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
@@ -108,7 +108,7 @@ frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { workspace = true, optional = true }
 
 core-primitives = { workspace = true, features = ["std"] }
-litentry-parachain-runtime = { workspace = true, features = ["std"] }
+heima-parachain-runtime = { workspace = true, features = ["std"] }
 pallet-omni-account-runtime-api = { workspace = true, features = ["std"] }
 paseo-parachain-runtime = { workspace = true, features = ["std"] }
 runtime-common = { workspace = true, features = ["std"] }
@@ -119,7 +119,7 @@ substrate-build-script-utils = { workspace = true }
 [features]
 default = []
 fast-runtime = [
-    "litentry-parachain-runtime/fast-runtime",
+    "heima-parachain-runtime/fast-runtime",
     "paseo-parachain-runtime/fast-runtime",
 ]
 runtime-benchmarks = [
@@ -127,7 +127,7 @@ runtime-benchmarks = [
     "frame-benchmarking-cli/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "litentry-parachain-runtime/runtime-benchmarks",
+    "heima-parachain-runtime/runtime-benchmarks",
     "pallet-ethereum/runtime-benchmarks",
     "pallet-evm/runtime-benchmarks",
     "paseo-parachain-runtime/runtime-benchmarks",
@@ -140,7 +140,7 @@ runtime-benchmarks = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
-    "litentry-parachain-runtime/try-runtime",
+    "heima-parachain-runtime/try-runtime",
     "pallet-ethereum/try-runtime",
     "pallet-evm/try-runtime",
     "pallet-transaction-payment/try-runtime",

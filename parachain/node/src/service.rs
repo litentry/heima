@@ -476,7 +476,7 @@ where
 	Ok((task_manager, client))
 }
 
-/// Start a litentry/rococo node.
+/// Start a heima/rococo node.
 pub async fn start_node(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
@@ -502,7 +502,7 @@ pub async fn start_node(
 	.await
 }
 
-/// Build the import queue for the litentry/rococo runtime.
+/// Build the import queue for the heima/rococo runtime.
 pub fn build_import_queue(
 	client: Arc<ParachainClient>,
 	block_import: ParachainBlockImport,

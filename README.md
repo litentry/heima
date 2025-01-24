@@ -36,7 +36,7 @@ To build the litentry-parachain runtime wasm:
 make build-runtime-litentry
 ```
 
-The wasms should be located under `target/release/wbuild/litentry-parachain-runtime/`
+The wasms should be located under `target/release/wbuild/heima-parachain-runtime/`
 
 Similarly, use `make build-runtime-paseo` to build the paseo-parachain-runtime.
 
@@ -47,7 +47,7 @@ Litentry uses [zombinet](https://github.com/paritytech/zombienet) to spin up a l
 ```
 make launch-network-litentry
 ```
-It will firstly look for the `target/release/litentry-collator` binary - and if not found - copy the binary out from `litentry/litentry-parachain:latest` image if you are on Linux.
+It will firstly look for the `target/release/heima-collator` binary - and if not found - copy the binary out from `litentry/litentry-parachain:latest` image if you are on Linux.
 
 If you see the screenshot below, you can tell the network is successfully spun up and you can access the [polkadot-js block explorer](https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9944#/explorer) locally:
 
