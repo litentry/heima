@@ -10,8 +10,13 @@ parity-scale-codec = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
+crypto = { workspace = true }
 executor-core = { workspace = true }
+heima-authentication = { workspace = true }
+parentchain-api-interface = { workspace = true }
+parentchain-rpc-client = { workspace = true }
 primitives = { workspace = true }
+storage = { workspace = true }
 
 [lints]
 workspace = true

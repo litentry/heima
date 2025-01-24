@@ -2882,6 +2882,7 @@ name = "executor-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "heima-authentication",
  "log",
  "parity-scale-codec",
  "primitives",
@@ -2900,6 +2901,7 @@ dependencies = [
  "log",
  "native-task-handler",
  "parentchain-listener",
+ "parentchain-rpc-client",
  "rpc-server",
  "scale-encode 0.10.0",
  "serde_json",
@@ -3676,6 +3678,7 @@ dependencies = [
  "crypto",
  "log",
  "parity-scale-codec",
+ "primitives",
  "serde",
 ]
 
@@ -4803,10 +4806,15 @@ dependencies = [
 name = "native-task-handler"
 version = "0.1.0"
 dependencies = [
+ "crypto",
  "executor-core",
+ "heima-authentication",
  "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
  "parity-scale-codec",
  "primitives",
+ "storage",
  "tokio",
 ]
 
