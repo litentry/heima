@@ -6,10 +6,18 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use primitives::{Identity, Web2IdentityType};
 use storage::{Storage, VerificationCodeStorage};
 
-pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContext>) {
+pub fn register_request_email_verification_code<
+	AccountId: Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
 			let Ok(email) = params.one::<String>() else {

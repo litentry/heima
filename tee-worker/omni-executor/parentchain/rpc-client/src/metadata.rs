@@ -14,11 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory};
 use async_trait::async_trait;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory};
 use parity_scale_codec::Decode;
-use subxt::{Config, Metadata};
+use subxt::Config;
 use subxt_core::utils::AccountId32;
+
+pub use subxt::Metadata;
 
 #[async_trait]
 pub trait MetadataProvider<M> {

@@ -1,5 +1,5 @@
 [package]
-name = "native-task-handler"
+name = "parentchain-signer"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
@@ -7,17 +7,15 @@ edition.workspace = true
 [dependencies]
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
-tokio = { workspace = true }
+subxt-core = { workspace = true }
+subxt-signer = { workspace = true }
 
 # Local dependencies
-crypto = { workspace = true }
 executor-core = { workspace = true }
-heima-authentication = { workspace = true }
-parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-parentchain-signer = { workspace = true }
-primitives = { workspace = true }
-storage = { workspace = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
 
 [lints]
 workspace = true

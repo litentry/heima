@@ -16,18 +16,12 @@
 
 mod event_handler;
 mod fetcher;
-mod key_store;
 mod listener;
-mod metadata;
 mod sync_checkpoint;
-mod transaction_signer;
 
 use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
-use crate::key_store::SubstrateKeyStore;
 use crate::listener::ParentchainListener;
-use crate::metadata::SubxtMetadataProvider;
-use crate::transaction_signer::TransactionSigner;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
@@ -37,8 +31,11 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
-use parentchain_rpc_client::SubstrateRpcClient;
-use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
+use parentchain_rpc_client::{
+	metadata::SubxtMetadataProvider, CustomConfig, SubstrateRpcClient, SubxtClient,
+	SubxtClientFactory,
+};
+use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use std::sync::Arc;
 use storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
 use subxt_core::utils::AccountId32;
@@ -47,7 +44,17 @@ use subxt_signer::sr25519::Keypair;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
 
+type ParentchainTxSigner = TransactionSigner<
+	SubstrateKeyStore,
+	SubxtClient<CustomConfig>,
+	SubxtClientFactory<CustomConfig>,
+	CustomConfig,
+	Metadata,
+	SubxtMetadataProvider<CustomConfig>,
+>;
+
 /// Creates parentchain listener
+#[allow(clippy::too_many_arguments)]
 pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	id: &str,
 	handle: Handle,
@@ -56,6 +63,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
 	storage_db: Arc<StorageDB>,
+	transaction_signer: Arc<ParentchainTxSigner>,
 ) -> Result<
 	ParentchainListener<
 		SubxtClient<CustomConfig>,
@@ -96,12 +104,6 @@ where
 		.unwrap();
 
 	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
-
-	let transaction_signer = Arc::new(TransactionSigner::new(
-		metadata_provider.clone(),
-		client_factory.clone(),
-		key_store.clone(),
-	));
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 

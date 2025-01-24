@@ -1306,9 +1306,9 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							241u8, 99u8, 20u8, 13u8, 66u8, 154u8, 92u8, 20u8, 74u8, 63u8, 131u8,
-							38u8, 39u8, 180u8, 22u8, 29u8, 152u8, 164u8, 140u8, 228u8, 132u8,
-							151u8, 168u8, 205u8, 37u8, 9u8, 151u8, 132u8, 250u8, 234u8, 37u8, 60u8,
+							30u8, 138u8, 178u8, 236u8, 178u8, 94u8, 119u8, 15u8, 47u8, 252u8,
+							133u8, 50u8, 71u8, 85u8, 213u8, 75u8, 128u8, 119u8, 251u8, 136u8, 15u8,
+							6u8, 205u8, 28u8, 67u8, 78u8, 77u8, 231u8, 42u8, 218u8, 233u8, 88u8,
 						],
 					)
 				}
@@ -1326,9 +1326,10 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							65u8, 214u8, 27u8, 187u8, 55u8, 78u8, 138u8, 216u8, 95u8, 170u8, 107u8,
-							54u8, 103u8, 18u8, 151u8, 108u8, 230u8, 25u8, 250u8, 93u8, 63u8, 79u8,
-							193u8, 72u8, 192u8, 156u8, 181u8, 178u8, 219u8, 182u8, 159u8, 109u8,
+							91u8, 199u8, 237u8, 1u8, 171u8, 236u8, 142u8, 3u8, 244u8, 143u8, 170u8,
+							142u8, 154u8, 104u8, 239u8, 96u8, 59u8, 15u8, 61u8, 176u8, 184u8,
+							155u8, 115u8, 244u8, 91u8, 148u8, 16u8, 143u8, 218u8, 155u8, 213u8,
+							50u8,
 						],
 					)
 				}
@@ -3051,9 +3052,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				183u8, 138u8, 42u8, 179u8, 59u8, 74u8, 128u8, 72u8, 198u8, 22u8, 118u8, 108u8,
-				83u8, 51u8, 110u8, 166u8, 196u8, 214u8, 209u8, 181u8, 118u8, 161u8, 177u8, 90u8,
-				176u8, 3u8, 147u8, 130u8, 135u8, 204u8, 99u8, 164u8,
+				181u8, 110u8, 158u8, 48u8, 59u8, 238u8, 71u8, 178u8, 177u8, 250u8, 161u8, 106u8,
+				246u8, 14u8, 105u8, 58u8, 104u8, 55u8, 37u8, 103u8, 195u8, 184u8, 66u8, 89u8,
+				103u8, 12u8, 63u8, 90u8, 134u8, 99u8, 4u8, 4u8,
 			]
 	}
 	pub mod omni_account {
@@ -3088,11 +3089,14 @@ pub mod api {
 					pub member_account_hash: dispatch_as_omni_account::MemberAccountHash,
 					pub call:
 						::subxt::ext::subxt_core::alloc::boxed::Box<dispatch_as_omni_account::Call>,
+					pub auth_type: dispatch_as_omni_account::AuthType,
 				}
 				pub mod dispatch_as_omni_account {
 					use super::runtime_types;
 					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
 					pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+					pub type AuthType =
+						runtime_types::core_primitives::omni_account::OmniAccountAuthType;
 				}
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for DispatchAsOmniAccount {
 					const PALLET: &'static str = "OmniAccount";
@@ -3116,11 +3120,14 @@ pub mod api {
 				pub struct DispatchAsSigned {
 					pub member_account_hash: dispatch_as_signed::MemberAccountHash,
 					pub call: ::subxt::ext::subxt_core::alloc::boxed::Box<dispatch_as_signed::Call>,
+					pub auth_type: dispatch_as_signed::AuthType,
 				}
 				pub mod dispatch_as_signed {
 					use super::runtime_types;
 					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
 					pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+					pub type AuthType =
+						runtime_types::core_primitives::omni_account::OmniAccountAuthType;
 				}
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for DispatchAsSigned {
 					const PALLET: &'static str = "OmniAccount";
@@ -3169,11 +3176,17 @@ pub mod api {
 				)]
 				pub struct AddAccount {
 					pub member_account: add_account::MemberAccount,
+					pub permissions: add_account::Permissions,
 				}
 				pub mod add_account {
 					use super::runtime_types;
 					pub type MemberAccount =
 						runtime_types::core_primitives::omni_account::MemberAccount;
+					pub type Permissions = ::core::option::Option<
+						::subxt::ext::subxt_core::alloc::vec::Vec<
+							runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+						>,
+					>;
 				}
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for AddAccount {
 					const PALLET: &'static str = "OmniAccount";
@@ -3322,6 +3335,64 @@ pub mod api {
 					const PALLET: &'static str = "OmniAccount";
 					const CALL: &'static str = "intent_executed";
 				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct SetPermissions {
+					pub member_account_hash: set_permissions::MemberAccountHash,
+					pub permissions: set_permissions::Permissions,
+				}
+				pub mod set_permissions {
+					use super::runtime_types;
+					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
+					pub type Permissions = ::subxt::ext::subxt_core::alloc::vec::Vec<
+						runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+					>;
+				}
+				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for SetPermissions {
+					const PALLET: &'static str = "OmniAccount";
+					const CALL: &'static str = "set_permissions";
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct AuthTokenRequested {
+					pub who: auth_token_requested::Who,
+					pub expires_at: auth_token_requested::ExpiresAt,
+				}
+				pub mod auth_token_requested {
+					use super::runtime_types;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type ExpiresAt = ::core::primitive::u32;
+				}
+				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for AuthTokenRequested {
+					const PALLET: &'static str = "OmniAccount";
+					const CALL: &'static str = "auth_token_requested";
+				}
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -3329,6 +3400,7 @@ pub mod api {
 					&self,
 					member_account_hash: types::dispatch_as_omni_account::MemberAccountHash,
 					call: types::dispatch_as_omni_account::Call,
+					auth_type: types::dispatch_as_omni_account::AuthType,
 				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<
 					types::DispatchAsOmniAccount,
 				> {
@@ -3338,11 +3410,13 @@ pub mod api {
 						types::DispatchAsOmniAccount {
 							member_account_hash,
 							call: ::subxt::ext::subxt_core::alloc::boxed::Box::new(call),
+							auth_type,
 						},
 						[
-							28u8, 35u8, 187u8, 134u8, 130u8, 163u8, 66u8, 195u8, 96u8, 40u8, 250u8,
-							127u8, 123u8, 162u8, 24u8, 24u8, 116u8, 245u8, 229u8, 150u8, 24u8,
-							25u8, 94u8, 79u8, 93u8, 72u8, 125u8, 223u8, 194u8, 12u8, 1u8, 249u8,
+							168u8, 40u8, 73u8, 240u8, 237u8, 200u8, 52u8, 79u8, 85u8, 185u8, 156u8,
+							111u8, 31u8, 193u8, 95u8, 55u8, 219u8, 105u8, 95u8, 128u8, 105u8,
+							243u8, 243u8, 116u8, 248u8, 90u8, 189u8, 161u8, 107u8, 233u8, 245u8,
+							26u8,
 						],
 					)
 				}
@@ -3350,6 +3424,7 @@ pub mod api {
 					&self,
 					member_account_hash: types::dispatch_as_signed::MemberAccountHash,
 					call: types::dispatch_as_signed::Call,
+					auth_type: types::dispatch_as_signed::AuthType,
 				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::DispatchAsSigned>
 				{
 					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
@@ -3358,11 +3433,13 @@ pub mod api {
 						types::DispatchAsSigned {
 							member_account_hash,
 							call: ::subxt::ext::subxt_core::alloc::boxed::Box::new(call),
+							auth_type,
 						},
 						[
-							202u8, 55u8, 230u8, 236u8, 37u8, 199u8, 242u8, 155u8, 246u8, 205u8,
-							233u8, 96u8, 162u8, 21u8, 66u8, 4u8, 39u8, 239u8, 39u8, 254u8, 144u8,
-							6u8, 2u8, 127u8, 55u8, 53u8, 37u8, 26u8, 97u8, 49u8, 235u8, 189u8,
+							126u8, 50u8, 166u8, 234u8, 160u8, 222u8, 75u8, 229u8, 48u8, 29u8,
+							159u8, 3u8, 160u8, 197u8, 24u8, 25u8, 190u8, 231u8, 96u8, 99u8, 29u8,
+							145u8, 229u8, 233u8, 225u8, 114u8, 97u8, 197u8, 48u8, 15u8, 90u8,
+							150u8,
 						],
 					)
 				}
@@ -3386,15 +3463,17 @@ pub mod api {
 				pub fn add_account(
 					&self,
 					member_account: types::add_account::MemberAccount,
+					permissions: types::add_account::Permissions,
 				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::AddAccount> {
 					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
 						"OmniAccount",
 						"add_account",
-						types::AddAccount { member_account },
+						types::AddAccount { member_account, permissions },
 						[
-							150u8, 189u8, 68u8, 161u8, 59u8, 95u8, 55u8, 22u8, 10u8, 97u8, 110u8,
-							93u8, 234u8, 194u8, 37u8, 64u8, 186u8, 50u8, 135u8, 72u8, 153u8, 91u8,
-							90u8, 23u8, 161u8, 9u8, 67u8, 229u8, 139u8, 207u8, 144u8, 191u8,
+							144u8, 99u8, 144u8, 107u8, 29u8, 237u8, 161u8, 141u8, 0u8, 130u8,
+							115u8, 4u8, 17u8, 227u8, 235u8, 154u8, 202u8, 33u8, 215u8, 124u8, 95u8,
+							170u8, 229u8, 197u8, 180u8, 188u8, 209u8, 251u8, 175u8, 87u8, 16u8,
+							165u8,
 						],
 					)
 				}
@@ -3484,6 +3563,41 @@ pub mod api {
 							83u8, 29u8, 223u8, 147u8, 210u8, 119u8, 151u8, 105u8, 238u8, 214u8,
 							243u8, 203u8, 237u8, 33u8, 156u8, 198u8, 100u8, 6u8, 204u8, 89u8,
 							214u8,
+						],
+					)
+				}
+				pub fn set_permissions(
+					&self,
+					member_account_hash: types::set_permissions::MemberAccountHash,
+					permissions: types::set_permissions::Permissions,
+				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::SetPermissions>
+				{
+					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
+						"OmniAccount",
+						"set_permissions",
+						types::SetPermissions { member_account_hash, permissions },
+						[
+							250u8, 24u8, 165u8, 101u8, 77u8, 223u8, 96u8, 176u8, 103u8, 22u8, 51u8,
+							151u8, 204u8, 164u8, 101u8, 60u8, 226u8, 161u8, 35u8, 119u8, 250u8,
+							66u8, 68u8, 164u8, 188u8, 8u8, 213u8, 216u8, 0u8, 128u8, 130u8, 5u8,
+						],
+					)
+				}
+				pub fn auth_token_requested(
+					&self,
+					who: types::auth_token_requested::Who,
+					expires_at: types::auth_token_requested::ExpiresAt,
+				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::AuthTokenRequested>
+				{
+					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
+						"OmniAccount",
+						"auth_token_requested",
+						types::AuthTokenRequested { who, expires_at },
+						[
+							86u8, 8u8, 155u8, 175u8, 185u8, 11u8, 23u8, 58u8, 47u8, 215u8, 177u8,
+							22u8, 223u8, 15u8, 107u8, 49u8, 159u8, 167u8, 221u8, 170u8, 224u8,
+							189u8, 107u8, 220u8, 216u8, 29u8, 128u8, 177u8, 169u8, 178u8, 14u8,
+							85u8,
 						],
 					)
 				}
@@ -3634,11 +3748,14 @@ pub mod api {
 			#[doc = "Some call is dispatched as omni-account origin"]
 			pub struct DispatchedAsOmniAccount {
 				pub who: dispatched_as_omni_account::Who,
+				pub auth_type: dispatched_as_omni_account::AuthType,
 				pub result: dispatched_as_omni_account::Result,
 			}
 			pub mod dispatched_as_omni_account {
 				use super::runtime_types;
 				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type AuthType =
+					runtime_types::core_primitives::omni_account::OmniAccountAuthType;
 				pub type Result =
 					::core::result::Result<(), runtime_types::sp_runtime::DispatchError>;
 			}
@@ -3660,11 +3777,14 @@ pub mod api {
 			#[doc = "Some call is dispatched as signed origin"]
 			pub struct DispatchedAsSigned {
 				pub who: dispatched_as_signed::Who,
+				pub auth_type: dispatched_as_signed::AuthType,
 				pub result: dispatched_as_signed::Result,
 			}
 			pub mod dispatched_as_signed {
 				use super::runtime_types;
 				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type AuthType =
+					runtime_types::core_primitives::omni_account::OmniAccountAuthType;
 				pub type Result =
 					::core::result::Result<(), runtime_types::sp_runtime::DispatchError>;
 			}
@@ -3724,6 +3844,56 @@ pub mod api {
 				const PALLET: &'static str = "OmniAccount";
 				const EVENT: &'static str = "IntentExecuted";
 			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			#[doc = "Member permission set"]
+			pub struct AccountPermissionsSet {
+				pub who: account_permissions_set::Who,
+				pub member_account_hash: account_permissions_set::MemberAccountHash,
+			}
+			pub mod account_permissions_set {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountPermissionsSet {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "AccountPermissionsSet";
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			#[doc = "An auth token is requested"]
+			pub struct AuthTokenRequested {
+				pub who: auth_token_requested::Who,
+				pub expires_at: auth_token_requested::ExpiresAt,
+			}
+			pub mod auth_token_requested {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type ExpiresAt = ::core::primitive::u32;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for AuthTokenRequested {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "AuthTokenRequested";
+			}
 		}
 		pub mod storage {
 			use super::runtime_types;
@@ -3740,6 +3910,14 @@ pub mod api {
 				pub mod member_account_hash {
 					use super::runtime_types;
 					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type Param0 = ::subxt::ext::subxt_core::utils::H256;
+				}
+				pub mod member_account_permissions {
+					use super::runtime_types;
+					pub type MemberAccountPermissions =
+						runtime_types::bounded_collections::bounded_vec::BoundedVec<
+							runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+						>;
 					pub type Param0 = ::subxt::ext::subxt_core::utils::H256;
 				}
 			}
@@ -3841,6 +4019,55 @@ pub mod api {
 						],
 					)
 				}
+				#[doc = " A map between hash of MemberAccount and its permissions"]
+				pub fn member_account_permissions_iter(
+					&self,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					(),
+					types::member_account_permissions::MemberAccountPermissions,
+					(),
+					::subxt::ext::subxt_core::utils::Yes,
+					::subxt::ext::subxt_core::utils::Yes,
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"MemberAccountPermissions",
+						(),
+						[
+							119u8, 233u8, 243u8, 176u8, 52u8, 185u8, 224u8, 189u8, 195u8, 17u8,
+							38u8, 215u8, 42u8, 28u8, 12u8, 138u8, 4u8, 60u8, 11u8, 241u8, 199u8,
+							246u8, 170u8, 227u8, 151u8, 37u8, 166u8, 111u8, 240u8, 19u8, 156u8,
+							50u8,
+						],
+					)
+				}
+				#[doc = " A map between hash of MemberAccount and its permissions"]
+				pub fn member_account_permissions(
+					&self,
+					_0: impl ::core::borrow::Borrow<types::member_account_permissions::Param0>,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
+						types::member_account_permissions::Param0,
+					>,
+					types::member_account_permissions::MemberAccountPermissions,
+					::subxt::ext::subxt_core::utils::Yes,
+					::subxt::ext::subxt_core::utils::Yes,
+					(),
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"MemberAccountPermissions",
+						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
+							_0.borrow(),
+						),
+						[
+							119u8, 233u8, 243u8, 176u8, 52u8, 185u8, 224u8, 189u8, 195u8, 17u8,
+							38u8, 215u8, 42u8, 28u8, 12u8, 138u8, 4u8, 60u8, 11u8, 241u8, 199u8,
+							246u8, 170u8, 227u8, 151u8, 37u8, 166u8, 111u8, 240u8, 19u8, 156u8,
+							50u8,
+						],
+					)
+				}
 			}
 		}
 		pub mod constants {
@@ -3856,6 +4083,23 @@ pub mod api {
 					::subxt::ext::subxt_core::constants::address::StaticAddress::new_static(
 						"OmniAccount",
 						"MaxAccountStoreLength",
+						[
+							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
+							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
+							178u8, 197u8, 113u8, 31u8, 79u8, 200u8, 90u8, 203u8, 100u8, 41u8,
+							145u8,
+						],
+					)
+				}
+				#[doc = " The maximum number of permissions that a member account can have"]
+				pub fn max_permissions(
+					&self,
+				) -> ::subxt::ext::subxt_core::constants::address::StaticAddress<
+					::core::primitive::u32,
+				> {
+					::subxt::ext::subxt_core::constants::address::StaticAddress::new_static(
+						"OmniAccount",
+						"MaxPermissions",
 						[
 							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
 							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
@@ -4683,9 +4927,10 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							216u8, 129u8, 96u8, 149u8, 91u8, 253u8, 52u8, 189u8, 152u8, 61u8, 34u8,
-							198u8, 4u8, 12u8, 117u8, 214u8, 191u8, 85u8, 158u8, 13u8, 152u8, 115u8,
-							160u8, 220u8, 235u8, 100u8, 161u8, 166u8, 174u8, 116u8, 35u8, 183u8,
+							36u8, 189u8, 248u8, 135u8, 209u8, 177u8, 207u8, 46u8, 66u8, 249u8,
+							183u8, 192u8, 155u8, 103u8, 210u8, 85u8, 183u8, 54u8, 240u8, 46u8,
+							88u8, 140u8, 236u8, 168u8, 32u8, 145u8, 46u8, 229u8, 225u8, 6u8, 196u8,
+							17u8,
 						],
 					)
 				}
@@ -6569,6 +6814,31 @@ pub mod api {
 						::subxt::ext::subxt_core::utils::H256,
 					),
 				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub enum OmniAccountAuthType {
+					#[codec(index = 0)]
+					Web3,
+					#[codec(index = 1)]
+					Email,
+					#[codec(index = 2)]
+					OAuth2,
+					#[codec(index = 3)]
+					AuthToken,
+				}
 			}
 			pub mod teebag {
 				use super::runtime_types;
@@ -7855,6 +8125,36 @@ pub mod api {
 						At(_0),
 						#[codec(index = 1)]
 						After(_0),
+					}
+				}
+				pub mod tokens {
+					use super::runtime_types;
+					pub mod fungible {
+						use super::runtime_types;
+						pub mod union_of {
+							use super::runtime_types;
+							#[derive(
+								:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+								:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+								:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+								:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+								Debug,
+							)]
+							# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+							#[codec(dumb_trait_bound)]
+							#[decode_as_type(
+								crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+							)]
+							#[encode_as_type(
+								crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+							)]
+							pub enum NativeOrWithId<_0> {
+								#[codec(index = 0)]
+								Native,
+								#[codec(index = 1)]
+								WithId(_0),
+							}
+						}
 					}
 				}
 			}
@@ -11975,6 +12275,8 @@ pub mod api {
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
 							runtime_types::paseo_parachain_runtime::RuntimeCall,
 						>,
+						auth_type:
+							runtime_types::core_primitives::omni_account::OmniAccountAuthType,
 					},
 					#[codec(index = 1)]
 					dispatch_as_signed {
@@ -11982,6 +12284,8 @@ pub mod api {
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
 							runtime_types::paseo_parachain_runtime::RuntimeCall,
 						>,
+						auth_type:
+							runtime_types::core_primitives::omni_account::OmniAccountAuthType,
 					},
 					#[codec(index = 2)]
 					create_account_store {
@@ -11990,6 +12294,11 @@ pub mod api {
 					#[codec(index = 3)]
 					add_account {
 						member_account: runtime_types::core_primitives::omni_account::MemberAccount,
+						permissions: ::core::option::Option<
+							::subxt::ext::subxt_core::alloc::vec::Vec<
+								runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+							>,
+						>,
 					},
 					#[codec(index = 4)]
 					remove_accounts {
@@ -12016,6 +12325,18 @@ pub mod api {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent: runtime_types::core_primitives::intent::Intent,
 						result: runtime_types::pallet_omni_account::pallet::IntentExecutionResult,
+					},
+					#[codec(index = 9)]
+					set_permissions {
+						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
+						permissions: ::subxt::ext::subxt_core::alloc::vec::Vec<
+							runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+						>,
+					},
+					#[codec(index = 10)]
+					auth_token_requested {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						expires_at: ::core::primitive::u32,
 					},
 				}
 				#[derive(
@@ -12047,6 +12368,10 @@ pub mod api {
 					UnknownAccountStore,
 					#[codec(index = 5)]
 					EmptyAccount,
+					#[codec(index = 6)]
+					NoPermission,
+					#[codec(index = 7)]
+					PermissionsLenLimitReached,
 				}
 				#[derive(
 					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -12100,6 +12425,8 @@ pub mod api {
 					#[doc = "Some call is dispatched as omni-account origin"]
 					DispatchedAsOmniAccount {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						auth_type:
+							runtime_types::core_primitives::omni_account::OmniAccountAuthType,
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
@@ -12107,6 +12434,8 @@ pub mod api {
 					#[doc = "Some call is dispatched as signed origin"]
 					DispatchedAsSigned {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						auth_type:
+							runtime_types::core_primitives::omni_account::OmniAccountAuthType,
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
@@ -12122,6 +12451,18 @@ pub mod api {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent: runtime_types::core_primitives::intent::Intent,
 						result: runtime_types::pallet_omni_account::pallet::IntentExecutionResult,
+					},
+					#[codec(index = 9)]
+					#[doc = "Member permission set"]
+					AccountPermissionsSet {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
+					},
+					#[codec(index = 10)]
+					#[doc = "An auth token is requested"]
+					AuthTokenRequested {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						expires_at: ::core::primitive::u32,
 					},
 				}
 				#[derive(
@@ -12162,6 +12503,97 @@ pub mod api {
 				OmniAccount(_0),
 				#[codec(index = 1)]
 				OmniAccountMembers(_0, ::core::primitive::u32, ::core::primitive::u32),
+			}
+		}
+		pub mod pallet_omni_bridge {
+			use super::runtime_types;
+			pub mod pallet {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				#[doc = "Contains a variant per dispatchable extrinsic that this pallet has."]
+				pub enum Call {
+					# [codec (index = 0)] set_admin { new_admin : :: subxt :: ext :: subxt_core :: utils :: AccountId32 , } , # [codec (index = 1)] pay_in { req : runtime_types :: pallet_omni_bridge :: PayInRequest < runtime_types :: frame_support :: traits :: tokens :: fungible :: union_of :: NativeOrWithId < :: core :: primitive :: u128 > , :: core :: primitive :: u128 > , } , # [codec (index = 2)] request_pay_out { req : runtime_types :: pallet_omni_bridge :: PayOutRequest < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , :: core :: primitive :: u128 > , aye : :: core :: primitive :: bool , } , # [codec (index = 3)] add_relayer { who : :: subxt :: ext :: subxt_core :: utils :: AccountId32 , } , # [codec (index = 4)] remove_relayer { who : :: subxt :: ext :: subxt_core :: utils :: AccountId32 , } , # [codec (index = 5)] set_pay_in_fee { asset : runtime_types :: frame_support :: traits :: tokens :: fungible :: union_of :: NativeOrWithId < :: core :: primitive :: u128 > , dest_chain : runtime_types :: pallet_omni_bridge :: ChainType , fee : :: core :: primitive :: u128 , } , # [codec (index = 6)] set_resource_id { resource_id : [:: core :: primitive :: u8 ; 32usize] , chain_asset : runtime_types :: pallet_omni_bridge :: ChainAsset < runtime_types :: frame_support :: traits :: tokens :: fungible :: union_of :: NativeOrWithId < :: core :: primitive :: u128 > > , } , # [codec (index = 7)] remove_resource_id { resource_id : [:: core :: primitive :: u8 ; 32usize] , } , # [codec (index = 8)] set_relayer_threshold { threshold : :: core :: primitive :: u32 , } , # [codec (index = 9)] add_pay_in_pair { asset : runtime_types :: frame_support :: traits :: tokens :: fungible :: union_of :: NativeOrWithId < :: core :: primitive :: u128 > , dest_chain : runtime_types :: pallet_omni_bridge :: ChainType , } , # [codec (index = 10)] remove_pay_in_pair { asset : runtime_types :: frame_support :: traits :: tokens :: fungible :: union_of :: NativeOrWithId < :: core :: primitive :: u128 > , dest_chain : runtime_types :: pallet_omni_bridge :: ChainType , } , }
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub struct ChainAsset<_0> {
+				pub chain: runtime_types::pallet_omni_bridge::ChainType,
+				pub asset: _0,
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub enum ChainType {
+				#[codec(index = 0)]
+				Heima,
+				#[codec(index = 1)]
+				Ethereum(::core::primitive::u32),
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub struct PayInRequest<_0, _1> {
+				pub asset: _0,
+				pub dest_chain: runtime_types::pallet_omni_bridge::ChainType,
+				pub dest_account: ::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
+				pub amount: _1,
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub struct PayOutRequest<_0, _1> {
+				pub source_chain: runtime_types::pallet_omni_bridge::ChainType,
+				pub nonce: ::core::primitive::u64,
+				pub resource_id: [::core::primitive::u8; 32usize],
+				pub dest_account: _0,
+				pub amount: _1,
 			}
 		}
 		pub mod pallet_parachain_staking {
@@ -14420,6 +14852,29 @@ pub mod api {
 			#[codec(dumb_trait_bound)]
 			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub enum OmniAccountPermission {
+				#[codec(index = 0)]
+				All,
+				#[codec(index = 1)]
+				AccountManagement,
+				#[codec(index = 2)]
+				RequestNativeIntent,
+				#[codec(index = 3)]
+				RequestEthereumIntent,
+				#[codec(index = 4)]
+				RequestSolanaIntent,
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
 			pub enum OriginCaller {
 				# [codec (index = 0)] system (runtime_types :: frame_support :: dispatch :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 22)] Council (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 24)] TechnicalCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 51)] PolkadotXcm (runtime_types :: pallet_xcm :: pallet :: Origin ,) , # [codec (index = 52)] CumulusXcm (runtime_types :: cumulus_pallet_xcm :: pallet :: Origin ,) , # [codec (index = 73)] DeveloperCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 84)] OmniAccount (runtime_types :: pallet_omni_account :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 121)] Ethereum (runtime_types :: pallet_ethereum :: RawOrigin ,) , # [codec (index = 172)] Origins (runtime_types :: paseo_parachain_runtime :: governance_v2 :: origins :: pallet_custom_origins :: Origin ,) , # [codec (index = 9)] Void (runtime_types :: sp_core :: Void ,) , }
 			#[derive(
@@ -14553,6 +15008,8 @@ pub mod api {
 				AssetsHandler(runtime_types::pallet_assets_handler::pallet::Call),
 				#[codec(index = 84)]
 				OmniAccount(runtime_types::pallet_omni_account::pallet::Call),
+				#[codec(index = 85)]
+				OmniBridge(runtime_types::pallet_omni_bridge::pallet::Call),
 				#[codec(index = 93)]
 				Teebag(runtime_types::pallet_teebag::pallet::Call),
 				#[codec(index = 120)]

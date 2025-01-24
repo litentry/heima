@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod signature;
+pub mod utils;
 pub use heima_primitives::{
 	omni_account::{MemberAccount, OmniAccountAuthType},
 	BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,

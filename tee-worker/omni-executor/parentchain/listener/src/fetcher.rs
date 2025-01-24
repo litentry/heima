@@ -75,7 +75,7 @@ impl<
 
 		if let Some(ref mut client) = self.client {
 			let block_num = client.get_last_finalized_block_num().await?;
-			Ok(Some(block_num))
+			Ok(Some(block_num.into()))
 		} else {
 			Err(())
 		}

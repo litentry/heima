@@ -5,12 +5,15 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+jsonwebtoken = { workspace = true }
+log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 ring = { workspace = true }
 rsa = { workspace = true, features = ["sha2"] }
-secp256k1 = { workspace = true, features = ["std", "global-context"] }
+secp256k1 = { workspace = true, features = ["std", "global-context", "recovery"] }
 sp-core = { workspace = true }
+serde = { workspace = true }
 
 [lints]
 workspace = true
