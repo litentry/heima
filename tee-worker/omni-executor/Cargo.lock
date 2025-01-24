@@ -5235,6 +5235,7 @@ dependencies = [
  "scale-encode 0.10.0",
  "subxt",
  "subxt-core",
+ "tokio",
 ]
 
 [[package]]

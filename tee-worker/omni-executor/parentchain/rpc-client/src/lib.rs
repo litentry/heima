@@ -21,8 +21,6 @@ use primitives::{BlockEvent, EventId};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::thread;
-use std::time::Duration;
 use std::vec::Vec;
 use subxt::backend::legacy::LegacyRpcMethods;
 use subxt::backend::BlockRef;
@@ -33,6 +31,7 @@ use subxt::storage::StorageClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
 use subxt_core::utils::AccountId32;
+use tokio::time::{sleep, Duration};
 
 // We don't need to construct this at runtime,
 // so an empty enum is appropriate:
@@ -296,7 +295,7 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubxtClientFactory<ChainConfi
 					error!("Error creating client: {:?}", e);
 				},
 			};
-			thread::sleep(Duration::from_secs(1))
+			sleep(Duration::from_secs(1)).await;
 		}
 		client.unwrap()
 	}
