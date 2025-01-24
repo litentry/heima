@@ -18,7 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
-use native_task_handler::run_native_task_handler;
+use native_task_handler::{run_native_task_handler, TaskHandlerContext};
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
@@ -63,9 +63,16 @@ async fn main() -> Result<(), ()> {
 	let client_factory = Arc::new(SubxtClientFactory::<CustomConfig>::new(&cli.parentchain_url));
 	let rpc_client = client_factory.new_client_until_connected().await;
 	let parentchain_rpc_client = Arc::new(rpc_client);
+
+	let task_handler_context = TaskHandlerContext {
+		parentchain_rpc_client: parentchain_rpc_client.clone(),
+		storage_db: storage_db.clone(),
+		jwt_secret: jwt_secret.clone(),
+	};
+
 	// TODO: make buffer size configurable
 	let buffer = 1024;
-	let native_task_sender = run_native_task_handler(buffer).await;
+	let native_task_sender = run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
 	// TODO: get mrenclave from quote
 	let mrenclave = [0u8; 32];
 
