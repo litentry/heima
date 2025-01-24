@@ -3,7 +3,11 @@ mod types;
 use crypto::jwt;
 use executor_core::native_call::NativeCall;
 use heima_authentication::auth_token::AuthTokenClaims;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use parentchain_rpc_client::{
+	metadata::{Metadata, SubxtMetadataProvider},
+	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
+	SubxtClientFactory,
+};
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::Encode;
 use primitives::{utils::hex::ToHexPrefixed, OmniAccountAuthType};
@@ -131,11 +135,30 @@ async fn handle_native_call<
 				}
 				return;
 			};
-			// let auth_token_requested_call = parentchain_api_interface::tx()
-			// 	.omni_account()
-			// 	.auth_token_requested(omni_account.into(), claims.exp);
-			// TODO: send transaction to parentchain
+			let auth_token_requested_call = parentchain_api_interface::tx()
+				.omni_account()
+				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
+
+			let Ok(mut client) = ctx.parentchain_rpc_client_factory.new_client().await else {
+				let response = NativeCallResponse::Err(NativeCallError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let signed_call = ctx.transaction_signer.sign(auth_token_requested_call).await;
+
+			if client.submit_tx(&signed_call).await.is_err() {
+				let response = NativeCallResponse::Err(NativeCallError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			}
+
 			let response = NativeCallResponse::Ok(NativeCallOk::AuthToken(token));
+
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
