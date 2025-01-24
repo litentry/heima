@@ -24,7 +24,7 @@ if [ -z "$ZOMBIENET_PID" ]; then
   killall polkadot || true
   killall litentry-collator || true
 else
-  sudo kill -2 $ZOMBIENET_PID
+  kill -2 $ZOMBIENET_PID
 fi
 
 docker ps -q -f name=geth | xargs -r docker stop
