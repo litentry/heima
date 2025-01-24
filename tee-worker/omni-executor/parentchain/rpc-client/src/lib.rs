@@ -32,7 +32,7 @@ use subxt::events::EventsClient;
 use subxt::storage::StorageClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
-pub use subxt_core::utils::AccountId32;
+use subxt_core::utils::AccountId32;
 
 // We don't need to construct this at runtime,
 // so an empty enum is appropriate:
