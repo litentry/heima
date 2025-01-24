@@ -10,4 +10,5 @@ pub enum NativeCallError {
 	UnexpectedCall(String),
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
+	InternalError,
 }
