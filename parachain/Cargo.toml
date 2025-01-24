@@ -314,15 +314,3 @@ pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-fea
 
 [patch.crates-io]
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
-
-# TODO: investigate further if the overwriting is still valid
-[patch."https://github.com/AstarNetwork/frontier"]
-fc-api = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-consensus = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-db = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-rpc = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-rpc-core = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-storage = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fp-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fp-rpc = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
