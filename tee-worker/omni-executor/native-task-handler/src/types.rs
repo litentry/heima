@@ -7,6 +7,7 @@ pub enum NativeCallOk {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeCallError {
+	UnexpectedCall(String),
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
 }
