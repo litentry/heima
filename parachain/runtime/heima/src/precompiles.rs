@@ -91,7 +91,7 @@ impl Contains<RuntimeCall> for WhitelistedCalls {
 		}
 	}
 }
-/// The PrecompileSet installed in the litentry runtime.
+/// The PrecompileSet installed in the Heima runtime.
 #[precompile_utils::precompile_name_from_address]
 pub type PrecompilesSetAt<R> = (
 	// Ethereum precompiles:
@@ -105,7 +105,7 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<AddressU64<7>, Bn128Mul, EthereumPrecompilesChecks>,
 	PrecompileAt<AddressU64<8>, Bn128Pairing, EthereumPrecompilesChecks>,
 	PrecompileAt<AddressU64<9>, Blake2F, EthereumPrecompilesChecks>,
-	// Non-Litentry specific nor Ethereum precompiles :
+	// Non-Heima specific nor Ethereum precompiles :
 	PrecompileAt<AddressU64<1024>, Sha3FIPS256, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<
 		AddressU64<1025>,
@@ -116,7 +116,7 @@ pub type PrecompilesSetAt<R> = (
 	>,
 	PrecompileAt<AddressU64<1026>, ECRecoverPublicKey, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<AddressU64<1027>, Ed25519Verify, (CallableByContract, CallableByPrecompile)>,
-	// Litentry precompiles (starts from 0x5000):
+	// Heima precompiles (starts from 0x5000):
 	// ParachainStaking: pallet_parachain_staking = 45 + 20480
 	PrecompileAt<
 		AddressU64<20525>,
@@ -137,7 +137,7 @@ pub type PrecompilesSetAt<R> = (
 	>,
 );
 
-pub type LitentryNetworkPrecompiles<R> = PrecompileSetBuilder<
+pub type HeimaNetworkPrecompiles<R> = PrecompileSetBuilder<
 	R,
 	(
 		// Skip precompiles if out of range.

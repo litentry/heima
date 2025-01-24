@@ -225,9 +225,9 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// It's important to match `litentry-parachain-runtime`, which is runtime pkg name
-	spec_name: create_runtime_str!("litentry-parachain"),
-	impl_name: create_runtime_str!("litentry-parachain"),
+	// It's important to match `heima-parachain-runtime`, which is runtime pkg name
+	spec_name: create_runtime_str!("heima-parachain"),
+	impl_name: create_runtime_str!("heima-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
 	spec_version: 9223,
@@ -522,13 +522,13 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 parameter_types! {
-	pub LaunchPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "LITENTRY_LAUNCHPERIOD");
-	pub VotingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "LITENTRY_VOTINGPERIOD");
-	pub FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS, 2 * MINUTES, "LITENTRY_FASTTRACKVOTINGPERIOD");
+	pub LaunchPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "HEIMA_LAUNCHPERIOD");
+	pub VotingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 5 * MINUTES, "HEIMA_VOTINGPERIOD");
+	pub FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS, 2 * MINUTES, "HEIMA_FASTTRACKVOTINGPERIOD");
 	pub const InstantAllowed: bool = true;
 	pub const MinimumDeposit: Balance = 100 * DOLLARS;
-	pub EnactmentPeriod: BlockNumber = prod_or_fast!(1 * DAYS, 2 * MINUTES, "LITENTRY_ENACTMENTPERIOD");
-	pub CooloffPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_COOLOFFPERIOD");
+	pub EnactmentPeriod: BlockNumber = prod_or_fast!(1 * DAYS, 2 * MINUTES, "HEIMA_ENACTMENTPERIOD");
+	pub CooloffPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "HEIMA_COOLOFFPERIOD");
 }
 
 impl pallet_democracy::Config for Runtime {
@@ -668,8 +668,8 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 20 * DOLLARS;
-	pub SpendPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_SPENDPERIOD");
-	pub PayoutPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "LITENTRY_PAYOUTPERIOD");
+	pub SpendPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "HEIMA_SPENDPERIOD");
+	pub PayoutPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES, "HEIMA_PAYOUTPERIOD");
 
 	pub BountyDepositBase: Balance = deposit(1, 0);
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
