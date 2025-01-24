@@ -1,8 +1,7 @@
 use crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
+use primitives::BlockNumber;
 use serde::{Deserialize, Serialize};
-
-type BlockNumber = u64;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -20,12 +19,12 @@ pub struct AuthOptions {
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub struct Claims {
+pub struct AuthTokenClaims {
 	sub: String,
 	pub exp: BlockNumber,
 }
 
-impl Claims {
+impl AuthTokenClaims {
 	pub fn new(sub: String, options: AuthOptions) -> Self {
 		Self { sub, exp: options.expires_at }
 	}
@@ -41,7 +40,7 @@ impl Validation {
 		Self { sub, current_block }
 	}
 
-	pub fn validate(&self, claims: &Claims) -> Result<(), Error> {
+	pub fn validate(&self, claims: &AuthTokenClaims) -> Result<(), Error> {
 		if self.sub != claims.sub {
 			return Err(Error::InvalidSubject);
 		}
@@ -60,7 +59,7 @@ pub trait AuthTokenValidator {
 
 impl AuthTokenValidator for String {
 	fn validate(&self, secret: &[u8], validation: Validation) -> Result<(), Error> {
-		jwt::decode_token::<Claims>(self, secret)
+		jwt::decode_token::<AuthTokenClaims>(self, secret)
 			.map_err(|_| Error::InvalidToken)
 			.and_then(|claims| validation.validate(&claims))
 	}
@@ -68,7 +67,7 @@ impl AuthTokenValidator for String {
 
 impl AuthTokenValidator for &str {
 	fn validate(&self, secret: &[u8], validation: Validation) -> Result<(), Error> {
-		jwt::decode_token::<Claims>(self, secret)
+		jwt::decode_token::<AuthTokenClaims>(self, secret)
 			.map_err(|_| Error::InvalidToken)
 			.and_then(|claims| validation.validate(&claims))
 	}
@@ -81,7 +80,7 @@ mod tests {
 	#[test]
 	fn test_auth_token() {
 		let secret = b"secret";
-		let claims = Claims::new("test".to_string(), AuthOptions { expires_at: 100 });
+		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
 		let token = jwt::create_token(&claims, secret).unwrap();
 
 		let current_block = 50;
@@ -94,7 +93,7 @@ mod tests {
 	#[test]
 	fn test_auth_token_expired() {
 		let secret = b"secret";
-		let claims = Claims::new("test".to_string(), AuthOptions { expires_at: 100 });
+		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
 		let token = jwt::create_token(&claims, secret).unwrap();
 
 		let current_block = 150;
@@ -107,7 +106,7 @@ mod tests {
 	#[test]
 	fn test_auth_token_invalid_subject() {
 		let secret = b"secret";
-		let claims = Claims::new("test".to_string(), AuthOptions { expires_at: 100 });
+		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
 		let token = jwt::create_token(&claims, secret).unwrap();
 
 		let current_block = 50;
