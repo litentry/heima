@@ -2,7 +2,7 @@ use crate::server::RpcContext;
 use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
-use parentchain_rpc_client::SubstrateRpcClient;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	signature::HeimaMultiSignature,
@@ -98,8 +98,13 @@ pub fn verify_web3_authentication(
 	}
 }
 
-pub fn verify_email_authentication(
-	ctx: Arc<RpcContext>,
+pub fn verify_email_authentication<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	sender_identity: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
@@ -115,15 +120,22 @@ pub fn verify_email_authentication(
 	Ok(())
 }
 
-pub fn verify_auth_token_authentication(
-	ctx: Arc<RpcContext>,
+pub fn verify_auth_token_authentication<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
 	let current_block = handle
 		.block_on(async {
-			let client = ctx.parentchain_rpc_client_factory.new_client_until_connected().await;
+			let client = ctx.parentchain_rpc_client_factory.new_client().await.map_err(|e| {
+				log::error!("Could not create client: {:?}", e);
+			})?;
 			client.get_last_finalized_block_num().await.map_err(|e| {
 				log::error!("Could not get last finalized block number: {:?}", e);
 			})
@@ -142,8 +154,13 @@ pub fn verify_auth_token_authentication(
 	Ok(())
 }
 
-pub fn verify_oauth2_authentication(
-	_ctx: Arc<RpcContext>,
+pub fn verify_oauth2_authentication<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	_ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	_sender_identity_hash: Hash,
 	_payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {

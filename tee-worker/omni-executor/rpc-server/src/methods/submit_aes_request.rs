@@ -13,6 +13,7 @@ use jsonrpsee::{
 	RpcModule,
 };
 use native_task_handler::NativeTask;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	utils::hex::{FromHexPrefixed, ToHexPrefixed},
@@ -28,7 +29,14 @@ pub struct AuthenticatedCall {
 	pub authentication: Authentication,
 }
 
-pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_aes_request<
+	AccountId: Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+) {
 	module
 		.register_async_method("native_submitAesRequest", |params, ctx, _| async move {
 			let Ok(hex_request) = params.one::<String>() else {
@@ -64,9 +72,15 @@ pub fn register_submit_aes_request(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register native_submitAesRequest method");
 }
 
-fn handle_aes_request<'a>(
+fn handle_aes_request<
+	'a,
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
 	mut request: AesRequest,
-	ctx: Arc<RpcContext>,
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.shard().encode() != ctx.mrenclave.encode() {

@@ -4,6 +4,7 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use primitives::utils::hex::ToHexPrefixed;
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
@@ -14,7 +15,14 @@ struct Rsa3072PubKey {
 	e: Vec<u8>,
 }
 
-pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_shielding_key<
+	AccountId: Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+) {
 	module
 		.register_async_method("native_getShieldingKey", |_params, ctx, _| async move {
 			let public_key = ctx.shielding_key.public_key();
