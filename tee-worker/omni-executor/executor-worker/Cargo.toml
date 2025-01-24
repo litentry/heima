@@ -18,6 +18,7 @@ ethereum-intent-executor = { workspace = true }
 executor-core = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-listener = { workspace = true }
+parentchain-rpc-client = { workspace = true }
 rpc-server = { workspace = true }
 solana-intent-executor = { workspace = true }
 storage = { workspace = true }

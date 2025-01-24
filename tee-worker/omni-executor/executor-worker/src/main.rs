@@ -19,8 +19,10 @@ use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
 use native_task_handler::run_native_task_handler;
+use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
+use std::env;
 use std::io::Write;
 use std::sync::Arc;
 use std::thread::JoinHandle;
@@ -54,9 +56,13 @@ async fn main() -> Result<(), ()> {
 		error!("Could not create data dir: {:?}", e);
 	})?;
 
+	// TODO: move to config
+	let jwt_secret = env::var("JWT_SECRET").unwrap_or("secret".to_string());
 	let storage_db =
 		init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
-
+	let client_factory = Arc::new(SubxtClientFactory::<CustomConfig>::new(&cli.parentchain_url));
+	let rpc_client = client_factory.new_client_until_connected().await;
+	let parentchain_rpc_client = Arc::new(rpc_client);
 	// TODO: make buffer size configurable
 	let buffer = 1024;
 	let native_task_sender = run_native_task_handler(buffer).await;
@@ -65,11 +71,12 @@ async fn main() -> Result<(), ()> {
 
 	start_rpc_server(
 		&cli.worker_rpc_port,
-		&cli.parentchain_url,
+		parentchain_rpc_client,
 		ShieldingKey::new(),
 		Arc::new(native_task_sender),
 		storage_db.clone(),
 		mrenclave,
+		jwt_secret,
 	)
 	.await
 	.map_err(|e| {
