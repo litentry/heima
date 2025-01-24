@@ -74,7 +74,7 @@ pub struct RuntimeVersion {
 #[async_trait]
 pub trait SubstrateRpcClient<AccountId, Header> {
 	async fn get_last_finalized_header(&self) -> Result<Option<Header>, ()>;
-	async fn get_last_finalized_block_num(&self) -> Result<u64, ()>;
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
 	async fn submit_tx(&mut self, raw_tx: &[u8]) -> Result<(), ()>;
@@ -111,9 +111,14 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 		let finalized_header = self.legacy.chain_get_finalized_head().await.map_err(|_| ())?;
 		self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())
 	}
-	async fn get_last_finalized_block_num(&self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()> {
 		match self.get_last_finalized_header().await {
-			Ok(Some(header)) => Ok(header.number().into()),
+			Ok(Some(header)) => {
+				let block_num = header.number().into();
+				// the parachain currently uses u32 for block numbers but subxt uses u64
+				let block_num: u32 = block_num.try_into().map_err(|_| ())?;
+				Ok(block_num)
+			},
 			_ => Err(()),
 		}
 	}
@@ -205,7 +210,7 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 }
 
 pub struct MockedRpcClient<ChainConfig: Config> {
-	block_num: u64,
+	block_num: u32,
 	_phantom: PhantomData<ChainConfig>,
 }
 
@@ -216,7 +221,7 @@ impl<ChainConfig: Config<AccountId = String>>
 	async fn get_last_finalized_header(&self) -> Result<Option<ChainConfig::Header>, ()> {
 		Ok(None)
 	}
-	async fn get_last_finalized_block_num(&self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()> {
 		Ok(self.block_num)
 	}
 
