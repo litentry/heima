@@ -19,7 +19,10 @@ use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
 use native_task_handler::{run_native_task_handler, TaskHandlerContext};
+use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
+use parentchain_signer::key_store::SubstrateKeyStore;
+use parentchain_signer::TransactionSigner;
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
@@ -60,10 +63,21 @@ async fn main() -> Result<(), ()> {
 	let jwt_secret = env::var("JWT_SECRET").unwrap_or("secret".to_string());
 	let storage_db =
 		init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
-	let client_factory = Arc::new(SubxtClientFactory::<CustomConfig>::new(&cli.parentchain_url));
-	let task_handler_context =
-		TaskHandlerContext::new(client_factory.clone(), storage_db.clone(), jwt_secret.clone());
-
+	let client_factory = SubxtClientFactory::<CustomConfig>::new(&cli.parentchain_url);
+	let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
+	let key_store = Arc::new(SubstrateKeyStore::new("data/parentchain_key.bin".to_string()));
+	let parentchain_rpc_client_factory = Arc::new(client_factory);
+	let transaction_signer = Arc::new(TransactionSigner::new(
+		metadata_provider,
+		parentchain_rpc_client_factory.clone(),
+		key_store,
+	));
+	let task_handler_context = TaskHandlerContext::new(
+		parentchain_rpc_client_factory.clone(),
+		transaction_signer,
+		storage_db.clone(),
+		jwt_secret.clone(),
+	);
 	// TODO: make buffer size configurable
 	let buffer = 1024;
 	let native_task_sender = run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
@@ -72,7 +86,7 @@ async fn main() -> Result<(), ()> {
 
 	start_rpc_server(
 		&cli.worker_rpc_port,
-		client_factory,
+		parentchain_rpc_client_factory,
 		ShieldingKey::new(),
 		Arc::new(native_task_sender),
 		storage_db.clone(),

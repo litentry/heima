@@ -4,6 +4,7 @@ use crypto::jwt;
 use executor_core::native_call::NativeCall;
 use heima_authentication::auth_token::AuthTokenClaims;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::Encode;
 use primitives::{utils::hex::ToHexPrefixed, OmniAccountAuthType};
 use std::{marker::PhantomData, sync::Arc};
@@ -12,7 +13,9 @@ use tokio::sync::{mpsc, oneshot};
 use types::{NativeCallError, NativeCallOk};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
+
 pub type NativeTaskSender = mpsc::Sender<NativeTask>;
+
 type NativeCallResponse = Result<NativeCallOk, NativeCallError>;
 
 pub struct NativeTask {
@@ -20,6 +23,7 @@ pub struct NativeTask {
 	pub auth_type: OmniAccountAuthType,
 	pub response_sender: ResponseSender,
 }
+
 pub struct TaskHandlerContext<
 	AccountId,
 	Header,
@@ -29,6 +33,16 @@ pub struct TaskHandlerContext<
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_secret: String,
+	pub transaction_signer: Arc<
+		TransactionSigner<
+			SubstrateKeyStore,
+			SubxtClient<CustomConfig>,
+			SubxtClientFactory<CustomConfig>,
+			CustomConfig,
+			Metadata,
+			SubxtMetadataProvider<CustomConfig>,
+		>,
+	>,
 	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -43,11 +57,22 @@ impl<
 {
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
+		transaction_signer: Arc<
+			TransactionSigner<
+				SubstrateKeyStore,
+				SubxtClient<CustomConfig>,
+				SubxtClientFactory<CustomConfig>,
+				CustomConfig,
+				Metadata,
+				SubxtMetadataProvider<CustomConfig>,
+			>,
+		>,
 		storage_db: Arc<StorageDB>,
 		jwt_secret: String,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
+			transaction_signer,
 			storage_db,
 			jwt_secret,
 			phantom_account_id: PhantomData,
