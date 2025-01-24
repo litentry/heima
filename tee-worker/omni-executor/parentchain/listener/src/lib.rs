@@ -44,7 +44,17 @@ use subxt_signer::sr25519::Keypair;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
 
+type ParentchainTxSigner = TransactionSigner<
+	SubstrateKeyStore,
+	SubxtClient<CustomConfig>,
+	SubxtClientFactory<CustomConfig>,
+	CustomConfig,
+	Metadata,
+	SubxtMetadataProvider<CustomConfig>,
+>;
+
 /// Creates parentchain listener
+#[allow(clippy::too_many_arguments)]
 pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	id: &str,
 	handle: Handle,
@@ -53,6 +63,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
 	storage_db: Arc<StorageDB>,
+	transaction_signer: Arc<ParentchainTxSigner>,
 ) -> Result<
 	ParentchainListener<
 		SubxtClient<CustomConfig>,
@@ -93,12 +104,6 @@ where
 		.unwrap();
 
 	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
-
-	let transaction_signer = Arc::new(TransactionSigner::new(
-		metadata_provider.clone(),
-		client_factory.clone(),
-		key_store.clone(),
-	));
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 

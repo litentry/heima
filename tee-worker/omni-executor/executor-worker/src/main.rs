@@ -18,7 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use log::error;
-use native_task_handler::{run_native_task_handler, TaskHandlerContext};
+use native_task_handler::{run_native_task_handler, ParentchainTxSigner, TaskHandlerContext};
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
@@ -74,7 +74,7 @@ async fn main() -> Result<(), ()> {
 	));
 	let task_handler_context = TaskHandlerContext::new(
 		parentchain_rpc_client_factory.clone(),
-		transaction_signer,
+		transaction_signer.clone(),
 		storage_db.clone(),
 		jwt_secret.clone(),
 	);
@@ -104,6 +104,7 @@ async fn main() -> Result<(), ()> {
 		cli.solana_url,
 		cli.start_block,
 		storage_db,
+		transaction_signer,
 	)
 	.await
 	.unwrap();
@@ -125,6 +126,7 @@ async fn listen_to_parentchain(
 	solana_url: String,
 	start_block: u64,
 	storage_db: Arc<StorageDB>,
+	parentchain_tx_signer: Arc<ParentchainTxSigner>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
@@ -141,6 +143,7 @@ async fn listen_to_parentchain(
 			solana_intent_executor,
 			sub_stop_receiver,
 			storage_db,
+			parentchain_tx_signer,
 		)
 		.await?;
 

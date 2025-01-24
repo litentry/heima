@@ -22,7 +22,7 @@ pub type NativeTaskSender = mpsc::Sender<NativeTask>;
 
 type NativeCallResponse = Result<NativeCallOk, NativeCallError>;
 
-type ParentchainTxSigner = TransactionSigner<
+pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
