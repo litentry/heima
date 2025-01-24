@@ -5214,6 +5214,7 @@ dependencies = [
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
+ "parentchain-signer",
  "parity-scale-codec",
  "primitives",
  "storage",
@@ -5236,6 +5237,19 @@ dependencies = [
  "subxt",
  "subxt-core",
  "tokio",
+]
+
+[[package]]
+name = "parentchain-signer"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "executor-core",
+ "log",
+ "parentchain-rpc-client",
+ "parity-scale-codec",
+ "subxt-core",
+ "subxt-signer",
 ]
 
 [[package]]

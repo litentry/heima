@@ -1,0 +1,21 @@
+[package]
+name = "parentchain-signer"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+log = { workspace = true }
+parity-scale-codec = { workspace = true }
+subxt-core = { workspace = true }
+subxt-signer = { workspace = true }
+
+# Local dependencies
+executor-core = { workspace = true }
+parentchain-rpc-client = { workspace = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+
+[lints]
+workspace = true

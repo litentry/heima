@@ -11,6 +11,7 @@ members = [
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
+    "parentchain/signer",
     "primitives",
     "rpc-server",
     "storage",
@@ -62,6 +63,7 @@ native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
+parentchain-signer = { path = "parentchain/signer" }
 primitives = { path = "primitives" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }

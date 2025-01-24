@@ -16,18 +16,14 @@
 
 mod event_handler;
 mod fetcher;
-mod key_store;
 mod listener;
 mod metadata;
 mod sync_checkpoint;
-mod transaction_signer;
 
 use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
-use crate::key_store::SubstrateKeyStore;
 use crate::listener::ParentchainListener;
 use crate::metadata::SubxtMetadataProvider;
-use crate::transaction_signer::TransactionSigner;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
@@ -39,6 +35,7 @@ use parentchain_api_interface::{
 };
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
+use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use std::sync::Arc;
 use storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
 use subxt_core::utils::AccountId32;
