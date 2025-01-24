@@ -34,14 +34,14 @@ pub async fn run_native_task_handler(
 
 	tokio::spawn(async move {
 		while let Some(task) = receiver.recv().await {
-			execute_native_call(ctx.clone(), task.call, task.response_sender).await;
+			handle_native_call(ctx.clone(), task.call, task.response_sender).await;
 		}
 	});
 
 	sender
 }
 
-async fn execute_native_call(
+async fn handle_native_call(
 	ctx: Arc<TaskHandlerContext>,
 	call: NativeCall,
 	response_sender: ResponseSender,
