@@ -2,14 +2,14 @@ use crate::{methods::register_methods, ShieldingKey};
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
-use parentchain_rpc_client::{CustomConfig, SubxtClient};
+use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use std::{env, net::SocketAddr, sync::Arc};
 use storage::StorageDB;
 
 pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
-	pub parentchain_rpc_client: Arc<SubxtClient<CustomConfig>>,
+	pub parentchain_rpc_client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	pub storage_db: Arc<StorageDB>,
 	pub mrenclave: [u8; 32],
 	pub mailer: Mailer,
@@ -18,7 +18,7 @@ pub(crate) struct RpcContext {
 
 pub async fn start_server(
 	port: &str,
-	parentchain_rpc_client: Arc<SubxtClient<CustomConfig>>,
+	parentchain_rpc_client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,
 	storage_db: Arc<StorageDB>,
@@ -37,7 +37,7 @@ pub async fn start_server(
 	let ctx = RpcContext {
 		shielding_key,
 		native_task_sender,
-		parentchain_rpc_client,
+		parentchain_rpc_client_factory,
 		mrenclave,
 		storage_db,
 		mailer,

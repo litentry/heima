@@ -61,11 +61,9 @@ async fn main() -> Result<(), ()> {
 	let storage_db =
 		init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
 	let client_factory = Arc::new(SubxtClientFactory::<CustomConfig>::new(&cli.parentchain_url));
-	let rpc_client = client_factory.new_client_until_connected().await;
-	let parentchain_rpc_client = Arc::new(rpc_client);
 
 	let task_handler_context = TaskHandlerContext {
-		parentchain_rpc_client: parentchain_rpc_client.clone(),
+		parentchain_rpc_client_factory: client_factory.clone(),
 		storage_db: storage_db.clone(),
 		jwt_secret: jwt_secret.clone(),
 	};
@@ -78,7 +76,7 @@ async fn main() -> Result<(), ()> {
 
 	start_rpc_server(
 		&cli.worker_rpc_port,
-		parentchain_rpc_client,
+		client_factory,
 		ShieldingKey::new(),
 		Arc::new(native_task_sender),
 		storage_db.clone(),

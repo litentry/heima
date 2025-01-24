@@ -123,7 +123,8 @@ pub fn verify_auth_token_authentication(
 ) -> Result<(), AuthenticationError> {
 	let current_block = handle
 		.block_on(async {
-			ctx.parentchain_rpc_client.get_last_finalized_block_num().await.map_err(|e| {
+			let client = ctx.parentchain_rpc_client_factory.new_client_until_connected().await;
+			client.get_last_finalized_block_num().await.map_err(|e| {
 				log::error!("Could not get last finalized block number: {:?}", e);
 			})
 		})

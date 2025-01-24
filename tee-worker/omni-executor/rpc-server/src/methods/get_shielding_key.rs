@@ -37,6 +37,7 @@ mod test {
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTask;
+	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use primitives::utils::hex::FromHexPrefixed;
 	use std::sync::Arc;
 	use storage::StorageDB;
@@ -47,11 +48,21 @@ mod test {
 		let port = "2000";
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTask>(1);
+		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
 		let db = StorageDB::open_default("test_storage_db").unwrap();
+		let jwt_secret = "secret".to_string();
 
-		start_server(port, shielding_key.clone(), Arc::new(sender), Arc::new(db), [0u8; 32])
-			.await
-			.unwrap();
+		start_server(
+			port,
+			Arc::new(client_factory),
+			shielding_key.clone(),
+			Arc::new(sender),
+			Arc::new(db),
+			[0u8; 32],
+			jwt_secret,
+		)
+		.await
+		.unwrap();
 
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();

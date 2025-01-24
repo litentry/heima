@@ -3,7 +3,7 @@ mod types;
 use crypto::jwt;
 use executor_core::native_call::NativeCall;
 use heima_authentication::auth_token::AuthTokenClaims;
-use parentchain_rpc_client::{CustomConfig, SubxtClient};
+use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parity_scale_codec::Encode;
 use primitives::{utils::hex::ToHexPrefixed, OmniAccountAuthType};
 use std::sync::Arc;
@@ -21,7 +21,7 @@ pub struct NativeTask {
 	pub response_sender: ResponseSender,
 }
 pub struct TaskHandlerContext {
-	pub parentchain_rpc_client: Arc<SubxtClient<CustomConfig>>,
+	pub parentchain_rpc_client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_secret: String,
 }
