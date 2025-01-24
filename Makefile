@@ -80,11 +80,11 @@ test-cargo-all-benchmarks:
 
 .PHONY: test-ts-litentry ## Run litentry ts tests without clean-up
 test-ts-litentry: launch-network-litentry
-	@cd parachain && ./scripts/run-ts-test.sh litentry
+	@trap "./scripts/clean-network.sh" EXIT; cd parachain && ./scripts/run-ts-test.sh litentry
 
 .PHONY: test-ts-paseo ## Run paseo ts tests without clean-up
 test-ts-paseo: launch-network-paseo
-	@cd parachain && ./scripts/run-ts-test.sh paseo
+	@trap "./scripts/clean-network.sh" EXIT; cd parachain && ./scripts/run-ts-test.sh paseo
 
 # clean up
 .PHONY: clean-network ## Clean up the network launched by 'launch-network'
