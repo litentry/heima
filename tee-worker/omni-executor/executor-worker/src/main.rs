@@ -61,12 +61,8 @@ async fn main() -> Result<(), ()> {
 	let storage_db =
 		init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
 	let client_factory = Arc::new(SubxtClientFactory::<CustomConfig>::new(&cli.parentchain_url));
-
-	let task_handler_context = TaskHandlerContext {
-		parentchain_rpc_client_factory: client_factory.clone(),
-		storage_db: storage_db.clone(),
-		jwt_secret: jwt_secret.clone(),
-	};
+	let task_handler_context =
+		TaskHandlerContext::new(client_factory.clone(), storage_db.clone(), jwt_secret.clone());
 
 	// TODO: make buffer size configurable
 	let buffer = 1024;
