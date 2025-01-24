@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::metadata::{MetadataProvider, SubxtMetadataProvider};
 use async_trait::async_trait;
 use executor_core::event_handler::Error::RecoverableError;
 use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
@@ -31,7 +30,10 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
 };
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use parentchain_rpc_client::{
+	metadata::{MetadataProvider, SubxtMetadataProvider},
+	SubstrateRpcClient, SubstrateRpcClientFactory,
+};
 use parentchain_signer::TransactionSigner;
 use primitives::{AccountId, BlockEvent, Hash, MemberAccount, TryFromSubxtType};
 use std::marker::PhantomData;

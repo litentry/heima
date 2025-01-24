@@ -17,13 +17,11 @@
 mod event_handler;
 mod fetcher;
 mod listener;
-mod metadata;
 mod sync_checkpoint;
 
 use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::listener::ParentchainListener;
-use crate::metadata::SubxtMetadataProvider;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
@@ -33,8 +31,10 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
-use parentchain_rpc_client::SubstrateRpcClient;
-use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
+use parentchain_rpc_client::{
+	metadata::SubxtMetadataProvider, CustomConfig, SubstrateRpcClient, SubxtClient,
+	SubxtClientFactory,
+};
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use std::sync::Arc;
 use storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};

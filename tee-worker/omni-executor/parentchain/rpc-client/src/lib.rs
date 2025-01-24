@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+pub mod metadata;
 
 use async_trait::async_trait;
 use log::{error, info};
