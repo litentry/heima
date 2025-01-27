@@ -1,4 +1,4 @@
-use crypto::jwt;
+use executor_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use primitives::BlockNumber;
 use serde::{Deserialize, Serialize};

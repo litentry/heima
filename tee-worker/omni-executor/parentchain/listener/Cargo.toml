@@ -6,9 +6,11 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-hex = "0.4.3"
+hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-encode = { workspace = true }
+sp-core = { workspace = true }
 subxt = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
@@ -16,11 +18,11 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 # Local dependencies
 executor-core = { workspace = true }
+executor-storage = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 primitives = { workspace = true }
-storage = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

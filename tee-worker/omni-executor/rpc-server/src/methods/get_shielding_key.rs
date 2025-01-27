@@ -1,5 +1,5 @@
 use crate::server::RpcContext;
-use crypto::rsa::traits::PublicKeyParts;
+use executor_crypto::rsa::traits::PublicKeyParts;
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
@@ -41,6 +41,7 @@ pub fn register_get_shielding_key<
 mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
+	use executor_storage::StorageDB;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -48,7 +49,6 @@ mod test {
 	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use primitives::utils::hex::FromHexPrefixed;
 	use std::sync::Arc;
-	use storage::StorageDB;
 	use tokio::sync::mpsc;
 
 	#[tokio::test]

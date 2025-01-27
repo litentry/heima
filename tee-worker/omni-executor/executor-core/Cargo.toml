@@ -8,11 +8,12 @@ edition.workspace = true
 async-trait = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
+regex = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
-primitives = { workspace = true }
 heima-authentication = { workspace = true }
+primitives = { workspace = true }
 
 [lints]
 workspace = true

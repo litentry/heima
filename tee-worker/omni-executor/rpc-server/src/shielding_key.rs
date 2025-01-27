@@ -1,4 +1,4 @@
-use crypto::{
+use executor_crypto::{
 	rsa::{errors::Error as RsaError, sha2::Sha256, Oaep, RsaPrivateKey, RsaPublicKey},
 	traits::Decrypt,
 };

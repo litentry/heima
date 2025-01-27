@@ -1,8 +1,8 @@
-mod bitcoin_signature;
-pub use bitcoin_signature::BitcoinSignature;
+mod bitcoin;
+pub use bitcoin::BitcoinSignature;
 
-mod ethereum_signature;
-pub use ethereum_signature::EthereumSignature;
+mod ethereum;
+pub use ethereum::EthereumSignature;
 
 mod heima_multi_signature;
 pub use heima_multi_signature::HeimaMultiSignature;

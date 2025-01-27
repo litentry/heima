@@ -12,6 +12,7 @@ subxt-signer = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
+executor-crypto = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 
 [dev-dependencies]

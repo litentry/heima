@@ -9,7 +9,7 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true }
 serde = { workspace = true }
 
-crypto = { workspace = true }
+executor-crypto = { workspace = true }
 primitives = { workspace = true }
 
 [lints]
