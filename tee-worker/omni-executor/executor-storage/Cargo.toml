@@ -1,5 +1,5 @@
 [package]
-name = "storage"
+name = "executor-storage"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true

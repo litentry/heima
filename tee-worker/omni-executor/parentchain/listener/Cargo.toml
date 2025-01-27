@@ -20,7 +20,7 @@ executor-core = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-primitives = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-storage = { workspace = true }
+executor-storage = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

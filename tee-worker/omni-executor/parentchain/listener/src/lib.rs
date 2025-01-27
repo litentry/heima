@@ -32,6 +32,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
+use executor_storage::AccountStoreStorage;
 use log::{error, info};
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
@@ -40,7 +41,6 @@ use parentchain_api_interface::{
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
 use std::sync::Arc;
-use storage::AccountStoreStorage;
 use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;

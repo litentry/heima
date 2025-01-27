@@ -11,7 +11,7 @@ members = [
     "parentchain/rpc-client",
     "parentchain/primitives",
     "rpc-server",
-    "storage",
+    "executor-storage",
     "solana/intent-executor",
 ]
 
@@ -61,7 +61,7 @@ parentchain-listener = { path = "parentchain/listener" }
 parentchain-primitives = { path = "parentchain/primitives" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 rpc-server = { path = "rpc-server" }
-storage = { path = "storage" }
+executor-storage = { path = "executor-storage" }
 parentchain-storage = { path = "parentchain/storage" }
 solana-intent-executor = { path = "solana/intent-executor" }
 
