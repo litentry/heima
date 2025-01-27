@@ -2099,18 +2099,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
-name = "crypto"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "rand 0.8.5",
- "ring 0.16.20",
- "rsa",
- "secp256k1 0.29.1",
- "sp-core 35.0.0",
-]
-
-[[package]]
 name = "crypto-bigint"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2882,7 +2870,36 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "primitives",
+ "regex",
  "tokio",
+]
+
+[[package]]
+name = "executor-crypto"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "ring 0.16.20",
+ "rsa",
+ "secp256k1 0.29.1",
+ "sp-core 35.0.0",
+]
+
+[[package]]
+name = "executor-storage"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "frame-support 39.0.0",
+ "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
+ "parity-scale-codec",
+ "primitives",
+ "rocksdb",
+ "sp-state-machine 0.44.0",
+ "subxt-core",
 ]
 
 [[package]]
@@ -2893,6 +2910,7 @@ dependencies = [
  "env_logger",
  "ethereum-intent-executor",
  "executor-core",
+ "executor-storage",
  "hex",
  "log",
  "native-task-handler",
@@ -2901,7 +2919,6 @@ dependencies = [
  "scale-encode 0.10.0",
  "serde_json",
  "solana-intent-executor",
- "storage",
  "tokio",
 ]
 
@@ -5174,13 +5191,15 @@ dependencies = [
  "async-trait",
  "env_logger",
  "executor-core",
+ "executor-storage",
  "hex",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parity-scale-codec",
  "primitives",
- "storage",
+ "scale-encode 0.10.0",
+ "sp-core 35.0.0",
  "subxt",
  "subxt-core",
  "subxt-signer",
@@ -5577,7 +5596,7 @@ dependencies = [
  "base64 0.22.1",
  "bitcoin",
  "core-primitives",
- "crypto",
+ "executor-crypto",
  "hex",
  "log",
  "parity-scale-codec",
@@ -6157,8 +6176,9 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
- "crypto",
  "executor-core",
+ "executor-crypto",
+ "executor-storage",
  "heima-identity-verification",
  "hex",
  "jsonrpsee",
@@ -6169,7 +6189,6 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
- "storage",
  "tokio",
 ]
 
@@ -9730,22 +9749,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "storage"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "frame-support 39.0.0",
- "log",
- "parentchain-api-interface",
- "parentchain-rpc-client",
- "parity-scale-codec",
- "primitives",
- "rocksdb",
- "sp-state-machine 0.44.0",
- "subxt-core",
-]
 
 [[package]]
 name = "string-interner"

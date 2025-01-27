@@ -19,7 +19,7 @@ esac
 ZOMBIENET_BIN=zombienet-${os}-${arch}
 ZOMBIENET_PID=$(pidof $ZOMBIENET_BIN)
 
-if [ -z $ZOMBIENET_PID ]; then
+if [ -z "$ZOMBIENET_PID" ]; then
   # the network might not be started with zombienet
   killall polkadot || true
   killall litentry-collator || true
@@ -27,7 +27,7 @@ else
   kill -2 $ZOMBIENET_PID
 fi
 
-docker ps -q -f name=geth | xargs -r docker stop 
+docker ps -q -f name=geth | xargs -r docker stop
 
 rm -rf "$LITENTRY_PARACHAIN_DIR"
 

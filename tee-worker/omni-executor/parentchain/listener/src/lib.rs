@@ -32,6 +32,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
+use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
 use log::{error, info};
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
@@ -40,7 +41,6 @@ use parentchain_api_interface::{
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
 use std::sync::Arc;
-use storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
 use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
@@ -48,6 +48,7 @@ use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
 
 /// Creates parentchain listener
+#[allow(clippy::too_many_arguments)]
 pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	id: &str,
 	handle: Handle,
@@ -56,6 +57,8 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
 	storage_db: Arc<StorageDB>,
+	keystore_path: &str,
+	log_path: &str,
 ) -> Result<
 	ParentchainListener<
 		SubxtClient<CustomConfig>,
@@ -77,25 +80,12 @@ where
 		Arc::new(SubxtClientFactory::new(ws_rpc_endpoint));
 
 	let fetcher = Fetcher::new(client_factory.clone());
-	let last_processed_log_repository =
-		FileCheckpointRepository::new("data/parentchain_last_log.bin");
+	let last_processed_log_repository = FileCheckpointRepository::new(log_path);
 
 	let metadata_provider =
 		Arc::new(SubxtMetadataProvider::new(SubxtClientFactory::new(ws_rpc_endpoint)));
-	let key_store = Arc::new(SubstrateKeyStore::new("data/parentchain_key.bin".to_string()));
-	let secret_key_bytes = key_store
-		.read()
-		.map_err(|e| {
-			error!("Could not unseal key: {:?}", e);
-		})
-		.unwrap();
-	let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
-		.map_err(|e| {
-			error!("Could not create secret key: {:?}", e);
-		})
-		.unwrap();
 
-	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
+	let (key_store, signer) = get_signer(keystore_path);
 
 	let transaction_signer = Arc::new(TransactionSigner::new(
 		metadata_provider.clone(),
@@ -119,6 +109,24 @@ where
 	);
 
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
+}
+
+pub fn get_signer(path: &str) -> (Arc<SubstrateKeyStore>, Keypair) {
+	let key_store = Arc::new(SubstrateKeyStore::new(path.to_string()));
+	let secret_key_bytes = key_store
+		.read()
+		.map_err(|e| {
+			error!("Could not unseal key: {:?}", e);
+		})
+		.unwrap();
+	let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
+		.map_err(|e| {
+			error!("Could not create secret key: {:?}", e);
+		})
+		.unwrap();
+
+	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
+	(key_store, signer)
 }
 
 #[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crypto",
+    "executor-crypto",
     "executor-core",
     "executor-worker",
     "ethereum/intent-executor",
@@ -12,7 +12,7 @@ members = [
     "parentchain/rpc-client",
     "primitives",
     "rpc-server",
-    "storage",
+    "executor-storage",
     "solana/intent-executor",
 ]
 
@@ -34,6 +34,7 @@ jsonrpsee = { version = "0.24", features = ["server"] }
 log = "0.4.22"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
+regex = "1.7"
 ring = "0.16.20"
 rsa = "0.9.7"
 scale-encode = "0.10.0"
@@ -51,18 +52,20 @@ subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
 
 # Local dependencies
-crypto = { path = "crypto" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
+executor-crypto = { path = "executor-crypto" }
+executor-storage = { path = "executor-storage" }
 heima-identity-verification = { path = "heima/identity-verification" }
+heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
+parentchain-storage = { path = "parentchain/storage" }
 primitives = { path = "primitives" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }
-storage = { path = "storage" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"

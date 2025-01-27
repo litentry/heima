@@ -119,13 +119,13 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/polkadot-
 cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 # evm-tracing, use the astar version to use "standard" substrate frame to avoid any conflicts
-moonbeam-primitives-ext = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-debug = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0" }
-moonbeam-rpc-primitives-debug = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-primitives-txpool = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-trace = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-txpool = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-evm-tracer = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
+moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
+moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc" }
+moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
+moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
+moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
+moonbeam-rpc-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
+moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
 
 # polkadot client
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
@@ -314,15 +314,3 @@ pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-fea
 
 [patch.crates-io]
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
-
-# TODO: investigate further if the overwriting is still valid
-[patch."https://github.com/AstarNetwork/frontier"]
-fc-api = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-consensus = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-db = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-rpc = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-rpc-core = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-storage = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fp-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fp-rpc = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }

@@ -16,16 +16,17 @@
 
 use crate::cli::Cli;
 use clap::Parser;
+use cli::*;
 use ethereum_intent_executor::EthereumIntentExecutor;
+use executor_storage::{init_storage, StorageDB};
 use log::error;
 use native_task_handler::run_native_task_handler;
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
 use std::sync::Arc;
+use std::thread;
 use std::thread::JoinHandle;
-use std::{fs, thread};
-use storage::{init_storage, StorageDB};
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
@@ -50,46 +51,41 @@ async fn main() -> Result<(), ()> {
 
 	let cli = Cli::parse();
 
-	fs::create_dir_all("data/").map_err(|e| {
-		error!("Could not create data dir: {:?}", e);
-	})?;
+	match cli.cmd {
+		Commands::Run(args) => {
+			let storage_db =
+				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 
-	let storage_db =
-		init_storage(&cli.parentchain_url).await.expect("Could not initialize storage");
+			// TODO: make buffer size configurable
+			let buffer = 1024;
+			let native_task_sender = run_native_task_handler(buffer).await;
+			// TODO: get mrenclave from quote
+			let mrenclave = [0u8; 32];
 
-	// TODO: make buffer size configurable
-	let buffer = 1024;
-	let native_task_sender = run_native_task_handler(buffer).await;
-	// TODO: get mrenclave from quote
-	let mrenclave = [0u8; 32];
+			start_rpc_server(
+				&args.worker_rpc_port,
+				ShieldingKey::new(),
+				Arc::new(native_task_sender),
+				storage_db.clone(),
+				mrenclave,
+			)
+			.await
+			.map_err(|e| {
+				error!("Could not start server: {:?}", e);
+			})?;
 
-	start_rpc_server(
-		&cli.worker_rpc_port,
-		ShieldingKey::new(),
-		Arc::new(native_task_sender),
-		storage_db.clone(),
-		mrenclave,
-	)
-	.await
-	.map_err(|e| {
-		error!("Could not start server: {:?}", e);
-	})?;
+			listen_to_parentchain(args, storage_db).await.unwrap();
 
-	listen_to_parentchain(
-		cli.parentchain_url,
-		cli.ethereum_url,
-		cli.solana_url,
-		cli.start_block,
-		storage_db,
-	)
-	.await
-	.unwrap();
-
-	match signal::ctrl_c().await {
-		Ok(()) => {},
-		Err(err) => {
-			eprintln!("Unable to listen for shutdown signal: {}", err);
-			// we also shut down in case of error
+			match signal::ctrl_c().await {
+				Ok(()) => {},
+				Err(err) => {
+					eprintln!("Unable to listen for shutdown signal: {}", err);
+					// we also shut down in case of error
+				},
+			}
+		},
+		Commands::GenKey(args) => {
+			let _ = parentchain_listener::get_signer(&args.keystore_path);
 		},
 	}
 
@@ -97,32 +93,31 @@ async fn main() -> Result<(), ()> {
 }
 
 async fn listen_to_parentchain(
-	parentchain_url: String,
-	ethereum_url: String,
-	solana_url: String,
-	start_block: u64,
+	args: RunArgs,
 	storage_db: Arc<StorageDB>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
-		EthereumIntentExecutor::new(&ethereum_url).map_err(|e| log::error!("{:?}", e))?;
+		EthereumIntentExecutor::new(&args.ethereum_url).map_err(|e| log::error!("{:?}", e))?;
 	let solana_intent_executor =
-		SolanaIntentExecutor::new(solana_url).map_err(|e| log::error!("{:?}", e))?;
+		SolanaIntentExecutor::new(args.solana_url).map_err(|e| log::error!("{:?}", e))?;
 
 	let mut parentchain_listener =
 		parentchain_listener::create_listener::<EthereumIntentExecutor, SolanaIntentExecutor>(
 			"litentry_rococo",
 			Handle::current(),
-			&parentchain_url,
+			&args.parentchain_url,
 			ethereum_intent_executor,
 			solana_intent_executor,
 			sub_stop_receiver,
 			storage_db,
+			&args.keystore_path,
+			&args.log_path,
 		)
 		.await?;
 
 	Ok(thread::Builder::new()
 		.name("litentry_rococo_sync".to_string())
-		.spawn(move || parentchain_listener.sync(start_block))
+		.spawn(move || parentchain_listener.sync(args.start_block))
 		.unwrap())
 }

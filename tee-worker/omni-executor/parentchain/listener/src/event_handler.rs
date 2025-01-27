@@ -22,6 +22,7 @@ use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
+use executor_storage::Storage;
 use log::error;
 use parentchain_api_interface::{
 	omni_account::{
@@ -36,7 +37,6 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use primitives::{AccountId, BlockEvent, Hash, MemberAccount, TryFromSubxtType};
 use std::marker::PhantomData;
 use std::sync::Arc;
-use storage::Storage;
 use subxt::ext::scale_decode;
 use subxt::ext::scale_decode::DecodeAsFields;
 use subxt::{events::StaticEvent, Config, Metadata};

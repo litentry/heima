@@ -1,5 +1,5 @@
 use crate::{server::RpcContext, utils::hex::ToHexPrefixed};
-use crypto::rsa::traits::PublicKeyParts;
+use executor_crypto::rsa::traits::PublicKeyParts;
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
@@ -32,12 +32,12 @@ pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use super::*;
 	use crate::{start_server, utils::hex::FromHexPrefixed, ShieldingKey};
+	use executor_storage::StorageDB;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTask;
 	use std::sync::Arc;
-	use storage::StorageDB;
 	use tokio::sync::mpsc;
 
 	#[tokio::test]

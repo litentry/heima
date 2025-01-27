@@ -16,11 +16,11 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 # Local dependencies
 ethereum-intent-executor = { workspace = true }
 executor-core = { workspace = true }
+executor-storage = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-listener = { workspace = true }
 rpc-server = { workspace = true }
 solana-intent-executor = { workspace = true }
-storage = { workspace = true }
 
 [lints]
 workspace = true

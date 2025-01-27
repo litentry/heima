@@ -80,11 +80,11 @@ test-cargo-all-benchmarks:
 
 .PHONY: test-ts-litentry ## Run litentry ts tests without clean-up
 test-ts-litentry: launch-network-litentry
-	@cd parachain && ./scripts/run-ts-test.sh litentry
+	@trap "./scripts/clean-network.sh" EXIT; cd parachain && ./scripts/run-ts-test.sh litentry
 
 .PHONY: test-ts-paseo ## Run paseo ts tests without clean-up
 test-ts-paseo: launch-network-paseo
-	@cd parachain && ./scripts/run-ts-test.sh paseo
+	@trap "./scripts/clean-network.sh" EXIT; cd parachain && ./scripts/run-ts-test.sh paseo
 
 # clean up
 .PHONY: clean-network ## Clean up the network launched by 'launch-network'
@@ -105,11 +105,13 @@ fmt-cargo:
 	@cd parachain && cargo fmt --all
 	@cd tee-worker && cargo fmt --all
 	@cd tee-worker/identity/enclave-runtime && cargo fmt --all
+	@cd tee-worker/omni-executor && cargo fmt --all
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:
 	@cd parachain && RUST_LOG=error taplo fmt
 	@cd tee-worker && RUST_LOG=error taplo fmt
+	@cd tee-worker/omni-executor && RUST_LOG=error taplo fmt
 
 .PHONY: fmt-ts ## ts fmt
 fmt-ts:
@@ -141,5 +143,5 @@ clean-all-build:
 	@echo "Clean tee-worker/identity..."
 	@cd tee-worker/identity && make clean
 
-	@echo "Clean tee-worker/omni-worker..."
-	@cd tee-worker/omni-worker && make distclean
+	@echo "Clean tee-worker/omni-executor..."
+	@cd tee-worker/omni-executor && make distclean

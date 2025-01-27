@@ -1,6 +1,6 @@
 use crate::signature::{BitcoinSignature, EthereumSignature};
 use bitcoin::sign_message::{signed_msg_hash, MessageSignature};
-use crypto::{
+use executor_crypto::{
 	ecdsa, ed25519,
 	hashing::{blake2_256, keccak_256},
 	secp256k1::{

@@ -14,12 +14,13 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 
-crypto = { workspace = true }
+# Local dependencies
 executor-core = { workspace = true }
+executor-crypto = { workspace = true }
+executor-storage = { workspace = true }
 heima-identity-verification = { workspace = true }
 native-task-handler = { workspace = true }
 primitives = { workspace = true }
-storage = { workspace = true }
 
 [lints]
 workspace = true

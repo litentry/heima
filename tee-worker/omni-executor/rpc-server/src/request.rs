@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crypto::{
+use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key as RequestAesKey, AesOutput},
 	traits::Decrypt,
 };
