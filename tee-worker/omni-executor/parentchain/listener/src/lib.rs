@@ -23,22 +23,20 @@ use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::listener::ParentchainListener;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
 use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
-use log::{error, info};
+use log::error;
 use parentchain_api_interface::{
-	runtime_types::{core_primitives::teebag::types::DcapProvider, ethereum::transaction},
+	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
 use parentchain_rpc_client::{
 	metadata::SubxtMetadataProvider, CustomConfig, SubstrateRpcClient, SubxtClient,
 	SubxtClientFactory,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use parentchain_signer::{get_signer, key_store::SubstrateKeyStore, TransactionSigner};
 use std::sync::Arc;
-use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
 use tokio::runtime::Handle;
@@ -112,23 +110,6 @@ where
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
 }
 
-pub fn get_signer(key_store: Arc<SubstrateKeyStore>) -> Keypair {
-	let secret_key_bytes = key_store
-		.read()
-		.map_err(|e| {
-			error!("Could not unseal key: {:?}", e);
-		})
-		.unwrap();
-	let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
-		.map_err(|e| {
-			error!("Could not create secret key: {:?}", e);
-		})
-		.unwrap();
-
-	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
-	signer
-}
-
 #[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]
 async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
@@ -149,6 +130,7 @@ async fn perform_attestation(
 
 	#[cfg(feature = "gramine-quote")]
 	{
+		use log::info;
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;

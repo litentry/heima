@@ -113,7 +113,7 @@ async fn main() -> Result<(), ()> {
 		},
 		Commands::GenKey(args) => {
 			let key_store = Arc::new(SubstrateKeyStore::new(args.keystore_path));
-			let _ = parentchain_listener::get_signer(key_store);
+			let _ = parentchain_signer::get_signer(key_store);
 		},
 	}
 
