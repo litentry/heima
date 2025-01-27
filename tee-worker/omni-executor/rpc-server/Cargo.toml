@@ -14,8 +14,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 
-executor-crypto = { workspace = true }
 executor-core = { workspace = true }
+executor-crypto = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-primitives = { workspace = true }
 

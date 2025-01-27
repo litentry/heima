@@ -17,10 +17,10 @@ subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 executor-core = { workspace = true }
+executor-storage = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-primitives = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-executor-storage = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
