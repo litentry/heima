@@ -1,5 +1,5 @@
 use crate::{server::RpcContext, utils::hex::ToHexPrefixed};
-use crypto::rsa::traits::PublicKeyParts;
+use executor_crypto::rsa::traits::PublicKeyParts;
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,

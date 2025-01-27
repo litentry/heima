@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crypto",
+    "executor-crypto",
     "executor-core",
     "executor-worker",
     "ethereum/intent-executor",
@@ -51,7 +51,7 @@ subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
 
 # Local dependencies
-crypto = { path = "crypto" }
+executor-crypto = { path = "executor-crypto" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }

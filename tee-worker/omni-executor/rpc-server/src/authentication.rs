@@ -1,6 +1,6 @@
 use crate::{server::RpcContext, utils::hex::hex_encode};
-use crypto::hashing::blake2_256;
 use executor_core::native_call::NativeCall;
+use executor_crypto::hashing::blake2_256;
 use parentchain_primitives::{
 	signature::HeimaMultiSignature,
 	// AccountId,

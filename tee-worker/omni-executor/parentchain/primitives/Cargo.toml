@@ -13,7 +13,7 @@ parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
 
-crypto = { workspace = true }
+executor-crypto = { workspace = true }
 heima-primitives = { workspace = true }
 
 [lints]

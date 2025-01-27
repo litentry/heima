@@ -2099,18 +2099,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
-name = "crypto"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "rand 0.8.5",
- "ring 0.16.20",
- "rsa",
- "secp256k1 0.29.1",
- "sp-core 35.0.0",
-]
-
-[[package]]
 name = "crypto-bigint"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2884,6 +2872,18 @@ dependencies = [
  "parity-scale-codec",
  "regex",
  "tokio",
+]
+
+[[package]]
+name = "executor-crypto"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "ring 0.16.20",
+ "rsa",
+ "secp256k1 0.29.1",
+ "sp-core 35.0.0",
 ]
 
 [[package]]
@@ -5187,7 +5187,7 @@ dependencies = [
  "base64 0.22.1",
  "bitcoin",
  "core-primitives",
- "crypto",
+ "executor-crypto",
  "hex",
  "log",
  "parity-scale-codec",
@@ -6149,8 +6149,8 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
- "crypto",
  "executor-core",
+ "executor-crypto",
  "hex",
  "jsonrpsee",
  "log",
