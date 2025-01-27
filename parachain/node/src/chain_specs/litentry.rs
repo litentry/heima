@@ -56,9 +56,9 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 		WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		Extensions { relay_chain: "rococo-local".into(), para_id: LITENTRY_PARA_ID },
 	)
-	.with_name("Litentry-dev")
-	.with_id("litentry-dev")
-	.with_protocol_id("litentry")
+	.with_name("Heima-dev")
+	.with_id("heima-dev")
+	.with_protocol_id("heima")
 	.with_chain_type(ChainType::Development)
 	.with_properties(default_parachain_properties())
 	.with_genesis_config(generate_genesis(
@@ -97,8 +97,8 @@ pub fn get_chain_spec_staging() -> ChainSpec {
 	// aura: 	$SECRET//collator//<id>//aura
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/staging.json"),
-		"Litentry-staging",
-		"litentry-staging",
+		"Heima-staging",
+		"heima-staging",
 		ChainType::Local,
 		"rococo-local".into(),
 		LITENTRY_PARA_ID.into(),
@@ -108,8 +108,8 @@ pub fn get_chain_spec_staging() -> ChainSpec {
 pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/litentry.json"),
-		"Litentry",
-		"litentry",
+		"Heima",
+		"heima",
 		ChainType::Live,
 		"polkadot".into(),
 		LITENTRY_PARA_ID.into(),
@@ -142,7 +142,7 @@ fn get_chain_spec_from_genesis_info(
 	.with_name(name)
 	.with_id(id)
 	.with_chain_type(chain_type)
-	.with_protocol_id("litentry")
+	.with_protocol_id("heima")
 	.with_properties(default_parachain_properties())
 	.with_boot_nodes(
 		boot_nodes
@@ -187,7 +187,7 @@ fn generate_genesis(
 		balances: BalancesConfig { balances: endowed_accounts },
 		parachain_info: ParachainInfoConfig { parachain_id: id, ..Default::default() },
 		parachain_staking: ParachainStakingConfig {
-			// Should be enough for both Litentry and rococo
+			// Should be enough for both Heima and rococo
 			candidates: invulnerables.iter().cloned().map(|(acc, _)| (acc, 5000 * UNIT)).collect(),
 			..Default::default()
 		},

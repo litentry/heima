@@ -226,8 +226,8 @@ impl_opaque_keys! {
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// It's important to match `litentry-parachain-runtime`, which is runtime pkg name
-	spec_name: create_runtime_str!("litentry-parachain"),
-	impl_name: create_runtime_str!("litentry-parachain"),
+	spec_name: create_runtime_str!("heima-parachain"),
+	impl_name: create_runtime_str!("heima-parachain"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
 	spec_version: 9223,
