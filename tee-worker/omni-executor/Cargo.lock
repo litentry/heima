@@ -2882,6 +2882,7 @@ dependencies = [
  "log",
  "parentchain-primitives",
  "parity-scale-codec",
+ "regex",
  "tokio",
 ]
 
@@ -5170,6 +5171,8 @@ dependencies = [
  "parentchain-primitives",
  "parentchain-rpc-client",
  "parity-scale-codec",
+ "scale-encode 0.10.0",
+ "sp-core 35.0.0",
  "storage",
  "subxt",
  "subxt-core",

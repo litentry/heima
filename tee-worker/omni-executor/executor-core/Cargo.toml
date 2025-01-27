@@ -8,6 +8,7 @@ edition.workspace = true
 async-trait = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
+regex = { workspace = true }
 tokio = { workspace = true }
 
 parentchain-primitives = { workspace = true }
