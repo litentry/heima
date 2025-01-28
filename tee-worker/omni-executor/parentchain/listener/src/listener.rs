@@ -16,10 +16,10 @@
 
 use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
-use crate::key_store::SubstrateKeyStore;
-use crate::metadata::SubxtMetadataProvider;
 use crate::sync_checkpoint::SyncCheckpoint;
 use executor_core::listener::Listener;
+use parentchain_rpc_client::metadata::SubxtMetadataProvider;
+use parentchain_signer::key_store::SubstrateKeyStore;
 use primitives::{BlockEvent, EventId};
 use subxt::Metadata;
 use subxt_core::Config;

@@ -20,9 +20,14 @@ use cli::*;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_storage::{init_storage, StorageDB};
 use log::error;
-use native_task_handler::run_native_task_handler;
+use native_task_handler::{run_native_task_handler, ParentchainTxSigner, TaskHandlerContext};
+use parentchain_rpc_client::metadata::SubxtMetadataProvider;
+use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
+use parentchain_signer::key_store::SubstrateKeyStore;
+use parentchain_signer::TransactionSigner;
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
+use std::env;
 use std::io::Write;
 use std::sync::Arc;
 use std::thread;
@@ -53,28 +58,50 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			// TODO: move to config
+			let jwt_secret = env::var("JWT_SECRET").unwrap_or("secret".to_string());
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 
+			let client_factory = SubxtClientFactory::<CustomConfig>::new(&args.parentchain_url);
+			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
+			let key_store = Arc::new(SubstrateKeyStore::new(args.keystore_path.clone()));
+			let parentchain_rpc_client_factory = Arc::new(client_factory);
+			let transaction_signer = Arc::new(TransactionSigner::new(
+				metadata_provider,
+				parentchain_rpc_client_factory.clone(),
+				key_store.clone(),
+			));
+			let task_handler_context = TaskHandlerContext::new(
+				parentchain_rpc_client_factory.clone(),
+				transaction_signer.clone(),
+				storage_db.clone(),
+				jwt_secret.clone(),
+			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
-			let native_task_sender = run_native_task_handler(buffer).await;
+			let native_task_sender =
+				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
 			// TODO: get mrenclave from quote
 			let mrenclave = [0u8; 32];
 
 			start_rpc_server(
 				&args.worker_rpc_port,
+				parentchain_rpc_client_factory,
 				ShieldingKey::new(),
 				Arc::new(native_task_sender),
 				storage_db.clone(),
 				mrenclave,
+				jwt_secret,
 			)
 			.await
 			.map_err(|e| {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db).await.unwrap();
+			listen_to_parentchain(args, storage_db, transaction_signer, key_store)
+				.await
+				.unwrap();
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
@@ -85,7 +112,8 @@ async fn main() -> Result<(), ()> {
 			}
 		},
 		Commands::GenKey(args) => {
-			let _ = parentchain_listener::get_signer(&args.keystore_path);
+			let key_store = Arc::new(SubstrateKeyStore::new(args.keystore_path));
+			let _ = parentchain_signer::get_signer(key_store);
 		},
 	}
 
@@ -95,6 +123,8 @@ async fn main() -> Result<(), ()> {
 async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
+	parentchain_tx_signer: Arc<ParentchainTxSigner>,
+	key_store: Arc<SubstrateKeyStore>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
@@ -111,7 +141,8 @@ async fn listen_to_parentchain(
 			solana_intent_executor,
 			sub_stop_receiver,
 			storage_db,
-			&args.keystore_path,
+			parentchain_tx_signer,
+			key_store,
 			&args.log_path,
 		)
 		.await?;

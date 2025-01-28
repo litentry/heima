@@ -18,8 +18,10 @@ tokio = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-storage = { workspace = true }
+heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
 native-task-handler = { workspace = true }
+parentchain-rpc-client = { workspace = true }
 primitives = { workspace = true }
 
 [lints]

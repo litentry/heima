@@ -1,10 +1,13 @@
-use crate::{server::RpcContext, utils::hex::hex_encode};
+use crate::server::RpcContext;
 use executor_core::native_call::NativeCall;
 use executor_crypto::hashing::blake2_256;
-use executor_storage::{Storage, VerificationCodeStorage};
+use executor_storage::{MemberOmniAccountStorage, Storage, VerificationCodeStorage};
+use heima_authentication::auth_token::{AuthTokenValidator, Validation};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	signature::HeimaMultiSignature,
+	utils::hex::{hex_encode, ToHexPrefixed},
 	// AccountId,
 	Hash,
 	Identity,
@@ -12,6 +15,7 @@ use primitives::{
 	ShardIdentifier,
 };
 use std::sync::Arc;
+use tokio::runtime::Handle;
 
 pub type VerificationCode = String;
 
@@ -40,7 +44,15 @@ pub enum AuthenticationError {
 	EmailVerificationCodeNotFound,
 	EmailInvalidVerificationCode,
 	// OAuth2Error(String),
-	// AuthTokenError(String),
+	#[allow(dead_code)]
+	AuthTokenError(AuthTokenError),
+}
+
+#[derive(Debug)]
+pub enum AuthTokenError {
+	InvalidToken,
+	OmniAccountNotFound,
+	BlockNumberError,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -86,8 +98,13 @@ pub fn verify_web3_authentication(
 	}
 }
 
-pub fn verify_email_authentication(
-	ctx: Arc<RpcContext>,
+pub fn verify_email_authentication<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	sender_identity: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
@@ -103,16 +120,47 @@ pub fn verify_email_authentication(
 	Ok(())
 }
 
-pub fn verify_auth_token_authentication(
-	_ctx: Arc<RpcContext>,
-	_sender_identity: &Identity,
-	_auth_token: &str,
+pub fn verify_auth_token_authentication<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	handle: Handle,
+	sender_identity: &Identity,
+	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
-	todo!()
+	let current_block = handle
+		.block_on(async {
+			let client = ctx.parentchain_rpc_client_factory.new_client().await.map_err(|e| {
+				log::error!("Could not create client: {:?}", e);
+			})?;
+			client.get_last_finalized_block_num().await.map_err(|e| {
+				log::error!("Could not get last finalized block number: {:?}", e);
+			})
+		})
+		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
+	let member_omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+	let Some(omni_account) = member_omni_account_storage.get(&sender_identity.hash()) else {
+		return Err(AuthenticationError::AuthTokenError(AuthTokenError::OmniAccountNotFound));
+	};
+	let validation = Validation::new(omni_account.to_hex(), current_block);
+
+	if auth_token.validate(ctx.jwt_secret.as_bytes(), validation).is_err() {
+		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));
+	}
+
+	Ok(())
 }
 
-pub fn verify_oauth2_authentication(
-	_ctx: Arc<RpcContext>,
+pub fn verify_oauth2_authentication<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	_ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	_sender_identity_hash: Hash,
 	_payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {

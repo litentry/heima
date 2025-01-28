@@ -12,6 +12,7 @@ regex = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
+heima-authentication = { workspace = true }
 primitives = { workspace = true }
 
 [lints]

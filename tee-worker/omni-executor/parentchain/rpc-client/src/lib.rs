@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+pub mod metadata;
 
 use async_trait::async_trait;
 use log::{error, info};
@@ -21,8 +22,6 @@ use primitives::{BlockEvent, EventId};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::thread;
-use std::time::Duration;
 use std::vec::Vec;
 use subxt::backend::legacy::LegacyRpcMethods;
 use subxt::backend::BlockRef;
@@ -32,11 +31,12 @@ use subxt::events::EventsClient;
 use subxt::storage::StorageClient;
 use subxt::tx::TxClient;
 use subxt::{Config, OnlineClient};
-use subxt_core::utils::AccountId32;
+pub use subxt_core::utils::AccountId32;
+use tokio::time::{sleep, Duration};
 
 // We don't need to construct this at runtime,
 // so an empty enum is appropriate:
-#[derive(EncodeAsType)]
+#[derive(EncodeAsType, Clone)]
 pub enum CustomConfig {}
 
 //todo: adjust if needed
@@ -73,8 +73,8 @@ pub struct RuntimeVersion {
 /// For fetching data from Substrate RPC node
 #[async_trait]
 pub trait SubstrateRpcClient<AccountId, Header> {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<Header>, ()>;
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()>;
+	async fn get_last_finalized_header(&self) -> Result<Option<Header>, ()>;
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
 	async fn submit_tx(&mut self, raw_tx: &[u8]) -> Result<(), ()>;
@@ -107,13 +107,18 @@ impl<ChainConfig: Config> SubxtClient<ChainConfig> {
 impl<ChainConfig: Config<AccountId = AccountId32>>
 	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for SubxtClient<ChainConfig>
 {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
+	async fn get_last_finalized_header(&self) -> Result<Option<ChainConfig::Header>, ()> {
 		let finalized_header = self.legacy.chain_get_finalized_head().await.map_err(|_| ())?;
 		self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())
 	}
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()> {
 		match self.get_last_finalized_header().await {
-			Ok(Some(header)) => Ok(header.number().into()),
+			Ok(Some(header)) => {
+				let block_num = header.number().into();
+				// the parachain currently uses u32 for block numbers but subxt uses u64
+				let block_num: u32 = block_num.try_into().map_err(|_| ())?;
+				Ok(block_num)
+			},
 			_ => Err(()),
 		}
 	}
@@ -205,7 +210,7 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 }
 
 pub struct MockedRpcClient<ChainConfig: Config> {
-	block_num: u64,
+	block_num: u32,
 	_phantom: PhantomData<ChainConfig>,
 }
 
@@ -213,10 +218,10 @@ pub struct MockedRpcClient<ChainConfig: Config> {
 impl<ChainConfig: Config<AccountId = String>>
 	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for MockedRpcClient<ChainConfig>
 {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
+	async fn get_last_finalized_header(&self) -> Result<Option<ChainConfig::Header>, ()> {
 		Ok(None)
 	}
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()> {
 		Ok(self.block_num)
 	}
 
@@ -268,6 +273,7 @@ pub trait SubstrateRpcClientFactory<
 	async fn new_client(&self) -> Result<RpcClient, ()>;
 }
 
+#[derive(Clone)]
 pub struct SubxtClientFactory<ChainConfig: Config> {
 	url: String,
 	_phantom: PhantomData<ChainConfig>,
@@ -291,7 +297,7 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubxtClientFactory<ChainConfi
 					error!("Error creating client: {:?}", e);
 				},
 			};
-			thread::sleep(Duration::from_secs(1))
+			sleep(Duration::from_secs(1)).await;
 		}
 		client.unwrap()
 	}

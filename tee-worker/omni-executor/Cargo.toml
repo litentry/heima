@@ -5,11 +5,13 @@ members = [
     "executor-worker",
     "ethereum/intent-executor",
     "ethereum/intent-executor",
+    "heima/authentication",
     "heima/identity-verification",
     "native-task-handler",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
+    "parentchain/signer",
     "primitives",
     "rpc-server",
     "executor-storage",
@@ -31,6 +33,7 @@ env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
 hex = "0.4"
 jsonrpsee = { version = "0.24", features = ["server"] }
+jsonwebtoken = "9.3.0"
 log = "0.4.22"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
@@ -56,13 +59,14 @@ ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
 executor-storage = { path = "executor-storage" }
+heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
-parentchain-storage = { path = "parentchain/storage" }
+parentchain-signer = { path = "parentchain/signer" }
 primitives = { path = "primitives" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }
