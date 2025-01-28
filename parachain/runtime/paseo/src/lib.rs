@@ -2337,7 +2337,7 @@ cumulus_pallet_parachain_system::register_validate_block! {
 }
 
 parameter_types! {
-	// The deposit configuration for the singed migration. Specially if you want to allow any signed account to do the migration (see `SignedFilter`, these deposits should be high)
+	// The deposit configuration for the signed migration. Specially if you want to allow any signed account to do the migration (see `SignedFilter`, these deposits should be high)
 	pub MigrationSignedDepositPerItem: Balance = 1 * CENTS;
 	pub MigrationSignedDepositBase: Balance = 20 * DOLLARS;
 	pub const MigrationMaxKeyLen: u32 = 512;
