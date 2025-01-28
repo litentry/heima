@@ -9,8 +9,15 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true }
 tokio = { workspace = true }
 
+# Local dependencies
 executor-core = { workspace = true }
-parentchain-primitives = { workspace = true }
+executor-crypto = { workspace = true }
+executor-storage = { workspace = true }
+heima-authentication = { workspace = true }
+parentchain-api-interface = { workspace = true }
+parentchain-rpc-client = { workspace = true }
+parentchain-signer = { workspace = true }
+primitives = { workspace = true }
 
 [lints]
 workspace = true

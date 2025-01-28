@@ -18,8 +18,8 @@ use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key as RequestAesKey, AesOutput},
 	traits::Decrypt,
 };
-use parentchain_primitives::ShardIdentifier;
 use parity_scale_codec::{Decode, Encode};
+use primitives::ShardIdentifier;
 use std::fmt::Debug;
 
 // Represent a request that can be decrypted by the enclave

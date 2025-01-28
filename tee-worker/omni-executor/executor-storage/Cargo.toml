@@ -5,16 +5,17 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+frame-support = { workspace = true, features = ["std"] }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 rocksdb = "0.23.0"
+sp-state-machine = { workspace = true, features = ["std"] }
 subxt-core = { workspace = true }
 
-executor-core = { workspace = true }
-frame-support = { workspace = true, features = ["std"] }
+# Local dependencies
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-sp-state-machine = { workspace = true, features = ["std"] }
+primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

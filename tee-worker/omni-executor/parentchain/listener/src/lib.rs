@@ -16,36 +16,40 @@
 
 mod event_handler;
 mod fetcher;
-mod key_store;
 mod listener;
-mod metadata;
 mod sync_checkpoint;
-mod transaction_signer;
 
 use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
-use crate::key_store::SubstrateKeyStore;
 use crate::listener::ParentchainListener;
-use crate::metadata::SubxtMetadataProvider;
-use crate::transaction_signer::TransactionSigner;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::key_store::KeyStore;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
-use executor_storage::AccountStoreStorage;
-use log::{error, info};
+use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
+use log::error;
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
-use parentchain_rpc_client::SubstrateRpcClient;
-use parentchain_rpc_client::{CustomConfig, SubxtClient, SubxtClientFactory};
+use parentchain_rpc_client::{
+	metadata::SubxtMetadataProvider, CustomConfig, SubstrateRpcClient, SubxtClient,
+	SubxtClientFactory,
+};
+use parentchain_signer::{get_signer, key_store::SubstrateKeyStore, TransactionSigner};
 use std::sync::Arc;
-use subxt_core::utils::AccountId32;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
+
+type ParentchainTxSigner = TransactionSigner<
+	SubstrateKeyStore,
+	SubxtClient<CustomConfig>,
+	SubxtClientFactory<CustomConfig>,
+	CustomConfig,
+	Metadata,
+	SubxtMetadataProvider<CustomConfig>,
+>;
 
 /// Creates parentchain listener
 #[allow(clippy::too_many_arguments)]
@@ -56,7 +60,9 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	ethereum_intent_executor: EthereumIntentExecutor,
 	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
-	keystore_path: &str,
+	storage_db: Arc<StorageDB>,
+	transaction_signer: Arc<ParentchainTxSigner>,
+	key_store: Arc<SubstrateKeyStore>,
 	log_path: &str,
 ) -> Result<
 	ParentchainListener<
@@ -67,6 +73,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
 		AccountStoreStorage,
+		MemberOmniAccountStorage,
 	>,
 	(),
 >
@@ -83,17 +90,12 @@ where
 	let metadata_provider =
 		Arc::new(SubxtMetadataProvider::new(SubxtClientFactory::new(ws_rpc_endpoint)));
 
-	let (key_store, signer) = get_signer(keystore_path);
-
-	let transaction_signer = Arc::new(TransactionSigner::new(
-		metadata_provider.clone(),
-		client_factory.clone(),
-		key_store.clone(),
-	));
+	let signer = get_signer(key_store);
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 
-	let account_store_storage = Arc::new(AccountStoreStorage::new());
+	let account_store_storage = Arc::new(AccountStoreStorage::new(storage_db.clone()));
+	let member_account_storage = Arc::new(MemberOmniAccountStorage::new(storage_db.clone()));
 
 	let event_handler = EventHandler::new(
 		metadata_provider,
@@ -102,27 +104,10 @@ where
 		SubxtClientFactory::new(ws_rpc_endpoint),
 		transaction_signer,
 		account_store_storage,
+		member_account_storage,
 	);
 
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
-}
-
-pub fn get_signer(path: &str) -> (Arc<SubstrateKeyStore>, Keypair) {
-	let key_store = Arc::new(SubstrateKeyStore::new(path.to_string()));
-	let secret_key_bytes = key_store
-		.read()
-		.map_err(|e| {
-			error!("Could not unseal key: {:?}", e);
-		})
-		.unwrap();
-	let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
-		.map_err(|e| {
-			error!("Could not create secret key: {:?}", e);
-		})
-		.unwrap();
-
-	info!("Substrate signer address: {}", AccountId32::from(signer.public_key()));
-	(key_store, signer)
 }
 
 #[allow(unused_assignments, unused_mut, unused_variables, clippy::type_complexity)]
@@ -145,6 +130,7 @@ async fn perform_attestation(
 
 	#[cfg(feature = "gramine-quote")]
 	{
+		use log::info;
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;

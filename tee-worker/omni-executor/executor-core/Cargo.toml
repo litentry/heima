@@ -11,7 +11,9 @@ parity-scale-codec = { workspace = true, features = ["derive"] }
 regex = { workspace = true }
 tokio = { workspace = true }
 
-parentchain-primitives = { workspace = true }
+# Local dependencies
+heima-authentication = { workspace = true }
+primitives = { workspace = true }
 
 [lints]
 workspace = true

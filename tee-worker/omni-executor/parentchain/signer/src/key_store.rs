@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use executor_core::key_store::KeyStore;
-use sp_core::{sr25519, Pair};
+use executor_crypto::{sr25519, PairTrait};
 use subxt_signer::sr25519::SecretKeyBytes;
 
 /// Generates and stores keys used by for communication with parentchain`

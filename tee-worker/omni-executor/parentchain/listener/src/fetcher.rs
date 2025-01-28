@@ -17,9 +17,9 @@
 use async_trait::async_trait;
 use executor_core::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
 use log::error;
-use parentchain_primitives::{BlockEvent, EventId};
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::SubstrateRpcClientFactory;
+use primitives::{BlockEvent, EventId};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -75,7 +75,7 @@ impl<
 
 		if let Some(ref mut client) = self.client {
 			let block_num = client.get_last_finalized_block_num().await?;
-			Ok(Some(block_num))
+			Ok(Some(block_num.into()))
 		} else {
 			Err(())
 		}
