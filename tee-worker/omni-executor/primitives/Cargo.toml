@@ -1,0 +1,21 @@
+[package]
+name = "primitives"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+base64 = { workspace = true }
+bitcoin = { workspace = true, features = ["secp-recovery"] }
+hex = { workspace = true }
+log = { workspace = true }
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true }
+
+executor-crypto = { workspace = true }
+heima-primitives = { package = "core-primitives", path = "../../../common/primitives/core", default-features = false, features = ["std"] }
+sp-core = { workspace = true }
+
+[lints]
+workspace = true

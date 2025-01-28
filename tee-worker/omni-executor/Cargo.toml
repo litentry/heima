@@ -1,13 +1,20 @@
 [workspace]
 members = [
+    "executor-crypto",
     "executor-core",
     "executor-worker",
+    "ethereum/intent-executor",
+    "ethereum/intent-executor",
+    "heima/authentication",
+    "heima/identity-verification",
+    "native-task-handler",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
-    "parentchain/storage",
-    "parentchain/primitives",
-    "ethereum/intent-executor",
+    "parentchain/signer",
+    "primitives",
+    "rpc-server",
+    "executor-storage",
     "solana/intent-executor",
 ]
 
@@ -19,14 +26,25 @@ edition = "2021"
 [workspace.dependencies]
 alloy = "0.3.6"
 async-trait = "0.1.82"
+base64 = "0.22.1"
+bitcoin = "0.32.5"
 clap = "4.5.17"
 env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
-hex = "0.4.3"
+hex = "0.4"
+jsonrpsee = { version = "0.24", features = ["server"] }
+jsonwebtoken = "9.3.0"
 log = "0.4.22"
 parity-scale-codec = "3.6.12"
+rand = "0.8.5"
 regex = "1.7"
+ring = "0.16.20"
+rsa = "0.9.7"
 scale-encode = "0.10.0"
+scale-info = "2.11.6"
+secp256k1 = "=0.29.1"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0"
 solana-client = "2.1.5"
 solana-sdk = "2.1.5"
 sp-core = "35.0.0"
@@ -34,15 +52,23 @@ sp-state-machine = { version = "0.44.0", features = ["std"] }
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
-tokio = "1.40.0"
+tokio = "1.43.0"
 
+# Local dependencies
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
+executor-crypto = { path = "executor-crypto" }
+executor-storage = { path = "executor-storage" }
+heima-authentication = { path = "heima/authentication" }
+heima-identity-verification = { path = "heima/identity-verification" }
+heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
+native-task-handler = { path = "native-task-handler" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
-parentchain-primitives = { path = "parentchain/primitives" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
-parentchain-storage = { path = "parentchain/storage" }
+parentchain-signer = { path = "parentchain/signer" }
+primitives = { path = "primitives" }
+rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }
 
 [workspace.lints.clippy]

@@ -68,7 +68,7 @@ distclean: clean
 
 .PHONY: build-docker
 build-docker:
-	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(OMNI_DIR)
+	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
