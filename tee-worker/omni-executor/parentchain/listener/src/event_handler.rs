@@ -14,15 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::metadata::{MetadataProvider, SubxtMetadataProvider};
-use crate::transaction_signer::TransactionSigner;
 use async_trait::async_trait;
 use executor_core::event_handler::Error::RecoverableError;
 use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
-use executor_core::storage::Storage;
+use executor_storage::Storage;
 use log::error;
 use parentchain_api_interface::{
 	omni_account::{
@@ -33,8 +31,12 @@ use parentchain_api_interface::{
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
 };
-use parentchain_primitives::BlockEvent;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use parentchain_rpc_client::{
+	metadata::{MetadataProvider, SubxtMetadataProvider},
+	SubstrateRpcClient, SubstrateRpcClientFactory,
+};
+use parentchain_signer::TransactionSigner;
+use primitives::{AccountId, BlockEvent, Hash, MemberAccount, TryFromSubxtType};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;
@@ -53,7 +55,8 @@ pub struct EventHandler<
 	KeyStoreT: KeyStore<SecretKeyBytes>,
 	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
-	AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore>,
+	AccountStoreStorage: Storage<AccountId, AccountStore>,
+	MemberOmniAccountStorage: Storage<Hash, AccountId>,
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	ethereum_intent_executor: EthereumIntentExecutorT,
@@ -70,6 +73,7 @@ pub struct EventHandler<
 		>,
 	>,
 	account_store_storage: Arc<AccountStoreStorage>,
+	member_account_storage: Arc<MemberOmniAccountStorage>,
 	phantom_data: PhantomData<(MetadataT, RpcClient)>,
 }
 
@@ -82,7 +86,8 @@ impl<
 		KeyStoreT: KeyStore<SecretKeyBytes>,
 		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
-		AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore>,
+		AccountStoreStorage: Storage<AccountId, AccountStore>,
+		MemberOmniAccountStorage: Storage<Hash, AccountId>,
 	>
 	EventHandler<
 		ChainConfig,
@@ -94,6 +99,7 @@ impl<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
+		MemberOmniAccountStorage,
 	>
 {
 	pub fn new(
@@ -112,6 +118,7 @@ impl<
 			>,
 		>,
 		account_store_storage: Arc<AccountStoreStorage>,
+		member_account_storage: Arc<MemberOmniAccountStorage>,
 	) -> Self {
 		Self {
 			metadata_provider,
@@ -120,6 +127,7 @@ impl<
 			rpc_client_factory,
 			transaction_signer,
 			account_store_storage,
+			member_account_storage,
 			phantom_data: Default::default(),
 		}
 	}
@@ -140,7 +148,8 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>
 			+ Send
 			+ Sync,
-		AccountStoreStorage: Storage<ChainConfig::AccountId, AccountStore> + Send + Sync,
+		AccountStoreStorage: Storage<AccountId, AccountStore> + Send + Sync,
+		MemberOmniAccountStorage: Storage<Hash, AccountId> + Send + Sync,
 	> EventHandlerTrait<BlockEvent>
 	for EventHandler<
 		ChainConfig,
@@ -152,6 +161,7 @@ impl<
 		RpcClient,
 		RpcClientFactory,
 		AccountStoreStorage,
+		MemberOmniAccountStorage,
 	>
 {
 	async fn handle(&self, event: BlockEvent) -> Result<(), Error> {
@@ -222,8 +232,24 @@ impl<
 						Error::NonRecoverableError
 					})?;
 
+				let omni_account = AccountId::new(account_store_updated.who.0);
+
+				for member in account_store_updated.account_store.0.iter() {
+					let member_account =
+						MemberAccount::try_from_subxt_type(member).map_err(|e| {
+							log::error!("Error decoding member account: {:?}", e);
+							Error::NonRecoverableError
+						})?;
+					self.member_account_storage
+						.insert(member_account.hash(), omni_account.clone())
+						.map_err(|e| {
+							log::error!("Error inserting member account hash: {:?}", e);
+							Error::NonRecoverableError
+						})?;
+				}
+
 				self.account_store_storage
-					.insert(account_store_updated.who, account_store_updated.account_store)
+					.insert(omni_account, account_store_updated.account_store)
 					.map_err(|_| {
 						log::error!("Could not insert account store into storage");
 						Error::NonRecoverableError

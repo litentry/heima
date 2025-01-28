@@ -19,6 +19,7 @@ pub struct RunArgs {
 	pub parentchain_url: String,
 	pub ethereum_url: String,
 	pub solana_url: String,
+	pub worker_rpc_port: String,
 	#[arg(short, long, default_value = "0", value_name = "start block to sync from parentchain")]
 	pub start_block: u64,
 	#[arg(

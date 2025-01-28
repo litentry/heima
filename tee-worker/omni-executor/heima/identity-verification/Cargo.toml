@@ -1,11 +1,15 @@
 [package]
-name = "parentchain-primitives"
+name = "heima-identity-verification"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-executor-core = { workspace = true }
+async-trait = { workspace = true }
+log = { workspace = true }
+rand = { workspace = true }
+sendgrid = "0.23.0"
+
 
 [lints]
 workspace = true
