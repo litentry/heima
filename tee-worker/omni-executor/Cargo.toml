@@ -38,6 +38,7 @@ log = "0.4.22"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
 regex = "1.7"
+reqwest = { version = "0.12", features = ["json"] }
 ring = "0.16.20"
 rsa = "0.9.7"
 scale-encode = "0.10.0"
@@ -53,6 +54,7 @@ subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
+url = "2.5.4"
 
 # Local dependencies
 ethereum-intent-executor = { path = "ethereum/intent-executor" }

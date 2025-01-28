@@ -8,8 +8,13 @@ edition.workspace = true
 async-trait = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }
+reqwest = { workspace = true }
 sendgrid = "0.23.0"
+serde = { workspace = true }
+url = { workspace = true }
 
+# Local dependencies
+executor-crypto = { workspace = true }
 
 [lints]
 workspace = true
