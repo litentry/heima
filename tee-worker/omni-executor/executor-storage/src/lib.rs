@@ -4,6 +4,8 @@ mod verification_code;
 pub use verification_code::VerificationCodeStorage;
 mod account_store;
 pub use account_store::AccountStoreStorage;
+mod oauth2_state_verifier;
+pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
