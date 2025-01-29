@@ -3723,8 +3723,8 @@ dependencies = [
  "async-trait",
  "base64 0.22.1",
  "log",
+ "oauth-providers",
  "rand 0.8.5",
- "reqwest 0.12.8",
  "sendgrid",
  "serde",
  "serde_json",
@@ -5273,6 +5273,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
+name = "oauth-providers"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.8",
+ "serde",
+]
+
+[[package]]
 name = "object"
 version = "0.36.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6411,6 +6419,7 @@ dependencies = [
  "jsonrpsee",
  "log",
  "native-task-handler",
+ "oauth-providers",
  "parentchain-rpc-client",
  "parity-scale-codec",
  "rand 0.8.5",

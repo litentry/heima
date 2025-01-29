@@ -10,6 +10,7 @@ members = [
     "heima/authentication",
     "heima/identity-verification",
     "native-task-handler",
+    "oauth-providers",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
@@ -66,6 +67,7 @@ heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 native-task-handler = { path = "native-task-handler" }
+oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
