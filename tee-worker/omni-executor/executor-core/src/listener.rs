@@ -22,7 +22,7 @@ use tokio::{runtime::Handle, sync::oneshot::Receiver};
 use crate::event_handler::{Error, EventHandler};
 use crate::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
 use crate::sync_checkpoint_repository::{Checkpoint, CheckpointRepository};
-use primitives::GetEventId;
+use executor_primitives::GetEventId;
 
 /// Component, used to listen to chain and execute requested intents
 /// Requires specific implementations of:

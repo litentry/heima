@@ -3,18 +3,19 @@ members = [
     "executor-crypto",
     "executor-core",
     "executor-worker",
+    "executor-storage",
+    "executor-primitives",
     "ethereum/intent-executor",
     "ethereum/intent-executor",
     "heima/authentication",
     "heima/identity-verification",
     "native-task-handler",
+    "oauth-providers",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/rpc-client",
     "parentchain/signer",
-    "primitives",
     "rpc-server",
-    "executor-storage",
     "solana/intent-executor",
 ]
 
@@ -38,6 +39,7 @@ log = "0.4.22"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
 regex = "1.7"
+reqwest = { version = "0.12", features = ["json"] }
 ring = "0.16.20"
 rsa = "0.9.7"
 scale-encode = "0.10.0"
@@ -53,21 +55,23 @@ subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
+url = "2.5.4"
 
 # Local dependencies
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
+executor-primitives = { path = "executor-primitives" }
 executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 native-task-handler = { path = "native-task-handler" }
+oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
-primitives = { path = "primitives" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }
 

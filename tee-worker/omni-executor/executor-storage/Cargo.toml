@@ -13,9 +13,9 @@ sp-state-machine = { workspace = true, features = ["std"] }
 subxt-core = { workspace = true }
 
 # Local dependencies
+executor-primitives = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

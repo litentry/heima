@@ -1,5 +1,5 @@
 [package]
-name = "primitives"
+name = "executor-primitives"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true

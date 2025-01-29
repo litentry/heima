@@ -8,6 +8,10 @@ use crate::{
 	server::RpcContext,
 };
 use executor_core::native_call::NativeCall;
+use executor_primitives::{
+	utils::hex::{FromHexPrefixed, ToHexPrefixed},
+	Nonce, OmniAccountAuthType,
+};
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
@@ -15,10 +19,6 @@ use jsonrpsee::{
 use native_task_handler::NativeTask;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
-use primitives::{
-	utils::hex::{FromHexPrefixed, ToHexPrefixed},
-	Nonce, OmniAccountAuthType,
-};
 use std::{fmt::Debug, sync::Arc};
 use tokio::{runtime::Handle, sync::oneshot, task};
 
@@ -112,7 +112,8 @@ fn handle_aes_request<
 		),
 		Authentication::OAuth2(ref oauth2_data) => verify_oauth2_authentication(
 			ctx,
-			authenticated_call.call.sender_identity().hash(),
+			handle,
+			authenticated_call.call.sender_identity(),
 			oauth2_data,
 		),
 		Authentication::AuthToken(ref auth_token) => verify_auth_token_authentication(

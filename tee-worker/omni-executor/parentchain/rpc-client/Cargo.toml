@@ -14,7 +14,7 @@ subxt-core = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
-primitives = { workspace = true }
+executor-primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

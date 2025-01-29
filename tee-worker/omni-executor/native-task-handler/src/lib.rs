@@ -2,6 +2,7 @@ mod types;
 
 use executor_core::native_call::NativeCall;
 use executor_crypto::jwt;
+use executor_primitives::OmniAccountAuthType;
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
 use parentchain_rpc_client::{
@@ -11,7 +12,6 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::Encode;
-use primitives::{utils::hex::ToHexPrefixed, OmniAccountAuthType};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use types::{NativeCallError, NativeCallOk};
@@ -109,16 +109,15 @@ async fn handle_native_call<
 ) {
 	match call {
 		NativeCall::request_auth_token(sender_identity, auth_options) => {
-			let member_omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = member_omni_account_storage.get(&sender_identity.hash())
-			else {
+			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
 				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
-			let claims = AuthTokenClaims::new(omni_account.to_hex(), auth_options);
+			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
 			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
 				let response = NativeCallResponse::Err(NativeCallError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {

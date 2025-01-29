@@ -1,6 +1,6 @@
+use executor_primitives::Identity;
 use heima_authentication::auth_token::AuthOptions;
 use parity_scale_codec::{Decode, Encode};
-use primitives::Identity;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

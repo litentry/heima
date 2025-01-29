@@ -12,12 +12,12 @@ tokio = { workspace = true }
 # Local dependencies
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
-primitives = { workspace = true }
 
 [lints]
 workspace = true

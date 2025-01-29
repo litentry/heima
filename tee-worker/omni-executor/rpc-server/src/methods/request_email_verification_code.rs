@@ -1,4 +1,5 @@
 use crate::server::RpcContext;
+use executor_primitives::{Identity, Web2IdentityType};
 use executor_storage::{Storage, VerificationCodeStorage};
 use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email,
@@ -8,7 +9,6 @@ use jsonrpsee::{
 	RpcModule,
 };
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use primitives::{Identity, Web2IdentityType};
 
 pub fn register_request_email_verification_code<
 	AccountId: Send + Sync + 'static,

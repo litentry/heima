@@ -18,9 +18,8 @@ pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
 	omni_account::{MemberAccount, OmniAccountAuthType},
-	BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
+	AccountId, BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
 };
-pub use sp_core::crypto::AccountId32 as AccountId;
 
 use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
