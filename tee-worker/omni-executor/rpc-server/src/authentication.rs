@@ -1,18 +1,17 @@
 use crate::server::RpcContext;
 use executor_core::native_call::NativeCall;
 use executor_crypto::hashing::blake2_256;
-use executor_storage::{MemberOmniAccountStorage, Storage, VerificationCodeStorage};
+use executor_storage::{
+	MemberOmniAccountStorage, OAuth2StateVerifierStorage, Storage, VerificationCodeStorage,
+};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
+use heima_identity_verification::web2::google;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	signature::HeimaMultiSignature,
 	utils::hex::{hex_encode, ToHexPrefixed},
-	// AccountId,
-	Hash,
-	Identity,
-	OmniAccountAuthType,
-	ShardIdentifier,
+	Identity, OmniAccountAuthType, ShardIdentifier, Web2IdentityType,
 };
 use std::{fmt::Display, sync::Arc};
 use tokio::runtime::Handle;
@@ -181,24 +180,51 @@ pub fn verify_oauth2_authentication<
 	RpcClient: SubstrateRpcClient<AccountId, Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
 >(
-	_ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
-	_sender_identity_hash: Hash,
-	_payload: &OAuth2Data,
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	handle: Handle,
+	sender_identity: &Identity,
+	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
-	// TODO: get OmniAccount from storage
-	todo!()
-	// match payload.provider {
-	// 	OAuth2Provider::Google => {
-	// 		verify_google_oauth2(ctx, sender_identity_hash, omni_account, payload).await
-	// 	},
-	// }
+	match payload.provider {
+		OAuth2Provider::Google => verify_google_oauth2(ctx, handle, sender_identity, payload),
+	}
 }
 
-// async fn verify_google_oauth2(
-// 	_ctx: Arc<RpcContext>,
-// 	_sender_identity_hash: Hash,
-// 	_omni_account: AccountId,
-// 	_payload: &OAuth2Data,
-// ) -> Result<(), AuthenticationError> {
-// 	todo!()
-// }
+fn verify_google_oauth2<
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	handle: Handle,
+	sender_identity: &Identity,
+	payload: &OAuth2Data,
+) -> Result<(), AuthenticationError> {
+	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
+	let Some(state_verifier) = state_verifier_storage.get(&sender_identity.hash()) else {
+		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
+	};
+	if state_verifier != payload.state {
+		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
+	}
+	let google_client = google::GoogleOAuth2Client::new(
+		ctx.google_client_id.clone(),
+		ctx.google_client_secret.clone(),
+	);
+	let code = payload.code.clone();
+	let redirect_uri = payload.redirect_uri.clone();
+	let token = handle
+		.block_on(async { google_client.exchange_code_for_token(code, redirect_uri).await })
+		.map_err(|_| {
+			AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
+		})?;
+	let id_token = google::decode_id_token(&token)
+		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
+	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
+
+	match sender_identity.hash() == google_identity.hash() {
+		true => Ok(()),
+		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
+	}
+}

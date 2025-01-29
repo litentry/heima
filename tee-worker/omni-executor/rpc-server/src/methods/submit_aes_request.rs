@@ -112,7 +112,8 @@ fn handle_aes_request<
 		),
 		Authentication::OAuth2(ref oauth2_data) => verify_oauth2_authentication(
 			ctx,
-			authenticated_call.call.sender_identity().hash(),
+			handle,
+			authenticated_call.call.sender_identity(),
 			oauth2_data,
 		),
 		Authentication::AuthToken(ref auth_token) => verify_auth_token_authentication(
