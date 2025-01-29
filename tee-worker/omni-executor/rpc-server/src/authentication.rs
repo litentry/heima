@@ -141,8 +141,8 @@ pub fn verify_auth_token_authentication<
 			})
 		})
 		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
-	let member_omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-	let Some(omni_account) = member_omni_account_storage.get(&sender_identity.hash()) else {
+	let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+	let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
 		return Err(AuthenticationError::AuthTokenError(AuthTokenError::OmniAccountNotFound));
 	};
 	let validation = Validation::new(omni_account.to_hex(), current_block);

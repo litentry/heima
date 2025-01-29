@@ -109,9 +109,8 @@ async fn handle_native_call<
 ) {
 	match call {
 		NativeCall::request_auth_token(sender_identity, auth_options) => {
-			let member_omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = member_omni_account_storage.get(&sender_identity.hash())
-			else {
+			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
 				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
