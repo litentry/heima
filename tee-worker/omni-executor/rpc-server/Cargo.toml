@@ -22,6 +22,7 @@ executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
 native-task-handler = { workspace = true }
+oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 
 [lints]

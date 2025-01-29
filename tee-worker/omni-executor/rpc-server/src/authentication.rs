@@ -7,7 +7,8 @@ use executor_primitives::{
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
-use heima_identity_verification::web2::google;
+use heima_identity_verification::web2::google::decode_id_token;
+use oauth_providers::google::GoogleOAuth2Client;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::{fmt::Display, sync::Arc};
@@ -201,10 +202,8 @@ fn verify_google_oauth2<
 	if state_verifier != payload.state {
 		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
 	}
-	let google_client = google::GoogleOAuth2Client::new(
-		ctx.google_client_id.clone(),
-		ctx.google_client_secret.clone(),
-	);
+	let google_client =
+		GoogleOAuth2Client::new(ctx.google_client_id.clone(), ctx.google_client_secret.clone());
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
 	let token = handle
@@ -212,7 +211,7 @@ fn verify_google_oauth2<
 		.map_err(|_| {
 			AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
 		})?;
-	let id_token = google::decode_id_token(&token)
+	let id_token = decode_id_token(&token)
 		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
 	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
 

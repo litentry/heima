@@ -1,6 +1,3 @@
-mod oauth2_client;
-pub use oauth2_client::GoogleOAuth2Client;
-
 use crate::helpers;
 use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
 use serde::Deserialize;
