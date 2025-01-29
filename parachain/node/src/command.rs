@@ -35,33 +35,16 @@ use std::net::SocketAddr;
 const UNSUPPORTED_CHAIN_MESSAGE: &str = "Unsupported chain spec, please use litentry*";
 
 trait IdentifyChain {
-	fn is_litentry(&self) -> bool;
-	fn is_paseo(&self) -> bool;
 	fn is_standalone(&self) -> bool;
 }
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
-	fn is_litentry(&self) -> bool {
-		// we need the combined condition as the id in our paseo spec starts with `litentry-paseo`
-		// simply renaming `litentry-paseo` to `paseo` everywhere would have an impact on the
-		// existing litentry-paseo chain
-		self.id().starts_with("litentry") && !self.id().starts_with("litentry-paseo")
-	}
-	fn is_paseo(&self) -> bool {
-		self.id().starts_with("litentry-paseo")
-	}
 	fn is_standalone(&self) -> bool {
 		self.id().eq("standalone") || self.id().eq("dev")
 	}
 }
 
 impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
-	fn is_litentry(&self) -> bool {
-		<dyn sc_service::ChainSpec>::is_litentry(self)
-	}
-	fn is_paseo(&self) -> bool {
-		<dyn sc_service::ChainSpec>::is_paseo(self)
-	}
 	fn is_standalone(&self) -> bool {
 		<dyn sc_service::ChainSpec>::is_standalone(self)
 	}
@@ -89,12 +72,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		"generate-paseo" => Box::new(chain_specs::paseo::get_chain_spec_prod()),
 		path => {
 			let chain_spec = chain_specs::ChainSpec::from_json_file(path.into())?;
-			if chain_spec.is_paseo() {
-				Box::new(chain_specs::ChainSpec::from_json_file(path.into())?)
-			} else {
-				// Fallback: use Litentry chain spec
-				Box::new(chain_spec)
-			}
+			Box::new(chain_spec)
 		},
 	})
 }
@@ -170,14 +148,11 @@ impl SubstrateCli for RelayChainCli {
 /// Creates partial components for the runtimes that are supported by the benchmarks.
 macro_rules! construct_benchmark_partials {
 	($config:expr, |$partials:ident| $code:expr) => {
-		if $config.chain_spec.is_litentry() {
-			let $partials = new_partial::<_>(&$config, build_import_queue, false, true)?;
-			$code
-		} else if $config.chain_spec.is_paseo() {
-			let $partials = new_partial::<_>(&$config, build_import_queue, false, true)?;
-			$code
-		} else {
+		if $config.chain_spec.is_standalone() {
 			panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
+		} else {
+			let $partials = new_partial::<_>(&$config, build_import_queue, false, true)?;
+			$code
 		}
 	};
 }
@@ -186,35 +161,21 @@ macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 
-		if runner.config().chain_spec.is_litentry() {
-			runner.async_run(|$config| {
-				let $components = new_partial::<
-					_
-				>(
-					&$config,
-					build_import_queue,
-					false,
-					$cli.delayed_best_block,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			})
-		} else if runner.config().chain_spec.is_paseo() {
-			runner.async_run(|$config| {
-				let $components = new_partial::<
-					_
-				>(
-					&$config,
-					build_import_queue,
-					false,
-					$cli.delayed_best_block,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			})
-		}
-		else {
+		if runner.config().chain_spec.is_standalone() {
 			panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
+		} else {
+			runner.async_run(|$config| {
+				let $components = new_partial::<
+					_
+				>(
+					&$config,
+					build_import_queue,
+					false,
+					$cli.delayed_best_block,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
 		}
 	}}
 }
@@ -272,28 +233,18 @@ pub fn run() -> Result<()> {
 
 		Some(Subcommand::ExportGenesisHead(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			if runner.config().chain_spec.is_litentry() {
-				runner.sync_run(|config| {
-					let sc_service::PartialComponents { client, .. } = new_partial::<_>(
-						&config,
-						build_import_queue,
-						false,
-						cli.delayed_best_block,
-					)?;
-					cmd.run(client)
-				})
-			} else if runner.config().chain_spec.is_paseo() {
-				runner.sync_run(|config| {
-					let sc_service::PartialComponents { client, .. } = new_partial::<_>(
-						&config,
-						build_import_queue,
-						false,
-						cli.delayed_best_block,
-					)?;
-					cmd.run(client)
-				})
-			} else {
+			if runner.config().chain_spec.is_standalone() {
 				panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
+			} else {
+				runner.sync_run(|config| {
+					let sc_service::PartialComponents { client, .. } = new_partial::<_>(
+						&config,
+						build_import_queue,
+						false,
+						cli.delayed_best_block,
+					)?;
+					cmd.run(client)
+				})
 			}
 		},
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
@@ -411,34 +362,21 @@ pub fn run() -> Result<()> {
 				let additional_config =
 					AdditionalConfig { evm_tracing_config, enable_evm_rpc: cli.enable_evm_rpc };
 
-				if config.chain_spec.is_litentry() {
-					start_node(
-						config,
-						polkadot_config,
-						collator_options,
-						para_id,
-						hwbench,
-						additional_config,
-						cli.delayed_best_block,
-					)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into)
-				} else if config.chain_spec.is_paseo() {
-					start_node(
-						config,
-						polkadot_config,
-						collator_options,
-						para_id,
-						hwbench,
-						additional_config,
-						cli.delayed_best_block,
-					)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into)
-				} else {
+				if config.chain_spec.is_standalone() {
 					Err(UNSUPPORTED_CHAIN_MESSAGE.into())
+				} else {
+					start_node(
+						config,
+						polkadot_config,
+						collator_options,
+						para_id,
+						hwbench,
+						additional_config,
+						cli.delayed_best_block,
+					)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into)
 				}
 			})
 		},

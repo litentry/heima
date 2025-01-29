@@ -5842,7 +5842,7 @@ checksum = "4ee93343901ab17bd981295f2cf0026d4ad018c7c31ba84549a4ddbb47a45104"
 
 [[package]]
 name = "litentry-collator"
-version = "0.9.22"
+version = "0.9.23"
 dependencies = [
  "async-trait",
  "clap",
