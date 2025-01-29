@@ -2,7 +2,7 @@ mod types;
 
 use executor_core::native_call::NativeCall;
 use executor_crypto::jwt;
-use executor_primitives::{utils::hex::ToHexPrefixed, OmniAccountAuthType};
+use executor_primitives::OmniAccountAuthType;
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
 use parentchain_rpc_client::{
