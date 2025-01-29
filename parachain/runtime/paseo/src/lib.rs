@@ -1513,10 +1513,10 @@ construct_runtime! {
 		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 173,
 
 		// TMP
+		// State Trie Migration
+		StateTrieMigration: pallet_state_trie_migration = 251,
 		AccountFix: pallet_account_fix = 254,
 		Sudo: pallet_sudo = 255,
-		// State Trie Migration
-		StateTrieMigration: pallet_state_trie_migration = 256,
 	}
 }
 

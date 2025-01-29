@@ -1363,9 +1363,9 @@ construct_runtime! {
 		Ethereum: pallet_ethereum = 121,
 
 		// TMP
-		AccountFix: pallet_account_fix = 254,
 		// State Trie Migration
-		StateTrieMigration: pallet_state_trie_migration = 255,
+		StateTrieMigration: pallet_state_trie_migration = 251,
+		AccountFix: pallet_account_fix = 254,
 	}
 }
 
