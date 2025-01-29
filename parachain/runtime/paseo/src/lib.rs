@@ -1499,9 +1499,6 @@ construct_runtime! {
 		EVM: pallet_evm = 120,
 		Ethereum: pallet_ethereum = 121,
 
-		// State Trie Migration
-		StateTrieMigration: pallet_state_trie_migration = 130,
-
 		// CollabAI
 		Curator: pallet_curator = 150,
 		Guardian: pallet_guardian = 151,
@@ -1518,6 +1515,8 @@ construct_runtime! {
 		// TMP
 		AccountFix: pallet_account_fix = 254,
 		Sudo: pallet_sudo = 255,
+		// State Trie Migration
+		StateTrieMigration: pallet_state_trie_migration = 256,
 	}
 }
 

@@ -1362,11 +1362,10 @@ construct_runtime! {
 		EVM: pallet_evm = 120,
 		Ethereum: pallet_ethereum = 121,
 
-		// State Trie Migration
-		StateTrieMigration: pallet_state_trie_migration = 130,
-
 		// TMP
 		AccountFix: pallet_account_fix = 254,
+		// State Trie Migration
+		StateTrieMigration: pallet_state_trie_migration = 255,
 	}
 }
 
