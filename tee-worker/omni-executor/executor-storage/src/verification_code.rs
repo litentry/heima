@@ -1,6 +1,6 @@
 use crate::Storage;
+use executor_primitives::Hash;
 use parity_scale_codec::{Decode, Encode};
-use primitives::Hash;
 use rocksdb::DB;
 use std::sync::Arc;
 

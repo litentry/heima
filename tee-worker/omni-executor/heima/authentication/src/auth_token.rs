@@ -1,6 +1,6 @@
 use executor_crypto::jwt;
+use executor_primitives::BlockNumber;
 use parity_scale_codec::{Decode, Encode};
-use primitives::BlockNumber;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq)]

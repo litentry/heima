@@ -7,6 +7,7 @@ pub use account_store::AccountStoreStorage;
 mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
+use executor_primitives::{AccountId, MemberAccount, TryFromSubxtType};
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
@@ -14,7 +15,6 @@ use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parity_scale_codec::Decode;
-use primitives::{AccountId, MemberAccount, TryFromSubxtType};
 use rocksdb::DB;
 use sp_state_machine::{read_proof_check, StorageProof};
 use std::sync::Arc;

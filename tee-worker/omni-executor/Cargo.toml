@@ -3,6 +3,8 @@ members = [
     "executor-crypto",
     "executor-core",
     "executor-worker",
+    "executor-storage",
+    "executor-primitives",
     "ethereum/intent-executor",
     "ethereum/intent-executor",
     "heima/authentication",
@@ -12,9 +14,7 @@ members = [
     "parentchain/api-interface",
     "parentchain/rpc-client",
     "parentchain/signer",
-    "primitives",
     "rpc-server",
-    "executor-storage",
     "solana/intent-executor",
 ]
 
@@ -60,6 +60,7 @@ url = "2.5.4"
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
+executor-primitives = { path = "executor-primitives" }
 executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
@@ -69,7 +70,6 @@ parentchain-api-interface = { path = "parentchain/api-interface" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
-primitives = { path = "primitives" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "solana/intent-executor" }
 

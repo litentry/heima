@@ -2867,10 +2867,10 @@ name = "executor-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "executor-primitives",
  "heima-authentication",
  "log",
  "parity-scale-codec",
- "primitives",
  "regex",
  "tokio",
 ]
@@ -2891,16 +2891,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "executor-primitives"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bitcoin",
+ "core-primitives",
+ "executor-crypto",
+ "hex",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 35.0.0",
+]
+
+[[package]]
 name = "executor-storage"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "executor-primitives",
  "frame-support 39.0.0",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parity-scale-codec",
- "primitives",
  "rocksdb",
  "sp-state-machine 0.44.0",
  "subxt-core",
@@ -3694,9 +3710,9 @@ name = "heima-authentication"
 version = "0.1.0"
 dependencies = [
  "executor-crypto",
+ "executor-primitives",
  "log",
  "parity-scale-codec",
- "primitives",
  "serde",
 ]
 
@@ -4984,6 +5000,7 @@ version = "0.1.0"
 dependencies = [
  "executor-core",
  "executor-crypto",
+ "executor-primitives",
  "executor-storage",
  "heima-authentication",
  "log",
@@ -4991,7 +5008,6 @@ dependencies = [
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
- "primitives",
  "tokio",
 ]
 
@@ -5387,6 +5403,7 @@ dependencies = [
  "async-trait",
  "env_logger",
  "executor-core",
+ "executor-primitives",
  "executor-storage",
  "hex",
  "log",
@@ -5394,7 +5411,6 @@ dependencies = [
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
- "primitives",
  "scale-encode 0.10.0",
  "sp-core 35.0.0",
  "subxt",
@@ -5409,9 +5425,9 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "env_logger",
+ "executor-primitives",
  "log",
  "parity-scale-codec",
- "primitives",
  "scale-encode 0.10.0",
  "subxt",
  "subxt-core",
@@ -5809,22 +5825,6 @@ dependencies = [
  "impl-serde 0.5.0",
  "scale-info",
  "uint 0.10.0",
-]
-
-[[package]]
-name = "primitives"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "bitcoin",
- "core-primitives",
- "executor-crypto",
- "hex",
- "log",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core 35.0.0",
 ]
 
 [[package]]
@@ -6404,6 +6404,7 @@ version = "0.1.0"
 dependencies = [
  "executor-core",
  "executor-crypto",
+ "executor-primitives",
  "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
@@ -6413,7 +6414,6 @@ dependencies = [
  "native-task-handler",
  "parentchain-rpc-client",
  "parity-scale-codec",
- "primitives",
  "rand 0.8.5",
  "serde",
  "serde_json",
