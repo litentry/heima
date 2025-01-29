@@ -16,9 +16,9 @@
 pub mod metadata;
 
 use async_trait::async_trait;
+use executor_primitives::{BlockEvent, EventId};
 use log::{error, info};
 use parity_scale_codec::Encode;
-use primitives::{BlockEvent, EventId};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;

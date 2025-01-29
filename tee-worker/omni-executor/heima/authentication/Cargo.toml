@@ -10,7 +10,7 @@ parity-scale-codec = { workspace = true }
 serde = { workspace = true }
 
 executor-crypto = { workspace = true }
-primitives = { workspace = true }
+executor-primitives = { workspace = true }
 
 [lints]
 workspace = true

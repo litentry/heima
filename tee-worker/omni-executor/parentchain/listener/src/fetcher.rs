@@ -16,10 +16,10 @@
 
 use async_trait::async_trait;
 use executor_core::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
+use executor_primitives::{BlockEvent, EventId};
 use log::error;
 use parentchain_rpc_client::SubstrateRpcClient;
 use parentchain_rpc_client::SubstrateRpcClientFactory;
-use primitives::{BlockEvent, EventId};
 use std::marker::PhantomData;
 use std::sync::Arc;
 

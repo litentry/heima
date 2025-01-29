@@ -4,13 +4,13 @@ use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::sync::Arc;
 
-const STORAGE_NAME: &[u8; 25] = b"verification_code_storage";
+const STORAGE_NAME: &[u8; 20] = b"oauth2_state_storage";
 
-pub struct VerificationCodeStorage {
+pub struct OAuth2StateVerifierStorage {
 	db: Arc<DB>,
 }
 
-impl VerificationCodeStorage {
+impl OAuth2StateVerifierStorage {
 	pub fn new(db: Arc<DB>) -> Self {
 		Self { db }
 	}
@@ -20,26 +20,28 @@ impl VerificationCodeStorage {
 	}
 }
 
-impl Storage<Hash, String> for VerificationCodeStorage {
+impl Storage<Hash, String> for OAuth2StateVerifierStorage {
 	fn get(&self, identity_hash: &Hash) -> Option<String> {
 		match self.db.get(Self::storage_key(identity_hash)) {
 			Ok(Some(value)) => String::decode(&mut &value[..]).ok(),
 			_ => {
-				log::error!("Error getting verification_code from storage");
+				log::error!("Error getting oauth2_state from storage");
 				None
 			},
 		}
 	}
 
-	fn insert(&self, identity_hash: Hash, code: String) -> Result<(), ()> {
-		self.db.put(Self::storage_key(&identity_hash), code.encode()).map_err(|e| {
-			log::error!("Error inserting verification_code into storage: {:?}", e);
-		})
+	fn insert(&self, identity_hash: Hash, state_verifier: String) -> Result<(), ()> {
+		self.db
+			.put(Self::storage_key(&identity_hash), state_verifier.encode())
+			.map_err(|e| {
+				log::error!("Error inserting oauth2_state into storage: {:?}", e);
+			})
 	}
 
 	fn remove(&self, identity_hash: &Hash) -> Result<(), ()> {
 		self.db.delete(Self::storage_key(identity_hash)).map_err(|e| {
-			log::error!("Error removing verification_code from storage: {:?}", e);
+			log::error!("Error removing oauth2_state from storage: {:?}", e);
 		})
 	}
 

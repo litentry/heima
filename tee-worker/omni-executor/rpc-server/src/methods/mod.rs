@@ -1,8 +1,10 @@
+mod get_oauth2_google_authorization_url;
 mod get_shielding_key;
 mod request_email_verification_code;
 mod submit_aes_request;
 
 use crate::server::RpcContext;
+use get_oauth2_google_authorization_url::register_get_oauth2_google_authorization_url;
 use get_shielding_key::register_get_shielding_key;
 use jsonrpsee::RpcModule;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
@@ -20,4 +22,5 @@ pub fn register_methods<
 	register_get_shielding_key(module);
 	register_submit_aes_request(module);
 	register_request_email_verification_code(module);
+	register_get_oauth2_google_authorization_url(module);
 }
