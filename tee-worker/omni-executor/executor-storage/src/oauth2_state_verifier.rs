@@ -4,7 +4,7 @@ use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::sync::Arc;
 
-const STORAGE_NAME: &[u8; 19] = b"oauth_state_storage";
+const STORAGE_NAME: &[u8; 20] = b"oauth2_state_storage";
 
 pub struct OAuth2StateVerifierStorage {
 	db: Arc<DB>,
