@@ -14,7 +14,7 @@ use primitives::{
 	OmniAccountAuthType,
 	ShardIdentifier,
 };
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 use tokio::runtime::Handle;
 
 pub type VerificationCode = String;
@@ -43,9 +43,30 @@ pub enum AuthenticationError {
 	Web3InvalidSignature,
 	EmailVerificationCodeNotFound,
 	EmailInvalidVerificationCode,
-	// OAuth2Error(String),
-	#[allow(dead_code)]
+	OAuth2Error(String),
 	AuthTokenError(AuthTokenError),
+}
+
+impl Display for AuthenticationError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			AuthenticationError::Web3InvalidSignature => {
+				write!(f, "Invalid Web3 signature")
+			},
+			AuthenticationError::EmailVerificationCodeNotFound => {
+				write!(f, "Email verification code not found")
+			},
+			AuthenticationError::EmailInvalidVerificationCode => {
+				write!(f, "Invalid email verification code")
+			},
+			AuthenticationError::OAuth2Error(msg) => {
+				write!(f, "OAuth2 error: {}", msg)
+			},
+			AuthenticationError::AuthTokenError(err) => {
+				write!(f, "Auth token error: {:?}", err)
+			},
+		}
+	}
 }
 
 #[derive(Debug)]
