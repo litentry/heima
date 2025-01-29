@@ -161,11 +161,8 @@ pub fn verify_auth_token_authentication<
 			})
 		})
 		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
-	let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-	let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
-		return Err(AuthenticationError::AuthTokenError(AuthTokenError::OmniAccountNotFound));
-	};
-	let validation = Validation::new(omni_account.to_hex(), current_block);
+
+	let validation = Validation::new(sender_identity.hash().to_string(), current_block);
 
 	if auth_token.validate(ctx.jwt_secret.as_bytes(), validation).is_err() {
 		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));

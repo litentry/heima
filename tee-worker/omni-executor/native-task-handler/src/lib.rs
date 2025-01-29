@@ -117,7 +117,7 @@ async fn handle_native_call<
 				}
 				return;
 			};
-			let claims = AuthTokenClaims::new(omni_account.to_hex(), auth_options);
+			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
 			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
 				let response = NativeCallResponse::Err(NativeCallError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
