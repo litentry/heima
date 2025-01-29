@@ -19,6 +19,8 @@ pub(crate) struct RpcContext<
 	pub mrenclave: [u8; 32],
 	pub mailer: Mailer,
 	pub jwt_secret: String,
+	pub google_client_id: String,
+	pub google_client_secret: String,
 	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -31,6 +33,7 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
 	> RpcContext<AccountId, Header, RpcClient, RpcClientFactory>
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		shielding_key: ShieldingKey,
 		native_task_sender: Arc<NativeTaskSender>,
@@ -39,6 +42,8 @@ impl<
 		mrenclave: [u8; 32],
 		mailer: Mailer,
 		jwt_secret: String,
+		google_client_id: String,
+		google_client_secret: String,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -48,6 +53,8 @@ impl<
 			mrenclave,
 			mailer,
 			jwt_secret,
+			google_client_id,
+			google_client_secret,
 			phantom_account_id: PhantomData,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
@@ -78,6 +85,9 @@ pub async fn start_server<
 	let mailer_from_name = env::var("SENDGRID_FROM_NAME").unwrap_or("".to_string());
 	let mailer = Mailer::new(mailer_api_key, mailer_from_email, mailer_from_name);
 
+	let google_client_id = env::var("GOOGLE_CLIENT_ID").unwrap_or("".to_string());
+	let google_client_secret = env::var("GOOGLE_CLIENT_SECRET").unwrap_or("".to_string());
+
 	let ctx = RpcContext::new(
 		shielding_key,
 		native_task_sender,
@@ -86,6 +96,8 @@ pub async fn start_server<
 		mrenclave,
 		mailer,
 		jwt_secret,
+		google_client_id,
+		google_client_secret,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);
