@@ -35,11 +35,11 @@ pub fn register_submit_aes_request<
 			let Ok(request) = AesRequest::from_hex(&hex_request) else {
 				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
 			};
-			let context = ctx.clone();
-			let aes_request = request.clone();
-			let handle = Handle::current();
-			let join_handle =
-				task::spawn_blocking(|| handle_aes_request(aes_request, context, handle));
+			let join_handle = task::spawn_blocking({
+				let ctx = ctx.clone();
+				let aes_request = request.clone();
+				|| handle_aes_request(aes_request, ctx, Handle::current())
+			});
 			let (native_call, auth_type) = join_handle.await.map_err(|e| {
 				log::error!("Failed to handle AES request: {:?}", e);
 				ErrorCode::InternalError
@@ -54,7 +54,7 @@ pub fn register_submit_aes_request<
 			match response_receiver.await {
 				Ok(response) => Ok::<String, ErrorObject>(response.to_hex()),
 				Err(e) => {
-					log::error!("Failed to receive response from native call executor: {:?}", e);
+					log::error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())
 				},
 			}
