@@ -186,7 +186,7 @@ sp-io = { path = "../../common/core-primitives/substrate-sgx/sp-io" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 
-[patch."https://github.com/paritytech/frontier"]
+[patch."https://github.com/CESSProject/frontier"]
 pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "bar/polkadot-v0.9.42" }
 
 [patch."https://github.com/paritytech/substrate"]
