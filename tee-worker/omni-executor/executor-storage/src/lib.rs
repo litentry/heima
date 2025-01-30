@@ -53,6 +53,8 @@ pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	Ok(db)
 }
 
+const ACCOUNT_STORE_KEYS_PAGE_SIZE: u32 = 300;
+
 async fn init_omni_account_storages(
 	client: &mut SubxtClient<CustomConfig>,
 	storage_db: Arc<StorageDB>,
@@ -60,12 +62,15 @@ async fn init_omni_account_storages(
 	let account_store_storage = AccountStoreStorage::new(storage_db.clone());
 	let member_omni_account_storage = MemberOmniAccountStorage::new(storage_db.clone());
 	let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
-	let page_size = 300;
 	let mut start_key: Option<Vec<u8>> = None;
 
 	loop {
 		let storage_keys_paged = client
-			.get_storage_keys_paged(account_store_key_prefix.into(), page_size, start_key.clone())
+			.get_storage_keys_paged(
+				account_store_key_prefix.into(),
+				ACCOUNT_STORE_KEYS_PAGE_SIZE,
+				start_key.clone(),
+			)
 			.await
 			.map_err(|e| {
 				log::error!("Could not get storage keys paged: {:?}", e);
