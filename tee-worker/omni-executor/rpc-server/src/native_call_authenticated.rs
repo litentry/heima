@@ -2,6 +2,7 @@ use crate::{
 	authentication::{
 		verify_auth_token_authentication, verify_email_authentication,
 		verify_oauth2_authentication, verify_web3_authentication, Authentication,
+		AuthenticationError,
 	},
 	server::RpcContext,
 };
@@ -29,14 +30,14 @@ pub fn verify_native_call_authenticated<
 	shard: &ShardIdentifier,
 	handle: Handle,
 	authenticated_call: &NativeCallAuthenticated,
-) -> Result<(), crate::authentication::AuthenticationError> {
+) -> Result<(), AuthenticationError> {
 	let authentication_result = match authenticated_call.authentication {
 		Authentication::Web3(ref signature) => verify_web3_authentication(
 			signature,
 			&authenticated_call.call,
 			authenticated_call.nonce,
 			&ctx.mrenclave,
-			&shard,
+			shard,
 		),
 		Authentication::Email(ref verification_code) => verify_email_authentication(
 			ctx,
