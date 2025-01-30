@@ -22,6 +22,12 @@ use executor_primitives::ShardIdentifier;
 use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Debug)]
+pub struct PlainRequest {
+	pub shard: ShardIdentifier,
+	pub payload: Vec<u8>,
+}
+
 // Represent a request that can be decrypted by the enclave
 pub trait DecryptableRequest {
 	type Error;
