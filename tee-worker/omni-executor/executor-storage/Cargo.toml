@@ -14,6 +14,7 @@ subxt-core = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }
+executor-crypto = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 

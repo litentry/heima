@@ -7,6 +7,7 @@ pub use account_store::AccountStoreStorage;
 mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
+use executor_crypto::hashing::{blake2_128, twox_128};
 use executor_primitives::{AccountId, MemberAccount, TryFromSubxtType};
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
@@ -28,6 +29,14 @@ pub trait Storage<K, V> {
 	fn insert(&self, key: K, value: V) -> Result<(), ()>;
 	fn remove(&self, key: &K) -> Result<(), ()>;
 	fn contains_key(&self, key: &K) -> bool;
+}
+
+fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
+	twox_128(storage_name.as_bytes())
+		.iter()
+		.chain(blake2_128(key).iter().chain(key.iter())) // blake2_128_concat
+		.cloned()
+		.collect()
 }
 
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
