@@ -57,7 +57,6 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		"dev" | "standalone" => Box::new(chain_specs::paseo::get_chain_spec_dev(true)),
 		// Litentry
 		"litentry-dev" => Box::new(chain_specs::litentry::get_chain_spec_dev()),
-		"litentry-staging" => Box::new(chain_specs::litentry::get_chain_spec_staging()),
 		"litentry" => Box::new(chain_specs::ChainSpec::from_json_bytes(
 			&include_bytes!("../res/chain_specs/litentry.json")[..],
 		)?),

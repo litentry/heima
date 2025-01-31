@@ -16,7 +16,7 @@
 
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use core_primitives::{AccountId, Signature, LITENTRY_PARA_ID};
+use core_primitives::{AccountId, Signature, HEIMA_PARA_ID};
 use runtime_common::currency::UNIT;
 pub use sc_chain_spec::Properties;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
