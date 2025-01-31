@@ -39,6 +39,7 @@ pub type ParentchainListener<
 	Fetcher<
 		<ChainConfig as Config>::AccountId,
 		<ChainConfig as Config>::Header,
+		<ChainConfig as Config>::Hash,
 		RpcClient,
 		RpcClientFactory,
 	>,

@@ -9,8 +9,9 @@ use std::{env, marker::PhantomData, net::SocketAddr, sync::Arc};
 pub(crate) struct RpcContext<
 	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	Hash,
+	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
 > {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
@@ -23,15 +24,17 @@ pub(crate) struct RpcContext<
 	pub google_client_secret: String,
 	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
+	phantom_hash: PhantomData<Hash>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
 		AccountId,
 		Header,
-		RpcClient: SubstrateRpcClient<AccountId, Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
-	> RpcContext<AccountId, Header, RpcClient, RpcClientFactory>
+		Hash,
+		RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
+		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	> RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -57,6 +60,7 @@ impl<
 			google_client_secret,
 			phantom_account_id: PhantomData,
 			phantom_header: PhantomData,
+			phantom_hash: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
 	}
@@ -65,8 +69,9 @@ impl<
 pub async fn start_server<
 	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	Hash: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
 >(
 	port: &str,
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,

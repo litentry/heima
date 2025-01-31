@@ -53,8 +53,13 @@ pub struct EventHandler<
 	EthereumIntentExecutorT: IntentExecutor,
 	SolanaIntentExecutorT: IntentExecutor,
 	KeyStoreT: KeyStore<SecretKeyBytes>,
-	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header, ChainConfig::Hash>,
+	RpcClientFactory: SubstrateRpcClientFactory<
+		ChainConfig::AccountId,
+		ChainConfig::Header,
+		ChainConfig::Hash,
+		RpcClient,
+	>,
 	AccountStoreStorage: Storage<AccountId, AccountStore>,
 	MemberOmniAccountStorage: Storage<Hash, AccountId>,
 > {
@@ -84,8 +89,13 @@ impl<
 		EthereumIntentExecutorT: IntentExecutor,
 		SolanaIntentExecutorT: IntentExecutor,
 		KeyStoreT: KeyStore<SecretKeyBytes>,
-		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
+		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header, ChainConfig::Hash>,
+		RpcClientFactory: SubstrateRpcClientFactory<
+			ChainConfig::AccountId,
+			ChainConfig::Header,
+			ChainConfig::Hash,
+			RpcClient,
+		>,
 		AccountStoreStorage: Storage<AccountId, AccountStore>,
 		MemberOmniAccountStorage: Storage<Hash, AccountId>,
 	>
@@ -145,9 +155,15 @@ impl<
 		EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 		SolanaIntentExecutorT: IntentExecutor + Send + Sync,
 		KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
-		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> + Send + Sync,
-		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>
+		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header, ChainConfig::Hash>
 			+ Send
+			+ Sync,
+		RpcClientFactory: SubstrateRpcClientFactory<
+				ChainConfig::AccountId,
+				ChainConfig::Header,
+				ChainConfig::Hash,
+				RpcClient,
+			> + Send
 			+ Sync,
 		AccountStoreStorage: Storage<AccountId, AccountStore> + Send + Sync,
 		MemberOmniAccountStorage: Storage<Hash, AccountId> + Send + Sync,
@@ -276,8 +292,16 @@ async fn handle_intent_requested_event<
 	EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 	SolanaIntentExecutorT: IntentExecutor + Send + Sync,
 	KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
-	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> + Send + Sync,
-	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient> + Send + Sync,
+	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header, ChainConfig::Hash>
+		+ Send
+		+ Sync,
+	RpcClientFactory: SubstrateRpcClientFactory<
+			ChainConfig::AccountId,
+			ChainConfig::Header,
+			ChainConfig::Hash,
+			RpcClient,
+		> + Send
+		+ Sync,
 >(
 	ethereum_intent_executor: &EthereumIntentExecutorT,
 	solana_intent_executor: &SolanaIntentExecutorT,

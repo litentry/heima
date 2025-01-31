@@ -78,7 +78,7 @@ pub struct RuntimeVersion {
 
 /// For fetching data from Substrate RPC node
 #[async_trait]
-pub trait SubstrateRpcClient<AccountId, Header> {
+pub trait SubstrateRpcClient<AccountId, Header, Hash> {
 	async fn get_last_finalized_header(&self) -> Result<Header, ()>;
 	async fn get_last_finalized_block_num(&self) -> Result<BlockNumber, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
@@ -112,7 +112,8 @@ impl<ChainConfig: Config> SubxtClient<ChainConfig> {
 
 #[async_trait]
 impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
-	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for SubxtClient<ChainConfig>
+	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header, ChainConfig::Hash>
+	for SubxtClient<ChainConfig>
 {
 	async fn get_last_finalized_header(&self) -> Result<ChainConfig::Header, ()> {
 		let latest_block = self.blocks.at_latest().await.map_err(|e| {
@@ -220,7 +221,8 @@ pub struct MockedRpcClient<ChainConfig: Config> {
 
 #[async_trait]
 impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
-	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for MockedRpcClient<ChainConfig>
+	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header, ChainConfig::Hash>
+	for MockedRpcClient<ChainConfig>
 {
 	async fn get_last_finalized_header(&self) -> Result<ChainConfig::Header, ()> {
 		let numeric_block_number_json = r#"
@@ -286,7 +288,8 @@ impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
 pub trait SubstrateRpcClientFactory<
 	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	Hash,
+	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
 >
 {
 	async fn new_client(&self) -> Result<RpcClient, ()>;
@@ -326,8 +329,12 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 
 #[async_trait]
 impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
-	SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, SubxtClient<ChainConfig>>
-	for SubxtClientFactory<ChainConfig>
+	SubstrateRpcClientFactory<
+		ChainConfig::AccountId,
+		ChainConfig::Header,
+		ChainConfig::Hash,
+		SubxtClient<ChainConfig>,
+	> for SubxtClientFactory<ChainConfig>
 {
 	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, ()> {
 		let rpc_client = subxt::backend::rpc::RpcClient::from_insecure_url(self.url.clone())

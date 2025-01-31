@@ -18,10 +18,11 @@ struct Rsa3072PubKey {
 pub fn register_get_shielding_key<
 	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	Hash: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	module: &mut RpcModule<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
 ) {
 	module
 		.register_async_method("native_getShieldingKey", |_params, ctx, _| async move {

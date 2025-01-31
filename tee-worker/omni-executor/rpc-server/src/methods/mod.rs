@@ -14,10 +14,11 @@ use submit_aes_request::register_submit_aes_request;
 pub fn register_methods<
 	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	Hash: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	module: &mut RpcModule<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
 ) {
 	register_get_shielding_key(module);
 	register_submit_aes_request(module);

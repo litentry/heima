@@ -13,10 +13,11 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 pub fn register_request_email_verification_code<
 	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	Hash: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	module: &mut RpcModule<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
 ) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
