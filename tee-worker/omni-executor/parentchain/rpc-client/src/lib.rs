@@ -16,6 +16,7 @@
 mod xt_status;
 
 pub mod metadata;
+pub use subxt_core::utils::AccountId32;
 
 use async_trait::async_trait;
 use executor_primitives::{BlockEvent, BlockNumber, EventId};
