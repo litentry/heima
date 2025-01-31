@@ -18,21 +18,21 @@ use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key as RequestAesKey, AesOutput},
 	traits::Decrypt,
 };
-use executor_primitives::ShardIdentifier;
+use executor_primitives::MrEnclave;
 use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug)]
 pub struct PlainRequest {
-	pub shard: ShardIdentifier,
+	pub mrenclave: MrEnclave,
 	pub payload: Vec<u8>,
 }
 
 // Represent a request that can be decrypted by the enclave
 pub trait DecryptableRequest {
 	type Error;
-	// the shard getter
-	fn shard(&self) -> ShardIdentifier;
+	// the mrenclave getter
+	fn mrenclave(&self) -> MrEnclave;
 	// how to decrypt the payload
 	fn decrypt<T: Debug>(
 		&mut self,
@@ -42,7 +42,7 @@ pub trait DecryptableRequest {
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
 pub struct AesRequest {
-	pub shard: ShardIdentifier,
+	pub mrenclave: MrEnclave,
 	pub key: Vec<u8>,
 	pub payload: AesOutput,
 }
@@ -50,8 +50,8 @@ pub struct AesRequest {
 impl DecryptableRequest for AesRequest {
 	type Error = ();
 
-	fn shard(&self) -> ShardIdentifier {
-		self.shard
+	fn mrenclave(&self) -> MrEnclave {
+		self.mrenclave
 	}
 
 	fn decrypt<T: Debug>(

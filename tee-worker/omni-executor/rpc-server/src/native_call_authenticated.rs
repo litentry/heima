@@ -7,7 +7,7 @@ use crate::{
 	server::RpcContext,
 };
 use executor_core::native_call::NativeCall;
-use executor_primitives::{Nonce, ShardIdentifier};
+use executor_primitives::Nonce;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
@@ -27,7 +27,6 @@ pub fn verify_native_call_authenticated<
 	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
 >(
 	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
-	shard: &ShardIdentifier,
 	handle: Handle,
 	authenticated_call: &NativeCallAuthenticated,
 ) -> Result<(), AuthenticationError> {
@@ -36,8 +35,7 @@ pub fn verify_native_call_authenticated<
 			signature,
 			&authenticated_call.call,
 			authenticated_call.nonce,
-			&ctx.mrenclave,
-			shard,
+			ctx.mrenclave,
 		),
 		Authentication::Email(ref verification_code) => verify_email_authentication(
 			ctx,

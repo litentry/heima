@@ -15,7 +15,7 @@ use jsonrpsee::{
 };
 use native_task_handler::NativeTask;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::Decode;
 use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
@@ -73,8 +73,8 @@ fn handle_aes_request<
 	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
-	if request.shard().encode() != ctx.mrenclave.encode() {
-		return Err(ErrorCode::ServerError(INVALID_SHARD_CODE).into());
+	if request.mrenclave() != ctx.mrenclave {
+		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
 	}
 	let Ok(encoded_nca) = request.decrypt(Box::new(ctx.shielding_key.clone())) else {
 		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
@@ -86,7 +86,7 @@ fn handle_aes_request<
 			return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
 		},
 	};
-	if verify_native_call_authenticated(ctx, &request.shard(), handle, &nca).is_err() {
+	if verify_native_call_authenticated(ctx, handle, &nca).is_err() {
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}
 
