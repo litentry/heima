@@ -20,7 +20,7 @@ pub mod metadata;
 use async_trait::async_trait;
 use executor_primitives::{BlockEvent, BlockNumber, EventId};
 use log::{error, info};
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Decode, Encode};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -31,14 +31,15 @@ use subxt::{
 	config::{
 		signed_extensions,
 		substrate::{BlakeTwo256, SubstrateHeader},
-		ExtrinsicParams,
+		Hasher,
 	},
 	events::EventsClient,
 	storage::StorageClient,
-	tx::{Payload as CallT, Signer as SignerT, TxClient},
+	tx::TxClient,
 	Config, OnlineClient,
 };
 use tokio::time::{sleep, Duration};
+use xt_status::{TransactionStatus, XtStatus};
 
 pub type RpcClientHeader = SubstrateHeader<BlockNumber, BlakeTwo256>;
 
@@ -86,6 +87,11 @@ pub trait SubstrateRpcClient<AccountId, Header, Hash> {
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
 	async fn submit_tx(&mut self, raw_tx: &[u8]) -> Result<(), ()>;
+	async fn submit_and_watch_tx_until(
+		&mut self,
+		extrinsic: &[u8],
+		until_status: XtStatus,
+	) -> Result<ExtrinsicResult<Hash>, ()>;
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()>;
 	async fn get_genesis_hash(&mut self) -> Result<Vec<u8>, ()>;
 	async fn get_account_nonce(&mut self, account_id: &AccountId) -> Result<u64, ()>;
@@ -104,6 +110,18 @@ pub struct SubxtClient<ChainConfig: Config> {
 	tx: TxClient<ChainConfig, OnlineClient<ChainConfig>>,
 	storage: StorageClient<ChainConfig, OnlineClient<ChainConfig>>,
 	blocks: BlocksClient<ChainConfig, OnlineClient<ChainConfig>>,
+}
+
+#[derive(Decode, Encode)]
+pub struct ExtrinsicResult<Hash> {
+	extrinsic_hash: Hash,
+	block_hash: Option<Hash>,
+}
+
+impl<Hash> ExtrinsicResult<Hash> {
+	pub fn new(extrinsic_hash: Hash, block_hash: Option<Hash>) -> Self {
+		Self { extrinsic_hash, block_hash }
+	}
 }
 
 impl<ChainConfig: Config> SubxtClient<ChainConfig> {
@@ -170,6 +188,39 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 		self.legacy.author_submit_extrinsic(raw_tx).await.map(|_| ()).map_err(|e| {
 			error!("Could not submit tx: {:?}", e);
 		})
+	}
+
+	async fn submit_and_watch_tx_until(
+		&mut self,
+		extrinsic: &[u8],
+		until_status: XtStatus,
+	) -> Result<ExtrinsicResult<ChainConfig::Hash>, ()> {
+		let tx_hash = ChainConfig::Hasher::hash(extrinsic);
+		let result = self.legacy.author_submit_and_watch_extrinsic(extrinsic).await;
+		match result {
+			Ok(mut subscription) => {
+				while let Some(Ok(tx_status)) = subscription.next().await {
+					let transaction_status: TransactionStatus<ChainConfig::Hash> = tx_status.into();
+					match transaction_status.is_expected() {
+						Ok(_) => {
+							if transaction_status.reached_status(until_status) {
+								let block_hash = transaction_status.get_maybe_block_hash();
+								return Ok(ExtrinsicResult::new(tx_hash, block_hash.cloned()));
+							}
+						},
+						Err(e) => {
+							error!("Unexpected transaction status: {:?}", e);
+							return Err(());
+						},
+					}
+				}
+			},
+			Err(e) => {
+				error!("Could not submit tx: {:?}", e);
+			},
+		};
+
+		Err(())
 	}
 
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()> {
@@ -283,6 +334,14 @@ impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
 
 	async fn get_storage_proof_by_keys(&mut self, _keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()> {
 		Ok(vec![])
+	}
+
+	async fn submit_and_watch_tx_until(
+		&mut self,
+		_extrinsic: &[u8],
+		_until_status: XtStatus,
+	) -> Result<ExtrinsicResult<ChainConfig::Hash>, ()> {
+		todo!()
 	}
 }
 
