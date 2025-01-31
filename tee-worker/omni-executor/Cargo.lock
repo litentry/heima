@@ -5436,6 +5436,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-encode 0.10.0",
+ "serde_json",
  "subxt",
  "subxt-core",
  "tokio",

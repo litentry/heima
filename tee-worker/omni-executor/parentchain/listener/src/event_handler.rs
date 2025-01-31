@@ -34,7 +34,7 @@ use parentchain_api_interface::{
 };
 use parentchain_rpc_client::{
 	metadata::{MetadataProvider, SubxtMetadataProvider},
-	SubstrateRpcClient, SubstrateRpcClientFactory,
+	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory,
 };
 use parentchain_signer::TransactionSigner;
 use std::marker::PhantomData;
@@ -140,6 +140,7 @@ impl<
 			AccountId = AccountId32,
 			Address = MultiAddress<AccountId32, u32>,
 			Signature = MultiSignature,
+			Header = RpcClientHeader,
 		>,
 		EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 		SolanaIntentExecutorT: IntentExecutor + Send + Sync,
@@ -270,6 +271,7 @@ async fn handle_intent_requested_event<
 		AccountId = AccountId32,
 		Address = MultiAddress<AccountId32, u32>,
 		Signature = MultiSignature,
+		Header = RpcClientHeader,
 	>,
 	EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 	SolanaIntentExecutorT: IntentExecutor + Send + Sync,

@@ -12,7 +12,8 @@ use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
 use parentchain_rpc_client::{
-	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
+	CustomConfig, RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
+	SubxtClientFactory,
 };
 use parity_scale_codec::Decode;
 use rocksdb::DB;
@@ -73,7 +74,7 @@ async fn init_omni_account_storages(
 					log::error!("Could not get storage proof by keys: {:?}", e);
 				})?;
 		let header = match client.get_last_finalized_header().await {
-			Ok(Some(header)) => header,
+			Ok(header) => header,
 			_ => {
 				log::error!("Could not get last finalized header");
 				return Err(());
