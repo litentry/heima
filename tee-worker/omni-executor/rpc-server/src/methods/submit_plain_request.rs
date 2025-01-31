@@ -4,14 +4,19 @@ use crate::{
 	request::PlainRequest,
 	server::RpcContext,
 };
-use executor_primitives::utils::hex::{FromHexPrefixed, ToHexPrefixed};
+use executor_core::native_call::NativeCall;
+use executor_primitives::{
+	utils::hex::{FromHexPrefixed, ToHexPrefixed},
+	OmniAccountAuthType,
+};
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
 use native_task_handler::NativeTask;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use parity_scale_codec::Decode;
+use parity_scale_codec::{Decode, Encode};
+use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
 pub fn register_submit_plain_request<
@@ -30,38 +35,22 @@ pub fn register_submit_plain_request<
 			let Ok(request) = PlainRequest::from_hex(&hex_request) else {
 				return Err(ErrorCode::ServerError(INVALID_PLAIN_REQUEST_CODE).into());
 			};
-			let nca = NativeCallAuthenticated::decode(&mut request.payload.as_slice())
-				.map_err(|_| ErrorCode::ServerError(INVALID_NATIVE_CALL_AUTHENTICATED_CODE))?;
-
-			task::spawn_blocking({
+			let join_handle = task::spawn_blocking({
 				let ctx = ctx.clone();
-				let nca = nca.clone();
-				move || {
-					verify_native_call_authenticated(ctx, &request.shard, Handle::current(), &nca)
-				}
-			})
-			.await
-			.map_err(|e| {
-				log::error!("Failed to verify native call authenticated: {:?}", e);
+				let aes_request = request.clone();
+				|| handle_plain_request(aes_request, ctx, Handle::current())
+			});
+			let (native_call, auth_type) = join_handle.await.map_err(|e| {
+				log::error!("Failed to handle AES request: {:?}", e);
 				ErrorCode::InternalError
-			})?
-			.map_err(|e| {
-				log::error!("Failed to verify native call authenticated: {:?}", e);
-				ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE)
-			})?;
-
+			})??;
 			let (response_sender, response_receiver) = oneshot::channel();
+			let native_task = NativeTask { call: native_call, auth_type, response_sender };
 
-			let native_task = NativeTask {
-				call: nca.call,
-				auth_type: nca.authentication.into(),
-				response_sender,
-			};
 			if ctx.native_task_sender.send(native_task).await.is_err() {
 				log::error!("Failed to send request to native call executor");
 				return Err(ErrorCode::InternalError.into());
 			}
-
 			match response_receiver.await {
 				Ok(response) => Ok::<String, ErrorObject>(response.to_hex()),
 				Err(e) => {
@@ -71,4 +60,28 @@ pub fn register_submit_plain_request<
 			}
 		})
 		.expect("Failed to register native_submitPlainRequest method");
+}
+
+fn handle_plain_request<
+	'a,
+	AccountId,
+	Header,
+	RpcClient: SubstrateRpcClient<AccountId, Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+>(
+	request: PlainRequest,
+	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	handle: Handle,
+) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
+	if request.shard.encode() != ctx.mrenclave.encode() {
+		return Err(ErrorCode::ServerError(INVALID_SHARD_CODE).into());
+	}
+	let nca = NativeCallAuthenticated::decode(&mut request.payload.as_slice())
+		.map_err(|_| ErrorCode::ServerError(INVALID_NATIVE_CALL_AUTHENTICATED_CODE))?;
+
+	if verify_native_call_authenticated(ctx, &request.shard, handle, &nca).is_err() {
+		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
+	}
+
+	Ok((nca.call, nca.authentication.into()))
 }
