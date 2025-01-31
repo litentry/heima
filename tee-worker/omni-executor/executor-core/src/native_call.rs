@@ -1,4 +1,4 @@
-use executor_primitives::Identity;
+use executor_primitives::{intent::Intent, Identity};
 use heima_authentication::auth_token::AuthOptions;
 use parity_scale_codec::{Decode, Encode};
 
@@ -6,6 +6,7 @@ use parity_scale_codec::{Decode, Encode};
 #[allow(non_camel_case_types)]
 pub enum NativeCall {
 	request_auth_token(Identity, AuthOptions),
+	request_intent(Identity, Intent),
 	noop(Identity),
 }
 
@@ -13,6 +14,7 @@ impl NativeCall {
 	pub fn sender_identity(&self) -> &Identity {
 		match self {
 			NativeCall::request_auth_token(sender_identity, ..) => sender_identity,
+			NativeCall::request_intent(sender_identity, ..) => sender_identity,
 			NativeCall::noop(sender_identity) => sender_identity,
 		}
 	}

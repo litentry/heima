@@ -17,6 +17,7 @@
 pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
+	intent,
 	omni_account::{MemberAccount, OmniAccountAuthType},
 	AccountId, BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
 };
