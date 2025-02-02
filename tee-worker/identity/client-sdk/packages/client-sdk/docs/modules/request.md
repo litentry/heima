@@ -15,6 +15,7 @@ requests
 - [getIdGraph](request.md#getidgraph)
 - [getIdGraphHash](request.md#getidgraphhash)
 - [getLastRegisteredEnclave](request.md#getlastregisteredenclave)
+- [getOmniGraph](request.md#getomnigraph)
 - [linkIdentity](request.md#linkidentity)
 - [linkIdentityCallback](request.md#linkidentitycallback)
 - [publicizeAccount](request.md#publicizeaccount)
@@ -254,6 +255,36 @@ Return the Enclave registry information of the latest registered TEE worker.
 #### Defined in
 
 [lib/requests/get-last-registered-enclave.ts:11](https://github.com/litentry/client-sdk/blob/develop/lib/requests/get-last-registered-enclave.ts#L11)
+
+___
+
+### getOmniGraph
+
+▸ **getOmniGraph**(`api`, `who`): `Promise`\<`MemberAccount`[] \| ``null``\>
+
+Retrieve the omni account graph for a given identity.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Polkadot API instance |
+| `who` | `Object` | Litentry identity to query |
+| `who.who` | `LitentryIdentity` | - |
+
+#### Returns
+
+`Promise`\<`MemberAccount`[] \| ``null``\>
+
+Array of member accounts or null if not found
+
+**`Throws`**
+
+Error if API calls fail
+
+#### Defined in
+
+[lib/requests/get-omni-graph.ts:13](https://github.com/litentry/client-sdk/blob/develop/lib/requests/get-omni-graph.ts#L13)
 
 ___
 

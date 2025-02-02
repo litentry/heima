@@ -41,6 +41,8 @@ Direct invocation vc test: `pnpm --filter integration-tests run test vc_correctn
 
 Direct requect vc test: `pnpm --filter integration-tests run test dr_vc.test.ts`
 
+Omni account test: `pnpm --filter integration-tests run test omni_account.test.ts`
+
 ## Data-provider test
 
 1. Start tee-worker with real endpoint and real code(Configure in `local-setup/env.dev.`).
