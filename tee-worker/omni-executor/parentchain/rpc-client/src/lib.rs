@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 mod xt_status;
+pub use xt_status::{TransactionStatus, XtStatus};
 
 pub mod metadata;
 pub use subxt_core::utils::AccountId32;
@@ -40,7 +41,6 @@ use subxt::{
 	Config, OnlineClient,
 };
 use tokio::time::{sleep, Duration};
-use xt_status::{TransactionStatus, XtStatus};
 
 pub type RpcClientHeader = SubstrateHeader<BlockNumber, BlakeTwo256>;
 
@@ -92,7 +92,7 @@ pub trait SubstrateRpcClient<AccountId, Header, Hash> {
 		&mut self,
 		extrinsic: &[u8],
 		until_status: XtStatus,
-	) -> Result<ExtrinsicResult<Hash>, ()>;
+	) -> Result<ExtrinsicReport<Hash>, ()>;
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()>;
 	async fn get_genesis_hash(&mut self) -> Result<Vec<u8>, ()>;
 	async fn get_account_nonce(&mut self, account_id: &AccountId) -> Result<u64, ()>;
@@ -114,14 +114,19 @@ pub struct SubxtClient<ChainConfig: Config> {
 }
 
 #[derive(Decode, Encode)]
-pub struct ExtrinsicResult<Hash> {
-	extrinsic_hash: Hash,
-	block_hash: Option<Hash>,
+pub struct ExtrinsicReport<Hash> {
+	pub extrinsic_hash: Hash,
+	pub block_hash: Option<Hash>,
+	pub status: TransactionStatus<Hash>,
 }
 
-impl<Hash> ExtrinsicResult<Hash> {
-	pub fn new(extrinsic_hash: Hash, block_hash: Option<Hash>) -> Self {
-		Self { extrinsic_hash, block_hash }
+impl<Hash> ExtrinsicReport<Hash> {
+	pub fn new(
+		extrinsic_hash: Hash,
+		block_hash: Option<Hash>,
+		status: TransactionStatus<Hash>,
+	) -> Self {
+		Self { extrinsic_hash, block_hash, status }
 	}
 }
 
@@ -195,7 +200,7 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 		&mut self,
 		extrinsic: &[u8],
 		until_status: XtStatus,
-	) -> Result<ExtrinsicResult<ChainConfig::Hash>, ()> {
+	) -> Result<ExtrinsicReport<ChainConfig::Hash>, ()> {
 		let tx_hash = ChainConfig::Hasher::hash(extrinsic);
 		let result = self.legacy.author_submit_and_watch_extrinsic(extrinsic).await;
 		match result {
@@ -206,7 +211,11 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 						Ok(_) => {
 							if transaction_status.reached_status(until_status) {
 								let block_hash = transaction_status.get_maybe_block_hash();
-								return Ok(ExtrinsicResult::new(tx_hash, block_hash.cloned()));
+								return Ok(ExtrinsicReport::new(
+									tx_hash,
+									block_hash.cloned(),
+									transaction_status,
+								));
 							}
 						},
 						Err(e) => {
@@ -341,7 +350,7 @@ impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
 		&mut self,
 		_extrinsic: &[u8],
 		_until_status: XtStatus,
-	) -> Result<ExtrinsicResult<ChainConfig::Hash>, ()> {
+	) -> Result<ExtrinsicReport<ChainConfig::Hash>, ()> {
 		todo!()
 	}
 }
