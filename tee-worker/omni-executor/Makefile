@@ -80,7 +80,7 @@ stop-local:
 
 .PHONY: get-metadata
 get-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets System,Balances,OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
 
 .PHONY: generate-api-interface
 generate-api-interface: get-metadata
