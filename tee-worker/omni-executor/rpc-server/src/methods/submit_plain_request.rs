@@ -37,11 +37,11 @@ pub fn register_submit_plain_request<
 			};
 			let join_handle = task::spawn_blocking({
 				let ctx = ctx.clone();
-				let aes_request = request.clone();
-				|| handle_plain_request(aes_request, ctx, Handle::current())
+				let plain_request = request.clone();
+				|| handle_plain_request(plain_request, ctx, Handle::current())
 			});
 			let (native_call, auth_type) = join_handle.await.map_err(|e| {
-				log::error!("Failed to handle AES request: {:?}", e);
+				log::error!("Failed to handle Plain request: {:?}", e);
 				ErrorCode::InternalError
 			})??;
 			let (response_sender, response_receiver) = oneshot::channel();
