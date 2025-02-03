@@ -1,7 +1,13 @@
-use parity_scale_codec::{Decode, Encode};
+use parentchain_rpc_client::TransactionStatus;
+use parity_scale_codec::{Codec, Decode, Encode};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub enum NativeCallOk {
+pub enum NativeCallOk<Hash: Codec> {
+	ExtrinsicReport {
+		extrinsic_hash: Hash,
+		block_hash: Option<Hash>,
+		status: TransactionStatus<Hash>,
+	},
 	AuthToken(String),
 }
 
