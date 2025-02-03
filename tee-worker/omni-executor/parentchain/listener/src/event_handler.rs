@@ -20,7 +20,7 @@ use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
-use executor_primitives::{AccountId, BlockEvent, Hash, MemberAccount, TryFromSubxtType};
+use executor_primitives::{AccountId, BlockEvent, Hash, MemberAccount};
 use executor_storage::Storage;
 use log::error;
 use parentchain_api_interface::{
@@ -37,6 +37,7 @@ use parentchain_rpc_client::{
 	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory,
 };
 use parentchain_signer::TransactionSigner;
+use parity_scale_codec::{Decode, Encode};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use subxt::ext::scale_decode;
@@ -252,8 +253,9 @@ impl<
 				let omni_account = AccountId::new(account_store_updated.who.0);
 
 				for member in account_store_updated.account_store.0.iter() {
-					let member_account =
-						MemberAccount::try_from_subxt_type(member).map_err(|e| {
+					let member_bytes = member.encode();
+					let member_account: MemberAccount = Decode::decode(&mut &member_bytes[..])
+						.map_err(|e| {
 							log::error!("Error decoding member account: {:?}", e);
 							Error::NonRecoverableError
 						})?;

@@ -7,15 +7,14 @@ pub use account_store::AccountStoreStorage;
 mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
-use executor_primitives::{AccountId, MemberAccount, TryFromSubxtType};
+use executor_primitives::{AccountId, MemberAccount};
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
 use parentchain_rpc_client::{
-	CustomConfig, RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory,
+	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
-use parity_scale_codec::Decode;
+use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use sp_state_machine::{read_proof_check, StorageProof};
 use std::sync::Arc;
@@ -119,8 +118,9 @@ async fn init_omni_account_storages(
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
 					for member in account_store.0.iter() {
-						let member_account =
-							MemberAccount::try_from_subxt_type(member).map_err(|e| {
+						let member_bytes = member.encode();
+						let member_account: MemberAccount = Decode::decode(&mut &member_bytes[..])
+							.map_err(|e| {
 								log::error!("Error decoding member account: {:?}", e);
 							})?;
 						member_omni_account_storage
