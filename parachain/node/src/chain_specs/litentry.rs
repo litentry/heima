@@ -54,7 +54,7 @@ struct GenesisInfo {
 pub fn get_chain_spec_dev() -> ChainSpec {
 	ChainSpec::builder(
 		WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		Extensions { relay_chain: "rococo-local".into(), para_id: HEIMA_PARA_ID },
+		Extensions { relay_chain: "rococo-local".into(), para_id: LITENTRY_PARA_ID },
 	)
 	.with_name("Heima-dev")
 	.with_id("heima-dev")
@@ -83,7 +83,7 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 		],
 		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
 		vec![get_account_id_from_seed::<sr25519::Public>("Alice")],
-		HEIMA_PARA_ID.into(),
+		LITENTRY_PARA_ID.into(),
 	))
 	.build()
 }
@@ -95,7 +95,7 @@ pub fn get_chain_spec_prod() -> ChainSpec {
 		"litentry", // unchanged for now, so that node operators don't have to change the db path 
 		ChainType::Live,
 		"polkadot".into(),
-		HEIMA_PARA_ID.into(),
+		LITENTRY_PARA_ID.into(),
 	)
 }
 

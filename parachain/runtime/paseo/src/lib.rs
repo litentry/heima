@@ -24,7 +24,7 @@
 #[macro_use]
 extern crate frame_benchmarking;
 
-use core_primitives::HEIMA_PARA_ID;
+use core_primitives::LITENTRY_PARA_ID;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
@@ -951,7 +951,7 @@ impl pallet_evm::FeeCalculator for TransactionPaymentAsGasPrice {
 
 parameter_types! {
 	pub WeightPerGas: Weight = Weight::from_parts(WEIGHT_PER_GAS, 0);
-	pub ChainId: u64 = HEIMA_PARA_ID.into();
+	pub ChainId: u64 = LITENTRY_PARA_ID.into();
 	pub BlockGasLimit: U256 = U256::from(
 		NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT.ref_time() / WEIGHT_PER_GAS
 	);
