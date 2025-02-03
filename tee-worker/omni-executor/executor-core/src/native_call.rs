@@ -7,6 +7,7 @@ use parity_scale_codec::{Decode, Encode};
 pub enum NativeCall {
 	request_auth_token(Identity, AuthOptions),
 	request_intent(Identity, Intent),
+	create_account_store(Identity),
 	noop(Identity),
 }
 
@@ -15,6 +16,7 @@ impl NativeCall {
 		match self {
 			NativeCall::request_auth_token(sender_identity, ..) => sender_identity,
 			NativeCall::request_intent(sender_identity, ..) => sender_identity,
+			NativeCall::create_account_store(sender_identity) => sender_identity,
 			NativeCall::noop(sender_identity) => sender_identity,
 		}
 	}
