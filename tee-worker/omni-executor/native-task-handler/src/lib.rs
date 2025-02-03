@@ -2,13 +2,17 @@ mod types;
 
 use executor_core::native_call::NativeCall;
 use executor_crypto::jwt;
-use executor_primitives::OmniAccountAuthType;
+use executor_primitives::{intent::Intent, OmniAccountAuthType};
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
+use parentchain_api_interface::runtime_types::{
+	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
+	pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
+};
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
 	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory,
+	SubxtClientFactory, XtStatus,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Codec, Decode, Encode};
@@ -156,6 +160,79 @@ async fn handle_native_task<
 
 			let response = NativeCallResponse::Ok(NativeCallOk::<Hash>::AuthToken(token));
 
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+		},
+		NativeCall::request_intent(sender_identity, intent) => {
+			let tx = match intent {
+				Intent::SystemRemark(remark) => {
+					let remark_call = SystemCall::remark { remark: remark.to_vec() };
+					let auth_type_bytes = task.auth_type.encode();
+					let member_hash_bytes = sender_identity.hash().encode();
+					let dispatch_as_omni_account_call =
+						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+							Decode::decode(&mut &member_hash_bytes[..]).unwrap(),
+							RuntimeCall::System(remark_call),
+							Decode::decode(&mut &auth_type_bytes[..]).unwrap(),
+						);
+					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
+				},
+				Intent::TransferNative(transfer) => {
+					let to_bytes = transfer.to.encode();
+					let to: AccountId32 = Decode::decode(&mut &to_bytes[..]).unwrap();
+					let transfer_call = BalancesCall::transfer_allow_death {
+						dest: to.into(),
+						value: transfer.value,
+					};
+					let auth_type_bytes = task.auth_type.encode();
+					let member_hash_bytes = sender_identity.hash().encode();
+					let dispatch_as_omni_account_call =
+						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+							Decode::decode(&mut &member_hash_bytes[..]).unwrap(),
+							RuntimeCall::Balances(transfer_call),
+							Decode::decode(&mut &auth_type_bytes[..]).unwrap(),
+						);
+					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
+				},
+				Intent::CallEthereum(_)
+				| Intent::TransferEthereum(_)
+				| Intent::TransferSolana(_) => {
+					let intent_bytes = intent.encode();
+					let request_intent_call = OmniAccountCall::request_intent {
+						intent: Decode::decode(&mut &intent_bytes[..]).unwrap(),
+					};
+					let auth_type_bytes = task.auth_type.encode();
+					let member_hash_bytes = sender_identity.hash().encode();
+					let dispatch_as_omni_account_call =
+						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+							Decode::decode(&mut &member_hash_bytes[..]).unwrap(),
+							RuntimeCall::OmniAccount(request_intent_call),
+							Decode::decode(&mut &auth_type_bytes[..]).unwrap(),
+						);
+					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
+				},
+			};
+			let Ok(mut client) = ctx.parentchain_rpc_client_factory.new_client().await else {
+				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let Ok(report) = client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
+			else {
+				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
+				extrinsic_hash: report.extrinsic_hash,
+				block_hash: report.block_hash,
+				status: report.status,
+			});
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
