@@ -5,9 +5,12 @@ use executor_crypto::jwt;
 use executor_primitives::{intent::Intent, OmniAccountAuthType};
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
-use parentchain_api_interface::runtime_types::{
-	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
+use parentchain_api_interface::{
+	omni_account::calls::types::create_account_store,
+	runtime_types::{
+		frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
+		pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
+	},
 };
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
@@ -117,6 +120,15 @@ async fn handle_native_task<
 	task: NativeTask,
 ) {
 	let response_sender = task.response_sender;
+
+	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
+		let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+		if response_sender.send(response.encode()).is_err() {
+			log::error!("Failed to send response");
+		}
+		return;
+	};
+
 	match task.call {
 		NativeCall::request_auth_token(sender_identity, auth_options) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
@@ -140,17 +152,9 @@ async fn handle_native_task<
 				.omni_account()
 				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
 
-			let Ok(mut client) = ctx.parentchain_rpc_client_factory.new_client().await else {
-				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-
 			let signed_call = ctx.transaction_signer.sign(auth_token_requested_call).await;
 
-			if client.submit_tx(&signed_call).await.is_err() {
+			if rpc_client.submit_tx(&signed_call).await.is_err() {
 				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
@@ -213,14 +217,30 @@ async fn handle_native_task<
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
 			};
-			let Ok(mut client) = ctx.parentchain_rpc_client_factory.new_client().await else {
+			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
+			else {
 				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
-			let Ok(report) = client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
+			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
+				extrinsic_hash: report.extrinsic_hash,
+				block_hash: report.block_hash,
+				status: report.status,
+			});
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+		},
+		NativeCall::create_account_store(sender_identity) => {
+			let sender_identity_bytes = sender_identity.encode();
+			let create_account_store_call = parentchain_api_interface::tx()
+				.omni_account()
+				.create_account_store(Decode::decode(&mut &sender_identity_bytes[..]).unwrap());
+			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
+			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
 			else {
 				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
