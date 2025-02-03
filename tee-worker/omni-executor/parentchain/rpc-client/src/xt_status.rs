@@ -1,4 +1,4 @@
-use parity_scale_codec::Codec;
+use parity_scale_codec::{Codec, Decode, Encode};
 use subxt::backend::legacy::rpc_methods::TransactionStatus as SubxtTransactionStatus;
 
 /// Simplified TransactionStatus to allow the user to choose until when to watch
@@ -24,7 +24,8 @@ pub enum UnexpectedTxStatus {
 	Invalid,
 }
 
-pub enum TransactionStatus<Hash: Codec> {
+#[derive(Debug, PartialEq, Eq, Decode, Encode)]
+pub enum TransactionStatus<Hash> {
 	/// Transaction is part of the future queue.
 	Future,
 	/// Transaction is part of the ready queue.
