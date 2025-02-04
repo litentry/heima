@@ -12,7 +12,7 @@ use parentchain_api_interface::runtime_types::{
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
 	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory, XtStatus,
+	SubxtClientFactory, ToSubxtType, XtStatus,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Decode, Encode};
@@ -156,47 +156,37 @@ async fn handle_native_task<
 			let tx = match intent {
 				Intent::SystemRemark(remark) => {
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
-					let auth_type_bytes = task.auth_type.encode();
-					let member_hash_bytes = sender_identity.hash().encode();
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-							Decode::decode(&mut &member_hash_bytes[..]).unwrap(),
+							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::System(remark_call),
-							Decode::decode(&mut &auth_type_bytes[..]).unwrap(),
+							task.auth_type.to_subxt_type(),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
 				Intent::TransferNative(transfer) => {
-					let to_bytes = transfer.to.encode();
-					let to: AccountId32 = Decode::decode(&mut &to_bytes[..]).unwrap();
 					let transfer_call = BalancesCall::transfer_allow_death {
-						dest: to.into(),
+						dest: transfer.to.to_subxt_type().into(),
 						value: transfer.value,
 					};
-					let auth_type_bytes = task.auth_type.encode();
-					let member_hash_bytes = sender_identity.hash().encode();
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-							Decode::decode(&mut &member_hash_bytes[..]).unwrap(),
+							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::Balances(transfer_call),
-							Decode::decode(&mut &auth_type_bytes[..]).unwrap(),
+							task.auth_type.to_subxt_type(),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
 				Intent::CallEthereum(_)
 				| Intent::TransferEthereum(_)
 				| Intent::TransferSolana(_) => {
-					let intent_bytes = intent.encode();
-					let request_intent_call = OmniAccountCall::request_intent {
-						intent: Decode::decode(&mut &intent_bytes[..]).unwrap(),
-					};
-					let auth_type_bytes = task.auth_type.encode();
-					let member_hash_bytes = sender_identity.hash().encode();
+					let request_intent_call =
+						OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-							Decode::decode(&mut &member_hash_bytes[..]).unwrap(),
+							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::OmniAccount(request_intent_call),
-							Decode::decode(&mut &auth_type_bytes[..]).unwrap(),
+							task.auth_type.to_subxt_type(),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
