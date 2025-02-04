@@ -1,5 +1,5 @@
 {
-  "name": "Litentry-paseo",
+  "name": "Heima-paseo",
   "id": "litentry-paseo",
   "chainType": "Live",
   "bootNodes": [
@@ -11,11 +11,10 @@
       0
     ]
   ],
-  "protocolId": "litentry-paseo",
   "properties": {
     "ss58Format": 131,
     "tokenDecimals": 18,
-    "tokenSymbol": "LIT"
+    "tokenSymbol": "HEI"
   },
   "relayChain": "paseo",
   "paraId": 2106,

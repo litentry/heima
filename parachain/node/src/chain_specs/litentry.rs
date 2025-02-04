@@ -33,7 +33,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Get default parachain properties for Litentry which will be filled into chain spec
 fn default_parachain_properties() -> Properties {
-	parachain_properties("LIT", 18, 31)
+	parachain_properties("HEI", 18, 31)
 }
 
 const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 1000 * UNIT;
@@ -58,7 +58,6 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 	)
 	.with_name("Heima-dev")
 	.with_id("heima-dev")
-	.with_protocol_id("heima")
 	.with_chain_type(ChainType::Development)
 	.with_properties(default_parachain_properties())
 	.with_genesis_config(generate_genesis(
@@ -89,27 +88,11 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 	.build()
 }
 
-pub fn get_chain_spec_staging() -> ChainSpec {
-	// Staging keys are derivative keys based on a single master secret phrase:
-	//
-	// root: 	$SECRET
-	// account:	$SECRET//collator//<id>
-	// aura: 	$SECRET//collator//<id>//aura
-	get_chain_spec_from_genesis_info(
-		include_bytes!("../../res/genesis_info/staging.json"),
-		"Heima-staging",
-		"heima-staging",
-		ChainType::Local,
-		"rococo-local".into(),
-		LITENTRY_PARA_ID.into(),
-	)
-}
-
 pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/litentry.json"),
 		"Heima",
-		"heima",
+		"litentry", // unchanged for now, so that node operators don't have to change the db path 
 		ChainType::Live,
 		"polkadot".into(),
 		LITENTRY_PARA_ID.into(),
@@ -142,7 +125,6 @@ fn get_chain_spec_from_genesis_info(
 	.with_name(name)
 	.with_id(id)
 	.with_chain_type(chain_type)
-	.with_protocol_id("heima")
 	.with_properties(default_parachain_properties())
 	.with_boot_nodes(
 		boot_nodes

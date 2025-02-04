@@ -4,7 +4,8 @@
   "chainType": "Live",
   "bootNodes": [
     "/dns/rpc0.litentry-parachain-sg.litentry.io/tcp/40333/ws/p2p/12D3KooWBy6nNAuca2ZrxNEH93bzmb7ZjRpzRbbz7CtNEraiHtSC",
-    "/dns/rpc1.litentry-parachain-sg.litentry.io/tcp/40333/ws/p2p/12D3KooWJejFQVK5wtZeDZguAXkzQxngrS9yZt2F1bk92m5w4Xgp"
+    "/dns/rpc1.litentry-parachain-sg.litentry.io/tcp/40333/ws/p2p/12D3KooWJejFQVK5wtZeDZguAXkzQxngrS9yZt2F1bk92m5w4Xgp",
+    "/dns/litentry-boot.dwellir.com/tcp/30333/ws/p2p/12D3KooWFHkJaz1BxqdAjzeLK4xcubxXP25kTaYWZqsJukuex5Ly"
   ],
   "telemetryEndpoints": [
     [
@@ -12,7 +13,6 @@
       0
     ]
   ],
-  "protocolId": "heima",
   "properties": {
     "ss58Format": 31,
     "tokenDecimals": 18,
