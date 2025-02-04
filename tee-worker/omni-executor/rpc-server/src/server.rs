@@ -7,11 +7,9 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::{env, marker::PhantomData, net::SocketAddr, sync::Arc};
 
 pub(crate) struct RpcContext<
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 > {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
@@ -22,19 +20,15 @@ pub(crate) struct RpcContext<
 	pub jwt_secret: String,
 	pub google_client_id: String,
 	pub google_client_secret: String,
-	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
-	phantom_hash: PhantomData<Hash>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
-		AccountId,
 		Header,
-		Hash,
-		RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
-	> RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	> RpcContext<Header, RpcClient, RpcClientFactory>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -58,20 +52,16 @@ impl<
 			jwt_secret,
 			google_client_id,
 			google_client_secret,
-			phantom_account_id: PhantomData,
 			phantom_header: PhantomData,
-			phantom_hash: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
 	}
 }
 
 pub async fn start_server<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	Hash: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	port: &str,
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,

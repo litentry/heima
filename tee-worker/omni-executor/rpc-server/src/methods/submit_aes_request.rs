@@ -30,13 +30,11 @@ pub struct AuthenticatedCall {
 }
 
 pub fn register_submit_aes_request<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	Hash: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
 	module
 		.register_async_method("native_submitAesRequest", |params, ctx, _| async move {
@@ -75,14 +73,12 @@ pub fn register_submit_aes_request<
 
 fn handle_aes_request<
 	'a,
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	mut request: AesRequest,
-	ctx: Arc<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.shard().encode() != ctx.mrenclave.encode() {

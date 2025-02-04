@@ -36,13 +36,7 @@ pub type ParentchainListener<
 	AccountStoreStorage,
 	MemberAccountStorage,
 > = Listener<
-	Fetcher<
-		<ChainConfig as Config>::AccountId,
-		<ChainConfig as Config>::Header,
-		<ChainConfig as Config>::Hash,
-		RpcClient,
-		RpcClientFactory,
-	>,
+	Fetcher<<ChainConfig as Config>::Header, RpcClient, RpcClientFactory>,
 	SyncCheckpoint,
 	CheckpointRepository,
 	IntentEventId,

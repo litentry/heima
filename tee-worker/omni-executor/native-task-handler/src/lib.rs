@@ -42,29 +42,23 @@ pub struct NativeTask {
 }
 
 pub struct TaskHandlerContext<
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 > {
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_secret: String,
 	pub transaction_signer: Arc<ParentchainTxSigner>,
-	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
-	phantom_hash: PhantomData<Hash>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
-		AccountId,
 		Header,
-		Hash,
-		RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
-	> TaskHandlerContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	> TaskHandlerContext<Header, RpcClient, RpcClientFactory>
 {
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
@@ -77,23 +71,19 @@ impl<
 			transaction_signer,
 			storage_db,
 			jwt_secret,
-			phantom_account_id: PhantomData,
 			phantom_header: PhantomData,
-			phantom_hash: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
 	}
 }
 
 pub async fn run_native_task_handler<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	Hash: Send + Sync + Codec + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	buffer: usize,
-	ctx: Arc<TaskHandlerContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
 ) -> NativeTaskSender {
 	let (sender, mut receiver) = mpsc::channel::<NativeTask>(buffer);
 
@@ -107,13 +97,11 @@ pub async fn run_native_task_handler<
 }
 
 async fn handle_native_task<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	Hash: Send + Sync + Codec + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	ctx: Arc<TaskHandlerContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
 	task: NativeTask,
 ) {
 	let response_sender = task.response_sender;

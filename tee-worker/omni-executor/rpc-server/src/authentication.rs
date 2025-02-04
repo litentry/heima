@@ -116,13 +116,11 @@ pub fn verify_web3_authentication(
 }
 
 pub fn verify_email_authentication<
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	sender_identity: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
@@ -139,13 +137,11 @@ pub fn verify_email_authentication<
 }
 
 pub fn verify_auth_token_authentication<
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	auth_token: &str,
@@ -171,13 +167,11 @@ pub fn verify_auth_token_authentication<
 }
 
 pub fn verify_oauth2_authentication<
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	payload: &OAuth2Data,
@@ -188,13 +182,11 @@ pub fn verify_oauth2_authentication<
 }
 
 fn verify_google_oauth2<
-	AccountId,
 	Header,
-	Hash,
-	RpcClient: SubstrateRpcClient<AccountId, Header, Hash>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, Hash, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, Hash, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	payload: &OAuth2Data,
