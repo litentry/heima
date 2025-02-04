@@ -1,4 +1,4 @@
-use executor_primitives::{intent::Intent, Identity};
+use executor_primitives::{intent::Intent, Identity, ValidationData};
 use heima_authentication::auth_token::AuthOptions;
 use parity_scale_codec::{Decode, Encode};
 
@@ -8,6 +8,7 @@ pub enum NativeCall {
 	request_auth_token(Identity, AuthOptions),
 	request_intent(Identity, Intent),
 	create_account_store(Identity),
+	add_account(Identity, Identity, ValidationData, bool),
 	noop(Identity),
 }
 
@@ -17,6 +18,7 @@ impl NativeCall {
 			NativeCall::request_auth_token(sender_identity, ..) => sender_identity,
 			NativeCall::request_intent(sender_identity, ..) => sender_identity,
 			NativeCall::create_account_store(sender_identity) => sender_identity,
+			NativeCall::add_account(sender_identity, ..) => sender_identity,
 			NativeCall::noop(sender_identity) => sender_identity,
 		}
 	}
