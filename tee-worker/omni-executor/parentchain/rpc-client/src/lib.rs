@@ -16,6 +16,9 @@
 mod xt_status;
 pub use xt_status::{TransactionStatus, XtStatus};
 
+mod type_converters;
+pub use type_converters::*;
+
 pub mod metadata;
 pub use subxt_core::utils::AccountId32;
 

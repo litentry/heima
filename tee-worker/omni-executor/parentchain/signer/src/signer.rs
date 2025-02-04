@@ -2,7 +2,7 @@ use executor_core::key_store::KeyStore;
 use log::error;
 use parentchain_rpc_client::{
 	metadata::{MetadataProvider, SubxtMetadataProvider},
-	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory,
+	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, ToPrimitiveType,
 };
 use parity_scale_codec::Decode;
 use std::marker::PhantomData;
@@ -88,7 +88,7 @@ impl<
 		let account_id = AccountId32::from(signer.public_key());
 
 		let nonce = client
-			.get_account_nonce(&account_id)
+			.get_account_nonce(&account_id.to_primitive_type())
 			.await
 			.map_err(|e| error!("Could not read nonce: {:?}", e))
 			.unwrap();

@@ -1,5 +1,9 @@
+use executor_primitives::Hash;
 use parity_scale_codec::{Codec, Decode, Encode};
-use subxt::backend::legacy::rpc_methods::TransactionStatus as SubxtTransactionStatus;
+use subxt::{
+	backend::legacy::rpc_methods::TransactionStatus as SubxtTransactionStatus,
+	utils::H256 as SubxtHash,
+};
 
 /// Simplified TransactionStatus to allow the user to choose until when to watch
 /// an extrinsic.
@@ -99,17 +103,32 @@ impl<Hash: Codec> TransactionStatus<Hash> {
 	}
 }
 
-impl<Hash: Codec> From<SubxtTransactionStatus<Hash>> for TransactionStatus<Hash> {
-	fn from(value: SubxtTransactionStatus<Hash>) -> Self {
+impl<H: Codec> From<SubxtTransactionStatus<H>> for TransactionStatus<Hash> {
+	fn from(value: SubxtTransactionStatus<H>) -> Self {
 		match value {
 			SubxtTransactionStatus::Future => Self::Future,
 			SubxtTransactionStatus::Ready => Self::Ready,
 			SubxtTransactionStatus::Broadcast(peers) => Self::Broadcast(peers),
-			SubxtTransactionStatus::InBlock(hash) => Self::InBlock(hash),
-			SubxtTransactionStatus::Retracted(hash) => Self::Retracted(hash),
-			SubxtTransactionStatus::FinalityTimeout(hash) => Self::FinalityTimeout(hash),
-			SubxtTransactionStatus::Finalized(hash) => Self::Finalized(hash),
-			SubxtTransactionStatus::Usurped(hash) => Self::Usurped(hash),
+			SubxtTransactionStatus::InBlock(hash) => {
+				let hash_bytes = hash.encode();
+				Self::InBlock(Hash::decode(&mut &hash_bytes[..]).unwrap())
+			},
+			SubxtTransactionStatus::Retracted(hash) => {
+				let hash_bytes = hash.encode();
+				Self::Retracted(Hash::decode(&mut &hash_bytes[..]).unwrap())
+			},
+			SubxtTransactionStatus::FinalityTimeout(hash) => {
+				let hash_bytes = hash.encode();
+				Self::FinalityTimeout(Hash::decode(&mut &hash_bytes[..]).unwrap())
+			},
+			SubxtTransactionStatus::Finalized(hash) => {
+				let hash_bytes = hash.encode();
+				Self::Finalized(Hash::decode(&mut &hash_bytes[..]).unwrap())
+			},
+			SubxtTransactionStatus::Usurped(hash) => {
+				let hash_bytes = hash.encode();
+				Self::Usurped(Hash::decode(&mut &hash_bytes[..]).unwrap())
+			},
 			SubxtTransactionStatus::Dropped => Self::Dropped,
 			SubxtTransactionStatus::Invalid => Self::Invalid,
 		}
@@ -119,7 +138,7 @@ impl<Hash: Codec> From<SubxtTransactionStatus<Hash>> for TransactionStatus<Hash>
 #[cfg(test)]
 mod tests {
 	use super::{TransactionStatus as GenericTransactionStatus, *};
-	use executor_primitives::Hash;
+	use subxt::utils::H256;
 
 	type TransactionStatus = GenericTransactionStatus<Hash>;
 
@@ -236,5 +255,17 @@ mod tests {
 		assert!(TransactionStatus::Usurped(Hash::random()).reached_status(status));
 		assert!(TransactionStatus::Dropped.reached_status(status));
 		assert!(TransactionStatus::Invalid.reached_status(status));
+	}
+
+	#[test]
+	fn test_conversion_from_subxt_transaction_status() {
+		let subxt_hash = H256::random();
+		let hash_bytes = subxt_hash.encode();
+		let hash = Hash::decode(&mut &hash_bytes[..]).unwrap();
+
+		let subxt_status = SubxtTransactionStatus::InBlock(subxt_hash);
+		let status: TransactionStatus = subxt_status.into();
+
+		assert_eq!(status, TransactionStatus::InBlock(hash));
 	}
 }

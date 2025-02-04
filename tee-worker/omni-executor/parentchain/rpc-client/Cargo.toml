@@ -16,6 +16,7 @@ serde_json = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }
+parentchain-api-interface = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
