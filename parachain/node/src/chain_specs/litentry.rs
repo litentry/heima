@@ -92,7 +92,7 @@ pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/litentry.json"),
 		"Heima",
-		"litentry", // unchanged for now, so that node operators don't have to change the db path 
+		"litentry", // unchanged for now, so that node operators don't have to change the db path
 		ChainType::Live,
 		"polkadot".into(),
 		LITENTRY_PARA_ID.into(),
