@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+mod validation_data;
+pub use validation_data::ValidationData;
+
 pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
