@@ -5,12 +5,9 @@ use executor_crypto::jwt;
 use executor_primitives::{intent::Intent, OmniAccountAuthType};
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
-use parentchain_api_interface::{
-	omni_account::calls::types::create_account_store,
-	runtime_types::{
-		frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
-		pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
-	},
+use parentchain_api_interface::runtime_types::{
+	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
+	pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
