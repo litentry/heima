@@ -15,7 +15,7 @@ use parentchain_rpc_client::{
 	SubxtClientFactory, XtStatus,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
-use parity_scale_codec::{Codec, Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use types::{NativeCallError, NativeCallOk};
@@ -24,7 +24,7 @@ pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 
 pub type NativeTaskSender = mpsc::Sender<NativeTask>;
 
-type NativeCallResponse<Hash> = Result<NativeCallOk<Hash>, NativeCallError>;
+type NativeCallResponse = Result<NativeCallOk, NativeCallError>;
 
 pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
@@ -107,7 +107,7 @@ async fn handle_native_task<
 	let response_sender = task.response_sender;
 
 	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
-		let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+		let response = NativeCallResponse::Err(NativeCallError::InternalError);
 		if response_sender.send(response.encode()).is_err() {
 			log::error!("Failed to send response");
 		}
@@ -118,7 +118,7 @@ async fn handle_native_task<
 		NativeCall::request_auth_token(sender_identity, auth_options) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
-				let response = NativeCallResponse::<Hash>::Err(NativeCallError::UnauthorizedSender);
+				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -126,8 +126,7 @@ async fn handle_native_task<
 			};
 			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
 			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
-				let response =
-					NativeCallResponse::<Hash>::Err(NativeCallError::AuthTokenCreationFailed);
+				let response = NativeCallResponse::Err(NativeCallError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -140,14 +139,14 @@ async fn handle_native_task<
 			let signed_call = ctx.transaction_signer.sign(auth_token_requested_call).await;
 
 			if rpc_client.submit_tx(&signed_call).await.is_err() {
-				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+				let response = NativeCallResponse::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			}
 
-			let response = NativeCallResponse::Ok(NativeCallOk::<Hash>::AuthToken(token));
+			let response = NativeCallResponse::Ok(NativeCallOk::AuthToken(token));
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
@@ -204,7 +203,7 @@ async fn handle_native_task<
 			};
 			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
 			else {
-				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+				let response = NativeCallResponse::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -227,7 +226,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
 			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
 			else {
-				let response = NativeCallResponse::<Hash>::Err(NativeCallError::InternalError);
+				let response = NativeCallResponse::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -243,9 +242,10 @@ async fn handle_native_task<
 			}
 		},
 		_ => {
-			let response = NativeCallResponse::<Hash>::Err(NativeCallError::UnexpectedCall(
-				format!("Unexpected call: {:?}", task.call),
-			));
+			let response = NativeCallResponse::Err(NativeCallError::UnexpectedCall(format!(
+				"Unexpected call: {:?}",
+				task.call
+			)));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
