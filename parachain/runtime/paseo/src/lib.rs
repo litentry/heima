@@ -227,13 +227,12 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// Note:
-	// It's important to match `paseo-parachain-runtime`, which is runtime pkg name
+	// has to match the on-chain registered spec-name, which is `paseo-parachain`
 	spec_name: create_runtime_str!("paseo-parachain"),
-	impl_name: create_runtime_str!("paseo-parachain"),
+	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9223,
+	spec_version: 9230,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
