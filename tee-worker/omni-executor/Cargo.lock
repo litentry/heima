@@ -3722,8 +3722,11 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
+ "executor-crypto",
+ "executor-primitives",
  "log",
  "oauth-providers",
+ "parity-scale-codec",
  "rand 0.8.5",
  "sendgrid",
  "serde",
@@ -5002,11 +5005,13 @@ dependencies = [
  "executor-primitives",
  "executor-storage",
  "heima-authentication",
+ "heima-identity-verification",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
+ "rand 0.8.5",
  "tokio",
 ]
 
