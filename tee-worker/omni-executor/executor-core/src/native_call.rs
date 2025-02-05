@@ -10,6 +10,7 @@ pub enum NativeCall {
 	request_intent(Identity, Intent),
 	create_account_store(Identity),
 	add_account(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
+	remove_accounts(Identity, Vec<Identity>),
 	noop(Identity),
 }
 
@@ -20,6 +21,7 @@ impl NativeCall {
 			NativeCall::request_intent(sender_identity, ..) => sender_identity,
 			NativeCall::create_account_store(sender_identity) => sender_identity,
 			NativeCall::add_account(sender_identity, ..) => sender_identity,
+			NativeCall::remove_accounts(sender_identity, ..) => sender_identity,
 			NativeCall::noop(sender_identity) => sender_identity,
 		}
 	}
