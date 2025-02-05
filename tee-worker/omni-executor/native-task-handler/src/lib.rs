@@ -357,16 +357,6 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(task.response_sender, tx)
 		},
-		_ => {
-			let response = NativeCallResponse::Err(NativeCallError::UnexpectedCall(format!(
-				"Unexpected call: {:?}",
-				task.call
-			)));
-			if task.response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
-			return;
-		},
 	};
 	let report = match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
 		Ok(report) => report,
