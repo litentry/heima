@@ -4,8 +4,11 @@ pub use aes256_key_store::Aes256KeyStore;
 mod types;
 
 use executor_core::native_call::NativeCall;
-use executor_crypto::jwt;
 use executor_primitives::{intent::Intent, OmniAccountAuthType};
+use executor_crypto::{
+	aes256::{aes_encrypt_default, Aes256Key},
+	jwt,
+};
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
 use parentchain_api_interface::runtime_types::{
@@ -52,6 +55,7 @@ pub struct TaskHandlerContext<
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_secret: String,
+	pub aes256_key: Aes256Key,
 	pub transaction_signer: Arc<ParentchainTxSigner>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -68,12 +72,14 @@ impl<
 		transaction_signer: Arc<ParentchainTxSigner>,
 		storage_db: Arc<StorageDB>,
 		jwt_secret: String,
+		aes256_key: Aes256Key,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
 			transaction_signer,
 			storage_db,
 			jwt_secret,
+			aes256_key,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
