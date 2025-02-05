@@ -426,6 +426,36 @@ async fn handle_native_task<
 				log::error!("Failed to send response");
 			}
 		},
+		NativeCall::set_permissions(sender_identity, identity, permissions) => {
+			let set_permissions_call = OmniAccountCall::set_permissions {
+				member_account_hash: identity.hash().to_subxt_type(),
+				permissions: permissions.to_subxt_type(),
+			};
+			let dispatch_as_omni_account_call =
+				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(set_permissions_call),
+					task.auth_type.to_subxt_type(),
+				);
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
+			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
+			else {
+				log::error!("Failed to submit and watch tx");
+				let response = NativeCallResponse::Err(NativeCallError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
+				extrinsic_hash: report.extrinsic_hash,
+				block_hash: report.block_hash,
+				status: report.status,
+			});
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+		},
 		_ => {
 			let response = NativeCallResponse::Err(NativeCallError::UnexpectedCall(format!(
 				"Unexpected call: {:?}",

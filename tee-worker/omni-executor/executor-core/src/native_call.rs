@@ -12,6 +12,7 @@ pub enum NativeCall {
 	add_account(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	remove_accounts(Identity, Vec<Identity>),
 	publicize_account(Identity, Identity),
+	set_permissions(Identity, Identity, Vec<OmniAccountPermission>),
 	noop(Identity),
 }
 
@@ -24,6 +25,7 @@ impl NativeCall {
 			NativeCall::add_account(sender_identity, ..) => sender_identity,
 			NativeCall::remove_accounts(sender_identity, ..) => sender_identity,
 			NativeCall::publicize_account(sender_identity, ..) => sender_identity,
+			NativeCall::set_permissions(sender_identity, ..) => sender_identity,
 			NativeCall::noop(sender_identity) => sender_identity,
 		}
 	}
