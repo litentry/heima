@@ -114,23 +114,20 @@ async fn handle_native_task<
 	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
 	task: NativeTask,
 ) {
-	let response_sender = task.response_sender;
-
 	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
 		log::error!("Failed to create rpc client");
 		let response = NativeCallResponse::Err(NativeCallError::InternalError);
-		if response_sender.send(response.encode()).is_err() {
+		if task.response_sender.send(response.encode()).is_err() {
 			log::error!("Failed to send response");
 		}
 		return;
 	};
-
-	match task.call {
+	let (response_sender, tx) = match task.call {
 		NativeCall::request_auth_token(sender_identity, auth_options) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
 				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
-				if response_sender.send(response.encode()).is_err() {
+				if task.response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
@@ -138,7 +135,7 @@ async fn handle_native_task<
 			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
 			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
 				let response = NativeCallResponse::Err(NativeCallError::AuthTokenCreationFailed);
-				if response_sender.send(response.encode()).is_err() {
+				if task.response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
@@ -152,7 +149,7 @@ async fn handle_native_task<
 			if rpc_client.submit_tx(&signed_call).await.is_err() {
 				log::error!("Failed to submit tx");
 				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
+				if task.response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
@@ -160,9 +157,10 @@ async fn handle_native_task<
 
 			let response = NativeCallResponse::Ok(NativeCallOk::AuthToken(token));
 
-			if response_sender.send(response.encode()).is_err() {
+			if task.response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
+			return;
 		},
 		NativeCall::request_intent(sender_identity, intent) => {
 			let tx = match intent {
@@ -203,23 +201,7 @@ async fn handle_native_task<
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
 			};
-			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
-			else {
-				log::error!("Failed to submit and watch tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
-				extrinsic_hash: report.extrinsic_hash,
-				block_hash: report.block_hash,
-				status: report.status,
-			});
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+			(task.response_sender, tx)
 		},
 		NativeCall::create_account_store(sender_identity) => {
 			let sender_identity_bytes = sender_identity.encode();
@@ -227,23 +209,7 @@ async fn handle_native_task<
 				.omni_account()
 				.create_account_store(Decode::decode(&mut &sender_identity_bytes[..]).unwrap());
 			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
-			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
-			else {
-				log::error!("Failed to submit and watch tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
-				extrinsic_hash: report.extrinsic_hash,
-				block_hash: report.block_hash,
-				status: report.status,
-			});
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+			(task.response_sender, tx)
 		},
 		NativeCall::add_account(
 			sender_identity,
@@ -255,7 +221,7 @@ async fn handle_native_task<
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
 				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
-				if response_sender.send(response.encode()).is_err() {
+				if task.response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
@@ -263,7 +229,7 @@ async fn handle_native_task<
 			let Ok(nonce) = rpc_client.get_account_nonce(&omni_account).await else {
 				log::error!("Failed to get account nonce");
 				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
+				if task.response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
@@ -322,10 +288,9 @@ async fn handle_native_task<
 					}
 				},
 			};
-
 			if let Err(e) = validation_result {
 				let response = NativeCallResponse::Err(e);
-				if response_sender.send(response.encode()).is_err() {
+				if task.response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
@@ -348,23 +313,7 @@ async fn handle_native_task<
 					task.auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
-			else {
-				log::error!("Failed to submit and watch tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
-				extrinsic_hash: report.extrinsic_hash,
-				block_hash: report.block_hash,
-				status: report.status,
-			});
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+			(task.response_sender, tx)
 		},
 		NativeCall::remove_accounts(sender_identity, identities) => {
 			let remove_accounts = OmniAccountCall::remove_accounts {
@@ -380,23 +329,7 @@ async fn handle_native_task<
 					task.auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
-			else {
-				log::error!("Failed to submit and watch tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
-				extrinsic_hash: report.extrinsic_hash,
-				block_hash: report.block_hash,
-				status: report.status,
-			});
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+			(task.response_sender, tx)
 		},
 		NativeCall::publicize_account(sender_identity, identity) => {
 			let publicize_account_call =
@@ -408,23 +341,7 @@ async fn handle_native_task<
 					task.auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
-			else {
-				log::error!("Failed to submit and watch tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
-				extrinsic_hash: report.extrinsic_hash,
-				block_hash: report.block_hash,
-				status: report.status,
-			});
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+			(task.response_sender, tx)
 		},
 		NativeCall::set_permissions(sender_identity, identity, permissions) => {
 			let set_permissions_call = OmniAccountCall::set_permissions {
@@ -438,32 +355,36 @@ async fn handle_native_task<
 					task.auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
-			else {
-				log::error!("Failed to submit and watch tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
-				extrinsic_hash: report.extrinsic_hash,
-				block_hash: report.block_hash,
-				status: report.status,
-			});
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+			(task.response_sender, tx)
 		},
 		_ => {
 			let response = NativeCallResponse::Err(NativeCallError::UnexpectedCall(format!(
 				"Unexpected call: {:?}",
 				task.call
 			)));
+			if task.response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
+		},
+	};
+	let report = match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
+		Ok(report) => report,
+		Err(e) => {
+			log::error!("Failed to submit and watch tx: {:?}", e);
+			let response = NativeCallResponse::Err(NativeCallError::InternalError);
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
+			return;
 		},
+	};
+	let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
+		extrinsic_hash: report.extrinsic_hash,
+		block_hash: report.block_hash,
+		status: report.status,
+	});
+	if response_sender.send(response.encode()).is_err() {
+		log::error!("Failed to send response");
 	}
 }
