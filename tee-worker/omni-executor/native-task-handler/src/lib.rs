@@ -116,6 +116,7 @@ async fn handle_native_task<
 	let response_sender = task.response_sender;
 
 	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
+		log::error!("Failed to create rpc client");
 		let response = NativeCallResponse::Err(NativeCallError::InternalError);
 		if response_sender.send(response.encode()).is_err() {
 			log::error!("Failed to send response");
@@ -148,6 +149,7 @@ async fn handle_native_task<
 			let signed_call = ctx.transaction_signer.sign(auth_token_requested_call).await;
 
 			if rpc_client.submit_tx(&signed_call).await.is_err() {
+				log::error!("Failed to submit tx");
 				let response = NativeCallResponse::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
@@ -202,6 +204,7 @@ async fn handle_native_task<
 			};
 			let Ok(report) = rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await
 			else {
+				log::error!("Failed to submit and watch tx");
 				let response = NativeCallResponse::Err(NativeCallError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
