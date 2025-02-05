@@ -1,8 +1,13 @@
-use executor_primitives::{intent::Intent, AccountId, Hash, MemberAccount, OmniAccountAuthType};
+use executor_primitives::{
+	intent::Intent, AccountId, Hash, MemberAccount, OmniAccountAuthType, OmniAccountPermission,
+};
 use parentchain_api_interface::{
 	omni_account::calls::types::dispatch_as_omni_account::AuthType as SubxtOmniAccountAuthType,
-	runtime_types::core_primitives::{
-		intent::Intent as SubxtIntent, omni_account::MemberAccount as SubxtMemberAccount,
+	runtime_types::{
+		core_primitives::{
+			intent::Intent as SubxtIntent, omni_account::MemberAccount as SubxtMemberAccount,
+		},
+		paseo_parachain_runtime::OmniAccountPermission as SubxtOmniAccountPermission,
 	},
 };
 use parity_scale_codec::{Decode, Encode};
@@ -62,5 +67,19 @@ impl ToPrimitiveType<MemberAccount> for SubxtMemberAccount {
 	fn to_primitive_type(&self) -> MemberAccount {
 		let bytes = self.encode();
 		Decode::decode(&mut &bytes[..]).expect("Failed to decode MemberAccount")
+	}
+}
+
+impl ToSubxtType<SubxtMemberAccount> for MemberAccount {
+	fn to_subxt_type(&self) -> SubxtMemberAccount {
+		let bytes = self.encode();
+		Decode::decode(&mut &bytes[..]).expect("Failed to decode SubxtMemberAccount")
+	}
+}
+
+impl ToSubxtType<Vec<SubxtOmniAccountPermission>> for Vec<OmniAccountPermission> {
+	fn to_subxt_type(&self) -> Vec<SubxtOmniAccountPermission> {
+		let bytes = self.encode();
+		Decode::decode(&mut &bytes[..]).expect("Failed to decode SubxtOmniAccountPermission")
 	}
 }
