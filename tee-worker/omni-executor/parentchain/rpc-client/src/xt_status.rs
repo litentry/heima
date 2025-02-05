@@ -1,9 +1,6 @@
 use executor_primitives::Hash;
 use parity_scale_codec::{Codec, Decode, Encode};
-use subxt::{
-	backend::legacy::rpc_methods::TransactionStatus as SubxtTransactionStatus,
-	utils::H256 as SubxtHash,
-};
+use subxt::backend::legacy::rpc_methods::TransactionStatus as SubxtTransactionStatus;
 
 /// Simplified TransactionStatus to allow the user to choose until when to watch
 /// an extrinsic.
