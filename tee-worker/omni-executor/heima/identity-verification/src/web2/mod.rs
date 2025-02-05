@@ -60,7 +60,7 @@ pub fn verify_identity(
 	Ok(())
 }
 
-pub fn vec_to_string(vec: Vec<u8>) -> Result<String, ()> {
+fn vec_to_string(vec: Vec<u8>) -> Result<String, ()> {
 	let tmp = String::from_utf8(vec.to_vec()).map_err(|_| ())?;
 	let tmp = tmp.trim();
 	if tmp.is_empty() {
