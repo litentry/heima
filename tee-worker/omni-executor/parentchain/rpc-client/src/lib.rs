@@ -352,7 +352,7 @@ impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
 		_extrinsic: &[u8],
 		_until_status: XtStatus,
 	) -> Result<ExtrinsicReport<Hash>, ()> {
-		todo!()
+		unimplemented!()
 	}
 }
 
