@@ -1,11 +1,13 @@
 use executor_primitives::{
-	intent::Intent, AccountId, Hash, MemberAccount, OmniAccountAuthType, OmniAccountPermission,
+	intent::Intent, AccountId, Hash, Identity, MemberAccount, OmniAccountAuthType,
+	OmniAccountPermission,
 };
 use parentchain_api_interface::{
 	omni_account::calls::types::dispatch_as_omni_account::AuthType as SubxtOmniAccountAuthType,
 	runtime_types::{
 		core_primitives::{
-			intent::Intent as SubxtIntent, omni_account::MemberAccount as SubxtMemberAccount,
+			identity::Identity as SubxtIdentity, intent::Intent as SubxtIntent,
+			omni_account::MemberAccount as SubxtMemberAccount,
 		},
 		paseo_parachain_runtime::OmniAccountPermission as SubxtOmniAccountPermission,
 	},
@@ -32,6 +34,13 @@ impl ToPrimitiveType<AccountId> for SubxtAccountId {
 	fn to_primitive_type(&self) -> AccountId {
 		let bytes = self.encode();
 		Decode::decode(&mut &bytes[..]).expect("Failed to decode AccountId")
+	}
+}
+
+impl ToSubxtType<SubxtIdentity> for Identity {
+	fn to_subxt_type(&self) -> SubxtIdentity {
+		let bytes = self.encode();
+		Decode::decode(&mut &bytes[..]).expect("Failed to decode SubxtIdentity")
 	}
 }
 
