@@ -13,7 +13,7 @@ use executor_primitives::{
 };
 use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
 use heima_authentication::auth_token::AuthTokenClaims;
-use heima_identity_verification::{get_expected_raw_message, verify_web3_identity};
+use heima_identity_verification::{web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
 	pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
@@ -271,7 +271,8 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let raw_message = get_expected_raw_message(&sender_identity, &identity, nonce);
+			let verification_message =
+				web3::get_verification_message(&sender_identity, &identity, nonce);
 
 			let validation_result = match validation_data {
 				ValidationData::Web2(web2_validation_data) => {
@@ -281,11 +282,15 @@ async fn handle_native_task<
 					if !identity.is_web3() {
 						Err(NativeCallError::InvalidMemberIdentity)
 					} else {
-						verify_web3_identity(&identity, &raw_message, &web3_validation_data)
-							.map_err(|_| {
-								log::error!("Failed to verify web3 identity");
-								NativeCallError::ValidationDataVerificationFailed
-							})
+						web3::verify_identity(
+							&identity,
+							&verification_message,
+							&web3_validation_data,
+						)
+						.map_err(|_| {
+							log::error!("Failed to verify web3 identity");
+							NativeCallError::ValidationDataVerificationFailed
+						})
 					}
 				},
 			};
