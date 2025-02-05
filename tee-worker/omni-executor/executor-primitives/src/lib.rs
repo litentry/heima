@@ -21,7 +21,7 @@ pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
 	intent,
-	omni_account::{MemberAccount, OmniAccountAuthType},
+	omni_account::{MemberAccount, OmniAccountAuthType, OmniAccountPermission},
 	AccountId, BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
 };
 use std::fmt::Debug;

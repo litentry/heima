@@ -1,6 +1,7 @@
-use executor_primitives::{intent::Intent, Identity, ValidationData};
+use executor_primitives::{intent::Intent, Identity, OmniAccountPermission, ValidationData};
 use heima_authentication::auth_token::AuthOptions;
 use parity_scale_codec::{Decode, Encode};
+use std::vec::Vec;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -8,7 +9,7 @@ pub enum NativeCall {
 	request_auth_token(Identity, AuthOptions),
 	request_intent(Identity, Intent),
 	create_account_store(Identity),
-	add_account(Identity, Identity, ValidationData, bool),
+	add_account(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	noop(Identity),
 }
 
