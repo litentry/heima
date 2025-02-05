@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory};
+use crate::{RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory};
 use async_trait::async_trait;
 use parity_scale_codec::Decode;
 use subxt::Config;
@@ -38,8 +38,8 @@ impl<ChainConfig: Config> SubxtMetadataProvider<ChainConfig> {
 }
 
 #[async_trait]
-impl<ChainConfig: Config<AccountId = AccountId32>> MetadataProvider<Metadata>
-	for SubxtMetadataProvider<ChainConfig>
+impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
+	MetadataProvider<Metadata> for SubxtMetadataProvider<ChainConfig>
 {
 	async fn get(&self, block_num: Option<u64>) -> Metadata {
 		let mut client = self.client_factory.new_client().await.unwrap();

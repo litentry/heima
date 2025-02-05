@@ -8,12 +8,13 @@ mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
 use executor_crypto::hashing::{blake2_128, twox_128};
-use executor_primitives::{AccountId, MemberAccount, TryFromSubxtType};
+use executor_primitives::{AccountId, MemberAccount};
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
 use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
+	ToPrimitiveType,
 };
 use parity_scale_codec::Decode;
 use rocksdb::DB;
@@ -87,7 +88,7 @@ async fn init_omni_account_storages(
 					log::error!("Could not get storage proof by keys: {:?}", e);
 				})?;
 		let header = match client.get_last_finalized_header().await {
-			Ok(Some(header)) => header,
+			Ok(header) => header,
 			_ => {
 				log::error!("Could not get last finalized header");
 				return Err(());
@@ -132,10 +133,7 @@ async fn init_omni_account_storages(
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
 					for member in account_store.0.iter() {
-						let member_account =
-							MemberAccount::try_from_subxt_type(member).map_err(|e| {
-								log::error!("Error decoding member account: {:?}", e);
-							})?;
+						let member_account: MemberAccount = member.to_primitive_type();
 						member_omni_account_storage
 							.insert(member_account.hash(), omni_account.clone())
 							.map_err(|e| {

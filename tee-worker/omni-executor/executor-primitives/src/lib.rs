@@ -14,17 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+mod validation_data;
+pub use validation_data::{
+	DiscordValidationData, TwitterValidationData, ValidationData, Web2ValidationData,
+	Web3ValidationData,
+};
+
 pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
-	omni_account::{MemberAccount, OmniAccountAuthType},
-	AccountId, BlockNumber, Hash, Identity, Nonce, Web2IdentityType,
+	intent,
+	omni_account::{MemberAccount, OmniAccountAuthType, OmniAccountPermission},
+	AccountId, BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
 };
+use std::fmt::Debug;
 
 pub type MrEnclave = Hash;
-
-use parity_scale_codec::{Decode, Encode};
-use std::fmt::Debug;
 
 pub trait GetEventId<Id> {
 	fn get_event_id(&self) -> Id;
@@ -66,23 +71,5 @@ impl BlockEvent {
 impl GetEventId<EventId> for BlockEvent {
 	fn get_event_id(&self) -> EventId {
 		self.id.clone()
-	}
-}
-
-pub trait TryFromSubxtType<T: Encode>: Sized {
-	fn try_from_subxt_type(t: T) -> Result<Self, ()>;
-}
-
-impl<T: Encode> TryFromSubxtType<T> for Identity {
-	fn try_from_subxt_type(t: T) -> Result<Self, ()> {
-		let bytes = t.encode();
-		Identity::decode(&mut &bytes[..]).map_err(|_| ())
-	}
-}
-
-impl<T: Encode> TryFromSubxtType<T> for MemberAccount {
-	fn try_from_subxt_type(t: T) -> Result<Self, ()> {
-		let bytes = t.encode();
-		MemberAccount::decode(&mut &bytes[..]).map_err(|_| ())
 	}
 }

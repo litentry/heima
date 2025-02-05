@@ -2,7 +2,7 @@ use executor_core::key_store::KeyStore;
 use log::error;
 use parentchain_rpc_client::{
 	metadata::{MetadataProvider, SubxtMetadataProvider},
-	SubstrateRpcClient, SubstrateRpcClientFactory,
+	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, ToPrimitiveType,
 };
 use parity_scale_codec::Decode;
 use std::marker::PhantomData;
@@ -15,8 +15,8 @@ use subxt_signer::sr25519::SecretKeyBytes;
 
 pub struct TransactionSigner<
 	KeyStoreT,
-	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<ChainConfig::Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient>,
 	ChainConfig: Config,
 	MetadataT,
 	MetadataProviderT: MetadataProvider<MetadataT>,
@@ -29,13 +29,14 @@ pub struct TransactionSigner<
 
 impl<
 		KeyStoreT: KeyStore<SecretKeyBytes>,
-		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
+		RpcClient: SubstrateRpcClient<ChainConfig::Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient>,
 		ChainConfig: Config<
 			ExtrinsicParams = DefaultExtrinsicParams<ChainConfig>,
 			AccountId = AccountId32,
 			Address = MultiAddress<AccountId32, u32>,
 			Signature = MultiSignature,
+			Header = RpcClientHeader,
 		>,
 	>
 	TransactionSigner<
@@ -77,7 +78,7 @@ impl<
 		let account_id = AccountId32::from(signer.public_key());
 
 		let nonce = client
-			.get_account_nonce(&account_id)
+			.get_account_nonce(&account_id.to_primitive_type())
 			.await
 			.map_err(|e| error!("Could not read nonce: {:?}", e))
 			.unwrap();

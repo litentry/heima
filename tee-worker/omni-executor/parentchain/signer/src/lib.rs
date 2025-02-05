@@ -9,8 +9,8 @@ use std::sync::Arc;
 use subxt_core::utils::AccountId32;
 use subxt_signer::sr25519::Keypair;
 
-pub fn get_signer(key_store: Arc<SubstrateKeyStore>) -> Keypair {
-	let secret_key_bytes = key_store
+pub fn get_signer(substrate_key_store: Arc<SubstrateKeyStore>) -> Keypair {
+	let secret_key_bytes = substrate_key_store
 		.read()
 		.map_err(|e| {
 			error!("Could not unseal key: {:?}", e);

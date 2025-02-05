@@ -8,6 +8,7 @@ edition.workspace = true
 async-trait = { workspace = true }
 base64 = { workspace = true }
 log = { workspace = true }
+parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 sendgrid = "0.23.0"
 serde = { workspace = true }
@@ -15,6 +16,9 @@ serde_json = { workspace = true }
 url = { workspace = true }
 
 # Local dependencies
+executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
+executor-storage = { workspace = true }
 oauth-providers = { workspace = true }
 
 [lints]
