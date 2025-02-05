@@ -260,7 +260,6 @@ async fn handle_native_task<
 				}
 				return;
 			};
-
 			let Ok(nonce) = rpc_client.get_account_nonce(&omni_account).await else {
 				log::error!("Failed to get account nonce");
 				let response = NativeCallResponse::Err(NativeCallError::InternalError);
@@ -273,7 +272,31 @@ async fn handle_native_task<
 
 			let validation_result = match validation_data {
 				ValidationData::Web2(web2_validation_data) => {
-					todo!()
+					if !identity.is_web2() {
+						Err(NativeCallError::InvalidMemberIdentity)
+					} else {
+						let join_handle = tokio::task::spawn_blocking({
+							let identity = identity.clone();
+							let storage_db = ctx.storage_db.clone();
+							move || {
+								web2::verify_identity(
+									&identity,
+									&verification_message,
+									&web2_validation_data,
+									storage_db,
+								)
+							}
+						})
+						.await;
+						match join_handle {
+							Ok(Ok(_)) => Ok(()),
+							Ok(Err(_)) => Err(NativeCallError::ValidationDataVerificationFailed),
+							Err(e) => {
+								log::error!("Failed to verify identity: {:?}", e);
+								Err(NativeCallError::InternalError)
+							},
+						}
+					}
 				},
 				ValidationData::Web3(web3_validation_data) => {
 					if !identity.is_web3() {
