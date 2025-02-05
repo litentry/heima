@@ -3724,6 +3724,7 @@ dependencies = [
  "base64 0.22.1",
  "executor-crypto",
  "executor-primitives",
+ "executor-storage",
  "log",
  "oauth-providers",
  "parity-scale-codec",

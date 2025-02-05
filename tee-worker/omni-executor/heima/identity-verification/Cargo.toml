@@ -19,6 +19,7 @@ url = { workspace = true }
 oauth-providers = { workspace = true }
 executor-primitives = { workspace = true }
 executor-crypto = { workspace = true }
+executor-storage = { workspace = true }
 
 [lints]
 workspace = true
