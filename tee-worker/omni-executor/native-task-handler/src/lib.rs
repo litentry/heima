@@ -279,15 +279,22 @@ async fn handle_native_task<
 					if !identity.is_web3() {
 						Err(NativeCallError::InvalidMemberIdentity)
 					} else {
-						web3::verify_identity(
-							&identity,
-							&verification_message,
-							&web3_validation_data,
-						)
-						.map_err(|_| {
-							log::error!("Failed to verify web3 identity");
-							NativeCallError::ValidationDataVerificationFailed
+						tokio::task::spawn_blocking(|| {
+							web3::verify_identity(
+								&identity,
+								&verification_message,
+								&web3_validation_data,
+							)
+							.map_err(|_| {
+								log::error!("Failed to verify web3 identity");
+								NativeCallError::ValidationDataVerificationFailed
+							})
 						})
+						.await
+						.map_err(|_| {
+							log::error!("Failed to join blocking task");
+							NativeCallError::InternalError
+						})?
 					}
 				},
 			};
