@@ -1,3 +1,6 @@
+mod aes256_key_store;
+pub use aes256_key_store::Aes256KeyStore;
+
 mod types;
 
 use executor_core::native_call::NativeCall;
