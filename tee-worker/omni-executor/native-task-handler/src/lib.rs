@@ -275,7 +275,7 @@ async fn handle_native_task<
 					if !identity.is_web2() {
 						Err(NativeCallError::InvalidMemberIdentity)
 					} else {
-						let join_handle = tokio::task::spawn_blocking({
+						tokio::task::spawn_blocking({
 							let identity = identity.clone();
 							let storage_db = ctx.storage_db.clone();
 							move || {
@@ -287,22 +287,21 @@ async fn handle_native_task<
 								)
 							}
 						})
-						.await;
-						match join_handle {
-							Ok(Ok(_)) => Ok(()),
-							Ok(Err(_)) => Err(NativeCallError::ValidationDataVerificationFailed),
-							Err(e) => {
-								log::error!("Failed to verify identity: {:?}", e);
-								Err(NativeCallError::InternalError)
-							},
-						}
+						.await
+						.map_err(|e| {
+							log::error!("Failed to verify identity: {:?}", e);
+							NativeCallError::InternalError
+						})
+						.and_then(|result| {
+							result.map_err(|_| NativeCallError::ValidationDataVerificationFailed)
+						})
 					}
 				},
 				ValidationData::Web3(web3_validation_data) => {
 					if !identity.is_web3() {
 						Err(NativeCallError::InvalidMemberIdentity)
 					} else {
-						let join_handle = tokio::task::spawn_blocking({
+						tokio::task::spawn_blocking({
 							let identity = identity.clone();
 							move || {
 								web3::verify_identity(
@@ -312,15 +311,14 @@ async fn handle_native_task<
 								)
 							}
 						})
-						.await;
-						match join_handle {
-							Ok(Ok(_)) => Ok(()),
-							Ok(Err(_)) => Err(NativeCallError::ValidationDataVerificationFailed),
-							Err(e) => {
-								log::error!("Failed to verify identity: {:?}", e);
-								Err(NativeCallError::InternalError)
-							},
-						}
+						.await
+						.map_err(|e| {
+							log::error!("Failed to verify identity: {:?}", e);
+							NativeCallError::InternalError
+						})
+						.and_then(|result| {
+							result.map_err(|_| NativeCallError::ValidationDataVerificationFailed)
+						})
 					}
 				},
 			};
