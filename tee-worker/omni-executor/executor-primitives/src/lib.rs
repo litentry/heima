@@ -15,7 +15,10 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 mod validation_data;
-pub use validation_data::{ValidationData, Web2ValidationData, Web3ValidationData};
+pub use validation_data::{
+	DiscordValidationData, TwitterValidationData, ValidationData, Web2ValidationData,
+	Web3ValidationData,
+};
 
 pub mod signature;
 pub mod utils;
