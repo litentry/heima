@@ -1,4 +1,5 @@
 use crate::{methods::register_methods, ShieldingKey};
+use executor_primitives::MrEnclave;
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
@@ -15,7 +16,7 @@ pub(crate) struct RpcContext<
 	pub native_task_sender: Arc<NativeTaskSender>,
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
-	pub mrenclave: [u8; 32],
+	pub mrenclave: MrEnclave,
 	pub mailer: Mailer,
 	pub jwt_secret: String,
 	pub google_client_id: String,
@@ -47,7 +48,7 @@ impl<
 			native_task_sender,
 			parentchain_rpc_client_factory,
 			storage_db,
-			mrenclave,
+			mrenclave: MrEnclave::from(mrenclave),
 			mailer,
 			jwt_secret,
 			google_client_id,

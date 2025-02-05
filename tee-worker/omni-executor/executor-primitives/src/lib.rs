@@ -29,6 +29,8 @@ pub use heima_primitives::{
 };
 use std::fmt::Debug;
 
+pub type MrEnclave = Hash;
+
 pub trait GetEventId<Id> {
 	fn get_event_id(&self) -> Id;
 }

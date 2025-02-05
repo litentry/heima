@@ -1,7 +1,7 @@
 use crate::{
 	error_code::*,
 	native_call_authenticated::{verify_native_call_authenticated, NativeCallAuthenticated},
-	request::{AesRequest, DecryptableRequest},
+	request::PlainRequest,
 	server::RpcContext,
 };
 use executor_core::native_call::NativeCall;
@@ -19,7 +19,7 @@ use parity_scale_codec::Decode;
 use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
-pub fn register_submit_aes_request<
+pub fn register_submit_plain_request<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -27,20 +27,20 @@ pub fn register_submit_aes_request<
 	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
 	module
-		.register_async_method("native_submitAesRequest", |params, ctx, _| async move {
+		.register_async_method("native_submitPlainRequest", |params, ctx, _| async move {
 			let Ok(hex_request) = params.one::<String>() else {
 				return Err(ErrorCode::ParseError.into());
 			};
-			let Ok(request) = AesRequest::from_hex(&hex_request) else {
-				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
+			let Ok(request) = PlainRequest::from_hex(&hex_request) else {
+				return Err(ErrorCode::ServerError(INVALID_PLAIN_REQUEST_CODE).into());
 			};
 			let join_handle = task::spawn_blocking({
 				let ctx = ctx.clone();
-				let aes_request = request.clone();
-				|| handle_aes_request(aes_request, ctx, Handle::current())
+				let plain_request = request.clone();
+				|| handle_plain_request(plain_request, ctx, Handle::current())
 			});
 			let (native_call, auth_type) = join_handle.await.map_err(|e| {
-				log::error!("Failed to handle AES request: {:?}", e);
+				log::error!("Failed to handle Plain request: {:?}", e);
 				ErrorCode::InternalError
 			})??;
 			let (response_sender, response_receiver) = oneshot::channel();
@@ -58,32 +58,25 @@ pub fn register_submit_aes_request<
 				},
 			}
 		})
-		.expect("Failed to register native_submitAesRequest method");
+		.expect("Failed to register native_submitPlainRequest method");
 }
 
-fn handle_aes_request<
+fn handle_plain_request<
 	'a,
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	mut request: AesRequest,
+	request: PlainRequest,
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
-	if request.mrenclave() != ctx.mrenclave {
+	if request.mrenclave != ctx.mrenclave {
 		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
 	}
-	let Ok(encoded_nca) = request.decrypt(Box::new(ctx.shielding_key.clone())) else {
-		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
-	};
-	let nca = match NativeCallAuthenticated::decode(&mut encoded_nca.as_slice()) {
-		Ok(nca) => nca,
-		Err(e) => {
-			log::error!("Failed to decode authenticated call: {:?}", e);
-			return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
-		},
-	};
+	let nca = NativeCallAuthenticated::decode(&mut request.payload.as_slice())
+		.map_err(|_| ErrorCode::ServerError(INVALID_NATIVE_CALL_AUTHENTICATED_CODE))?;
+
 	if verify_native_call_authenticated(ctx, handle, &nca).is_err() {
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}

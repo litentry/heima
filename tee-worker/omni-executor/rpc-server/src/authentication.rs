@@ -2,8 +2,8 @@ use crate::server::RpcContext;
 use executor_core::native_call::NativeCall;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, OmniAccountAuthType,
-	ShardIdentifier, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave,
+	OmniAccountAuthType, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
@@ -89,13 +89,11 @@ pub fn verify_web3_authentication(
 	signature: &HeimaMultiSignature,
 	call: &NativeCall,
 	nonce: u32,
-	mrenclave: &[u8; 32],
-	shard: &ShardIdentifier,
+	mrenclave: MrEnclave,
 ) -> Result<(), AuthenticationError> {
 	let mut payload = call.encode();
 	payload.append(&mut nonce.encode());
 	payload.append(&mut mrenclave.encode());
-	payload.append(&mut shard.encode());
 
 	// The signature should be valid in either case:
 	// 1. blake2_256(payload)

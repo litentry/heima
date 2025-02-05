@@ -7,6 +7,7 @@ pub use account_store::AccountStoreStorage;
 mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
+use executor_crypto::hashing::{blake2_128, twox_128};
 use executor_primitives::{AccountId, MemberAccount};
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
@@ -31,6 +32,14 @@ pub trait Storage<K, V> {
 	fn contains_key(&self, key: &K) -> bool;
 }
 
+fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
+	twox_128(storage_name.as_bytes())
+		.iter()
+		.chain(blake2_128(key).iter().chain(key.iter())) // blake2_128_concat
+		.cloned()
+		.collect()
+}
+
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	let db = Arc::new(StorageDB::open_default(STORAGE_DB_PATH).map_err(|e| {
 		log::error!("Could not open db: {:?}", e);
@@ -45,6 +54,8 @@ pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	Ok(db)
 }
 
+const ACCOUNT_STORE_KEYS_PAGE_SIZE: u32 = 300;
+
 async fn init_omni_account_storages(
 	client: &mut SubxtClient<CustomConfig>,
 	storage_db: Arc<StorageDB>,
@@ -52,12 +63,15 @@ async fn init_omni_account_storages(
 	let account_store_storage = AccountStoreStorage::new(storage_db.clone());
 	let member_omni_account_storage = MemberOmniAccountStorage::new(storage_db.clone());
 	let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
-	let page_size = 300;
 	let mut start_key: Option<Vec<u8>> = None;
 
 	loop {
 		let storage_keys_paged = client
-			.get_storage_keys_paged(account_store_key_prefix.into(), page_size, start_key.clone())
+			.get_storage_keys_paged(
+				account_store_key_prefix.into(),
+				ACCOUNT_STORE_KEYS_PAGE_SIZE,
+				start_key.clone(),
+			)
 			.await
 			.map_err(|e| {
 				log::error!("Could not get storage keys paged: {:?}", e);
