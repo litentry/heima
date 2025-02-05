@@ -9,10 +9,10 @@ async-trait = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-encode = { workspace = true }
+serde_json = { workspace = true }
 subxt = { workspace = true }
 subxt-core = { workspace = true }
 tokio = { workspace = true }
-serde_json = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }

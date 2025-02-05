@@ -7,8 +7,8 @@ edition.workspace = true
 [dependencies]
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
-tokio = { workspace = true }
 rand = { workspace = true }
+tokio = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }

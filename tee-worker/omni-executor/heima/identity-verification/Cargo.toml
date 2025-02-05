@@ -16,10 +16,10 @@ serde_json = { workspace = true }
 url = { workspace = true }
 
 # Local dependencies
-oauth-providers = { workspace = true }
-executor-primitives = { workspace = true }
 executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
+oauth-providers = { workspace = true }
 
 [lints]
 workspace = true
