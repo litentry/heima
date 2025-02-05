@@ -18,4 +18,6 @@ pub enum NativeCallError {
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
 	InternalError,
+	InvalidMemberIdentity,
+	ValidationDataVerificationFailed,
 }
