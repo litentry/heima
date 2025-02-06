@@ -8,7 +8,7 @@
     "version": "0.9.21-next.0",
     "scripts": {
         "clean": "rm -rf dist build node_modules",
-        "update-metadata": "../../bin/litentry-cli print-sgx-metadata-raw > prepare-build/litentry-sidechain-metadata.json",
+        "update-metadata": "../../identity/bin/litentry-cli print-sgx-metadata-raw > prepare-build/litentry-sidechain-metadata.json",
         "prepare-dir": "mkdir -p build && cp -rf prepare-build/* build",
         "generate-from-defs": "pnpm exec node --experimental-specifier-resolution=node --loader ts-node/esm node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package sidechain-api/interfaces --input build/interfaces --endpoint build/litentry-sidechain-metadata.json",
         "generate-from-chain": "pnpm exec node --experimental-specifier-resolution=node --loader ts-node/esm node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --package sidechain-api/interfaces --output build/interfaces --endpoint build/litentry-sidechain-metadata.json --strict",

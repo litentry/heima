@@ -95,14 +95,14 @@ importers:
         specifier: ^1.3.0
         version: 1.3.0
       parachain-api:
-        specifier: file:../../client-api/parachain-api
-        version: file:../client-api/parachain-api
+        specifier: file:../../../client-api/parachain-api
+        version: file:../../client-api/parachain-api
       scale-ts:
         specifier: ^0.2.11
         version: 0.2.12
       sidechain-api:
-        specifier: file:../../client-api/sidechain-api
-        version: file:../client-api/sidechain-api
+        specifier: file:../../../client-api/sidechain-api
+        version: file:../../client-api/sidechain-api
       tiny-secp256k1:
         specifier: ^2.2.3
         version: 2.2.3
@@ -5067,8 +5067,8 @@ packages:
       yaml: 2.6.1
     dev: false
 
-  file:../client-api/parachain-api:
-    resolution: {directory: ../client-api/parachain-api, type: directory}
+  file:../../client-api/parachain-api:
+    resolution: {directory: ../../client-api/parachain-api, type: directory}
     name: '@litentry/parachain-api'
     dependencies:
       '@polkadot/api': 15.0.2
@@ -5091,8 +5091,8 @@ packages:
       - utf-8-validate
     dev: false
 
-  file:../client-api/sidechain-api:
-    resolution: {directory: ../client-api/sidechain-api, type: directory}
+  file:../../client-api/sidechain-api:
+    resolution: {directory: ../../client-api/sidechain-api, type: directory}
     name: '@litentry/sidechain-api'
     dependencies:
       '@polkadot/api': 15.0.2
