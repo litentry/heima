@@ -3,10 +3,10 @@ services:
         image: litentry/identity-cli:latest
         container_name: litentry-lit-ts-api-package-build
         volumes:
-            - ../client-api:/client-api
+            - ../../client-api:/client-api
             - ../cli:/usr/local/worker-cli
         build:
-            context: ..
+            context: ../..
             dockerfile: build.Dockerfile
             target: deployed-client
         depends_on:
@@ -17,7 +17,7 @@ services:
                 condition: service_started
         networks:
             - litentry-test-network
-        entrypoint: 
+        entrypoint:
             "/usr/local/worker-cli/lit_ts_api_package_build.sh -p 9944 -u ws://litentry-node -W http://litentry-node -V ws://litentry-worker-1 -A 2011 -C /usr/local/bin/litentry-cli 2>&1"
         restart: "no"
 networks:
