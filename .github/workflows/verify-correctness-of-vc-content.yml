@@ -31,8 +31,13 @@ jobs:
 
       - run: docker images --all
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Launch parachain network
         run: |
