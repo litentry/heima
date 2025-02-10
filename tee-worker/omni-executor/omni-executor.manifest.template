@@ -24,7 +24,7 @@ fs.mounts = [
   { path = "/storage_db", uri = "file:storage_db" },
 ]
 
-sgx.debug = true
+sgx.debug = {{ 'true' if env.get('SGX_DEBUG', '0') == '1' else 'false' }}
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 
