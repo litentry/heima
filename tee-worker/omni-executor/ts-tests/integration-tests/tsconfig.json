@@ -10,5 +10,11 @@
         "allowSyntheticDefaultImports": true,
         "resolveJsonModule": true,
         "baseUrl": "."
+    },
+    "ts-node": {
+        "esm": true,
+        "experimentalResolver": true,
+        "experimentalSpecifierResolution": "node",
+        "transpileOnly": true
     }
 }
