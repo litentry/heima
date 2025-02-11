@@ -1,11 +1,12 @@
 import { step } from 'mocha-steps';
 import { assert } from 'chai';
-import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
+import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount, OmniAccountPermission } from 'parachain-api';
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
-import { createNativeCall, createNativeCallAuthenticated } from './utils/type_creators';
+import { createNativeCall, createNativeCallAuthenticated, createOmniAccountPermission } from './utils/type_creators';
 import { sendPlainRequestFromNativeCall } from './utils/requests';
+import { buildWeb3ValidationData } from './utils/identity';
 
 describe('OmniAccount', function () {
     this.timeout(120000);
@@ -48,5 +49,55 @@ describe('OmniAccount', function () {
             aliceIdentity.asSubstrate.toHex(),
             'account store member is not the expected signer'
         );
+    });
+
+    step('test add_account web3', async function () {
+        const currentNonce = 0;
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context.api);
+        const validationData = await buildWeb3ValidationData(
+            context.api,
+            aliceIdentity,
+            bobIdentity,
+            currentNonce,
+            'substrate',
+            bob
+        );
+        const nativeCall = createNativeCall(
+            context.api,
+            [
+                'add_account',
+                '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)',
+            ],
+            [
+                aliceIdentity,
+                bobIdentity,
+                validationData.toHex(),
+                false, // publicAccount
+                [createOmniAccountPermission(context.api, 'All')],
+            ]
+        );
+        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+            context.api,
+            nativeCall,
+            aliceWallet,
+            context.api.createType('Index', currentNonce),
+            context.mrEnclave
+        );
+        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated, (response) =>
+            console.log(JSON.stringify(response, null, 2))
+        );
+
+        const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        const membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 2, 'account store members count should be 2');
+        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        assert.equal(
+            memberAccount1.asPublic.asSubstrate.toHex(),
+            aliceIdentity.asSubstrate.toHex(),
+            'account store member 1 is not the expected member'
+        );
+        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        assert.isTrue(memberAccount2.isPrivate);
     });
 });
