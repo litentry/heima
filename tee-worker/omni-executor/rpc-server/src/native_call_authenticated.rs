@@ -21,12 +21,11 @@ pub struct NativeCallAuthenticated {
 }
 
 pub fn verify_native_call_authenticated<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	authenticated_call: &NativeCallAuthenticated,
 ) -> Result<(), AuthenticationError> {

@@ -20,12 +20,11 @@ use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
 pub fn register_submit_plain_request<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
 	module
 		.register_async_method("native_submitPlainRequest", |params, ctx, _| async move {
@@ -64,13 +63,12 @@ pub fn register_submit_plain_request<
 
 fn handle_plain_request<
 	'a,
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	request: PlainRequest,
-	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 ) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.mrenclave != ctx.mrenclave {
