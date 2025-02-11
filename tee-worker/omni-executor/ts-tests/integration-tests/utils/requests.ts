@@ -1,9 +1,10 @@
-import { hexToU8a, compactStripLength, u8aToString, hexToString } from '@polkadot/util';
-import { ApiPromise, NativeCall, NativeCallAuthenticated } from 'parachain-api';
-import { HexString } from '@polkadot/util/types';
-import { Codec } from '@polkadot/types-codec/types';
+import { u8aToHex } from '@polkadot/util';
+import { ApiPromise, NativeCallAuthenticated, NativeCallResponse } from 'parachain-api';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
+import { decodeRpcBytesAsString } from './helpers';
+import { createPlainRequest } from './type_creators';
+import WebSocketAsPromised from 'websocket-as-promised';
 
 type JsonRpcRequest = {
     jsonrpc: string;
@@ -19,6 +20,50 @@ function createJsonRpcRequest(method: string, params: unknown, id: number): Json
         params,
         id,
     };
+}
+
+export async function sendPlainRequestFromNativeCall(
+    context: IntegrationTestContext,
+    call: NativeCallAuthenticated,
+    onMessageReceived?: (response: NativeCallResponse) => void
+) {
+    const plainRequest = createPlainRequest(context.api, context.mrEnclave, call);
+
+    const request = createJsonRpcRequest(
+        'native_submitPlainRequest',
+        [u8aToHex(plainRequest.toU8a())],
+        nextRequestId(context)
+    );
+
+    return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
+}
+
+async function sendRequest(
+    wsClient: WebSocketAsPromised,
+    request: JsonRpcRequest,
+    api: ApiPromise,
+    onMessageReceived?: (response: NativeCallResponse) => void
+): Promise<NativeCallResponse> {
+    const p = new Promise<NativeCallResponse>((resolve, reject) =>
+        wsClient.onMessage.addListener((data) => {
+            const parsed = JSON.parse(data);
+            console.log('parsed:', JSON.stringify(parsed, null, 2));
+            if (parsed.id !== request.id) {
+                return;
+            }
+            if ('error' in parsed) {
+                const transaction = { request, response: parsed };
+                console.log('Request failed: ' + JSON.stringify(transaction, null, 2));
+                reject(new Error(parsed.error.message, { cause: transaction }));
+            }
+            const response = api.createType('NativeCallResponse', parsed.result);
+            if (onMessageReceived) onMessageReceived(response);
+            wsClient.onMessage.removeAllListeners();
+            resolve(response);
+        })
+    );
+    wsClient.sendRequest(request);
+    return p;
 }
 
 export const getTeeShieldingKey = async (context: IntegrationTestContext) => {
@@ -60,7 +105,3 @@ export const getTeeShieldingKey = async (context: IntegrationTestContext) => {
         format: 'jwk',
     });
 };
-
-function decodeRpcBytesAsString(value: HexString): string {
-    return u8aToString(compactStripLength(hexToU8a(value))[1]);
-}
