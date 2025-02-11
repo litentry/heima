@@ -28,7 +28,14 @@ pub struct RunArgs {
 		default_value = "local/keystore/substrate_alice.bin",
 		value_name = "keystore file path"
 	)]
-	pub keystore_path: String,
+	pub substrate_keystore_path: String,
+	#[arg(
+		short,
+		long,
+		default_value = "local/keystore/aes_256_key.bin",
+		value_name = "Aes256 keystore file path"
+	)]
+	pub aes256_key_store_path: String,
 	#[arg(
 		short,
 		long,
@@ -46,5 +53,5 @@ pub struct GenKeyArgs {
 		default_value = "local/keystore/substrate_alice.bin",
 		value_name = "keystore file path"
 	)]
-	pub keystore_path: String,
+	pub substrate_keystore_path: String,
 }

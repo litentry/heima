@@ -11,12 +11,11 @@ use jsonrpsee::{
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub fn register_request_email_verification_code<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {

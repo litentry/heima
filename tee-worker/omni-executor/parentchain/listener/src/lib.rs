@@ -62,7 +62,7 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 	stop_signal: Receiver<()>,
 	storage_db: Arc<StorageDB>,
 	transaction_signer: Arc<ParentchainTxSigner>,
-	key_store: Arc<SubstrateKeyStore>,
+	substrate_key_store: Arc<SubstrateKeyStore>,
 	log_path: &str,
 ) -> Result<
 	ParentchainListener<
@@ -90,7 +90,7 @@ where
 	let metadata_provider =
 		Arc::new(SubxtMetadataProvider::new(SubxtClientFactory::new(ws_rpc_endpoint)));
 
-	let signer = get_signer(key_store);
+	let signer = get_signer(substrate_key_store);
 
 	perform_attestation(client_factory, signer, &transaction_signer).await?;
 

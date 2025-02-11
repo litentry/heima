@@ -18,9 +18,12 @@ use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
 use ethereum_intent_executor::EthereumIntentExecutor;
+use executor_core::key_store::KeyStore;
 use executor_storage::{init_storage, StorageDB};
 use log::error;
-use native_task_handler::{run_native_task_handler, ParentchainTxSigner, TaskHandlerContext};
+use native_task_handler::{
+	run_native_task_handler, Aes256KeyStore, ParentchainTxSigner, TaskHandlerContext,
+};
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
@@ -65,18 +68,22 @@ async fn main() -> Result<(), ()> {
 
 			let client_factory = SubxtClientFactory::<CustomConfig>::new(&args.parentchain_url);
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
-			let key_store = Arc::new(SubstrateKeyStore::new(args.keystore_path.clone()));
+			let substrate_key_store =
+				Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
 			let transaction_signer = Arc::new(TransactionSigner::new(
 				metadata_provider,
 				parentchain_rpc_client_factory.clone(),
-				key_store.clone(),
+				substrate_key_store.clone(),
 			));
+			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
+			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				storage_db.clone(),
 				jwt_secret.clone(),
+				aes256_key,
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
@@ -99,7 +106,7 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db, transaction_signer, key_store)
+			listen_to_parentchain(args, storage_db, transaction_signer, substrate_key_store)
 				.await
 				.unwrap();
 
@@ -112,7 +119,7 @@ async fn main() -> Result<(), ()> {
 			}
 		},
 		Commands::GenKey(args) => {
-			let key_store = Arc::new(SubstrateKeyStore::new(args.keystore_path));
+			let key_store = Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path));
 			let _ = parentchain_signer::get_signer(key_store);
 		},
 	}
@@ -124,7 +131,7 @@ async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
 	parentchain_tx_signer: Arc<ParentchainTxSigner>,
-	key_store: Arc<SubstrateKeyStore>,
+	substrate_key_store: Arc<SubstrateKeyStore>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
@@ -142,7 +149,7 @@ async fn listen_to_parentchain(
 			sub_stop_receiver,
 			storage_db,
 			parentchain_tx_signer,
-			key_store,
+			substrate_key_store,
 			&args.log_path,
 		)
 		.await?;
