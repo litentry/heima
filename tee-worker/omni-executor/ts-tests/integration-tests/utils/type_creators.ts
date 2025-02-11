@@ -1,11 +1,15 @@
 import { HexString } from '@polkadot/util/types';
+import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
+import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
     ApiPromise,
+    Authentication,
     CorePrimitivesIdentity,
-    LitentryValidationData,
+    LitentryMultiSignature,
     NativeCall,
     NativeCallAuthenticated,
+    PlainRequest,
 } from 'parachain-api';
 import { Signer } from './signer';
 
@@ -20,16 +24,95 @@ export async function createIdentityType(
     return api.createType('CorePrimitivesIdentity', identity);
 }
 
+export async function createLitentryMultiSignature(
+    api: ApiPromise,
+    args: { signer: Signer; payload: Uint8Array | string }
+): Promise<LitentryMultiSignature> {
+    const { signer, payload } = args;
+    const signerType = signer.type();
+
+    // Sign Bytes:
+    // For Bitcoin, sign as hex with no prefix; for other types, convert it to raw bytes
+    if (payload instanceof Uint8Array) {
+        const signature = await signer.sign(signerType === 'bitcoin' ? u8aToHex(payload).substring(2) : payload);
+
+        return api.createType('LitentryMultiSignature', {
+            [signerType]: signature,
+        });
+    }
+
+    // Sign hex:
+    // Remove the prefix for bitcoin signature, and use raw bytes for other types
+    if (payload.startsWith('0x')) {
+        const signature = await signer.sign(signerType === 'bitcoin' ? payload.substring(2) : hexToU8a(payload));
+
+        return api.createType('LitentryMultiSignature', {
+            [signerType]: signature,
+        });
+    }
+
+    // Sign string:
+    // For Bitcoin, pass it as it is, for other types, convert it to raw bytes
+    const signature = await signer.sign(signerType === 'bitcoin' ? payload : stringToU8a(payload));
+
+    return api.createType('LitentryMultiSignature', {
+        [signerType]: signature,
+    });
+}
+
+export function createNativeCall(api: ApiPromise, call: [string, string], params: unknown): NativeCall {
+    const [variant, argType] = call;
+    return api.createType('NativeCall', {
+        [variant]: api.createType(argType, params),
+    });
+}
+
+// We only support web3 authentication in these tests
 export async function createNativeCallAuthenticated(
     api: ApiPromise,
-    call: [string, string],
+    nativeCall: NativeCall,
     signer: Signer,
-    mrenclave: string,
     nonce: Codec,
-    params: unknown
+    mrenclave: string,
+    withWrappedBytes = false,
+    withPrefix = false
 ): Promise<NativeCallAuthenticated> {
-    const [variant, argType] = call;
-    const nativeCall: NativeCall = api.createType('NativeCall', {
-        [variant]: api.createType(argType, params),
+    let payload: string = blake2AsHex(u8aConcat(nativeCall.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
+
+    if (withWrappedBytes) {
+        payload = `<Bytes>${payload}</Bytes>`;
+    }
+
+    if (withPrefix) {
+        const prefix = 'Token: ';
+        const msg = prefix + payload;
+        payload = msg;
+        console.log('Signing message: ', payload);
+    }
+
+    const signature = await createLitentryMultiSignature(api, {
+        signer,
+        payload,
+    });
+
+    const authentication: Authentication = api.createType('Authentication', {
+        Web3: api.createType('(LitentryMultiSignature)', signature),
+    });
+
+    return api.createType('NativeCallAuthenticated', {
+        call: nativeCall,
+        nonce,
+        authentication,
+    });
+}
+
+export function createPlainRequest(
+    api: ApiPromise,
+    mrenclave: string,
+    call_authenticated: NativeCallAuthenticated
+): PlainRequest {
+    return api.createType('PlainRequest', {
+        mrenclave: hexToU8a(mrenclave),
+        payload: compactAddLength(call_authenticated.toU8a()),
     });
 }
