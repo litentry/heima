@@ -2935,6 +2935,7 @@ dependencies = [
  "hex",
  "log",
  "native-task-handler",
+ "parentchain-attestation",
  "parentchain-listener",
  "parentchain-rpc-client",
  "parentchain-signer",
@@ -5408,6 +5409,23 @@ name = "parentchain-api-interface"
 version = "0.1.0"
 dependencies = [
  "subxt",
+]
+
+[[package]]
+name = "parentchain-attestation"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "executor-core",
+ "executor-primitives",
+ "executor-storage",
+ "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
+ "parentchain-signer",
+ "subxt",
+ "subxt-core",
+ "subxt-signer",
 ]
 
 [[package]]
