@@ -9,8 +9,8 @@
 
 </div>
 
-Litentry parachain is a substrate-based, EVM-compatible blockchain that connects to the relaychain (e.g. [Polkadot](https://polkadot.com/)) which ensures shared security and interoperability. It serves as the backbone of Litentry protocol:
-- LIT token native features: transfer, governance, staking ...
+ Being evolved from Litentry, a substrate-based L1 blockchain,  **Heima Network** inherits its modularity, flexibility and security, which forms a solid ground for chain abstraction and cross-chain operations. It is also an EVM-compatible blockchain that connects to the relaychain (e.g. [Polkadot](https://polkadot.com/)) which ensures shared security and interoperability, which serves as the backbone of Heima Network:
+- HEI token native features: transfer, governance, staking ...
 - Runtime logic such as enclave management, DID ...
 - parentchain of identity-worker, which is a TEE-based sidechain to achieve identity aggregation and crediential issuance without promising users' privacy
 - parentchain of bitacross-worker, which is a TEE-based offchain-worker to bridge assets across chains using native custodian and multisig
