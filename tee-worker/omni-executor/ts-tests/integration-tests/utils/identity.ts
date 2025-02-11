@@ -201,3 +201,93 @@ export async function buildValidations(
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);
 }
+
+export async function buildWeb3ValidationData(
+    api: ApiPromise,
+    sender: CorePrimitivesIdentity,
+    accountToAdd: CorePrimitivesIdentity,
+    nonce: number,
+    network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
+    signer: Signer
+): Promise<LitentryValidationData> {
+    const msg = generateVerificationMessage(api, sender, accountToAdd, nonce);
+
+    if (network === 'evm') {
+        const evmValidationData = {
+            Web3Validation: {
+                Evm: {
+                    message: '',
+                    signature: {
+                        Ethereum: '' as HexString,
+                    },
+                },
+            },
+        };
+        evmValidationData.Web3Validation.Evm.message = msg;
+        const msgHash = ethers.utils.arrayify(msg);
+        const evmSignature = u8aToHex(await signer.sign(msgHash));
+
+        evmValidationData!.Web3Validation.Evm.signature.Ethereum = evmSignature;
+
+        return api.createType('LitentryValidationData', evmValidationData);
+    }
+
+    if (network === 'substrate') {
+        const substrateValidationData = {
+            Web3Validation: {
+                Substrate: {
+                    message: '',
+                    signature: {
+                        Sr25519: '' as HexString,
+                    },
+                },
+            },
+        };
+        console.log('post verification msg to substrate: ', msg);
+        substrateValidationData.Web3Validation.Substrate.message = msg;
+        const substrateSignature = await signer.sign(msg);
+        substrateValidationData!.Web3Validation.Substrate.signature.Sr25519 = u8aToHex(substrateSignature);
+
+        return api.createType('LitentryValidationData', substrateValidationData);
+    }
+
+    if (network === 'bitcoin') {
+        const bitcoinValidationData = {
+            Web3Validation: {
+                Bitcoin: {
+                    message: '',
+                    signature: {
+                        Bitcoin: '' as HexString,
+                    },
+                },
+            },
+        };
+        bitcoinValidationData.Web3Validation.Bitcoin.message = msg;
+        // we need to sign the hex string without `0x` prefix, the signature is base64-encoded string
+        const bitcoinSignature = await signer.sign(msg.substring(2));
+        bitcoinValidationData!.Web3Validation.Bitcoin.signature.Bitcoin = u8aToHex(bitcoinSignature);
+
+        return api.createType('LitentryValidationData', bitcoinValidationData);
+    }
+
+    if (network === 'solana') {
+        const solanaValidationData = {
+            Web3Validation: {
+                Solana: {
+                    message: '',
+                    signature: {
+                        Ed25519: '' as HexString,
+                    },
+                },
+            },
+        };
+        console.log('post verification msg to solana: ', msg);
+        solanaValidationData.Web3Validation.Solana.message = msg;
+        const solanaSignature = await signer.sign(msg);
+        solanaValidationData!.Web3Validation.Solana.signature.Ed25519 = u8aToHex(solanaSignature);
+
+        return api.createType('LitentryValidationData', solanaValidationData);
+    }
+
+    throw new Error(`[buildValidation]: Unsupported network ${network}.`);
+}
