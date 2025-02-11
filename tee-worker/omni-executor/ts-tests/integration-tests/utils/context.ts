@@ -7,6 +7,7 @@ import WsAsPromiseOptions from 'websocket-as-promised/types/options';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { createWeb3Wallets } from './wallet';
 import { KeyObject, createPublicKey } from 'crypto';
+import WebSocket from 'ws';
 import { Wallets } from './wallet';
 
 export type IntegrationTestContext = {
@@ -20,8 +21,8 @@ export type IntegrationTestContext = {
 };
 
 export async function createIntegrationTestContext(
-    parachainEndpoint?: string,
-    workerEndpoint?: string
+    parachainEndpoint: string = 'ws://localhost:9944',
+    workerEndpoint: string = 'ws://localhost:2000'
 ): Promise<IntegrationTestContext> {
     await cryptoWaitReady();
 
@@ -36,7 +37,7 @@ export async function createIntegrationTestContext(
     });
     const web3Wallets = createWeb3Wallets();
     const chainIdentifier = api.registry.chainSS58 as number;
-    const wsp = await initTeeWorkerConnection(workerEndpoint || 'ws://localhost:2000');
+    const wsp = await initTeeWorkerConnection(workerEndpoint);
     const requestId = 1;
     // const { mrEnclave, teeShieldingKey } = await getEnclave(api);
     const mrEnclave = ('0x' + '0'.repeat(64)) as HexString;
