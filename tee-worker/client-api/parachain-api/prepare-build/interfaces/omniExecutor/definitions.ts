@@ -46,8 +46,8 @@ export default {
         NativeCallResponse: "Result<NativeCallOk, NativeCallError>",
         NativeCallOk: {
             _enum: {
-                AuthToken: "(Text)",
-                ExtrinsicReport: "(XtReport)",
+                ExtrinsicReport: "XtReport",
+                AuthToken: "Text",
             },
         },
         XtReport: {
@@ -60,28 +60,30 @@ export default {
             status: "TxStatus",
         },
         TxStatus: {
-            // Transaction is part of the future queue.
-            Future: "Null",
-            // Transaction is part of the ready queue.
-            Ready: "Null",
-            // The transaction has been broadcast to the given peers.
-            Broadcast: "Vec<Text>",
-            // Transaction has been included in block with given hash.
-            InBlock: "H256",
-            // The block this transaction was included in has been retracted.
-            Retracted: "H256",
-            // Maximum number of finality watchers has been reached,
-            // old watchers are being removed.
-            FinalityTimeout: "H256",
-            // Transaction has been finalized by a finality-gadget, e.g GRANDPA
-            Finalized: "H256",
-            // Transaction has been replaced in the pool, by another transaction
-            // that provides the same tags. (e.g. same (sender, nonce)).
-            Usurped: "H256",
-            // Transaction has been dropped from the pool because of the limit.
-            Dropped: "Null",
-            // Transaction is no longer valid in the current state.
-            Invalid: "Null",
+            _enum: {
+                // Transaction is part of the future queue.
+                Future: "Null",
+                // Transaction is part of the ready queue.
+                Ready: "Null",
+                // The transaction has been broadcast to the given peers.
+                Broadcast: "Vec<Text>",
+                // Transaction has been included in block with given hash.
+                InBlock: "H256",
+                // The block this transaction was included in has been retracted.
+                Retracted: "H256",
+                // Maximum number of finality watchers has been reached,
+                // old watchers are being removed.
+                FinalityTimeout: "H256",
+                // Transaction has been finalized by a finality-gadget, e.g GRANDPA
+                Finalized: "H256",
+                // Transaction has been replaced in the pool, by another transaction
+                // that provides the same tags. (e.g. same (sender, nonce)).
+                Usurped: "H256",
+                // Transaction has been dropped from the pool because of the limit.
+                Dropped: "Null",
+                // Transaction is no longer valid in the current state.
+                Invalid: "Null",
+            },
         },
         NativeCallError: {
             _enum: {
@@ -89,7 +91,7 @@ export default {
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
                 InternalError: "Null",
-                IInvalidMemberIdentity: "Null",
+                InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
             },
         },
