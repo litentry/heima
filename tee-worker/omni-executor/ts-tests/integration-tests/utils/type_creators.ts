@@ -9,6 +9,7 @@ import {
     LitentryMultiSignature,
     NativeCall,
     NativeCallAuthenticated,
+    OmniAccountPermission,
     PlainRequest,
 } from 'parachain-api';
 import { Signer } from './signer';
@@ -115,4 +116,18 @@ export function createPlainRequest(
         mrenclave: hexToU8a(mrenclave),
         payload: compactAddLength(call_authenticated.toU8a()),
     });
+}
+
+type OmniAccountPermissionString =
+    | 'All'
+    | 'AccountManagement'
+    | 'RequestNativeIntent'
+    | 'RequestEthereumIntent'
+    | 'RequestSolanaIntent';
+
+export function createOmniAccountPermission(
+    api: ApiPromise,
+    permission: OmniAccountPermissionString
+): OmniAccountPermission {
+    return api.createType('OmniAccountPermission', permission);
 }
