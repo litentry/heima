@@ -5,19 +5,19 @@ import { blake2AsHex } from '@polkadot/util-crypto';
 import { ethers } from 'ethers';
 import { Signer } from './signer';
 
-// blake2_256(<sidechain nonce> + <primary AccountId> + <identity-to-be-linked>)
+// blake2_256(<OmniAccount nonce> + <MemberIdentity AccountId> + <identity-to-be-linked>)
 export function generateVerificationMessage(
     api: ApiPromise,
-    signer: CorePrimitivesIdentity,
-    identity: CorePrimitivesIdentity,
-    sidechainNonce: number,
+    memberIdentity: CorePrimitivesIdentity,
+    identityToAdd: CorePrimitivesIdentity,
+    omniAccountNonce: number,
     options?: { prettifiedMessage?: boolean }
 ): string {
     const opts = { prettifiedMessage: false, ...options };
-    const encodedIdentity = api.createType('CorePrimitivesIdentity', identity).toU8a();
-    const encodedWho = api.createType('CorePrimitivesIdentity', signer).toU8a();
-    const encodedSidechainNonce = api.createType('Index', sidechainNonce);
-    const msg = Buffer.concat([encodedSidechainNonce.toU8a(), encodedWho, encodedIdentity]);
+    const encodedMemberIdentity = api.createType('CorePrimitivesIdentity', memberIdentity).toU8a();
+    const encodedIdentityToAdd = api.createType('CorePrimitivesIdentity', identityToAdd).toU8a();
+    const encodedOmniAccountNonce = api.createType('u64', omniAccountNonce);
+    const msg = Buffer.concat([encodedOmniAccountNonce.toU8a(), encodedMemberIdentity, encodedIdentityToAdd]);
     const hash = blake2AsHex(msg, 256);
 
     if (opts.prettifiedMessage) {
