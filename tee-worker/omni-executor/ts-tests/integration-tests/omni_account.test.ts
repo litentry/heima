@@ -25,7 +25,7 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        const currentNonce = 2;
+        const currentNonce = 0;
         const nativeCall = createNativeCall(context.api, ['create_account_store', 'LitentryIdentity'], aliceIdentity);
         const nativeCallAuthenticated = await createNativeCallAuthenticated(
             context.api,
