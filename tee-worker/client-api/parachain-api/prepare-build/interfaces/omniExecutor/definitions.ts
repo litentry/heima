@@ -12,6 +12,7 @@ export default {
         MrEnclave: "H256",
         NativeCall: {
             _enum: {
+                request_auth_token: "(LitentryIdentity, AuthOptions)",
                 request_intent: "(LitentryIdentity, Intent)",
                 create_account_store: "(LitentryIdentity)",
                 add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
