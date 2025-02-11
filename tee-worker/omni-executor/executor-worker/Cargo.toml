@@ -7,16 +7,22 @@ edition.workspace = true
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
 env_logger = { workspace = true }
-ethereum-intent-executor = { workspace = true }
-executor-core = { workspace = true }
 hex = "0.4.3"
 log = { workspace = true }
-parentchain-listener = { workspace = true }
-parentchain-storage = { workspace = true }
 scale-encode = { workspace = true }
 serde_json = "1.0.127"
-solana-intent-executor = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
+
+# Local dependencies
+ethereum-intent-executor = { workspace = true }
+executor-core = { workspace = true }
+executor-storage = { workspace = true }
+native-task-handler = { workspace = true }
+parentchain-listener = { workspace = true }
+parentchain-rpc-client = { workspace = true }
+parentchain-signer = { workspace = true }
+rpc-server = { workspace = true }
+solana-intent-executor = { workspace = true }
 
 [lints]
 workspace = true

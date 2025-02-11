@@ -245,8 +245,13 @@ jobs:
           docker tag litentry/litentry-parachain:${{ env.RELEASE_TAG }} litentry/litentry-parachain:latest
           docker images
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Run ts tests for ${{ matrix.chain }}
         timeout-minutes: 30

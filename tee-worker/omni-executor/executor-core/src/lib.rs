@@ -19,6 +19,6 @@ pub mod fetcher;
 pub mod intent_executor;
 pub mod key_store;
 pub mod listener;
+pub mod native_call;
 pub mod primitives;
-pub mod storage;
 pub mod sync_checkpoint_repository;

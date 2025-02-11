@@ -13,30 +13,43 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+mod xt_status;
+pub use xt_status::{TransactionStatus, XtStatus};
+
+mod type_converters;
+pub use type_converters::*;
+
+pub mod metadata;
+pub use subxt_core::utils::AccountId32;
 
 use async_trait::async_trait;
+use executor_primitives::{AccountId, BlockEvent, BlockNumber, EventId, Hash};
 use log::{error, info};
-use parentchain_primitives::{BlockEvent, EventId};
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Decode, Encode};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::thread;
-use std::time::Duration;
 use std::vec::Vec;
-use subxt::backend::legacy::LegacyRpcMethods;
-use subxt::backend::BlockRef;
-use subxt::config::signed_extensions;
-use subxt::config::Header;
-use subxt::events::EventsClient;
-use subxt::storage::StorageClient;
-use subxt::tx::TxClient;
-use subxt::{Config, OnlineClient};
-use subxt_core::utils::AccountId32;
+use subxt::{
+	backend::{legacy::LegacyRpcMethods, BlockRef},
+	blocks::BlocksClient,
+	config::{
+		signed_extensions,
+		substrate::{BlakeTwo256, SubstrateHeader},
+		Hasher,
+	},
+	events::EventsClient,
+	storage::StorageClient,
+	tx::TxClient,
+	Config, OnlineClient,
+};
+use tokio::time::{sleep, Duration};
+
+pub type RpcClientHeader = SubstrateHeader<BlockNumber, BlakeTwo256>;
 
 // We don't need to construct this at runtime,
 // so an empty enum is appropriate:
-#[derive(EncodeAsType)]
+#[derive(EncodeAsType, Clone)]
 pub enum CustomConfig {}
 
 //todo: adjust if needed
@@ -45,8 +58,8 @@ impl Config for CustomConfig {
 	type AccountId = subxt::utils::AccountId32;
 	type Address = subxt::utils::MultiAddress<Self::AccountId, u32>;
 	type Signature = subxt::utils::MultiSignature;
-	type Hasher = subxt::config::substrate::BlakeTwo256;
-	type Header = subxt::config::substrate::SubstrateHeader<u32, Self::Hasher>;
+	type Hasher = BlakeTwo256;
+	type Header = SubstrateHeader<BlockNumber, Self::Hasher>;
 	type ExtrinsicParams = signed_extensions::AnyOf<
 		Self,
 		(
@@ -72,12 +85,17 @@ pub struct RuntimeVersion {
 
 /// For fetching data from Substrate RPC node
 #[async_trait]
-pub trait SubstrateRpcClient<AccountId, Header> {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<Header>, ()>;
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()>;
+pub trait SubstrateRpcClient<Header> {
+	async fn get_last_finalized_header(&self) -> Result<Header, ()>;
+	async fn get_last_finalized_block_num(&self) -> Result<BlockNumber, ()>;
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()>;
 	async fn get_raw_metadata(&mut self, block_num: Option<u64>) -> Result<Vec<u8>, ()>;
 	async fn submit_tx(&mut self, raw_tx: &[u8]) -> Result<(), ()>;
+	async fn submit_and_watch_tx_until(
+		&mut self,
+		extrinsic: &[u8],
+		until_status: XtStatus,
+	) -> Result<ExtrinsicReport<Hash>, ()>;
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()>;
 	async fn get_genesis_hash(&mut self) -> Result<Vec<u8>, ()>;
 	async fn get_account_nonce(&mut self, account_id: &AccountId) -> Result<u64, ()>;
@@ -95,6 +113,24 @@ pub struct SubxtClient<ChainConfig: Config> {
 	events: EventsClient<ChainConfig, OnlineClient<ChainConfig>>,
 	tx: TxClient<ChainConfig, OnlineClient<ChainConfig>>,
 	storage: StorageClient<ChainConfig, OnlineClient<ChainConfig>>,
+	blocks: BlocksClient<ChainConfig, OnlineClient<ChainConfig>>,
+}
+
+#[derive(Decode, Encode)]
+pub struct ExtrinsicReport<Hash> {
+	pub extrinsic_hash: Hash,
+	pub block_hash: Option<Hash>,
+	pub status: TransactionStatus<Hash>,
+}
+
+impl<Hash> ExtrinsicReport<Hash> {
+	pub fn new(
+		extrinsic_hash: Hash,
+		block_hash: Option<Hash>,
+		status: TransactionStatus<Hash>,
+	) -> Self {
+		Self { extrinsic_hash, block_hash, status }
+	}
 }
 
 impl<ChainConfig: Config> SubxtClient<ChainConfig> {
@@ -104,18 +140,20 @@ impl<ChainConfig: Config> SubxtClient<ChainConfig> {
 }
 
 #[async_trait]
-impl<ChainConfig: Config<AccountId = AccountId32>>
-	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for SubxtClient<ChainConfig>
+impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
+	SubstrateRpcClient<ChainConfig::Header> for SubxtClient<ChainConfig>
 {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
-		let finalized_header = self.legacy.chain_get_finalized_head().await.map_err(|_| ())?;
-		self.legacy.chain_get_header(Some(finalized_header)).await.map_err(|_| ())
+	async fn get_last_finalized_header(&self) -> Result<ChainConfig::Header, ()> {
+		let latest_block = self.blocks.at_latest().await.map_err(|e| {
+			error!("Error getting latest block: {:?}", e);
+		})?;
+		Ok(latest_block.header().clone())
 	}
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
-		match self.get_last_finalized_header().await {
-			Ok(Some(header)) => Ok(header.number().into()),
-			_ => Err(()),
-		}
+	async fn get_last_finalized_block_num(&self) -> Result<BlockNumber, ()> {
+		let latest_block = self.blocks.at_latest().await.map_err(|e| {
+			error!("Error getting latest block: {:?}", e);
+		})?;
+		Ok(latest_block.number())
 	}
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
 		info!("Getting block {} events", block_num);
@@ -160,6 +198,43 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 		})
 	}
 
+	async fn submit_and_watch_tx_until(
+		&mut self,
+		extrinsic: &[u8],
+		until_status: XtStatus,
+	) -> Result<ExtrinsicReport<Hash>, ()> {
+		let tx_hash_bytes = ChainConfig::Hasher::hash(extrinsic).encode();
+		let result = self.legacy.author_submit_and_watch_extrinsic(extrinsic).await;
+		match result {
+			Ok(mut subscription) => {
+				while let Some(Ok(tx_status)) = subscription.next().await {
+					let transaction_status: TransactionStatus<Hash> = tx_status.into();
+					match transaction_status.is_expected() {
+						Ok(_) => {
+							if transaction_status.reached_status(until_status) {
+								let block_hash = transaction_status.get_maybe_block_hash();
+								return Ok(ExtrinsicReport::new(
+									Hash::decode(&mut tx_hash_bytes.as_slice()).unwrap(),
+									block_hash.cloned(),
+									transaction_status,
+								));
+							}
+						},
+						Err(e) => {
+							error!("Unexpected transaction status: {:?}", e);
+							return Err(());
+						},
+					}
+				}
+			},
+			Err(e) => {
+				error!("Could not submit tx: {:?}", e);
+			},
+		};
+
+		Err(())
+	}
+
 	async fn runtime_version(&mut self) -> Result<RuntimeVersion, ()> {
 		self.legacy
 			.state_get_runtime_version(None)
@@ -175,8 +250,8 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 		self.legacy.genesis_hash().await.map(|h| h.encode()).map_err(|_| ())
 	}
 
-	async fn get_account_nonce(&mut self, account_id: &ChainConfig::AccountId) -> Result<u64, ()> {
-		self.tx.account_nonce(account_id).await.map_err(|_| ())
+	async fn get_account_nonce(&mut self, account_id: &AccountId) -> Result<u64, ()> {
+		self.tx.account_nonce(&account_id.to_subxt_type()).await.map_err(|_| ())
 	}
 
 	async fn get_storage_keys_paged(
@@ -205,18 +280,33 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 }
 
 pub struct MockedRpcClient<ChainConfig: Config> {
-	block_num: u64,
+	block_num: u32,
 	_phantom: PhantomData<ChainConfig>,
 }
 
 #[async_trait]
-impl<ChainConfig: Config<AccountId = String>>
-	SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> for MockedRpcClient<ChainConfig>
+impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
+	SubstrateRpcClient<ChainConfig::Header> for MockedRpcClient<ChainConfig>
 {
-	async fn get_last_finalized_header(&mut self) -> Result<Option<ChainConfig::Header>, ()> {
-		Ok(None)
+	async fn get_last_finalized_header(&self) -> Result<ChainConfig::Header, ()> {
+		let numeric_block_number_json = r#"
+            {
+                "digest": {
+                    "logs": []
+                },
+                "extrinsicsRoot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "number": 4,
+                "parentHash": "0xcb2690b2c85ceab55be03fc7f7f5f3857e7efeb7a020600ebd4331e10be2f7a5",
+                "stateRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
+            }
+        "#;
+
+		let header: SubstrateHeader<u32, BlakeTwo256> =
+			serde_json::from_str(numeric_block_number_json).expect("valid block header");
+
+		Ok(header)
 	}
-	async fn get_last_finalized_block_num(&mut self) -> Result<u64, ()> {
+	async fn get_last_finalized_block_num(&self) -> Result<u32, ()> {
 		Ok(self.block_num)
 	}
 
@@ -240,7 +330,7 @@ impl<ChainConfig: Config<AccountId = String>>
 		Ok(vec![])
 	}
 
-	async fn get_account_nonce(&mut self, _account_id: &ChainConfig::AccountId) -> Result<u64, ()> {
+	async fn get_account_nonce(&mut self, _account_id: &AccountId) -> Result<u64, ()> {
 		Ok(0)
 	}
 
@@ -256,24 +346,30 @@ impl<ChainConfig: Config<AccountId = String>>
 	async fn get_storage_proof_by_keys(&mut self, _keys: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, ()> {
 		Ok(vec![])
 	}
+
+	async fn submit_and_watch_tx_until(
+		&mut self,
+		_extrinsic: &[u8],
+		_until_status: XtStatus,
+	) -> Result<ExtrinsicReport<Hash>, ()> {
+		unimplemented!()
+	}
 }
 
 #[async_trait]
-pub trait SubstrateRpcClientFactory<
-	AccountId,
-	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
->
-{
+pub trait SubstrateRpcClientFactory<Header, RpcClient: SubstrateRpcClient<Header>> {
 	async fn new_client(&self) -> Result<RpcClient, ()>;
 }
 
+#[derive(Clone)]
 pub struct SubxtClientFactory<ChainConfig: Config> {
 	url: String,
 	_phantom: PhantomData<ChainConfig>,
 }
 
-impl<ChainConfig: Config<AccountId = AccountId32>> SubxtClientFactory<ChainConfig> {
+impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
+	SubxtClientFactory<ChainConfig>
+{
 	pub fn new(url: &str) -> Self {
 		Self { url: url.to_string(), _phantom: PhantomData }
 	}
@@ -291,15 +387,15 @@ impl<ChainConfig: Config<AccountId = AccountId32>> SubxtClientFactory<ChainConfi
 					error!("Error creating client: {:?}", e);
 				},
 			};
-			thread::sleep(Duration::from_secs(1))
+			sleep(Duration::from_secs(1)).await;
 		}
 		client.unwrap()
 	}
 }
 
 #[async_trait]
-impl<ChainConfig: Config<AccountId = AccountId32>>
-	SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, SubxtClient<ChainConfig>>
+impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
+	SubstrateRpcClientFactory<ChainConfig::Header, SubxtClient<ChainConfig>>
 	for SubxtClientFactory<ChainConfig>
 {
 	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, ()> {
@@ -318,7 +414,8 @@ impl<ChainConfig: Config<AccountId = AccountId32>>
 		let events = online_client.events();
 		let tx = online_client.tx();
 		let storage = online_client.storage();
+		let blocks = online_client.blocks();
 
-		Ok(SubxtClient { legacy, events, tx, storage })
+		Ok(SubxtClient { legacy, events, tx, storage, blocks })
 	}
 }

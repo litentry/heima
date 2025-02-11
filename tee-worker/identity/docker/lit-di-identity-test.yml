@@ -4,10 +4,10 @@ services:
         container_name: litentry-di-identity-test
         volumes:
             - ../ts-tests:/ts-tests
-            - ../client-api:/client-api
+            - ../../client-api:/client-api
             - ../cli:/usr/local/worker-cli
         build:
-            context: ..
+            context: ../../
             dockerfile: build.Dockerfile
             target: deployed-client
         depends_on:

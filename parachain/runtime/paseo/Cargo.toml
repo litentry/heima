@@ -47,6 +47,7 @@ pallet-proxy = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
+pallet-state-trie-migration = { workspace = true }
 pallet-sudo = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-tips = { workspace = true }
@@ -193,6 +194,7 @@ runtime-benchmarks = [
     "pallet-referenda/runtime-benchmarks",
     "pallet-scheduler/runtime-benchmarks",
     "pallet-score-staking/runtime-benchmarks",
+    "pallet-state-trie-migration/runtime-benchmarks",
     "pallet-sudo/runtime-benchmarks",
     "pallet-teebag/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
@@ -293,6 +295,7 @@ std = [
     "pallet-scheduler/std",
     "pallet-score-staking/std",
     "pallet-session/std",
+    "pallet-state-trie-migration/std",
     "pallet-sudo/std",
     "pallet-teebag/std",
     "pallet-timestamp/std",
@@ -388,6 +391,7 @@ try-runtime = [
     "pallet-scheduler/try-runtime",
     "pallet-score-staking/try-runtime",
     "pallet-session/try-runtime",
+    "pallet-state-trie-migration/try-runtime",
     "pallet-sudo/try-runtime",
     "pallet-teebag/try-runtime",
     "pallet-timestamp/try-runtime",

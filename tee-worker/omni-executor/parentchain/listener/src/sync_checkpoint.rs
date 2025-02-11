@@ -16,7 +16,7 @@
 
 use crate::listener::IntentEventId;
 use executor_core::sync_checkpoint_repository::Checkpoint;
-use parentchain_primitives::EventId;
+use executor_primitives::EventId;
 use parity_scale_codec::{Decode, Encode};
 
 /// Represents parentchain sync checkpoint.

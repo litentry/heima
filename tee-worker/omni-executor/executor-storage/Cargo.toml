@@ -1,0 +1,25 @@
+[package]
+name = "executor-storage"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+frame-support = { workspace = true, features = ["std"] }
+log = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+rocksdb = "0.23.0"
+sp-state-machine = { workspace = true, features = ["std"] }
+subxt-core = { workspace = true }
+
+# Local dependencies
+executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
+parentchain-api-interface = { workspace = true }
+parentchain-rpc-client = { workspace = true }
+
+[dev-dependencies]
+env_logger = { workspace = true }
+
+[lints]
+workspace = true

@@ -6343,7 +6343,7 @@ checksum = "4ee93343901ab17bd981295f2cf0026d4ad018c7c31ba84549a4ddbb47a45104"
 
 [[package]]
 name = "litentry-collator"
-version = "0.9.22"
+version = "0.9.23"
 dependencies = [
  "async-trait",
  "clap",
@@ -6523,6 +6523,7 @@ dependencies = [
  "pallet-scheduler",
  "pallet-score-staking",
  "pallet-session",
+ "pallet-state-trie-migration",
  "pallet-teebag",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -9953,6 +9954,7 @@ dependencies = [
  "pallet-scheduler",
  "pallet-score-staking",
  "pallet-session",
+ "pallet-state-trie-migration",
  "pallet-sudo",
  "pallet-teebag",
  "pallet-timestamp",
