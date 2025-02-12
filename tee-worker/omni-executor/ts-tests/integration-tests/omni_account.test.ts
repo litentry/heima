@@ -136,8 +136,55 @@ describe('OmniAccount', function () {
         );
     });
 
-    step('test remove_account', async function () {
+    step('test set_permissions', async function () {
         const currentNonce = 2;
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context.api);
+
+        // current permissions
+        let accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
+        assert.equal(accountPermissions.length, 1, 'permissions length should be 1 before set permissions');
+        assert.equal(
+            accountPermissions[0].toString(),
+            'All',
+            'permission is not the expected permission before set permissions'
+        );
+
+        const newPermissions = [
+            createOmniAccountPermission(context.api, 'RequestNativeIntent'),
+            createOmniAccountPermission(context.api, 'RequestEthereumIntent'),
+        ];
+        const nativeCall = createNativeCall(
+            context.api,
+            ['set_permissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
+            [aliceIdentity, bobIdentity, newPermissions]
+        );
+        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+            context.api,
+            nativeCall,
+            aliceWallet,
+            context.api.createType('Index', currentNonce),
+            context.mrEnclave
+        );
+        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+
+        accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
+
+        assert.equal(accountPermissions.length, 2, 'permissions length should be 2');
+        assert.equal(
+            accountPermissions[0].toString(),
+            'RequestNativeIntent',
+            'permission 1 is not the expected permission'
+        );
+        assert.equal(
+            accountPermissions[1].toString(),
+            'RequestEthereumIntent',
+            'permission 2 is not the expected permission'
+        );
+    });
+
+    step('test remove_account', async function () {
+        const currentNonce = 3;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
 
@@ -165,7 +212,7 @@ describe('OmniAccount', function () {
     });
 
     step('test request_intent (TransferNative)', async function () {
-        const currentNonce = 3;
+        const currentNonce = 4;
         const initialBalance = context.api.createType('u128', 50000000000000000000n);
         await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
         const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
