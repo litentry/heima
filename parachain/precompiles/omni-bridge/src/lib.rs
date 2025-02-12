@@ -38,7 +38,7 @@ where
 	Runtime::RuntimeCall: From<pallet_omni_bridge::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	BridgeBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
-	BridgeAssetKind<Runtime> = NativeOrWithId<AssetId>,
+	BridgeAssetKind<Runtime>: NativeOrWithId<AssetId>,
 {
 	#[precompile::public("payIn(uint256,uint8,bool,uint256,bytes)")]
 	fn pay_in(
