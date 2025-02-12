@@ -10,6 +10,7 @@ import {
 } from '../common/utils';
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
+import precompileOmniBridgeContractAbi from '../common/abi/precompile/OmniBridge.json';
 const BN = require('bn.js');
 import { evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
@@ -27,6 +28,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
     const precompileStakingContractAddress = '0x000000000000000000000000000000000000502d';
     const precompileBridgeContractAddress = '0x000000000000000000000000000000000000503d';
+    const precompileOmniBridgeContractAddress = '0x0000000000000000000000000000000000005055';
     const evmAccountRaw = {
         privateKey: '0x01ab6e801c06e59ca97a14fc0a1978b27fa366fc87450e0b65459dd3515b7391',
         address: '0xaaafB3972B05630fCceE866eC69CdADd9baC2771',
@@ -49,6 +51,11 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     const precompileBridgeContract = new ethers.Contract(
         precompileBridgeContractAddress,
         precompileBridgeContractAbi,
+        provider
+    );
+    const precompileOmniBridgeContract = new ethers.Contract(
+        precompileOmniBridgeContractAddress,
+        precompileOmniBridgeContractAbi,
         provider
     );
 
@@ -199,6 +206,12 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         expect(event_data[4]).to.eq(dest_address);
 
         console.timeEnd('Test precompile bridge contract');
+    });
+
+    step('Test precompile omni bridge contract', async function () {
+        console.time('Test precompile bridge contract');
+
+        console.timeEnd('Test precompile omni bridge contract');
     });
 
     // To see full params types for the interfaces, check notion page: https://web3builders.notion.site/Parachain-Precompile-Contract-0c34929e5f16408084446dcf3dd36006

@@ -19,6 +19,8 @@ sp-std = { workspace = true }
 fp-evm = { workspace = true }
 pallet-evm = { workspace = true }
 
+core-primitives = { workspace = true }
+
 [dev-dependencies]
 derive_more = { workspace = true }
 hex-literal = { workspace = true }
@@ -33,6 +35,7 @@ sp-runtime = { workspace = true, features = ["std"] }
 [features]
 default = ["std"]
 std = [
+    "core-primitives/std",
     "fp-evm/std",
     "frame-support/std",
     "frame-system/std",

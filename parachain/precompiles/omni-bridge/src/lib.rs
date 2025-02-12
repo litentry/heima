@@ -17,13 +17,19 @@
 
 use fp_evm::{PrecompileFailure, PrecompileHandle};
 
-use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
+use core_primitives::AssetId;
+use frame_support::{
+	dispatch::{GetDispatchInfo, PostDispatchInfo},
+	traits::fungible::NativeOrWithId,
+};
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
-use sp_core::{H256, U256};
+use sp_core::U256;
 use sp_std::{marker::PhantomData, vec::Vec};
+
+use pallet_omni_bridge::{ChainType, PayInRequest};
 
 pub struct OmniBridgePrecompile<Runtime>(PhantomData<Runtime>);
 
@@ -31,7 +37,7 @@ type BridgeBalanceOf<Runtime> = <Runtime as pallet_omni_bridge::Config>::Balance
 type BridgeAssetKind<Runtime> = <Runtime as pallet_omni_bridge::Config>::AssetKind;
 
 #[precompile_utils::precompile]
-impl<Runtime> BOmniBridgePrecompile<Runtime>
+impl<Runtime> OmniBridgePrecompile<Runtime>
 where
 	Runtime: pallet_omni_bridge::Config + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
