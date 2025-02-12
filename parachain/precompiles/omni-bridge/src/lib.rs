@@ -34,17 +34,15 @@ use pallet_omni_bridge::{ChainType, PayInRequest};
 pub struct OmniBridgePrecompile<Runtime>(PhantomData<Runtime>);
 
 type BridgeBalanceOf<Runtime> = <Runtime as pallet_omni_bridge::Config>::Balance;
-type BridgeAssetKind<Runtime> = <Runtime as pallet_omni_bridge::Config>::AssetKind;
 
 #[precompile_utils::precompile]
 impl<Runtime> OmniBridgePrecompile<Runtime>
 where
-	Runtime: pallet_omni_bridge::Config + pallet_evm::Config,
+	Runtime: pallet_omni_bridge::Config<AssetKind = NativeOrWithId<AssetId>> + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_omni_bridge::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	BridgeBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
-	BridgeAssetKind<Runtime>: NativeOrWithId<AssetId>,
 {
 	#[precompile::public("payIn(uint256,uint8,bool,uint256,bytes)")]
 	fn pay_in(

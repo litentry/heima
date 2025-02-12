@@ -211,6 +211,71 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     step('Test precompile omni bridge contract', async function () {
         console.time('Test precompile bridge contract');
 
+        const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
+        let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
+
+        // balance should be greater than 0.01
+        if (parseInt(balance.free.toString()) < parseInt('10000000000000000')) {
+            await transferTokens(context.alice, evmAccountRaw);
+
+            expect(parseInt(balance.free.toString())).to.gt(parseInt('10000000000000000'));
+        }
+
+        // add_pay_in_pair
+        const updatePayInPairTx = await sudoWrapperGC(
+            context.api,
+            context.api.tx.omniBridge.addPayInPair(
+                'Native',
+                { Ethereum: 0},
+            )
+        );
+        await signAndSend(updatePayInPairTx, context.alice);
+
+        // set_pay_in_fee
+        const updatePayInFeeTx = await sudoWrapperGC(
+            context.api,
+            context.api.tx.omniBridge.setPayInFee(
+                'Native',
+                { Ethereum: 0},
+                new BN('1000000000000000'), //0.001
+            )
+        );
+        await signAndSend(updatePayInFeeTx, context.alice);
+
+        const AssetInfo = (await context.api.query.assetsHandler.resourceToAssetInfo(destResourceId)).toHuman() as any;
+
+        const bridge_fee = AssetInfo.fee;
+        expect(bridge_fee.toString().replace(/,/g, '')).to.eq(ethers.utils.parseUnits('0.001', 18).toString());
+        // set chainId to whitelist
+        const whitelistChainTx = await sudoWrapperGC(context.api, context.api.tx.chainBridge.whitelistChain(0));
+        await signAndSend(whitelistChainTx, context.alice);
+
+        // The above two steps are necessary, otherwise the contract transaction will be reverted.
+        // transfer native token
+        const payInTx = precompileOmniBridgeContract.interface.encodeFunctionData('payIn', [
+            ethers.utils.parseUnits('0.01', 18).toString(),
+            0,
+            true,
+            destResourceId, // Does not matter since native = true
+            dest_address,
+        ]);
+
+        await executeTransaction(payInTx, precompileOmniBridgeContractAddress, 'payIn');
+        const eventsPromise = subscribeToEvents('omniBridge', 'PaidIn', context.api);
+        const events = (await eventsPromise).map(({ event }) => event);
+
+        expect(events.length).to.eq(1);
+        const event_data = events[0].toHuman().data! as Array<string>;
+
+        // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
+        expect(event_data[4]).to.eq('0');
+        expect(event_data[3]).to.eq(destResourceId); // This is hard-coded, not neccessary correct
+
+        // 0.01 - 0.001 = 0.009
+        const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
+        expect(event_data[6].toString().replace(/,/g, '')).to.eq(expectedBalance.toString());
+        expect(event_data[5]).to.eq(dest_address);
+
         console.timeEnd('Test precompile omni bridge contract');
     });
 
