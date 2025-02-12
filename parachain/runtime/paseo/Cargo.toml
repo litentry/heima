@@ -124,6 +124,7 @@ pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
 
 pallet-evm-precompile-bridge-transfer = { workspace = true }
+pallet-evm-precompile-omni-bridge = { workspace = true }
 pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
 
@@ -271,6 +272,7 @@ std = [
     "pallet-evm-precompile-blake2/std",
     "pallet-evm-precompile-bn128/std",
     "pallet-evm-precompile-bridge-transfer/std",
+    "pallet-evm-precompile-omni-bridge/std",
     "pallet-evm-precompile-dispatch/std",
     "pallet-evm-precompile-ed25519/std",
     "pallet-evm-precompile-modexp/std",
