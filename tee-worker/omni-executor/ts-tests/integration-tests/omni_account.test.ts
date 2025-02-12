@@ -134,4 +134,32 @@ describe('OmniAccount', function () {
         );
     });
 
+    step('test remove_account', async function () {
+        const currentNonce = 2;
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context.api);
+
+        let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        let membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 2, 'account store members count should be 2');
+
+        const nativeCall = createNativeCall(
+            context.api,
+            ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+            [aliceIdentity, [bobIdentity]]
+        );
+        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+            context.api,
+            nativeCall,
+            aliceWallet,
+            context.api.createType('Index', currentNonce),
+            context.mrEnclave
+        );
+        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+
+        accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
+        membersCount = accountStore.unwrap().length;
+        assert.equal(membersCount, 1, 'account store members count should be 1');
+    });
+
 });
