@@ -242,14 +242,6 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         );
         await signAndSend(updatePayInFeeTx, context.alice);
 
-        const AssetInfo = (await context.api.query.assetsHandler.resourceToAssetInfo(destResourceId)).toHuman() as any;
-
-        const bridge_fee = AssetInfo.fee;
-        expect(bridge_fee.toString().replace(/,/g, '')).to.eq(ethers.utils.parseUnits('0.001', 18).toString());
-        // set chainId to whitelist
-        const whitelistChainTx = await sudoWrapperGC(context.api, context.api.tx.chainBridge.whitelistChain(0));
-        await signAndSend(whitelistChainTx, context.alice);
-
         // The above two steps are necessary, otherwise the contract transaction will be reverted.
         // transfer native token
         const payInTx = precompileOmniBridgeContract.interface.encodeFunctionData('payIn', [
