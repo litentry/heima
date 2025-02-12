@@ -226,7 +226,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             context.api,
             context.api.tx.omniBridge.addPayInPair(
                 'Native',
-                { Ethereum: 0},
+                { Ethereum: 0 },
             )
         );
         await signAndSend(updatePayInPairTx, context.alice);
@@ -236,7 +236,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             context.api,
             context.api.tx.omniBridge.setPayInFee(
                 'Native',
-                { Ethereum: 0},
+                { Ethereum: 0 },
                 new BN('1000000000000000'), //0.001
             )
         );
@@ -260,13 +260,13 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         const event_data = events[0].toHuman().data! as Array<string>;
 
         // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
-        expect(event_data[4]).to.eq('0');
         expect(event_data[3]).to.eq(destResourceId); // This is hard-coded, not neccessary correct
+        expect(event_data[4]).to.eq({ Ethereum: 0 });
+        expect(event_data[5]).to.eq(dest_address);
 
         // 0.01 - 0.001 = 0.009
         const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
         expect(event_data[6].toString().replace(/,/g, '')).to.eq(expectedBalance.toString());
-        expect(event_data[5]).to.eq(dest_address);
 
         console.timeEnd('Test precompile omni bridge contract');
     });
