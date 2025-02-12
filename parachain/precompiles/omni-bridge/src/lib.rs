@@ -59,28 +59,31 @@ where
 			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("balance type"))
 		})?;
 		let recipient: Vec<u8> = recipient.into();
-		let asset_id: AssetId = asset_id.into();
+		let asset_id: AssetId = asset_id.try_into().map_err(|_| {
+			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("asset id type"))
+		})?;
 
-		let pay_in_request: PayInRequest<NativeOrWithId> = match native {
-			true => PayInRequest {
-				asset: NativeOrWithId::Native,
-				// This is substrate parachain precompile
-				// So always be non native chain
-				dest_chain: ChainType::Ethereum(dest_id.into()),
-				dest_account: recipient,
-				amount,
-			},
-			false => PayInRequest {
-				asset: NativeOrWithId::WithId(asset_id),
-				// This is substrate parachain precompile
-				// So always be non native chain
-				dest_chain: ChainType::Ethereum(dest_id.into()),
-				dest_account: recipient,
-				amount,
-			},
-		};
+		let pay_in_request: PayInRequest<NativeOrWithId<AssetId>, BridgeBalanceOf<Runtime>> =
+			match native {
+				true => PayInRequest {
+					asset: NativeOrWithId::Native,
+					// This is substrate parachain precompile
+					// So always be non native chain
+					dest_chain: ChainType::Ethereum(dest_id.into()),
+					dest_account: recipient,
+					amount,
+				},
+				false => PayInRequest {
+					asset: NativeOrWithId::WithId(asset_id),
+					// This is substrate parachain precompile
+					// So always be non native chain
+					dest_chain: ChainType::Ethereum(dest_id.into()),
+					dest_account: recipient,
+					amount,
+				},
+			};
 
-		let call = pallet_omni_bridge::Call::<Runtime>::pay_in { pay_in_request };
+		let call = pallet_omni_bridge::Call::<Runtime>::pay_in { req: pay_in_request };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 
 		Ok(())
