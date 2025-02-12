@@ -118,6 +118,6 @@ In the worker launch terminal, `Ctrl + C` should interrupt and clean everything 
 
 #### Additional Info:
 
-1. Change the RUST_LOG level: `heima/local-setup/worker-log-level-config.toml`
-2. Check existing ts-tests: `heima/tee-worker/identity/ts-tests/package.json`
-3. JSON config parameters: `heima/tee-worker/identity/service/src/cli.yml`
+1. Change the RUST_LOG level: `local-setup/worker-log-level-config.toml`
+2. Check existing ts-tests: `tee-worker/identity/ts-tests/package.json`
+3. JSON config parameters: `tee-worker/identity/service/src/cli.yml`
