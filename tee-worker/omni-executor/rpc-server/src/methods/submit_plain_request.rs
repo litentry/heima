@@ -43,7 +43,6 @@ pub fn register_submit_plain_request<
 				log::error!("Failed to handle Plain request: {:?}", e);
 				ErrorCode::InternalError
 			})??;
-			log::info!("Received native call: {:?}", native_call);
 			let (response_sender, response_receiver) = oneshot::channel();
 			let native_task = NativeTask { call: native_call, auth_type, response_sender };
 
@@ -52,10 +51,7 @@ pub fn register_submit_plain_request<
 				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
-				Ok(response) => {
-					log::info!("Received response from native call handler: {:?}", response);
-					Ok::<String, ErrorObject>(hex_encode(response.as_slice()))
-				},
+				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())
