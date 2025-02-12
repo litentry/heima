@@ -1,6 +1,6 @@
 import { step } from 'mocha-steps';
 import { assert } from 'chai';
-import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount, OmniAccountPermission } from 'parachain-api';
+import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
