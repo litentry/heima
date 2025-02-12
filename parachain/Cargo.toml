@@ -35,6 +35,7 @@ members = [
     'precompiles/collab-ai/guardian',
     'precompiles/collab-ai/pool-proposal',
     'precompiles/collab-ai/investing-pool',
+    'precompiles/omni-bridge',
     'precompiles/parachain-staking',
     'precompiles/score-staking',
     'runtime/litentry',
