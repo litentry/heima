@@ -24,3 +24,63 @@ use sp_runtime::traits::Dispatchable;
 
 use sp_core::{H256, U256};
 use sp_std::{marker::PhantomData, vec::Vec};
+
+pub struct OmniBridgePrecompile<Runtime>(PhantomData<Runtime>);
+
+type BridgeBalanceOf<Runtime> = <Runtime as pallet_omni_bridge::Config>::Balance;
+type BridgeAssetKind<Runtime> = <Runtime as pallet_omni_bridge::Config>::AssetKind;
+
+#[precompile_utils::precompile]
+impl<Runtime> BOmniBridgePrecompile<Runtime>
+where
+	Runtime: pallet_omni_bridge::Config + pallet_evm::Config,
+	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
+	Runtime::RuntimeCall: From<pallet_omni_bridge::Call<Runtime>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	BridgeBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
+	BridgeAssetKind<Runtime> = NativeOrWithId<AssetId>,
+{
+	#[precompile::public("payIn(uint256,uint8,bool,uint256,bytes)")]
+	fn pay_in(
+		handle: &mut impl PrecompileHandle,
+		amount: U256,
+		dest_id: u8,
+        native: bool,
+		asset_id: U256,
+		recipient: UnboundedBytes,
+	) -> EvmResult {
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
+
+		let amount: BridgeBalanceOf<Runtime> = amount.try_into().map_err(|_| {
+			Into::<PrecompileFailure>::into(RevertReason::value_is_too_large("balance type"))
+		})?;
+		let recipient: Vec<u8> = recipient.into();
+		let asset_id: AssetId = asset_id.into();
+
+		let pay_in_request: PayInRequest<NativeOrWithId, > = match native {
+			true => PayInRequest {
+				asset: NativeOrWithId::Native,
+				// This is substrate parachain precompile
+				// So always be non native chain
+				dest_chain: ChainType::Ethereum(dest_id.into()),
+				dest_account: recipient,
+				amount,
+			},
+			false => PayInRequest {
+				asset: NativeOrWithId::WithId(asset_id),
+				// This is substrate parachain precompile
+				// So always be non native chain
+				dest_chain: ChainType::Ethereum(dest_id.into()),
+				dest_account: recipient,
+				amount,
+			}
+		}
+
+		let call = pallet_omni_bridge::Call::<Runtime>::pay_in {
+			pay_in_request,
+		};
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+
+		Ok(())
+	}
+}

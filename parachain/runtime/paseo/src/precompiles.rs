@@ -30,6 +30,7 @@ use pallet_evm_precompile_bridge_transfer::BridgeTransferPrecompile;
 use pallet_evm_precompile_dispatch::{Dispatch, DispatchValidateT};
 use pallet_evm_precompile_ed25519::Ed25519Verify;
 use pallet_evm_precompile_modexp::Modexp;
+use pallet_evm_precompile_omni_bridge::OmniBridgePrecompile;
 use pallet_evm_precompile_parachain_staking::ParachainStakingPrecompile;
 use pallet_evm_precompile_score_staking::ScoreStakingPrecompile;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
@@ -140,6 +141,12 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<
 		AddressU64<20555>,
 		ScoreStakingPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// OmniBridge: pallet_omni_bridge = 85 + 20480
+	PrecompileAt<
+		AddressU64<20565>,
+		OmniBridgePrecompile<R>,
 		(CallableByContract, CallableByPrecompile),
 	>,
 	// Curator: pallet_curator = 150 + 20480
