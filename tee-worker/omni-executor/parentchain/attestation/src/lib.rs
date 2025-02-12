@@ -20,6 +20,7 @@ type TxSigner = TransactionSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
+#[allow(unused_assignments, unused_mut, unused_variables)]
 pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
