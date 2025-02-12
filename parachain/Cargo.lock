@@ -8216,6 +8216,7 @@ dependencies = [
 name = "pallet-evm-precompile-omni-bridge"
 version = "0.1.0"
 dependencies = [
+ "core-primitives",
  "derive_more 0.99.18",
  "fp-evm",
  "frame-support",
