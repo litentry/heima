@@ -84,9 +84,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated, (response) =>
-            console.log(JSON.stringify(response, null, 2))
-        );
+        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
