@@ -45,7 +45,7 @@ where
 		handle: &mut impl PrecompileHandle,
 		amount: U256,
 		dest_id: u8,
-        native: bool,
+		native: bool,
 		asset_id: U256,
 		recipient: UnboundedBytes,
 	) -> EvmResult {
@@ -57,7 +57,7 @@ where
 		let recipient: Vec<u8> = recipient.into();
 		let asset_id: AssetId = asset_id.into();
 
-		let pay_in_request: PayInRequest<NativeOrWithId, > = match native {
+		let pay_in_request: PayInRequest<NativeOrWithId> = match native {
 			true => PayInRequest {
 				asset: NativeOrWithId::Native,
 				// This is substrate parachain precompile
@@ -73,12 +73,10 @@ where
 				dest_chain: ChainType::Ethereum(dest_id.into()),
 				dest_account: recipient,
 				amount,
-			}
-		}
-
-		let call = pallet_omni_bridge::Call::<Runtime>::pay_in {
-			pay_in_request,
+			},
 		};
+
+		let call = pallet_omni_bridge::Call::<Runtime>::pay_in { pay_in_request };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 
 		Ok(())
