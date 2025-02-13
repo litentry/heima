@@ -248,7 +248,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             ethers.utils.parseUnits('0.01', 18).toString(),
             0,
             true,
-            destResourceId, // Does not matter since native = true
+            0x0000000000000000000000000000000000000000000000000000000000000000, // Does not matter since native = true, but make sure it does not overflow u128
             dest_address,
         ]);
 
