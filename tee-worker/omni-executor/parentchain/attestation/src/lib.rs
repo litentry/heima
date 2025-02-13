@@ -46,6 +46,7 @@ pub async fn perform_attestation(
 		quote = fs::read("/dev/attestation/quote").unwrap();
 		info!("Attestation quote {:?}", quote);
 
+		// TODO: double check this
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
 
