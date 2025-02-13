@@ -1,3 +1,4 @@
+use executor_primitives::{DcapQuote, MrEnclave};
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
@@ -7,6 +8,7 @@ use parentchain_rpc_client::{
 	SubxtClientFactory,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use parity_scale_codec::Decode;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
@@ -25,9 +27,10 @@ pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
 	transaction_signer: Arc<TxSigner>,
-) -> Result<(), ()> {
+) -> Result<MrEnclave, ()> {
 	let mut quote = vec![];
 	let mut attestation_type = AttestationType::Dcap(DcapProvider::Intel);
+	let mut mrenclave = MrEnclave::default();
 
 	#[cfg(feature = "gramine-quote")]
 	{
@@ -41,6 +44,12 @@ pub async fn perform_attestation(
 
 		quote = fs::read("/dev/attestation/quote").unwrap();
 		info!("Attestation quote {:?}", quote);
+
+		let dcap_quote: DcapQuote =
+			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
+
+		mrenclave = dcap_quote.body.mr_enclave;
+		info!("Attestation mr_enclave {:?}", mrenclave);
 	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
@@ -62,5 +71,6 @@ pub async fn perform_attestation(
 	client.submit_tx(&signed_call).await.map_err(|e| {
 		log::error!("Error while submitting tx: {:?}", e);
 	})?;
-	Ok(())
+
+	Ok(mrenclave)
 }
