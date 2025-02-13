@@ -209,7 +209,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     });
 
     step('Test precompile omni bridge contract', async function () {
-        console.time('Test precompile bridge contract');
+        console.time('Test precompile omni bridge contract');
 
         const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
