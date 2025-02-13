@@ -1,4 +1,4 @@
-use executor_primitives::{DcapQuote, MrEnclave};
+use executor_primitives::MrEnclave;
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
@@ -8,7 +8,6 @@ use parentchain_rpc_client::{
 	SubxtClientFactory,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
-use parity_scale_codec::Decode;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
@@ -34,7 +33,9 @@ pub async fn perform_attestation(
 
 	#[cfg(feature = "gramine-quote")]
 	{
+		use executor_primitives::DcapQuote;
 		use log::info;
+		use parity_scale_codec::Decode;
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;
