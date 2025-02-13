@@ -1,4 +1,5 @@
 use crate::{MrEnclave, MrSigner, QuotingEnclave, SgxBuildMode};
+use alloc::vec;
 use parity_scale_codec::{Decode, Encode, Input};
 use scale_info::TypeInfo;
 
@@ -72,7 +73,7 @@ pub struct EcdsaQuoteSignature {
 #[repr(C)]
 pub struct QeAuthenticationData {
     pub size: u16,
-    pub certification_data: Vec<u8>,
+    pub certification_data: vec::Vec<u8>,
 }
 
 impl Decode for QeAuthenticationData {
@@ -96,7 +97,7 @@ impl Decode for QeAuthenticationData {
 pub struct QeCertificationData {
     pub certification_data_type: u16,
     pub size: u32,
-    pub certification_data: Vec<u8>,
+    pub certification_data: vec::Vec<u8>,
 }
 
 impl Decode for QeCertificationData {
