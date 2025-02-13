@@ -221,24 +221,27 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             expect(parseInt(balance.free.toString())).to.gt(parseInt('10000000000000000'));
         }
 
-        // add_pay_in_pair
-        const updatePayInPairTx = await sudoWrapperGC(
+        // Set admin
+        const setAdminTx = await sudoWrapperGC(
             context.api,
-            context.api.tx.omniBridge.addPayInPair(
-                'Native',
-                { Ethereum: 0 },
+            context.api.tx.omniBridge.setAdmin(
+                context.alice.address,
             )
+        );
+        await signAndSend(setAdminTx, context.alice);
+
+        // add_pay_in_pair
+        const updatePayInPairTx = context.api.tx.omniBridge.addPayInPair(
+            'Native',
+            { Ethereum: 0 },
         );
         await signAndSend(updatePayInPairTx, context.alice);
 
         // set_pay_in_fee
-        const updatePayInFeeTx = await sudoWrapperGC(
-            context.api,
-            context.api.tx.omniBridge.setPayInFee(
-                'Native',
-                { Ethereum: 0 },
-                new BN('1000000000000000'), //0.001
-            )
+        const updatePayInFeeTx = context.api.tx.omniBridge.setPayInFee(
+            'Native',
+            { Ethereum: 0 },
+            new BN('1000000000000000'), //0.001
         );
         await signAndSend(updatePayInFeeTx, context.alice);
 
