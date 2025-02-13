@@ -22,6 +22,7 @@ fs.mounts = [
   { path = "/etc", uri = "file:/etc" },
   { path = "/usr", uri = "file:/usr" },
   { path = "/storage_db", uri = "file:storage_db" },
+  { path = "/local", uri = "file:local" },
 ]
 
 sgx.debug = {{ 'true' if env.get('SGX_DEBUG', '0') == '1' else 'false' }}
@@ -42,6 +43,7 @@ sgx.trusted_files = [
 
 sgx.allowed_files = [
   "file:storage_db/",
+  "file:local/",
 ]
 
 # The maximum number of threads in a single process needs to be declared in advance.
