@@ -1008,9 +1008,9 @@ impl pallet_parachain_staking::Config for Runtime {
 	/// Minimum collators selected per round, default at genesis and minimum forever after
 	type MinSelectedCandidates = ConstU32<1>;
 	/// Maximum top delegations per candidate
-	type MaxTopDelegationsPerCandidate = ConstU32<1000>;
+	type MaxTopDelegationsPerCandidate = ConstU32<300>;
 	/// Maximum bottom delegations per candidate
-	type MaxBottomDelegationsPerCandidate = ConstU32<200>;
+	type MaxBottomDelegationsPerCandidate = ConstU32<100>;
 	/// Maximum delegations per delegator
 	type MaxDelegationsPerDelegator = ConstU32<100>;
 	type DefaultCollatorCommission = DefaultCollatorCommission;
