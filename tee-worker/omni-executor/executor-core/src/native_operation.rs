@@ -5,7 +5,10 @@ use std::vec::Vec;
 
 pub trait NativeOperation: Codec {
 	fn sender_identity(&self) -> &Identity;
-	fn signature_message_prefix(&self) -> String;
+
+	fn signature_message_prefix(&self) -> String {
+		"Token: ".to_string()
+	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -32,8 +35,18 @@ impl NativeOperation for NativeCall {
 			NativeCall::set_permissions(sender_identity, ..) => sender_identity,
 		}
 	}
-	fn signature_message_prefix(&self) -> String {
-		// TODO: update this when adding request_batch_vc variant
-		"Token: ".to_string()
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum NativeQuery {
+	get_account_store(Identity),
+}
+
+impl NativeOperation for NativeQuery {
+	fn sender_identity(&self) -> &Identity {
+		match self {
+			NativeQuery::get_account_store(sender_identity) => sender_identity,
+		}
 	}
 }

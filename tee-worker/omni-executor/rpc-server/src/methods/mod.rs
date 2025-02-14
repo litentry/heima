@@ -11,7 +11,7 @@ use jsonrpsee::RpcModule;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use request_email_verification_code::register_request_email_verification_code;
 use submit_aes_request::register_submit_aes_request;
-use submit_plain_request::register_submit_plain_request;
+use submit_plain_request::register_submit_plain_requests;
 
 pub fn register_methods<
 	Header: Send + Sync + 'static,
@@ -24,5 +24,5 @@ pub fn register_methods<
 	register_submit_aes_request(module);
 	register_request_email_verification_code(module);
 	register_get_oauth2_google_authorization_url(module);
-	register_submit_plain_request(module);
+	register_submit_plain_requests(module);
 }

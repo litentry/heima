@@ -6,7 +6,7 @@ use crate::{
 	request::{AesRequest, DecryptableRequest},
 	server::RpcContext,
 };
-use executor_core::native_operation::NativeCall;
+use executor_core::native_operation::NativeOperation;
 use executor_primitives::{
 	utils::hex::{FromHexPrefixed, ToHexPrefixed},
 	OmniAccountAuthType,
@@ -15,7 +15,7 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use native_task_handler::NativeTask;
+use native_task_handler::{NativeTask, NativeTaskOperation};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use std::sync::Arc;
@@ -46,8 +46,11 @@ pub fn register_submit_aes_request<
 				ErrorCode::InternalError
 			})??;
 			let (response_sender, response_receiver) = oneshot::channel();
-			let native_task = NativeTask { call: native_call, auth_type, response_sender };
-
+			let native_task = NativeTask {
+				operation: NativeTaskOperation::Call(native_call),
+				auth_type,
+				response_sender,
+			};
 			if ctx.native_task_sender.send(native_task).await.is_err() {
 				log::error!("Failed to send request to native call executor");
 				return Err(ErrorCode::InternalError.into());
@@ -68,11 +71,12 @@ fn handle_aes_request<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	OP: NativeOperation,
 >(
 	mut request: AesRequest,
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
-) -> Result<(NativeCall, OmniAccountAuthType), ErrorObject<'a>> {
+) -> Result<(OP, OmniAccountAuthType), ErrorObject<'a>> {
 	if request.mrenclave() != ctx.mrenclave {
 		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
 	}
