@@ -3,7 +3,7 @@ pub use aes256_key_store::Aes256KeyStore;
 
 mod types;
 
-use executor_core::native_call::NativeCall;
+use executor_core::native_operation::NativeCall;
 use executor_crypto::{
 	aes256::{aes_encrypt_default, Aes256Key},
 	jwt,

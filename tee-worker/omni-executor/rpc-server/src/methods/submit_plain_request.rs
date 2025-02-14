@@ -1,10 +1,12 @@
 use crate::{
 	error_code::*,
-	native_call_authenticated::{verify_native_call_authenticated, NativeCallAuthenticated},
+	native_operation_authenticated::{
+		verify_native_operation_authenticated, AuthenticatedOperation,
+	},
 	request::PlainRequest,
 	server::RpcContext,
 };
-use executor_core::native_call::NativeCall;
+use executor_core::native_operation::NativeCall;
 use executor_primitives::{
 	utils::hex::{FromHexPrefixed, ToHexPrefixed},
 	OmniAccountAuthType,
@@ -74,12 +76,12 @@ fn handle_plain_request<
 	if request.mrenclave != ctx.mrenclave {
 		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
 	}
-	let nca = NativeCallAuthenticated::decode(&mut request.payload.as_slice())
+	let authenticated_op = AuthenticatedOperation::decode(&mut request.payload.as_slice())
 		.map_err(|_| ErrorCode::ServerError(INVALID_NATIVE_CALL_AUTHENTICATED_CODE))?;
 
-	if verify_native_call_authenticated(ctx, handle, &nca).is_err() {
+	if verify_native_operation_authenticated(ctx, handle, &authenticated_op).is_err() {
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}
 
-	Ok((nca.call, nca.authentication.into()))
+	Ok((authenticated_op.operation, authenticated_op.authentication.into()))
 }

@@ -1,10 +1,12 @@
 use crate::{
 	error_code::*,
-	native_call_authenticated::{verify_native_call_authenticated, NativeCallAuthenticated},
+	native_operation_authenticated::{
+		verify_native_operation_authenticated, AuthenticatedOperation,
+	},
 	request::{AesRequest, DecryptableRequest},
 	server::RpcContext,
 };
-use executor_core::native_call::NativeCall;
+use executor_core::native_operation::NativeCall;
 use executor_primitives::{
 	utils::hex::{FromHexPrefixed, ToHexPrefixed},
 	OmniAccountAuthType,
@@ -77,16 +79,16 @@ fn handle_aes_request<
 	let Ok(encoded_nca) = request.decrypt(Box::new(ctx.shielding_key.clone())) else {
 		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
 	};
-	let nca = match NativeCallAuthenticated::decode(&mut encoded_nca.as_slice()) {
+	let authenticated_op = match AuthenticatedOperation::decode(&mut encoded_nca.as_slice()) {
 		Ok(nca) => nca,
 		Err(e) => {
 			log::error!("Failed to decode authenticated call: {:?}", e);
 			return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
 		},
 	};
-	if verify_native_call_authenticated(ctx, handle, &nca).is_err() {
+	if verify_native_operation_authenticated(ctx, handle, &authenticated_op).is_err() {
 		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
 	}
 
-	Ok((nca.call, nca.authentication.into()))
+	Ok((authenticated_op.operation, authenticated_op.authentication.into()))
 }
