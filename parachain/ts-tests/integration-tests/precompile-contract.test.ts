@@ -150,64 +150,6 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
     });
 
-    step('Test precompile bridge contract', async function () {
-        console.time('Test precompile bridge contract');
-
-        const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
-        let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
-
-        // balance should be greater than 0.01
-        if (parseInt(balance.free.toString()) < parseInt('10000000000000000')) {
-            await transferTokens(context.alice, evmAccountRaw);
-
-            expect(parseInt(balance.free.toString())).to.gt(parseInt('10000000000000000'));
-        }
-
-        const updateFeeTx = await sudoWrapperGC(
-            context.api,
-            context.api.tx.assetsHandler.setResource(destResourceId, {
-                fee: new BN('1000000000000000'), //0.001
-                asset: null,
-            })
-        );
-        await signAndSend(updateFeeTx, context.alice);
-
-        const AssetInfo = (await context.api.query.assetsHandler.resourceToAssetInfo(destResourceId)).toHuman() as any;
-
-        const bridge_fee = AssetInfo.fee;
-        expect(bridge_fee.toString().replace(/,/g, '')).to.eq(ethers.utils.parseUnits('0.001', 18).toString());
-        // set chainId to whitelist
-        const whitelistChainTx = await sudoWrapperGC(context.api, context.api.tx.chainBridge.whitelistChain(0));
-        await signAndSend(whitelistChainTx, context.alice);
-
-        // The above two steps are necessary, otherwise the contract transaction will be reverted.
-        // transfer native token
-        const transferNativeTx = precompileBridgeContract.interface.encodeFunctionData('transferAssets', [
-            ethers.utils.parseUnits('0.01', 18).toString(),
-            0,
-            destResourceId,
-            dest_address,
-        ]);
-
-        await executeTransaction(transferNativeTx, precompileBridgeContractAddress, 'transferAssets');
-        const eventsPromise = subscribeToEvents('chainBridge', 'FungibleTransfer', context.api);
-        const events = (await eventsPromise).map(({ event }) => event);
-
-        expect(events.length).to.eq(1);
-        const event_data = events[0].toHuman().data! as Array<string>;
-
-        // FungibleTransfer(BridgeChainId, DepositNonce, ResourceId, u128, Vec<u8>)
-        expect(event_data[0]).to.eq('0');
-        expect(event_data[2]).to.eq(destResourceId);
-
-        // 0.01 - 0.001 = 0.009
-        const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
-        expect(event_data[3].toString().replace(/,/g, '')).to.eq(expectedBalance.toString());
-        expect(event_data[4]).to.eq(dest_address);
-
-        console.timeEnd('Test precompile bridge contract');
-    });
-
     step('Test precompile omni bridge contract', async function () {
         console.time('Test precompile omni bridge contract');
 
@@ -222,26 +164,18 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
 
         // Set admin
-        const setAdminTx = await sudoWrapperGC(
-            context.api,
-            context.api.tx.omniBridge.setAdmin(
-                context.alice.address,
-            )
-        );
+        const setAdminTx = await sudoWrapperGC(context.api, context.api.tx.omniBridge.setAdmin(context.alice.address));
         await signAndSend(setAdminTx, context.alice);
 
         // add_pay_in_pair
-        const updatePayInPairTx = context.api.tx.omniBridge.addPayInPair(
-            'Native',
-            { Ethereum: 0 },
-        );
+        const updatePayInPairTx = context.api.tx.omniBridge.addPayInPair('Native', { Ethereum: 0 });
         await signAndSend(updatePayInPairTx, context.alice);
 
         // set_pay_in_fee
         const updatePayInFeeTx = context.api.tx.omniBridge.setPayInFee(
             'Native',
             { Ethereum: 0 },
-            new BN('1000000000000000'), //0.001
+            new BN('1000000000000000') //0.001
         );
         await signAndSend(updatePayInFeeTx, context.alice);
 

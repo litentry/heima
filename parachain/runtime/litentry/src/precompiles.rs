@@ -150,7 +150,7 @@ pub type LitentryNetworkPrecompiles<R> = PrecompileSetBuilder<
 		// Skip precompiles if out of range.
 		PrecompilesInRangeInclusive<
 			// We take range as last precompile index, UPDATE this once new prcompile is added
-			(AddressU64<1>, AddressU64<20556>),
+			(AddressU64<1>, AddressU64<20565>),
 			PrecompilesSetAt<R>,
 		>,
 		// Prefixed precompile sets (XC20)

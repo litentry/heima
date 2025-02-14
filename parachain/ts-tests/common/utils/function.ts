@@ -65,7 +65,7 @@ export const subscribeToEvents = async (
     api: ApiPromise
 ): Promise<FrameSystemEventRecord[]> => {
     return new Promise<FrameSystemEventRecord[]>((resolve, reject) => {
-        let blocksToScan = 40;
+        let blocksToScan = 30;
         const unsubscribe = api.rpc.chain.subscribeNewHeads(async (blockHeader) => {
             const shiftedApi = await api.at(blockHeader.hash);
 
