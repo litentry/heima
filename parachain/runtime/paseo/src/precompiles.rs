@@ -187,7 +187,7 @@ pub type RococoNetworkPrecompiles<R> = PrecompileSetBuilder<
 		// Skip precompiles if out of range.
 		PrecompilesInRangeInclusive<
 			// We take range as last precompile index, UPDATE this once new prcompile is added
-			(AddressU64<1>, AddressU64<20635>),
+			(AddressU64<1>, AddressU64<20634>),
 			PrecompilesSetAt<R>,
 		>,
 		// Prefixed precompile sets (XC20)
