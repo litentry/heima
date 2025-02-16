@@ -198,7 +198,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
-        expect(JSON.stringify(event_data[4])).to.eq(JSON.stringify({Ethereum:0}));
+        expect(JSON.stringify(event_data[4])).to.eq(JSON.stringify({ethereum:0}));
         expect(event_data[5]).to.eq(dest_address);
 
         // 0.01 - 0.001 = 0.009
