@@ -127,28 +127,28 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         await signAndSend(extrinsic, context.alice);
     });
 
-    // step('Address with insufficient amount of tokens', async function () {
-    //     const randomEvmWallet = ethers.Wallet.createRandom();
-    //     const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
-    //         'delegateWithAutoCompound',
-    //         [collatorPublicKey, ethers.utils.parseUnits('60', 18), 1]
-    //     );
+    step('Address with insufficient amount of tokens', async function () {
+        const randomEvmWallet = ethers.Wallet.createRandom();
+        const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
+            'delegateWithAutoCompound',
+            [collatorPublicKey, ethers.utils.parseUnits('60', 18), 1]
+        );
 
-    //     try {
-    //         const tx = await randomEvmWallet.sendTransaction({
-    //             to: precompileStakingContractAddress,
-    //             data: delegateWithAutoCompound,
-    //             gasLimit: 1000000,
-    //             nonce: await randomEvmWallet.getTransactionCount(),
-    //             gasPrice: await provider.getGasPrice(),
-    //         });
-    //         await tx.wait();
+        try {
+            const tx = await randomEvmWallet.sendTransaction({
+                to: precompileStakingContractAddress,
+                data: delegateWithAutoCompound,
+                gasLimit: 1000000,
+                nonce: await randomEvmWallet.getTransactionCount(),
+                gasPrice: await provider.getGasPrice(),
+            });
+            await tx.wait();
 
-    //         expect(true).to.eq(false); // test should fail here
-    //     } catch (e) {
-    //         expect(e).to.be.instanceof(Error);
-    //     }
-    // });
+            expect(true).to.eq(false); // test should fail here
+        } catch (e) {
+            expect(e).to.be.instanceof(Error);
+        }
+    });
 
     step('Test precompile omni bridge contract', async function () {
         console.time('Test precompile omni bridge contract');
