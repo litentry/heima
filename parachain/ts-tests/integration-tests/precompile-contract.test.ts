@@ -194,16 +194,26 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         const events = (await eventsPromise).map(({ event }) => event);
 
         expect(events.length).to.eq(1);
-        const event_data = events[0].data;
+        const event_data = events[0].toHuman().data! as {
+            sourceAccount: string;
+            nonce: number;
+            asset: string;
+            resourceId: string;
+            destChain: {
+                Ethereum: string;
+            };
+            destAccount: string;
+            amount: string;
+        };
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
-        expect(JSON.stringify(event_data[4])).to.eq(JSON.stringify({ethereum:0}));
-        expect(event_data[5]).to.eq(dest_address);
+        expect(event_data.destChain).to.deep.equal({ Ethereum: '0' });
+        expect(event_data.destAccount).to.eq(dest_address);
 
         // 0.01 - 0.001 = 0.009
         const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
-        expect(event_data[6].toString().replace(/,/g, '')).to.eq(expectedBalance.toString());
+        expect(event_data.amount.replace(/,/g, '')).to.eq(expectedBalance.toString());
 
         console.timeEnd('Test precompile omni bridge contract');
     });
