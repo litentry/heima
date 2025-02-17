@@ -24,10 +24,11 @@ use log::error;
 use native_task_handler::{
 	run_native_task_handler, Aes256KeyStore, ParentchainTxSigner, TaskHandlerContext,
 };
+use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
-use parentchain_signer::TransactionSigner;
+use parentchain_signer::{get_signer, TransactionSigner};
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
@@ -92,6 +93,18 @@ async fn main() -> Result<(), ()> {
 			// TODO: get mrenclave from quote
 			let mrenclave = [0u8; 32];
 
+			let signer = get_signer(substrate_key_store.clone());
+
+			perform_attestation(
+				parentchain_rpc_client_factory.clone(),
+				signer,
+				transaction_signer.clone(),
+			)
+			.await
+			.map_err(|_| {
+				error!("Could not perform attestation");
+			})?;
+
 			start_rpc_server(
 				&args.worker_rpc_port,
 				parentchain_rpc_client_factory,
@@ -106,9 +119,7 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db, transaction_signer, substrate_key_store)
-				.await
-				.unwrap();
+			listen_to_parentchain(args, storage_db, transaction_signer).await.unwrap();
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
@@ -131,7 +142,6 @@ async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
 	parentchain_tx_signer: Arc<ParentchainTxSigner>,
-	substrate_key_store: Arc<SubstrateKeyStore>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 	let ethereum_intent_executor =
@@ -149,7 +159,6 @@ async fn listen_to_parentchain(
 			sub_stop_receiver,
 			storage_db,
 			parentchain_tx_signer,
-			substrate_key_store,
 			&args.log_path,
 		)
 		.await?;

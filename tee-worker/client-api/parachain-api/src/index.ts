@@ -17,7 +17,8 @@ import { default as vc } from "../build/interfaces/vc/definitions";
 import { default as omniAccount } from "../build/interfaces/omniAccount/definitions";
 import { default as trusted_operations } from "../build/interfaces/trusted_operations/definitions";
 import { default as sidechain } from "../build/interfaces/sidechain/definitions";
-export { identity, vc, trusted_operations, sidechain, omniAccount };
+import { default as omniExecutor } from "../build/interfaces/omniExecutor/definitions";
+export { identity, vc, trusted_operations, sidechain, omniAccount, omniExecutor };
 
 // Export handy types
 import type { LitentryIdentity, Web3Network } from "../build/interfaces/identity/types";
