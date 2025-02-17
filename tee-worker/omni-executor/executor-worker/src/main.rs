@@ -103,6 +103,18 @@ async fn main() -> Result<(), ()> {
 				error!("Could not perform attestation");
 			})?;
 
+			let signer = get_signer(substrate_key_store.clone());
+
+			perform_attestation(
+				parentchain_rpc_client_factory.clone(),
+				signer,
+				transaction_signer.clone(),
+			)
+			.await
+			.map_err(|_| {
+				error!("Could not perform attestation");
+			})?;
+
 			start_rpc_server(
 				&args.worker_rpc_port,
 				parentchain_rpc_client_factory,
