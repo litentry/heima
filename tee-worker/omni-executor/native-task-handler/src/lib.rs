@@ -167,7 +167,7 @@ async fn handle_native_task<
 				Intent::SystemRemark(remark) => {
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
 					let dispatch_as_omni_account_call =
-						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
 							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::System(remark_call),
 							task.auth_type.to_subxt_type(),
@@ -180,7 +180,7 @@ async fn handle_native_task<
 						value: transfer.value,
 					};
 					let dispatch_as_omni_account_call =
-						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
 							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::Balances(transfer_call),
 							task.auth_type.to_subxt_type(),
