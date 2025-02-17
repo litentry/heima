@@ -84,7 +84,7 @@ log = { version = "0.4", default-features = false }
 proc-macro2 = { version = "1" }
 quote = { version = "1" }
 syn = { version = "2" }
-scale-info = { version = "2.11.6", default-features = false, features = ["derive"] }
+scale-info = { version = "2.11", default-features = false, features = ["derive"] }
 parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
 paste = { version = "1.0" }
 serde = { version = "=1.0.214", default-features = false, features = ["derive", "alloc"] }
@@ -133,26 +133,26 @@ polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "s
 polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
 
 # frontier
-fc-api = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fc-consensus = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fc-db = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fc-mapping-sync = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fc-rpc = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false, features = ["rpc-binary-search-estimate", "txpool"] }
-fc-rpc-core = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fc-storage = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fp-rpc = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fp-evm = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-fp-self-contained = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false, features = ["serde"] }
-pallet-ethereum = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false, features = ["forbid-evm-reentrancy"] }
-pallet-evm = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false, features = ["forbid-evm-reentrancy"] }
-pallet-evm-precompile-blake2 = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-bn128 = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-dispatch = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-ed25519 = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-modexp = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-sha3fips = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-simple = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
-precompile-utils = { git = "https://github.com/CESSProject/frontier", branch = "stable2412", default-features = false }
+fc-api = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fc-consensus = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fc-db = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fc-mapping-sync = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fc-rpc = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false, features = ["rpc-binary-search-estimate", "txpool"] }
+fc-rpc-core = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fc-storage = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fp-rpc = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fp-evm = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+fp-self-contained = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false, features = ["serde"] }
+pallet-ethereum = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false, features = ["forbid-evm-reentrancy"] }
+pallet-evm = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false, features = ["forbid-evm-reentrancy"] }
+pallet-evm-precompile-blake2 = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+pallet-evm-precompile-bn128 = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+pallet-evm-precompile-dispatch = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+pallet-evm-precompile-ed25519 = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+pallet-evm-precompile-modexp = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
+precompile-utils = { git = "https://github.com/polkadot-evm/frontier", rev = "986eb1ad6ec69c16d05d142b7e731b4b69e3b409", default-features = false }
 
 # substrate client
 sc-basic-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
