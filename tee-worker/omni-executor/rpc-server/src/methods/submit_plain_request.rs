@@ -6,9 +6,9 @@ use crate::{
 	request::PlainRequest,
 	server::RpcContext,
 };
-use executor_core::native_operation::{NativeOperation, NativeQuery};
+use executor_core::native_operation::NativeOperation;
 use executor_primitives::{
-	utils::hex::{FromHexPrefixed, ToHexPrefixed},
+	utils::hex::{hex_encode, FromHexPrefixed},
 	OmniAccountAuthType,
 };
 use jsonrpsee::{
@@ -56,7 +56,7 @@ pub fn register_submit_plain_requests<
 				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
-				Ok(response) => Ok::<String, ErrorObject>(response.to_hex()),
+				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())
@@ -93,7 +93,7 @@ pub fn register_submit_plain_requests<
 				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
-				Ok(response) => Ok::<String, ErrorObject>(response.to_hex()),
+				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())

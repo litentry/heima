@@ -20,6 +20,7 @@ export function signAndSend(tx: SubmittableExtrinsic<ApiTypes>, account: Address
                     block: result.status.asFinalized.toString(),
                 });
             } else if (result.status.isInvalid) {
+                console.log(`Transaction failed at blockHash ${result.status}`);
                 reject(`Transaction is ${result.status}`);
             }
         });

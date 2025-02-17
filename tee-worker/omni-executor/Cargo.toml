@@ -13,6 +13,7 @@ members = [
     "oauth-providers",
     "parentchain/listener",
     "parentchain/api-interface",
+    "parentchain/attestation",
     "parentchain/rpc-client",
     "parentchain/signer",
     "rpc-server",
@@ -69,6 +70,7 @@ heima-primitives = { package = "core-primitives", path = "../../common/primitive
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
+parentchain-attestation = { path = "parentchain/attestation" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
