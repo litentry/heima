@@ -8,7 +8,8 @@ import {
     CorePrimitivesIdentity,
     LitentryMultiSignature,
     NativeCall,
-    NativeCallAuthenticated,
+    NativeCallAuthenticatedOperation,
+    NativeQueryAuthenticatedOperation,
     OmniAccountPermission,
     PlainRequest,
 } from 'parachain-api';
@@ -69,7 +70,7 @@ export function createNativeCall(api: ApiPromise, call: [string, string], params
 }
 
 // We only support web3 authentication in these tests
-export async function createNativeCallAuthenticated(
+export async function createNativeCallOperation(
     api: ApiPromise,
     nativeCall: NativeCall,
     signer: Signer,
@@ -77,7 +78,7 @@ export async function createNativeCallAuthenticated(
     mrenclave: string,
     withWrappedBytes = false,
     withPrefix = false
-): Promise<NativeCallAuthenticated> {
+): Promise<NativeCallAuthenticatedOperation> {
     let payload: string = blake2AsHex(u8aConcat(nativeCall.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
 
     if (withWrappedBytes) {
@@ -100,8 +101,8 @@ export async function createNativeCallAuthenticated(
         Web3: api.createType('(LitentryMultiSignature)', signature),
     });
 
-    return api.createType('NativeCallAuthenticated', {
-        call: nativeCall,
+    return api.createType('NativeCallAuthenticatedOperation', {
+        operation: nativeCall,
         nonce,
         authentication,
     });
@@ -110,11 +111,11 @@ export async function createNativeCallAuthenticated(
 export function createPlainRequest(
     api: ApiPromise,
     mrenclave: string,
-    call_authenticated: NativeCallAuthenticated
+    authenticated_operation: NativeCallAuthenticatedOperation | NativeQueryAuthenticatedOperation
 ): PlainRequest {
     return api.createType('PlainRequest', {
         mrenclave: hexToU8a(mrenclave),
-        payload: compactAddLength(call_authenticated.toU8a()),
+        payload: compactAddLength(authenticated_operation.toU8a()),
     });
 }
 

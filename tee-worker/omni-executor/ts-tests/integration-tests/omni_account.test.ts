@@ -4,7 +4,7 @@ import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from '
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
-import { createNativeCall, createNativeCallAuthenticated, createOmniAccountPermission } from './utils/type_creators';
+import { createNativeCall, createNativeCallOperation, createOmniAccountPermission } from './utils/type_creators';
 import { sendPlainRequestFromNativeCall } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount } from './utils/helpers';
@@ -30,14 +30,14 @@ describe('OmniAccount', function () {
 
         const currentNonce = 0;
         const nativeCall = createNativeCall(context.api, ['create_account_store', 'LitentryIdentity'], aliceIdentity);
-        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+        const nativeCallOperation = await createNativeCallOperation(
             context.api,
             nativeCall,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isSome, 'account store not found');
@@ -79,14 +79,14 @@ describe('OmniAccount', function () {
                 [createOmniAccountPermission(context.api, 'All')],
             ]
         );
-        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+        const nativeCallOperation = await createNativeCallOperation(
             context.api,
             nativeCall,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
@@ -110,14 +110,14 @@ describe('OmniAccount', function () {
             ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
             [aliceIdentity, bobIdentity]
         );
-        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+        const nativeCallOperation = await createNativeCallOperation(
             context.api,
             nativeCall,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
@@ -159,14 +159,14 @@ describe('OmniAccount', function () {
             ['set_permissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
-        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+        const nativeCallOperation = await createNativeCallOperation(
             context.api,
             nativeCall,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
 
         accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
 
@@ -197,14 +197,14 @@ describe('OmniAccount', function () {
             ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
-        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+        const nativeCallOperation = await createNativeCallOperation(
             context.api,
             nativeCall,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         membersCount = accountStore.unwrap().length;
@@ -231,14 +231,14 @@ describe('OmniAccount', function () {
             ['request_intent', '(LitentryIdentity, Intent)'],
             [aliceIdentity, intent]
         );
-        const nativeCallAuthenticated = await createNativeCallAuthenticated(
+        const nativeCallOperation = await createNativeCallOperation(
             context.api,
             nativeCall,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallAuthenticated);
+        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
         const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
         assert.equal(
             bobAccountDataAfter.free.toBigInt(),

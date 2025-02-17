@@ -30,7 +30,7 @@ export async function sendPlainRequestFromNativeCall(
     const plainRequest = createPlainRequest(context.api, context.mrEnclave, call);
 
     const request = createJsonRpcRequest(
-        'native_submitPlainRequest',
+        'native_submitCallPlainRequest',
         [u8aToHex(plainRequest.toU8a())],
         nextRequestId(context)
     );
