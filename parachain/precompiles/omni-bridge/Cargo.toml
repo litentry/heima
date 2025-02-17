@@ -1,0 +1,54 @@
+[package]
+authors = ["Trust Computing GmbH <info@litentry.com>"]
+edition = '2021'
+name = "pallet-evm-precompile-omni-bridge"
+version = '0.1.0'
+
+[dependencies]
+precompile-utils = { workspace = true }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-omni-bridge = { workspace = true }
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true, features = ["derive"] }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+fp-evm = { workspace = true }
+pallet-evm = { workspace = true }
+
+core-primitives = { workspace = true }
+
+[dev-dependencies]
+derive_more = { workspace = true }
+hex-literal = { workspace = true }
+libsecp256k1 = { workspace = true, features = ["std"] }
+serde = { workspace = true }
+sha3 = { workspace = true }
+precompile-utils = { workspace = true, features = ["std", "testing"] }
+pallet-timestamp = { workspace = true, features = ["std"] }
+parity-scale-codec = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "core-primitives/std",
+    "fp-evm/std",
+    "frame-support/std",
+    "frame-system/std",
+    "libsecp256k1/std",
+    "pallet-omni-bridge/std",
+    "pallet-evm/std",
+    "pallet-timestamp/std",
+    "parity-scale-codec/std",
+    "precompile-utils/std",
+    "scale-info/std",
+    "serde/std",
+    "sha3/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
