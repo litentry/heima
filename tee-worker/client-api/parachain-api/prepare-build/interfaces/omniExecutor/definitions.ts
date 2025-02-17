@@ -21,8 +21,13 @@ export default {
                 set_permissions: "(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)",
             },
         },
-        NativeCallAuthenticated: {
-            call: "NativeCall",
+        NativeCallAuthenticatedOperation: {
+            operation: "NativeCall",
+            nonce: "Index",
+            authentication: "Authentication",
+        },
+        NativeQueryAuthenticatedOperation: {
+            operation: "NativeQuery",
             nonce: "Index",
             authentication: "Authentication",
         },
@@ -32,6 +37,11 @@ export default {
                 Email: "(Text)",
                 AuthToken: "(Text)",
                 OAuth2: "(OAuth2Data)",
+            },
+        },
+        NativeQuery: {
+            _enum: {
+                get_account_store: "(LitentryIdentity)",
             },
         },
         OAuth2Data: {
