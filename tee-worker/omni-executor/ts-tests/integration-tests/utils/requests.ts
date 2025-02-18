@@ -1,5 +1,9 @@
 import { u8aToHex } from '@polkadot/util';
-import { ApiPromise, NativeCallAuthenticated, NativeCallResponse } from 'parachain-api';
+import {
+    ApiPromise,
+    NativeCallAuthenticatedOperation,
+    NativeOperationResponse,
+} from 'parachain-api';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';
@@ -24,10 +28,10 @@ function createJsonRpcRequest(method: string, params: unknown, id: number): Json
 
 export async function sendPlainRequestFromNativeCall(
     context: IntegrationTestContext,
-    call: NativeCallAuthenticated,
-    onMessageReceived?: (response: NativeCallResponse) => void
+    operation: NativeCallAuthenticatedOperation,
+    onMessageReceived?: (response: NativeOperationResponse) => void
 ) {
-    const plainRequest = createPlainRequest(context.api, context.mrEnclave, call);
+    const plainRequest = createPlainRequest(context.api, context.mrEnclave, operation);
 
     const request = createJsonRpcRequest(
         'native_submitCallPlainRequest',
@@ -42,9 +46,9 @@ async function sendRequest(
     wsClient: WebSocketAsPromised,
     request: JsonRpcRequest,
     api: ApiPromise,
-    onMessageReceived?: (response: NativeCallResponse) => void
-): Promise<NativeCallResponse> {
-    const p = new Promise<NativeCallResponse>((resolve, reject) =>
+    onMessageReceived?: (response: NativeOperationResponse) => void
+): Promise<NativeOperationResponse> {
+    const p = new Promise<NativeOperationResponse>((resolve, reject) =>
         wsClient.onMessage.addListener((data) => {
             const parsed = JSON.parse(data);
             console.log('parsed:', JSON.stringify(parsed, null, 2));
@@ -56,7 +60,7 @@ async function sendRequest(
                 console.log('Request failed: ' + JSON.stringify(transaction, null, 2));
                 reject(new Error(parsed.error.message, { cause: transaction }));
             }
-            const response = api.createType('NativeCallResponse', parsed.result);
+            const response = api.createType('NativeOperationResponse', parsed.result);
             if (onMessageReceived) onMessageReceived(response);
             wsClient.onMessage.removeAllListeners();
             resolve(response);

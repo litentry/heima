@@ -70,7 +70,7 @@ export function createNativeCall(api: ApiPromise, call: [string, string], params
 }
 
 // We only support web3 authentication in these tests
-export async function createNativeCallOperation(
+export async function createNativeAuthenticatedOperation(
     api: ApiPromise,
     nativeCall: NativeCall,
     signer: Signer,

@@ -4,14 +4,18 @@ import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from '
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
-import { createNativeCall, createNativeCallOperation, createOmniAccountPermission } from './utils/type_creators';
+import {
+    createNativeCall,
+    createNativeAuthenticatedOperation,
+    createOmniAccountPermission,
+} from './utils/type_creators';
 import { sendPlainRequestFromNativeCall } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('OmniAccount', function () {
-    this.timeout(120000);
+    this.timeout(30000);
     let context: IntegrationTestContext;
     let aliceWallet: SubstrateSigner;
     let aliceIdentity: CorePrimitivesIdentity;
@@ -30,7 +34,7 @@ describe('OmniAccount', function () {
 
         const currentNonce = 0;
         const nativeCall = createNativeCall(context.api, ['create_account_store', 'LitentryIdentity'], aliceIdentity);
-        const nativeCallOperation = await createNativeCallOperation(
+        const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
             nativeCall,
             aliceWallet,
@@ -79,7 +83,7 @@ describe('OmniAccount', function () {
                 [createOmniAccountPermission(context.api, 'All')],
             ]
         );
-        const nativeCallOperation = await createNativeCallOperation(
+        const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
             nativeCall,
             aliceWallet,
@@ -110,7 +114,7 @@ describe('OmniAccount', function () {
             ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
             [aliceIdentity, bobIdentity]
         );
-        const nativeCallOperation = await createNativeCallOperation(
+        const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
             nativeCall,
             aliceWallet,
@@ -159,7 +163,7 @@ describe('OmniAccount', function () {
             ['set_permissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
-        const nativeCallOperation = await createNativeCallOperation(
+        const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
             nativeCall,
             aliceWallet,
@@ -197,7 +201,7 @@ describe('OmniAccount', function () {
             ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
-        const nativeCallOperation = await createNativeCallOperation(
+        const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
             nativeCall,
             aliceWallet,
@@ -231,7 +235,7 @@ describe('OmniAccount', function () {
             ['request_intent', '(LitentryIdentity, Intent)'],
             [aliceIdentity, intent]
         );
-        const nativeCallOperation = await createNativeCallOperation(
+        const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
             nativeCall,
             aliceWallet,
