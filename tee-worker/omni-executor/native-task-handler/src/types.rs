@@ -10,6 +10,7 @@ pub enum NativeOperationOk {
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken(String),
+	QueryData(Vec<u8>),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

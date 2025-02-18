@@ -117,8 +117,7 @@ async fn handle_native_task<
 				.await;
 		},
 		NativeTaskOperation::Query(native_query) => {
-			handle_native_query(ctx.clone(), native_query, task.auth_type, task.response_sender)
-				.await;
+			handle_native_query(ctx.clone(), native_query, task.response_sender).await;
 		},
 	};
 }
