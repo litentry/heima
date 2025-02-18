@@ -9,6 +9,7 @@ import {
     LitentryMultiSignature,
     NativeCall,
     NativeCallAuthenticatedOperation,
+    NativeQuery,
     NativeQueryAuthenticatedOperation,
     OmniAccountPermission,
     PlainRequest,
@@ -69,17 +70,24 @@ export function createNativeCall(api: ApiPromise, call: [string, string], params
     });
 }
 
+export function createNativeQuery(api: ApiPromise, query: [string, string], params: unknown): NativeQuery {
+    const [variant, argType] = query;
+    return api.createType('NativeQuery', {
+        [variant]: api.createType(argType, params),
+    });
+}
+
 // We only support web3 authentication in these tests
 export async function createNativeAuthenticatedOperation(
     api: ApiPromise,
-    nativeCall: NativeCall,
+    operation: NativeCall | NativeQuery,
     signer: Signer,
     nonce: Codec,
     mrenclave: string,
     withWrappedBytes = false,
     withPrefix = false
 ): Promise<NativeCallAuthenticatedOperation> {
-    let payload: string = blake2AsHex(u8aConcat(nativeCall.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
+    let payload: string = blake2AsHex(u8aConcat(operation.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
 
     if (withWrappedBytes) {
         payload = `<Bytes>${payload}</Bytes>`;
@@ -102,7 +110,7 @@ export async function createNativeAuthenticatedOperation(
     });
 
     return api.createType('NativeCallAuthenticatedOperation', {
-        operation: nativeCall,
+        operation: operation,
         nonce,
         authentication,
     });
