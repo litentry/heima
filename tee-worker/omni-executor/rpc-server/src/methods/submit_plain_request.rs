@@ -12,7 +12,7 @@ use executor_primitives::{
 	OmniAccountAuthType,
 };
 use jsonrpsee::{
-	types::{ErrorCode, ErrorObject},
+	types::{ErrorCode, ErrorObject, Params},
 	RpcModule,
 };
 use native_task_handler::{NativeTask, NativeTaskOperation};
@@ -30,21 +30,11 @@ pub fn register_submit_plain_requests<
 ) {
 	module
 		.register_async_method("native_submitCallPlainRequest", |params, ctx, _| async move {
-			let Ok(hex_request) = params.one::<String>() else {
-				return Err(ErrorCode::ParseError.into());
-			};
-			let Ok(request) = PlainRequest::from_hex(&hex_request) else {
-				return Err(ErrorCode::ServerError(INVALID_PLAIN_REQUEST_CODE).into());
-			};
-			let join_handle = task::spawn_blocking({
-				let ctx = ctx.clone();
-				let plain_request = request.clone();
-				|| handle_plain_request(plain_request, ctx, Handle::current())
-			});
-			let (native_call, auth_type) = join_handle.await.map_err(|e| {
-				log::error!("Failed to handle Plain request: {:?}", e);
-				ErrorCode::InternalError
-			})??;
+			let (native_call, auth_type) =
+				handle_plain_request(params, ctx.clone()).await.map_err(|e| {
+					log::error!("Failed to handle Plain request: {:?}", e);
+					ErrorCode::InternalError
+				})??;
 			let (response_sender, response_receiver) = oneshot::channel();
 			let native_task = NativeTask {
 				operation: NativeTaskOperation::Call(native_call),
@@ -67,21 +57,11 @@ pub fn register_submit_plain_requests<
 
 	module
 		.register_async_method("native_submitQueryPlainRequest", |params, ctx, _| async move {
-			let Ok(hex_request) = params.one::<String>() else {
-				return Err(ErrorCode::ParseError.into());
-			};
-			let Ok(request) = PlainRequest::from_hex(&hex_request) else {
-				return Err(ErrorCode::ServerError(INVALID_PLAIN_REQUEST_CODE).into());
-			};
-			let join_handle = task::spawn_blocking({
-				let ctx = ctx.clone();
-				let plain_request = request.clone();
-				|| handle_plain_request(plain_request, ctx, Handle::current())
-			});
-			let (native_query, auth_type) = join_handle.await.map_err(|e| {
-				log::error!("Failed to handle Plain request: {:?}", e);
-				ErrorCode::InternalError
-			})??;
+			let (native_query, auth_type) =
+				handle_plain_request(params, ctx.clone()).await.map_err(|e| {
+					log::error!("Failed to handle Plain request: {:?}", e);
+					ErrorCode::InternalError
+				})??;
 			let (response_sender, response_receiver) = oneshot::channel();
 			let native_task = NativeTask {
 				operation: NativeTaskOperation::Query(native_query),
@@ -103,26 +83,33 @@ pub fn register_submit_plain_requests<
 		.expect("Failed to register native_submitQueryPlainRequest method");
 }
 
-pub fn handle_plain_request<
-	'a,
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	OP: NativeOperation,
+fn handle_plain_request<
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	OP: NativeOperation + Send + Sync + 'static,
 >(
-	request: PlainRequest,
+	params: Params<'static>,
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
-) -> Result<(OP, OmniAccountAuthType), ErrorObject<'a>> {
-	if request.mrenclave != ctx.mrenclave {
-		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
-	}
-	let authenticated_op = AuthenticatedOperation::decode(&mut request.payload.as_slice())
-		.map_err(|_| ErrorCode::ServerError(INVALID_NATIVE_CALL_AUTHENTICATED_CODE))?;
+) -> task::JoinHandle<Result<(OP, OmniAccountAuthType), ErrorObject<'_>>> {
+	task::spawn_blocking(move || {
+		let Ok(hex_request) = params.one::<String>() else {
+			return Err(ErrorCode::ParseError.into());
+		};
+		let Ok(request) = PlainRequest::from_hex(&hex_request) else {
+			return Err(ErrorCode::ServerError(INVALID_PLAIN_REQUEST_CODE).into());
+		};
+		if request.mrenclave != ctx.mrenclave {
+			return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
+		}
+		let authenticated_op = AuthenticatedOperation::decode(&mut request.payload.as_slice())
+			.map_err(|_| ErrorCode::ServerError(INVALID_NATIVE_CALL_AUTHENTICATED_CODE))?;
 
-	if verify_native_operation_authenticated(ctx, handle, &authenticated_op).is_err() {
-		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
-	}
+		if verify_native_operation_authenticated(ctx, Handle::current(), &authenticated_op).is_err()
+		{
+			return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
+		}
 
-	Ok((authenticated_op.operation, authenticated_op.authentication.into()))
+		Ok((authenticated_op.operation, authenticated_op.authentication.into()))
+	})
 }

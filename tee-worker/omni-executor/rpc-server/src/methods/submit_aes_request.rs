@@ -12,7 +12,7 @@ use executor_primitives::{
 	OmniAccountAuthType,
 };
 use jsonrpsee::{
-	types::{ErrorCode, ErrorObject},
+	types::{ErrorCode, ErrorObject, Params},
 	RpcModule,
 };
 use native_task_handler::{NativeTask, NativeTaskOperation};
@@ -30,21 +30,11 @@ pub fn register_submit_aes_requests<
 ) {
 	module
 		.register_async_method("native_submitCallAesRequest", |params, ctx, _| async move {
-			let Ok(hex_request) = params.one::<String>() else {
-				return Err(ErrorCode::ParseError.into());
-			};
-			let Ok(request) = AesRequest::from_hex(&hex_request) else {
-				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
-			};
-			let join_handle = task::spawn_blocking({
-				let ctx = ctx.clone();
-				let aes_request = request.clone();
-				|| handle_aes_request(aes_request, ctx, Handle::current())
-			});
-			let (native_call, auth_type) = join_handle.await.map_err(|e| {
-				log::error!("Failed to handle AES request: {:?}", e);
-				ErrorCode::InternalError
-			})??;
+			let (native_call, auth_type) =
+				handle_aes_request(params, ctx.clone()).await.map_err(|e| {
+					log::error!("Failed to handle AES request: {:?}", e);
+					ErrorCode::InternalError
+				})??;
 			let (response_sender, response_receiver) = oneshot::channel();
 			let native_task = NativeTask {
 				operation: NativeTaskOperation::Call(native_call),
@@ -67,21 +57,11 @@ pub fn register_submit_aes_requests<
 
 	module
 		.register_async_method("native_submitQueryAesRequest", |params, ctx, _| async move {
-			let Ok(hex_request) = params.one::<String>() else {
-				return Err(ErrorCode::ParseError.into());
-			};
-			let Ok(request) = AesRequest::from_hex(&hex_request) else {
-				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
-			};
-			let join_handle = task::spawn_blocking({
-				let ctx = ctx.clone();
-				let aes_request = request.clone();
-				|| handle_aes_request(aes_request, ctx, Handle::current())
-			});
-			let (native_query, auth_type) = join_handle.await.map_err(|e| {
-				log::error!("Failed to handle AES request: {:?}", e);
-				ErrorCode::InternalError
-			})??;
+			let (native_query, auth_type) =
+				handle_aes_request(params, ctx.clone()).await.map_err(|e| {
+					log::error!("Failed to handle AES request: {:?}", e);
+					ErrorCode::InternalError
+				})??;
 			let (response_sender, response_receiver) = oneshot::channel();
 			let native_task = NativeTask {
 				operation: NativeTaskOperation::Query(native_query),
@@ -104,32 +84,39 @@ pub fn register_submit_aes_requests<
 }
 
 fn handle_aes_request<
-	'a,
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	OP: NativeOperation,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	OP: NativeOperation + Send + Sync + 'static,
 >(
-	mut request: AesRequest,
+	params: Params<'static>,
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
-) -> Result<(OP, OmniAccountAuthType), ErrorObject<'a>> {
-	if request.mrenclave() != ctx.mrenclave {
-		return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
-	}
-	let Ok(encoded_nca) = request.decrypt(Box::new(ctx.shielding_key.clone())) else {
-		return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
-	};
-	let authenticated_op = match AuthenticatedOperation::decode(&mut encoded_nca.as_slice()) {
-		Ok(nca) => nca,
-		Err(e) => {
-			log::error!("Failed to decode authenticated call: {:?}", e);
-			return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
-		},
-	};
-	if verify_native_operation_authenticated(ctx, handle, &authenticated_op).is_err() {
-		return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
-	}
+) -> task::JoinHandle<Result<(OP, OmniAccountAuthType), ErrorObject<'_>>> {
+	task::spawn_blocking(move || {
+		let Ok(hex_request) = params.one::<String>() else {
+			return Err(ErrorCode::ParseError.into());
+		};
+		let Ok(mut request) = AesRequest::from_hex(&hex_request) else {
+			return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
+		};
+		if request.mrenclave() != ctx.mrenclave {
+			return Err(ErrorCode::ServerError(INVALID_MRENCLAVE_CODE).into());
+		}
+		let Ok(encoded_nca) = request.decrypt(Box::new(ctx.shielding_key.clone())) else {
+			return Err(ErrorCode::ServerError(REQUEST_DECRYPTION_FAILED_CODE).into());
+		};
+		let authenticated_op = match AuthenticatedOperation::decode(&mut encoded_nca.as_slice()) {
+			Ok(nca) => nca,
+			Err(e) => {
+				log::error!("Failed to decode authenticated call: {:?}", e);
+				return Err(ErrorCode::ServerError(INVALID_AUTHENTICATED_CALL_CODE).into());
+			},
+		};
+		if verify_native_operation_authenticated(ctx, Handle::current(), &authenticated_op).is_err()
+		{
+			return Err(ErrorCode::ServerError(AUTHENTICATION_FAILED_CODE).into());
+		}
 
-	Ok((authenticated_op.operation, authenticated_op.authentication.into()))
+		Ok((authenticated_op.operation, authenticated_op.authentication.into()))
+	})
 }
