@@ -38,7 +38,7 @@ pub async fn handle_native_query<
 					acc_store
 						.into_iter()
 						.map(|member| match member {
-							MemberAccount::Public(_) => Ok(member),
+							MemberAccount::Public(member_identity) => Ok(member_identity),
 							MemberAccount::Private(encoded_aes_output, _) => {
 								let mut encrypted_member =
 									AesOutput::decode(&mut encoded_aes_output.as_slice())
@@ -49,10 +49,10 @@ pub async fn handle_native_query<
 								let member_identity: Identity =
 									Identity::decode(&mut encoded_member.as_slice())
 										.map_err(|_| "Failed to decode Identity".to_string())?;
-								Ok(MemberAccount::Public(member_identity))
+								Ok(member_identity)
 							},
 						})
-						.collect::<Result<Vec<MemberAccount>, String>>()
+						.collect::<Result<Vec<Identity>, String>>()
 				})
 				.transpose();
 			let account_store = match account_store_result {

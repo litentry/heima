@@ -1,4 +1,4 @@
-use executor_primitives::{Hash, MemberAccount};
+use executor_primitives::{Hash, Identity};
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
 use std::vec::Vec;
@@ -27,7 +27,7 @@ impl From<CallResponse> for Result<NativeOperationOk, NativeOperationError> {
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum QueryResponse {
-	AccountStore(Vec<MemberAccount>),
+	AccountStore(Vec<Identity>),
 }
 
 impl From<QueryResponse> for Result<NativeOperationOk, NativeOperationError> {
