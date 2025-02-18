@@ -8,8 +8,8 @@ edition.workspace = true
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
-tokio = { workspace = true }
 subxt = { workspace = true }
+tokio = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
