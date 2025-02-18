@@ -21,7 +21,7 @@ use parity_scale_codec::Decode;
 use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
-pub fn register_submit_aes_request<
+pub fn register_submit_aes_requests<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -29,7 +29,7 @@ pub fn register_submit_aes_request<
 	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
 	module
-		.register_async_method("native_submitAesRequest", |params, ctx, _| async move {
+		.register_async_method("native_submitCallAesRequest", |params, ctx, _| async move {
 			let Ok(hex_request) = params.one::<String>() else {
 				return Err(ErrorCode::ParseError.into());
 			};
@@ -63,7 +63,44 @@ pub fn register_submit_aes_request<
 				},
 			}
 		})
-		.expect("Failed to register native_submitAesRequest method");
+		.expect("Failed to register native_submitCallAesRequest method");
+
+	module
+		.register_async_method("native_submitQueryAesRequest", |params, ctx, _| async move {
+			let Ok(hex_request) = params.one::<String>() else {
+				return Err(ErrorCode::ParseError.into());
+			};
+			let Ok(request) = AesRequest::from_hex(&hex_request) else {
+				return Err(ErrorCode::ServerError(INVALID_AES_REQUEST_CODE).into());
+			};
+			let join_handle = task::spawn_blocking({
+				let ctx = ctx.clone();
+				let aes_request = request.clone();
+				|| handle_aes_request(aes_request, ctx, Handle::current())
+			});
+			let (native_query, auth_type) = join_handle.await.map_err(|e| {
+				log::error!("Failed to handle AES request: {:?}", e);
+				ErrorCode::InternalError
+			})??;
+			let (response_sender, response_receiver) = oneshot::channel();
+			let native_task = NativeTask {
+				operation: NativeTaskOperation::Query(native_query),
+				auth_type,
+				response_sender,
+			};
+			if ctx.native_task_sender.send(native_task).await.is_err() {
+				log::error!("Failed to send request to native call executor");
+				return Err(ErrorCode::InternalError.into());
+			}
+			match response_receiver.await {
+				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
+				Err(e) => {
+					log::error!("Failed to receive response from native call handler: {:?}", e);
+					Err(ErrorCode::InternalError.into())
+				},
+			}
+		})
+		.expect("Failed to register native_submitCallAesRequest method");
 }
 
 fn handle_aes_request<
