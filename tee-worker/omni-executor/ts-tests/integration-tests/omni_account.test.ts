@@ -20,6 +20,7 @@ describe('OmniAccount', function () {
     let aliceWallet: SubstrateSigner;
     let aliceIdentity: CorePrimitivesIdentity;
     let omniAccount: string;
+    let currentNonce = 0;
 
     before(async function () {
         context = await createIntegrationTestContext(process.env.PARACHAIN_ENDPOINT, process.env.OMNI_WORKER_ENDPOINT);
@@ -32,7 +33,6 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        const currentNonce = 0;
         const nativeCall = createNativeCall(context.api, ['create_account_store', 'LitentryIdentity'], aliceIdentity);
         const nativeCallOperation = await createNativeAuthenticatedOperation(
             context.api,
@@ -91,6 +91,7 @@ describe('OmniAccount', function () {
             context.mrEnclave
         );
         await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        currentNonce++;
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
@@ -106,7 +107,6 @@ describe('OmniAccount', function () {
     });
 
     step('test publicize_account', async function () {
-        const currentNonce = 1;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
         const nativeCall = createNativeCall(
@@ -122,6 +122,8 @@ describe('OmniAccount', function () {
             context.mrEnclave
         );
         await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        currentNonce++;
+
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
@@ -141,7 +143,6 @@ describe('OmniAccount', function () {
     });
 
     step('test set_permissions', async function () {
-        const currentNonce = 2;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
 
@@ -171,6 +172,7 @@ describe('OmniAccount', function () {
             context.mrEnclave
         );
         await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        currentNonce++;
 
         accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
 
@@ -188,7 +190,6 @@ describe('OmniAccount', function () {
     });
 
     step('test remove_account', async function () {
-        const currentNonce = 3;
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
 
@@ -209,6 +210,7 @@ describe('OmniAccount', function () {
             context.mrEnclave
         );
         await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        currentNonce++;
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         membersCount = accountStore.unwrap().length;
@@ -216,7 +218,6 @@ describe('OmniAccount', function () {
     });
 
     step('test request_intent (TransferNative)', async function () {
-        const currentNonce = 4;
         const initialBalance = context.api.createType('u128', 50000000000000000000n);
         await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
         const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
@@ -243,6 +244,8 @@ describe('OmniAccount', function () {
             context.mrEnclave
         );
         await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        currentNonce++;
+
         const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
         assert.equal(
             bobAccountDataAfter.free.toBigInt(),
