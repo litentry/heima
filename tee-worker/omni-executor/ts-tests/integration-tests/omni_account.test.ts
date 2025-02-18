@@ -11,7 +11,7 @@ import {
 } from './utils/type_creators';
 import { sendPlainRequestFromNativeCall } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
-import { fundAccount } from './utils/helpers';
+import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('OmniAccount', function () {
@@ -58,7 +58,7 @@ describe('OmniAccount', function () {
     });
 
     step('test add_account web3', async function () {
-        const currentNonce = 0;
+        await sleep(6); // wait for the worker's storage to be updated
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
         const validationData = await buildWeb3ValidationData(
