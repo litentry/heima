@@ -3,6 +3,7 @@ import {
     ApiPromise,
     NativeCallAuthenticatedOperation,
     NativeOperationResponse,
+    NativeQueryAuthenticatedOperation,
 } from 'parachain-api';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
@@ -35,6 +36,22 @@ export async function sendPlainRequestFromNativeCall(
 
     const request = createJsonRpcRequest(
         'native_submitCallPlainRequest',
+        [u8aToHex(plainRequest.toU8a())],
+        nextRequestId(context)
+    );
+
+    return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
+}
+
+export async function sendPlainRequestFromNativeQuery(
+    context: IntegrationTestContext,
+    operation: NativeQueryAuthenticatedOperation,
+    onMessageReceived?: (response: NativeOperationResponse) => void
+) {
+    const plainRequest = createPlainRequest(context.api, context.mrEnclave, operation);
+
+    const request = createJsonRpcRequest(
+        'native_submitQueryPlainRequest',
         [u8aToHex(plainRequest.toU8a())],
         nextRequestId(context)
     );
