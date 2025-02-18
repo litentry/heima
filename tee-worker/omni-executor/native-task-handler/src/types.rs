@@ -3,7 +3,7 @@ use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub enum NativeCallOk {
+pub enum NativeOperationOk {
 	ExtrinsicReport {
 		extrinsic_hash: Hash,
 		block_hash: Option<Hash>,
@@ -13,7 +13,7 @@ pub enum NativeCallOk {
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum NativeCallError {
+pub enum NativeOperationError {
 	UnexpectedCall(String),
 	UnauthorizedSender,
 	AuthTokenCreationFailed,

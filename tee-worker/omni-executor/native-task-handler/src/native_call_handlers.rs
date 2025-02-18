@@ -1,6 +1,6 @@
 use crate::{
-	types::{NativeCallError, NativeCallOk},
-	NativeCallResponse, ResponseSender, TaskHandlerContext,
+	types::{NativeOperationError, NativeOperationOk},
+	NativeOperationResponse, ResponseSender, TaskHandlerContext,
 };
 use executor_core::native_operation::NativeCall;
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
@@ -30,7 +30,7 @@ pub async fn handle_native_call<
 ) {
 	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
 		log::error!("Failed to create rpc client");
-		let response = NativeCallResponse::Err(NativeCallError::InternalError);
+		let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 		if response_sender.send(response.encode()).is_err() {
 			log::error!("Failed to send response");
 		}
@@ -41,7 +41,8 @@ pub async fn handle_native_call<
 		NativeCall::request_auth_token(sender_identity, auth_options) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
-				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -49,7 +50,8 @@ pub async fn handle_native_call<
 			};
 			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
 			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
-				let response = NativeCallResponse::Err(NativeCallError::AuthTokenCreationFailed);
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -63,14 +65,14 @@ pub async fn handle_native_call<
 
 			if rpc_client.submit_tx(&signed_call).await.is_err() {
 				log::error!("Failed to submit tx");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			}
 
-			let response = NativeCallResponse::Ok(NativeCallOk::AuthToken(token));
+			let response = NativeOperationResponse::Ok(NativeOperationOk::AuthToken(token));
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
@@ -135,7 +137,8 @@ pub async fn handle_native_call<
 		) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
-				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -143,7 +146,7 @@ pub async fn handle_native_call<
 			};
 			let Ok(nonce) = rpc_client.get_account_nonce(&omni_account).await else {
 				log::error!("Failed to get account nonce");
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -154,7 +157,7 @@ pub async fn handle_native_call<
 			let validation_result = match validation_data {
 				ValidationData::Web2(web2_validation_data) => {
 					if !identity.is_web2() {
-						Err(NativeCallError::InvalidMemberIdentity)
+						Err(NativeOperationError::InvalidMemberIdentity)
 					} else {
 						tokio::task::spawn_blocking({
 							let identity = identity.clone();
@@ -171,16 +174,17 @@ pub async fn handle_native_call<
 						.await
 						.map_err(|e| {
 							log::error!("Failed to verify identity: {:?}", e);
-							NativeCallError::InternalError
+							NativeOperationError::InternalError
 						})
 						.and_then(|result| {
-							result.map_err(|_| NativeCallError::ValidationDataVerificationFailed)
+							result
+								.map_err(|_| NativeOperationError::ValidationDataVerificationFailed)
 						})
 					}
 				},
 				ValidationData::Web3(web3_validation_data) => {
 					if !identity.is_web3() {
-						Err(NativeCallError::InvalidMemberIdentity)
+						Err(NativeOperationError::InvalidMemberIdentity)
 					} else {
 						tokio::task::spawn_blocking({
 							let identity = identity.clone();
@@ -195,16 +199,17 @@ pub async fn handle_native_call<
 						.await
 						.map_err(|e| {
 							log::error!("Failed to verify identity: {:?}", e);
-							NativeCallError::InternalError
+							NativeOperationError::InternalError
 						})
 						.and_then(|result| {
-							result.map_err(|_| NativeCallError::ValidationDataVerificationFailed)
+							result
+								.map_err(|_| NativeOperationError::ValidationDataVerificationFailed)
 						})
 					}
 				},
 			};
 			if let Err(e) = validation_result {
-				let response = NativeCallResponse::Err(e);
+				let response = NativeOperationResponse::Err(e);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -277,14 +282,14 @@ pub async fn handle_native_call<
 		Ok(report) => report,
 		Err(e) => {
 			log::error!("Failed to submit and watch tx: {:?}", e);
-			let response = NativeCallResponse::Err(NativeCallError::InternalError);
+			let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
 			return;
 		},
 	};
-	let response = NativeCallResponse::Ok(NativeCallOk::ExtrinsicReport {
+	let response = NativeOperationResponse::Ok(NativeOperationOk::ExtrinsicReport {
 		extrinsic_hash: report.extrinsic_hash,
 		block_hash: report.block_hash,
 		status: report.status,

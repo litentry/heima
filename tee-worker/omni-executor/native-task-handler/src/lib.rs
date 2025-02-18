@@ -17,13 +17,13 @@ use parentchain_rpc_client::{
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
-use types::{NativeCallError, NativeCallOk};
+use types::{NativeOperationError, NativeOperationOk};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 
 pub type NativeTaskSender = mpsc::Sender<NativeTask>;
 
-type NativeCallResponse = Result<NativeCallOk, NativeCallError>;
+type NativeOperationResponse = Result<NativeOperationOk, NativeOperationError>;
 
 pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
