@@ -8,8 +8,9 @@ import {
     createNativeCall,
     createNativeAuthenticatedOperation,
     createOmniAccountPermission,
+    createNativeQuery,
 } from './utils/type_creators';
-import { sendPlainRequestFromNativeCall } from './utils/requests';
+import { sendPlainRequestFromNativeCall, sendPlainRequestFromNativeQuery } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -186,6 +187,38 @@ describe('OmniAccount', function () {
             accountPermissions[1].toString(),
             'RequestEthereumIntent',
             'permission 2 is not the expected permission'
+        );
+    });
+
+    step('test get_account_store', async function () {
+        const nativeQuery = createNativeQuery(context.api, ['get_account_store', '(LitentryIdentity)'], aliceIdentity);
+        const nativeQueryOperation = await createNativeAuthenticatedOperation(
+            context.api,
+            nativeQuery,
+            aliceWallet,
+            context.api.createType('Index', currentNonce),
+            context.mrEnclave
+        );
+        const response = await sendPlainRequestFromNativeQuery(context, nativeQueryOperation);
+        assert.isTrue(response.isOk, 'response should be ok');
+        assert.isTrue(response.asOk.isQueryResponse, 'response should be query response');
+        assert.isTrue(response.asOk.asQueryResponse.isAccountStore, 'response should be account store');
+
+        const accountStore = response.asOk.asQueryResponse.asAccountStore;
+        assert.equal(accountStore.length, 2, 'account store members count should be 2');
+
+        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
+        const bobIdentity = await bob.getIdentity(context.api);
+
+        assert.equal(
+            accountStore[0].toHex(),
+            aliceIdentity.toHex(),
+            'account store member is not the expected identity (Alice)'
+        );
+        assert.equal(
+            accountStore[1].toHex(),
+            bobIdentity.toHex(),
+            'account store member is not the expected identity (Bob)'
         );
     });
 
