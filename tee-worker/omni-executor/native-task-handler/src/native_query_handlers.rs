@@ -1,5 +1,5 @@
 use crate::{
-	types::{NativeOperationError, NativeOperationOk},
+	types::{NativeOperationError, QueryResponse},
 	NativeOperationResponse, ResponseSender, TaskHandlerContext,
 };
 use executor_core::native_operation::NativeQuery;
@@ -53,11 +53,10 @@ pub async fn handle_native_query<
 							},
 						})
 						.collect::<Result<Vec<MemberAccount>, String>>()
-						.map(BoundedVec)
 				})
 				.transpose();
 			let account_store = match account_store_result {
-				Ok(account_store) => account_store,
+				Ok(account_store) => account_store.unwrap_or_default(),
 				Err(e) => {
 					log::error!("Failed to get account store: {}", e);
 					let response =
@@ -68,10 +67,11 @@ pub async fn handle_native_query<
 					return;
 				},
 			};
-			let response =
-				NativeOperationResponse::Ok(NativeOperationOk::QueryData(account_store.encode()));
+			let response: NativeOperationResponse =
+				QueryResponse::AccountStore(account_store).into();
+
 			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response to the sender");
+				log::error!("Failed to send response");
 			}
 		},
 	}

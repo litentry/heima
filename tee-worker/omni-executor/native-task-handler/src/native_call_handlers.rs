@@ -1,5 +1,5 @@
 use crate::{
-	types::{NativeOperationError, NativeOperationOk},
+	types::{CallResponse, NativeOperationError},
 	NativeOperationResponse, ResponseSender, TaskHandlerContext,
 };
 use executor_core::native_operation::NativeCall;
@@ -72,7 +72,7 @@ pub async fn handle_native_call<
 				return;
 			}
 
-			let response = NativeOperationResponse::Ok(NativeOperationOk::AuthToken(token));
+			let response: NativeOperationResponse = CallResponse::AuthToken(token).into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
@@ -289,11 +289,13 @@ pub async fn handle_native_call<
 			return;
 		},
 	};
-	let response = NativeOperationResponse::Ok(NativeOperationOk::ExtrinsicReport {
+	let response: NativeOperationResponse = CallResponse::ExtrinsicReport {
 		extrinsic_hash: report.extrinsic_hash,
 		block_hash: report.block_hash,
 		status: report.status,
-	});
+	}
+	.into();
+
 	if response_sender.send(response.encode()).is_err() {
 		log::error!("Failed to send response");
 	}
