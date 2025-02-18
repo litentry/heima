@@ -38,7 +38,6 @@ impl From<QueryResponse> for Result<NativeOperationOk, NativeOperationError> {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeOperationError {
-	UnexpectedCall(String),
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
 	InternalError,
