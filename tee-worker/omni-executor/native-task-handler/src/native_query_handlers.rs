@@ -4,11 +4,8 @@ use crate::{
 };
 use executor_core::native_operation::NativeQuery;
 use executor_crypto::aes256::{aes_decrypt, AesOutput};
+use executor_primitives::{Identity, MemberAccount};
 use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, Storage};
-use parentchain_api_interface::runtime_types::{
-	bounded_collections::bounded_vec::BoundedVec,
-	core_primitives::{identity::Identity, omni_account::MemberAccount},
-};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
@@ -39,7 +36,6 @@ pub async fn handle_native_query<
 				.get(&omni_account)
 				.map(|acc_store| {
 					acc_store
-						.0
 						.into_iter()
 						.map(|member| match member {
 							MemberAccount::Public(_) => Ok(member),
