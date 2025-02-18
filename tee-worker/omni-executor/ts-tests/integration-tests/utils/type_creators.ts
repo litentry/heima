@@ -1,3 +1,4 @@
+import type { Enum } from '@polkadot/types-codec';
 import { HexString } from '@polkadot/util/types';
 import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
@@ -78,15 +79,15 @@ export function createNativeQuery(api: ApiPromise, query: [string, string], para
 }
 
 // We only support web3 authentication in these tests
-export async function createNativeAuthenticatedOperation(
+export async function createNativeAuthenticatedOperation<OP extends Enum>(
     api: ApiPromise,
-    operation: NativeCall | NativeQuery,
+    operation: OP,
     signer: Signer,
     nonce: Codec,
     mrenclave: string,
     withWrappedBytes = false,
     withPrefix = false
-): Promise<NativeCallAuthenticatedOperation> {
+): Promise<OP extends NativeCall ? NativeCallAuthenticatedOperation : NativeQueryAuthenticatedOperation> {
     let payload: string = blake2AsHex(u8aConcat(operation.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
 
     if (withWrappedBytes) {
@@ -108,6 +109,14 @@ export async function createNativeAuthenticatedOperation(
     const authentication: Authentication = api.createType('Authentication', {
         Web3: api.createType('(LitentryMultiSignature)', signature),
     });
+
+    if ('isGetAccountStore' in operation) {
+        return api.createType('NativeQueryAuthenticatedOperation', {
+            operation: operation,
+            nonce,
+            authentication,
+        });
+    }
 
     return api.createType('NativeCallAuthenticatedOperation', {
         operation: operation,
