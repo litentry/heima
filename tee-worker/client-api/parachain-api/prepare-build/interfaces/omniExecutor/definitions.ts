@@ -53,11 +53,22 @@ export default {
         OAuth2Provider: {
             _enum: ["Google"],
         },
-        NativeCallResponse: "Result<NativeCallOk, NativeCallError>",
-        NativeCallOk: {
+        NativeOperationResponse: "Result<NativeOperationOk, NativeOperationError>",
+        NativeOperationOk: {
+            _enum: {
+                CallResponse: "CallResponse",
+                QueryResponse: "QueryResponse",
+            },
+        },
+        CallResponse: {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
+            },
+        },
+        QueryResponse: {
+            _enum: {
+                AccountStore: "Vec<LitentryIdentity>",
             },
         },
         XtReport: {
@@ -95,9 +106,8 @@ export default {
                 Invalid: "Null",
             },
         },
-        NativeCallError: {
+        NativeOperationError: {
             _enum: {
-                UnexpectedCall: "(Text)",
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
                 InternalError: "Null",
