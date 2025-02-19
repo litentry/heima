@@ -46,12 +46,11 @@ pub async fn perform_attestation(
 		quote = fs::read("/dev/attestation/quote").unwrap();
 		info!("Attestation quote {:?}", quote);
 
-		// TODO: double check this
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
 
 		mrenclave = dcap_quote.body.mr_enclave;
-		info!("Attestation mr_enclave {:?}", mrenclave);
+		info!("MRENCLAVE {:?}", mrenclave);
 	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
