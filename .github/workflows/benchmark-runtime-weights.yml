@@ -5,7 +5,6 @@ on:
     inputs:
       rebuild-docker:
         type: boolean
-        # if the runtime-benchmarks image should be rebuilt or pulled from hub
         description: rebuild-docker
         required: true
         default: true
@@ -25,9 +24,11 @@ on:
         required: true
 
 env:
-  INSTANCE_ID: ${{ secrets.BENCHMARK_INSTANCE_ID }}
-  BENCHMARK_SSH_USER: ${{ secrets.BENCHMARK_SSH_USER }}
-  BENCHMARK_SSH_KEY: ${{ secrets.BENCHMARK_SSH_KEY }}
+  INSTANCE_NAME: "benchmark-instance"
+  INSTANCE_ZONE: "us-central1-a"
+  GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+  GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+  BENCHMARK_SSH_USER: "ubuntu"
   DOCKER_BUILDKIT: 1
 
 jobs:
@@ -45,8 +46,6 @@ jobs:
         if: startsWith(runner.name, 'GitHub Actions')
         uses: ./.github/actions/disk-cleanup
 
-      # try to increase usable memory
-      # https://github.com/actions/runner/issues/1051
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
@@ -70,7 +69,6 @@ jobs:
   benchmark:
     runs-on: ubuntu-22.04
     needs: build-docker
-    # see https://github.com/actions/runner/issues/491
     if: |
       always() &&
       (needs.build-docker.result == 'success' || needs.build-docker.result == 'skipped')
@@ -99,67 +97,56 @@ jobs:
         run: |
           docker pull litentry/litentry-parachain:runtime-benchmarks
 
-      - name: Set up AWS CLI
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
 
-      # TODO: maybe use GHA to start/stop remote instance
-      - name: Start remote instance
+      - name: Set up Google Cloud CLI
+        run: |
+          gcloud auth configure-docker
+          gcloud config set project ${{ env.GOOGLE_PROJECT_ID }}
+
+      - name: Start remote instance on GCE
         timeout-minutes: 10
         id: start_instance
         run: |
-          aws ec2 start-instances --instance-ids ${{ env.INSTANCE_ID }}
+          gcloud compute instances start ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }}
           sleep 5
-          instance_status="aws ec2 describe-instance-status --instance-ids ${{ env.INSTANCE_ID }} --query 'InstanceStatuses[0].InstanceStatus.Status' --output text"
-          system_status="aws ec2 describe-instance-status --instance-ids ${{ env.INSTANCE_ID }} --query 'InstanceStatuses[0].SystemStatus.Status' --output text"
           SECONDS=0
           while : ; do
-            if [ "$(eval $instance_status)" = "ok" ] && [ "$(eval $system_status)" = "ok" ]; then
+            status=$(gcloud compute instances describe ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }} --format="get(status)")
+            if [ "$status" = "RUNNING" ]; then
               break
             else
-              sleep 20
-              SECONDS=$((SECONDS + 20))
+              sleep 10
+              SECONDS=$((SECONDS + 10))
             fi
           done
-          echo "Remote instance reachable now after $SECONDS seconds"
-          remote_ip=`aws ec2 describe-instances --filters 'Name=instance-state-name,Values=running' 'Name=instance-id,Values=${{ env.INSTANCE_ID }}' --query 'Reservations[*].Instances[*].[PublicIpAddress]' --output text`
-          echo "Running instances ip address: $remote_ip"
-          echo "remote_ip=$remote_ip" >> $GITHUB_OUTPUT
+          echo "Instance is running after $SECONDS seconds"
+          remote_ip=$(gcloud compute instances describe ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }} --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
+          echo "remote_ip=$remote_ip" >> $GITHUB_ENV
 
-      # exit status should propagate through ssh
       - name: Remotely benchmark pallets ${{ github.event.inputs.pallets }} for ${{ env.CHAIN }}
         timeout-minutes: 240
         run: |
-          # prepend the asterisk with \ to go through ssh
-          echo "Running instances ip address: ${{ steps.start_instance.outputs.remote_ip }}"
+          echo "Remote instance IP address: ${{ env.remote_ip }}"
           arg="${{ github.event.inputs.pallets }}"
           chain="${{ env.CHAIN }}"
           if [ "$arg" = "*" ]; then
             arg="\\$arg";
           fi
-          cat << EOF > ./benchmark-server-key.pem
-          ${{ env.BENCHMARK_SSH_KEY }}
-          EOF
-          chmod 600 ./benchmark-server-key.pem
           for c in $chain; do
-            ssh -x -i ./benchmark-server-key.pem -o StrictHostKeychecking=no "${{ steps.start_instance.outputs.remote_ip }}" -l ${{ env.BENCHMARK_SSH_USER }} 'bash -s' < parachain/scripts/benchmark-weight-remote.sh "$c" "${GITHUB_REF#refs/heads/}" "$arg"
-            echo "copy generated weights files back ..."
-            scp -o StrictHostKeychecking=no -i ./benchmark-server-key.pem "${{ env.BENCHMARK_SSH_USER }}"@"${{ steps.start_instance.outputs.remote_ip }}":/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
+            gcloud compute scp --zone=${{ env.INSTANCE_ZONE }} --recurse parachain/scripts/benchmark-weight-remote.sh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~
+            gcloud compute ssh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} --zone=${{ env.INSTANCE_ZONE }} --command="bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
+            echo "Copying generated weights files back ..."
+            gcloud compute scp --zone=${{ env.INSTANCE_ZONE }} ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
           done
-          rm -f ./benchmark-server-key.pem
-          echo "======================"
-          git status
 
-      - name: Stop remote instance
+      - name: Stop remote instance on GCE
         if: always()
         run: |
-          aws ec2 stop-instances --instance-ids ${{ env.INSTANCE_ID }}
-          sleep 5
-          ret=`aws ec2 describe-instance-status --instance-ids ${{ env.INSTANCE_ID }} | jq '.InstanceStatuses[0].InstanceState.Name'`
-          echo "Remote instance running state: $ret"
+          gcloud compute instances stop ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }}
 
       - name: Create auto PR
         uses: peter-evans/create-pull-request@v7
@@ -167,13 +154,12 @@ jobs:
           commit-message: "[benchmarking bot] Auto commit generated weights files"
           committer: benchmarking bot <noreply@github.com>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          signoff: false
           branch: benchmarking-bot-${{ github.run_id }}
           delete-branch: true
           title: "[benchmarking bot] Update generated weights files"
           body: |
             This is an automatically created PR.
-            It updates the weights files under `runtime/*/src/weights/*.rs` after running benchmarks on the remote machine: ${{ env.INSTANCE_ID }}
+            It updates the weights files under `runtime/*/src/weights/*.rs` after running benchmarks on the remote machine: ${{ env.INSTANCE_NAME }}
 
             Pallets: "${{ github.event.inputs.pallets }}"
             Chain: "${{ env.CHAIN }}"
