@@ -15,22 +15,21 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
+use fp_evm::PrecompileHandle;
 
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
 use sp_runtime::traits::Dispatchable;
 
-use sp_core::U256;
-use sp_std::{marker::PhantomData, vec::Vec};
+use sp_std::marker::PhantomData;
 
 pub struct VestingPrecompile<Runtime>(PhantomData<Runtime>);
 
 #[precompile_utils::precompile]
 impl<Runtime> VestingPrecompile<Runtime>
 where
-	Runtime: VestingPrecompile::Config + pallet_evm::Config,
+	Runtime: pallet_vesting::Config + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<VestingPrecompile::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
