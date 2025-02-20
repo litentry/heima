@@ -31,7 +31,7 @@ impl<Runtime> VestingPrecompile<Runtime>
 where
 	Runtime: pallet_vesting::Config + pallet_evm::Config,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	Runtime::RuntimeCall: From<VestingPrecompile::Call<Runtime>>,
+	Runtime::RuntimeCall: From<pallet_vesting::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 {
 	#[precompile::public("vest()")]
