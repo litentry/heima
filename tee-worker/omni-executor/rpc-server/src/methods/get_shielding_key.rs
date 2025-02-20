@@ -1,19 +1,11 @@
 use crate::server::RpcContext;
-use executor_crypto::rsa::traits::PublicKeyParts;
+use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_primitives::utils::hex::ToHexPrefixed;
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use serde::{Deserialize, Serialize};
-use std::vec::Vec;
-
-#[derive(Serialize, Deserialize)]
-struct Rsa3072PubKey {
-	n: Vec<u8>,
-	e: Vec<u8>,
-}
 
 pub fn register_get_shielding_key<
 	Header: Send + Sync + 'static,
