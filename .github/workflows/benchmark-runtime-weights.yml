@@ -24,8 +24,8 @@ on:
         required: true
 
 env:
-  INSTANCE_NAME: "benchmark-instance"
-  INSTANCE_ZONE: "us-central1-a"
+  INSTANCE_NAME: "stress-test-server"
+  INSTANCE_ZONE: "asia-southeast1-b"
   GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
   GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
   BENCHMARK_SSH_USER: "ubuntu"
