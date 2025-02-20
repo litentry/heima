@@ -26,6 +26,8 @@ pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
 	transaction_signer: Arc<TxSigner>,
+	worker_url: &str,
+	shielding_pubkey: Vec<u8>,
 ) -> Result<MrEnclave, ()> {
 	let mut quote = vec![];
 	let mut attestation_type = AttestationType::Dcap(DcapProvider::Intel);
@@ -61,8 +63,8 @@ pub async fn perform_attestation(
 		WorkerType::OmniExecutor,
 		WorkerMode::OffChainWorker,
 		quote,
-		vec![],
-		None,
+		worker_url.as_bytes().to_vec(),
+		Some(shielding_pubkey),
 		None,
 		attestation_type,
 	);

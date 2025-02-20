@@ -2931,6 +2931,7 @@ dependencies = [
  "env_logger",
  "ethereum-intent-executor",
  "executor-core",
+ "executor-crypto",
  "executor-storage",
  "hex",
  "log",
