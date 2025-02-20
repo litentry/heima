@@ -2944,6 +2944,7 @@ dependencies = [
  "serde_json",
  "solana-intent-executor",
  "tokio",
+ "url",
 ]
 
 [[package]]

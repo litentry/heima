@@ -93,6 +93,9 @@ async fn main() -> Result<(), ()> {
 
 			let signer = get_signer(substrate_key_store.clone());
 
+			log::info!("worker url: {:?}", args.worker_url);
+			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
+
 			let mrenclave = perform_attestation(
 				parentchain_rpc_client_factory.clone(),
 				signer,
@@ -104,7 +107,7 @@ async fn main() -> Result<(), ()> {
 			})?;
 
 			start_rpc_server(
-				&args.worker_rpc_port,
+				worker_url.port().expect("Missing worker port"),
 				parentchain_rpc_client_factory,
 				ShieldingKey::new(),
 				Arc::new(native_task_sender),
