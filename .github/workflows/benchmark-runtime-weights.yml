@@ -138,7 +138,7 @@ jobs:
           fi
           for c in $chain; do
             gcloud compute scp --zone=${{ env.INSTANCE_ZONE }} --recurse parachain/scripts/benchmark-weight-remote.sh ${{ env.INSTANCE_NAME }}:~
-            gcloud compute ssh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} --zone=${{ env.INSTANCE_ZONE }} --command="bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
+            gcloud compute ssh ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }} --command="bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
             echo "Copying generated weights files back ..."
             gcloud compute scp --zone=${{ env.INSTANCE_ZONE }} ${{ env.INSTANCE_NAME }}:/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
           done
