@@ -2,8 +2,8 @@
 pragma solidity >=0.8.3;
 
 interface IVesting {
-	/// @notice Used to unlock vest.
+    /// @notice Used to unlock vest.
     /// @custom:selector 0x458efde3
-	/// 				 vest()
+    ///                  vest()
     function vest() external;
 }
