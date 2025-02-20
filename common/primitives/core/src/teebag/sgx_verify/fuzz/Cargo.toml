@@ -13,6 +13,7 @@ codec = { version = "3.0.0", default-features = false, features = ["derive"], pa
 libfuzzer-sys = "0.4"
 serde_json = { version = "1.0" }
 webpki = { git = "https://github.com/rustls/webpki", version = "=0.102.0-alpha.3", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+# webpki = { version = "0.102.8", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
 
 [dependencies.sgx-verify]
 path = ".."

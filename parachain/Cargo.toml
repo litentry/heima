@@ -85,9 +85,9 @@ proc-macro2 = { version = "1" }
 quote = { version = "1" }
 syn = { version = "2" }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
-parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
+parity-scale-codec = { version = "3.7", default-features = false, features = ["derive", "max-encoded-len"] }
 paste = { version = "1.0" }
-serde = { version = "=1.0.214", default-features = false, features = ["derive", "alloc"] }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "=1.0.133", default-features = false }
 slices = { version = "0.2.0" }
 hex = { version = "0.4", default-features = false }
@@ -105,7 +105,8 @@ num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
 # ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
-webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+# webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+webpki = { version = "0.102.8", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }

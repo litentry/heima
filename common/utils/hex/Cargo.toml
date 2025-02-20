@@ -9,7 +9,7 @@ edition = "2021"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-parity-scale-codec = { version = "3.6" }
+parity-scale-codec = { version = "3.7" }
 
 [features]
 default = ["std"]
