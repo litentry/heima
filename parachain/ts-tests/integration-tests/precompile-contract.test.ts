@@ -14,7 +14,7 @@ import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
 import precompileOmniBridgeContractAbi from '../common/abi/precompile/OmniBridge.json';
 import precompileVestingContractAbi from '../common/abi/precompile/Vesting.json';
 const BN = require('bn.js');
-import { evmToAddress } from '@polkadot/util-crypto';
+import { encodeAddress, evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
@@ -367,7 +367,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // VestingCompleted Event
-        expect(event_data.account).to.eq(evmToAddress(evmAccountRaw.address, 42));
+        expect(encodeAddress(event_data.account, 42)).to.eq(evmToAddress(evmAccountRaw.address, 42));
 
         console.timeEnd('Test precompile vesting contract');
     });
