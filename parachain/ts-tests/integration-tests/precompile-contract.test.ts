@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { step } from 'mocha-steps';
 import {
+    sleep,
     signAndSend,
     describeLitentry,
     loadConfig,
@@ -344,10 +345,12 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             printBalance('balance after transferring', balance);
         }
 
-        // Add an immediate-unlocked vesting
-        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: 1});
+        // Add an almost immediate-unlocked vesting
+        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: context.api.query.system.number() + 2});
         await signAndSend(vestedTransferTx, context.alice);
 
+        // Set timeout to 60 seconds (5 blocks on parachain)
+        sleep(60);
 
         // Precompile vest
         const vestTx = precompileVestingContract.interface.encodeFunctionData('vest', []);
