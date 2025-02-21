@@ -29,15 +29,16 @@ env:
   GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
   GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
   BENCHMARK_SSH_USER: "ubuntu"
+  BENCHMARK_SSH_KEY: ${{ secrets.BENCHMARK_SSH_KEY }}
   DOCKER_BUILDKIT: 1
 
 jobs:
-  ## build docker image with runtime-benchmarks feature and push it to the hub
+  ## Build docker image with runtime-benchmarks feature and push it to the hub
   build-docker:
     if: ${{ github.event.inputs.rebuild-docker == 'true' }}
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout codes on ${{ github.ref }}
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -65,7 +66,7 @@ jobs:
         run: |
           docker push litentry/litentry-parachain:runtime-benchmarks
 
-  ## run the benchmarking remotely
+  ## Run the benchmarking remotely
   benchmark:
     runs-on: ubuntu-22.04
     needs: build-docker
@@ -73,7 +74,7 @@ jobs:
       always() &&
       (needs.build-docker.result == 'success' || needs.build-docker.result == 'skipped')
     steps:
-      - name: Set env
+      - name: Set environment variables
         run: |
           chain=""
           if [ "${{ github.event.inputs.litentry }}" = "true" ]; then
@@ -88,7 +89,7 @@ jobs:
           fi
           echo "CHAIN=$chain" >> $GITHUB_ENV
 
-      - name: Checkout codes on ${{ github.ref }}
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -131,17 +132,33 @@ jobs:
         timeout-minutes: 240
         run: |
           echo "Remote instance IP address: ${{ env.remote_ip }}"
+
+          # Prepare SSH Key
+          cat << EOF > ./benchmark-server-key.pem
+          ${{ env.BENCHMARK_SSH_KEY }}
+          EOF
+          chmod 600 ./benchmark-server-key.pem
+
           arg="${{ github.event.inputs.pallets }}"
           chain="${{ env.CHAIN }}"
           if [ "$arg" = "*" ]; then
             arg="\\$arg";
           fi
+
           for c in $chain; do
-            gcloud compute scp --zone=${{ env.INSTANCE_ZONE }} --recurse parachain/scripts/benchmark-weight-remote.sh ${{ env.INSTANCE_NAME }}:~
-            gcloud compute ssh ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }} --command="bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
+            # Copy benchmark script to remote machine
+            scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem parachain/scripts/benchmark-weight-remote.sh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~
+
+            # Execute benchmark script remotely
+            ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
+
+            # Retrieve the generated weight files
             echo "Copying generated weights files back ..."
-            gcloud compute scp --zone=${{ env.INSTANCE_ZONE }} ${{ env.INSTANCE_NAME }}:/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
+            scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
           done
+
+          # Clean up the SSH key
+          rm -f ./benchmark-server-key.pem
 
       - name: Stop remote instance on GCE
         if: always()
