@@ -346,7 +346,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
 
         // Add an almost immediate-unlocked vesting
-        const targetBlock = BigInt(await context.api.query.system.number()) + BigInt(2);
+        const targetBlock = parseInt((await context.api.query.system.number()).toString()) + 2;
         const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: targetBlock.toString()});
         await signAndSend(vestedTransferTx, context.alice);
 
