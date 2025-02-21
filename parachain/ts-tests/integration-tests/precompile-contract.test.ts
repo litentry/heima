@@ -346,8 +346,8 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
 
         // Add an almost immediate-unlocked vesting
-        const currentBlock = await context.api.query.system.number();
-        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: currentBlock + 2});
+        const targetBlock = BigInt(await context.api.query.system.number()) + BigInt(2);
+        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: targetBlock.toString()});
         await signAndSend(vestedTransferTx, context.alice);
 
         // Set timeout to 60 seconds (5 blocks on parachain)
