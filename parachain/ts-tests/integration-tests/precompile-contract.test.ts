@@ -31,7 +31,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     const precompileStakingContractAddress = '0x000000000000000000000000000000000000502d';
     const precompileBridgeContractAddress = '0x000000000000000000000000000000000000503d';
     const precompileOmniBridgeContractAddress = '0x0000000000000000000000000000000000005055';
-    const precompileVestingContractAddress = '0x000000000000000000000000000000000000500f';
+    const precompileVestingContractAddress = '0x000000000000000000000000000000000000500b';
     const evmAccountRaw = {
         privateKey: '0x01ab6e801c06e59ca97a14fc0a1978b27fa366fc87450e0b65459dd3515b7391',
         address: '0xaaafB3972B05630fCceE866eC69CdADd9baC2771',
@@ -346,7 +346,8 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
 
         // Add an almost immediate-unlocked vesting
-        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: context.api.query.system.number() + 2});
+        const currentBlock = await context.api.query.system.number();
+        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: currentBlock + 2});
         await signAndSend(vestedTransferTx, context.alice);
 
         // Set timeout to 60 seconds (5 blocks on parachain)

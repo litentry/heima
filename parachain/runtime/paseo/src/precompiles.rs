@@ -126,9 +126,9 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<AddressU64<1026>, ECRecoverPublicKey, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<AddressU64<1027>, Ed25519Verify, (CallableByContract, CallableByPrecompile)>,
 	// Litentry precompiles (starts from 0x5000):
-	// ParachainStaking: pallet_parachain_staking = 15 + 20480
+	// Vesting: pallet_vesting = 11 + 20480
 	PrecompileAt<
-		AddressU64<20495>,
+		AddressU64<20491>,
 		VestingPrecompile<R>,
 		(CallableByContract, CallableByPrecompile),
 	>,
