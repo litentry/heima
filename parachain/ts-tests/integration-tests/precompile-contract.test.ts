@@ -367,7 +367,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // VestingCompleted Event
-        expect(event_data.account).to.eq(evmAccountRaw.mappedAddress);
+        expect(event_data.account).to.eq(evmToAddress(evmAccountRaw.address, 42));
 
         console.timeEnd('Test precompile vesting contract');
     });
