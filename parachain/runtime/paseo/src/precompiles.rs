@@ -35,6 +35,7 @@ use pallet_evm_precompile_parachain_staking::ParachainStakingPrecompile;
 use pallet_evm_precompile_score_staking::ScoreStakingPrecompile;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
 use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripemd160, Sha256};
+use pallet_evm_precompile_vesting::VestingPrecompile;
 use precompile_utils::precompile_set::*;
 use sp_std::fmt::Debug;
 
@@ -125,6 +126,12 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<AddressU64<1026>, ECRecoverPublicKey, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<AddressU64<1027>, Ed25519Verify, (CallableByContract, CallableByPrecompile)>,
 	// Litentry precompiles (starts from 0x5000):
+	// Vesting: pallet_vesting = 11 + 20480
+	PrecompileAt<
+		AddressU64<20491>,
+		VestingPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
 	// ParachainStaking: pallet_parachain_staking = 45 + 20480
 	PrecompileAt<
 		AddressU64<20525>,
