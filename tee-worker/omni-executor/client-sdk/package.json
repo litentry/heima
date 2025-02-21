@@ -1,0 +1,59 @@
+{
+	"name": "@omni-client-sdk/source",
+	"version": "0.0.0",
+	"license": "MIT",
+	"scripts": {
+		"test": "nx affected --base=dev --target=test --plain",
+		"lint": "nx affected --base=dev --target=lint --plain",
+		"clean": "pnpm clean:dist; pnpm clean:packages",
+		"clean:dist": "rm -rf dist",
+		"clean:packages": "rm -rf node_modules && pnpm -r exec rm -rf node_modules && pnpm i"
+	},
+	"private": true,
+	"dependencies": {
+		"@polkadot/api": "^15.0.1",
+		"@polkadot/types": "^15.0.1",
+		"@polkadot/types-codec": "^15.0.1",
+		"@polkadot/util": "^13.2.3",
+		"@polkadot/util-crypto": "^13.2.3",
+		"ts-node": "10.9.1",
+		"tslib": "^2.5.3",
+		"ws": "^8.17.1"
+	},
+	"devDependencies": {
+		"@altack/nx-bundlefy": "^0.16.0",
+		"@nrwl/cli": "^15.9.3",
+		"@nrwl/devkit": "^19.8.4",
+		"@nrwl/eslint-plugin-nx": "^19.8.4",
+		"@nrwl/jest": "^19.8.4",
+		"@nrwl/js": "^19.8.4",
+		"@nrwl/linter": "^19.8.4",
+		"@nrwl/workspace": "^19.8.4",
+		"@polkadot/api-base": "^15.5.2",
+		"@polkadot/rpc-core": "^15.5.2",
+		"@polkadot/rpc-provider": "^15.5.2",
+		"@swc-node/register": "^1.8.0",
+		"@swc/core": "^1.4.17",
+		"@types/jest": "^29.4.0",
+		"@types/node": "20.14.8",
+		"@types/ws": "^8.5.9",
+		"@typescript-eslint/eslint-plugin": "8.x",
+		"@typescript-eslint/parser": "8.x",
+		"eslint": "^9.20.1",
+		"eslint-config-prettier": "^10.0.1",
+		"jest": "^29.4.1",
+		"jest-environment-node": "^29.4.1",
+		"nx": "^20.4.4",
+		"prettier": "^3.5.1",
+		"ts-jest": "^29.1.0",
+		"typedoc": "^0.27.7",
+		"typedoc-plugin-markdown": "^4.4.2",
+		"typescript": "5.4.5",
+		"validate-npm-package-name": "^6.0.0",
+		"verdaccio": "^6.0.5"
+	},
+	"nx": {
+		"includedScripts": []
+	},
+	"packageManager": "pnpm@8.7.6"
+}
