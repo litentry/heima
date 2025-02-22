@@ -665,7 +665,7 @@ pub mod pallet {
 			use pallet_utility::WeightInfo;
 			let dispatch_infos = calls.iter().map(|call| call.get_dispatch_info()).collect::<Vec<_>>();
 			let dispatch_weight = dispatch_infos.iter()
-				.map(|di| di.weight)
+				.map(|di| di.call_weight)
 				.fold(Weight::zero(), |total: Weight, weight: Weight| total.saturating_add(weight))
 				.saturating_add(<T as pallet_utility::Config>::WeightInfo::batch(calls.len() as u32));
 			let dispatch_class = {

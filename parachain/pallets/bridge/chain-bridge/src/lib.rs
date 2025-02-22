@@ -368,7 +368,7 @@ pub mod pallet {
 		#[pallet::weight({
 		let di = call.get_dispatch_info();
 		(< T as Config >::WeightInfo::acknowledge_proposal()
-		.saturating_add(di.weight),
+		.saturating_add(di.call_weight),
 		di.class)
 		})]
 		pub fn acknowledge_proposal(
@@ -422,7 +422,7 @@ pub mod pallet {
 		#[pallet::weight({
 		let di = prop.get_dispatch_info();
 		(< T as Config >::WeightInfo::eval_vote_state()
-		.saturating_add(di.weight),
+		.saturating_add(di.call_weight),
 		di.class)
 		})]
 		pub fn eval_vote_state(

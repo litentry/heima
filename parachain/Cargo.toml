@@ -104,9 +104,7 @@ num_enum = { version = "0.7.3", default-features = false }
 num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
-# ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
-webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
-# webpki = { version = "0.102.8", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+webpki = { version = "0.102.8", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
