@@ -132,8 +132,8 @@ jobs:
         timeout-minutes: 240
         run: |
           echo "Remote instance IP address: ${{ env.remote_ip }}"
-          sleep 120
-          echo "Sleep 120s to wait for server up"
+          sleep 30
+          echo "Sleep 30s to wait for server up"
 
           # Prepare SSH Key
           cat << EOF > ./benchmark-server-key.pem
