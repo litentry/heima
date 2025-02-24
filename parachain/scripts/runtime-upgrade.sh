@@ -27,7 +27,7 @@ if [ -f "$new_wasm" ] && [ -s "$new_wasm" ]; then
   ls -l "$new_wasm"
 else
   echo "Cannot find $new_wasm or it has 0 bytes, quit"
-  exit 0
+  exit 1
 fi
 
 # Install tools
