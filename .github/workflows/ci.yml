@@ -226,91 +226,91 @@ jobs:
           interval: 300
           branch: dev
 
-  parachain-clippy:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    steps:
-      - uses: actions/checkout@v4
+  # parachain-clippy:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - fmt
+  #     - set-condition
+  #     - sequentialise
+  #   if: needs.set-condition.outputs.rebuild_parachain == 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Install rust toolchain
+  #       run: rustup show
+  #
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+  #
+  #     - name: Run cargo clippy check
+  #       run: make clippy
+  #
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
-      - name: Install rust toolchain
-        run: rustup show
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-
-      - name: Run cargo clippy check
-        run: make clippy
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  tee-check:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    container: "litentry/litentry-tee-dev:latest"
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-
-      - name: Cargo test
-        working-directory: ./tee-worker
-        run: |
-          cargo test --release
-
-      - name: Check clippy
-        working-directory: ./tee-worker
-        shell: bash
-        run: |
-          for d in . identity/enclave-runtime; do
-            pushd "$d"
-            echo "::group::cargo clippy all"
-            cargo clippy --release -- -D warnings
-            echo "::endgroup::"
-            echo "::group::cargo clippy development"
-            cargo clippy --release --features development -- -D warnings
-            echo "::endgroup::"
-            echo "::group::cargo clippy offchain-worker"
-            cargo clippy --release --features offchain-worker -- -D warnings
-            echo "::group::cargo clippy offchain-worker,development"
-            cargo clippy --release --features offchain-worker,development -- -D warnings
-            echo "::endgroup::"
-            popd
-          done
-
-      - name: Identity-worker specific clippy
-        working-directory: ./tee-worker/identity/enclave-runtime
-        shell: bash
-        run: |
-          echo "::group::cargo clippy sidechain"
-          cargo clippy --release --features sidechain -- -D warnings
-          echo "::endgroup::"
-          echo "::group::cargo clippy evm"
-          cargo clippy --release --features evm -- -D warnings
-          echo "::endgroup::"
-          echo "::group::cargo clippy sidechain development"
-          cargo clippy --release --features sidechain,development -- -D warnings
-          echo "::endgroup::"
-          echo "::group::cargo clippy evm development"
-          cargo clippy --release --features evm,development -- -D warnings
-          echo "::endgroup::"
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
+  # tee-check:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - fmt
+  #     - set-condition
+  #     - sequentialise
+  #   container: "litentry/litentry-tee-dev:latest"
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update && \
+  #         sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+  #
+  #     - name: Cargo test
+  #       working-directory: ./tee-worker
+  #       run: |
+  #         cargo test --release
+  #
+  #     - name: Check clippy
+  #       working-directory: ./tee-worker
+  #       shell: bash
+  #       run: |
+  #         for d in . identity/enclave-runtime; do
+  #           pushd "$d"
+  #           echo "::group::cargo clippy all"
+  #           cargo clippy --release -- -D warnings
+  #           echo "::endgroup::"
+  #           echo "::group::cargo clippy development"
+  #           cargo clippy --release --features development -- -D warnings
+  #           echo "::endgroup::"
+  #           echo "::group::cargo clippy offchain-worker"
+  #           cargo clippy --release --features offchain-worker -- -D warnings
+  #           echo "::group::cargo clippy offchain-worker,development"
+  #           cargo clippy --release --features offchain-worker,development -- -D warnings
+  #           echo "::endgroup::"
+  #           popd
+  #         done
+  #
+  #     - name: Identity-worker specific clippy
+  #       working-directory: ./tee-worker/identity/enclave-runtime
+  #       shell: bash
+  #       run: |
+  #         echo "::group::cargo clippy sidechain"
+  #         cargo clippy --release --features sidechain -- -D warnings
+  #         echo "::endgroup::"
+  #         echo "::group::cargo clippy evm"
+  #         cargo clippy --release --features evm -- -D warnings
+  #         echo "::endgroup::"
+  #         echo "::group::cargo clippy sidechain development"
+  #         cargo clippy --release --features sidechain,development -- -D warnings
+  #         echo "::endgroup::"
+  #         echo "::group::cargo clippy evm development"
+  #         cargo clippy --release --features evm,development -- -D warnings
+  #         echo "::endgroup::"
+  #
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
   omni-executor-check:
     runs-on: ubuntu-22.04
@@ -381,146 +381,146 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  identity-build:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          # use the docker driver to access the local image
-          # we don't need external caches or multi platforms here
-          # see https://docs.docker.com/build/drivers/
-          driver: docker
-
-      - name: Cache worker-cache
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            worker-cache
-          key: worker-cache-${{ env.REF_VERSION }}-${{ hashFiles('tee-worker/identity/**/Cargo.lock', 'tee-worker/identity/**/Cargo.toml') }}
-          restore-keys: |
-            worker-cache-${{ env.REF_VERSION }}-
-            worker-cache-
-
-      - name: Create cache folder if not exist
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        run: |
-          for i in 'git/db' 'registry/cache' 'registry/index' 'sccache'; do
-            [ ! -d "worker-cache/$i" ] && mkdir -p "worker-cache/$i" || true
-            echo "hello" > worker-cache/$i/nix
-          done
-          echo "::group::List worker-cache size"
-          du -sh worker-cache/*
-          echo "::endgroup::"
-          echo "::group::Show disk usage"
-          df -h .
-          echo "::endgroup::"
-
-      # cache mount in buildkit won't be exported as image layers, so it doesn't work well with GHA cache, see
-      # https://github.com/moby/buildkit/issues/1512
-      # https://www.reddit.com/r/rust/comments/126xeyx/exploring_the_problem_of_faster_cargo_docker/
-      # https://hackmd.io/@kobzol/S17NS71bh (a great summary)
-      #
-      # the `reproducible-containers/buildkit-cache-dance` seems to be unstable too in my test
-      # sometimes it works, sometimes it results in empty cache, root cause unclear
-      #
-      # thus the persistence of rust cache (w/ sccache) is maintained manually
-      #
-      # there's no cache-from/to as the docker image layer is too large and it takes too long to sync
-      # moreoever, we are not so eager to have layer caches, as the most critical operation(cargo build)
-      # is "atomic" and can't be broken into layers.
-      - name: Build local builder
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/identity/build.Dockerfile
-          tags: local-builder:latest
-          target: builder
-          build-args: |
-            WORKER_MODE_ARG=sidechain
-            WORKER_ENV_DATA_PROVIDERS_CONFIG=1
-            WORKER_MOCK_SERVER=1
-            ADDITIONAL_FEATURES_ARG=
-
-      - name: Copy caches from the built image
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        run: |
-          echo "::group::Show disk usage"
-          df -h .
-          echo "::endgroup::"
-          echo "::group::docker images"
-          docker images --all
-          echo "::endgroup::"
-          echo "::group::copy cache out"
-          for i in 'git/db' 'registry/cache' 'registry/index'; do
-            b="${i%/*}"
-            rm -rf worker-cache/$i
-            docker cp "$(docker create --rm local-builder:latest):/opt/rust/$i" worker-cache/$b
-          done
-          rm -rf worker-cache/sccache
-          docker cp "$(docker create --rm local-builder:latest):/opt/rust/sccache" worker-cache
-          du -sh worker-cache/*
-          echo "::endgroup::"
-          echo "::group::df -h ."
-          df -h .
-          echo "::endgroup::"
-
-      - name: Build worker
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/identity/build.Dockerfile
-          tags: litentry/identity-worker:latest
-          target: deployed-worker
-
-      - name: Build cli
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/identity/build.Dockerfile
-          tags: litentry/identity-cli:latest
-          target: deployed-client
-
-      - name: Pull and tag worker and cli image optionally
-        if: needs.set-condition.outputs.rebuild_identity == 'false'
-        run: |
-          docker pull litentry/identity-worker:latest
-          docker pull litentry/identity-cli:latest
-
-      - run: docker images --all
-
-      - name: Test enclave
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        # cargo test is not supported in the enclave
-        # see https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run litentry/identity-worker:latest test --all
-
-      - name: Save docker images
-        run: docker save litentry/identity-worker:latest litentry/identity-cli:latest | gzip > litentry-identity.tar.gz
-
-      - name: Upload docker images
-        uses: actions/upload-artifact@v4
-        with:
-          name: litentry-identity
-          path: litentry-identity.tar.gz
-          if-no-files-found: error
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
+  # identity-build:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - fmt
+  #     - set-condition
+  #     - sequentialise
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Free up disk space
+  #       if: startsWith(runner.name, 'GitHub Actions')
+  #       uses: ./.github/actions/disk-cleanup
+  #
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #       with:
+  #         # use the docker driver to access the local image
+  #         # we don't need external caches or multi platforms here
+  #         # see https://docs.docker.com/build/drivers/
+  #         driver: docker
+  #
+  #     - name: Cache worker-cache
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           worker-cache
+  #         key: worker-cache-${{ env.REF_VERSION }}-${{ hashFiles('tee-worker/identity/**/Cargo.lock', 'tee-worker/identity/**/Cargo.toml') }}
+  #         restore-keys: |
+  #           worker-cache-${{ env.REF_VERSION }}-
+  #           worker-cache-
+  #
+  #     - name: Create cache folder if not exist
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       run: |
+  #         for i in 'git/db' 'registry/cache' 'registry/index' 'sccache'; do
+  #           [ ! -d "worker-cache/$i" ] && mkdir -p "worker-cache/$i" || true
+  #           echo "hello" > worker-cache/$i/nix
+  #         done
+  #         echo "::group::List worker-cache size"
+  #         du -sh worker-cache/*
+  #         echo "::endgroup::"
+  #         echo "::group::Show disk usage"
+  #         df -h .
+  #         echo "::endgroup::"
+  #
+  #     # cache mount in buildkit won't be exported as image layers, so it doesn't work well with GHA cache, see
+  #     # https://github.com/moby/buildkit/issues/1512
+  #     # https://www.reddit.com/r/rust/comments/126xeyx/exploring_the_problem_of_faster_cargo_docker/
+  #     # https://hackmd.io/@kobzol/S17NS71bh (a great summary)
+  #     #
+  #     # the `reproducible-containers/buildkit-cache-dance` seems to be unstable too in my test
+  #     # sometimes it works, sometimes it results in empty cache, root cause unclear
+  #     #
+  #     # thus the persistence of rust cache (w/ sccache) is maintained manually
+  #     #
+  #     # there's no cache-from/to as the docker image layer is too large and it takes too long to sync
+  #     # moreoever, we are not so eager to have layer caches, as the most critical operation(cargo build)
+  #     # is "atomic" and can't be broken into layers.
+  #     - name: Build local builder
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: tee-worker/identity/build.Dockerfile
+  #         tags: local-builder:latest
+  #         target: builder
+  #         build-args: |
+  #           WORKER_MODE_ARG=sidechain
+  #           WORKER_ENV_DATA_PROVIDERS_CONFIG=1
+  #           WORKER_MOCK_SERVER=1
+  #           ADDITIONAL_FEATURES_ARG=
+  #
+  #     - name: Copy caches from the built image
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       run: |
+  #         echo "::group::Show disk usage"
+  #         df -h .
+  #         echo "::endgroup::"
+  #         echo "::group::docker images"
+  #         docker images --all
+  #         echo "::endgroup::"
+  #         echo "::group::copy cache out"
+  #         for i in 'git/db' 'registry/cache' 'registry/index'; do
+  #           b="${i%/*}"
+  #           rm -rf worker-cache/$i
+  #           docker cp "$(docker create --rm local-builder:latest):/opt/rust/$i" worker-cache/$b
+  #         done
+  #         rm -rf worker-cache/sccache
+  #         docker cp "$(docker create --rm local-builder:latest):/opt/rust/sccache" worker-cache
+  #         du -sh worker-cache/*
+  #         echo "::endgroup::"
+  #         echo "::group::df -h ."
+  #         df -h .
+  #         echo "::endgroup::"
+  #
+  #     - name: Build worker
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: tee-worker/identity/build.Dockerfile
+  #         tags: litentry/identity-worker:latest
+  #         target: deployed-worker
+  #
+  #     - name: Build cli
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: tee-worker/identity/build.Dockerfile
+  #         tags: litentry/identity-cli:latest
+  #         target: deployed-client
+  #
+  #     - name: Pull and tag worker and cli image optionally
+  #       if: needs.set-condition.outputs.rebuild_identity == 'false'
+  #       run: |
+  #         docker pull litentry/identity-worker:latest
+  #         docker pull litentry/identity-cli:latest
+  #
+  #     - run: docker images --all
+  #
+  #     - name: Test enclave
+  #       if: needs.set-condition.outputs.rebuild_identity == 'true'
+  #       # cargo test is not supported in the enclave
+  #       # see https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
+  #       run: docker run litentry/identity-worker:latest test --all
+  #
+  #     - name: Save docker images
+  #       run: docker save litentry/identity-worker:latest litentry/identity-cli:latest | gzip > litentry-identity.tar.gz
+  #
+  #     - name: Upload docker images
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: litentry-identity
+  #         path: litentry-identity.tar.gz
+  #         if-no-files-found: error
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
   omni-executor-build:
     runs-on: ubuntu-22.04
@@ -570,321 +570,321 @@ jobs:
           path: litentry-omni.tar.gz
           if-no-files-found: error
 
-  parachain-ts-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - set-condition
-      - parachain-build-dev
-    strategy:
-      matrix:
-        chain:
-          - litentry
-          - paseo
-    name: ${{ matrix.chain }}
-    steps:
-      - uses: actions/checkout@v4
+  # parachain-ts-test:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - set-condition
+  #     - parachain-build-dev
+  #   strategy:
+  #     matrix:
+  #       chain:
+  #         - litentry
+  #         - paseo
+  #   name: ${{ matrix.chain }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: litentry-parachain-dev
+  #
+  #     - name: Load docker image
+  #       run: |
+  #         docker load < litentry-parachain-dev.tar.gz
+  #
+  #     - name: Use Latest Corepack
+  #       run: |
+  #         echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+  #         npm install -g corepack@latest
+  #         echo "After : corepack version => $(corepack --version)"
+  #         corepack enable && corepack enable pnpm
+  #         pnpm --version
+  #
+  #     - name: Run ts tests for ${{ matrix.chain }}
+  #       if: needs.set-condition.outputs.run_parachain_test == 'true'
+  #       timeout-minutes: 35
+  #       run: |
+  #         make test-ts-${{ matrix.chain }}
+  #
+  #     - name: Collect docker logs if test fails
+  #       continue-on-error: true
+  #       uses: jwalton/gh-docker-logs@v2
+  #       if: failure()
+  #       with:
+  #         tail: all
+  #         dest: docker-logs
+  #
+  #     - name: Upload docker logs if test fails
+  #       uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: ${{ matrix.chain }}-ts-tests-docker-logs
+  #         path: docker-logs
+  #         if-no-files-found: ignore
+  #         retention-days: 3
+  #
+  #     - name: Archive logs if test fails
+  #       uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: ${{ matrix.chain }}-ts-tests-artifact
+  #         path: /tmp/parachain_dev/
+  #         if-no-files-found: ignore
+  #         retention-days: 3
+  #
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-parachain-dev
+  # parachain-unit-test:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - fmt
+  #     - set-condition
+  #     - sequentialise
+  #   # run_parachain_test is related to ts-tests only
+  #   if: needs.set-condition.outputs.rebuild_parachain == 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Run all unittests
+  #       working-directory: ./parachain
+  #       run: |
+  #         echo "::group::core-primitives unittest"
+  #         cargo test --locked -p core-primitives --lib
+  #         echo "::endgroup::"
+  #         echo "::group::all pallets unittest"
+  #         cargo test --locked -p pallet-* --lib
+  #         echo "::endgroup::"
+  #         echo "::group::all pallets unittest with runtime-benchmarks feature"
+  #         cargo test --locked -p pallet-* --lib --features=runtime-benchmarks
+  #         echo "::endgroup::"
+  #
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
-      - name: Load docker image
-        run: |
-          docker load < litentry-parachain-dev.tar.gz
+  # parachain-runtime-test:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - fmt
+  #     - set-condition
+  #     - sequentialise
+  #   if: needs.set-condition.outputs.rebuild_parachain == 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Free up disk space
+  #       if: startsWith(runner.name, 'GitHub Actions')
+  #       uses: ./.github/actions/disk-cleanup
+  #
+  #     - name: Install toolchain
+  #       working-directory: ./parachain
+  #       run: rustup show
+  #
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update && \
+  #         sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+  #
+  #     # We could have used matrix but the runtime tests are executed sequentially for a cleaner GHA visualisation graph.
+  #     # It won't take much longer as we run them back to back.
+  #     - name: Run runtime tests
+  #       working-directory: ./parachain
+  #       run: |
+  #         echo "::group::paseo runtime test"
+  #         cargo test --locked -p paseo-parachain-runtime --lib
+  #         echo "::endgroup::"
+  #         echo "::group::litentry runtime test"
+  #         cargo test --locked -p litentry-parachain-runtime --lib
+  #         echo "::endgroup::"
+  #
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
-      - name: Use Latest Corepack
-        run: |
-          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
-          npm install -g corepack@latest
-          echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
-          pnpm --version
+  # identity-single-worker-test:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - set-condition
+  #     - parachain-build-dev
+  #     - identity-build
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - test_name: lit-di-identity-test
+  #         - test_name: lit-dr-vc-test
+  #         - test_name: lit-parentchain-nonce
+  #         - test_name: lit-test-failed-parentchain-extrinsic
+  #         # TODO: enable these tests once we use polkadot-sdk branch stable2412
+  #         # - test_name: lit-omni-account-test
+  #         # - test_name: lit-native-request-vc-test
+  #   name: ${{ matrix.test_name }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: litentry-parachain-dev
+  #
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: litentry-identity
+  #
+  #     - name: Load docker image
+  #       run: |
+  #         docker load < litentry-parachain-dev.tar.gz
+  #         docker load < litentry-identity.tar.gz
+  #         docker images
+  #
+  #     - name: Use Latest Corepack
+  #       run: |
+  #         echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+  #         npm install -g corepack@latest
+  #         echo "After : corepack version => $(corepack --version)"
+  #         corepack enable && corepack enable pnpm
+  #         pnpm --version
+  #
+  #     - name: Launch parachain network
+  #       run: |
+  #         make launch-network-litentry
+  #
+  #     - name: Integration single worker test ${{ matrix.test_name }}
+  #       working-directory: ./tee-worker/identity/docker
+  #       if: needs.set-condition.outputs.run_identity_test == 'true'
+  #       timeout-minutes: 40
+  #       run: |
+  #         docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+  #
+  #     - name: Stop integration single worker docker containers
+  #       working-directory: ./tee-worker/identity/docker
+  #       if: needs.set-condition.outputs.run_identity_test == 'true'
+  #       run: |
+  #         docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+  #
+  #     - name: Upload zombienet logs if test fails
+  #       continue-on-error: true
+  #       uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: ${{ matrix.test_name }}-zombienet-logs
+  #         path: |
+  #           /tmp/parachain_dev
+  #           !/tmp/parachain_dev/polkadot*
+  #           !/tmp/parachain_dev/zombienet*
+  #           !/tmp/parachain_dev/litentry-collator
+  #         if-no-files-found: ignore
+  #         retention-days: 3
+  #
+  #     - name: Collect docker logs if test fails
+  #       continue-on-error: true
+  #       uses: jwalton/gh-docker-logs@v2
+  #       if: failure()
+  #       with:
+  #         tail: all
+  #         dest: docker-logs
+  #
+  #     - name: Upload docker logs if test fails
+  #       uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: ${{ matrix.test_name }}-docker-logs
+  #         path: docker-logs
+  #         if-no-files-found: ignore
+  #         retention-days: 3
 
-      - name: Run ts tests for ${{ matrix.chain }}
-        if: needs.set-condition.outputs.run_parachain_test == 'true'
-        timeout-minutes: 35
-        run: |
-          make test-ts-${{ matrix.chain }}
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.chain }}-ts-tests-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Archive logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.chain }}-ts-tests-artifact
-          path: /tmp/parachain_dev/
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  parachain-unit-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    # run_parachain_test is related to ts-tests only
-    if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run all unittests
-        working-directory: ./parachain
-        run: |
-          echo "::group::core-primitives unittest"
-          cargo test --locked -p core-primitives --lib
-          echo "::endgroup::"
-          echo "::group::all pallets unittest"
-          cargo test --locked -p pallet-* --lib
-          echo "::endgroup::"
-          echo "::group::all pallets unittest with runtime-benchmarks feature"
-          cargo test --locked -p pallet-* --lib --features=runtime-benchmarks
-          echo "::endgroup::"
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  parachain-runtime-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Install toolchain
-        working-directory: ./parachain
-        run: rustup show
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-
-      # We could have used matrix but the runtime tests are executed sequentially for a cleaner GHA visualisation graph.
-      # It won't take much longer as we run them back to back.
-      - name: Run runtime tests
-        working-directory: ./parachain
-        run: |
-          echo "::group::paseo runtime test"
-          cargo test --locked -p paseo-parachain-runtime --lib
-          echo "::endgroup::"
-          echo "::group::litentry runtime test"
-          cargo test --locked -p litentry-parachain-runtime --lib
-          echo "::endgroup::"
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  identity-single-worker-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - set-condition
-      - parachain-build-dev
-      - identity-build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test_name: lit-di-identity-test
-          - test_name: lit-dr-vc-test
-          - test_name: lit-parentchain-nonce
-          - test_name: lit-test-failed-parentchain-extrinsic
-          # TODO: enable these tests once we use polkadot-sdk branch stable2412
-          # - test_name: lit-omni-account-test
-          # - test_name: lit-native-request-vc-test
-    name: ${{ matrix.test_name }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-parachain-dev
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-identity
-
-      - name: Load docker image
-        run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker load < litentry-identity.tar.gz
-          docker images
-
-      - name: Use Latest Corepack
-        run: |
-          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
-          npm install -g corepack@latest
-          echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
-          pnpm --version
-
-      - name: Launch parachain network
-        run: |
-          make launch-network-litentry
-
-      - name: Integration single worker test ${{ matrix.test_name }}
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        timeout-minutes: 40
-        run: |
-          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
-
-      - name: Stop integration single worker docker containers
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        run: |
-          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-
-      - name: Upload zombienet logs if test fails
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-zombienet-logs
-          path: |
-            /tmp/parachain_dev
-            !/tmp/parachain_dev/polkadot*
-            !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/litentry-collator
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
-
-  identity-multi-worker-test:
-    runs-on: ubuntu-22.04
-    continue-on-error: true
-    if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
-    needs:
-      - set-condition
-      - parachain-build-dev
-      - identity-build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test_name: lit-di-identity-multiworker-test
-          - test_name: lit-dr-vc-multiworker-test
-          - test_name: lit-resume-worker
-          # TODO: enable these tests once we use polkadot-sdk branch stable2412
-          # - test_name: lit-omni-account-multiworker-test
-          # - test_name: lit-native-request-vc-multiworker-test
-    name: ${{ matrix.test_name }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-parachain-dev
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: litentry-identity
-
-      - name: Load docker image
-        run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker load < litentry-identity.tar.gz
-          docker images
-
-      - name: Use Latest Corepack
-        run: |
-          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
-          npm install -g corepack@latest
-          echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
-          pnpm --version
-
-      - name: Launch parachain network
-        run: |
-          make launch-network-litentry
-
-      - name: Integration multi worker test ${{ matrix.test_name }}
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        timeout-minutes: 40
-        run: |
-          docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
-
-      - name: Stop integration multi worker docker containers
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        run: |
-          docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-
-      - name: Upload zombienet logs if test fails
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-zombienet-logs
-          path: |
-            /tmp/parachain_dev
-            !/tmp/parachain_dev/polkadot*
-            !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/litentry-collator
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
+  # identity-multi-worker-test:
+  #   runs-on: ubuntu-22.04
+  #   continue-on-error: true
+  #   if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
+  #   needs:
+  #     - set-condition
+  #     - parachain-build-dev
+  #     - identity-build
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - test_name: lit-di-identity-multiworker-test
+  #         - test_name: lit-dr-vc-multiworker-test
+  #         - test_name: lit-resume-worker
+  #         # TODO: enable these tests once we use polkadot-sdk branch stable2412
+  #         # - test_name: lit-omni-account-multiworker-test
+  #         # - test_name: lit-native-request-vc-multiworker-test
+  #   name: ${{ matrix.test_name }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: litentry-parachain-dev
+  #
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: litentry-identity
+  #
+  #     - name: Load docker image
+  #       run: |
+  #         docker load < litentry-parachain-dev.tar.gz
+  #         docker load < litentry-identity.tar.gz
+  #         docker images
+  #
+  #     - name: Use Latest Corepack
+  #       run: |
+  #         echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+  #         npm install -g corepack@latest
+  #         echo "After : corepack version => $(corepack --version)"
+  #         corepack enable && corepack enable pnpm
+  #         pnpm --version
+  #
+  #     - name: Launch parachain network
+  #       run: |
+  #         make launch-network-litentry
+  #
+  #     - name: Integration multi worker test ${{ matrix.test_name }}
+  #       working-directory: ./tee-worker/identity/docker
+  #       if: needs.set-condition.outputs.run_identity_test == 'true'
+  #       timeout-minutes: 40
+  #       run: |
+  #         docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+  #
+  #     - name: Stop integration multi worker docker containers
+  #       working-directory: ./tee-worker/identity/docker
+  #       if: needs.set-condition.outputs.run_identity_test == 'true'
+  #       run: |
+  #         docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
+  #
+  #     - name: Upload zombienet logs if test fails
+  #       continue-on-error: true
+  #       uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: ${{ matrix.test_name }}-zombienet-logs
+  #         path: |
+  #           /tmp/parachain_dev
+  #           !/tmp/parachain_dev/polkadot*
+  #           !/tmp/parachain_dev/zombienet*
+  #           !/tmp/parachain_dev/litentry-collator
+  #         if-no-files-found: ignore
+  #         retention-days: 3
+  #
+  #     - name: Collect docker logs if test fails
+  #       continue-on-error: true
+  #       uses: jwalton/gh-docker-logs@v2
+  #       if: failure()
+  #       with:
+  #         tail: all
+  #         dest: docker-logs
+  #
+  #     - name: Upload docker logs if test fails
+  #       uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: ${{ matrix.test_name }}-docker-logs
+  #         path: docker-logs
+  #         if-no-files-found: ignore
+  #         retention-days: 3
 
   omni-executor-test:
     runs-on: ubuntu-22.04
