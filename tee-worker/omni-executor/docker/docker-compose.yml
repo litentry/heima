@@ -7,11 +7,15 @@ services:
     depends_on:
       - ethereum-node
       - litentry-node
-    command: ["executor-worker", "ws://litentry-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "0"]
+    command: ["executor-worker", "run", "ws://litentry-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "8080"]
+    ports:
+      - "8080:8080"
     privileged: true
     restart: always
     networks:
       - litentry-test-network
+    volumes:
+      - ../local/keystore:/usr/local/bin/local/keystore
   ethereum-node:
     image: ghcr.io/foundry-rs/foundry
     container_name: ethereum-node

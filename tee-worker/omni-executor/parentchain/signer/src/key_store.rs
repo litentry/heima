@@ -25,14 +25,21 @@ pub struct SubstrateKeyStore {
 
 impl SubstrateKeyStore {
 	pub fn new(path: String) -> Self {
-		if std::path::Path::new(&path).exists() {
-			Self { path }
-		} else {
-			let key = Self::generate_key().unwrap();
-			let store = Self { path };
+		let store = Self { path: path.clone() };
+		let std_path = std::path::Path::new(&path);
+		if !std_path.exists() {
+			let key: [u8; 32] = Self::generate_key().unwrap();
+			// Create store file if not exists.
+			if let Some(parent) = std_path.parent() {
+				if !parent.exists() {
+					std::fs::create_dir_all(parent).unwrap();
+				}
+			}
+			let _file = std::fs::File::create(&path).unwrap();
 			store.write(&key).unwrap();
-			store
 		}
+
+		store
 	}
 }
 
