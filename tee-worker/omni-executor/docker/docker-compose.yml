@@ -7,7 +7,7 @@ services:
       dockerfile: tee-worker/omni-executor/Dockerfile
       target: executor-worker
     volumes:
-      - ../local:/local
+      - ../local/keystore:/local/keystore
     environment:
       - RUST_LOG=debug
     depends_on:

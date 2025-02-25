@@ -28,7 +28,7 @@ RUN apt update && apt install -y ca-certificates curl
 RUN corepack enable && corepack prepare pnpm@8.7.6 --activate && corepack enable pnpm
 
 COPY --from=plain-builder $SRC_DIR/target/release/executor-worker $BIN_DIR/executor-worker
-COPY --from=plain-builder $SRC_DIR/local $BIN_DIR/local
+COPY --from=plain-builder $SRC_DIR/local/keystore $BIN_DIR/local/keystore
 
 RUN chmod +x $BIN_DIR/executor-worker
 RUN ls -al $BIN_DIR
