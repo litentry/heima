@@ -896,7 +896,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - test_name: omni-test
           - test_name: omni-account-test
     name: ${{ matrix.test_name }}
     steps:
