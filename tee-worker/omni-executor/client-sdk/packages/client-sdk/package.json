@@ -9,6 +9,7 @@
 	},
 	"peerDependencies": {
 		"@heima/chaindata": "*",
+		"@litentry/parachain-api": "0.9.21-next.4",
 		"@polkadot/api": "^15.0.1",
 		"@polkadot/types": "^15.0.1",
 		"@polkadot/types-codec": "^15.0.1",

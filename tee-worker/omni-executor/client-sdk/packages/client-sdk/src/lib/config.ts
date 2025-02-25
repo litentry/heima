@@ -1,0 +1,1 @@
+export const OMNI_ENDPOINT = 'ws://localhost:8080';
