@@ -46,7 +46,7 @@ echo "Parachain metadata fetched"
 echo "Installing dependencies and building client-api"
 cd /client-api
 pnpm install --force
-pnpm run build
+pnpm run build-parachain-api
 
 echo "Installing dependencies and building ts-tests"
 cd /ts-tests

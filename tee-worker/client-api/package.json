@@ -4,6 +4,7 @@
     "scripts": {
         "update": "pnpm --filter parachain-api run update-metadata && pnpm --filter sidechain-api run update-metadata",
         "build": "pnpm --filter parachain-api run build && pnpm --filter sidechain-api run build",
+        "build-parachain-api": "pnpm --filter parachain-api run build",
         "update-build": "pnpm run update && pnpm run build",
         "format": "pnpm run --recursive format",
         "check-format": "pnpm run --recursive check-format",
