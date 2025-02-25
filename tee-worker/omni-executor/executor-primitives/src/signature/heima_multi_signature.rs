@@ -212,6 +212,6 @@ mod tests {
 		];
 		let result = HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(signature))
 			.verify(b"test message", &signer);
-		assert_eq!(result, true);
+		assert!(result);
 	}
 }

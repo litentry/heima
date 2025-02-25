@@ -1,3 +1,4 @@
+import type { Enum } from '@polkadot/types-codec';
 import { HexString } from '@polkadot/util/types';
 import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
@@ -8,7 +9,9 @@ import {
     CorePrimitivesIdentity,
     LitentryMultiSignature,
     NativeCall,
-    NativeCallAuthenticated,
+    NativeCallAuthenticatedOperation,
+    NativeQuery,
+    NativeQueryAuthenticatedOperation,
     OmniAccountPermission,
     PlainRequest,
 } from 'parachain-api';
@@ -68,17 +71,24 @@ export function createNativeCall(api: ApiPromise, call: [string, string], params
     });
 }
 
+export function createNativeQuery(api: ApiPromise, query: [string, string], params: unknown): NativeQuery {
+    const [variant, argType] = query;
+    return api.createType('NativeQuery', {
+        [variant]: api.createType(argType, params),
+    });
+}
+
 // We only support web3 authentication in these tests
-export async function createNativeCallAuthenticated(
+export async function createNativeAuthenticatedOperation<OP extends Enum>(
     api: ApiPromise,
-    nativeCall: NativeCall,
+    operation: OP,
     signer: Signer,
     nonce: Codec,
     mrenclave: string,
     withWrappedBytes = false,
     withPrefix = false
-): Promise<NativeCallAuthenticated> {
-    let payload: string = blake2AsHex(u8aConcat(nativeCall.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
+): Promise<OP extends NativeCall ? NativeCallAuthenticatedOperation : NativeQueryAuthenticatedOperation> {
+    let payload: string = blake2AsHex(u8aConcat(operation.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
 
     if (withWrappedBytes) {
         payload = `<Bytes>${payload}</Bytes>`;
@@ -100,8 +110,16 @@ export async function createNativeCallAuthenticated(
         Web3: api.createType('(LitentryMultiSignature)', signature),
     });
 
-    return api.createType('NativeCallAuthenticated', {
-        call: nativeCall,
+    if ('isGetAccountStore' in operation) {
+        return api.createType('NativeQueryAuthenticatedOperation', {
+            operation: operation,
+            nonce,
+            authentication,
+        });
+    }
+
+    return api.createType('NativeCallAuthenticatedOperation', {
+        operation: operation,
         nonce,
         authentication,
     });
@@ -110,11 +128,11 @@ export async function createNativeCallAuthenticated(
 export function createPlainRequest(
     api: ApiPromise,
     mrenclave: string,
-    call_authenticated: NativeCallAuthenticated
+    authenticated_operation: NativeCallAuthenticatedOperation | NativeQueryAuthenticatedOperation
 ): PlainRequest {
     return api.createType('PlainRequest', {
         mrenclave: hexToU8a(mrenclave),
-        payload: compactAddLength(call_authenticated.toU8a()),
+        payload: compactAddLength(authenticated_operation.toU8a()),
     });
 }
 

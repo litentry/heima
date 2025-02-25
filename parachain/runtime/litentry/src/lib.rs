@@ -230,7 +230,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9231,
+	spec_version: 9233,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1406,7 +1406,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 		matches!(
 			call,
 			// Vesting::vest
-			RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
+			RuntimeCall::Vesting(_) |
 			// ChainBridge
 			RuntimeCall::ChainBridge(_) |
 			// Bounties

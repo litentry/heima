@@ -19,7 +19,7 @@ use parentchain_rpc_client::{
 use parity_scale_codec::Decode;
 use rocksdb::DB;
 use sp_state_machine::{read_proof_check, StorageProof};
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
 const STORAGE_DB_PATH: &str = "storage_db";
 
@@ -132,6 +132,7 @@ async fn init_omni_account_storages(
 						Decode::decode(&mut &value[..]).map_err(|e| {
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
+					let mut member_accounts: Vec<MemberAccount> = Vec::new();
 					for member in account_store.0.iter() {
 						let member_account: MemberAccount = member.to_primitive_type();
 						member_omni_account_storage
@@ -139,8 +140,9 @@ async fn init_omni_account_storages(
 							.map_err(|e| {
 								log::error!("Error inserting member account hash: {:?}", e);
 							})?;
+						member_accounts.push(member_account);
 					}
-					account_store_storage.insert(omni_account, account_store).map_err(|e| {
+					account_store_storage.insert(omni_account, member_accounts).map_err(|e| {
 						log::error!("Error inserting account store: {:?}", e);
 					})?;
 				},

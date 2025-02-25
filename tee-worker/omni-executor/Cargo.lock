@@ -5015,6 +5015,7 @@ dependencies = [
  "parentchain-signer",
  "parity-scale-codec",
  "rand 0.8.5",
+ "subxt",
  "tokio",
 ]
 
