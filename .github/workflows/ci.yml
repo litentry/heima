@@ -896,7 +896,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - test_name: omni-test
+          # - test_name: omni-test
+          - test_name: omni-account-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4
@@ -915,12 +916,12 @@ jobs:
           docker load < litentry-omni.tar.gz
           docker images
 
-      # - name: Integration omni executor test ${{ matrix.test_name }}
-      #   working-directory: ./tee-worker/omni-executor/docker
-      #   if: needs.set-condition.outputs.run_omni_executor_test == 'true'
-      #   timeout-minutes: 40
-      #   run: |
-      #     docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+      - name: Integration omni executor test ${{ matrix.test_name }}
+        working-directory: ./tee-worker/omni-executor/docker
+        if: needs.set-condition.outputs.run_omni_executor_test == 'true'
+        timeout-minutes: 40
+        run: |
+          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Collect docker logs if test fails
         continue-on-error: true
