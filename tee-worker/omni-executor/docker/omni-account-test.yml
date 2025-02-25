@@ -1,5 +1,6 @@
 services:
     omni-account-test:
+        image: litentry/omni-executor:latest
         container_name: litentry-omni-account-test
         volumes:
             - ../ts-tests:/ts-tests
