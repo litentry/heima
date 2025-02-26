@@ -23,9 +23,9 @@ mod tests;
 
 use frame_support::{pallet_prelude::*, sp_runtime::Saturating};
 use frame_system::pallet_prelude::*;
+pub use pallet::*;
 use pallet_parachain_staking::{BalanceOf, Round, RoundIndex};
 use sp_runtime::traits::Zero;
-pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
