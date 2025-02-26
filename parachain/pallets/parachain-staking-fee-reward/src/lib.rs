@@ -72,7 +72,7 @@ pub mod pallet {
 		for Pallet<T>
 	{
 		fn on_transaction_fee_reward_notify(amount: BalanceOf<T>) -> Result<(), &'static str> {
-			let round = <Round<T>>::get();
+			let round = <Round<T>>::get().current;
 			let cr = <RoundAccumulatedReward<T>>::take(round);
 			<RoundAccumulatedReward<T>>::insert(round, cr.saturating_add(amount));
 			Ok(())
