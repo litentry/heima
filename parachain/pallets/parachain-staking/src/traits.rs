@@ -70,11 +70,11 @@ pub trait TransactionFeeRewardResource<Balance, RoundIndex> {
 impl<Balance: AtLeast32BitUnsigned, RoundIndex> TransactionFeeRewardResource<Balance, RoundIndex>
 	for ()
 {
-	fn on_transaction_fee_reward_notify(amount: Balance) -> Result<(), &'static str> {
+	fn on_transaction_fee_reward_notify(_amount: Balance) -> Result<(), &'static str> {
 		Ok(())
 	}
 
-	fn query_round_fee_reward(round: RoundIndex) -> Balance {
+	fn query_round_fee_reward(_round: RoundIndex) -> Balance {
 		0u32.into()
 	}
 }

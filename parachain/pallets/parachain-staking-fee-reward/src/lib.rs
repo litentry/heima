@@ -21,17 +21,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_support::{
-	pallet_prelude::*,
-	traits::{
-		fungibles::{Balanced, Create, Mutate, Refund},
-		tokens::{Balance, Fortitude, Precision, Preservation},
-		AccountTouch,
-	},
-	PalletId,
-};
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
-use pallet_parachain_taking::{Round, RoundIndex, TotalSelected};
+use frame_support::pallet_prelude::*;
+use frame_system::pallet_prelude::*;
+use pallet_parachain_staking::{BalanceOf, Round, RoundIndex, TotalSelected};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -77,7 +69,7 @@ pub mod pallet {
 	impl<T: Config> pallet_parachain_staking::TransactionFeeRewardResource<BalanceOf<T>, RoundIndex>
 		for Pallet<T>
 	{
-		fn on_transaction_fee_reward_notify(amount: BalanceOf<T>) -> Result<(), &str> {
+		fn on_transaction_fee_reward_notify(amount: BalanceOf<T>) -> Result<(), &'static str> {
 			let round = <Round<T>>::get();
 			let cr = <RoundAccumulatedReward<T>>::take(round);
 			<RoundAccumulatedReward<T>>::insert(round, cr.saturating_add(amount));
