@@ -47,7 +47,7 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			let mut weight = T::DbWeight::get().reads_writes(2, 0);
 			let round =
 				<Round<T>>::get().current.saturating_sub(T::RewardPaymentRecordRound::get());
