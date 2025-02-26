@@ -36,10 +36,12 @@ chmod a+x litentry-collator
 PALLETS=
 case "$3" in
   '*')
+    echo "test 1"
     PALLETS=$(grep -F '[pallet_' runtime/$1/src/lib.rs | tr -d '\t' | grep -v "^ *//" | sed 's/.*\[//;s/,.*//' | paste -s -d' ' -)
     PALLETS="frame_system cumulus_pallet_xcmp_queue $PALLETS"
     ;;
   *)
+    echo "test 2"
     PALLETS=$(echo "$3" | tr ',' ' ')
     ;;
 esac
