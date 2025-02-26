@@ -21,9 +21,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_support::pallet_prelude::*;
+use frame_support::{pallet_prelude::*, sp_runtime::Saturating};
 use frame_system::pallet_prelude::*;
-use pallet_parachain_staking::{BalanceOf, Round, RoundIndex, TotalSelected};
+use pallet_parachain_staking::{BalanceOf, Round, RoundIndex};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -48,10 +48,11 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			let mut weight = T::DbWeight::get().reads_writes(2, 0);
-			let round = <Round<T>>::get().saturating_sub(T::RewardPaymentRecordRound::get());
+			let round =
+				<Round<T>>::get().current.saturating_sub(T::RewardPaymentRecordRound::get());
 			// Clean outdated storage
 			let reward_record = <RoundAccumulatedReward<T>>::get(round);
-			if reward_record > 0 {
+			if reward_record > Zero::zero() {
 				<RoundAccumulatedReward<T>>::remove(round);
 				weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
 			}
