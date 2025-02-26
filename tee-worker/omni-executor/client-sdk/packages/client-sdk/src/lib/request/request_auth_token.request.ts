@@ -1,16 +1,16 @@
 import type { ApiPromise } from '@polkadot/api';
-import type { LitentryIdentity, NativeCall, NativeCallResponse } from '@litentry/parachain-api';
-import type { JsonRpcRequest } from '../util/types';
+import { hexToU8a, assert, compactStripLength } from '@polkadot/util';
+import type { LitentryIdentity, NativeCallResponse } from '@litentry/parachain-api';
 
-import { hexToU8a, assert } from '@polkadot/util';
+import type { JsonRpcRequest } from '../util/types';
+import { createPayloadToSign } from '../util/create-payload-to-sign';
 import { createRequestType } from '../type-creators/request';
 import { AuthenticationData } from '../type-creators/authentication';
 import { createNativeCallType } from '../type-creators/native-call';
 import { enclave } from '../enclave';
-import { Index } from '@polkadot/types/interfaces';
 
 /**
- * Requests an authentication token from the omni.
+ * Requests an authentication token from the Enclave.
  *
  * @returns {Promise<Object>} A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {string} [payloadToSign] The payload to sign if the identity is not an email.
@@ -22,20 +22,20 @@ export async function requestAuthToken(
   /** Litentry Parachain API instance from Polkadot.js */
   api: ApiPromise,
   data: {
-    /** The user's omniAccount.  Use `createLitentryIdentityType` helper to create this struct */
+    /** The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct */
     omniAccount: LitentryIdentity;
     /** The user's account. Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
     /** The block number at which the token expires */
     expiresAt: number;
   },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean,
 ): Promise<{
+  payloadToSign?: string; // Only present if isWeb3Auth is true
   send: (args: { authentication: AuthenticationData }) => Promise<{
     token: string;
   }>;
-  call: NativeCall;
-  nonce: Index;
-  shard: `0x${string}`;
 }> {
   const { who, expiresAt, omniAccount } = data;
 
@@ -75,9 +75,11 @@ export async function requestAuthToken(
       params: [request.toHex()],
     };
 
-    const response = await enclave.send<string>(rpcRequest); // we expect 1 response only
+    const hexString = await enclave.send<string>(rpcRequest);
 
-    const result = api.createType('NativeCallResponse', hexToU8a(response)) as unknown as NativeCallResponse;
+    const [, data] = compactStripLength(hexToU8a(hexString));
+
+    const result = api.createType('NativeCallResponse', data) as unknown as NativeCallResponse;
 
     if (result.isErr) {
       throw new Error(result.asErr.toString());
@@ -87,10 +89,21 @@ export async function requestAuthToken(
       throw new Error('Unexpected response type');
     }
 
-    const token = result.asOk.asAuthToken.toHuman();
+    const token = result.asOk.asAuthToken.toString();
 
     return { token };
   };
 
-  return { send, call, nonce, shard };
+  if (isWeb3Auth) {
+    const payloadToSign = createPayloadToSign({
+      who,
+      call,
+      nonce,
+      shard: shardU8,
+    });
+
+    return { payloadToSign, send };
+  }
+
+  return { send };
 }

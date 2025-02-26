@@ -1,12 +1,12 @@
+import WebSocket from 'isomorphic-ws';
 import { TypeRegistry } from '@polkadot/types';
 import { Index } from '@polkadot/types/interfaces';
-import { hexStripPrefix, hexToU8a, u8aToString } from '@polkadot/util';
-import WebSocket from 'isomorphic-ws';
+import { compactStripLength, hexToU8a, u8aToString } from '@polkadot/util';
 import { ApiPromise, identity, LitentryIdentity, omniExecutor } from '@litentry/parachain-api';
 import { JsonRpcRequest } from './util/types';
-import { OMNI_ENDPOINT } from './config';
-import { getLastRegisteredEnclave } from './request/get-last-registered-enclave';
 import { u8aToBase64Url } from './util/u8aToBase64Url';
+import { getLastRegisteredEnclave } from './request/get-last-registered-enclave';
+import { OMNI_ENDPOINT } from './config';
 
 export interface OmniClientConfig {
   requestTimeout: number;
@@ -129,8 +129,8 @@ export class Enclave {
     });
 
     // Remove the hex prefix and SCALE prefix
-    const cleanHex = hexStripPrefix(hexString).slice(4);
-    const pubKey = u8aToString(hexToU8a(cleanHex));
+    const [, data] = compactStripLength(hexToU8a(hexString))
+    const pubKey = u8aToString(data);
     const pubKeyJSON = JSON.parse(pubKey);
 
     const jwkData = {
@@ -327,7 +327,6 @@ export class Enclave {
 
   // omni_getOAuth2GoogleAuthorizationUrl
   // omni_requestEmailVerificationCode
-  // native_getShieldingKey
   // native_submitPlainRequest
 }
 

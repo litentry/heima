@@ -1,10 +1,9 @@
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
+import { u8aToHex } from '@polkadot/util';
+import { identity, omniAccount, omniExecutor, sidechain } from '@litentry/parachain-api';
 import { requestAuthToken } from './request_auth_token.request';
 import { createLitentryIdentityType } from '../type-creators/litentry-identity';
-import { identity, omniAccount, omniExecutor, sidechain } from '@litentry/parachain-api';
-import { hexToU8a, u8aToHex } from '@polkadot/util';
-import { blake2AsHex } from '@polkadot/util-crypto';
 
 const types = {
   ...identity.types, // LitentryIdentity is defined here
@@ -13,15 +12,19 @@ const types = {
   ...sidechain.types, // AesOutput is defined here
 };
 
-describe('request_auth_token.request', () => {
-  it('request_auth_token', async () => {
-    const api = new ApiPromise({
+describe('request_auth_token', () => {
+  let api: ApiPromise;
+
+  beforeAll(async () => {
+    api = new ApiPromise({
       provider: new WsProvider('ws://localhost:9944'),
       types,
     });
 
     await api.isReady;
+  });
 
+  it('web3', async () => {
     const substrateAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
 
     const omniAccount = createLitentryIdentityType(api.registry, {
@@ -32,28 +35,21 @@ describe('request_auth_token.request', () => {
     const keyring = new Keyring({ type: 'sr25519' });
     const alice = keyring.addFromUri('//Alice');
     const who = createLitentryIdentityType(api.registry, {
-        addressOrHandle: alice.address,
-        type: 'Substrate',
+      addressOrHandle: alice.address,
+      type: 'Substrate',
     });
 
-    const { send, call, nonce, shard } = await requestAuthToken(
+    const { send, payloadToSign } = await requestAuthToken(
       api,
       {
         omniAccount,
         who,
         expiresAt: 99999999,
       },
+      true,
     );
-    
 
-    const payload = Buffer.concat([
-      call.toU8a(),
-      nonce.toU8a(),
-      hexToU8a(shard),
-    ]);
-
-    const signature = alice.sign(`Token: ${blake2AsHex(payload, 256)}`);
-    const signatureHex = u8aToHex(signature);
+    const signatureHex = u8aToHex(alice.sign(payloadToSign!));
 
     const result = await send({
       authentication: {
@@ -63,6 +59,6 @@ describe('request_auth_token.request', () => {
       },
     });
 
-    console.log('result', result);
+    expect(result.token.length).toBeGreaterThan(0);
   });
 });
