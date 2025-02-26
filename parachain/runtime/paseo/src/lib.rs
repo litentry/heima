@@ -501,7 +501,7 @@ pub struct ToAuthor;
 impl OnUnbalanced<Credit<AccountId, Balances>> for ToAuthor {
 	fn on_nonzero_unbalanced(credit: Credit<AccountId, Balances>) {
 		if let Some(author) = Authorship::author() {
-			let _ = Balances::resolve(&author, credit);
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(credit, &author);
 		}
 	}
 }
@@ -1073,6 +1073,11 @@ impl pallet_parachain_staking::Config for Runtime {
 	type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
 	type IssuanceAdapter = AssetsHandler;
 	type OnAllDelegationRemoved = ScoreStaking;
+	type RoundFeeRewardResource = ParachainStakingFeeReward;
+}
+
+impl pallet_parachain_staking_fee_reward::Config for Runtime {
+	type RewardPaymentRecordRound = ConstU32<3>;
 }
 
 parameter_types! {
@@ -1458,6 +1463,7 @@ construct_runtime! {
 		Aura: pallet_aura = 43,
 		AuraExt: cumulus_pallet_aura_ext = 44,
 		ParachainStaking: pallet_parachain_staking = 45,
+		ParachainStakingFeeReward: pallet_parachain_staking_fee_reward = 46,
 
 		// XCM helpers
 		XcmpQueue: cumulus_pallet_xcmp_queue = 50,

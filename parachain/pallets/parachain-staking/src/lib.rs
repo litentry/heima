@@ -206,6 +206,8 @@ pub mod pallet {
 		type IssuanceAdapter: IssuanceAdapter<BalanceOf<Self>>;
 		/// Handler to notify when all delegations are removed for a delegator.
 		type OnAllDelegationRemoved: OnAllDelegationRemoved<Self>;
+		/// Extra impl for transaction fee reward distributed through staking mechinism
+		type RoundFeeRewardResource: TransactionFeeRewardResource<BalanceOf<Self>, RoundIndex>;
 	}
 
 	#[pallet::error]
@@ -1389,7 +1391,11 @@ pub mod pallet {
 			}
 			let total_staked = <Staked<T>>::take(round_to_payout);
 			let total_issuance = Self::compute_issuance(total_staked);
-			let mut left_issuance = total_issuance;
+
+			// TransactionPayment distribution
+			let transaction_fee_reward = Self::RoundFeeRewardResource::query_round_fee_reward(now);
+
+			let mut left_issuance = total_issuance.saturating_add(transaction_fee_reward);
 			// reserve portion of issuance for parachain bond account
 			let bond_config = <ParachainBondInfo<T>>::get();
 			let parachain_bond_reserve = bond_config.percent * total_issuance;

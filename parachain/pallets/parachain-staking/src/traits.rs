@@ -60,3 +60,21 @@ impl<Balance: AtLeast32BitUnsigned> IssuanceAdapter<Balance> for () {
 pub trait OnAllDelegationRemoved<T: crate::Config> {
 	fn on_all_delegation_removed(delegator: &T::AccountId) -> Result<(), &str>;
 }
+
+pub trait TransactionFeeRewardResource<Balance, RoundIndex, Account> {
+	fn on_transaction_fee_reward_notify(amount: Balance, collator: Account) -> Result<(), &str>;
+
+	fn query_round_fee_reward(round: RoundIndex, collator: Account) -> Balance;
+}
+
+impl<Balance: AtLeast32BitUnsigned> TransactionFeeRewardResource<Balance, RoundIndex, Account>
+	for ()
+{
+	fn on_transaction_fee_reward_notify(amount: Balance, collator: Account) -> Result<(), &str> {
+		Ok(())
+	}
+
+	fn query_round_fee_reward(round: RoundIndex, collator: Account) -> Balance {
+		0u32.into()
+	}
+}
