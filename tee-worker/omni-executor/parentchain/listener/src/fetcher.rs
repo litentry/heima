@@ -25,31 +25,23 @@ use std::sync::Arc;
 
 /// Used for fetching data from parentchain
 pub struct Fetcher<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 > {
 	client_factory: Arc<RpcClientFactory>,
 	client: Option<RpcClient>,
-	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
 }
 
 impl<
-		AccountId,
 		Header,
-		RpcClient: SubstrateRpcClient<AccountId, Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
-	> Fetcher<AccountId, Header, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	> Fetcher<Header, RpcClient, RpcClientFactory>
 {
 	pub fn new(client_factory: Arc<RpcClientFactory>) -> Self {
-		Self {
-			client: None,
-			client_factory,
-			phantom_account_id: PhantomData,
-			phantom_header: PhantomData,
-		}
+		Self { client: None, client_factory, phantom_header: PhantomData }
 	}
 
 	async fn connect_if_needed(&mut self) {
@@ -64,11 +56,10 @@ impl<
 
 #[async_trait]
 impl<
-		AccountId: Sync + Send,
 		Header: Sync + Send,
-		RpcClient: SubstrateRpcClient<AccountId, Header> + Sync + Send,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Sync + Send,
-	> LastFinalizedBlockNumFetcher for Fetcher<AccountId, Header, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header> + Sync + Send,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Sync + Send,
+	> LastFinalizedBlockNumFetcher for Fetcher<Header, RpcClient, RpcClientFactory>
 {
 	async fn get_last_finalized_block_num(&mut self) -> Result<Option<u64>, ()> {
 		self.connect_if_needed().await;
@@ -84,11 +75,10 @@ impl<
 
 #[async_trait]
 impl<
-		AccountId: Sync + Send,
 		Header: Sync + Send,
-		RpcClient: SubstrateRpcClient<AccountId, Header> + Sync + Send,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Sync + Send,
-	> EventsFetcher<EventId, BlockEvent> for Fetcher<AccountId, Header, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header> + Sync + Send,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Sync + Send,
+	> EventsFetcher<EventId, BlockEvent> for Fetcher<Header, RpcClient, RpcClientFactory>
 {
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
 		self.connect_if_needed().await;

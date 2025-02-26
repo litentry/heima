@@ -1,26 +1,29 @@
+mod aes256_key_store;
+mod native_call_handlers;
+mod native_query_handlers;
 mod types;
+pub use aes256_key_store::Aes256KeyStore;
 
-use executor_core::native_call::NativeCall;
-use executor_crypto::jwt;
+use executor_core::native_operation::{NativeCall, NativeQuery};
+use executor_crypto::aes256::Aes256Key;
 use executor_primitives::OmniAccountAuthType;
-use executor_storage::{MemberOmniAccountStorage, Storage, StorageDB};
-use heima_authentication::auth_token::AuthTokenClaims;
+use executor_storage::StorageDB;
+use native_call_handlers::handle_native_call;
+use native_query_handlers::handle_native_query;
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
-	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory,
+	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
-use parity_scale_codec::Encode;
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
-use types::{NativeCallError, NativeCallOk};
+use types::{NativeOperationError, NativeOperationOk};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 
 pub type NativeTaskSender = mpsc::Sender<NativeTask>;
 
-type NativeCallResponse = Result<NativeCallOk, NativeCallError>;
+type NativeOperationResponse = Result<NativeOperationOk, NativeOperationError>;
 
 pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
@@ -31,46 +34,50 @@ pub type ParentchainTxSigner = TransactionSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
+pub enum NativeTaskOperation {
+	Call(NativeCall),
+	Query(NativeQuery),
+}
+
 pub struct NativeTask {
-	pub call: NativeCall,
+	pub operation: NativeTaskOperation,
 	pub auth_type: OmniAccountAuthType,
 	pub response_sender: ResponseSender,
 }
 
 pub struct TaskHandlerContext<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 > {
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_secret: String,
+	pub aes256_key: Aes256Key,
 	pub transaction_signer: Arc<ParentchainTxSigner>,
-	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
-		AccountId,
 		Header,
-		RpcClient: SubstrateRpcClient<AccountId, Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
-	> TaskHandlerContext<AccountId, Header, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	> TaskHandlerContext<Header, RpcClient, RpcClientFactory>
 {
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
 		storage_db: Arc<StorageDB>,
 		jwt_secret: String,
+		aes256_key: Aes256Key,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
 			transaction_signer,
 			storage_db,
 			jwt_secret,
-			phantom_account_id: PhantomData,
+			aes256_key,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -78,89 +85,39 @@ impl<
 }
 
 pub async fn run_native_task_handler<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	buffer: usize,
-	ctx: Arc<TaskHandlerContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
 ) -> NativeTaskSender {
 	let (sender, mut receiver) = mpsc::channel::<NativeTask>(buffer);
 
 	tokio::spawn(async move {
 		while let Some(task) = receiver.recv().await {
-			handle_native_call(ctx.clone(), task.call, task.response_sender).await;
+			handle_native_task(ctx.clone(), task).await;
 		}
 	});
 
 	sender
 }
 
-async fn handle_native_call<
-	AccountId: Send + Sync + 'static,
+async fn handle_native_task<
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	ctx: Arc<TaskHandlerContext<AccountId, Header, RpcClient, RpcClientFactory>>,
-	call: NativeCall,
-	response_sender: ResponseSender,
+	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
+	task: NativeTask,
 ) {
-	match call {
-		NativeCall::request_auth_token(sender_identity, auth_options) => {
-			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
-				let response = NativeCallResponse::Err(NativeCallError::UnauthorizedSender);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
-			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
-				let response = NativeCallResponse::Err(NativeCallError::AuthTokenCreationFailed);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let auth_token_requested_call = parentchain_api_interface::tx()
-				.omni_account()
-				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
-
-			let Ok(mut client) = ctx.parentchain_rpc_client_factory.new_client().await else {
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-
-			let signed_call = ctx.transaction_signer.sign(auth_token_requested_call).await;
-
-			if client.submit_tx(&signed_call).await.is_err() {
-				let response = NativeCallResponse::Err(NativeCallError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			}
-
-			let response = NativeCallResponse::Ok(NativeCallOk::AuthToken(token));
-
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+	match task.operation {
+		NativeTaskOperation::Call(native_call) => {
+			handle_native_call(ctx.clone(), native_call, task.auth_type, task.response_sender)
+				.await;
 		},
-		_ => {
-			let response = NativeCallResponse::Err(NativeCallError::UnexpectedCall(format!(
-				"Unexpected call: {:?}",
-				call
-			)));
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
+		NativeTaskOperation::Query(native_query) => {
+			handle_native_query(ctx.clone(), native_query, task.response_sender).await;
 		},
-	}
+	};
 }

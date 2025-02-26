@@ -6002,10 +6002,12 @@ dependencies = [
  "pallet-evm-precompile-dispatch",
  "pallet-evm-precompile-ed25519",
  "pallet-evm-precompile-modexp",
+ "pallet-evm-precompile-omni-bridge",
  "pallet-evm-precompile-parachain-staking",
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
+ "pallet-evm-precompile-vesting",
  "pallet-extrinsic-filter",
  "pallet-group",
  "pallet-identity",
@@ -8212,6 +8214,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm-precompile-omni-bridge"
+version = "0.1.0"
+dependencies = [
+ "core-primitives",
+ "derive_more 0.99.18",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-evm",
+ "pallet-omni-bridge",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-evm-precompile-parachain-staking"
 version = "0.1.0"
 dependencies = [
@@ -8300,6 +8326,29 @@ dependencies = [
  "fp-evm",
  "ripemd",
  "sp-io",
+]
+
+[[package]]
+name = "pallet-evm-precompile-vesting"
+version = "0.1.0"
+dependencies = [
+ "derive_more 0.99.18",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-evm",
+ "pallet-timestamp",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -9502,11 +9551,13 @@ dependencies = [
  "pallet-evm-precompile-guardian",
  "pallet-evm-precompile-investing-pool",
  "pallet-evm-precompile-modexp",
+ "pallet-evm-precompile-omni-bridge",
  "pallet-evm-precompile-parachain-staking",
  "pallet-evm-precompile-pool-proposal",
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
+ "pallet-evm-precompile-vesting",
  "pallet-extrinsic-filter",
  "pallet-group",
  "pallet-guardian",

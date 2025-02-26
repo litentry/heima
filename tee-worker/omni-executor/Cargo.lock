@@ -2935,6 +2935,7 @@ dependencies = [
  "hex",
  "log",
  "native-task-handler",
+ "parentchain-attestation",
  "parentchain-listener",
  "parentchain-rpc-client",
  "parentchain-signer",
@@ -3723,8 +3724,12 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
+ "executor-crypto",
+ "executor-primitives",
+ "executor-storage",
  "log",
  "oauth-providers",
+ "parity-scale-codec",
  "rand 0.8.5",
  "sendgrid",
  "serde",
@@ -5003,11 +5008,14 @@ dependencies = [
  "executor-primitives",
  "executor-storage",
  "heima-authentication",
+ "heima-identity-verification",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
+ "rand 0.8.5",
+ "subxt",
  "tokio",
 ]
 
@@ -5405,6 +5413,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "parentchain-attestation"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
+ "parentchain-signer",
+ "subxt-core",
+ "subxt-signer",
+]
+
+[[package]]
 name = "parentchain-listener"
 version = "0.1.0"
 dependencies = [
@@ -5435,8 +5456,10 @@ dependencies = [
  "env_logger",
  "executor-primitives",
  "log",
+ "parentchain-api-interface",
  "parity-scale-codec",
  "scale-encode 0.10.0",
+ "serde_json",
  "subxt",
  "subxt-core",
  "tokio",

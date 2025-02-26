@@ -1,9 +1,8 @@
 use crate::{storage_key, Storage};
-use executor_primitives::AccountId;
-use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
+use executor_primitives::{AccountId, MemberAccount};
 use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
 const STORAGE_NAME: &str = "account_store_storage";
 
@@ -16,6 +15,8 @@ impl AccountStoreStorage {
 		Self { db }
 	}
 }
+
+type AccountStore = Vec<MemberAccount>;
 
 impl Storage<AccountId, AccountStore> for AccountStoreStorage {
 	fn get(&self, account_id: &AccountId) -> Option<AccountStore> {

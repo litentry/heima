@@ -232,7 +232,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9230,
+	spec_version: 9233,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1053,9 +1053,9 @@ impl pallet_parachain_staking::Config for Runtime {
 	/// Minimum collators selected per round, default at genesis and minimum forever after
 	type MinSelectedCandidates = ConstU32<1>;
 	/// Maximum top delegations per candidate
-	type MaxTopDelegationsPerCandidate = ConstU32<1000>;
+	type MaxTopDelegationsPerCandidate = ConstU32<300>;
 	/// Maximum bottom delegations per candidate
-	type MaxBottomDelegationsPerCandidate = ConstU32<200>;
+	type MaxBottomDelegationsPerCandidate = ConstU32<100>;
 	/// Maximum delegations per delegator
 	type MaxDelegationsPerDelegator = ConstU32<100>;
 	type DefaultCollatorCommission = DefaultCollatorCommission;
@@ -1070,7 +1070,7 @@ impl pallet_parachain_staking::Config for Runtime {
 	type MinDelegatorStk = MinDelegatorStk;
 	type OnCollatorPayout = ();
 	type OnNewRound = ();
-	type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
+	type WeightInfo = ();
 	type IssuanceAdapter = AssetsHandler;
 	type OnAllDelegationRemoved = ScoreStaking;
 	type RoundFeeRewardResource = ParachainStakingFeeReward;
@@ -1563,7 +1563,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 		matches!(
 			call,
 			// Vesting::vest
-			RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
+			RuntimeCall::Vesting(_) |
 			// ChainBridge
 			RuntimeCall::ChainBridge(_) |
 			// Bounties

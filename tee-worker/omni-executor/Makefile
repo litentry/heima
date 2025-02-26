@@ -66,6 +66,10 @@ clean:
 distclean: clean
 	cargo clean
 
+.PHONY: clean-data
+clean-data:
+	$(RM) -rf $(OMNI_DIR)/local/log $(OMNI_DIR)/storage_db
+
 .PHONY: build-docker
 build-docker:
 	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
@@ -80,7 +84,7 @@ stop-local:
 
 .PHONY: get-metadata
 get-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets System,Balances,OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
 
 .PHONY: generate-api-interface
 generate-api-interface: get-metadata

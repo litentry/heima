@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { step } from 'mocha-steps';
 import {
+    sleep,
     signAndSend,
     describeLitentry,
     loadConfig,
@@ -10,8 +11,10 @@ import {
 } from '../common/utils';
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
+import precompileOmniBridgeContractAbi from '../common/abi/precompile/OmniBridge.json';
+import precompileVestingContractAbi from '../common/abi/precompile/Vesting.json';
 const BN = require('bn.js');
-import { evmToAddress } from '@polkadot/util-crypto';
+import { encodeAddress, evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
@@ -27,6 +30,8 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
     const precompileStakingContractAddress = '0x000000000000000000000000000000000000502d';
     const precompileBridgeContractAddress = '0x000000000000000000000000000000000000503d';
+    const precompileOmniBridgeContractAddress = '0x0000000000000000000000000000000000005055';
+    const precompileVestingContractAddress = '0x000000000000000000000000000000000000500b';
     const evmAccountRaw = {
         privateKey: '0x01ab6e801c06e59ca97a14fc0a1978b27fa366fc87450e0b65459dd3515b7391',
         address: '0xaaafB3972B05630fCceE866eC69CdADd9baC2771',
@@ -49,6 +54,16 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     const precompileBridgeContract = new ethers.Contract(
         precompileBridgeContractAddress,
         precompileBridgeContractAbi,
+        provider
+    );
+    const precompileOmniBridgeContract = new ethers.Contract(
+        precompileOmniBridgeContractAddress,
+        precompileOmniBridgeContractAbi,
+        provider
+    );
+    const precompileVestingContract = new ethers.Contract(
+        precompileVestingContractAddress,
+        precompileVestingContractAbi,
         provider
     );
 
@@ -143,8 +158,8 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
     });
 
-    step('Test precompile bridge contract', async function () {
-        console.time('Test precompile bridge contract');
+    step('Test precompile omni bridge contract', async function () {
+        console.time('Test precompile omni bridge contract');
 
         const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
@@ -156,49 +171,59 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             expect(parseInt(balance.free.toString())).to.gt(parseInt('10000000000000000'));
         }
 
-        const updateFeeTx = await sudoWrapperGC(
-            context.api,
-            context.api.tx.assetsHandler.setResource(destResourceId, {
-                fee: new BN('1000000000000000'), //0.001
-                asset: null,
-            })
+        // Set admin
+        const setAdminTx = await sudoWrapperGC(context.api, context.api.tx.omniBridge.setAdmin(context.alice.address));
+        await signAndSend(setAdminTx, context.alice);
+
+        // add_pay_in_pair
+        const updatePayInPairTx = context.api.tx.omniBridge.addPayInPair('Native', { Ethereum: 0 });
+        await signAndSend(updatePayInPairTx, context.alice);
+
+        // set_pay_in_fee
+        const updatePayInFeeTx = context.api.tx.omniBridge.setPayInFee(
+            'Native',
+            { Ethereum: 0 },
+            new BN('1000000000000000') //0.001
         );
-        await signAndSend(updateFeeTx, context.alice);
-
-        const AssetInfo = (await context.api.query.assetsHandler.resourceToAssetInfo(destResourceId)).toHuman() as any;
-
-        const bridge_fee = AssetInfo.fee;
-        expect(bridge_fee.toString().replace(/,/g, '')).to.eq(ethers.utils.parseUnits('0.001', 18).toString());
-        // set chainId to whitelist
-        const whitelistChainTx = await sudoWrapperGC(context.api, context.api.tx.chainBridge.whitelistChain(0));
-        await signAndSend(whitelistChainTx, context.alice);
+        await signAndSend(updatePayInFeeTx, context.alice);
 
         // The above two steps are necessary, otherwise the contract transaction will be reverted.
         // transfer native token
-        const transferNativeTx = precompileBridgeContract.interface.encodeFunctionData('transferAssets', [
+        const payInTx = precompileOmniBridgeContract.interface.encodeFunctionData('payIn', [
             ethers.utils.parseUnits('0.01', 18).toString(),
             0,
-            destResourceId,
+            true,
+            0x0000000000000000000000000000000000000000000000000000000000000000, // Does not matter since native = true, but make sure it does not overflow u128
             dest_address,
         ]);
 
-        await executeTransaction(transferNativeTx, precompileBridgeContractAddress, 'transferAssets');
-        const eventsPromise = subscribeToEvents('chainBridge', 'FungibleTransfer', context.api);
+        await executeTransaction(payInTx, precompileOmniBridgeContractAddress, 'payIn');
+        const eventsPromise = subscribeToEvents('omniBridge', 'PaidIn', context.api);
         const events = (await eventsPromise).map(({ event }) => event);
 
         expect(events.length).to.eq(1);
-        const event_data = events[0].toHuman().data! as Array<string>;
+        const event_data = events[0].toHuman().data! as {
+            sourceAccount: string;
+            nonce: number;
+            asset: string;
+            resourceId: string;
+            destChain: {
+                Ethereum: string;
+            };
+            destAccount: string;
+            amount: string;
+        };
+        console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
-        // FungibleTransfer(BridgeChainId, DepositNonce, ResourceId, u128, Vec<u8>)
-        expect(event_data[0]).to.eq('0');
-        expect(event_data[2]).to.eq(destResourceId);
+        // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
+        expect(event_data.destChain).to.deep.equal({ Ethereum: '0' });
+        expect(event_data.destAccount).to.eq(dest_address);
 
         // 0.01 - 0.001 = 0.009
         const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
-        expect(event_data[3].toString().replace(/,/g, '')).to.eq(expectedBalance.toString());
-        expect(event_data[4]).to.eq(dest_address);
+        expect(event_data.amount.replace(/,/g, '')).to.eq(expectedBalance.toString());
 
-        console.timeEnd('Test precompile bridge contract');
+        console.timeEnd('Test precompile omni bridge contract');
     });
 
     // To see full params types for the interfaces, check notion page: https://web3builders.notion.site/Parachain-Precompile-Contract-0c34929e5f16408084446dcf3dd36006
@@ -298,6 +323,53 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         expect(await isPendingRequest()).to.be.false;
 
         console.timeEnd('Test precompile staking contract');
+    });
+
+    step('Test precompile vesting contract', async function () {
+        console.time('Test precompile vesting contract');
+
+        let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
+        printBalance('initial balance', balance);
+
+        // top up LITs if insufficient amount for staking or they are not reserved (require: 50 LITs minimum)
+        // Add vesting balance
+        if (
+            parseInt(balance.free.toString()) < parseInt('60000000000000000000') &&
+            Number(balance.reserved.toString()) === 0
+        ) {
+            console.log('transferring more tokens');
+
+            await transferTokens(context.alice, evmAccountRaw);
+
+            balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
+            printBalance('balance after transferring', balance);
+        }
+
+        // Add an almost immediate-unlocked vesting
+        const targetBlock = parseInt((await context.api.query.system.number()).toString()) + 2;
+        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: targetBlock.toString()});
+        await signAndSend(vestedTransferTx, context.alice);
+
+        // Set timeout to 60 seconds (5 blocks on parachain)
+        sleep(60);
+
+        // Precompile vest
+        const vestTx = precompileVestingContract.interface.encodeFunctionData('vest', []);
+
+        await executeTransaction(vestTx, precompileVestingContractAddress, 'vest');
+        const eventsPromise = subscribeToEvents('vesting', 'VestingCompleted', context.api);
+        const events = (await eventsPromise).map(({ event }) => event);
+
+        expect(events.length).to.eq(1);
+        const event_data = events[0].toHuman().data! as {
+            account: string;
+        };
+        console.log(`Print Event data: ${JSON.stringify(event_data)}`);
+
+        // VestingCompleted Event
+        expect(encodeAddress(event_data.account, 42)).to.eq(evmToAddress(evmAccountRaw.address, 42));
+
+        console.timeEnd('Test precompile vesting contract');
     });
 
     step('Set ExtrinsicFilter mode to Normal', async function () {

@@ -12,6 +12,7 @@ export default {
         MrEnclave: "H256",
         NativeCall: {
             _enum: {
+                request_auth_token: "(LitentryIdentity, AuthOptions)",
                 request_intent: "(LitentryIdentity, Intent)",
                 create_account_store: "(LitentryIdentity)",
                 add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
@@ -20,8 +21,13 @@ export default {
                 set_permissions: "(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)",
             },
         },
-        NativeCallAuthenticated: {
-            call: "NativeCall",
+        NativeCallAuthenticatedOperation: {
+            operation: "NativeCall",
+            nonce: "Index",
+            authentication: "Authentication",
+        },
+        NativeQueryAuthenticatedOperation: {
+            operation: "NativeQuery",
             nonce: "Index",
             authentication: "Authentication",
         },
@@ -33,6 +39,11 @@ export default {
                 OAuth2: "(OAuth2Data)",
             },
         },
+        NativeQuery: {
+            _enum: {
+                get_account_store: "(LitentryIdentity)",
+            },
+        },
         OAuth2Data: {
             provider: "OAuth2Provider",
             code: "Text",
@@ -42,11 +53,22 @@ export default {
         OAuth2Provider: {
             _enum: ["Google"],
         },
-        NativeCallResponse: "Result<NativeCallOk, NativeCallError>",
-        NativeCallOk: {
+        NativeOperationResponse: "Result<NativeOperationOk, NativeOperationError>",
+        NativeOperationOk: {
             _enum: {
-                AuthToken: "(Text)",
-                ExtrinsicReport: "(XtReport)",
+                CallResponse: "CallResponse",
+                QueryResponse: "QueryResponse",
+            },
+        },
+        CallResponse: {
+            _enum: {
+                ExtrinsicReport: "XtReport",
+                AuthToken: "Text",
+            },
+        },
+        QueryResponse: {
+            _enum: {
+                AccountStore: "Vec<LitentryIdentity>",
             },
         },
         XtReport: {
@@ -59,36 +81,37 @@ export default {
             status: "TxStatus",
         },
         TxStatus: {
-            // Transaction is part of the future queue.
-            Future: "Null",
-            // Transaction is part of the ready queue.
-            Ready: "Null",
-            // The transaction has been broadcast to the given peers.
-            Broadcast: "Vec<Text>",
-            // Transaction has been included in block with given hash.
-            InBlock: "H256",
-            // The block this transaction was included in has been retracted.
-            Retracted: "H256",
-            // Maximum number of finality watchers has been reached,
-            // old watchers are being removed.
-            FinalityTimeout: "H256",
-            // Transaction has been finalized by a finality-gadget, e.g GRANDPA
-            Finalized: "H256",
-            // Transaction has been replaced in the pool, by another transaction
-            // that provides the same tags. (e.g. same (sender, nonce)).
-            Usurped: "H256",
-            // Transaction has been dropped from the pool because of the limit.
-            Dropped: "Null",
-            // Transaction is no longer valid in the current state.
-            Invalid: "Null",
-        },
-        NativeCallError: {
             _enum: {
-                UnexpectedCall: "(Text)",
+                // Transaction is part of the future queue.
+                Future: "Null",
+                // Transaction is part of the ready queue.
+                Ready: "Null",
+                // The transaction has been broadcast to the given peers.
+                Broadcast: "Vec<Text>",
+                // Transaction has been included in block with given hash.
+                InBlock: "H256",
+                // The block this transaction was included in has been retracted.
+                Retracted: "H256",
+                // Maximum number of finality watchers has been reached,
+                // old watchers are being removed.
+                FinalityTimeout: "H256",
+                // Transaction has been finalized by a finality-gadget, e.g GRANDPA
+                Finalized: "H256",
+                // Transaction has been replaced in the pool, by another transaction
+                // that provides the same tags. (e.g. same (sender, nonce)).
+                Usurped: "H256",
+                // Transaction has been dropped from the pool because of the limit.
+                Dropped: "Null",
+                // Transaction is no longer valid in the current state.
+                Invalid: "Null",
+            },
+        },
+        NativeOperationError: {
+            _enum: {
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
                 InternalError: "Null",
-                IInvalidMemberIdentity: "Null",
+                InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
             },
         },
