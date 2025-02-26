@@ -108,6 +108,7 @@ impl pallet_parachain_staking::Config for Test {
 	type WeightInfo = ();
 	type IssuanceAdapter = ();
 	type OnAllDelegationRemoved = ();
+	type RoundFeeRewardResource = ();
 }
 
 impl pallet_parachain_staking::OnAllDelegationRemoved<Test> for () {
