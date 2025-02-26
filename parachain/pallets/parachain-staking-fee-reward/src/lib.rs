@@ -55,22 +55,13 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-			let mut weight = T::DbWeight::get().reads_writes(1, 1); // Self::state()
-			let round = <Round<T>>::get();
+			let mut weight = T::DbWeight::get().reads_writes(2, 0);
+			let round = <Round<T>>::get().saturating_sub(T::RewardPaymentRecordRound::get());
 			// Clean outdated storage
-			let reward_record_length = <RoundAccumulatedReward<T>>::iter_prefix(
-				round.saturating_sub(T::RewardPaymentRecordRound::get()),
-			)
-			.collect::<Vec<_>>()
-			.len();
-			if reward_record_length > 0 {
-				let _ = <RoundAccumulatedReward<T>>::clear_prefix(
-					round,
-					Some(<TotalSelected<T>>::get()),
-					None,
-				);
-				weight =
-					weight.saturating_add(T::DbWeight::get().reads_writes(reward_record_length, 0));
+			let reward_record = <RoundAccumulatedReward<T>>::get(round);
+			if reward_record > 0 {
+				<RoundAccumulatedReward<T>>::remove(round);
+				weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
 			}
 			weight
 		}
@@ -80,35 +71,21 @@ pub mod pallet {
 	#[pallet::getter(fn round_accumulated_reward)]
 	/// Snapshot of round accumulated reward
 	/// Clean up after RewardPaymentDelay
-	pub type RoundAccumulatedReward<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		RoundIndex,
-		Twox64Concat,
-		T::AccountId,
-		BalanceOf<T>,
-		ValueQuery,
-	>;
+	pub type RoundAccumulatedReward<T: Config> =
+		StorageMap<_, Twox64Concat, RoundIndex, BalanceOf<T>, ValueQuery>;
 
-	impl<T: Config>
-		pallet_parachain_staking::TransactionFeeRewardResource<
-			BalanceOf<T>,
-			RoundIndex,
-			T::AccountId,
-		> for Pallet<T>
+	impl<T: Config> pallet_parachain_staking::TransactionFeeRewardResource<BalanceOf<T>, RoundIndex>
+		for Pallet<T>
 	{
-		fn on_transaction_fee_reward_notify(
-			amount: BalanceOf<T>,
-			collator: T::AccountId,
-		) -> Result<(), &str> {
+		fn on_transaction_fee_reward_notify(amount: BalanceOf<T>) -> Result<(), &str> {
 			let round = <Round<T>>::get();
-			let cr = <RoundAccumulatedReward<T>>::take(round, &collator);
-			<RoundAccumulatedReward<T>>::insert(round, collator, cr.saturating_add(amount));
+			let cr = <RoundAccumulatedReward<T>>::take(round);
+			<RoundAccumulatedReward<T>>::insert(round, cr.saturating_add(amount));
 			Ok(())
 		}
 
-		fn query_round_fee_reward(round: RoundIndex, collator: T::AccountId) -> BalanceOf<T> {
-			<RoundAccumulatedReward<T>>::get(round, collator)
+		fn query_round_fee_reward(round: RoundIndex) -> BalanceOf<T> {
+			<RoundAccumulatedReward<T>>::get(round)
 		}
 	}
 }

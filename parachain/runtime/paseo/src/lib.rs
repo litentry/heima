@@ -500,8 +500,9 @@ parameter_types! {
 pub struct ToAuthor;
 impl OnUnbalanced<Credit<AccountId, Balances>> for ToAuthor {
 	fn on_nonzero_unbalanced(credit: Credit<AccountId, Balances>) {
-		if let Some(author) = Authorship::author() {
-			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(credit, &author);
+		if let Some(_author) = Authorship::author() {
+			// Aurthor does not matter, parachain staking will distribute accordingly
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(credit);
 		}
 	}
 }

@@ -1393,7 +1393,7 @@ pub mod pallet {
 			let total_issuance = Self::compute_issuance(total_staked);
 
 			// TransactionPayment distribution
-			let transaction_fee_reward = Self::RoundFeeRewardResource::query_round_fee_reward(now);
+			let transaction_fee_reward = T::RoundFeeRewardResource::query_round_fee_reward(now);
 
 			let mut left_issuance = total_issuance.saturating_add(transaction_fee_reward);
 			// reserve portion of issuance for parachain bond account
