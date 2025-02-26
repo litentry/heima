@@ -8792,6 +8792,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-parachain-staking-fee-reward"
+version = "0.1.0"
+dependencies = [
+ "core-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "pallet-parachain-staking",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-parameters"
 version = "0.8.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2407#826bb49da6104daabff9cecd139efa9a74cfc8c2"
