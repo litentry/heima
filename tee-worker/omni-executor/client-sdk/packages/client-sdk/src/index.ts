@@ -1,6 +1,6 @@
-import '@litentry/sidechain-api';
+import '@litentry/parachain-api';
 
-export { OmniClient, OmniClientConfig, ConnectionState, type ConnectionListener } from './lib/omni-client';
+export { OmniClient, OmniClientConfig, ConnectionState, type ConnectionListener } from './lib/enclave';
 
 // type creators
 export * from './lib/type-creators/key-aes-output';

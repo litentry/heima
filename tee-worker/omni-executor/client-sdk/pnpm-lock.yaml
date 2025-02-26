@@ -153,13 +153,22 @@ importers:
       '@polkadot/util-crypto':
         specifier: ^13.2.3
         version: 13.2.3(@polkadot/util@13.2.3)
+      isomorphic-ws:
+        specifier: ^5.0.0
+        version: 5.0.0(ws@8.18.0)
       tslib:
         specifier: ^2.5.3
         version: 2.8.1
+      ws:
+        specifier: ^8.18.0
+        version: 8.18.0
     devDependencies:
       '@polkadot/rpc-provider':
         specifier: ^15.0.1
         version: 15.0.2
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.5.13
 
 packages:
 
@@ -5947,6 +5956,14 @@ packages:
   /isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
     dev: true
+
+  /isomorphic-ws@5.0.0(ws@8.18.0):
+    resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
+    peerDependencies:
+      ws: '*'
+    dependencies:
+      ws: 8.18.0
+    dev: false
 
   /isstream@0.1.2:
     resolution: {integrity: sha512-Yljz7ffyPbrLpLngrMtZ7NduUgVvi6wG9RJ9IUcyCd59YQ911PBJphODUcbOVbqYfxe1wuYf/LJ8PauMRwsM/g==}

@@ -16,3 +16,8 @@ export type JsonRpcResponse = {
   id: number | string;
   result: string;
 };
+
+/**
+ * Substrate SS58 address, Substrate public key or EVM address
+ */
+export type SubstrateOrEvmOrBtcAddress = string | `0x${string}`;

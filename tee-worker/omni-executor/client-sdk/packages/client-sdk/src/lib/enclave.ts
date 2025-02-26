@@ -1,6 +1,12 @@
-import { TypeRegistry, U8aFixed } from '@polkadot/types';
-import { identity, MrEnclave, omniExecutor } from '@litentry/parachain-api';
+import { TypeRegistry } from '@polkadot/types';
+import { Index } from '@polkadot/types/interfaces';
+import { hexStripPrefix, hexToU8a, u8aToString } from '@polkadot/util';
+import WebSocket from 'isomorphic-ws';
+import { ApiPromise, identity, LitentryIdentity, omniExecutor } from '@litentry/parachain-api';
 import { JsonRpcRequest } from './util/types';
+import { OMNI_ENDPOINT } from './config';
+import { getLastRegisteredEnclave } from './request/get-last-registered-enclave';
+import { u8aToBase64Url } from './util/u8aToBase64Url';
 
 export interface OmniClientConfig {
   requestTimeout: number;
@@ -13,8 +19,6 @@ export enum ConnectionState {
   Disconnecting = 'disconnecting',
 }
 
-export type ConnectionListener = (state: ConnectionState) => void;
-
 const types = {
   ...identity.types,
   ...omniExecutor.types,
@@ -22,11 +26,10 @@ const types = {
 const registry = new TypeRegistry();
 registry.register(types);
 
-export class OmniClient {
+export class Enclave {
   readonly #config: OmniClientConfig;
   readonly #MAX_ID = Number.MAX_SAFE_INTEGER;
   readonly #endpoint: string | null = null;
-  readonly #connectionListeners: Set<ConnectionListener> = new Set();
   readonly #pendingRequests: Map<
     number,
     {
@@ -39,7 +42,17 @@ export class OmniClient {
   #connectionPromise: Promise<void> | null = null;
   #currentState: ConnectionState = ConnectionState.Disconnected;
   #messageId: number = 1;
-  #mrEnclave: MrEnclave | null = null;
+  #shard: `0x${string}` | null = null;
+  #shieldingKey: CryptoKey | null = null;
+
+  static #instance: Enclave | null = null;
+
+  static getInstance() {
+    if (!Enclave.#instance) {
+      Enclave.#instance = new Enclave(OMNI_ENDPOINT);
+    }
+    return Enclave.#instance;
+  }
 
   /**
    * Creates a new Omni client instance
@@ -62,25 +75,98 @@ export class OmniClient {
     return this.#currentState;
   }
 
-  /**
-   * Registers a connection state change listener
-   * @param listener Callback function to be called on state changes
-   * @returns Function to unregister the listener
-   */
-  onConnectionStateChange(listener: ConnectionListener): () => void {
-    this.#connectionListeners.add(listener);
-    return () => this.#connectionListeners.delete(listener);
+  async getNonce(
+    /** Litentry Parachain API instance from Polkadot.js */
+    api: ApiPromise,
+    /** The user's omniAccount.  Use `createLitentryIdentityType` helper to create this struct */
+    omniAccount: LitentryIdentity,
+  ): Promise<Index> {
+    return await api.rpc.system.accountNextIndex(omniAccount.asSubstrate.toHex());
   }
 
-  async getMrEnclave(): Promise<MrEnclave> {
-    if (this.#mrEnclave) {
-      return this.#mrEnclave;
+  /**
+   * Retrieve the Enclave's Shard from the Parachain.
+   *
+   * The Enclave registry contains the information of the registered TEE workers. These TEE Workers share the
+   * same Enclave's Shard value.
+   *
+   * @see Test it by yourself https://polkadot.js.org/apps/?rpc=wss://tee-dev.litentry.io#/chainstate
+   */
+  async getShard(api: ApiPromise): Promise<`0x${string}`> {
+    if (this.#shard) {
+      return this.#shard;
     }
 
-    // TODO: get mrEnclave from the omni worker
-    const mrEnclave = new Uint8Array(32).fill(0);
-    this.#mrEnclave = registry.createType<U8aFixed>('MrEnclave', mrEnclave) as unknown as MrEnclave;
-    return this.#mrEnclave;
+    const { account, enclave } = await getLastRegisteredEnclave(api);
+
+    const firstTEEWorkerJson = {
+      pubkey: account.toHuman(), // SS58 formatted (address)
+      timestamp: enclave.lastSeenTimestamp.toNumber(), // e.g., 1674819846045
+      mrEnclave: enclave.mrenclave.toHex(), // same as shard
+      sgxMode: enclave.sgxBuildMode.toHuman(),
+    };
+
+    console.trace(
+      `[omni-sdk] Reading TEE Shielding Key from TEE Worker ${
+        firstTEEWorkerJson.pubkey
+      }. Timestamp ${new Date(firstTEEWorkerJson.timestamp)}`,
+    );
+
+    this.#shard = firstTEEWorkerJson.mrEnclave;
+
+    return this.#shard;
+  }
+
+  async getShieldingKey(): Promise<CryptoKey> {
+    if (this.#shieldingKey) {
+      return this.#shieldingKey;
+    }
+
+    const hexString = await this.send<string>({
+      jsonrpc: '2.0',
+      method: 'native_getShieldingKey',
+      params: [],
+    });
+
+    // Remove the hex prefix and SCALE prefix
+    const cleanHex = hexStripPrefix(hexString).slice(4);
+    const pubKey = u8aToString(hexToU8a(cleanHex));
+    const pubKeyJSON = JSON.parse(pubKey);
+
+    const jwkData = {
+      alg: 'RSA-OAEP-256',
+      kty: 'RSA',
+      use: 'enc',
+      n: u8aToBase64Url(new Uint8Array([...pubKeyJSON.n].reverse())),
+      e: u8aToBase64Url(new Uint8Array([...pubKeyJSON.e].reverse())),
+    };
+
+    this.#shieldingKey = await globalThis.crypto.subtle.importKey(
+      'jwk',
+      jwkData,
+      {
+        name: 'RSA-OAEP',
+        hash: 'SHA-256',
+      },
+      false,
+      ['encrypt'],
+    );
+
+    return this.#shieldingKey;
+  }
+
+  async encrypt(cleartext: Uint8Array): Promise<{ ciphertext: Uint8Array }> {
+    const key = await this.getShieldingKey();
+
+    const encrypted = await globalThis.crypto.subtle.encrypt(
+      {
+        name: 'RSA-OAEP',
+      },
+      key,
+      cleartext,
+    );
+
+    return { ciphertext: new Uint8Array(encrypted) };
   }
 
   /**
@@ -93,7 +179,7 @@ export class OmniClient {
     await this.#ensureConnection();
 
     if (!this.#ws) {
-      return Promise.reject(new Error('WebSocket connection failed'));
+      return Promise.reject(new Error('[omni-sdk] WebSocket connection failed'));
     }
 
     const id = this.#getNextId();
@@ -102,7 +188,7 @@ export class OmniClient {
     return new Promise<T>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
-        reject(new Error(`Request timeout: ${id}`));
+        reject(new Error(`[omni-sdk] Request timeout: ${id}`));
       }, options?.timeout ?? this.#config.requestTimeout);
 
       this.#pendingRequests.set(id, {
@@ -117,7 +203,7 @@ export class OmniClient {
       });
 
       try {
-        console.trace('sending request', request);
+        console.trace('[omni-sdk] sending request', request);
         this.#ws!.send(JSON.stringify(request));
       } catch (err) {
         clearTimeout(timeoutId);
@@ -142,12 +228,11 @@ export class OmniClient {
   }
 
   /**
-   * Updates the connection state and notifies all listeners
+   * Updates the connection state
    * @param state New connection state to set
    */
   #setState(state: ConnectionState) {
     this.#currentState = state;
-    this.#connectionListeners.forEach((listener) => listener(state));
   }
 
   /**
@@ -165,7 +250,7 @@ export class OmniClient {
     }
 
     if (!this.#endpoint) {
-      return Promise.reject(new Error('WebSocket endpoint is not set'));
+      return Promise.reject(new Error('[omni-sdk] WebSocket endpoint is not set'));
     }
 
     this.#setState(ConnectionState.Connecting);
@@ -185,27 +270,28 @@ export class OmniClient {
           reject(err);
         });
 
-        this.#ws.addEventListener('close', (e: CloseEvent) => {
+        this.#ws.addEventListener('close', (e) => {
           this.#ws = null;
           this.#connectionPromise = null;
           this.#setState(ConnectionState.Disconnected);
           for (const [id, { reject }] of this.#pendingRequests) {
-            reject(new Error(`WebSocket connection closed - please retry the request: ${id}, event: ${e}`));
+            reject(new Error(`[omni-sdk] WebSocket connection closed - please retry the request: ${id}, event: ${e}`));
           }
           this.#pendingRequests.clear();
         });
 
-        this.#ws.addEventListener('message', (event) => {
+        this.#ws.addEventListener('message', (event: any) => {
           try {
             const response = JSON.parse(event.data);
+            console.trace('[omni-sdk] received response', response);
             if (typeof response.id !== 'number') {
-              console.error('Invalid response id:', response);
+              console.error('[omni-sdk] Invalid response id:', response);
               return;
             }
 
             const pendingRequest = this.#pendingRequests.get(response.id);
             if (!pendingRequest) {
-              console.error('No pending request found for id:', response.id);
+              console.error('[omni-sdk] No pending request found for id:', response.id);
               return;
             }
 
@@ -216,7 +302,7 @@ export class OmniClient {
               pendingRequest.resolve(response.result);
             }
           } catch (err) {
-            console.error('Failed to process message:', err);
+            console.error('[omni-sdk] Failed to process message:', err);
           }
         });
       } catch (err) {
@@ -242,6 +328,7 @@ export class OmniClient {
   // omni_getOAuth2GoogleAuthorizationUrl
   // omni_requestEmailVerificationCode
   // native_getShieldingKey
-  // native_submitAesRequest
   // native_submitPlainRequest
 }
+
+export const enclave = Enclave.getInstance();
