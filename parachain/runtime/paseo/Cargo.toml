@@ -97,6 +97,7 @@ pallet-omni-account = { workspace = true }
 pallet-omni-account-runtime-api = { workspace = true }
 pallet-omni-bridge = { workspace = true }
 pallet-parachain-staking = { workspace = true }
+pallet-parachain-staking-fee-reward = { workspace = true }
 pallet-score-staking = { workspace = true }
 pallet-teebag = { workspace = true }
 pallet-vc-management = { workspace = true }
@@ -191,6 +192,7 @@ runtime-benchmarks = [
     "pallet-multisig/runtime-benchmarks",
     "pallet-omni-account/runtime-benchmarks",
     "pallet-parachain-staking/runtime-benchmarks",
+    "pallet-parachain-staking-fee-reward/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
     "pallet-proxy/runtime-benchmarks",
     "pallet-referenda/runtime-benchmarks",
@@ -293,6 +295,7 @@ std = [
     "pallet-omni-account-runtime-api/std",
     "pallet-omni-account/std",
     "pallet-parachain-staking/std",
+    "pallet-parachain-staking-fee-reward/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
     "pallet-referenda/std",
@@ -389,6 +392,7 @@ try-runtime = [
     "pallet-multisig/try-runtime",
     "pallet-omni-account/try-runtime",
     "pallet-parachain-staking/try-runtime",
+    "pallet-parachain-staking-fee-reward/try-runtime",
     "pallet-preimage/try-runtime",
     "pallet-proxy/try-runtime",
     "pallet-referenda/try-runtime",
