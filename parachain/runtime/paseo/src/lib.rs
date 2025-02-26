@@ -79,6 +79,7 @@ pub use core_primitives::{
 };
 use pallet_ethereum::{Call::transact, PostLogContent, TransactionStatus};
 use pallet_evm::{FeeCalculator, GasWeightMapping, Runner};
+use pallet_parachain_staking::TransactionFeeRewardResource;
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 use pallet_treasury::TreasuryAccountId;
 use runtime_common::{
