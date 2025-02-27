@@ -119,7 +119,7 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db, transaction_signer).await.unwrap();
+			listen_to_parentchain(args, storage_db).await.unwrap();
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
@@ -141,27 +141,18 @@ async fn main() -> Result<(), ()> {
 async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
-	parentchain_tx_signer: Arc<ParentchainTxSigner>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
-	let ethereum_intent_executor =
-		EthereumIntentExecutor::new(&args.ethereum_url).map_err(|e| log::error!("{:?}", e))?;
-	let solana_intent_executor =
-		SolanaIntentExecutor::new(args.solana_url).map_err(|e| log::error!("{:?}", e))?;
 
-	let mut parentchain_listener =
-		parentchain_listener::create_listener::<EthereumIntentExecutor, SolanaIntentExecutor>(
-			"litentry_rococo",
-			Handle::current(),
-			&args.parentchain_url,
-			ethereum_intent_executor,
-			solana_intent_executor,
-			sub_stop_receiver,
-			storage_db,
-			parentchain_tx_signer,
-			&args.log_path,
-		)
-		.await?;
+	let mut parentchain_listener = parentchain_listener::create_listener(
+		"litentry_rococo",
+		Handle::current(),
+		&args.parentchain_url,
+		sub_stop_receiver,
+		storage_db,
+		&args.log_path,
+	)
+	.await?;
 
 	Ok(thread::Builder::new()
 		.name("litentry_rococo_sync".to_string())

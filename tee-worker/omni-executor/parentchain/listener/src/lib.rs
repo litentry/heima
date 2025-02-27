@@ -22,39 +22,23 @@ mod sync_checkpoint;
 use crate::event_handler::EventHandler;
 use crate::fetcher::Fetcher;
 use crate::listener::ParentchainListener;
-use executor_core::intent_executor::IntentExecutor;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
 use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
 use parentchain_rpc_client::{
 	metadata::SubxtMetadataProvider, CustomConfig, SubxtClient, SubxtClientFactory,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use std::sync::Arc;
-use subxt_core::Metadata;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
 
-type ParentchainTxSigner = TransactionSigner<
-	SubstrateKeyStore,
-	SubxtClient<CustomConfig>,
-	SubxtClientFactory<CustomConfig>,
-	CustomConfig,
-	Metadata,
-	SubxtMetadataProvider<CustomConfig>,
->;
-
 /// Creates parentchain listener
-#[allow(clippy::too_many_arguments)]
-pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
+pub async fn create_listener(
 	id: &str,
 	handle: Handle,
 	ws_rpc_endpoint: &str,
-	ethereum_intent_executor: EthereumIntentExecutor,
-	solana_intent_executor: SolanaIntentExecutor,
 	stop_signal: Receiver<()>,
 	storage_db: Arc<StorageDB>,
-	transaction_signer: Arc<ParentchainTxSigner>,
 	log_path: &str,
 ) -> Result<
 	ParentchainListener<
@@ -62,17 +46,11 @@ pub async fn create_listener<EthereumIntentExecutor, SolanaIntentExecutor>(
 		SubxtClientFactory<CustomConfig>,
 		FileCheckpointRepository,
 		CustomConfig,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
 		AccountStoreStorage,
 		MemberOmniAccountStorage,
 	>,
 	(),
->
-where
-	EthereumIntentExecutor: IntentExecutor + Send + Sync,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync,
-{
+> {
 	let client_factory: Arc<SubxtClientFactory<CustomConfig>> =
 		Arc::new(SubxtClientFactory::new(ws_rpc_endpoint));
 
@@ -85,15 +63,8 @@ where
 	let account_store_storage = Arc::new(AccountStoreStorage::new(storage_db.clone()));
 	let member_account_storage = Arc::new(MemberOmniAccountStorage::new(storage_db.clone()));
 
-	let event_handler = EventHandler::new(
-		metadata_provider,
-		ethereum_intent_executor,
-		solana_intent_executor,
-		SubxtClientFactory::new(ws_rpc_endpoint),
-		transaction_signer,
-		account_store_storage,
-		member_account_storage,
-	);
+	let event_handler =
+		EventHandler::new(metadata_provider, account_store_storage, member_account_storage);
 
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
 }
