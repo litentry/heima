@@ -11,8 +11,8 @@ hex = { workspace = true }
 log = { workspace = true }
 scale-encode = { workspace = true }
 serde_json = { workspace = true }
-url = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
+url = { workspace = true }
 
 # Local dependencies
 ethereum-intent-executor = { workspace = true }
