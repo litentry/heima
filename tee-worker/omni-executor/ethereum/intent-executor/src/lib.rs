@@ -101,7 +101,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 pub mod test {
 	use alloy::hex;
 	use alloy::hex::FromHex;
-	use alloy::network::{EthereumWallet, NetworkWallet, TransactionBuilder};
+	use alloy::network::{EthereumWallet, TransactionBuilder};
 	use alloy::primitives::Address;
 	use alloy::providers::{Provider, ProviderBuilder, WalletProvider};
 	use alloy::rpc::types::{TransactionInput, TransactionRequest};
@@ -145,7 +145,6 @@ pub mod test {
 			})
 			.map_err(|e| {
 				std::println!("Could not get transaction receipt: {:?}", e);
-				()
 			})
 			.unwrap();
 

@@ -21,8 +21,13 @@ export default {
                 set_permissions: "(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)",
             },
         },
-        NativeCallAuthenticated: {
-            call: "NativeCall",
+        NativeCallAuthenticatedOperation: {
+            operation: "NativeCall",
+            nonce: "Index",
+            authentication: "Authentication",
+        },
+        NativeQueryAuthenticatedOperation: {
+            operation: "NativeQuery",
             nonce: "Index",
             authentication: "Authentication",
         },
@@ -34,6 +39,11 @@ export default {
                 OAuth2: "(OAuth2Data)",
             },
         },
+        NativeQuery: {
+            _enum: {
+                get_account_store: "(LitentryIdentity)",
+            },
+        },
         OAuth2Data: {
             provider: "OAuth2Provider",
             code: "Text",
@@ -43,11 +53,22 @@ export default {
         OAuth2Provider: {
             _enum: ["Google"],
         },
-        NativeCallResponse: "Result<NativeCallOk, NativeCallError>",
-        NativeCallOk: {
+        NativeOperationResponse: "Result<NativeOperationOk, NativeOperationError>",
+        NativeOperationOk: {
+            _enum: {
+                CallResponse: "CallResponse",
+                QueryResponse: "QueryResponse",
+            },
+        },
+        CallResponse: {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
+            },
+        },
+        QueryResponse: {
+            _enum: {
+                AccountStore: "Vec<LitentryIdentity>",
             },
         },
         XtReport: {
@@ -85,9 +106,8 @@ export default {
                 Invalid: "Null",
             },
         },
-        NativeCallError: {
+        NativeOperationError: {
             _enum: {
-                UnexpectedCall: "(Text)",
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
                 InternalError: "Null",
