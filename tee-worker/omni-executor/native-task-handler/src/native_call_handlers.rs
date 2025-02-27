@@ -2,7 +2,7 @@ use crate::{
 	types::{CallResponse, NativeOperationError},
 	NativeOperationResponse, ResponseSender, TaskHandlerContext,
 };
-use executor_core::native_operation::NativeCall;
+use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{intent::Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
@@ -22,8 +22,18 @@ pub async fn handle_native_call<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<
+		TaskHandlerContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+		>,
+	>,
 	call: NativeCall,
 	auth_type: OmniAccountAuthType,
 	response_sender: ResponseSender,
