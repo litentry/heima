@@ -32,7 +32,7 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
+		fungible::{self, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
 		tokens::imbalance::ResolveTo,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
