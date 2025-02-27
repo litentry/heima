@@ -1,0 +1,9 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "entryPoints": ["./src/index.ts"],
+  "disableGit": true,
+  "sourceLinkTemplate": "https://github.com/litentry/heima/blob/dev/{path}#L{line}",
+  "readme": "none",
+  "out": "docs"
+}

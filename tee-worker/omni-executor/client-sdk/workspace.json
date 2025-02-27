@@ -1,0 +1,8 @@
+{
+    "$schema": "./node_modules/nx/schemas/workspace-schema.json",
+    "version": 2,
+    "projects": {
+        "chaindata": "packages/chaindata",
+        "client-sdk": "packages/client-sdk"
+    }
+}

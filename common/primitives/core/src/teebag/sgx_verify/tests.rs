@@ -4,6 +4,7 @@ use super::{
     collateral::{EnclaveIdentitySigned, TcbInfoSigned},
     *,
 };
+use crate::{MrEnclave, QeAuthenticationData, QeCertificationData, SgxBuildMode};
 use frame_support::assert_err;
 use hex_literal::hex;
 use parity_scale_codec::Decode;

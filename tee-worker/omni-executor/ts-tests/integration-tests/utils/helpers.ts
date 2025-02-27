@@ -20,3 +20,9 @@ export async function fundAccount(api: ApiPromise, account: string, amount: bigi
             .catch(reject);
     });
 }
+
+export function sleep(secs: number) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, secs * 1000);
+    });
+}

@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { step } from 'mocha-steps';
 import {
+    sleep,
     signAndSend,
     describeLitentry,
     loadConfig,
@@ -11,8 +12,9 @@ import {
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
 import precompileOmniBridgeContractAbi from '../common/abi/precompile/OmniBridge.json';
+import precompileVestingContractAbi from '../common/abi/precompile/Vesting.json';
 const BN = require('bn.js');
-import { evmToAddress } from '@polkadot/util-crypto';
+import { encodeAddress, evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
@@ -29,6 +31,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     const precompileStakingContractAddress = '0x000000000000000000000000000000000000502d';
     const precompileBridgeContractAddress = '0x000000000000000000000000000000000000503d';
     const precompileOmniBridgeContractAddress = '0x0000000000000000000000000000000000005055';
+    const precompileVestingContractAddress = '0x000000000000000000000000000000000000500b';
     const evmAccountRaw = {
         privateKey: '0x01ab6e801c06e59ca97a14fc0a1978b27fa366fc87450e0b65459dd3515b7391',
         address: '0xaaafB3972B05630fCceE866eC69CdADd9baC2771',
@@ -56,6 +59,11 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     const precompileOmniBridgeContract = new ethers.Contract(
         precompileOmniBridgeContractAddress,
         precompileOmniBridgeContractAbi,
+        provider
+    );
+    const precompileVestingContract = new ethers.Contract(
+        precompileVestingContractAddress,
+        precompileVestingContractAbi,
         provider
     );
 
@@ -89,7 +97,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         let aliceMappedSustrateAccount = evmToAddress(aliceEVMMappedAccount, 31);
 
-        console.log('transfer from Alice to alice EMV');
+        console.log('transfer from Alice to alice EVM');
 
         // Deposit money into substrate account's truncated EVM address's mapping substrate account
         const tx_init = context.api.tx.balances.transferKeepAlive(
@@ -315,6 +323,57 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         expect(await isPendingRequest()).to.be.false;
 
         console.timeEnd('Test precompile staking contract');
+    });
+
+    step('Test precompile vesting contract', async function () {
+        console.time('Test precompile vesting contract');
+
+        let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
+        printBalance('initial balance', balance);
+
+        // top up LITs if insufficient amount for staking or they are not reserved (require: 50 LITs minimum)
+        // Add vesting balance
+        if (
+            parseInt(balance.free.toString()) < parseInt('60000000000000000000') &&
+            Number(balance.reserved.toString()) === 0
+        ) {
+            console.log('transferring more tokens');
+
+            await transferTokens(context.alice, evmAccountRaw);
+
+            balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
+            printBalance('balance after transferring', balance);
+        }
+
+        // Add an almost immediate-unlocked vesting
+        const targetBlock = parseInt((await context.api.query.system.number()).toString()) + 2;
+        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, {
+            locked: '60000000000000000000',
+            perBlock: '60000000000000000000',
+            startingBlock: targetBlock.toString(),
+        });
+        await signAndSend(vestedTransferTx, context.alice);
+
+        // Set timeout to 60 seconds (5 blocks on parachain)
+        sleep(60);
+
+        // Precompile vest
+        const vestTx = precompileVestingContract.interface.encodeFunctionData('vest', []);
+
+        await executeTransaction(vestTx, precompileVestingContractAddress, 'vest');
+        const eventsPromise = subscribeToEvents('vesting', 'VestingCompleted', context.api);
+        const events = (await eventsPromise).map(({ event }) => event);
+
+        expect(events.length).to.eq(1);
+        const event_data = events[0].toHuman().data! as {
+            account: string;
+        };
+        console.log(`Print Event data: ${JSON.stringify(event_data)}`);
+
+        // VestingCompleted Event
+        expect(encodeAddress(event_data.account, 42)).to.eq(evmToAddress(evmAccountRaw.address, 42));
+
+        console.timeEnd('Test precompile vesting contract');
     });
 
     step('Set ExtrinsicFilter mode to Normal', async function () {
