@@ -9,8 +9,10 @@ use executor_storage::{MemberOmniAccountStorage, Storage};
 use heima_authentication::auth_token::AuthTokenClaims;
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
-	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::Call as OmniAccountCall, paseo_parachain_runtime::RuntimeCall,
+	frame_system::pallet::Call as SystemCall,
+	pallet_balances::pallet::Call as BalancesCall,
+	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentExecutionResult},
+	paseo_parachain_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
 	AccountId32, SubstrateRpcClient, SubstrateRpcClientFactory, ToSubxtType, XtStatus,
@@ -90,6 +92,36 @@ pub async fn handle_native_call<
 			return;
 		},
 		NativeCall::request_intent(sender_identity, intent) => {
+			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let request_intent_call =
+				OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
+			let dispatch_as_omni_account_call =
+				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(request_intent_call),
+					auth_type.to_subxt_type(),
+				);
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
+			if rpc_client.submit_tx(&tx).await.is_err() {
+				log::error!("Failed to submit request_intent tx");
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			}
+
+			let mut execution_result = IntentExecutionResult::Success;
+
 			let tx = match intent {
 				Intent::SystemRemark(remark) => {
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
@@ -114,20 +146,34 @@ pub async fn handle_native_call<
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
-				Intent::CallEthereum(_)
-				| Intent::TransferEthereum(_)
-				| Intent::TransferSolana(_) => {
-					let request_intent_call =
-						OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
-					let dispatch_as_omni_account_call =
-						parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-							sender_identity.hash().to_subxt_type(),
-							RuntimeCall::OmniAccount(request_intent_call),
-							auth_type.to_subxt_type(),
+				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
+					if let Err(e) = ctx.ethereum_intent_executor.execute(intent.clone()).await {
+						log::error!("Error executing intent: {:?}", e);
+						execution_result = IntentExecutionResult::Failure;
+					}
+					let intent_executed_call =
+						parentchain_api_interface::tx().omni_account().intent_executed(
+							omni_account.to_subxt_type(),
+							intent.to_subxt_type(),
+							execution_result,
 						);
-					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
+					ctx.transaction_signer.sign(intent_executed_call).await
+				},
+				Intent::TransferSolana(_) => {
+					if let Err(e) = ctx.solana_intent_executor.execute(intent.clone()).await {
+						log::error!("Error executing intent: {:?}", e);
+						execution_result = IntentExecutionResult::Failure;
+					}
+					let intent_executed_call =
+						parentchain_api_interface::tx().omni_account().intent_executed(
+							omni_account.to_subxt_type(),
+							intent.to_subxt_type(),
+							execution_result,
+						);
+					ctx.transaction_signer.sign(intent_executed_call).await
 				},
 			};
+
 			(response_sender, tx)
 		},
 		NativeCall::create_account_store(sender_identity) => {
