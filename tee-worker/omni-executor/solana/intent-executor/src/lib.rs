@@ -33,8 +33,9 @@ pub struct SolanaIntentExecutor {
 }
 
 impl SolanaIntentExecutor {
-	pub fn new(rpc_url: String) -> Result<Self, ()> {
-		let client = RpcClient::new_with_commitment(rpc_url, CommitmentConfig::confirmed());
+	pub fn new(rpc_url: &str) -> Result<Self, ()> {
+		let client =
+			RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
 		Ok(Self { rpc_client: client })
 	}
 }

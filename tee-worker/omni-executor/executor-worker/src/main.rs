@@ -21,9 +21,7 @@ use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_storage::{init_storage, StorageDB};
 use log::error;
-use native_task_handler::{
-	run_native_task_handler, Aes256KeyStore, ParentchainTxSigner, TaskHandlerContext,
-};
+use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
@@ -79,12 +77,20 @@ async fn main() -> Result<(), ()> {
 			));
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
+
+			let ethereum_intent_executor = EthereumIntentExecutor::new(&args.ethereum_url)
+				.map_err(|e| log::error!("{:?}", e))?;
+			let solana_intent_executor =
+				SolanaIntentExecutor::new(&args.solana_url).map_err(|e| log::error!("{:?}", e))?;
+
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				storage_db.clone(),
 				jwt_secret.clone(),
 				aes256_key,
+				Arc::new(ethereum_intent_executor),
+				Arc::new(solana_intent_executor),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
