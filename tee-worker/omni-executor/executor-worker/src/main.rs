@@ -90,12 +90,10 @@ async fn main() -> Result<(), ()> {
 			let buffer = 1024;
 			let native_task_sender =
 				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
-			// TODO: get mrenclave from quote
-			let mrenclave = [0u8; 32];
 
 			let signer = get_signer(substrate_key_store.clone());
 
-			perform_attestation(
+			let mrenclave = perform_attestation(
 				parentchain_rpc_client_factory.clone(),
 				signer,
 				transaction_signer.clone(),
