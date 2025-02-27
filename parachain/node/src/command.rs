@@ -260,7 +260,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Pallet(cmd) => {
 					if cfg!(feature = "runtime-benchmarks") {
 						runner.sync_run(|config| {
-							cmd.run_with_spec::<sp_runtime::traits::HashingFor<crate::service::Block>, ()>(
+							cmd.run_with_spec::<sp_runtime::traits::HashingFor<crate::service::Block>, crate::service::HostFunctions>(
 								Some(config.chain_spec),
 							)
 						})
