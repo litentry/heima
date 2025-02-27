@@ -116,7 +116,7 @@ pub struct SubxtClient<ChainConfig: Config> {
 	blocks: BlocksClient<ChainConfig, OnlineClient<ChainConfig>>,
 }
 
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub struct ExtrinsicReport<Hash> {
 	pub extrinsic_hash: Hash,
 	pub block_hash: Option<Hash>,

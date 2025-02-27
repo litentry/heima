@@ -5417,10 +5417,12 @@ name = "parentchain-attestation"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "executor-primitives",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "parity-scale-codec",
  "subxt-core",
  "subxt-signer",
 ]
