@@ -2757,6 +2757,7 @@ dependencies = [
  "alloy",
  "async-trait",
  "executor-core",
+ "executor-primitives",
  "log",
  "tokio",
 ]
@@ -7907,6 +7908,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "executor-core",
+ "executor-primitives",
  "log",
  "solana-client",
  "solana-sdk",

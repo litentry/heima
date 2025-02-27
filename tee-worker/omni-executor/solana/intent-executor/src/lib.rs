@@ -16,7 +16,7 @@
 
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::primitives::Intent;
+use executor_primitives::intent::Intent;
 use log::{error, info};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -53,10 +53,10 @@ impl IntentExecutor for SolanaIntentExecutor {
 			.map_err(|e| error!("Could not get block hash: {:?}", e))?;
 
 		match intent {
-			Intent::TransferSolana(to, amount) => {
-				let to = Pubkey::new_from_array(to);
+			Intent::TransferSolana(transfer) => {
+				let to = Pubkey::new_from_array(transfer.to);
 				let transfer_instruction =
-					system_instruction::transfer(&signer_key_pair.pubkey(), &to, amount);
+					system_instruction::transfer(&signer_key_pair.pubkey(), &to, transfer.value);
 				let tx = Transaction::new_signed_with_payer(
 					&[transfer_instruction],
 					Some(&signer_key_pair.pubkey()),

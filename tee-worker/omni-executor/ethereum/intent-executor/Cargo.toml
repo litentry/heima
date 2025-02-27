@@ -10,6 +10,9 @@ async-trait = { workspace = true }
 executor-core = { workspace = true }
 log = { workspace = true }
 
+# Local dependencies
+executor-primitives = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true }
 
