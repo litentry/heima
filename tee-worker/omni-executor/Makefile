@@ -66,6 +66,10 @@ clean:
 distclean: clean
 	cargo clean
 
+.PHONY: clean-data
+clean-data:
+	$(RM) -rf $(OMNI_DIR)/local/log $(OMNI_DIR)/storage_db
+
 .PHONY: build-docker
 build-docker:
 	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)

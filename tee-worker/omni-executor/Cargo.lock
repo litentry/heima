@@ -2958,6 +2958,7 @@ dependencies = [
  "env_logger",
  "ethereum-intent-executor",
  "executor-core",
+ "executor-crypto",
  "executor-storage",
  "hex",
  "log",
@@ -2971,6 +2972,7 @@ dependencies = [
  "serde_json",
  "solana-intent-executor",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -5061,6 +5063,7 @@ dependencies = [
  "parentchain-signer",
  "parity-scale-codec",
  "rand 0.8.5",
+ "subxt",
  "tokio",
 ]
 
@@ -5459,10 +5462,12 @@ name = "parentchain-attestation"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "executor-primitives",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "parity-scale-codec",
  "subxt-core",
  "subxt-signer",
 ]

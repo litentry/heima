@@ -1,5 +1,5 @@
 use crate::server::RpcContext;
-use executor_core::native_call::NativeCall;
+use executor_core::native_operation::NativeOperation;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave,
@@ -85,13 +85,13 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
-pub fn verify_web3_authentication(
+pub fn verify_web3_authentication<OP: NativeOperation>(
 	signature: &HeimaMultiSignature,
-	call: &NativeCall,
+	operation: &OP,
 	nonce: u32,
 	mrenclave: MrEnclave,
 ) -> Result<(), AuthenticationError> {
-	let mut payload = call.encode();
+	let mut payload = operation.encode();
 	payload.append(&mut nonce.encode());
 	payload.append(&mut mrenclave.encode());
 
@@ -101,12 +101,12 @@ pub fn verify_web3_authentication(
 
 	let hashed = blake2_256(&payload);
 
-	let prettified_msg_hash = call.signature_message_prefix() + &hex_encode(&hashed);
+	let prettified_msg_hash = operation.signature_message_prefix() + &hex_encode(&hashed);
 	let prettified_msg_hash = prettified_msg_hash.as_bytes();
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(prettified_msg_hash, call.sender_identity())
-		|| signature.verify(&hashed, call.sender_identity())
+	match signature.verify(prettified_msg_hash, operation.sender_identity())
+		|| signature.verify(&hashed, operation.sender_identity())
 	{
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),

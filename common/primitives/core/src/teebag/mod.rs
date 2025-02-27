@@ -27,3 +27,6 @@ pub use sgx_verify::*;
 
 mod quoting_enclave;
 pub use quoting_enclave::*;
+
+mod dcap_types;
+pub use dcap_types::*;

@@ -116,6 +116,7 @@ pallet-evm-precompile-bridge-transfer = { workspace = true }
 pallet-evm-precompile-omni-bridge = { workspace = true }
 pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
+pallet-evm-precompile-vesting = { workspace = true }
 
 moonbeam-evm-tracer = { workspace = true }
 moonbeam-rpc-primitives-debug = { workspace = true }
@@ -249,6 +250,7 @@ std = [
     "pallet-evm-precompile-score-staking/std",
     "pallet-evm-precompile-sha3fips/std",
     "pallet-evm-precompile-simple/std",
+    "pallet-evm-precompile-vesting/std",
     "pallet-evm/std",
     "pallet-extrinsic-filter/std",
     "pallet-group/std",

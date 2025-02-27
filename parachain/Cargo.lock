@@ -3215,7 +3215,7 @@ dependencies = [
 [[package]]
 name = "evm-tracing-events"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "environmental",
  "ethereum",
@@ -6570,6 +6570,7 @@ dependencies = [
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
+ "pallet-evm-precompile-vesting",
  "pallet-extrinsic-filter",
  "pallet-group",
  "pallet-identity",
@@ -7049,7 +7050,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-client-evm-tracing"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7065,7 +7066,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-evm-tracer"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum-types",
  "evm",
@@ -7085,7 +7086,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-primitives-ext"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7098,7 +7099,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-debug"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7115,7 +7116,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-trace"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum-types",
  "futures 0.3.31",
@@ -7129,7 +7130,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-txpool"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7142,7 +7143,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-types"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum-types",
  "serde",
@@ -7152,7 +7153,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-debug"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7184,7 +7185,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-debug"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "environmental",
  "ethereum",
@@ -7202,7 +7203,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-txpool"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -7216,7 +7217,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-trace"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7252,7 +7253,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-txpool"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=373c4fd#373c4fdf63108d96578d222a768af4b8634647ad"
 dependencies = [
  "ethereum-types",
  "fc-rpc",
@@ -8839,6 +8840,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm-precompile-vesting"
+version = "0.1.0"
+dependencies = [
+ "derive_more 0.99.18",
+ "fp-evm",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "libsecp256k1",
+ "pallet-evm",
+ "pallet-timestamp",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "precompile-utils",
+ "scale-info",
+ "serde",
+ "sha3",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-extrinsic-filter"
 version = "0.1.0"
 dependencies = [
@@ -10046,6 +10070,7 @@ dependencies = [
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
+ "pallet-evm-precompile-vesting",
  "pallet-extrinsic-filter",
  "pallet-group",
  "pallet-guardian",
