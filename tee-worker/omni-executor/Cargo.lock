@@ -2050,6 +2050,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cross-chain-intent-executor"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "executor-core",
+ "executor-primitives",
+ "log",
+]
+
+[[package]]
 name = "crossbeam-channel"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"

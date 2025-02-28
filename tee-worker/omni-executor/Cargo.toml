@@ -7,6 +7,7 @@ members = [
     "executor-primitives",
     "heima/authentication",
     "heima/identity-verification",
+    "intent-executors/cross-chain-intent-executor",
     "intent-executors/ethereum-intent-executor",
     "intent-executors/solana-intent-executor",
     "native-task-handler",
@@ -75,6 +76,7 @@ parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "intent-executors/solana-intent-executor" }
+cross-chain-intent-executor = { path = "intent-executors/cross-chain-intent-executor" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
