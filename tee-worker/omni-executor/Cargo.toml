@@ -59,6 +59,7 @@ tokio = "1.43.0"
 url = "2.5.4"
 
 # Local dependencies
+cross-chain-intent-executor = { path = "intent-executors/cross-chain-intent-executor" }
 ethereum-intent-executor = { path = "intent-executors/ethereum-intent-executor" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
@@ -76,7 +77,6 @@ parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "intent-executors/solana-intent-executor" }
-cross-chain-intent-executor = { path = "intent-executors/cross-chain-intent-executor" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
