@@ -26,6 +26,7 @@ pub async fn handle_native_call<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<
 		TaskHandlerContext<
@@ -34,6 +35,7 @@ pub async fn handle_native_call<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
 		>,
 	>,
 	call: NativeCall,
@@ -161,6 +163,19 @@ pub async fn handle_native_call<
 				},
 				Intent::TransferSolana(_) => {
 					if let Err(e) = ctx.solana_intent_executor.execute(intent.clone()).await {
+						log::error!("Error executing intent: {:?}", e);
+						execution_result = IntentExecutionResult::Failure;
+					}
+					let intent_executed_call =
+						parentchain_api_interface::tx().omni_account().intent_executed(
+							omni_account.to_subxt_type(),
+							intent.to_subxt_type(),
+							execution_result,
+						);
+					ctx.transaction_signer.sign(intent_executed_call).await
+				},
+				Intent::CrossChainSwap(_) => {
+					if let Err(e) = ctx.cross_chain_intent_executor.execute(intent.clone()).await {
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
 					}

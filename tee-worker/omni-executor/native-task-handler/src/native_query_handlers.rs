@@ -17,6 +17,7 @@ pub async fn handle_native_query<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<
 		TaskHandlerContext<
@@ -25,6 +26,7 @@ pub async fn handle_native_query<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
 		>,
 	>,
 	query: NativeQuery,

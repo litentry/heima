@@ -54,6 +54,7 @@ pub struct TaskHandlerContext<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 	EthereumIntentExecutor: IntentExecutor,
 	SolanaIntentExecutor: IntentExecutor,
+	CrossChainIntentExecutor: IntentExecutor,
 > {
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
@@ -62,6 +63,7 @@ pub struct TaskHandlerContext<
 	pub transaction_signer: Arc<ParentchainTxSigner>,
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
+	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -72,6 +74,7 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 		EthereumIntentExecutor: IntentExecutor,
 		SolanaIntentExecutor: IntentExecutor,
+		CrossChainIntentExecutor: IntentExecutor,
 	>
 	TaskHandlerContext<
 		Header,
@@ -79,8 +82,10 @@ impl<
 		RpcClientFactory,
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
 	>
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
@@ -89,6 +94,7 @@ impl<
 		aes256_key: Aes256Key,
 		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
+		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -98,6 +104,7 @@ impl<
 			aes256_key,
 			ethereum_intent_executor,
 			solana_intent_executor,
+			cross_chain_intent_executor,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -110,6 +117,7 @@ pub async fn run_native_task_handler<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	buffer: usize,
 	ctx: Arc<
@@ -119,6 +127,7 @@ pub async fn run_native_task_handler<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
 		>,
 	>,
 ) -> NativeTaskSender {
@@ -139,6 +148,7 @@ async fn handle_native_task<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<
 		TaskHandlerContext<
@@ -147,6 +157,7 @@ async fn handle_native_task<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
 		>,
 	>,
 	task: NativeTask,
