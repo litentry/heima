@@ -143,9 +143,6 @@ jobs:
 
           arg="${{ github.event.inputs.pallets }}"
           chain="${{ env.CHAIN }}"
-          if [ "$arg" = "*" ]; then
-            arg="\\$arg";
-          fi
 
           for c in $chain; do
             # Copy benchmark script to remote machine
