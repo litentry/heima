@@ -18,6 +18,7 @@ use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
 use ethereum_intent_executor::EthereumIntentExecutor;
+use executor_core::intent_executor::MockedIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_storage::{init_storage, StorageDB};
 use log::error;
@@ -82,6 +83,8 @@ async fn main() -> Result<(), ()> {
 				.map_err(|e| log::error!("{:?}", e))?;
 			let solana_intent_executor =
 				SolanaIntentExecutor::new(&args.solana_url).map_err(|e| log::error!("{:?}", e))?;
+			// TODO: implement cross chain intent executor
+			let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
 
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
@@ -91,6 +94,7 @@ async fn main() -> Result<(), ()> {
 				aes256_key,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
+				Arc::new(cross_chain_intent_executor),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
