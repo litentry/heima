@@ -21,8 +21,8 @@ use executor_primitives::intent::Intent;
 pub struct CrossChainIntentExecutor {}
 
 impl CrossChainIntentExecutor {
-	pub fn new() -> Self {
-		Self {}
+	pub fn new() -> Result<Self, ()> {
+		Ok(Self {})
 	}
 }
 

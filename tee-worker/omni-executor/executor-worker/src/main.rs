@@ -17,8 +17,8 @@
 use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
+use cross_chain_intent_executor::CrossChainIntentExecutor;
 use ethereum_intent_executor::EthereumIntentExecutor;
-use executor_core::intent_executor::MockedIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_storage::{init_storage, StorageDB};
 use log::error;
@@ -79,12 +79,9 @@ async fn main() -> Result<(), ()> {
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let ethereum_intent_executor = EthereumIntentExecutor::new(&args.ethereum_url)
-				.map_err(|e| log::error!("{:?}", e))?;
-			let solana_intent_executor =
-				SolanaIntentExecutor::new(&args.solana_url).map_err(|e| log::error!("{:?}", e))?;
-			// TODO: implement cross chain intent executor
-			let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
+			let ethereum_intent_executor = EthereumIntentExecutor::new(&args.ethereum_url)?;
+			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
+			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
 
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
