@@ -20,6 +20,7 @@ use cli::*;
 use cross_chain_intent_executor::CrossChainIntentExecutor;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
+use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_storage::{init_storage, StorageDB};
 use log::error;
 use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
@@ -97,15 +98,26 @@ async fn main() -> Result<(), ()> {
 			let buffer = 1024;
 			let native_task_sender =
 				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
-			// TODO: get mrenclave from quote
-			let mrenclave = [0u8; 32];
 
 			let signer = get_signer(substrate_key_store.clone());
 
-			perform_attestation(
+			log::info!("worker url: {:?}", args.worker_url);
+			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
+
+			let shielding_key = ShieldingKey::new();
+			let shielding_pubkey = shielding_key.public_key();
+			let shielding_pubkey_vec = serde_json::to_vec(&Rsa3072PubKey {
+				n: shielding_pubkey.n().to_bytes_le(),
+				e: shielding_pubkey.e().to_bytes_le(),
+			})
+			.expect("Could not serialize shielding public key");
+
+			let mrenclave = perform_attestation(
 				parentchain_rpc_client_factory.clone(),
 				signer,
 				transaction_signer.clone(),
+				worker_url.as_str(),
+				shielding_pubkey_vec,
 			)
 			.await
 			.map_err(|_| {
@@ -113,9 +125,9 @@ async fn main() -> Result<(), ()> {
 			})?;
 
 			start_rpc_server(
-				&args.worker_rpc_port,
+				worker_url.port().expect("Missing worker port"),
 				parentchain_rpc_client_factory,
-				ShieldingKey::new(),
+				shielding_key,
 				Arc::new(native_task_sender),
 				storage_db.clone(),
 				mrenclave,

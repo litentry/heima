@@ -97,7 +97,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         let aliceMappedSustrateAccount = evmToAddress(aliceEVMMappedAccount, 31);
 
-        console.log('transfer from Alice to alice EMV');
+        console.log('transfer from Alice to alice EVM');
 
         // Deposit money into substrate account's truncated EVM address's mapping substrate account
         const tx_init = context.api.tx.balances.transferKeepAlive(
@@ -347,7 +347,11 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         // Add an almost immediate-unlocked vesting
         const targetBlock = parseInt((await context.api.query.system.number()).toString()) + 2;
-        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, { locked: '60000000000000000000', perBlock: '60000000000000000000', startingBlock: targetBlock.toString()});
+        const vestedTransferTx = context.api.tx.vesting.vestedTransfer(evmAccountRaw.mappedAddress, {
+            locked: '60000000000000000000',
+            perBlock: '60000000000000000000',
+            startingBlock: targetBlock.toString(),
+        });
         await signAndSend(vestedTransferTx, context.alice);
 
         // Set timeout to 60 seconds (5 blocks on parachain)
