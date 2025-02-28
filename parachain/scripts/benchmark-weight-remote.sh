@@ -32,6 +32,7 @@ git checkout "$2"
 docker cp "$(docker create --rm litentry/litentry-parachain:runtime-benchmarks):/usr/local/bin/litentry-collator" .
 chmod a+x litentry-collator
 
+LIB_RS_FILE="runtime/$1/src/lib.rs"
 # populate PALLETS
 PALLETS=
 case "$3" in
