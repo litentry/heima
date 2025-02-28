@@ -151,4 +151,29 @@ impl<T: frame_system::Config> frame_system::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(p.into())))
 			.saturating_add(Weight::from_parts(0, 70).saturating_mul(p.into()))
 	}
+	/// Storage: `System::AuthorizedUpgrade` (r:0 w:1)
+    /// Proof: `System::AuthorizedUpgrade` (`max_values`: Some(1), `max_size`: Some(33), added: 528, mode: `MaxEncodedLen`)
+    fn authorize_upgrade() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `0`
+        //  Estimated: `0`
+        // Minimum execution time: 5_199_000 picoseconds.
+        Weight::from_parts(5_421_000, 0)
+            .saturating_add(T::DbWeight::get().writes(1_u64))
+    }
+    /// Storage: `System::AuthorizedUpgrade` (r:1 w:1)
+    /// Proof: `System::AuthorizedUpgrade` (`max_values`: Some(1), `max_size`: Some(33), added: 528, mode: `MaxEncodedLen`)
+    /// Storage: `System::Digest` (r:1 w:1)
+    /// Proof: `System::Digest` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+    /// Storage: UNKNOWN KEY `0x3a636f6465` (r:0 w:1)
+    /// Proof: UNKNOWN KEY `0x3a636f6465` (r:0 w:1)
+    fn apply_authorized_upgrade() -> Weight {
+        // Proof Size summary in bytes:
+        //  Measured:  `22`
+        //  Estimated: `1518`
+        // Minimum execution time: 86_900_374_000 picoseconds.
+        Weight::from_parts(88_564_619_000, 1518)
+            .saturating_add(T::DbWeight::get().reads(2_u64))
+            .saturating_add(T::DbWeight::get().writes(3_u64))
+    }
 }

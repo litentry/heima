@@ -203,4 +203,9 @@ impl<T: frame_system::Config> pallet_scheduler::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
+	fn schedule_retry(_: u32) -> Weight { todo!() }
+	fn set_retry() -> Weight { todo!() }
+	fn set_retry_named() -> Weight { todo!() }
+	fn cancel_retry() -> Weight { todo!() }
+	fn cancel_retry_named() -> Weight { todo!() }
 }
