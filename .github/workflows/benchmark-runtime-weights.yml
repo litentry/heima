@@ -150,7 +150,7 @@ jobs:
 
             # Execute benchmark script remotely
             ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
-            ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "ls ~ && ls ./runtime/$1/src/weights/"
+            ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "pwd && ls ~ && ls ./runtime/$1/src/weights/ && ifconfig"
           done
 
           # Retrieve the generated weight files
