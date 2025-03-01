@@ -90,9 +90,6 @@ for p in $PALLETS; do
         --header=./LICENSE_HEADER \
         --output=./runtime/$1/src/weights/"$p".rs
 
-  ls ./runtime/$1/src/weights/"$p".rs
-  pwd
-  ifconfig
   echo "================================================================"
   echo ""
 done
