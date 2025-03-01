@@ -150,11 +150,11 @@ jobs:
 
             # Execute benchmark script remotely
             ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
-
-            # Retrieve the generated weight files
-            echo "Copying generated weights files back ..."
-            scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/litentry-parachain/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
           done
+
+          # Retrieve the generated weight files
+          echo "Copying generated weights files back ..."
+          scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
 
           # Clean up the SSH key
           rm -f ./benchmark-server-key.pem
