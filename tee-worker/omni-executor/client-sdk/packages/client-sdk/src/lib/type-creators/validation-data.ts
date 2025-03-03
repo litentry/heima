@@ -1,18 +1,18 @@
 import type { Registry } from '@polkadot/types-codec/types';
 import { assert, isHex, stringToHex } from '@polkadot/util';
 
-import type { LitentryIdentity, LitentryValidationData } from '@litentry/parachain-api';
+import type { Identity, ValidationData } from '@heima/parachain-api';
 
-import { decodeSignature } from '../util/decode-signature';
-import { getSignatureCryptoType } from '../util/get-signature-crypto-type';
-import { createLitentryIdentityType } from '../type-creators/litentry-identity';
+import { createIdentityType } from '@lib/type-creators/identity';
+import { decodeSignature } from '@utils/decode-signature';
+import { getSignatureCryptoType } from '@utils/get-signature-crypto-type';
 
 /**
  * Ownership proof for Web3 accounts (Substrate, EVM, Bitcoin).
  *
  * Bitcoin signatures are base64-encoded strings. Substrate and EVM signatures are hex-encoded strings.
  *
- * @see createLitentryIdentityType
+ * @see createIdentityType
  */
 export type Web3Proof = {
   signature: `0x${string}` | string;
@@ -22,14 +22,14 @@ export type Web3Proof = {
 /**
  * Ownership proof for Twitter accounts
  *
- * @see createLitentryValidationDataType
+ * @see createValidationDataType
  */
 export type TwitterProof = { tweetId: string };
 
 /**
  * Ownership proof for Twitter accounts using oAuth2
  *
- * @see createLitentryValidationDataType
+ * @see createValidationDataType
  */
 export type TwitterOAuth2Proof = {
   code: string;
@@ -40,7 +40,7 @@ export type TwitterOAuth2Proof = {
 /**
  * Ownership proof for Discord accounts
  *
- * @see createLitentryValidationDataType
+ * @see createValidationDataType
  */
 export type DiscordProof = {
   channelId: string;
@@ -50,7 +50,7 @@ export type DiscordProof = {
 /**
  * Ownership proof for Discord accounts using oAuth2
  *
- * @see createLitentryValidationDataType
+ * @see createValidationDataType
  */
 export type DiscordOAuth2Proof = {
   code: string;
@@ -60,7 +60,7 @@ export type DiscordOAuth2Proof = {
 /**
  * Ownership proof for Email
  *
- * @see createLitentryValidationDataType
+ * @see createValidationDataType
  */
 export type EmailProof = {
   email: string;
@@ -68,17 +68,17 @@ export type EmailProof = {
 };
 
 /**
- * Creates the LitentryValidationData given the identity network and its type.
+ * Creates the ValidationData given the identity network and its type.
  *
- * The proof to pass depends on the identity network (IIdentityType):
+ * The proof to pass depends on the identity network (IdentityType):
  * - Web3: Web3Proof
  * - Twitter: TwitterProof
  * - Discord: DiscordProof
  *
  * @example Web3
  * ```ts
- * import { createLitentryValidationDataType } from '@litentry/client-sdk';
- * import type { Web3Proof } from '@litentry/client-sdk';
+ * import { createValidationDataType } from '@heima/client-sdk';
+ * import type { Web3Proof } from '@heima/client-sdk';
  *
  * const userAddress = '0x123';
  *
@@ -87,7 +87,7 @@ export type EmailProof = {
  *   message: '0x123',
  * }
  *
- * const validationData = createLitentryValidationDataType(
+ * const validationData = createValidationDataType(
  *   registry,
  *   {
  *     addressOrHandle: userAddress,
@@ -99,17 +99,17 @@ export type EmailProof = {
  *
  * @example Twitter
  * ```ts
- * import { createLitentryValidationDataType } from '@litentry/client-sdk';
- * import type { TwitterProof } from '@litentry/client-sdk';
+ * import { createValidationDataType } from '@heima/client-sdk';
+ * import type { TwitterProof } from '@heima/client-sdk';
  *
- * const userHandle = '@litentry';
+ * const userHandle = '@heima';
  *
  * const proof: TwitterProof = {
  *   // Both twitter.com and x.com are valid
  *   tweetId: 'https://twitter.com/0x123/status/123',
  * };
  *
- * const validationData = createLitentryValidationDataType(
+ * const validationData = createValidationDataType(
  *   registry,
  *   {
  *     addressOrHandle: userHandle,
@@ -120,8 +120,8 @@ export type EmailProof = {
  * ```
  *
  */
-export function createLitentryValidationDataType<IIdentityType extends LitentryIdentity['type']>(
-  /** Litentry Parachain API's type registry */
+export function createValidationDataType<IIdentityType extends Identity['type']>(
+  /**  Parachain API's type registry */
   registry: Registry,
   identityDescriptor: {
     /** The address or handle of the identity */
@@ -137,8 +137,8 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
       : IIdentityType extends 'Email'
         ? EmailProof
         : Web3Proof,
-): LitentryValidationData {
-  const identity = createLitentryIdentityType(registry, identityDescriptor);
+): ValidationData {
+  const identity = createIdentityType(registry, identityDescriptor);
 
   if (isProofWeb3(identity, proof)) {
     const signature: Uint8Array = decodeSignature(proof.signature, identity);
@@ -178,7 +178,7 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
       cryptoType = 'Ed25519';
     }
 
-    return registry.createType('LitentryValidationData', {
+    return registry.createType('ValidationData', {
       Web3Validation: {
         [web3Type]: {
           message,
@@ -187,24 +187,24 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
           },
         },
       },
-    }) as unknown as LitentryValidationData;
+    }) as unknown as ValidationData;
   }
 
   if (isProofEmail(identity, proof)) {
-    return registry.createType('LitentryValidationData', {
+    return registry.createType('ValidationData', {
       Web2Validation: {
         Email: {
           email: stringToHex(proof.email),
           verification_code: stringToHex(proof.verificationCode),
         },
       },
-    }) as unknown as LitentryValidationData;
+    }) as unknown as ValidationData;
   }
 
   if (isProofTwitter(identity, proof)) {
     assert(proof.tweetId, '[vault::link_identity] Missing tweetId');
 
-    return registry.createType('LitentryValidationData', {
+    return registry.createType('ValidationData', {
       Web2Validation: {
         Twitter: {
           PublicTweet: {
@@ -212,11 +212,11 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
           },
         },
       },
-    }) as unknown as LitentryValidationData;
+    }) as unknown as ValidationData;
   }
 
   if (isProofTwitterOAuth2(identity, proof)) {
-    return registry.createType('LitentryValidationData', {
+    return registry.createType('ValidationData', {
       Web2Validation: {
         Twitter: {
           OAuth2: {
@@ -226,7 +226,7 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
           },
         },
       },
-    }) as unknown as LitentryValidationData;
+    }) as unknown as ValidationData;
   }
 
   if (isProofDiscord(identity, proof)) {
@@ -234,7 +234,7 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
     assert(proof.channelId, '[vault::link_identity] Missing channelId');
     assert(proof.messageId, '[vault::link_identity] Missing messageId');
 
-    return registry.createType('LitentryValidationData', {
+    return registry.createType('ValidationData', {
       Web2Validation: {
         Discord: {
           PublicMessage: {
@@ -244,11 +244,11 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
           },
         },
       },
-    }) as unknown as LitentryValidationData;
+    }) as unknown as ValidationData;
   }
 
   if (isProofDiscordOAuth2(identity, proof)) {
-    return registry.createType('LitentryValidationData', {
+    return registry.createType('ValidationData', {
       Web2Validation: {
         Discord: {
           OAuth2: {
@@ -257,14 +257,14 @@ export function createLitentryValidationDataType<IIdentityType extends LitentryI
           },
         },
       },
-    }) as unknown as LitentryValidationData;
+    }) as unknown as ValidationData;
   }
 
   throw new Error(`[vault] Unsupported identity network "${identity.type}"`);
 }
 
 function isProofWeb3(
-  identity: LitentryIdentity,
+  identity: Identity,
   proof: Web3Proof | TwitterProof | TwitterOAuth2Proof | DiscordProof | DiscordOAuth2Proof | EmailProof,
 ): proof is Web3Proof {
   const isWeb3 = identity.isEvm || identity.isSubstrate || identity.isBitcoin || identity.isSolana;
@@ -281,7 +281,7 @@ function isProofWeb3(
 }
 
 function isProofTwitter(
-  identity: LitentryIdentity,
+  identity: Identity,
   proof: Web3Proof | TwitterProof | TwitterOAuth2Proof | DiscordProof | DiscordOAuth2Proof,
 ): proof is TwitterProof {
   const isTwitter = identity.isTwitter;
@@ -298,7 +298,7 @@ function isProofTwitter(
 }
 
 function isProofTwitterOAuth2(
-  identity: LitentryIdentity,
+  identity: Identity,
   proof: Web3Proof | TwitterProof | TwitterOAuth2Proof | DiscordProof | DiscordOAuth2Proof,
 ): proof is TwitterOAuth2Proof {
   const isTwitter = identity.isTwitter;
@@ -317,7 +317,7 @@ function isProofTwitterOAuth2(
 }
 
 function isProofEmail(
-  identity: LitentryIdentity,
+  identity: Identity,
   proof: Web3Proof | TwitterProof | DiscordProof | DiscordOAuth2Proof | EmailProof,
 ): proof is EmailProof {
   const isEmail = identity.isEmail;
@@ -336,7 +336,7 @@ function isProofEmail(
 }
 
 function isProofDiscord(
-  identity: LitentryIdentity,
+  identity: Identity,
   proof: Web3Proof | TwitterProof | DiscordProof | DiscordOAuth2Proof,
 ): proof is DiscordProof {
   const isDiscord = identity.isDiscord;
@@ -355,7 +355,7 @@ function isProofDiscord(
 }
 
 function isProofDiscordOAuth2(
-  identity: LitentryIdentity,
+  identity: Identity,
   proof: Web3Proof | TwitterProof | DiscordProof | DiscordOAuth2Proof,
 ): proof is DiscordOAuth2Proof {
   const isDiscord = identity.isDiscord;

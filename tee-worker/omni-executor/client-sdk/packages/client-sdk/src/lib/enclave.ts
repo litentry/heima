@@ -1,14 +1,15 @@
 import WebSocket from 'isomorphic-ws';
-import { TypeRegistry } from '@polkadot/types';
-import { Index } from '@polkadot/types/interfaces';
+import { ApiPromise } from '@polkadot/api';
 import { compactStripLength, hexToU8a, u8aToString } from '@polkadot/util';
-import { ApiPromise, identity, LitentryIdentity, omniExecutor } from '@litentry/parachain-api';
-import { JsonRpcRequest } from './util/types';
-import { u8aToBase64Url } from './util/u8aToBase64Url';
-import { getLastRegisteredEnclave } from './request/get-last-registered-enclave';
-import { OMNI_ENDPOINT } from './config';
 
-export interface OmniClientConfig {
+import { JsonRpcRequest } from '@utils/types';
+import { u8aToBase64Url } from '@utils/u8aToBase64Url';
+
+import { ENCLAVE_ENDPOINT } from './config';
+import { HexString } from '@polkadot/util/types';
+import { CorePrimitivesTeebagTypesEnclave } from '@heima/parachain-api';
+
+export interface EnclaveConfig {
   requestTimeout: number;
 }
 
@@ -19,37 +20,64 @@ export enum ConnectionState {
   Disconnecting = 'disconnecting',
 }
 
-const types = {
-  ...identity.types,
-  ...omniExecutor.types,
-};
-const registry = new TypeRegistry();
-registry.register(types);
+const log = process.env.NODE_ENV !== 'production' ? console.log.bind(console) : () => 0;
 
+/**
+ * This is a singleton class to mainly hold the Enclave's Shielding Key and MrEnclave.
+ *
+ * With this class you can:
+ * - Retrieve the Enclave's Shielding Key. (1)
+ * - Retrieve the Enclave's MrEnclave value which is used as the mrEnclave value. (1)
+ * - Encrypt data using the Enclave's Shielding Key.
+ * - Send request to the Enclave.
+ *
+ * (1) Querying from the Parachain, instead of directly from the Enclave Worker itself helps
+ * ensuring clients are connected to a trusted worker.
+ *
+ * @example
+ * ```ts
+ * import { enclave } from '@heima/client-sdk';
+ *
+ * const mrEnclave = await enclave.getMrEnclave(api);
+ * const key = await enclave.getShieldingKey();
+ *
+ * console.log({ mrEnclave, key });
+ *
+ * // Encrypt data using the Enclave's Shielding Key
+ * const encrypted = await enclave.encrypt({ cleartext: new Uint8Array([1, 2, 3]) });
+ *
+ * // Send request to the Enclave.
+ * const response = await enclave.send({
+ *  jsonrpc: '2.0',
+ *  method: 'native_submitAesRequest',
+ *  params: ['0x123']
+ * });
+ * ```
+ */
 export class Enclave {
-  readonly #config: OmniClientConfig;
+  readonly #config: EnclaveConfig;
   readonly #MAX_ID = Number.MAX_SAFE_INTEGER;
   readonly #endpoint: string | null = null;
   readonly #pendingRequests: Map<
     number,
     {
-      resolve: (value: any) => void;
-      reject: (reason?: any) => void;
+      resolve: (value: string) => void;
+      reject: (reason?: unknown) => void;
     }
   > = new Map();
 
   #ws: WebSocket | null = null;
   #connectionPromise: Promise<void> | null = null;
   #currentState: ConnectionState = ConnectionState.Disconnected;
-  #messageId: number = 1;
-  #shard: `0x${string}` | null = null;
+  #messageId = 0;
+  #mrEnclave: `0x${string}` | null = null;
   #shieldingKey: CryptoKey | null = null;
 
   static #instance: Enclave | null = null;
 
   static getInstance() {
     if (!Enclave.#instance) {
-      Enclave.#instance = new Enclave(OMNI_ENDPOINT);
+      Enclave.#instance = new Enclave(ENCLAVE_ENDPOINT);
     }
     return Enclave.#instance;
   }
@@ -59,11 +87,11 @@ export class Enclave {
    * @param endpoint WebSocket endpoint URL
    * @param config Optional configuration overrides
    */
-  constructor(endpoint: string, config: Partial<OmniClientConfig> = {}) {
+  constructor(endpoint: string, config: Partial<EnclaveConfig> = {}) {
     this.#endpoint = endpoint;
     this.#config = {
       // default request timeout 30 seconds
-      requestTimeout: 30000,
+      requestTimeout: 60000,
       ...config,
     };
   }
@@ -75,61 +103,64 @@ export class Enclave {
     return this.#currentState;
   }
 
-  async getNonce(
-    /** Litentry Parachain API instance from Polkadot.js */
-    api: ApiPromise,
-    /** The user's omniAccount.  Use `createLitentryIdentityType` helper to create this struct */
-    omniAccount: LitentryIdentity,
-  ): Promise<Index> {
-    return await api.rpc.system.accountNextIndex(omniAccount.asSubstrate.toHex());
-  }
-
   /**
-   * Retrieve the Enclave's Shard from the Parachain.
+   * Retrieve the Enclave's mrEnclave from the Parachain.
    *
    * The Enclave registry contains the information of the registered TEE workers. These TEE Workers share the
-   * same Enclave's Shard value.
+   * same Enclave's mrEnclave value.
+   *
+   * The value will be held in memory for the duration of the session.
    *
    * @see Test it by yourself https://polkadot.js.org/apps/?rpc=wss://tee-dev.litentry.io#/chainstate
    */
-  async getShard(api: ApiPromise): Promise<`0x${string}`> {
-    if (this.#shard) {
-      return this.#shard;
+  async getMrEnclave(api: ApiPromise): Promise<`0x${string}`> {
+    if (this.#mrEnclave) {
+      return this.#mrEnclave;
     }
 
-    const { account, enclave } = await getLastRegisteredEnclave(api);
+    const entries = (await api.query.teebag.enclaveRegistry.entries()) as unknown as [
+      HexString,
+      CorePrimitivesTeebagTypesEnclave,
+    ][];
 
-    const firstTEEWorkerJson = {
-      pubkey: account.toHuman(), // SS58 formatted (address)
-      timestamp: enclave.lastSeenTimestamp.toNumber(), // e.g., 1674819846045
-      mrEnclave: enclave.mrenclave.toHex(), // same as shard
-      sgxMode: enclave.sgxBuildMode.toHuman(),
-    };
+    if (entries.length === 0) {
+      throw new Error(`[omni-sdk] No Enclave registry found`);
+    }
 
-    console.trace(
-      `[omni-sdk] Reading TEE Shielding Key from TEE Worker ${
-        firstTEEWorkerJson.pubkey
-      }. Timestamp ${new Date(firstTEEWorkerJson.timestamp)}`,
-    );
+    const sortedEnclaves = entries
+      .map((entry) => entry[1])
+      .sort((a, b) => (b.lastSeenTimestamp.toBigInt() > a.lastSeenTimestamp.toBigInt() ? 1 : -1));
 
-    this.#shard = firstTEEWorkerJson.mrEnclave;
+    const workerType = 'OmniExecutor';
+    const omniExecutorEnclave = sortedEnclaves.find((entry) => entry.workerType.toString() === workerType);
+    if (!omniExecutorEnclave) {
+      throw new Error(`[omni-sdk] No Enclave registry type [${workerType}] with found`);
+    }
 
-    return this.#shard;
+    const mrEnclave = omniExecutorEnclave.mrenclave.toHex();
+    this.#mrEnclave = mrEnclave;
+
+    return mrEnclave;
   }
 
+  /**
+   * Get the Enclave's Shielding Key.
+   *
+   * @returns Promise that resolves with the crypto key, the value will be held in memory for the duration of the session.
+   */
   async getShieldingKey(): Promise<CryptoKey> {
     if (this.#shieldingKey) {
       return this.#shieldingKey;
     }
 
-    const hexString = await this.send<string>({
+    const hexString = await this.send({
       jsonrpc: '2.0',
       method: 'native_getShieldingKey',
       params: [],
     });
 
     // Remove the hex prefix and SCALE prefix
-    const [, data] = compactStripLength(hexToU8a(hexString))
+    const [, data] = compactStripLength(hexToU8a(hexString));
     const pubKey = u8aToString(data);
     const pubKeyJSON = JSON.parse(pubKey);
 
@@ -155,7 +186,7 @@ export class Enclave {
     return this.#shieldingKey;
   }
 
-  async encrypt(cleartext: Uint8Array): Promise<{ ciphertext: Uint8Array }> {
+  async encrypt({ cleartext }: { cleartext: Uint8Array }): Promise<{ ciphertext: Uint8Array }> {
     const key = await this.getShieldingKey();
 
     const encrypted = await globalThis.crypto.subtle.encrypt(
@@ -175,20 +206,16 @@ export class Enclave {
    * @param options Optional settings including custom timeout
    * @returns Promise that resolves with the response
    */
-  async send<T = any>(payload: JsonRpcRequest, options?: { timeout?: number }): Promise<T> {
+  async send(payload: JsonRpcRequest, options?: { timeout?: number }): Promise<string> {
     await this.#ensureConnection();
-
-    if (!this.#ws) {
-      return Promise.reject(new Error('[omni-sdk] WebSocket connection failed'));
-    }
 
     const id = this.#getNextId();
     const request = { ...payload, id };
 
-    return new Promise<T>((resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.#pendingRequests.delete(id);
-        reject(new Error(`[omni-sdk] Request timeout: ${id}`));
+        reject(new Error(`[error:omni-sdk] Request timeout: ${id}`));
       }, options?.timeout ?? this.#config.requestTimeout);
 
       this.#pendingRequests.set(id, {
@@ -202,9 +229,14 @@ export class Enclave {
         },
       });
 
+      if (!this.#ws) {
+        reject(new Error('[error:omni-sdk] WebSocket connection failed'));
+        return;
+      }
+
       try {
-        console.trace('[omni-sdk] sending request', request);
-        this.#ws!.send(JSON.stringify(request));
+        log('[debug:omni-sdk] sending request', request);
+        this.#ws.send(JSON.stringify(request));
       } catch (err) {
         clearTimeout(timeoutId);
         this.#pendingRequests.delete(id);
@@ -249,15 +281,16 @@ export class Enclave {
       return Promise.resolve();
     }
 
-    if (!this.#endpoint) {
-      return Promise.reject(new Error('[omni-sdk] WebSocket endpoint is not set'));
-    }
-
     this.#setState(ConnectionState.Connecting);
 
     this.#connectionPromise = new Promise<void>((resolve, reject) => {
       try {
-        this.#ws = new WebSocket(this.#endpoint!);
+        if (!this.#endpoint) {
+          reject(new Error('[error:omni-sdk] WebSocket endpoint is not set'));
+          return;
+        }
+
+        this.#ws = new WebSocket(this.#endpoint);
 
         this.#ws.addEventListener('open', () => {
           this.#setState(ConnectionState.Connected);
@@ -275,23 +308,25 @@ export class Enclave {
           this.#connectionPromise = null;
           this.#setState(ConnectionState.Disconnected);
           for (const [id, { reject }] of this.#pendingRequests) {
-            reject(new Error(`[omni-sdk] WebSocket connection closed - please retry the request: ${id}, event: ${e}`));
+            reject(
+              new Error(`[error:omni-sdk] WebSocket connection closed - please retry the request: ${id}, event: ${e}`),
+            );
           }
           this.#pendingRequests.clear();
         });
 
-        this.#ws.addEventListener('message', (event: any) => {
+        this.#ws.addEventListener('message', (event: WebSocket.MessageEvent) => {
           try {
-            const response = JSON.parse(event.data);
-            console.trace('[omni-sdk] received response', response);
+            const response = JSON.parse(event.data as string);
+            log('[debug:omni-sdk] received response', response);
             if (typeof response.id !== 'number') {
-              console.error('[omni-sdk] Invalid response id:', response);
+              log('[error:omni-sdk] Invalid response id:', response);
               return;
             }
 
             const pendingRequest = this.#pendingRequests.get(response.id);
             if (!pendingRequest) {
-              console.error('[omni-sdk] No pending request found for id:', response.id);
+              log('[error:omni-sdk] No pending request found for id:', response.id);
               return;
             }
 
@@ -302,7 +337,7 @@ export class Enclave {
               pendingRequest.resolve(response.result);
             }
           } catch (err) {
-            console.error('[omni-sdk] Failed to process message:', err);
+            log('[error:omni-sdk] Failed to process message:', err);
           }
         });
       } catch (err) {
@@ -324,10 +359,6 @@ export class Enclave {
     this.#messageId = nextId;
     return nextId;
   }
-
-  // omni_getOAuth2GoogleAuthorizationUrl
-  // omni_requestEmailVerificationCode
-  // native_submitPlainRequest
 }
 
 export const enclave = Enclave.getInstance();

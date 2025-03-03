@@ -1,11 +1,11 @@
+import type { Registry } from '@polkadot/types-codec/types';
 import { isHex, u8aToHex } from '@polkadot/util';
 import { base58Decode, decodeAddress } from '@polkadot/util-crypto';
 
-import type { Registry } from '@polkadot/types-codec/types';
-import type { LitentryIdentity } from '@litentry/parachain-api';
+import type { Identity } from '@heima/parachain-api';
 
 /**
- * Creates a LitentryIdentity chain type.
+ * Creates a Identity chain type.
  *
  * Notice that addresses and handles are not fully validated. This struct shouldn't be relied on for validation.
  *
@@ -17,30 +17,30 @@ import type { LitentryIdentity } from '@litentry/parachain-api';
  *
  * @example
  * ```ts
- * const substrateIdentity = createLitentryIdentityType(registry, {
+ * const substrateIdentity = createIdentityType(registry, {
  *  addressOrHandle: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
  *  type: 'Substrate',
  * });
  *
- * const twitterIdentity = createLitentryIdentityType(registry, {
+ * const twitterIdentity = createIdentityType(registry, {
  *  addressOrHandle: 'my-twitter-handle',
  *  type: 'Twitter',
  * });
  * ```
  */
-export function createLitentryIdentityType(
+export function createIdentityType(
   registry: Registry,
   data:
     | {
         // pubKey or address or handle
         addressOrHandle: string;
-        type: LitentryIdentity['type'];
+        type: Identity['type'];
       }
     | `0x${string}`
     | Uint8Array,
-): LitentryIdentity {
+): Identity {
   if (data instanceof Uint8Array || typeof data === 'string') {
-    return registry.createType('LitentryIdentity', data) as unknown as LitentryIdentity;
+    return registry.createType('Identity', data) as unknown as Identity;
   }
 
   const { addressOrHandle, type } = data;
@@ -49,26 +49,26 @@ export function createLitentryIdentityType(
   }
 
   if (type === 'Substrate') {
-    return registry.createType('LitentryIdentity', {
+    return registry.createType('Identity', {
       [type]: toPublicKey(addressOrHandle), // ensures substrate acc pubKey
-    }) as unknown as LitentryIdentity;
+    }) as unknown as Identity;
   }
 
   if (type === 'Bitcoin') {
-    return registry.createType('LitentryIdentity', {
+    return registry.createType('Identity', {
       [type]: formatBitcoinPublicKey(addressOrHandle),
-    }) as unknown as LitentryIdentity;
+    }) as unknown as Identity;
   }
 
   if (type === 'Solana') {
-    return registry.createType('LitentryIdentity', {
+    return registry.createType('Identity', {
       [type]: isHex(addressOrHandle) ? addressOrHandle : base58Decode(addressOrHandle),
-    }) as unknown as LitentryIdentity;
+    }) as unknown as Identity;
   }
 
-  return registry.createType('LitentryIdentity', {
+  return registry.createType('Identity', {
     [type]: addressOrHandle,
-  }) as unknown as LitentryIdentity;
+  }) as unknown as Identity;
 }
 
 function formatBitcoinPublicKey(key: string): `0x${string}` {

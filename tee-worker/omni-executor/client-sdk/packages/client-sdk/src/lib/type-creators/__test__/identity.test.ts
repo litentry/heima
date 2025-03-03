@@ -1,13 +1,13 @@
-import { u8aToHex } from '@polkadot/util';
 import { TypeRegistry } from '@polkadot/types';
+import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady, addressEq } from '@polkadot/util-crypto';
 
-import { identity } from '@litentry/parachain-api';
+import { identity } from '@heima/parachain-api';
 
-import { createLitentryIdentityType } from './litentry-identity';
+import { createIdentityType } from '@type-creators/identity';
 
 const types = {
-  ...identity.types, // LitentryIdentity is defined here
+  ...identity.types, // Identity is defined here
 };
 
 let registry: TypeRegistry;
@@ -22,7 +22,7 @@ beforeAll(async () => {
 test('it creates Substrate identity', () => {
   const substrateAddress = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     type: 'Substrate',
     addressOrHandle: substrateAddress,
   });
@@ -35,7 +35,7 @@ test('it creates Substrate identity', () => {
 test('it creates Evm identity', () => {
   const evmAddress = '0x0AcE67628Bd43213C1C41ca1DAEf47E63923c75c';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     type: 'Evm',
     addressOrHandle: evmAddress,
   });
@@ -48,7 +48,7 @@ test('it creates Evm identity', () => {
 test('it creates Bitcoin identity', () => {
   const bitcointPk = '03dea1fa79da3457bcb4dfd72357a2a8e932fd48e00cc29c5f1b6363d13828ad0e';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     addressOrHandle: bitcointPk,
     type: 'Bitcoin',
   });
@@ -66,7 +66,7 @@ test('it creates Solana identity from base58-encoded string', () => {
   ];
   const address = '5CXSbcqN6hS5skWhViaJs1bYzVdL6KS7X1ANSoH3Uhc1';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     addressOrHandle: address,
     type: 'Solana',
   });
@@ -84,7 +84,7 @@ test('it creates Solana identity from hex-encoded string', () => {
   ];
   const address = u8aToHex(new Uint8Array(publicKey));
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     addressOrHandle: address,
     type: 'Solana',
   });
@@ -97,7 +97,7 @@ test('it creates Solana identity from hex-encoded string', () => {
 test('it creates Twitter identity', () => {
   const handle = 'my-haNdle';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     type: 'Twitter',
     addressOrHandle: handle,
   });
@@ -110,7 +110,7 @@ test('it creates Twitter identity', () => {
 test('it creates Discord identity', () => {
   const handle = 'my-haNdle';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     type: 'Discord',
     addressOrHandle: handle,
   });
@@ -123,7 +123,7 @@ test('it creates Discord identity', () => {
 test('it creates Email identity', () => {
   const handle = 'test@test.com.not.valid';
 
-  const identity = createLitentryIdentityType(registry, {
+  const identity = createIdentityType(registry, {
     type: 'Email',
     addressOrHandle: handle,
   });

@@ -1,4 +1,4 @@
-import { enclave } from './enclave';
+import { enclave } from '@lib/enclave';
 
 describe('enclave', () => {
   it('get shielding key', async () => {

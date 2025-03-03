@@ -1,13 +1,12 @@
 import { TypeRegistry } from '@polkadot/types';
 import { base58Encode, cryptoWaitReady, base64Decode } from '@polkadot/util-crypto';
 
-import { identity, trusted_operations } from '@litentry/parachain-api';
+import { identity } from '@heima/parachain-api';
 
-import { createLitentryValidationDataType } from './validation-data';
+import { createValidationDataType } from '@type-creators/validation-data';
 
 const types = {
-  ...identity.types, // LitentryIdentity is defined here
-  ...trusted_operations.types, // TrustedCall types are defined here
+  ...identity.types, // Identity is defined here
 };
 
 let registry: TypeRegistry;
@@ -21,7 +20,7 @@ beforeAll(async () => {
 
 describe('Bitcoin', () => {
   test('0x prefix is restored for hex encoded challenge code', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: '036cb496b29f281f34b52c49e5dd56f4f921db3f9353cbe254040f581662a924d7',
@@ -48,7 +47,7 @@ describe('Bitcoin', () => {
   });
 
   test('utf-8 challenge codes are preserved as is', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: '036cb496b29f281f34b52c49e5dd56f4f921db3f9353cbe254040f581662a924d7',
@@ -73,7 +72,7 @@ describe('Bitcoin', () => {
 
 describe('Substrate', () => {
   test('it works', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY',
@@ -101,7 +100,7 @@ describe('Substrate', () => {
 
 describe('Solana', () => {
   test('it works', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'F8dr7WYcvkdU9YkQ84Hh8JvZwjZo81BzX2vMHbZBtPd4',
@@ -130,7 +129,7 @@ describe('Solana', () => {
   });
 
   test('it works with hex encoded signatures', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'F8dr7WYcvkdU9YkQ84Hh8JvZwjZo81BzX2vMHbZBtPd4',
@@ -156,7 +155,7 @@ describe('Solana', () => {
 
 describe('Twitter', () => {
   test('it works', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'my_twitter_handle',
@@ -177,7 +176,7 @@ describe('Twitter', () => {
   });
 
   test('it works oAuth2', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'my_twitter_handle',
@@ -204,7 +203,7 @@ describe('Twitter', () => {
 
 describe('Discord', () => {
   test('it works', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'my_discord_handle',
@@ -230,7 +229,7 @@ describe('Discord', () => {
   });
 
   test('it works oAuth2', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'my_discord_handle',
@@ -255,7 +254,7 @@ describe('Discord', () => {
 
 describe('Email', () => {
   test('it works', () => {
-    const validationData = createLitentryValidationDataType(
+    const validationData = createValidationDataType(
       registry,
       {
         addressOrHandle: 'test@my.wrong.email', // not validated

@@ -1,14 +1,16 @@
-import { LitentryIdentity } from '@litentry/parachain-api';
+import { Identity } from '@heima/parachain-api';
 import { hexToU8a, isHex } from '@polkadot/util';
 import { base58Decode, base64Decode } from '@polkadot/util-crypto';
 
 /**
  * Decodes a signature string into a Uint8Array based on the identity type.
+ * 
+ * @param signature - The signature string to decode
+ * @param identity - The identity object containing the type information
+ * @returns A Uint8Array containing the decoded signature
+ * @throws {Error} When signature is empty or format is unsupported
  */
-export function decodeSignature(
-  signature: string,
-  identity: LitentryIdentity
-): Uint8Array {
+export function decodeSignature(signature: string, identity: Identity): Uint8Array {
   if (!signature) {
     throw new Error(`[enclave] Signature is empty`);
   }
@@ -28,6 +30,6 @@ export function decodeSignature(
   }
 
   throw new Error(
-    `[enclave] Unsupported signature format for "${identity.type}". Expected hex-encoded string. Got "${signature}"`
+    `[enclave] Unsupported signature format for "${identity.type}". Expected hex-encoded string. Got "${signature}"`,
   );
 }

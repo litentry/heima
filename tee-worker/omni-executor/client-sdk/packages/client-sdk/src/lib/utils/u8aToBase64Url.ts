@@ -1,5 +1,5 @@
-import type { U8aLike } from '@polkadot/util/types';
 import { base64Encode, base64Trim } from '@polkadot/util-crypto';
+import type { U8aLike } from '@polkadot/util/types';
 
 /**
  * Creates a base64-URL value. Padding is omitted.

@@ -11,7 +11,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 1. Install from NPM
 
     ```
-    npm install @litentry/parachain-api @litentry/sidechain-api @heima/client-sdk
+    npm install @heima/parachain-api @heima/sidechain-api @heima/client-sdk
     ```
 
 2. Set the right environment
@@ -20,7 +20,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 
     You can set what stage to use by setting the `HEIMA_NETWORK` environment variable. Valid values are:
 
-    - `heima-local`: will point to a local enclave `ws://localhost:2000`
+    - `heima-local`: will point to a local enclave `ws://localhost:8080`
     - `heima-dev` (default): will point to `tee-dev`'s Enclave.
     - `heima-prod`: will point to `tee-prod`'s Enclave.
 
@@ -30,7 +30,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 
 This package is distributed under two main tags: `next` and `latest`.
 
-Versions in the pattern of `x.x.x-next.x` feature the most recent code version to work with `tee-dev`. E.g., `1.0.0-next.0`. Once stable and once the Heima Protocol is upgraded, the version will be tagged as `latest` and should be used against `tee-prod`. E.g., `1.0.0`. You can find all versions on https://www.npmjs.com/package/@litentry/enclave?activeTab=versions
+Versions in the pattern of `x.x.x-next.x` feature the most recent code version to work with `tee-dev`. E.g., `1.0.0-next.0`. Once stable and once the Heima Protocol is upgraded, the version will be tagged as `latest` and should be used against `tee-prod`. E.g., `1.0.0`. You can find all versions on https://www.npmjs.com/package/@heima/client-sdk?activeTab=versions
 
 ## Examples & API documentation
 
@@ -67,6 +67,8 @@ These are the steps for publishing the package locally for development purposes.
 
     pnpm nx run client-sdk:test
     ```
+
+    > Before running the tests, make sure you have a local omni-executor running, see [omni-executor README](https://github.com/litentry/heima/tree/dev/tee-worker/omni-executor/README.md) for more information.
 
 ### Publish new versions
 

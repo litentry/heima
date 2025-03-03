@@ -1,6 +1,6 @@
-import { Authentication, LitentryIdentity, OAuth2Data } from '@litentry/parachain-api';
+import { Authentication, Identity } from '@heima/parachain-api';
 import { Registry } from '@polkadot/types-codec/types';
-import { createLitentryMultiSignature } from './litentry-multi-signature';
+import { createMultiSignature } from './multi-signature';
 import { createOAuth2Data, type OAuth2DataType } from './oauth2';
 
 export type AuthenticationData =
@@ -10,7 +10,7 @@ export type AuthenticationData =
     }
   | {
       type: 'Web3';
-      signer: LitentryIdentity;
+      signer: Identity;
       signature: string;
     }
   | {
@@ -32,7 +32,7 @@ export function createAuthentication(registry: Registry, data: AuthenticationDat
       break;
     case 'Web3':
       authentication = {
-        Web3: createLitentryMultiSignature(registry, {
+        Web3: createMultiSignature(registry, {
           who: data.signer,
           signature: data.signature,
         }),

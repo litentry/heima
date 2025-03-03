@@ -1,5 +1,5 @@
 import type { Registry } from '@polkadot/types-codec/types';
-import { OAuth2Data, OAuth2Provider } from '@litentry/parachain-api';
+import { OAuth2Data, OAuth2Provider } from '@heima/parachain-api';
 
 export type OAuth2DataType = {
   provider: 'Google';

@@ -1,24 +1,26 @@
 import type { Registry } from '@polkadot/types-codec/types';
-import type { LitentryIdentity, LitentryMultiSignature } from '@litentry/parachain-api';
-import { decodeSignature } from '../util/decode-signature';
+
+import type { Identity, MultiSignature } from '@heima/parachain-api';
+
+import { decodeSignature } from '@utils/decode-signature';
 
 /**
- * Creates a LitentryIdentity struct type.
+ * Creates a Identity struct type.
  *
  * Accepted signature encoding: hex-encoded string, base64-encoded string (Bitcoin only), base58-encoded string (Solana only).
  */
-export function createLitentryMultiSignature(
+export function createMultiSignature(
   registry: Registry,
   data: {
-    who: LitentryIdentity;
+    who: Identity;
     signature: string;
   },
-): LitentryMultiSignature {
+): MultiSignature {
   const { who, signature } = data;
 
   // Pick the crypto type. EthereumPrettified is a special case for EVM.
   // fallback to Sr25519 for all Substrate accounts.
-  const cryptoType: LitentryMultiSignature['type'] = who.isBitcoin
+  const cryptoType: MultiSignature['type'] = who.isBitcoin
     ? 'Bitcoin'
     : who.isEvm
       ? 'Ethereum' // Work with prettified signature for EVM only
@@ -26,9 +28,9 @@ export function createLitentryMultiSignature(
         ? 'Ed25519'
         : 'Sr25519';
 
-  const struct = registry.createType('LitentryMultiSignature', {
+  const struct = registry.createType('MultiSignature', {
     [cryptoType]: decodeSignature(signature, who),
   });
 
-  return struct as unknown as LitentryMultiSignature;
+  return struct as unknown as MultiSignature;
 }

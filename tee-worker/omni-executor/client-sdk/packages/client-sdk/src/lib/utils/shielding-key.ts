@@ -29,7 +29,7 @@ export async function decrypt(
     );
 
     return { cleartext: new Uint8Array(decrypted) };
-  } catch (e) {
+  } catch (_) {
     // It throws Throws OperationError if the ciphertext is invalid
     // We would like to return a more human error.
     throw new Error('Failed to decrypt data');
