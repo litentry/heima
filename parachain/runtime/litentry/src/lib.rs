@@ -433,7 +433,7 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRootOrAllCouncil;
 	type MaxScheduledPerBlock = ConstU32<50>;
-	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
+	type WeightInfo = ();
 	type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
 	type Preimages = Preimage;
 }
@@ -724,7 +724,7 @@ impl pallet_treasury::Config for Runtime {
 	type BalanceConverter = UnityAssetBalanceConversion;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
-	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -1025,7 +1025,7 @@ impl pallet_parachain_staking::Config for Runtime {
 	type MinDelegatorStk = MinDelegatorStk;
 	type OnCollatorPayout = ();
 	type OnNewRound = ();
-	type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
+	type WeightInfo = ();
 	type IssuanceAdapter = AssetsHandler;
 	type OnAllDelegationRemoved = ScoreStaking;
 }
@@ -1475,14 +1475,14 @@ mod benches {
 		[pallet_identity_management, IdentityManagement]
 		[pallet_membership, CouncilMembership]
 		[pallet_multisig, Multisig]
-		[pallet_parachain_staking, ParachainStaking]
+		// [pallet_parachain_staking, ParachainStaking]
 		[pallet_preimage, Preimage]
 		[pallet_proxy, Proxy]
 		[pallet_scheduler, Scheduler]
 		[pallet_session, SessionBench::<Runtime>]
 		[pallet_teebag, Teebag]
 		[pallet_timestamp, Timestamp]
-		[pallet_treasury, Treasury]
+		// [pallet_treasury, Treasury]
 		[pallet_utility, Utility]
 		[pallet_vc_management, VCManagement]
 	);

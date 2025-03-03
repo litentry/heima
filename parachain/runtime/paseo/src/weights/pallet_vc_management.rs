@@ -175,4 +175,15 @@ impl<T: frame_system::Config> pallet_vc_management::WeightInfo for WeightInfo<T>
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+	/// Storage: `Teebag::EnclaveRegistry` (r:1 w:0)
+	/// Proof: `Teebag::EnclaveRegistry` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn on_vc_issued() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `314`
+		//  Estimated: `3779`
+		// Minimum execution time: 9_810_000 picoseconds.
+		Weight::from_parts(10_269_000, 0)
+			.saturating_add(Weight::from_parts(0, 3779))
+			.saturating_add(T::DbWeight::get().reads(1))
+	}
 }
