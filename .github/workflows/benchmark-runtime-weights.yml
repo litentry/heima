@@ -164,6 +164,11 @@ jobs:
         run: |
           gcloud compute instances stop ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }}
 
+      - name: Clean up GHA temporary credentials
+        run: |
+          ls -la .github/gha-creds-*
+          rm -f .github/gha-creds-*
+
       - name: Create auto PR
         uses: peter-evans/create-pull-request@v7
         with:
