@@ -166,9 +166,9 @@ jobs:
 
       - name: Clean up GHA temporary credentials
         run: |
-          ls
-          pwd
-          git status
+          ls -al gha-creds-*
+          rm -f gha-creds-*
+          ls -al
 
       # - name: Create auto PR
       #   uses: peter-evans/create-pull-request@v7
