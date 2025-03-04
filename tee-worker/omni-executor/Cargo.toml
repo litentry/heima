@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "binance-api",
     "executor-crypto",
     "executor-core",
     "executor-worker",
@@ -59,6 +60,7 @@ tokio = "1.43.0"
 url = "2.5.4"
 
 # Local dependencies
+binance-api = { path = "binance-api" }
 ethereum-intent-executor = { path = "ethereum/intent-executor" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
