@@ -17,6 +17,7 @@ ARG BUILD_ARGS
 ARG PROFILE
 
 RUN rustup toolchain install 1.81.0-x86_64-unknown-linux-gnu
+RUN rustup target add wasm32-unknown-unknown --toolchain 1.81.0-x86_64-unknown-linux-gnu
 RUN cargo build --locked --profile $PROFILE $BUILD_ARGS
 
 # ==========================
