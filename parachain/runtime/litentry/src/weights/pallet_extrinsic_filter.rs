@@ -19,11 +19,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 42.0.1
 //! DATE: 2025-03-04, STEPS: `20`, REPEAT: `50`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `parachain-dev-1`, CPU: `AMD EPYC 7B12`
+//! HOSTNAME: `stress-test-server`, CPU: `AMD EPYC 7B12`
 //! WASM-EXECUTION: `Compiled`, CHAIN: `Some("litentry-dev")`, DB CACHE: 20
 
 // Executed Command:
-// ./target/production/litentry-collator
+// ./litentry-collator
 // benchmark
 // pallet
 // --chain=litentry-dev
@@ -57,13 +57,13 @@ impl<T: frame_system::Config> pallet_extrinsic_filter::WeightInfo for WeightInfo
 		// Proof Size summary in bytes:
 		//  Measured:  `142`
 		//  Estimated: `3607`
-		// Minimum execution time: 11_990_000 picoseconds.
-		Weight::from_parts(10_227_524, 0)
+		// Minimum execution time: 12_380_000 picoseconds.
+		Weight::from_parts(10_293_747, 0)
 			.saturating_add(Weight::from_parts(0, 3607))
-			// Standard Error: 34
-			.saturating_add(Weight::from_parts(2_755, 0).saturating_mul(p.into()))
-			// Standard Error: 34
-			.saturating_add(Weight::from_parts(2_799, 0).saturating_mul(f.into()))
+			// Standard Error: 46
+			.saturating_add(Weight::from_parts(2_918, 0).saturating_mul(p.into()))
+			// Standard Error: 46
+			.saturating_add(Weight::from_parts(2_809, 0).saturating_mul(f.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
@@ -75,13 +75,13 @@ impl<T: frame_system::Config> pallet_extrinsic_filter::WeightInfo for WeightInfo
 		// Proof Size summary in bytes:
 		//  Measured:  `178 + f * (1 ±0) + p * (1 ±0)`
 		//  Estimated: `3644 + f * (1 ±0) + p * (1 ±0)`
-		// Minimum execution time: 21_490_000 picoseconds.
-		Weight::from_parts(11_970_730, 0)
+		// Minimum execution time: 21_400_000 picoseconds.
+		Weight::from_parts(10_929_962, 0)
 			.saturating_add(Weight::from_parts(0, 3644))
-			// Standard Error: 56
-			.saturating_add(Weight::from_parts(10_658, 0).saturating_mul(p.into()))
-			// Standard Error: 56
-			.saturating_add(Weight::from_parts(10_694, 0).saturating_mul(f.into()))
+			// Standard Error: 115
+			.saturating_add(Weight::from_parts(10_966, 0).saturating_mul(p.into()))
+			// Standard Error: 115
+			.saturating_add(Weight::from_parts(11_428, 0).saturating_mul(f.into()))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 			.saturating_add(Weight::from_parts(0, 1).saturating_mul(f.into()))

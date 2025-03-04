@@ -19,11 +19,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 42.0.1
 //! DATE: 2025-03-04, STEPS: `20`, REPEAT: `50`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `parachain-dev-1`, CPU: `AMD EPYC 7B12`
+//! HOSTNAME: `stress-test-server`, CPU: `AMD EPYC 7B12`
 //! WASM-EXECUTION: `Compiled`, CHAIN: `Some("litentry-dev")`, DB CACHE: 20
 
 // Executed Command:
-// ./target/production/litentry-collator
+// ./litentry-collator
 // benchmark
 // pallet
 // --chain=litentry-dev
@@ -59,8 +59,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `190`
 		//  Estimated: `3655`
-		// Minimum execution time: 15_810_000 picoseconds.
-		Weight::from_parts(16_520_000, 0)
+		// Minimum execution time: 15_820_000 picoseconds.
+		Weight::from_parts(16_521_000, 0)
 			.saturating_add(Weight::from_parts(0, 3655))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -73,8 +73,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `508`
 		//  Estimated: `3973`
-		// Minimum execution time: 16_089_000 picoseconds.
-		Weight::from_parts(16_590_000, 0)
+		// Minimum execution time: 15_740_000 picoseconds.
+		Weight::from_parts(16_700_000, 0)
 			.saturating_add(Weight::from_parts(0, 3973))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -87,8 +87,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `687`
 		//  Estimated: `11577`
-		// Minimum execution time: 39_970_000 picoseconds.
-		Weight::from_parts(41_780_000, 0)
+		// Minimum execution time: 40_851_000 picoseconds.
+		Weight::from_parts(42_020_000, 0)
 			.saturating_add(Weight::from_parts(0, 11577))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -101,8 +101,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `687`
 		//  Estimated: `11577`
-		// Minimum execution time: 40_010_000 picoseconds.
-		Weight::from_parts(41_571_000, 0)
+		// Minimum execution time: 40_001_000 picoseconds.
+		Weight::from_parts(41_440_000, 0)
 			.saturating_add(Weight::from_parts(0, 11577))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -113,8 +113,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `350`
 		//  Estimated: `3815`
-		// Minimum execution time: 10_070_000 picoseconds.
-		Weight::from_parts(10_600_000, 0)
+		// Minimum execution time: 9_970_000 picoseconds.
+		Weight::from_parts(10_550_000, 0)
 			.saturating_add(Weight::from_parts(0, 3815))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -127,8 +127,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `382`
 		//  Estimated: `3847`
-		// Minimum execution time: 14_900_000 picoseconds.
-		Weight::from_parts(15_710_000, 0)
+		// Minimum execution time: 14_640_000 picoseconds.
+		Weight::from_parts(15_540_000, 0)
 			.saturating_add(Weight::from_parts(0, 3847))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -147,8 +147,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `357`
 		//  Estimated: `3822`
-		// Minimum execution time: 1_650_460_000 picoseconds.
-		Weight::from_parts(1_664_150_000, 0)
+		// Minimum execution time: 1_676_850_000 picoseconds.
+		Weight::from_parts(1_699_789_000, 0)
 			.saturating_add(Weight::from_parts(0, 3822))
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -171,8 +171,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `574`
 		//  Estimated: `4039`
-		// Minimum execution time: 3_307_140_000 picoseconds.
-		Weight::from_parts(3_330_700_000, 0)
+		// Minimum execution time: 3_332_320_000 picoseconds.
+		Weight::from_parts(3_385_050_000, 0)
 			.saturating_add(Weight::from_parts(0, 4039))
 			.saturating_add(T::DbWeight::get().reads(7))
 			.saturating_add(T::DbWeight::get().writes(3))
@@ -185,8 +185,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `425`
 		//  Estimated: `3890`
-		// Minimum execution time: 17_051_000 picoseconds.
-		Weight::from_parts(18_540_000, 0)
+		// Minimum execution time: 17_269_000 picoseconds.
+		Weight::from_parts(18_690_000, 0)
 			.saturating_add(Weight::from_parts(0, 3890))
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -199,8 +199,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `94`
 		//  Estimated: `1493`
-		// Minimum execution time: 1_650_149_000 picoseconds.
-		Weight::from_parts(1_672_790_000, 0)
+		// Minimum execution time: 1_655_980_000 picoseconds.
+		Weight::from_parts(1_680_810_000, 0)
 			.saturating_add(Weight::from_parts(0, 1493))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -213,8 +213,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `94`
 		//  Estimated: `1493`
-		// Minimum execution time: 1_782_969_000 picoseconds.
-		Weight::from_parts(1_810_170_000, 0)
+		// Minimum execution time: 1_810_750_000 picoseconds.
+		Weight::from_parts(1_831_120_000, 0)
 			.saturating_add(Weight::from_parts(0, 1493))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
@@ -223,8 +223,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 4_500_000 picoseconds.
-		Weight::from_parts(4_790_000, 0)
+		// Minimum execution time: 4_420_000 picoseconds.
+		Weight::from_parts(4_730_000, 0)
 			.saturating_add(Weight::from_parts(0, 0))
 	}
 	/// Storage: `Teebag::EnclaveRegistry` (r:1 w:0)
@@ -235,8 +235,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `374`
 		//  Estimated: `3839`
-		// Minimum execution time: 12_770_000 picoseconds.
-		Weight::from_parts(13_300_000, 0)
+		// Minimum execution time: 12_590_000 picoseconds.
+		Weight::from_parts(13_500_000, 0)
 			.saturating_add(Weight::from_parts(0, 3839))
 			.saturating_add(T::DbWeight::get().reads(2))
 	}
@@ -254,8 +254,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `495`
 		//  Estimated: `3960`
-		// Minimum execution time: 21_160_000 picoseconds.
-		Weight::from_parts(22_540_000, 0)
+		// Minimum execution time: 21_650_000 picoseconds.
+		Weight::from_parts(22_560_000, 0)
 			.saturating_add(Weight::from_parts(0, 3960))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
@@ -266,8 +266,8 @@ impl<T: frame_system::Config> pallet_teebag::WeightInfo for WeightInfo<T> {
 		// Proof Size summary in bytes:
 		//  Measured:  `180`
 		//  Estimated: `3645`
-		// Minimum execution time: 5_789_000 picoseconds.
-		Weight::from_parts(6_040_000, 0)
+		// Minimum execution time: 5_960_000 picoseconds.
+		Weight::from_parts(6_220_000, 0)
 			.saturating_add(Weight::from_parts(0, 3645))
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
