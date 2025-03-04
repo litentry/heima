@@ -1648,7 +1648,7 @@ mod benches {
 		[pallet_proxy, Proxy]
 		[pallet_membership, CouncilMembership]
 		[pallet_multisig, Multisig]
-		[paleet_evm, EVM]
+		[pallet_evm, EVM]
 		[pallet_extrinsic_filter, ExtrinsicFilter]
 		[pallet_scheduler, Scheduler]
 		[pallet_preimage, Preimage]

@@ -1,3 +1,4 @@
+use executor_primitives::MrEnclave;
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
@@ -25,13 +26,18 @@ pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
 	transaction_signer: Arc<TxSigner>,
-) -> Result<(), ()> {
+	worker_url: &str,
+	shielding_pubkey: Vec<u8>,
+) -> Result<MrEnclave, ()> {
 	let mut quote = vec![];
 	let mut attestation_type = AttestationType::Dcap(DcapProvider::Intel);
+	let mut mrenclave = MrEnclave::default();
 
 	#[cfg(feature = "gramine-quote")]
 	{
+		use executor_primitives::DcapQuote;
 		use log::info;
+		use parity_scale_codec::Decode;
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;
@@ -41,6 +47,12 @@ pub async fn perform_attestation(
 
 		quote = fs::read("/dev/attestation/quote").unwrap();
 		info!("Attestation quote {:?}", quote);
+
+		let dcap_quote: DcapQuote =
+			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
+
+		mrenclave = dcap_quote.body.mr_enclave;
+		info!("MRENCLAVE {:?}", mrenclave);
 	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
@@ -51,8 +63,8 @@ pub async fn perform_attestation(
 		WorkerType::OmniExecutor,
 		WorkerMode::OffChainWorker,
 		quote,
-		vec![],
-		None,
+		worker_url.as_bytes().to_vec(),
+		Some(shielding_pubkey),
 		None,
 		attestation_type,
 	);
@@ -62,5 +74,6 @@ pub async fn perform_attestation(
 	client.submit_tx(&signed_call).await.map_err(|e| {
 		log::error!("Error while submitting tx: {:?}", e);
 	})?;
-	Ok(())
+
+	Ok(mrenclave)
 }

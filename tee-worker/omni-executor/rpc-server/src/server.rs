@@ -64,7 +64,7 @@ pub async fn start_server<
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	port: &str,
+	port: u16,
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,
