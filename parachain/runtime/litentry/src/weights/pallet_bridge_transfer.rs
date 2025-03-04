@@ -19,11 +19,11 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 42.0.1
 //! DATE: 2025-03-04, STEPS: `20`, REPEAT: `50`, LOW RANGE: `[]`, HIGH RANGE: `[]`
 //! WORST CASE MAP SIZE: `1000000`
-//! HOSTNAME: `parachain-dev-1`, CPU: `AMD EPYC 7B12`
+//! HOSTNAME: `stress-test-server`, CPU: `AMD EPYC 7B12`
 //! WASM-EXECUTION: `Compiled`, CHAIN: `Some("litentry-dev")`, DB CACHE: 20
 
 // Executed Command:
-// ./target/production/litentry-collator
+// ./litentry-collator
 // benchmark
 // pallet
 // --chain=litentry-dev
@@ -63,8 +63,8 @@ impl<T: frame_system::Config> pallet_bridge_transfer::WeightInfo for WeightInfo<
 		// Proof Size summary in bytes:
 		//  Measured:  `573`
 		//  Estimated: `6196`
-		// Minimum execution time: 49_450_000 picoseconds.
-		Weight::from_parts(51_160_000, 0)
+		// Minimum execution time: 49_460_000 picoseconds.
+		Weight::from_parts(50_610_000, 0)
 			.saturating_add(Weight::from_parts(0, 6196))
 			.saturating_add(T::DbWeight::get().reads(6))
 			.saturating_add(T::DbWeight::get().writes(4))
@@ -81,8 +81,8 @@ impl<T: frame_system::Config> pallet_bridge_transfer::WeightInfo for WeightInfo<
 		// Proof Size summary in bytes:
 		//  Measured:  `328`
 		//  Estimated: `3793`
-		// Minimum execution time: 28_050_000 picoseconds.
-		Weight::from_parts(29_270_000, 0)
+		// Minimum execution time: 28_280_000 picoseconds.
+		Weight::from_parts(29_220_000, 0)
 			.saturating_add(Weight::from_parts(0, 3793))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(2))
