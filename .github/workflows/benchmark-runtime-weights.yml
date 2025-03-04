@@ -128,36 +128,36 @@ jobs:
           remote_ip=$(gcloud compute instances describe ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }} --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
           echo "remote_ip=$remote_ip" >> $GITHUB_ENV
 
-      - name: Remotely benchmark pallets ${{ github.event.inputs.pallets }} for ${{ env.CHAIN }}
-        timeout-minutes: 240
-        run: |
-          echo "Remote instance IP address: ${{ env.remote_ip }}"
-          sleep 30
-          echo "Sleep 30s to wait for server up"
+      # - name: Remotely benchmark pallets ${{ github.event.inputs.pallets }} for ${{ env.CHAIN }}
+      #   timeout-minutes: 240
+      #   run: |
+      #     echo "Remote instance IP address: ${{ env.remote_ip }}"
+      #     sleep 30
+      #     echo "Sleep 30s to wait for server up"
 
-          # Prepare SSH Key
-          cat << EOF > ./benchmark-server-key.pem
-          ${{ env.BENCHMARK_SSH_KEY }}
-          EOF
-          chmod 600 ./benchmark-server-key.pem
+      #     # Prepare SSH Key
+      #     cat << EOF > ./benchmark-server-key.pem
+      #     ${{ env.BENCHMARK_SSH_KEY }}
+      #     EOF
+      #     chmod 600 ./benchmark-server-key.pem
 
-          arg="${{ github.event.inputs.pallets }}"
-          chain="${{ env.CHAIN }}"
+      #     arg="${{ github.event.inputs.pallets }}"
+      #     chain="${{ env.CHAIN }}"
 
-          for c in $chain; do
-            # Copy benchmark script to remote machine
-            scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem parachain/scripts/benchmark-weight-remote.sh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~
+      #     for c in $chain; do
+      #       # Copy benchmark script to remote machine
+      #       scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem parachain/scripts/benchmark-weight-remote.sh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~
 
-            # Execute benchmark script remotely
-            ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
-          done
+      #       # Execute benchmark script remotely
+      #       ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
+      #     done
 
-          # Retrieve the generated weight files
-          echo "Copying generated weights files back ..."
-          scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/heima/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
+      #     # Retrieve the generated weight files
+      #     echo "Copying generated weights files back ..."
+      #     scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/heima/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
 
-          # Clean up the SSH key
-          rm -f ./benchmark-server-key.pem
+      #     # Clean up the SSH key
+      #     rm -f ./benchmark-server-key.pem
 
       - name: Stop remote instance on GCE
         if: always()
@@ -166,8 +166,9 @@ jobs:
 
       - name: Clean up GHA temporary credentials
         run: |
-          ls -la .github/gha-creds-*
-          rm -f .github/gha-creds-*
+          ls
+          pwd
+          git status
 
       - name: Create auto PR
         uses: peter-evans/create-pull-request@v7
