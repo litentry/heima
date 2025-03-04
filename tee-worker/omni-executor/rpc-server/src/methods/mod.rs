@@ -1,3 +1,4 @@
+mod get_health;
 mod get_oauth2_google_authorization_url;
 mod get_shielding_key;
 mod request_email_verification_code;
@@ -5,6 +6,7 @@ mod submit_aes_request;
 mod submit_plain_request;
 
 use crate::server::RpcContext;
+use get_health::register_get_health;
 use get_oauth2_google_authorization_url::register_get_oauth2_google_authorization_url;
 use get_shielding_key::register_get_shielding_key;
 use jsonrpsee::RpcModule;
@@ -20,6 +22,7 @@ pub fn register_methods<
 >(
 	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
+	register_get_health(module);
 	register_get_shielding_key(module);
 	register_submit_aes_requests(module);
 	register_request_email_verification_code(module);
