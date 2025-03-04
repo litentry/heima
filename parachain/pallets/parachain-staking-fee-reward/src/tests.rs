@@ -36,14 +36,18 @@ use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
 fn reward_distributed() {
 	ExtBuilder::default()
 		.with_balances(vec![(1, 100), (2, 100), (3, 100), (4, 100)])
-		.with_candidates(vec![(1, 25), (2, 25)])
-		.with_delegations(vec![(3, 1, 30), (3, 2, 25)])
+		.with_candidates(vec![(1, 25)])
+		.with_delegations(vec![(3, 1, 30)])
 		.build()
 		.execute_with(|| {
-			roll_to(10);
-			ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
+            // 5 block per round, 2 round delay
 			roll_to(11);
+			ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
+			roll_to(12);
 			ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
 			roll_to(15);
+            // No reward distributed yet
+            assert_eq!(Balances::free_balance(1), 75);
+            assert_eq!(Balances::free_balance(3), 70);
 		});
 }
