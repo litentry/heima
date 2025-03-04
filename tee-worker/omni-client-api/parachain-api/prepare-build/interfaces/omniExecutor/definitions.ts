@@ -1,6 +1,6 @@
 export default {
     types: {
-        OmniAesRequest: {
+        AesRequest: {
             mrenclave: "MrEnclave",
             key: "Vec<u8>",
             payload: "AesOutput",

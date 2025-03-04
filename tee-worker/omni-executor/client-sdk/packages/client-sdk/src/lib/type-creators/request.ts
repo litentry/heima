@@ -2,7 +2,7 @@ import type { Index } from '@polkadot/types/interfaces';
 import type { ApiPromise } from '@polkadot/api';
 import { compactAddLength, u8aToHex } from '@polkadot/util';
 
-import type { AesOutput, NativeCall, OmniAesRequest, PlainRequest } from '@heima/parachain-api';
+import type { AesOutput, NativeCall, AesRequest, PlainRequest } from '@heima/parachain-api';
 import { encrypt, generateNonce12, generate, exportKey } from '@utils/shielding-key';
 import { createKeyAesOutputType } from './key-aes-output';
 import { createAuthentication, AuthenticationData } from './authentication';
@@ -25,7 +25,7 @@ export async function createCallRequestType(
     mrEnclave: Uint8Array;
     plain?: boolean;
   },
-): Promise<OmniAesRequest | PlainRequest> {
+): Promise<AesRequest | PlainRequest> {
   const { authentication, nonce, operation, mrEnclave, plain = false } = data;
 
   const authenticationValue = createAuthentication(api.registry, authentication);
@@ -53,7 +53,7 @@ async function createRequestType(
     mrEnclave: Uint8Array;
     plain?: boolean;
   },
-): Promise<OmniAesRequest | PlainRequest> {
+): Promise<AesRequest | PlainRequest> {
   const { operation, mrEnclave, plain = false } = data;
 
   const mrenclave = api.createType('MrEnclave', mrEnclave);
@@ -89,7 +89,7 @@ async function createRequestType(
   // Encrypt the client shielding key using the enclave public key
   const { ciphertext: encryptedKey } = await enclave.encrypt({ cleartext: encryptionKeyU8 });
 
-  return api.createType<OmniAesRequest>('OmniAesRequest', {
+  return api.createType<AesRequest>('AesRequest', {
     mrenclave,
     key: compactAddLength(encryptedKey),
     payload: encryptedPayload,

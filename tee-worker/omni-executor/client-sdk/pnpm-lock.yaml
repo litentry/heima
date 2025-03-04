@@ -1595,7 +1595,7 @@ packages:
     dev: true
 
   /@heima/parachain-api@0.9.23-next.0:
-    resolution: {integrity: sha512-2DSAHLVYpdBq6tG7hR7ZhRR2hkXs1Y/kWRzu6IMjAYrO0sIFZf6teZpFM7R1TWIDxks2WwKBSzyVqEd9cYqsKA==}
+    resolution: {integrity: sha512-0JCttQI4/lWxlblo4ePKcvHzTs+4Lp6LCSck6SUu4UvCSLurw9bgK4clB6Dk8RpSenSZHBIVJZH3jspfwAJKDQ==}
     dependencies:
       '@polkadot/api': 15.0.2
       '@polkadot/api-augment': 15.0.2
