@@ -9,6 +9,9 @@ log = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 url = { workspace = true }
+sha2 = { workspace = true }
+hmac = { workspace = true }
+hex = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
