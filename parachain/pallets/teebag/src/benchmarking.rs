@@ -448,5 +448,5 @@ mod benchmarks {
 		assert!(EnclaveIdentifier::<T>::get(worker_type).contains(&who));
 	}
 
-	impl_benchmark_test_suite!(Teebag, super::mock::new_test_ext(false), super::mock::Test);
+	impl_benchmark_test_suite!(Teebag, super::mock::new_test_ext(true), super::mock::Test);
 }
