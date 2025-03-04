@@ -4,9 +4,8 @@ ARG PROFILE
 # ==========================
 # stage 1: build
 # https://hub.docker.com/_/rust
-# our host is based on bullseye/sid (ubuntu 20)
 # ==========================
-FROM rust:bullseye as builder
+FROM rust:1.81 as builder
 
 WORKDIR /litentry/parachain
 COPY . /litentry/
