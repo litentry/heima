@@ -25,11 +25,10 @@ pub mod utils;
 pub use heima_primitives::{
 	intent,
 	omni_account::{MemberAccount, OmniAccountAuthType, OmniAccountPermission},
-	AccountId, BlockNumber, Hash, Identity, Nonce, ShardIdentifier, Web2IdentityType,
+	teebag::DcapQuote,
+	AccountId, BlockNumber, Hash, Identity, MrEnclave, Nonce, ShardIdentifier, Web2IdentityType,
 };
 use std::fmt::Debug;
-
-pub type MrEnclave = Hash;
 
 pub trait GetEventId<Id> {
 	fn get_event_id(&self) -> Id;
