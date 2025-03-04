@@ -18,13 +18,13 @@
 //! - Moonbeam `pallet_parachain_staking`
 
 use crate as pallet_parachain_staking_fee_reward;
-use crate::{pallet, AwardedPts, Config, InflationInfo, Points, Range};
+use crate::Config;
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
 	traits::{OnFinalize, OnInitialize},
 };
+use pallet_parachain_staking::{InflationInfo, Range};
 use sp_runtime::{BuildStorage, Perbill, Percent};
-
 pub type AccountId = u64;
 pub type Balance = u128;
 
@@ -105,6 +105,14 @@ impl pallet_parachain_staking::Config for Test {
 	type IssuanceAdapter = ();
 	type OnAllDelegationRemoved = ();
 	type RoundFeeRewardResource = ParachainStakingFeeReward;
+}
+
+impl pallet_parachain_staking::OnAllDelegationRemoved<Test> for () {
+	fn on_all_delegation_removed(
+		_delegator: &<Test as frame_system::Config>::AccountId,
+	) -> Result<(), &str> {
+		Ok(())
+	}
 }
 
 impl Config for Test {

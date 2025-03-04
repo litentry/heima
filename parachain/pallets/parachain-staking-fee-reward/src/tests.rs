@@ -22,13 +22,8 @@ use crate::{
 		ExtBuilder, ParachainStaking, ParachainStakingFeeReward, RuntimeEvent as MetaEvent,
 		RuntimeOrigin, Test,
 	},
-	AtStake, Bond, CollatorStatus, DelegationScheduledRequests, DelegatorAdded, Error, Event,
-	Range,
 };
-use frame_support::{
-	assert_noop, assert_ok,
-	traits::{LockIdentifier, LockableCurrency, WithdrawReasons},
-};
+use frame_support::{assert_noop, assert_ok};
 use pallet_parachain_staking::TransactionFeeRewardResource;
 use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
 
