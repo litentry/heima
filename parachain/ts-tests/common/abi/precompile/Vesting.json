@@ -1,0 +1,9 @@
+[
+    {
+        "inputs": [],
+        "name": "vest",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]

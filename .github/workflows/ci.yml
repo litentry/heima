@@ -192,8 +192,13 @@ jobs:
         run: |
           cargo fmt --all -- --check
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: identity-worker ts-tests install npm deps
         working-directory: ./tee-worker/identity/ts-tests
@@ -587,8 +592,13 @@ jobs:
         run: |
           docker load < litentry-parachain-dev.tar.gz
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Run ts tests for ${{ matrix.chain }}
         if: needs.set-condition.outputs.run_parachain_test == 'true'
@@ -728,8 +738,13 @@ jobs:
           docker load < litentry-identity.tar.gz
           docker images
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Launch parachain network
         run: |
@@ -815,8 +830,13 @@ jobs:
           docker load < litentry-identity.tar.gz
           docker images
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Launch parachain network
         run: |

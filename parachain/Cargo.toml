@@ -35,8 +35,10 @@ members = [
     'precompiles/collab-ai/guardian',
     'precompiles/collab-ai/pool-proposal',
     'precompiles/collab-ai/investing-pool',
+    'precompiles/omni-bridge',
     'precompiles/parachain-staking',
     'precompiles/score-staking',
+    'precompiles/vesting',
     'runtime/litentry',
     'runtime/paseo',
     'runtime/common',
@@ -119,13 +121,13 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/polkadot-
 cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 # evm-tracing, use the astar version to use "standard" substrate frame to avoid any conflicts
-moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
-moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc" }
-moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
-moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
-moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
-moonbeam-rpc-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
-moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", default-features = false }
+moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd" }
+moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
 
 # polkadot client
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
@@ -293,8 +295,10 @@ pallet-teebag = { path = "pallets/teebag", default-features = false }
 pallet-vc-management = { path = "pallets/vc-management", default-features = false }
 pallet-evm-precompile-assets-erc20 = { path = "precompiles/assets-erc20", default-features = false }
 pallet-evm-precompile-bridge-transfer = { path = "precompiles/bridge-transfer", default-features = false }
+pallet-evm-precompile-omni-bridge = { path = "precompiles/omni-bridge", default-features = false }
 pallet-evm-precompile-parachain-staking = { path = "precompiles/parachain-staking", default-features = false }
 pallet-evm-precompile-score-staking = { path = "precompiles/score-staking", default-features = false }
+pallet-evm-precompile-vesting = { path = "precompiles/vesting", default-features = false }
 
 pallet-evm-precompile-aiusd-convertor = { path = "precompiles/collab-ai/aiusd-convertor", default-features = false }
 pallet-evm-precompile-curator = { path = "precompiles/collab-ai/curator", default-features = false }

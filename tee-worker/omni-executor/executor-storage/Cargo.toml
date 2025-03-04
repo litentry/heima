@@ -13,6 +13,7 @@ sp-state-machine = { workspace = true, features = ["std"] }
 subxt-core = { workspace = true }
 
 # Local dependencies
+executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }

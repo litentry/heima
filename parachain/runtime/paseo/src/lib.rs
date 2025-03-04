@@ -227,13 +227,12 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// Note:
-	// It's important to match `paseo-parachain-runtime`, which is runtime pkg name
+	// has to match the on-chain registered spec-name, which is `paseo-parachain`
 	spec_name: create_runtime_str!("paseo-parachain"),
-	impl_name: create_runtime_str!("paseo-parachain"),
+	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9223,
+	spec_version: 9233,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1054,9 +1053,9 @@ impl pallet_parachain_staking::Config for Runtime {
 	/// Minimum collators selected per round, default at genesis and minimum forever after
 	type MinSelectedCandidates = ConstU32<1>;
 	/// Maximum top delegations per candidate
-	type MaxTopDelegationsPerCandidate = ConstU32<1000>;
+	type MaxTopDelegationsPerCandidate = ConstU32<300>;
 	/// Maximum bottom delegations per candidate
-	type MaxBottomDelegationsPerCandidate = ConstU32<200>;
+	type MaxBottomDelegationsPerCandidate = ConstU32<100>;
 	/// Maximum delegations per delegator
 	type MaxDelegationsPerDelegator = ConstU32<100>;
 	type DefaultCollatorCommission = DefaultCollatorCommission;
@@ -1071,7 +1070,7 @@ impl pallet_parachain_staking::Config for Runtime {
 	type MinDelegatorStk = MinDelegatorStk;
 	type OnCollatorPayout = ();
 	type OnNewRound = ();
-	type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
+	type WeightInfo = ();
 	type IssuanceAdapter = AssetsHandler;
 	type OnAllDelegationRemoved = ScoreStaking;
 }
@@ -1558,7 +1557,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 		matches!(
 			call,
 			// Vesting::vest
-			RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
+			RuntimeCall::Vesting(_) |
 			// ChainBridge
 			RuntimeCall::ChainBridge(_) |
 			// Bounties
@@ -1640,7 +1639,7 @@ mod benches {
 		[pallet_proxy, Proxy]
 		[pallet_membership, CouncilMembership]
 		[pallet_multisig, Multisig]
-		[paleet_evm, EVM]
+		[pallet_evm, EVM]
 		[pallet_extrinsic_filter, ExtrinsicFilter]
 		[pallet_scheduler, Scheduler]
 		[pallet_preimage, Preimage]

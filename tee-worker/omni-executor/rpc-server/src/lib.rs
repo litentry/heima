@@ -1,6 +1,7 @@
 mod authentication;
 mod error_code;
 mod methods;
+mod native_operation_authenticated;
 mod request;
 mod server;
 mod shielding_key;

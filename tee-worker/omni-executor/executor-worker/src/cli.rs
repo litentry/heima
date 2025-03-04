@@ -19,8 +19,8 @@ pub struct RunArgs {
 	pub parentchain_url: String,
 	pub ethereum_url: String,
 	pub solana_url: String,
-	pub worker_rpc_port: String,
-	#[arg(short, long, default_value = "0", value_name = "start block to sync from parentchain")]
+	pub worker_url: String,
+	#[arg(long, short = 'b', default_value = "0", help = "Start block to sync from parentchain")]
 	pub start_block: u64,
 	#[arg(
 		short,
@@ -28,7 +28,14 @@ pub struct RunArgs {
 		default_value = "local/keystore/substrate_alice.bin",
 		value_name = "keystore file path"
 	)]
-	pub keystore_path: String,
+	pub substrate_keystore_path: String,
+	#[arg(
+		short,
+		long,
+		default_value = "local/keystore/aes_256_key.bin",
+		value_name = "Aes256 keystore file path"
+	)]
+	pub aes256_key_store_path: String,
 	#[arg(
 		short,
 		long,
@@ -46,5 +53,5 @@ pub struct GenKeyArgs {
 		default_value = "local/keystore/substrate_alice.bin",
 		value_name = "keystore file path"
 	)]
-	pub keystore_path: String,
+	pub substrate_keystore_path: String,
 }

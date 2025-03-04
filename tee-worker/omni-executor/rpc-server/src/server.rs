@@ -1,4 +1,5 @@
 use crate::{methods::register_methods, ShieldingKey};
+use executor_primitives::MrEnclave;
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
@@ -7,31 +8,28 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::{env, marker::PhantomData, net::SocketAddr, sync::Arc};
 
 pub(crate) struct RpcContext<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 > {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
-	pub mrenclave: [u8; 32],
+	pub mrenclave: MrEnclave,
 	pub mailer: Mailer,
 	pub jwt_secret: String,
 	pub google_client_id: String,
 	pub google_client_secret: String,
-	phantom_account_id: PhantomData<AccountId>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
-		AccountId,
 		Header,
-		RpcClient: SubstrateRpcClient<AccountId, Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
-	> RpcContext<AccountId, Header, RpcClient, RpcClientFactory>
+		RpcClient: SubstrateRpcClient<Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	> RpcContext<Header, RpcClient, RpcClientFactory>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -50,12 +48,11 @@ impl<
 			native_task_sender,
 			parentchain_rpc_client_factory,
 			storage_db,
-			mrenclave,
+			mrenclave: MrEnclave::from(mrenclave),
 			mailer,
 			jwt_secret,
 			google_client_id,
 			google_client_secret,
-			phantom_account_id: PhantomData,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -63,12 +60,11 @@ impl<
 }
 
 pub async fn start_server<
-	AccountId: Send + Sync + 'static,
 	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<AccountId, Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient> + Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	port: &str,
+	port: u16,
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,

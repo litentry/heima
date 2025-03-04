@@ -20,31 +20,33 @@ use executor_core::event_handler::{Error, EventHandler as EventHandlerTrait};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_core::primitives::Intent;
-use executor_primitives::{AccountId, BlockEvent, Hash, MemberAccount, TryFromSubxtType};
+use executor_primitives::{AccountId, BlockEvent, Hash, MemberAccount};
 use executor_storage::Storage;
 use log::error;
 use parentchain_api_interface::{
 	omni_account::{
 		calls::types::intent_executed::Result as IntentExecutionResult,
 		events::{AccountStoreUpdated, IntentRequested},
-		storage::types::account_store::AccountStore,
 	},
 	runtime_types::core_primitives::intent::Intent as RuntimeIntent,
 	tx as parentchain_tx,
 };
 use parentchain_rpc_client::{
 	metadata::{MetadataProvider, SubxtMetadataProvider},
-	SubstrateRpcClient, SubstrateRpcClientFactory,
+	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory,
 };
 use parentchain_signer::TransactionSigner;
+use parity_scale_codec::{Decode, Encode};
 use std::marker::PhantomData;
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 use subxt::ext::scale_decode;
 use subxt::ext::scale_decode::DecodeAsFields;
 use subxt::{events::StaticEvent, Config, Metadata};
 use subxt_core::config::DefaultExtrinsicParams;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_signer::sr25519::SecretKeyBytes;
+
+type AccountStore = Vec<MemberAccount>;
 
 pub struct EventHandler<
 	ChainConfig: Config,
@@ -53,8 +55,8 @@ pub struct EventHandler<
 	EthereumIntentExecutorT: IntentExecutor,
 	SolanaIntentExecutorT: IntentExecutor,
 	KeyStoreT: KeyStore<SecretKeyBytes>,
-	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<ChainConfig::Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient>,
 	AccountStoreStorage: Storage<AccountId, AccountStore>,
 	MemberOmniAccountStorage: Storage<Hash, AccountId>,
 > {
@@ -84,8 +86,8 @@ impl<
 		EthereumIntentExecutorT: IntentExecutor,
 		SolanaIntentExecutorT: IntentExecutor,
 		KeyStoreT: KeyStore<SecretKeyBytes>,
-		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>,
+		RpcClient: SubstrateRpcClient<ChainConfig::Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient>,
 		AccountStoreStorage: Storage<AccountId, AccountStore>,
 		MemberOmniAccountStorage: Storage<Hash, AccountId>,
 	>
@@ -140,14 +142,13 @@ impl<
 			AccountId = AccountId32,
 			Address = MultiAddress<AccountId32, u32>,
 			Signature = MultiSignature,
+			Header = RpcClientHeader,
 		>,
 		EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 		SolanaIntentExecutorT: IntentExecutor + Send + Sync,
 		KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
-		RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> + Send + Sync,
-		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient>
-			+ Send
-			+ Sync,
+		RpcClient: SubstrateRpcClient<ChainConfig::Header> + Send + Sync,
+		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient> + Send + Sync,
 		AccountStoreStorage: Storage<AccountId, AccountStore> + Send + Sync,
 		MemberOmniAccountStorage: Storage<Hash, AccountId> + Send + Sync,
 	> EventHandlerTrait<BlockEvent>
@@ -233,10 +234,12 @@ impl<
 					})?;
 
 				let omni_account = AccountId::new(account_store_updated.who.0);
+				let mut account_store: Vec<MemberAccount> = Vec::new();
 
 				for member in account_store_updated.account_store.0.iter() {
-					let member_account =
-						MemberAccount::try_from_subxt_type(member).map_err(|e| {
+					let member_bytes = member.encode();
+					let member_account: MemberAccount = Decode::decode(&mut &member_bytes[..])
+						.map_err(|e| {
 							log::error!("Error decoding member account: {:?}", e);
 							Error::NonRecoverableError
 						})?;
@@ -246,14 +249,12 @@ impl<
 							log::error!("Error inserting member account hash: {:?}", e);
 							Error::NonRecoverableError
 						})?;
+					account_store.push(member_account);
 				}
-
-				self.account_store_storage
-					.insert(omni_account, account_store_updated.account_store)
-					.map_err(|_| {
-						log::error!("Could not insert account store into storage");
-						Error::NonRecoverableError
-					})?;
+				self.account_store_storage.insert(omni_account, account_store).map_err(|_| {
+					log::error!("Could not insert account store into storage");
+					Error::NonRecoverableError
+				})?;
 			},
 			_ => {
 				log::debug!("Not interested in {} events", event.variant_name);
@@ -270,12 +271,13 @@ async fn handle_intent_requested_event<
 		AccountId = AccountId32,
 		Address = MultiAddress<AccountId32, u32>,
 		Signature = MultiSignature,
+		Header = RpcClientHeader,
 	>,
 	EthereumIntentExecutorT: IntentExecutor + Send + Sync,
 	SolanaIntentExecutorT: IntentExecutor + Send + Sync,
 	KeyStoreT: KeyStore<SecretKeyBytes> + Send + Sync,
-	RpcClient: SubstrateRpcClient<ChainConfig::AccountId, ChainConfig::Header> + Send + Sync,
-	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::AccountId, ChainConfig::Header, RpcClient> + Send + Sync,
+	RpcClient: SubstrateRpcClient<ChainConfig::Header> + Send + Sync,
+	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient> + Send + Sync,
 >(
 	ethereum_intent_executor: &EthereumIntentExecutorT,
 	solana_intent_executor: &SolanaIntentExecutorT,

@@ -7,17 +7,19 @@ pub use account_store::AccountStoreStorage;
 mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 
-use executor_primitives::{AccountId, MemberAccount, TryFromSubxtType};
+use executor_crypto::hashing::{blake2_128, twox_128};
+use executor_primitives::{AccountId, MemberAccount};
 use frame_support::sp_runtime::traits::BlakeTwo256;
 use frame_support::storage::storage_prefix;
 use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
 use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
+	ToPrimitiveType,
 };
 use parity_scale_codec::Decode;
 use rocksdb::DB;
 use sp_state_machine::{read_proof_check, StorageProof};
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
 const STORAGE_DB_PATH: &str = "storage_db";
 
@@ -28,6 +30,14 @@ pub trait Storage<K, V> {
 	fn insert(&self, key: K, value: V) -> Result<(), ()>;
 	fn remove(&self, key: &K) -> Result<(), ()>;
 	fn contains_key(&self, key: &K) -> bool;
+}
+
+fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
+	twox_128(storage_name.as_bytes())
+		.iter()
+		.chain(blake2_128(key).iter().chain(key.iter())) // blake2_128_concat
+		.cloned()
+		.collect()
 }
 
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
@@ -44,6 +54,8 @@ pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	Ok(db)
 }
 
+const ACCOUNT_STORE_KEYS_PAGE_SIZE: u32 = 300;
+
 async fn init_omni_account_storages(
 	client: &mut SubxtClient<CustomConfig>,
 	storage_db: Arc<StorageDB>,
@@ -51,12 +63,15 @@ async fn init_omni_account_storages(
 	let account_store_storage = AccountStoreStorage::new(storage_db.clone());
 	let member_omni_account_storage = MemberOmniAccountStorage::new(storage_db.clone());
 	let account_store_key_prefix = storage_prefix(b"OmniAccount", b"AccountStore");
-	let page_size = 300;
 	let mut start_key: Option<Vec<u8>> = None;
 
 	loop {
 		let storage_keys_paged = client
-			.get_storage_keys_paged(account_store_key_prefix.into(), page_size, start_key.clone())
+			.get_storage_keys_paged(
+				account_store_key_prefix.into(),
+				ACCOUNT_STORE_KEYS_PAGE_SIZE,
+				start_key.clone(),
+			)
 			.await
 			.map_err(|e| {
 				log::error!("Could not get storage keys paged: {:?}", e);
@@ -73,7 +88,7 @@ async fn init_omni_account_storages(
 					log::error!("Could not get storage proof by keys: {:?}", e);
 				})?;
 		let header = match client.get_last_finalized_header().await {
-			Ok(Some(header)) => header,
+			Ok(header) => header,
 			_ => {
 				log::error!("Could not get last finalized header");
 				return Err(());
@@ -117,18 +132,17 @@ async fn init_omni_account_storages(
 						Decode::decode(&mut &value[..]).map_err(|e| {
 							log::error!("Error decoding account store: {:?}", e);
 						})?;
+					let mut member_accounts: Vec<MemberAccount> = Vec::new();
 					for member in account_store.0.iter() {
-						let member_account =
-							MemberAccount::try_from_subxt_type(member).map_err(|e| {
-								log::error!("Error decoding member account: {:?}", e);
-							})?;
+						let member_account: MemberAccount = member.to_primitive_type();
 						member_omni_account_storage
 							.insert(member_account.hash(), omni_account.clone())
 							.map_err(|e| {
 								log::error!("Error inserting member account hash: {:?}", e);
 							})?;
+						member_accounts.push(member_account);
 					}
-					account_store_storage.insert(omni_account, account_store).map_err(|e| {
+					account_store_storage.insert(omni_account, member_accounts).map_err(|e| {
 						log::error!("Error inserting account store: {:?}", e);
 					})?;
 				},

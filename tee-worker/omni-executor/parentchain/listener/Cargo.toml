@@ -29,6 +29,3 @@ env_logger = { workspace = true }
 
 [lints]
 workspace = true
-
-[features]
-gramine-quote = []

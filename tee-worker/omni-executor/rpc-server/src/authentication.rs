@@ -1,9 +1,9 @@
 use crate::server::RpcContext;
-use executor_core::native_call::NativeCall;
+use executor_core::native_operation::NativeOperation;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, OmniAccountAuthType,
-	ShardIdentifier, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave,
+	OmniAccountAuthType, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
@@ -85,17 +85,15 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
-pub fn verify_web3_authentication(
+pub fn verify_web3_authentication<OP: NativeOperation>(
 	signature: &HeimaMultiSignature,
-	call: &NativeCall,
+	operation: &OP,
 	nonce: u32,
-	mrenclave: &[u8; 32],
-	shard: &ShardIdentifier,
+	mrenclave: MrEnclave,
 ) -> Result<(), AuthenticationError> {
-	let mut payload = call.encode();
+	let mut payload = operation.encode();
 	payload.append(&mut nonce.encode());
 	payload.append(&mut mrenclave.encode());
-	payload.append(&mut shard.encode());
 
 	// The signature should be valid in either case:
 	// 1. blake2_256(payload)
@@ -103,12 +101,12 @@ pub fn verify_web3_authentication(
 
 	let hashed = blake2_256(&payload);
 
-	let prettified_msg_hash = call.signature_message_prefix() + &hex_encode(&hashed);
+	let prettified_msg_hash = operation.signature_message_prefix() + &hex_encode(&hashed);
 	let prettified_msg_hash = prettified_msg_hash.as_bytes();
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(prettified_msg_hash, call.sender_identity())
-		|| signature.verify(&hashed, call.sender_identity())
+	match signature.verify(prettified_msg_hash, operation.sender_identity())
+		|| signature.verify(&hashed, operation.sender_identity())
 	{
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
@@ -116,12 +114,11 @@ pub fn verify_web3_authentication(
 }
 
 pub fn verify_email_authentication<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	sender_identity: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
@@ -138,12 +135,11 @@ pub fn verify_email_authentication<
 }
 
 pub fn verify_auth_token_authentication<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	auth_token: &str,
@@ -169,12 +165,11 @@ pub fn verify_auth_token_authentication<
 }
 
 pub fn verify_oauth2_authentication<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	payload: &OAuth2Data,
@@ -185,12 +180,11 @@ pub fn verify_oauth2_authentication<
 }
 
 fn verify_google_oauth2<
-	AccountId,
 	Header,
-	RpcClient: SubstrateRpcClient<AccountId, Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, Header, RpcClient>,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
-	ctx: Arc<RpcContext<AccountId, Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
 	sender_identity: &Identity,
 	payload: &OAuth2Data,
