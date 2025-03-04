@@ -80,7 +80,7 @@ export async function requestAuthToken(
 
     const data = await enclave.send(rpcRequest);
 
-    const result = api.createType('NativeOperationResponse', data) as unknown as NativeOperationResponse;
+    const result = api.createType<NativeOperationResponse>('NativeOperationResponse', data);
 
     if (result.isErr) {
       throw new Error(result.asErr.toString());

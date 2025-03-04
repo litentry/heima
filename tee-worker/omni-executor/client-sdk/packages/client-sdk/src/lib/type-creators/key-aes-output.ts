@@ -38,5 +38,5 @@ export function createKeyAesOutputType(
   if (typeof data !== 'string') {
     assert(typeof data.ciphertext === 'string', 'ciphertext must be a hex string');
   }
-  return registry.createType('AesOutput', data) as unknown as AesOutput;
+  return registry.createType<AesOutput>('AesOutput', data);
 }

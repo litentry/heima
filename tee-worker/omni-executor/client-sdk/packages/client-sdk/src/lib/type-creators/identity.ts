@@ -40,7 +40,7 @@ export function createIdentityType(
     | Uint8Array,
 ): Identity {
   if (data instanceof Uint8Array || typeof data === 'string') {
-    return registry.createType('Identity', data) as unknown as Identity;
+    return registry.createType<Identity>('Identity', data);
   }
 
   const { addressOrHandle, type } = data;
@@ -49,26 +49,26 @@ export function createIdentityType(
   }
 
   if (type === 'Substrate') {
-    return registry.createType('Identity', {
+    return registry.createType<Identity>('Identity', {
       [type]: toPublicKey(addressOrHandle), // ensures substrate acc pubKey
-    }) as unknown as Identity;
+    });
   }
 
   if (type === 'Bitcoin') {
-    return registry.createType('Identity', {
+    return registry.createType<Identity>('Identity', {
       [type]: formatBitcoinPublicKey(addressOrHandle),
-    }) as unknown as Identity;
+    });
   }
 
   if (type === 'Solana') {
-    return registry.createType('Identity', {
+    return registry.createType<Identity>('Identity', {
       [type]: isHex(addressOrHandle) ? addressOrHandle : base58Decode(addressOrHandle),
-    }) as unknown as Identity;
+    });
   }
 
-  return registry.createType('Identity', {
+  return registry.createType<Identity>('Identity', {
     [type]: addressOrHandle,
-  }) as unknown as Identity;
+  });
 }
 
 function formatBitcoinPublicKey(key: string): `0x${string}` {

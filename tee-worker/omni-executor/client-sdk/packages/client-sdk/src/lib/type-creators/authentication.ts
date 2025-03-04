@@ -51,5 +51,5 @@ export function createAuthentication(registry: Registry, data: AuthenticationDat
     default:
       throw new Error('Unsupported authentication type');
   }
-  return registry.createType('Authentication', authentication) as unknown as Authentication;
+  return registry.createType<Authentication>('Authentication', authentication);
 }

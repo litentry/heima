@@ -178,7 +178,7 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
       cryptoType = 'Ed25519';
     }
 
-    return registry.createType('ValidationData', {
+    return registry.createType<ValidationData>('ValidationData', {
       Web3Validation: {
         [web3Type]: {
           message,
@@ -187,24 +187,24 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
           },
         },
       },
-    }) as unknown as ValidationData;
+    });
   }
 
   if (isProofEmail(identity, proof)) {
-    return registry.createType('ValidationData', {
+    return registry.createType<ValidationData>('ValidationData', {
       Web2Validation: {
         Email: {
           email: stringToHex(proof.email),
           verification_code: stringToHex(proof.verificationCode),
         },
       },
-    }) as unknown as ValidationData;
+    });
   }
 
   if (isProofTwitter(identity, proof)) {
     assert(proof.tweetId, '[vault::link_identity] Missing tweetId');
 
-    return registry.createType('ValidationData', {
+    return registry.createType<ValidationData>('ValidationData', {
       Web2Validation: {
         Twitter: {
           PublicTweet: {
@@ -212,11 +212,11 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
           },
         },
       },
-    }) as unknown as ValidationData;
+    });
   }
 
   if (isProofTwitterOAuth2(identity, proof)) {
-    return registry.createType('ValidationData', {
+    return registry.createType<ValidationData>('ValidationData', {
       Web2Validation: {
         Twitter: {
           OAuth2: {
@@ -226,7 +226,7 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
           },
         },
       },
-    }) as unknown as ValidationData;
+    });
   }
 
   if (isProofDiscord(identity, proof)) {
@@ -234,7 +234,7 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
     assert(proof.channelId, '[vault::link_identity] Missing channelId');
     assert(proof.messageId, '[vault::link_identity] Missing messageId');
 
-    return registry.createType('ValidationData', {
+    return registry.createType<ValidationData>('ValidationData', {
       Web2Validation: {
         Discord: {
           PublicMessage: {
@@ -244,11 +244,11 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
           },
         },
       },
-    }) as unknown as ValidationData;
+    });
   }
 
   if (isProofDiscordOAuth2(identity, proof)) {
-    return registry.createType('ValidationData', {
+    return registry.createType<ValidationData>('ValidationData', {
       Web2Validation: {
         Discord: {
           OAuth2: {
@@ -257,7 +257,7 @@ export function createValidationDataType<IIdentityType extends Identity['type']>
           },
         },
       },
-    }) as unknown as ValidationData;
+    });
   }
 
   throw new Error(`[vault] Unsupported identity network "${identity.type}"`);

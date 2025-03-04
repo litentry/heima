@@ -59,10 +59,10 @@ async function createRequestType(
   const mrenclave = api.createType('MrEnclave', mrEnclave);
   if (plain) {
     // TODO plain request is invalid, the payload in the created PlainRequest is 0x.
-    return api.createType('PlainRequest', {
+    return api.createType<PlainRequest>('PlainRequest', {
       mrenclave,
       payload: operation,
-    }) as unknown as PlainRequest;
+    });
   }
 
   // generate ephemeral shielding key to encrypt the operation
@@ -89,9 +89,9 @@ async function createRequestType(
   // Encrypt the client shielding key using the enclave public key
   const { ciphertext: encryptedKey } = await enclave.encrypt({ cleartext: encryptionKeyU8 });
 
-  return api.createType('OmniAesRequest', {
+  return api.createType<OmniAesRequest>('OmniAesRequest', {
     mrenclave,
     key: compactAddLength(encryptedKey),
     payload: encryptedPayload,
-  }) as unknown as OmniAesRequest;
+  });
 }

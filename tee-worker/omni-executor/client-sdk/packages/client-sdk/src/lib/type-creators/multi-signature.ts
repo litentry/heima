@@ -28,9 +28,7 @@ export function createMultiSignature(
         ? 'Ed25519'
         : 'Sr25519';
 
-  const struct = registry.createType('MultiSignature', {
+  return registry.createType<MultiSignature>('MultiSignature', {
     [cryptoType]: decodeSignature(signature, who),
   });
-
-  return struct as unknown as MultiSignature;
 }

@@ -13,16 +13,16 @@ export function createOAuth2Data(registry: Registry, data: OAuth2DataType): OAut
 
   let oAuth2Provider: OAuth2Provider | undefined;
   if (provider === 'Google') {
-    oAuth2Provider = registry.createType('OAuth2Provider', provider) as unknown as OAuth2Provider;
+    oAuth2Provider = registry.createType<OAuth2Provider>('OAuth2Provider', provider);
   }
 
   if (oAuth2Provider) {
-    return registry.createType('OAuth2Data', {
+    return registry.createType<OAuth2Data>('OAuth2Data', {
       provider: oAuth2Provider,
       code,
       state,
       redirect_uri: redirectUri,
-    }) as unknown as OAuth2Data;
+    });
   }
 
   throw new Error('Unsupported OAuth2 provider');

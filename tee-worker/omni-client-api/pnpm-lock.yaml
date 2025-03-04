@@ -11,40 +11,40 @@ importers:
   parachain-api:
     dependencies:
       '@polkadot/api':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/api-augment':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/api-base':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/api-derive':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/keyring':
         specifier: ^13.2.3
         version: 13.2.3(@polkadot/util-crypto@13.2.3)(@polkadot/util@13.2.3)
       '@polkadot/rpc-core':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/types':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/types-augment':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/types-codec':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/types-create':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/types-known':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/types-support':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@polkadot/util':
         specifier: ^13.2.3
@@ -54,7 +54,7 @@ importers:
         version: 13.2.3(@polkadot/util@13.2.3)
     devDependencies:
       '@polkadot/typegen':
-        specifier: ^15.0.1
+        specifier: ^15.0.2
         version: 15.0.2
       '@types/node':
         specifier: ^20.4.4

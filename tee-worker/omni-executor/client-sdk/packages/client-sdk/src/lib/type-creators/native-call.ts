@@ -50,14 +50,14 @@ export function createNativeCallType(
   if (isRequestAuthTokenCall(method, params)) {
     const { member, authOptions } = params;
 
-    const operation = registry.createType('NativeCall', {
+    const operation = registry.createType<NativeCall>('NativeCall', {
       [nativeCallMethodsMap.request_auth_token]: registry.createType(NativeCallEnum.request_auth_token, [
         member,
         registry.createType('AuthOptions', {
           expires_at: authOptions.expiresAt,
         }),
       ]),
-    }) as unknown as NativeCall;
+    });
 
     return { operation };
   }
