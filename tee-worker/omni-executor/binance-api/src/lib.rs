@@ -6,6 +6,8 @@ use log::error;
 use types::TokenPair;
 use url::Url;
 
+const CONVERT_API: &str = "/sapi/v1/convert";
+
 pub struct BinanceApi {
 	client: Client,
 	base_url: Url,
@@ -30,7 +32,8 @@ impl BinanceApi {
 		from_asset: Option<String>,
 		to_asset: Option<String>,
 	) -> Result<Vec<TokenPair>, BinanceApiError> {
-		let mut url = self.base_url.join("/sapi/v1/convert/exchangeInfo").unwrap();
+		let endpoint = format!("{}/exchangeInfo", CONVERT_API);
+		let mut url = self.base_url.join(&endpoint).unwrap();
 		if let Some(from_asset) = from_asset {
 			url.query_pairs_mut().append_pair("fromAsset", &from_asset);
 		}
