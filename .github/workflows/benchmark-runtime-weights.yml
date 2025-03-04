@@ -170,24 +170,24 @@ jobs:
           pwd
           git status
 
-      - name: Create auto PR
-        uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: "[benchmarking bot] Auto commit generated weights files"
-          committer: benchmarking bot <noreply@github.com>
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          branch: benchmarking-bot-${{ github.run_id }}
-          delete-branch: true
-          title: "[benchmarking bot] Update generated weights files"
-          body: |
-            This is an automatically created PR.
-            It updates the weights files under `runtime/*/src/weights/*.rs` after running benchmarks on the remote machine: ${{ env.INSTANCE_NAME }}
+      # - name: Create auto PR
+      #   uses: peter-evans/create-pull-request@v7
+      #   with:
+      #     commit-message: "[benchmarking bot] Auto commit generated weights files"
+      #     committer: benchmarking bot <noreply@github.com>
+      #     author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+      #     branch: benchmarking-bot-${{ github.run_id }}
+      #     delete-branch: true
+      #     title: "[benchmarking bot] Update generated weights files"
+      #     body: |
+      #       This is an automatically created PR.
+      #       It updates the weights files under `runtime/*/src/weights/*.rs` after running benchmarks on the remote machine: ${{ env.INSTANCE_NAME }}
 
-            Pallets: "${{ github.event.inputs.pallets }}"
-            Chain: "${{ env.CHAIN }}"
-            Github action run: https://github.com/litentry/litentry-parachain/actions/runs/${{ github.run_id }}
-          labels: |
-            automated-pr
-          assignees: ${{ github.actor }}
-          reviewers: ${{ github.actor }}
-          draft: false
+      #       Pallets: "${{ github.event.inputs.pallets }}"
+      #       Chain: "${{ env.CHAIN }}"
+      #       Github action run: https://github.com/litentry/litentry-parachain/actions/runs/${{ github.run_id }}
+      #     labels: |
+      #       automated-pr
+      #     assignees: ${{ github.actor }}
+      #     reviewers: ${{ github.actor }}
+      #     draft: false
