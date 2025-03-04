@@ -4,10 +4,10 @@ mod types;
 use error::BinanceApiError;
 use hmac::{Hmac, Mac};
 use log::error;
-use types::TokenPair;
 use reqwest::{Client, Method};
 use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
+use types::{AssetInfo, AssetSymbol, TokenPair};
 use url::Url;
 
 const CONVERT_API: &str = "/sapi/v1/convert";
@@ -55,6 +55,13 @@ impl BinanceApi {
 
 		Ok(token_pairs)
 	}
+
+	/// List all supported asset’s precision information
+	pub async fn get_asset_info(&self) -> Result<Vec<AssetInfo>, BinanceApiError> {
+		let endpoint = format!("{}/assetInfo", CONVERT_API);
+		self.make_signed_request(&endpoint, Method::GET, None).await
+	}
+}
 
 impl BinanceApi {
 	/// Create HMAC SHA256 signature for request parameters
