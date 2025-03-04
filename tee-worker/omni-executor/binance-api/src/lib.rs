@@ -29,12 +29,11 @@ impl BinanceApi {
 		BinanceApi { client, base_url, api_key, api_secret }
 	}
 
-	/// List All Convert Pairs
-	/// Query for all convertible token pairs and the tokens’ respective upper/lower limits
+	/// List all convertible token pairs and the tokens’ respective upper/lower limits
 	pub async fn get_exchange_info(
 		&self,
-		from_asset: Option<String>,
-		to_asset: Option<String>,
+		from_asset: Option<AssetSymbol>,
+		to_asset: Option<AssetSymbol>,
 	) -> Result<Vec<TokenPair>, BinanceApiError> {
 		let endpoint = format!("{}/exchangeInfo", CONVERT_API);
 		let mut url = self.base_url.join(&endpoint).unwrap();
