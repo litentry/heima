@@ -7,6 +7,7 @@ use types::TokenPair;
 use url::Url;
 
 pub struct BinanceApi {
+	client: Client,
 	base_url: Url,
 	api_key: String,
 	api_secret: String,
@@ -18,7 +19,8 @@ impl BinanceApi {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse("https://api.binance.com").unwrap(),
 		};
-		BinanceApi { base_url, api_key, api_secret }
+		let client = Client::new();
+		BinanceApi { client, base_url, api_key, api_secret }
 	}
 
 	/// List All Convert Pairs
@@ -35,7 +37,7 @@ impl BinanceApi {
 		if let Some(to_asset) = to_asset {
 			url.query_pairs_mut().append_pair("toAsset", &to_asset);
 		}
-		let response = reqwest::get(url.as_str()).await.map_err(|e| {
+		let response = self.client.get(url.as_str()).send().await.map_err(|e| {
 			error!("Error getting exchange info: {}", e);
 			BinanceApiError::RequestError
 		})?;
