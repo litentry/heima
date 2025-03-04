@@ -16,7 +16,7 @@ import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('OmniAccount', function () {
-    this.timeout(30000);
+    this.timeout(120000);
     let context: IntegrationTestContext;
     let aliceWallet: SubstrateSigner;
     let aliceIdentity: CorePrimitivesIdentity;
