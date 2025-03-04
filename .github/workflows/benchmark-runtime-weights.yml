@@ -128,36 +128,36 @@ jobs:
           remote_ip=$(gcloud compute instances describe ${{ env.INSTANCE_NAME }} --zone=${{ env.INSTANCE_ZONE }} --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
           echo "remote_ip=$remote_ip" >> $GITHUB_ENV
 
-      # - name: Remotely benchmark pallets ${{ github.event.inputs.pallets }} for ${{ env.CHAIN }}
-      #   timeout-minutes: 240
-      #   run: |
-      #     echo "Remote instance IP address: ${{ env.remote_ip }}"
-      #     sleep 30
-      #     echo "Sleep 30s to wait for server up"
+      - name: Remotely benchmark pallets ${{ github.event.inputs.pallets }} for ${{ env.CHAIN }}
+        timeout-minutes: 240
+        run: |
+          echo "Remote instance IP address: ${{ env.remote_ip }}"
+          sleep 30
+          echo "Sleep 30s to wait for server up"
 
-      #     # Prepare SSH Key
-      #     cat << EOF > ./benchmark-server-key.pem
-      #     ${{ env.BENCHMARK_SSH_KEY }}
-      #     EOF
-      #     chmod 600 ./benchmark-server-key.pem
+          # Prepare SSH Key
+          cat << EOF > ./benchmark-server-key.pem
+          ${{ env.BENCHMARK_SSH_KEY }}
+          EOF
+          chmod 600 ./benchmark-server-key.pem
 
-      #     arg="${{ github.event.inputs.pallets }}"
-      #     chain="${{ env.CHAIN }}"
+          arg="${{ github.event.inputs.pallets }}"
+          chain="${{ env.CHAIN }}"
 
-      #     for c in $chain; do
-      #       # Copy benchmark script to remote machine
-      #       scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem parachain/scripts/benchmark-weight-remote.sh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~
+          for c in $chain; do
+            # Copy benchmark script to remote machine
+            scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem parachain/scripts/benchmark-weight-remote.sh ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:~
 
-      #       # Execute benchmark script remotely
-      #       ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
-      #     done
+            # Execute benchmark script remotely
+            ssh -i ./benchmark-server-key.pem -o StrictHostKeyChecking=no ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }} "bash benchmark-weight-remote.sh \"$c\" \"${GITHUB_REF#refs/heads/}\" \"$arg\""
+          done
 
-      #     # Retrieve the generated weight files
-      #     echo "Copying generated weights files back ..."
-      #     scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/heima/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
+          # Retrieve the generated weight files
+          echo "Copying generated weights files back ..."
+          scp -o StrictHostKeyChecking=no -i ./benchmark-server-key.pem ${{ env.BENCHMARK_SSH_USER }}@${{ env.remote_ip }}:/tmp/heima/parachain/runtime/$c/src/weights/*.rs parachain/runtime/$c/src/weights/
 
-      #     # Clean up the SSH key
-      #     rm -f ./benchmark-server-key.pem
+          # Clean up the SSH key
+          rm -f ./benchmark-server-key.pem
 
       - name: Stop remote instance on GCE
         if: always()
@@ -168,26 +168,25 @@ jobs:
         run: |
           ls -al gha-creds-*
           rm -f gha-creds-*
-          ls -al
 
-      # - name: Create auto PR
-      #   uses: peter-evans/create-pull-request@v7
-      #   with:
-      #     commit-message: "[benchmarking bot] Auto commit generated weights files"
-      #     committer: benchmarking bot <noreply@github.com>
-      #     author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-      #     branch: benchmarking-bot-${{ github.run_id }}
-      #     delete-branch: true
-      #     title: "[benchmarking bot] Update generated weights files"
-      #     body: |
-      #       This is an automatically created PR.
-      #       It updates the weights files under `runtime/*/src/weights/*.rs` after running benchmarks on the remote machine: ${{ env.INSTANCE_NAME }}
+      - name: Create auto PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "[benchmarking bot] Auto commit generated weights files"
+          committer: benchmarking bot <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          branch: benchmarking-bot-${{ github.run_id }}
+          delete-branch: true
+          title: "[benchmarking bot] Update generated weights files"
+          body: |
+            This is an automatically created PR.
+            It updates the weights files under `runtime/*/src/weights/*.rs` after running benchmarks on the remote machine: ${{ env.INSTANCE_NAME }}
 
-      #       Pallets: "${{ github.event.inputs.pallets }}"
-      #       Chain: "${{ env.CHAIN }}"
-      #       Github action run: https://github.com/litentry/litentry-parachain/actions/runs/${{ github.run_id }}
-      #     labels: |
-      #       automated-pr
-      #     assignees: ${{ github.actor }}
-      #     reviewers: ${{ github.actor }}
-      #     draft: false
+            Pallets: "${{ github.event.inputs.pallets }}"
+            Chain: "${{ env.CHAIN }}"
+            Github action run: https://github.com/litentry/litentry-parachain/actions/runs/${{ github.run_id }}
+          labels: |
+            automated-pr
+          assignees: ${{ github.actor }}
+          reviewers: ${{ github.actor }}
+          draft: false
