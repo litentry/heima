@@ -1246,9 +1246,12 @@ name = "binance-api"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "hex",
+ "hmac 0.12.1",
  "log",
  "reqwest 0.12.8",
  "serde",
+ "sha2 0.10.8",
  "tokio",
  "url",
 ]
