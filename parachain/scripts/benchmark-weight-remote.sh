@@ -32,22 +32,14 @@ git checkout "$2"
 docker cp "$(docker create --rm litentry/litentry-parachain:runtime-benchmarks):/usr/local/bin/litentry-collator" .
 chmod a+x litentry-collator
 
-LIB_RS_FILE="runtime/$1/src/lib.rs"
 # populate PALLETS
 PALLETS=
 case "$3" in
   '*')
-    echo "test 1"
     PALLETS=$(grep -F '[pallet_' runtime/$1/src/lib.rs | tr -d '\t' | grep -v "^ *//" | sed 's/.*\[//;s/,.*//' | paste -s -d' ' -)
     PALLETS="frame_system cumulus_pallet_xcmp_queue $PALLETS"
-#     PALLETS=($(awk '
-#     /define_benchmarks!/ {inside=1; next}
-#     inside && /\);/ {inside=0; next}
-#     inside && !/^\/\// {gsub(/\[|\]|,.*$/, "", $1); print $1}
-# ' "$LIB_RS_FILE"))
     ;;
   *)
-    echo "test 2"
     PALLETS=$(echo "$3" | tr ',' ' ')
     ;;
 esac
