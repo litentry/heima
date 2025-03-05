@@ -3,7 +3,7 @@ import { hexToU8a } from '@polkadot/util';
 
 import type { Identity, NativeOperationResponse } from '@heima/parachain-api';
 
-import { getNonce } from '@requests/get-nonce.request';
+import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
 import { AuthenticationData } from '@type-creators/authentication';
 import { createNativeCallType } from '@type-creators/native-call';
 import { createCallRequestType } from '@type-creators/request';
@@ -44,7 +44,10 @@ export async function requestAuthToken(
 }> {
   const { member, expiresAt } = data;
 
-  const [nonce, mrEnclave] = await Promise.all([getNonce(api, member), enclave.getMrEnclave(api)]);
+  const [nonce, mrEnclave] = await Promise.all([
+    getOmniAccountNonceWithIdentity(api, member),
+    enclave.getMrEnclave(api),
+  ]);
 
   const { operation } = createNativeCallType(api.registry, {
     method: 'request_auth_token',

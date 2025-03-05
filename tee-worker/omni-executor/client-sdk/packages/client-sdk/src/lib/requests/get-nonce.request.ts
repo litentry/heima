@@ -1,27 +1,27 @@
 import { AccountId, Index } from '@polkadot/types/interfaces';
-import { assert } from '@polkadot/util';
 
 import { ApiPromise, Identity } from '@heima/parachain-api';
-import { GenericAccountId } from '@polkadot/types';
+
+import { toOmniAccount } from '@utils/identity';
 
 /**
- * Retrieves the nonce for a given identity.
- * 
+ * Retrieves the omni account nonce for a given identity.
+ *
  * @param api Polkadot.js API instance
- * @param account The account to get the nonce for
+ * @param identity The identity to get the nonce for
  * @returns Promise resolving to the nonce value
- * @throws Error if api is not initialized or account is invalid
  */
-export async function getNonce(
-  api: ApiPromise,
-  account: Identity | string | Uint8Array | AccountId,
-): Promise<Index> {
-  if (typeof account === 'string' || account instanceof Uint8Array || account instanceof GenericAccountId) {
-    return await api.rpc.system.accountNextIndex(account);
-  }
+export async function getOmniAccountNonceWithIdentity(api: ApiPromise, identity: Identity): Promise<Index> {
+  return await getOmniAccountNonce(api, toOmniAccount(api.registry, identity));
+}
 
-  const identity = account as Identity;
-  assert(identity.isSubstrate, 'Identity must be a Substrate identity');
-
-  return await api.rpc.system.accountNextIndex(identity.asSubstrate.toHex());
+/**
+ * Retrieves the nonce for a given omni account.
+ *
+ * @param api Polkadot.js API instance
+ * @param account The omni account to get the nonce for
+ * @returns Promise resolving to the nonce value
+ */
+export async function getOmniAccountNonce(api: ApiPromise, account: string | Uint8Array | AccountId): Promise<Index> {
+  return await api.rpc.system.accountNextIndex(account);
 }
