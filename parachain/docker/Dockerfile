@@ -5,7 +5,7 @@ ARG PROFILE
 # stage 1: build
 # https://hub.docker.com/_/rust
 # ==========================
-FROM rust:1.81 as builder
+FROM rust:bullseye as builder
 
 WORKDIR /litentry/parachain
 COPY . /litentry/
@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -yq clang libclang-dev cmake protobuf-comp
 ARG BUILD_ARGS
 ARG PROFILE
 
+RUN rustup toolchain install
 RUN cargo build --locked --profile $PROFILE $BUILD_ARGS
 
 # ==========================
