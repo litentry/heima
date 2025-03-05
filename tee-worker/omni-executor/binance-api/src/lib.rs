@@ -11,7 +11,8 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 use types::{
-	AssetInfo, AssetSymbol, ConvertOrder, ConvertTradeHistory, Quote, RequestQuoteParams, TokenPair,
+	AssetInfo, AssetSymbol, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, Quote,
+	RequestQuoteParams, TokenPair,
 };
 use url::Url;
 
@@ -122,6 +123,29 @@ impl BinanceApi {
 		}
 
 		let endpoint = format!("{}/tradeFlow", CONVERT_API);
+		self.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
+			.await
+	}
+
+	/// Query order status by order ID.
+	pub async fn get_order_status(
+		&self,
+		order_id: Option<String>,
+		quote_id: Option<String>,
+		recv_window: Option<u32>,
+	) -> Result<ConvertOrderStatus, Error> {
+		if order_id.is_none() && quote_id.is_none() {
+			return Err(Error::InvalidParams);
+		}
+		let mut params = HashMap::new();
+
+		if let Some(order_id) = order_id {
+			params.insert("orderId".to_string(), order_id);
+		} else if let Some(quote_id) = quote_id {
+			params.insert("quoteId".to_string(), quote_id);
+		}
+
+		let endpoint = format!("{}/orderStatus", CONVERT_API);
 		self.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
 			.await
 	}

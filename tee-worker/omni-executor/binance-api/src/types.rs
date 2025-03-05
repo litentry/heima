@@ -37,7 +37,7 @@ pub struct Quote {
 /// Convert order status
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ConvertOrderStatus {
+pub enum OrderStatus {
 	Process,
 	AcceptSuccess,
 	Success,
@@ -49,7 +49,7 @@ pub enum ConvertOrderStatus {
 pub struct ConvertOrder {
 	pub order_id: String,
 	pub create_time: u64,
-	pub order_status: ConvertOrderStatus,
+	pub order_status: OrderStatus,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,7 +57,7 @@ pub struct ConvertOrder {
 pub struct ConvertTrade {
 	pub quote_id: String,
 	pub order_id: String,
-	pub order_status: ConvertOrderStatus,
+	pub order_status: OrderStatus,
 	pub from_asset: AssetSymbol,
 	pub from_amount: String,
 	pub to_asset: AssetSymbol,
@@ -75,6 +75,20 @@ pub struct ConvertTradeHistory {
 	pub limit: u16,
 	pub list: Vec<ConvertTrade>,
 	pub more_data: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertOrderStatus {
+	pub order_id: String,
+	pub order_status: OrderStatus,
+	pub from_asset: AssetSymbol,
+	pub from_amount: String,
+	pub to_asset: AssetSymbol,
+	pub to_amount: String,
+	pub ratio: String,
+	pub inverse_ratio: String,
+	pub create_time: u64,
 }
 
 pub enum WalletType {
