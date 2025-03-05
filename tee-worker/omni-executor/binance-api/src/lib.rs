@@ -1,5 +1,5 @@
 mod error;
-mod types;
+pub mod types;
 
 use error::Error;
 use hmac::{Hmac, Mac};
