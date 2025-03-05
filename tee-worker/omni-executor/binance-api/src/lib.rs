@@ -10,7 +10,7 @@ use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
 };
-use types::{AssetInfo, AssetSymbol, Quote, RequestQuoteParams, TokenPair};
+use types::{AssetInfo, AssetSymbol, ConvertOrder, Quote, RequestQuoteParams, TokenPair};
 use url::Url;
 
 const CONVERT_API: &str = "/sapi/v1/convert";
@@ -76,6 +76,18 @@ impl BinanceApi {
 			error!("Error converting request quote params: {}", e);
 			Error::InvalidParams
 		})?;
+		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
+			.await
+	}
+
+	pub async fn accept_quote(
+		&self,
+		quote_id: &str,
+		recv_window: Option<u32>,
+	) -> Result<ConvertOrder, Error> {
+		let endpoint = format!("{}/acceptQuote", CONVERT_API);
+		let mut params = HashMap::new();
+		params.insert("quoteId".to_string(), quote_id.to_string());
 		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
 			.await
 	}

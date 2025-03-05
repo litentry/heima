@@ -34,6 +34,24 @@ pub struct Quote {
 	pub from_amount: String,
 }
 
+/// Convert order status
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ConvertOrderStatus {
+	Process,
+	AcceptSuccess,
+	Success,
+	Fail,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertOrder {
+	pub order_id: String,
+	pub create_time: u64,
+	pub order_status: ConvertOrderStatus,
+}
+
 pub enum WalletType {
 	Spot,
 	Funding,
