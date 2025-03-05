@@ -91,20 +91,6 @@ pub struct ConvertOrderStatus {
 	pub create_time: u64,
 }
 
-/*
- * PlaceLimitOrderParams Parameters
-Name	Type	Mandatory	Description
-baseAsset	STRING	YES	base asset (use the response fromIsBase from GET /sapi/v1/convert/exchangeInfo api to check which one is baseAsset )
-quoteAsset	STRING	YES	quote asset
-limitPrice	DECIMAL	YES	Symbol limit price (from baseAsset to quoteAsset)
-baseAmount	DECIMAL	NO	Base asset amount. (One of baseAmount or quoteAmount is required)
-quoteAmount	DECIMAL	NO	Quote asset amount. (One of baseAmount or quoteAmount is required)
-side	ENUM	YES	BUY or SELL
-walletType	ENUM	NO	SPOT or FUNDING or SPOT_FUNDING. It is to use which type of assets. Default is SPOT.
-expiredType	ENUM	YES	1_D, 3_D, 7_D, 30_D (D means day)
-recvWindow	LONG	NO
-timestamp	LONG	YES
-*/
 pub enum OrderSide {
 	Buy,
 	Sell,
