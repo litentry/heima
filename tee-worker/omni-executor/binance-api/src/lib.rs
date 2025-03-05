@@ -1,7 +1,7 @@
 mod error;
 mod types;
 
-use error::BinanceApiError;
+use error::Error;
 use hmac::{Hmac, Mac};
 use log::error;
 use reqwest::{Client, Method};
@@ -34,7 +34,7 @@ impl BinanceApi {
 		&self,
 		from_asset: Option<AssetSymbol>,
 		to_asset: Option<AssetSymbol>,
-	) -> Result<Vec<TokenPair>, BinanceApiError> {
+	) -> Result<Vec<TokenPair>, Error> {
 		let endpoint = format!("{}/exchangeInfo", CONVERT_API);
 		let mut url = self.base_url.join(&endpoint).unwrap();
 		if let Some(from_asset) = from_asset {
@@ -45,18 +45,18 @@ impl BinanceApi {
 		}
 		let response = self.client.get(url.as_str()).send().await.map_err(|e| {
 			error!("Error getting exchange info: {}", e);
-			BinanceApiError::RequestError
+			Error::RequestFailed
 		})?;
 		let token_pairs: Vec<TokenPair> = response.json().await.map_err(|e| {
 			error!("Error parsing exchange info: {}", e);
-			BinanceApiError::ParseResponseFailed
+			Error::ParseResponseFailed
 		})?;
 
 		Ok(token_pairs)
 	}
 
 	/// List all supported asset’s precision information
-	pub async fn get_asset_info(&self) -> Result<Vec<AssetInfo>, BinanceApiError> {
+	pub async fn get_asset_info(&self) -> Result<Vec<AssetInfo>, Error> {
 		let endpoint = format!("{}/assetInfo", CONVERT_API);
 		self.make_signed_request(&endpoint, Method::GET, None).await
 	}
@@ -80,7 +80,7 @@ impl BinanceApi {
 		method: Method,
 		parameters: Option<HashMap<String, String>>,
 		recv_window: Option<u64>,
-	) -> Result<T, BinanceApiError>
+	) -> Result<T, Error>
 	where
 		T: serde::de::DeserializeOwned,
 	{
@@ -122,18 +122,18 @@ impl BinanceApi {
 					.form(&params)
 			},
 			_ => {
-				return Err(BinanceApiError::MethodNotSupported);
+				return Err(Error::MethodNotSupported);
 			},
 		};
 
 		let response = request.send().await.map_err(|e| {
 			error!("API request failed: {}", e);
-			BinanceApiError::RequestError
+			Error::RequestFailed
 		})?;
 
 		response.json::<T>().await.map_err(|e| {
 			error!("Error parsing response: {}", e);
-			BinanceApiError::ParseResponseFailed
+			Error::ParseResponseFailed
 		})
 	}
 }

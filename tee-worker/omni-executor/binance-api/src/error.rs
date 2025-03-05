@@ -1,6 +1,7 @@
 #[derive(Debug)]
-pub enum BinanceApiError {
-	RequestError,
+pub enum Error {
+	RequestFailed,
 	ParseResponseFailed,
 	MethodNotSupported,
+	InvalidParams,
 }
