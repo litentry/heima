@@ -91,6 +91,118 @@ pub struct ConvertOrderStatus {
 	pub create_time: u64,
 }
 
+/*
+ * PlaceLimitOrderParams Parameters
+Name	Type	Mandatory	Description
+baseAsset	STRING	YES	base asset (use the response fromIsBase from GET /sapi/v1/convert/exchangeInfo api to check which one is baseAsset )
+quoteAsset	STRING	YES	quote asset
+limitPrice	DECIMAL	YES	Symbol limit price (from baseAsset to quoteAsset)
+baseAmount	DECIMAL	NO	Base asset amount. (One of baseAmount or quoteAmount is required)
+quoteAmount	DECIMAL	NO	Quote asset amount. (One of baseAmount or quoteAmount is required)
+side	ENUM	YES	BUY or SELL
+walletType	ENUM	NO	SPOT or FUNDING or SPOT_FUNDING. It is to use which type of assets. Default is SPOT.
+expiredType	ENUM	YES	1_D, 3_D, 7_D, 30_D (D means day)
+recvWindow	LONG	NO
+timestamp	LONG	YES
+*/
+pub enum OrderSide {
+	Buy,
+	Sell,
+}
+
+pub enum ExpiredType {
+	OneDay,
+	ThreeDays,
+	SevenDays,
+	ThirtyDays,
+}
+
+/// base_asset or quote_asset can be determined via exchangeInfo endpoint.
+/// Limit price is defined from base_asset to quote_asset.
+/// Either base_amount or quote_amount is used.
+pub struct PlaceLimitOrderParams {
+	base_asset: AssetSymbol,
+	quote_asset: AssetSymbol,
+	limit_price: String,
+	base_amount: Option<String>,
+	quote_amount: Option<String>,
+	side: OrderSide,
+	wallet_type: Option<WalletType>,
+	expired_type: ExpiredType,
+}
+
+impl PlaceLimitOrderParams {
+	#[allow(clippy::too_many_arguments)]
+	pub fn new(
+		base_asset: AssetSymbol,
+		quote_asset: AssetSymbol,
+		limit_price: f64,
+		side: OrderSide,
+		expired_type: ExpiredType,
+		base_amount: Option<f64>,
+		quote_amount: Option<f64>,
+		wallet_type: Option<WalletType>,
+	) -> Self {
+		Self {
+			base_asset,
+			quote_asset,
+			limit_price: limit_price.to_string(),
+			base_amount: base_amount.map(|a| a.to_string()),
+			quote_amount: quote_amount.map(|a| a.to_string()),
+			side,
+			wallet_type,
+			expired_type,
+		}
+	}
+
+	pub fn try_into_params(self) -> Result<HashMap<String, String>, &'static str> {
+		let mut params = HashMap::new();
+		params.insert("baseAsset".to_string(), self.base_asset);
+		params.insert("quoteAsset".to_string(), self.quote_asset);
+		params.insert("limitPrice".to_string(), self.limit_price);
+		if self.base_amount.is_none() && self.quote_amount.is_none() {
+			return Err("Missing amount for limit order");
+		}
+		if let Some(base_amount) = self.base_amount {
+			params.insert("baseAmount".to_string(), base_amount);
+		} else if let Some(quote_amount) = self.quote_amount {
+			params.insert("quoteAmount".to_string(), quote_amount);
+		}
+		let side = match self.side {
+			OrderSide::Buy => "BUY".to_string(),
+			OrderSide::Sell => "SELL".to_string(),
+		};
+		params.insert("side".to_string(), side);
+		if let Some(wallet_type) = self.wallet_type {
+			let wallet_type = match wallet_type {
+				WalletType::Spot => "SPOT".to_string(),
+				WalletType::Funding => "FUNDING".to_string(),
+			};
+			params.insert("walletType".to_string(), wallet_type);
+		}
+		let expired_type = match self.expired_type {
+			ExpiredType::OneDay => "1_D".to_string(),
+			ExpiredType::ThreeDays => "3_D".to_string(),
+			ExpiredType::SevenDays => "7_D".to_string(),
+			ExpiredType::ThirtyDays => "30_D".to_string(),
+		};
+		params.insert("expiredType".to_string(), expired_type);
+
+		Ok(params)
+	}
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LimitOrder {
+	pub quote_id: String,
+	pub ratio: String,
+	pub inverse_ratio: String,
+	pub valid_timestamp: u64,
+	pub to_amount: String,
+	pub from_amount: String,
+}
+
 pub enum WalletType {
 	Spot,
 	Funding,
@@ -223,5 +335,97 @@ mod tests {
 		let result = params.try_into_params();
 		assert!(result.is_err());
 		assert_eq!(result.unwrap_err(), "Missing amount for quote");
+	}
+
+	#[test]
+	fn test_limit_order_req_try_into_params_with_base_amount() {
+		let limit_order_params = PlaceLimitOrderParams::new(
+			"BTC".to_string(),
+			"USDT".to_string(),
+			50000.0,
+			OrderSide::Buy,
+			ExpiredType::OneDay,
+			Some(0.1),
+			None,
+			Some(WalletType::Spot),
+		);
+
+		let result = limit_order_params.try_into_params().unwrap();
+
+		assert_eq!(result.get("baseAsset").unwrap(), "BTC");
+		assert_eq!(result.get("quoteAsset").unwrap(), "USDT");
+		assert_eq!(result.get("limitPrice").unwrap(), "50000");
+		assert_eq!(result.get("baseAmount").unwrap(), "0.1");
+		assert_eq!(result.get("side").unwrap(), "BUY");
+		assert_eq!(result.get("walletType").unwrap(), "SPOT");
+		assert_eq!(result.get("expiredType").unwrap(), "1_D");
+		assert!(!result.contains_key("quoteAmount"));
+	}
+
+	#[test]
+	fn test_limit_order_req_try_into_params_with_quote_amount() {
+		let limit_order_params = PlaceLimitOrderParams::new(
+			"BTC".to_string(),
+			"USDT".to_string(),
+			50000.0,
+			OrderSide::Sell,
+			ExpiredType::SevenDays,
+			None,
+			Some(1000.0),
+			Some(WalletType::Funding),
+		);
+
+		let result = limit_order_params.try_into_params().unwrap();
+
+		assert_eq!(result.get("quoteAmount").unwrap(), "1000");
+		assert_eq!(result.get("side").unwrap(), "SELL");
+		assert_eq!(result.get("walletType").unwrap(), "FUNDING");
+		assert_eq!(result.get("expiredType").unwrap(), "7_D");
+		assert!(!result.contains_key("baseAmount"));
+	}
+
+	#[test]
+	fn test_limit_order_req_try_into_params_missing_amount() {
+		let limit_order_params = PlaceLimitOrderParams::new(
+			"BTC".to_string(),
+			"USDT".to_string(),
+			50000.0,
+			OrderSide::Buy,
+			ExpiredType::OneDay,
+			None,
+			None,
+			None,
+		);
+
+		let result = limit_order_params.try_into_params();
+		assert!(result.is_err());
+		assert_eq!(result.unwrap_err(), "Missing amount for limit order");
+	}
+
+	#[test]
+	fn test_limit_order_req_try_into_params_different_expired_types() {
+		let expired_types = vec![
+			(ExpiredType::OneDay, "1_D"),
+			(ExpiredType::ThreeDays, "3_D"),
+			(ExpiredType::SevenDays, "7_D"),
+			(ExpiredType::ThirtyDays, "30_D"),
+		];
+
+		for (expired_type, expected) in expired_types {
+			let limit_order_params = PlaceLimitOrderParams::new(
+				"BTC".to_string(),
+				"USDT".to_string(),
+				50000.0,
+				OrderSide::Buy,
+				expired_type,
+				Some(0.1),
+				None,
+				None,
+			);
+
+			let result = limit_order_params.try_into_params().unwrap();
+			assert_eq!(result.get("expiredType").unwrap(), expected);
+			assert!(!result.contains_key("walletType"));
+		}
 	}
 }

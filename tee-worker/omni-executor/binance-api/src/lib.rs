@@ -11,8 +11,8 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 use types::{
-	AssetInfo, AssetSymbol, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, Quote,
-	RequestQuoteParams, TokenPair,
+	AssetInfo, AssetSymbol, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, LimitOrder,
+	PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,
 };
 use url::Url;
 
@@ -147,6 +147,21 @@ impl BinanceApi {
 
 		let endpoint = format!("{}/orderStatus", CONVERT_API);
 		self.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
+			.await
+	}
+
+	/// Enable users to place a limit order
+	pub async fn place_limit_order(
+		&self,
+		place_limit_order_params: PlaceLimitOrderParams,
+		recv_window: Option<u32>,
+	) -> Result<LimitOrder, Error> {
+		let endpoint = format!("{}/limit/placeOrder", CONVERT_API);
+		let params = place_limit_order_params.try_into_params().map_err(|e| {
+			error!("Error converting place limit order params: {}", e);
+			Error::InvalidParams
+		})?;
+		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
 			.await
 	}
 }
