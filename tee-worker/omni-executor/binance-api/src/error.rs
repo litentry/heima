@@ -2,4 +2,5 @@
 pub enum BinanceApiError {
 	RequestError,
 	ParseResponseFailed,
+	MethodNotSupported,
 }

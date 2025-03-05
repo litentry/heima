@@ -78,28 +78,53 @@ impl BinanceApi {
 		&self,
 		endpoint: &str,
 		method: Method,
+		parameters: Option<HashMap<String, String>>,
 		recv_window: Option<u64>,
 	) -> Result<T, BinanceApiError>
 	where
 		T: serde::de::DeserializeOwned,
 	{
 		let mut url = self.base_url.join(endpoint).unwrap();
+		let mut params = HashMap::new();
+
 		let timestamp = SystemTime::now()
 			.duration_since(UNIX_EPOCH)
 			.expect("Time went backwards")
 			.as_millis() as u64;
-		url.query_pairs_mut().append_pair("timestamp", &timestamp.to_string());
+		params.insert("timestamp".to_string(), timestamp.to_string());
 
 		if let Some(window) = recv_window {
-			url.query_pairs_mut().append_pair("recvWindow", &window.to_string());
+			params.insert("recvWindow".to_string(), window.to_string());
 		}
 
-		let query_string = url.query().unwrap();
-		let signature = self.sign_request(query_string);
-		url.query_pairs_mut().append_pair("signature", &signature);
+		if let Some(p) = parameters {
+			params.extend(p);
+		}
 
-		let request =
-			self.client.request(method, url.as_str()).header("X-MBX-APIKEY", &self.api_key);
+		let signature = {
+			let mut tmp_url = url.clone();
+			tmp_url.query_pairs_mut().extend_pairs(params.iter());
+			let query_string = tmp_url.query().unwrap().to_string();
+			self.sign_request(&query_string)
+		};
+
+		let request = match method {
+			Method::GET => {
+				url.query_pairs_mut().extend_pairs(params.iter());
+				url.query_pairs_mut().append_pair("signature", &signature);
+				self.client.request(method, url.as_str()).header("X-MBX-APIKEY", &self.api_key)
+			},
+			Method::POST => {
+				params.insert("signature".to_string(), signature);
+				self.client
+					.request(method, url.as_str())
+					.header("X-MBX-APIKEY", &self.api_key)
+					.form(&params)
+			},
+			_ => {
+				return Err(BinanceApiError::MethodNotSupported);
+			},
+		};
 
 		let response = request.send().await.map_err(|e| {
 			error!("API request failed: {}", e);
