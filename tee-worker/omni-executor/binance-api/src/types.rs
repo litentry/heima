@@ -98,6 +98,28 @@ pub struct CancelOrderLimit {
 	pub status: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenOrders {
+	pub list: Vec<OpenOrder>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenOrder {
+	pub quote_id: String,
+	pub order_id: String,
+	pub order_status: OrderStatus,
+	pub from_asset: AssetSymbol,
+	pub from_amount: String,
+	pub to_asset: AssetSymbol,
+	pub to_amount: String,
+	pub ratio: String,
+	pub inverse_ratio: String,
+	pub create_time: u64,
+	pub expired_timestamp: u64,
+}
+
 pub enum OrderSide {
 	Buy,
 	Sell,

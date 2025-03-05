@@ -12,7 +12,8 @@ use std::{
 };
 use types::{
 	AssetInfo, AssetSymbol, CancelOrderLimit, ConvertOrder, ConvertOrderStatus,
-	ConvertTradeHistory, LimitOrder, PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,
+	ConvertTradeHistory, LimitOrder, OpenOrders, PlaceLimitOrderParams, Quote, RequestQuoteParams,
+	TokenPair,
 };
 use url::Url;
 
@@ -176,6 +177,12 @@ impl BinanceApi {
 		params.insert("orderId".to_string(), order_id.to_string());
 		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
 			.await
+	}
+
+	/// Query open orders
+	pub async fn get_open_orders(&self, recv_window: Option<u32>) -> Result<OpenOrders, Error> {
+		let endpoint = format!("{}/limit/queryOpenOrders", CONVERT_API);
+		self.make_signed_request(&endpoint, Method::POST, None, recv_window).await
 	}
 }
 
