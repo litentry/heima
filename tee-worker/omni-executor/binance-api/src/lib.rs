@@ -56,9 +56,11 @@ impl BinanceApi {
 	}
 
 	/// List all supported asset’s precision information
-	pub async fn get_asset_info(&self) -> Result<Vec<AssetInfo>, Error> {
+	pub async fn get_asset_info(&self, recv_window: Option<u64>) -> Result<Vec<AssetInfo>, Error> {
 		let endpoint = format!("{}/assetInfo", CONVERT_API);
-		self.make_signed_request(&endpoint, Method::GET, None).await
+		self.make_signed_request(&endpoint, Method::GET, None, recv_window).await
+	}
+
 	}
 }
 
