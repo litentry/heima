@@ -6,8 +6,11 @@ use hmac::{Hmac, Mac};
 use log::error;
 use reqwest::{Client, Method};
 use sha2::Sha256;
-use std::time::{SystemTime, UNIX_EPOCH};
-use types::{AssetInfo, AssetSymbol, TokenPair};
+use std::{
+	collections::HashMap,
+	time::{SystemTime, UNIX_EPOCH},
+};
+use types::{AssetInfo, AssetSymbol, Quote, RequestQuoteParams, TokenPair};
 use url::Url;
 
 const CONVERT_API: &str = "/sapi/v1/convert";
@@ -61,6 +64,19 @@ impl BinanceApi {
 		self.make_signed_request(&endpoint, Method::GET, None, recv_window).await
 	}
 
+	/// Request a quote for the requested token pairs
+	pub async fn get_quote(
+		&self,
+		request_quote_params: RequestQuoteParams,
+		recv_window: Option<u64>,
+	) -> Result<Quote, Error> {
+		let endpoint = format!("{}/getQuote", CONVERT_API);
+		let params = request_quote_params.try_into_params().map_err(|e| {
+			error!("Error converting request quote params: {}", e);
+			Error::InvalidParams
+		})?;
+		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
+			.await
 	}
 }
 
