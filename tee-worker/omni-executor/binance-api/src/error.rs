@@ -4,4 +4,5 @@ pub enum Error {
 	ParseResponseFailed,
 	MethodNotSupported,
 	InvalidParams,
+	MaxRecvWindowExceeded,
 }

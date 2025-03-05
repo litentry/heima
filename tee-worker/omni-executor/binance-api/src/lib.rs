@@ -14,6 +14,7 @@ use types::{AssetInfo, AssetSymbol, Quote, RequestQuoteParams, TokenPair};
 use url::Url;
 
 const CONVERT_API: &str = "/sapi/v1/convert";
+const MAX_RECV_WINDOW: u32 = 60000;
 
 pub struct BinanceApi {
 	client: Client,
@@ -59,7 +60,7 @@ impl BinanceApi {
 	}
 
 	/// List all supported asset’s precision information
-	pub async fn get_asset_info(&self, recv_window: Option<u64>) -> Result<Vec<AssetInfo>, Error> {
+	pub async fn get_asset_info(&self, recv_window: Option<u32>) -> Result<Vec<AssetInfo>, Error> {
 		let endpoint = format!("{}/assetInfo", CONVERT_API);
 		self.make_signed_request(&endpoint, Method::GET, None, recv_window).await
 	}
@@ -68,7 +69,7 @@ impl BinanceApi {
 	pub async fn get_quote(
 		&self,
 		request_quote_params: RequestQuoteParams,
-		recv_window: Option<u64>,
+		recv_window: Option<u32>,
 	) -> Result<Quote, Error> {
 		let endpoint = format!("{}/getQuote", CONVERT_API);
 		let params = request_quote_params.try_into_params().map_err(|e| {
@@ -97,7 +98,7 @@ impl BinanceApi {
 		endpoint: &str,
 		method: Method,
 		parameters: Option<HashMap<String, String>>,
-		recv_window: Option<u64>,
+		recv_window: Option<u32>,
 	) -> Result<T, Error>
 	where
 		T: serde::de::DeserializeOwned,
@@ -112,6 +113,9 @@ impl BinanceApi {
 		params.insert("timestamp".to_string(), timestamp.to_string());
 
 		if let Some(window) = recv_window {
+			if window > MAX_RECV_WINDOW {
+				return Err(Error::MaxRecvWindowExceeded);
+			}
 			params.insert("recvWindow".to_string(), window.to_string());
 		}
 
