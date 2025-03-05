@@ -80,6 +80,7 @@ impl BinanceApi {
 			.await
 	}
 
+	/// Accept the offered quote by quote ID.
 	pub async fn accept_quote(
 		&self,
 		quote_id: &str,
