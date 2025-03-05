@@ -11,8 +11,8 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 use types::{
-	AssetInfo, AssetSymbol, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, LimitOrder,
-	PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,
+	AssetInfo, AssetSymbol, CancelOrderLimit, ConvertOrder, ConvertOrderStatus,
+	ConvertTradeHistory, LimitOrder, PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,
 };
 use url::Url;
 
@@ -161,6 +161,19 @@ impl BinanceApi {
 			error!("Error converting place limit order params: {}", e);
 			Error::InvalidParams
 		})?;
+		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
+			.await
+	}
+
+	/// Enable users to cancel a limit order
+	pub async fn cancel_limit_order(
+		&self,
+		order_id: String,
+		recv_window: Option<u32>,
+	) -> Result<CancelOrderLimit, Error> {
+		let endpoint = format!("{}/limit/cancelOrder", CONVERT_API);
+		let mut params = HashMap::new();
+		params.insert("orderId".to_string(), order_id.to_string());
 		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
 			.await
 	}

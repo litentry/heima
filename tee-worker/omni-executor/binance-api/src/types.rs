@@ -91,6 +91,13 @@ pub struct ConvertOrderStatus {
 	pub create_time: u64,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelOrderLimit {
+	pub order_id: String,
+	pub status: String,
+}
+
 pub enum OrderSide {
 	Buy,
 	Sell,
