@@ -10,11 +10,14 @@ use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
 };
-use types::{AssetInfo, AssetSymbol, ConvertOrder, Quote, RequestQuoteParams, TokenPair};
+use types::{
+	AssetInfo, AssetSymbol, ConvertOrder, ConvertTradeHistory, Quote, RequestQuoteParams, TokenPair,
+};
 use url::Url;
 
 const CONVERT_API: &str = "/sapi/v1/convert";
 const MAX_RECV_WINDOW: u32 = 60000;
+const MAX_HISTORY_LIMIT: u16 = 1000;
 
 pub struct BinanceApi {
 	client: Client,
@@ -90,6 +93,36 @@ impl BinanceApi {
 		let mut params = HashMap::new();
 		params.insert("quoteId".to_string(), quote_id.to_string());
 		self.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
+			.await
+	}
+
+	/// Get Convert Trade History
+	pub async fn get_convert_trade_history(
+		&self,
+		start_time: u64,
+		end_time: u64,
+		limit: Option<u16>,
+		recv_window: Option<u32>,
+	) -> Result<ConvertTradeHistory, Error> {
+		if let Some(limit) = limit {
+			if limit > MAX_HISTORY_LIMIT {
+				return Err(Error::LimitExceeded);
+			}
+		}
+		// The max interval between startTime and endTime is 30 days.
+		if end_time - start_time > 30 * 24 * 60 * 60 * 1000 {
+			return Err(Error::InvalidParams);
+		}
+
+		let mut params = HashMap::new();
+		params.insert("startTime".to_string(), start_time.to_string());
+		params.insert("endTime".to_string(), end_time.to_string());
+		if let Some(limit) = limit {
+			params.insert("limit".to_string(), limit.to_string());
+		}
+
+		let endpoint = format!("{}/tradeFlow", CONVERT_API);
+		self.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
 			.await
 	}
 }
