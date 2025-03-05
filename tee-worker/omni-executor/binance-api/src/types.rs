@@ -43,7 +43,9 @@ pub enum WalletType {
 pub struct RequestQuoteParams {
 	from_asset: AssetSymbol,
 	to_asset: AssetSymbol,
+	/// When specified, it is the amount you will be debited after the conversion
 	from_amount: Option<String>,
+	/// When specified, it is the amount you will be credited after the conversion
 	to_amount: Option<String>,
 	wallet_type: Option<WalletType>,
 }
