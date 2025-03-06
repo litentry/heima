@@ -130,6 +130,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -230,10 +231,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9233,
+	spec_version: 9240,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
+	transaction_version: 2,
 	// https://hackmd.io/JagpUd8tTjuKf9HQtpvHIQ
 	// The trie is an abstraction that sits between the Runtime (and its Overlays) and the actual database, providing an important abstraction to the blockchain, namely storage proofs and state roots.
 	// The trie format has changed since this pull request(#9732) in substrate. The main new difference is, that nodes that contain values larger than 256 bits will not storage the value itself, but rather store the hash of that value. The value itself, is consequently stored in the node that lives in the path traversed by this new hash.
