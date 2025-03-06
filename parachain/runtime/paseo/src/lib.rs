@@ -453,7 +453,7 @@ parameter_types! {
 }
 
 impl pallet_preimage::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRootOrHalfCouncil;
@@ -475,7 +475,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
@@ -619,7 +619,7 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
 	type MembershipInitialized = Council;
 	type MembershipChanged = Council;
 	type MaxMembers = CouncilDefaultMaxMembers;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -649,7 +649,7 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
 	type MembershipInitialized = TechnicalCommittee;
 	type MembershipChanged = TechnicalCommittee;
 	type MaxMembers = CouncilDefaultMaxMembers;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 impl pallet_collective::Config<DeveloperCommitteeInstance> for Runtime {
@@ -819,7 +819,7 @@ impl pallet_identity::Config for Runtime {
 	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
 	type MaxSuffixLength = ConstU32<7>;
 	type MaxUsernameLength = ConstU32<32>;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1004,7 +1004,7 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type SuicideQuickClearLimit = ConstU32<0>;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1157,7 +1157,7 @@ impl pallet_teebag::Config for Runtime {
 
 impl pallet_identity_management::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
 	type ExtrinsicWhitelistOrigin = IMPExtrinsicWhitelist;
@@ -1629,28 +1629,30 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 mod benches {
 	define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
+		[cumulus_pallet_xcmp_queue, XcmpQueue]
 		// [pallet_asset_manager, AssetManager]
 		[pallet_balances, Balances]
-		[pallet_timestamp, Timestamp]
-		[pallet_utility, Utility]
-		[pallet_treasury, Treasury]
-		[pallet_democracy, Democracy]
+		[pallet_bridge_transfer,BridgeTransfer]
+		[pallet_chain_bridge,ChainBridge]
 		[pallet_collective, Council]
-		[pallet_proxy, Proxy]
-		[pallet_membership, CouncilMembership]
-		[pallet_multisig, Multisig]
+		[pallet_democracy, Democracy]
 		[pallet_evm, EVM]
 		[pallet_extrinsic_filter, ExtrinsicFilter]
-		[pallet_scheduler, Scheduler]
-		[pallet_preimage, Preimage]
-		[pallet_session, SessionBench::<Runtime>]
-		[pallet_parachain_staking, ParachainStaking]
-		[cumulus_pallet_xcmp_queue, XcmpQueue]
+		[pallet_identity, ParachainIdentity]
 		[pallet_identity_management, IdentityManagement]
-		[pallet_vc_management, VCManagement]
-		[pallet_chain_bridge,ChainBridge]
-		[pallet_bridge_transfer,BridgeTransfer]
+		[pallet_membership, CouncilMembership]
+		[pallet_multisig, Multisig]
+		// [pallet_parachain_staking, ParachainStaking]
+		[pallet_preimage, Preimage]
+		[pallet_proxy, Proxy]
+		[pallet_scheduler, Scheduler]
+		[pallet_session, SessionBench::<Runtime>]
 		[pallet_teebag, Teebag]
+		[pallet_timestamp, Timestamp]
+		// [pallet_treasury, Treasury]
+		[pallet_utility, Utility]
+		[pallet_vc_management, VCManagement]
+
 		[pallet_conviction_voting, ConvictionVoting]
 		[pallet_referenda, Referenda]
 		[pallet_whitelist, Whitelist]
