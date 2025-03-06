@@ -41,6 +41,8 @@ fn reward_distributed() {
 			// Reward distributed
 			// DefaultCollatorCommission = 20%
 			// DefaultParachainBondReservePercent = 30%
+			// Reward still recorded
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 30);
 			assert_eq!(Balances::free_balance(1), 75 + 30);
 			assert_eq!(Balances::free_balance(3), 70 + 30);
 			// Reward still recorded
