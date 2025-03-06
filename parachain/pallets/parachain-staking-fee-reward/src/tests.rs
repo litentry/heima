@@ -35,7 +35,7 @@ fn reward_distributed() {
 			assert_eq!(Balances::free_balance(1), 75);
 			assert_eq!(Balances::free_balance(3), 70);
 			// Reward did recorded
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 30);
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 30);
 
 			roll_to(29);
 			// Reward distributed
@@ -44,10 +44,10 @@ fn reward_distributed() {
 			assert_eq!(Balances::free_balance(1), 75 + 30);
 			assert_eq!(Balances::free_balance(3), 70 + 30);
 			// Reward still recorded
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 30);
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 30);
 			roll_to(31);
 			// Reward removed
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 0);
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 0);
 		});
 }
 
@@ -66,15 +66,15 @@ fn query_reward() {
 			ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
 
 			assert_eq!(
-				ParachainStakingFeeReward::round_accumulated_reward(2),
-				ParachainStakingFeeReward::query_round_fee_reward(2)
+				ParachainStakingFeeReward::round_accumulated_reward(3),
+				ParachainStakingFeeReward::query_round_fee_reward(3)
 			);
 			// 5 block per round, 2 round delay
 			roll_to(21);
 			ParachainStakingFeeReward::on_transaction_fee_reward_notify(15);
 			assert_eq!(
-				ParachainStakingFeeReward::round_accumulated_reward(4),
-				ParachainStakingFeeReward::query_round_fee_reward(4)
+				ParachainStakingFeeReward::round_accumulated_reward(5),
+				ParachainStakingFeeReward::query_round_fee_reward(5)
 			);
 		});
 }
