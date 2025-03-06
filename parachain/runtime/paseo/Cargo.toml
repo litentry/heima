@@ -423,4 +423,3 @@ try-runtime = [
     "pallet-pool-proposal/try-runtime",
     "pallet-omni-bridge/try-runtime",
 ]
-metadata-hash = ["substrate-wasm-builder?/metadata-hash"]

@@ -35,7 +35,6 @@ jobs:
           #           which will result in a different parachain_authorize_upgrade_hash
           PARACHAIN_PALLET_ID: "0x1e"
           AUTHORIZE_UPGRADE_PREFIX: "0x02"
-          BUILD_OPTS: "--features=metadata-hash"
         with:
           chain: ${{ github.event.inputs.chain }}-parachain
           runtime_dir: runtime/${{ github.event.inputs.chain }}

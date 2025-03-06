@@ -367,4 +367,3 @@ try-runtime = [
     "sp-debug-derive/std",
     "sp-runtime/try-runtime",
 ]
-metadata-hash = ["substrate-wasm-builder?/metadata-hash"]

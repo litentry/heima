@@ -7,7 +7,7 @@ homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
 name = 'litentry-collator'
 repository = 'https://github.com/litentry/litentry-parachain'
-version = '0.9.23'
+version = '0.9.24'
 
 [[bin]]
 name = 'litentry-collator'
@@ -153,7 +153,3 @@ try-runtime = [
     "frame-try-runtime",
 ]
 std = []
-metadata-hash = [
-    "litentry-parachain-runtime/metadata-hash",
-    "paseo-parachain-runtime/metadata-hash",
-]
