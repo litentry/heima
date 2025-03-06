@@ -203,6 +203,7 @@ frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch =
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
@@ -265,7 +266,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branc
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
 cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/polkadot-sdk', branch = "stable2412", default-features = false }
-substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", features = ["metadata-hash"] }
 
 # local
 core-primitives = { path = "../common/primitives/core", default-features = false }
