@@ -214,6 +214,7 @@ pub mod pallet {
 		EmptyAccount,
 		NoPermission,
 		PermissionsLenLimitReached,
+		AccountStoreAlreadyExists,
 	}
 
 	#[pallet::call]
@@ -488,6 +489,10 @@ pub mod pallet {
 			let omni_account = T::OmniAccountConverter::convert(&identity);
 
 			ensure!(!MemberAccountHash::<T>::contains_key(hash), Error::<T>::AccountAlreadyAdded);
+			ensure!(
+				!AccountStore::<T>::contains_key(&omni_account),
+				Error::<T>::AccountStoreAlreadyExists
+			);
 
 			let mut member_accounts: MemberAccounts<T> = BoundedVec::new();
 			member_accounts
