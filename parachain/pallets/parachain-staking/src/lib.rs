@@ -1390,13 +1390,13 @@ pub mod pallet {
 				return;
 			}
 			let total_staked = <Staked<T>>::take(round_to_payout);
-			let total_issuance = Self::compute_issuance(total_staked);
-
 			// TransactionPayment distribution
 			let transaction_fee_reward =
 				T::RoundFeeRewardResource::query_round_fee_reward(round_to_payout);
+			let total_issuance =
+				Self::compute_issuance(total_staked).saturating_add(transaction_fee_reward);
 
-			let mut left_issuance = total_issuance.saturating_add(transaction_fee_reward);
+			let mut left_issuance = total_issuance;
 			// reserve portion of issuance for parachain bond account
 			let bond_config = <ParachainBondInfo<T>>::get();
 			let parachain_bond_reserve = bond_config.percent * total_issuance;
