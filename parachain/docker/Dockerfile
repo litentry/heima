@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -yq clang libclang-dev cmake protobuf-comp
 ARG BUILD_ARGS
 ARG PROFILE
 
+RUN rustup toolchain install
 RUN cargo build --locked --profile $PROFILE $BUILD_ARGS
 
 # ==========================
