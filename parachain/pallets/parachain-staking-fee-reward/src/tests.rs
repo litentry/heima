@@ -46,6 +46,5 @@ fn reward_distributed() {
 			roll_to(31);
 			// Reward removed
 			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 0);
-
 		});
 }
