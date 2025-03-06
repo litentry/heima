@@ -57,6 +57,7 @@ pub trait WeightInfo {
 	fn disable_schema() -> Weight;
 	fn activate_schema() -> Weight;
 	fn revoke_schema() -> Weight;
+	fn on_vc_issued() -> Weight;
 }
 
 /// Weights for pallet_vc_management using the Litentry node and recommended hardware.
@@ -141,6 +142,15 @@ impl<T: frame_system::Config> WeightInfo for LitentryWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(2 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
+	// Storage: Teerex EnclaveIndex (r:1 w:0)
+	// Proof Skipped: Teerex EnclaveIndex (max_values: None, max_size: None, mode: Measured)
+	// Storage: VCManagement VCRegistry (r:1 w:1)
+	// Proof: VCManagement VCRegistry (max_values: None, max_size: Some(312), added: 2787, mode: MaxEncodedLen)
+	fn on_vc_issued() -> Weight {
+		Weight::from_parts(26_888_000 as u64, 0)
+			.saturating_add(T::DbWeight::get().reads(2 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
+	}
 }
 
 // For backwards compatibility and tests
@@ -221,6 +231,15 @@ impl WeightInfo for () {
 	// Proof: VCManagement SchemaRegistry (max_values: None, max_size: Some(2621), added: 5096, mode: MaxEncodedLen)
 	fn revoke_schema() -> Weight {
 		Weight::from_parts(23_754_000 as u64, 0)
+			.saturating_add(RocksDbWeight::get().reads(2 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
+	}
+	// Storage: Teerex EnclaveIndex (r:1 w:0)
+	// Proof Skipped: Teerex EnclaveIndex (max_values: None, max_size: None, mode: Measured)
+	// Storage: VCManagement VCRegistry (r:1 w:1)
+	// Proof: VCManagement VCRegistry (max_values: None, max_size: Some(312), added: 2787, mode: MaxEncodedLen)
+	fn on_vc_issued() -> Weight {
+		Weight::from_parts(26_888_000 as u64, 0)
 			.saturating_add(RocksDbWeight::get().reads(2 as u64))
 			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
