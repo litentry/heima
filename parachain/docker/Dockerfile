@@ -5,7 +5,7 @@ ARG PROFILE
 # stage 1: build
 # https://hub.docker.com/_/rust
 # ==========================
-FROM rust:1.81 as builder
+FROM rust:bullseye as builder
 
 WORKDIR /litentry/parachain
 COPY . /litentry/
