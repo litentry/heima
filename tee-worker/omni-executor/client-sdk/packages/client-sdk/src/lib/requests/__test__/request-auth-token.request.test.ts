@@ -30,6 +30,7 @@ describe('request-auth-token', () => {
   it('web3', async () => {
     const keyring = new Keyring({ type: 'sr25519' });
     const memberSigner = keyring.addFromUri('//Dave');
+    // ensure the omni account is created for this identity
     const member = createIdentityType(api.registry, {
       addressOrHandle: memberSigner.address,
       type: 'Substrate',

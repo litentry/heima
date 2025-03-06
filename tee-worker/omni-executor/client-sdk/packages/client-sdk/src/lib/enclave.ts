@@ -1,13 +1,13 @@
 import WebSocket from 'isomorphic-ws';
 import { ApiPromise } from '@polkadot/api';
+import { Codec } from '@polkadot/types-codec/types';
 import { compactStripLength, hexToU8a, u8aToString } from '@polkadot/util';
+import { HexString } from '@polkadot/util/types';
 
 import { JsonRpcRequest } from '@utils/types';
 import { u8aToBase64Url } from '@utils/u8aToBase64Url';
 
 import { ENCLAVE_ENDPOINT } from './config';
-import { HexString } from '@polkadot/util/types';
-import { CorePrimitivesTeebagTypesEnclave } from '@heima/parachain-api';
 
 export interface EnclaveConfig {
   requestTimeout: number;
@@ -70,7 +70,7 @@ export class Enclave {
   #connectionPromise: Promise<void> | null = null;
   #currentState: ConnectionState = ConnectionState.Disconnected;
   #messageId = 0;
-  #mrEnclave: `0x${string}` | null = null;
+  #mrEnclave: HexString | null = null;
   #shieldingKey: CryptoKey | null = null;
 
   static #instance: Enclave | null = null;
@@ -118,29 +118,29 @@ export class Enclave {
       return this.#mrEnclave;
     }
 
-    const entries = (await api.query.teebag.enclaveRegistry.entries()) as unknown as [
-      HexString,
-      CorePrimitivesTeebagTypesEnclave,
-    ][];
+    const entries = (await api.query.teebag.enclaveRegistry.entries()) as unknown as [HexString, Codec][];
 
     if (entries.length === 0) {
       throw new Error(`[omni-sdk] No Enclave registry found`);
     }
 
-    const sortedEnclaves = entries
-      .map((entry) => entry[1])
-      .sort((a, b) => (b.lastSeenTimestamp.toBigInt() > a.lastSeenTimestamp.toBigInt() ? 1 : -1));
-
     const workerType = 'OmniExecutor';
-    const omniExecutorEnclave = sortedEnclaves.find((entry) => entry.workerType.toString() === workerType);
-    if (!omniExecutorEnclave) {
-      throw new Error(`[omni-sdk] No Enclave registry type [${workerType}] with found`);
+    const omniExecutorEnclaves = entries
+      .map((entry) => entry[1].toJSON() as { lastSeenTimestamp: number; workerType: string; mrenclave: HexString })
+      .filter((entry) => entry.workerType === workerType);
+
+    if (omniExecutorEnclaves.length === 0) {
+      throw new Error(`[omni-sdk] No Enclave registry with type [${workerType}] found`);
     }
 
-    const mrEnclave = omniExecutorEnclave.mrenclave.toHex();
-    this.#mrEnclave = mrEnclave;
+    // Find the most recent enclave by lastSeenTimestamp
+    const mostRecentEnclave = omniExecutorEnclaves.reduce((prev, current) =>
+      current.lastSeenTimestamp > prev.lastSeenTimestamp ? current : prev,
+    );
 
-    return mrEnclave;
+    this.#mrEnclave = mostRecentEnclave.mrenclave;
+
+    return this.#mrEnclave;
   }
 
   /**

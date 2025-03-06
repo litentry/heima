@@ -1,1 +1,1 @@
-export const ENCLAVE_ENDPOINT = 'ws://localhost:8080';
+export const ENCLAVE_ENDPOINT = 'ws://localhost:2100';
