@@ -65,10 +65,16 @@ fn query_reward() {
 			roll_to(12);
 			ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
 
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), ParachainStakingFeeReward::query_round_fee_reward(2));
+			assert_eq!(
+				ParachainStakingFeeReward::round_accumulated_reward(2),
+				ParachainStakingFeeReward::query_round_fee_reward(2)
+			);
 			// 5 block per round, 2 round delay
 			roll_to(21);
 			ParachainStakingFeeReward::on_transaction_fee_reward_notify(15);
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(4), ParachainStakingFeeReward::query_round_fee_reward(4));
+			assert_eq!(
+				ParachainStakingFeeReward::round_accumulated_reward(4),
+				ParachainStakingFeeReward::query_round_fee_reward(4)
+			);
 		});
 }
