@@ -28,7 +28,7 @@ mod test {
 
 	#[tokio::test]
 	pub async fn get_health_works() {
-		let port = "2000";
+		let port = 2000;
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTask>(1);
 		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
