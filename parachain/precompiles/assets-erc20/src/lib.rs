@@ -267,6 +267,7 @@ where
 					id: asset_id.into(),
 					delegate: Runtime::Lookup::unlookup(spender.clone()),
 				},
+				0
 			)?;
 		}
 		// Dispatch call (if enough gas).
@@ -278,6 +279,7 @@ where
 				delegate: Runtime::Lookup::unlookup(spender),
 				amount,
 			},
+			0
 		)?;
 
 		Ok(())
@@ -309,6 +311,7 @@ where
 					target: Runtime::Lookup::unlookup(to),
 					amount: value,
 				},
+				0
 			)?;
 		}
 
@@ -356,6 +359,7 @@ where
 						destination: Runtime::Lookup::unlookup(to),
 						amount: value,
 					},
+					0
 				)?;
 			} else {
 				// Dispatch call (if enough gas).
@@ -367,6 +371,7 @@ where
 						target: Runtime::Lookup::unlookup(to),
 						amount: value,
 					},
+					0
 				)?;
 			}
 		}
@@ -476,6 +481,7 @@ where
 					beneficiary: Runtime::Lookup::unlookup(to),
 					amount: value,
 				},
+				0
 			)?;
 		}
 
@@ -517,6 +523,7 @@ where
 					who: Runtime::Lookup::unlookup(from),
 					amount: value,
 				},
+				0
 			)?;
 		}
 

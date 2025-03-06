@@ -93,7 +93,7 @@ where
 			estimated_pool_reward,
 			pool_info_hash,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -118,7 +118,7 @@ where
 			pool_proposal_index,
 			amount,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -143,7 +143,7 @@ where
 			pool_proposal_index,
 			amount,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -162,7 +162,7 @@ where
 		let call = pallet_pool_proposal::Call::<Runtime>::guardian_participate_proposal {
 			pool_proposal_index,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

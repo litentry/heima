@@ -103,7 +103,7 @@ where
 		let call = pallet_parachain_staking::Call::<Runtime>::delegate { candidate, amount };
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -137,7 +137,7 @@ where
 		};
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -157,7 +157,7 @@ where
 		};
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -180,7 +180,7 @@ where
 			pallet_parachain_staking::Call::<Runtime>::delegator_bond_more { candidate, more };
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -205,7 +205,7 @@ where
 		};
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -229,7 +229,7 @@ where
 		};
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -245,7 +245,7 @@ where
 			pallet_parachain_staking::Call::<Runtime>::cancel_delegation_request { candidate };
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -272,7 +272,7 @@ where
 			pallet_parachain_staking::Call::<Runtime>::set_auto_compound { candidate, value };
 
 		// Dispatch call (if enough gas).
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

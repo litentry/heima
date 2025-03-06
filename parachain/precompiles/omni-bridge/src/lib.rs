@@ -84,7 +84,7 @@ where
 			};
 
 		let call = pallet_omni_bridge::Call::<Runtime>::pay_in { req: pay_in_request };
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

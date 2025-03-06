@@ -50,7 +50,7 @@ where
 		})?;
 
 		let call = pallet_score_staking::Call::<Runtime>::claim { amount };
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -60,7 +60,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let call = pallet_score_staking::Call::<Runtime>::claim_all {};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

@@ -51,7 +51,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let call = pallet_curator::Call::<Runtime>::regist_curator { info_hash };
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -61,7 +61,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let call = pallet_curator::Call::<Runtime>::update_curator { info_hash };
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -71,7 +71,7 @@ where
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 
 		let call = pallet_curator::Call::<Runtime>::clean_curator {};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
