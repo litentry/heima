@@ -39,6 +39,8 @@ fn reward_distributed() {
 
 			roll_to(29);
 			// Reward distributed
+			// DefaultCollatorCommission = 20%
+			// DefaultParachainBondReservePercent = 30%
 			assert_eq!(Balances::free_balance(1), 75 + 30);
 			assert_eq!(Balances::free_balance(3), 70 + 30);
 			// Reward still recorded
@@ -46,5 +48,27 @@ fn reward_distributed() {
 			roll_to(31);
 			// Reward removed
 			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 0);
+		});
+}
+
+#[test]
+fn query_reward() {
+	ExtBuilder::default()
+		.with_balances(vec![(1, 100), (2, 100), (3, 100), (4, 100)])
+		.with_candidates(vec![(1, 25)])
+		.with_delegations(vec![(3, 1, 30)])
+		.build()
+		.execute_with(|| {
+			// 5 block per round, 2 round delay
+			roll_to(11);
+			ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
+			roll_to(12);
+			ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
+
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), ParachainStakingFeeReward::query_round_fee_reward(2));
+			// 5 block per round, 2 round delay
+			roll_to(21);
+			ParachainStakingFeeReward::on_transaction_fee_reward_notify(15);
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(4), ParachainStakingFeeReward::query_round_fee_reward(4));
 		});
 }
