@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::mock::{roll_to, Balances, ExtBuilder, ParachainStakingFeeReward};
+use crate::mock::{roll_to, set_author, Balances, ExtBuilder, ParachainStakingFeeReward};
 use pallet_parachain_staking::TransactionFeeRewardResource;
 
 #[test]
@@ -25,31 +25,28 @@ fn reward_distributed() {
 		.with_delegations(vec![(3, 1, 30)])
 		.build()
 		.execute_with(|| {
-			// 5 block per round, 2 round delay
-			roll_to(11);
-			ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
-			roll_to(12);
-			ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
-			roll_to(15);
+			// 5 block per round, 2 round delay, first two round no pay
+			roll_to(21);
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
+			roll_to(22);
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
+			roll_to(25);
 			// No reward distributed yet
 			assert_eq!(Balances::free_balance(1), 75);
 			assert_eq!(Balances::free_balance(3), 70);
 			// Reward did recorded
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 30);
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(5), 30);
+			set_author(5, 1, 100);
 
-			roll_to(29);
+			roll_to(39);
 			// Reward distributed
-			// DefaultCollatorCommission = 20%
-			// DefaultParachainBondReservePercent = 30%
-			// Reward still recorded
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 30);
-			assert_eq!(Balances::free_balance(1), 75 + 30);
-			assert_eq!(Balances::free_balance(3), 70 + 30);
-			// Reward still recorded
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 30);
-			roll_to(31);
+			// DefaultCollatorCommission = 20%, 30 * 0.8 = 24
+
+			// ParachainBondReservePercent not concerned since receiving account not existed
+			assert_eq!(Balances::free_balance(1), 75 + 17);
+			assert_eq!(Balances::free_balance(3), 70 + 13);
 			// Reward removed
-			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(3), 0);
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(5), 0);
 		});
 }
 
@@ -61,22 +58,21 @@ fn query_reward() {
 		.with_delegations(vec![(3, 1, 30)])
 		.build()
 		.execute_with(|| {
-			// 5 block per round, 2 round delay
-			roll_to(11);
-			ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
-			roll_to(12);
-			ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
-
-			assert_eq!(
-				ParachainStakingFeeReward::round_accumulated_reward(3),
-				ParachainStakingFeeReward::query_round_fee_reward(3)
-			);
-			// 5 block per round, 2 round delay
+			// 5 block per round, 2 round delay, first two round no pay
 			roll_to(21);
-			ParachainStakingFeeReward::on_transaction_fee_reward_notify(15);
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(10);
+			roll_to(22);
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(20);
+
 			assert_eq!(
 				ParachainStakingFeeReward::round_accumulated_reward(5),
 				ParachainStakingFeeReward::query_round_fee_reward(5)
+			);
+			roll_to(31);
+			let _ = ParachainStakingFeeReward::on_transaction_fee_reward_notify(15);
+			assert_eq!(
+				ParachainStakingFeeReward::round_accumulated_reward(7),
+				ParachainStakingFeeReward::query_round_fee_reward(7)
 			);
 		});
 }

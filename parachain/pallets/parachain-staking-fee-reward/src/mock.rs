@@ -23,7 +23,7 @@ use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
 	traits::{OnFinalize, OnInitialize},
 };
-use pallet_parachain_staking::{InflationInfo, Range};
+use pallet_parachain_staking::{AwardedPts, InflationInfo, Points, Range};
 use sp_runtime::{BuildStorage, Perbill, Percent};
 pub type AccountId = u64;
 pub type Balance = u128;
@@ -211,6 +211,7 @@ impl ExtBuilder {
 
 /// Rolls forward one block. Returns the new block number.
 pub(crate) fn roll_one_block() -> u64 {
+	ParachainStakingFeeReward::on_finalize(System::block_number());
 	ParachainStaking::on_finalize(System::block_number());
 	Balances::on_finalize(System::block_number());
 	System::on_finalize(System::block_number());
@@ -218,6 +219,7 @@ pub(crate) fn roll_one_block() -> u64 {
 	System::on_initialize(System::block_number());
 	Balances::on_initialize(System::block_number());
 	ParachainStaking::on_initialize(System::block_number());
+	ParachainStakingFeeReward::on_initialize(System::block_number());
 	System::block_number()
 }
 
@@ -245,4 +247,10 @@ pub(crate) fn roll_to_round_begin(round: u64) -> u64 {
 pub(crate) fn roll_to_round_end(round: u64) -> u64 {
 	let block = round * DefaultBlocksPerRound::get() as u64 - 1;
 	roll_to(block)
+}
+
+// Same storage changes as EventHandler::note_author impl
+pub(crate) fn set_author(round: u32, acc: u64, pts: u32) {
+	<Points<Test>>::mutate(round, |p| *p += pts);
+	<AwardedPts<Test>>::mutate(round, acc, |p| *p += pts);
 }
