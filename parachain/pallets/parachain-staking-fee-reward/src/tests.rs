@@ -34,5 +34,18 @@ fn reward_distributed() {
 			// No reward distributed yet
 			assert_eq!(Balances::free_balance(1), 75);
 			assert_eq!(Balances::free_balance(3), 70);
+			// Reward did recorded
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 30);
+
+			roll_to(29);
+			// Reward distributed
+			assert_eq!(Balances::free_balance(1), 75 + 30);
+			assert_eq!(Balances::free_balance(3), 70 + 30);
+			// Reward still recorded
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 30);
+			roll_to(31);
+			// Reward removed
+			assert_eq!(ParachainStakingFeeReward::round_accumulated_reward(2), 0);
+
 		});
 }
