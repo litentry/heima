@@ -47,8 +47,7 @@ use precompile_utils::{
 };
 
 use sp_core::{ConstU32, ConstU64, H160};
-use sp_runtime::traits::IdentityLookup;
-use sp_runtime::BuildStorage;
+use sp_runtime::{traits::IdentityLookup, BuildStorage};
 
 pub type AccountId = MockAccount;
 pub type AssetId = u128;

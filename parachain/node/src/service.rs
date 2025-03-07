@@ -60,8 +60,7 @@ use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_keystore::KeystorePtr;
-use sp_runtime::app_crypto::AppCrypto;
-use sp_runtime::traits::Header;
+use sp_runtime::{app_crypto::AppCrypto, traits::Header};
 use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 

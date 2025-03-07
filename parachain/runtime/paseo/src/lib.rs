@@ -33,8 +33,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
-		tokens::imbalance::ResolveTo,
-		tokens::{PayFromAccount, UnityAssetBalanceConversion},
+		tokens::{imbalance::ResolveTo, PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
 		EnsureOrigin, Everything, FindAuthor, Imbalance, InstanceFilter, LinearStoragePrice,
 		OnFinalize, OnUnbalanced, SortedMembers, WithdrawReasons,
