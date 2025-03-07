@@ -95,8 +95,6 @@ impl<
 			return Ok(());
 		}
 
-		log::debug!("Got IntentRequested event: {:?}", event.id);
-
 		let metadata = self.metadata_provider.get(Some(event.id.block_num)).await;
 
 		let pallet = metadata.pallet_by_name(&event.pallet_name).ok_or_else(move || {
