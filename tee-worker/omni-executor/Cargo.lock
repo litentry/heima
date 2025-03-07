@@ -2049,7 +2049,7 @@ dependencies = [
  "pallet-evm",
  "parity-scale-codec",
  "ring 0.16.20",
- "rustls-webpki 0.102.0-alpha.3",
+ "rustls-webpki 0.102.8",
  "scale-info",
  "serde",
  "serde_json",
@@ -3132,7 +3132,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?rev=986eb1ad6ec69c16d05d142b7e731b4b69e3b409#986eb1ad6ec69c16d05d142b7e731b4b69e3b409"
+source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "hex",
  "impl-serde",
@@ -3151,7 +3151,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?rev=986eb1ad6ec69c16d05d142b7e731b4b69e3b409#986eb1ad6ec69c16d05d142b7e731b4b69e3b409"
+source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "environmental",
  "evm",
@@ -4021,7 +4021,7 @@ dependencies = [
  "hyper 1.6.0",
  "hyper-util",
  "rustls 0.23.23",
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
  "tokio",
  "tokio-rustls 0.26.1",
  "tower-service",
@@ -4489,7 +4489,7 @@ dependencies = [
  "jsonrpsee-core",
  "pin-project",
  "rustls 0.23.23",
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
  "rustls-platform-verifier 0.3.4",
  "soketto",
  "thiserror 1.0.69",
@@ -5430,7 +5430,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?rev=986eb1ad6ec69c16d05d142b7e731b4b69e3b409#986eb1ad6ec69c16d05d142b7e731b4b69e3b409"
+source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "environmental",
  "evm",
@@ -6069,7 +6069,7 @@ dependencies = [
  "ring 0.17.9",
  "rustc-hash 2.1.1",
  "rustls 0.23.23",
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
  "rustls-platform-verifier 0.4.0",
  "slab",
  "thiserror 2.0.11",
@@ -6647,7 +6647,7 @@ dependencies = [
  "log",
  "once_cell",
  "ring 0.17.9",
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
  "rustls-webpki 0.102.8",
  "subtle",
  "zeroize",
@@ -6661,7 +6661,7 @@ checksum = "e5bfb394eeed242e909609f56089eecfe5fda225042e8b171791b9c95f5931e5"
 dependencies = [
  "openssl-probe",
  "rustls-pemfile 2.2.0",
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
  "schannel",
  "security-framework",
 ]
@@ -6681,14 +6681,8 @@ version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
 dependencies = [
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
 ]
-
-[[package]]
-name = "rustls-pki-types"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0d3edd6cdcdf26eda538757038343986e666d0b8ba4b5ac1de663b78475550d"
 
 [[package]]
 name = "rustls-pki-types"
@@ -6759,22 +6753,12 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.102.0-alpha.3"
-source = "git+https://github.com/rustls/webpki?rev=da923ed#da923edaab56f599971e58773617fb574cd019dc"
-dependencies = [
- "ring 0.16.20",
- "rustls-pki-types 0.2.3",
- "untrusted 0.9.0",
-]
-
-[[package]]
-name = "rustls-webpki"
 version = "0.102.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64ca1bc8749bd4cf37b5ce386cc146580777b4e8572c7b97baf22c83f444bee9"
 dependencies = [
  "ring 0.17.9",
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
  "untrusted 0.9.0",
 ]
 
@@ -11320,7 +11304,7 @@ version = "0.26.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09aed61f5e8d2c18344b3faa33a4c837855fe56642757754775548fee21386c4"
 dependencies = [
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
 ]
 
 [[package]]
@@ -11344,7 +11328,7 @@ version = "0.26.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2210b291f7ea53617fbafcc4939f10914214ec15aace5ba62293a668f322c5c9"
 dependencies = [
- "rustls-pki-types 1.11.0",
+ "rustls-pki-types",
 ]
 
 [[package]]

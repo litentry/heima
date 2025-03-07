@@ -16,14 +16,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
+use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use frame_system::pallet_prelude::BlockNumberFor;
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
-use sp_runtime::traits::Dispatchable;
-
 use sp_core::{H256, U256};
+use sp_runtime::traits::Dispatchable;
 use sp_std::{marker::PhantomData, vec::Vec};
 
 use pallet_collab_ai_common::{CandidateStatus, GuardianVote};
@@ -39,6 +38,9 @@ pub struct GuardianPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> GuardianPrecompile<Runtime>
 where
 	Runtime: pallet_guardian::Config + pallet_evm::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_guardian::Call<Runtime>>,

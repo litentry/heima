@@ -985,6 +985,7 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 }
 
 impl pallet_evm::Config for Runtime {
+	type AccountProvider = pallet_evm::FrameSystemAccountProvider<Self>;
 	type FeeCalculator = TransactionPaymentAsGasPrice;
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
@@ -1004,7 +1005,7 @@ impl pallet_evm::Config for Runtime {
 	type OnCreate = ();
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
-	type SuicideQuickClearLimit = ConstU32<0>;
+	type GasLimitStorageGrowthRatio = ConstU64<4>;
 	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
 }
 

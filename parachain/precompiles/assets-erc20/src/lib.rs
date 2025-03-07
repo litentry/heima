@@ -97,6 +97,8 @@ pub trait AddressToAssetId<AssetId> {
 
 /// This means that every address that starts with 0xFFFFFFFF will go through an additional db read,
 /// but the probability for this to happen is 2^-32 for random addresses
+use fp_evm::AccountProvider;
+
 #[derive(Clone, DefaultNoBound)]
 pub struct Erc20AssetsPrecompileSet<Runtime, Instance: 'static = ()>(
 	PhantomData<(Runtime, Instance)>,
@@ -115,6 +117,9 @@ impl<Runtime, Instance> Erc20AssetsPrecompileSet<Runtime, Instance>
 where
 	Instance: 'static,
 	Runtime: pallet_assets::Config<Instance> + pallet_evm::Config + frame_system::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_assets::Call<Runtime, Instance>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
@@ -122,6 +127,8 @@ where
 	Runtime: AddressToAssetId<AssetIdOf<Runtime, Instance>>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: OriginTrait,
 	AssetIdOf<Runtime, Instance>: Copy,
+	Runtime::AccountId:
+		From<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
 {
 	/// PrecompileSet discriminant. Allows to knows if the address maps to an asset id,
 	/// and if this is the case which one.
@@ -176,7 +183,7 @@ where
 
 		// Fetch info.
 		let amount: U256 = {
-			let who: Runtime::AccountId = Runtime::AddressMapping::into_account_id(who);
+			let who: Runtime::AccountId = Runtime::AddressMapping::into_account_id(who).into();
 			pallet_assets::Pallet::<Runtime, Instance>::balance(asset_id, &who).into()
 		};
 
@@ -202,8 +209,9 @@ where
 
 		// Fetch info.
 		let amount: U256 = {
-			let owner: Runtime::AccountId = Runtime::AddressMapping::into_account_id(owner);
-			let spender: Runtime::AccountId = Runtime::AddressMapping::into_account_id(spender);
+			let owner: Runtime::AccountId = Runtime::AddressMapping::into_account_id(owner).into();
+			let spender: Runtime::AccountId =
+				Runtime::AddressMapping::into_account_id(spender).into();
 
 			// Fetch info.
 			pallet_assets::Pallet::<Runtime, Instance>::allowance(asset_id, &owner, &spender).into()
@@ -246,8 +254,8 @@ where
 		spender: H160,
 		value: U256,
 	) -> EvmResult {
-		let owner = Runtime::AddressMapping::into_account_id(owner);
-		let spender: Runtime::AccountId = Runtime::AddressMapping::into_account_id(spender);
+		let owner = Runtime::AddressMapping::into_account_id(owner).into();
+		let spender: Runtime::AccountId = Runtime::AddressMapping::into_account_id(spender).into();
 		// Amount saturate if too high.
 		let amount: BalanceOf<Runtime, Instance> =
 			value.try_into().unwrap_or_else(|_| Bounded::max_value());
@@ -267,7 +275,7 @@ where
 					id: asset_id.into(),
 					delegate: Runtime::Lookup::unlookup(spender.clone()),
 				},
-				0
+				0,
 			)?;
 		}
 		// Dispatch call (if enough gas).
@@ -279,7 +287,7 @@ where
 				delegate: Runtime::Lookup::unlookup(spender),
 				amount,
 			},
-			0
+			0,
 		)?;
 
 		Ok(())
@@ -300,7 +308,7 @@ where
 		// Build call with origin.
 		{
 			let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-			let to = Runtime::AddressMapping::into_account_id(to);
+			let to = Runtime::AddressMapping::into_account_id(to).into();
 
 			// Dispatch call (if enough gas).
 			RuntimeHelper::<Runtime>::try_dispatch(
@@ -311,7 +319,7 @@ where
 					target: Runtime::Lookup::unlookup(to),
 					amount: value,
 				},
-				0
+				0,
 			)?;
 		}
 
@@ -343,9 +351,9 @@ where
 
 		{
 			let caller: Runtime::AccountId =
-				Runtime::AddressMapping::into_account_id(handle.context().caller);
-			let from: Runtime::AccountId = Runtime::AddressMapping::into_account_id(from);
-			let to: Runtime::AccountId = Runtime::AddressMapping::into_account_id(to);
+				Runtime::AddressMapping::into_account_id(handle.context().caller).into();
+			let from: Runtime::AccountId = Runtime::AddressMapping::into_account_id(from).into();
+			let to: Runtime::AccountId = Runtime::AddressMapping::into_account_id(to).into();
 
 			// If caller is "from", it can spend as much as it wants from its own balance.
 			if caller != from {
@@ -359,7 +367,7 @@ where
 						destination: Runtime::Lookup::unlookup(to),
 						amount: value,
 					},
-					0
+					0,
 				)?;
 			} else {
 				// Dispatch call (if enough gas).
@@ -371,7 +379,7 @@ where
 						target: Runtime::Lookup::unlookup(to),
 						amount: value,
 					},
-					0
+					0,
 				)?;
 			}
 		}
@@ -470,7 +478,7 @@ where
 		// Build call with origin.
 		{
 			let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-			let to = Runtime::AddressMapping::into_account_id(to);
+			let to = Runtime::AddressMapping::into_account_id(to).into();
 
 			// Dispatch call (if enough gas).
 			RuntimeHelper::<Runtime>::try_dispatch(
@@ -481,7 +489,7 @@ where
 					beneficiary: Runtime::Lookup::unlookup(to),
 					amount: value,
 				},
-				0
+				0,
 			)?;
 		}
 
@@ -512,7 +520,7 @@ where
 		// Build call with origin.
 		{
 			let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-			let from = Runtime::AddressMapping::into_account_id(from);
+			let from = Runtime::AddressMapping::into_account_id(from).into();
 
 			// Dispatch call (if enough gas).
 			RuntimeHelper::<Runtime>::try_dispatch(
@@ -523,7 +531,7 @@ where
 					who: Runtime::Lookup::unlookup(from),
 					amount: value,
 				},
-				0
+				0,
 			)?;
 		}
 

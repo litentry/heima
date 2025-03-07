@@ -505,16 +505,17 @@ pub fn verify_server_cert(
     timestamp_valid_until: webpki::types::UnixTime,
 ) -> Result<(), &'static str> {
     let chain: Vec<webpki::types::CertificateDer> = Vec::new();
-    sig_cert.verify_for_usage(
-        SUPPORTED_SIG_ALGS,
-        IAS_SERVER_ROOTS,
-        &chain,
-        timestamp_valid_until,
-        webpki::KeyUsage::server_auth(),
-        None,
-        None,
-    )
-    .map_err(|_| "CA verification failed")?;
+    sig_cert
+        .verify_for_usage(
+            SUPPORTED_SIG_ALGS,
+            IAS_SERVER_ROOTS,
+            &chain,
+            timestamp_valid_until,
+            webpki::KeyUsage::server_auth(),
+            None,
+            None,
+        )
+        .map_err(|_| "CA verification failed")?;
 
     Ok(())
 }

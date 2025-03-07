@@ -16,14 +16,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
-
+use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
-use sp_runtime::traits::Dispatchable;
-
 use sp_core::U256;
+use sp_runtime::traits::Dispatchable;
 use sp_std::marker::PhantomData;
 
 use pallet_aiusd_convertor::{AssetBalanceOf, AssetIdOf};
@@ -39,6 +37,9 @@ pub struct AIUSDConvertorPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> AIUSDConvertorPrecompile<Runtime>
 where
 	Runtime: pallet_aiusd_convertor::Config + pallet_evm::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_aiusd_convertor::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,

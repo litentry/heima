@@ -16,7 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
+use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::Currency,
@@ -45,6 +45,9 @@ type BalanceOf<T> = <<T as pallet_pool_proposal::Config>::Currency as Currency<
 impl<Runtime> PoolProposalPrecompile<Runtime>
 where
 	Runtime: pallet_pool_proposal::Config + pallet_evm::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	<Runtime as frame_system::Config>::RuntimeCall:
 		Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,

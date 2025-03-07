@@ -15,18 +15,16 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
-
 use core_primitives::AssetId;
+use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::fungible::NativeOrWithId,
 };
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;
-use sp_runtime::traits::Dispatchable;
-
 use sp_core::U256;
+use sp_runtime::traits::Dispatchable;
 use sp_std::{marker::PhantomData, vec::Vec};
 
 use pallet_omni_bridge::{ChainType, PayInRequest};
@@ -39,6 +37,9 @@ type BridgeBalanceOf<Runtime> = <Runtime as pallet_omni_bridge::Config>::Balance
 impl<Runtime> OmniBridgePrecompile<Runtime>
 where
 	Runtime: pallet_omni_bridge::Config<AssetKind = NativeOrWithId<AssetId>> + pallet_evm::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_omni_bridge::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,

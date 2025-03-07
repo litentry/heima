@@ -20,7 +20,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
+use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	sp_runtime::Percent,
@@ -50,6 +50,9 @@ pub struct ParachainStakingPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> ParachainStakingPrecompile<Runtime>
 where
 	Runtime: pallet_parachain_staking::Config + pallet_evm::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::AccountId: From<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
