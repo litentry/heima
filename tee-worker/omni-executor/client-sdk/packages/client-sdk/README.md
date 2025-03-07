@@ -1,8 +1,8 @@
-# @litentry/client-sdk
+# @heima/client-sdk
 
-This package provides helpers for dApps to interact with the Litentry Protocol.
+This package provides helpers for dApps to interact with the Heima Protocol.
 
-The Enclave is the Litentry's Trusted Execution Environment (TEE), that provides the hightest security and privacy for users to store their identity.
+The Enclave is the Heima's Trusted Execution Environment (TEE), that provides the hightest security and privacy for users to store their identity.
 
 This is a browser package, it may not work as-is on Node.js due to Crypto Subtle and WebSocket differences, but the exposed RPC logic is the same.
 
@@ -11,19 +11,18 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 1. Install from NPM
 
     ```
-    npm install @litentry/parachain-api @litentry/sidechain-api @litentry/client-sdk
+    npm install @heima/parachain-api @heima/sidechain-api @heima/client-sdk
     ```
 
 2. Set the right environment
 
-    Litentry's Protocol is currently available in three main stages: local (development), `tee-dev` (staging), and `tee-prod` (production).
+    Heima's Protocol is currently available in three main stages: local (development), `tee-dev` (staging), and `tee-prod` (production).
 
-    You can set what stage to use by setting the `LITENTRY_NETWORK` environment variable. Valid values are:
+    You can set what stage to use by setting the `HEIMA_NETWORK` environment variable. Valid values are:
 
-    - `litentry-local`: will point to a local enclave `ws://localhost:2000`
-    - `litentry-dev` (default): will point to `tee-dev`'s Enclave.
-    - `litentry-staging`: will point to `tee-staging`'s Enclave.
-    - `litentry-prod`: will point to `tee-prod`'s Enclave.
+    - `heima-local`: will point to a local enclave `ws://localhost:8080`
+    - `heima-dev` (default): will point to `tee-dev`'s Enclave.
+    - `heima-prod`: will point to `tee-prod`'s Enclave.
 
     `NX_*` prefixed env variables (NX projects) will work too.
 
@@ -31,7 +30,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 
 This package is distributed under two main tags: `next` and `latest`.
 
-Versions in the pattern of `x.x.x-next.x` feature the most recent code version to work with `tee-dev`. E.g., `1.0.0-next.0`. Once stable and once the Litentry Protocol is upgraded, the version will be tagged as `latest` and should be used against `tee-prod`. E.g., `1.0.0`. You can find all versions on https://www.npmjs.com/package/@litentry/enclave?activeTab=versions
+Versions in the pattern of `x.x.x-next.x` feature the most recent code version to work with `tee-dev`. E.g., `1.0.0-next.0`. Once stable and once the Heima Protocol is upgraded, the version will be tagged as `latest` and should be used against `tee-prod`. E.g., `1.0.0`. You can find all versions on https://www.npmjs.com/package/@heima/client-sdk?activeTab=versions
 
 ## Examples & API documentation
 
@@ -68,6 +67,8 @@ These are the steps for publishing the package locally for development purposes.
 
     pnpm nx run client-sdk:test
     ```
+
+    > Before running the tests, make sure you have a local omni-executor running, see [omni-executor README](https://github.com/litentry/heima/tree/dev/tee-worker/omni-executor/README.md) for more information.
 
 ### Publish new versions
 

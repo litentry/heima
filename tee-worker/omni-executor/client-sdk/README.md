@@ -8,5 +8,5 @@ Learn more about it on [Heima's official documentation](https://docs.heima.netwo
 
 ## Packages
 
-- `@heima/omni-client-sdk` ([go-to](packages/client-sdk/README.md)): provides helpers for dApps to interact with the Heima Protocol
+- `@heima/client-sdk` ([go-to](packages/client-sdk/README.md)): provides helpers for dApps to interact with the Heima Protocol
 - `@heima/chaindata` ([go-to](packages/chaindata/README.md)): provides chain information of Heima networks.

@@ -7,7 +7,7 @@ homepage = 'https://litentry.com/'
 license = 'GPL-3.0'
 name = 'litentry-collator'
 repository = 'https://github.com/litentry/litentry-parachain'
-version = '0.9.23'
+version = '0.9.24'
 
 [[bin]]
 name = 'litentry-collator'
@@ -104,6 +104,7 @@ xcm = { workspace = true }
 
 frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { workspace = true, optional = true }
 
