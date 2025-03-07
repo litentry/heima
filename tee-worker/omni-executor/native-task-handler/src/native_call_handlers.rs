@@ -104,24 +104,6 @@ pub async fn handle_native_call<
 				return;
 			};
 
-			let request_intent_call =
-				OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
-			let dispatch_as_omni_account_call =
-				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender_identity.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(request_intent_call),
-					auth_type.to_subxt_type(),
-				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			if rpc_client.submit_tx(&tx).await.is_err() {
-				log::error!("Failed to submit request_intent tx");
-				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			}
-
 			let mut execution_result = IntentExecutionResult::Success;
 
 			let tx = match intent {
