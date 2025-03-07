@@ -939,6 +939,77 @@ fn set_permissions_works() {
 }
 
 #[test]
+fn set_permissions_with_only_one_member_fails() {
+	new_test_ext().execute_with(|| {
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		let new_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+		];
+
+		let call = set_permissions_call(alice().identity.hash(), new_permissions);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				alice().identity.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::AccountStoreHasOneMember
+		);
+	});
+}
+
+#[test]
+fn set_permissions_with_no_member_with_default_permissions_fails() {
+	new_test_ext().execute_with(|| {
+		let tee_signer = get_tee_signer();
+
+		assert_ok!(OmniAccount::create_account_store(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity,
+		));
+
+		let bob = private_member_account(bob());
+		let bob_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+			OmniAccountPermission::AccountManagement,
+		];
+
+		let call = add_account_call::<Test>(bob.clone(), Some(bob_permissions.clone()));
+		assert_ok!(OmniAccount::dispatch_as_omni_account(
+			RuntimeOrigin::signed(tee_signer.clone()),
+			alice().identity.hash(),
+			call,
+			OmniAccountAuthType::Web3
+		));
+
+		let new_alice_permissions = vec![
+			OmniAccountPermission::RequestEthereumIntent,
+			OmniAccountPermission::RequestSolanaIntent,
+		];
+
+		let call = set_permissions_call(alice().identity.hash(), new_alice_permissions);
+		assert_noop!(
+			OmniAccount::dispatch_as_omni_account(
+				RuntimeOrigin::signed(tee_signer.clone()),
+				alice().identity.hash(),
+				call,
+				OmniAccountAuthType::Web3
+			),
+			Error::<Test>::NoPermission
+		);
+	});
+}
+
+#[test]
 fn auth_token_requested_works() {
 	new_test_ext().execute_with(|| {
 		let tee_signer = get_tee_signer();
