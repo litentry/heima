@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "ac-primitives",
  "log",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -5544,7 +5544,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
