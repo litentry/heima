@@ -1,5 +1,5 @@
 {
-  "name": "@omni-client-sdk/source",
+  "name": "@heima-client-sdk/source",
   "$schema": "node_modules/nx/schemas/project-schema.json",
   "targets": {
     "local-registry": {
