@@ -214,6 +214,8 @@ pub mod pallet {
 		EmptyAccount,
 		NoPermission,
 		PermissionsLenLimitReached,
+		AccountStoreAlreadyExists,
+		AccountStoreHasOneMember,
 	}
 
 	#[pallet::call]
@@ -488,6 +490,10 @@ pub mod pallet {
 			let omni_account = T::OmniAccountConverter::convert(&identity);
 
 			ensure!(!MemberAccountHash::<T>::contains_key(hash), Error::<T>::AccountAlreadyAdded);
+			ensure!(
+				!AccountStore::<T>::contains_key(&omni_account),
+				Error::<T>::AccountStoreAlreadyExists
+			);
 
 			let mut member_accounts: MemberAccounts<T> = BoundedVec::new();
 			member_accounts
@@ -545,11 +551,33 @@ pub mod pallet {
 					}
 				},
 				Some(Call::set_permissions { permissions: ref new_permissions, .. }) => {
+					let omni_account = MemberAccountHash::<T>::get(member_account_hash)
+						.ok_or(Error::<T>::AccountNotFound)?;
+					let member_accounts = AccountStore::<T>::get(&omni_account)
+						.ok_or(Error::<T>::UnknownAccountStore)?;
+					// Only allow to set permissions if the account store has more than one member
+					ensure!(member_accounts.len() > 1, Error::<T>::AccountStoreHasOneMember);
+					// Only allow to set permissions if at least other member of the account store has
+					// default permission
+					if !new_permissions.iter().any(|p| p == &T::Permission::default()) {
+						ensure!(
+							member_accounts
+								.iter()
+								.filter(|member| member.hash() != member_account_hash)
+								.any(|member| {
+									let member_permissions =
+										MemberAccountPermissions::<T>::get(member.hash());
+									member_permissions.contains(&T::Permission::default())
+								}),
+							Error::<T>::NoPermission
+						);
+					}
+
 					// If member has default permission, they can set permissions to any value
 					if member_permissions.contains(&T::Permission::default()) {
 						return Ok(());
 					}
-					// an account can only set permissions to the same or less permissions
+					// An account can only set permissions to the same or less permissions
 					if !new_permissions.iter().all(|p| member_permissions.contains(p)) {
 						return Err(Error::<T>::NoPermission);
 					}
