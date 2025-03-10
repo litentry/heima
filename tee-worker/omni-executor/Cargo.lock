@@ -5488,6 +5488,7 @@ dependencies = [
  "env_logger",
  "executor-core",
  "executor-crypto",
+ "executor-primitives",
  "log",
  "parentchain-rpc-client",
  "parity-scale-codec",
