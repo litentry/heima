@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("4d4sEXZXa3BHfEpggwQNGmRniLn71YckNzqzErwhFjwJ");
+declare_id!("31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub");
 
 #[program]
 pub mod accounting_contract {
