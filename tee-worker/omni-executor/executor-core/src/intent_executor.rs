@@ -17,7 +17,7 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use crate::primitives::Intent;
+use executor_primitives::intent::Intent;
 
 /// Used to perform intent on destination chain
 #[async_trait]

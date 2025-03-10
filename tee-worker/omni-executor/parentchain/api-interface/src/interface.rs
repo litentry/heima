@@ -1306,10 +1306,10 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							49u8, 111u8, 241u8, 170u8, 107u8, 18u8, 172u8, 184u8, 241u8, 20u8,
-							113u8, 101u8, 218u8, 98u8, 190u8, 59u8, 19u8, 125u8, 167u8, 76u8,
-							126u8, 145u8, 233u8, 113u8, 19u8, 169u8, 49u8, 168u8, 49u8, 246u8,
-							16u8, 168u8,
+							211u8, 39u8, 228u8, 190u8, 133u8, 124u8, 14u8, 39u8, 107u8, 121u8,
+							147u8, 236u8, 248u8, 209u8, 14u8, 17u8, 250u8, 21u8, 79u8, 182u8,
+							156u8, 128u8, 155u8, 113u8, 205u8, 140u8, 255u8, 169u8, 43u8, 180u8,
+							68u8, 254u8,
 						],
 					)
 				}
@@ -1327,9 +1327,10 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							35u8, 159u8, 66u8, 215u8, 26u8, 81u8, 149u8, 18u8, 216u8, 23u8, 166u8,
-							134u8, 13u8, 106u8, 0u8, 158u8, 88u8, 218u8, 252u8, 104u8, 23u8, 116u8,
-							224u8, 21u8, 70u8, 246u8, 91u8, 174u8, 23u8, 98u8, 38u8, 131u8,
+							126u8, 63u8, 98u8, 223u8, 12u8, 66u8, 7u8, 205u8, 250u8, 46u8, 28u8,
+							184u8, 11u8, 193u8, 162u8, 167u8, 5u8, 149u8, 94u8, 215u8, 210u8,
+							183u8, 192u8, 115u8, 135u8, 71u8, 19u8, 78u8, 223u8, 213u8, 242u8,
+							99u8,
 						],
 					)
 				}
@@ -3070,9 +3071,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				85u8, 77u8, 133u8, 241u8, 148u8, 69u8, 72u8, 92u8, 169u8, 191u8, 234u8, 125u8,
-				108u8, 5u8, 36u8, 141u8, 180u8, 13u8, 216u8, 230u8, 138u8, 187u8, 13u8, 34u8, 36u8,
-				57u8, 152u8, 184u8, 86u8, 74u8, 63u8, 20u8,
+				141u8, 105u8, 50u8, 51u8, 40u8, 195u8, 178u8, 49u8, 72u8, 73u8, 140u8, 156u8,
+				145u8, 185u8, 181u8, 220u8, 211u8, 200u8, 124u8, 46u8, 96u8, 21u8, 18u8, 9u8, 56u8,
+				116u8, 21u8, 214u8, 210u8, 166u8, 20u8, 104u8,
 			]
 	}
 	pub mod system {
@@ -4225,10 +4226,9 @@ pub mod api {
 						"Events",
 						(),
 						[
-							81u8, 149u8, 50u8, 191u8, 223u8, 40u8, 192u8, 213u8, 180u8, 245u8,
-							44u8, 118u8, 122u8, 197u8, 154u8, 18u8, 109u8, 88u8, 248u8, 181u8,
-							110u8, 109u8, 244u8, 168u8, 116u8, 9u8, 145u8, 133u8, 3u8, 246u8,
-							162u8, 152u8,
+							98u8, 59u8, 94u8, 240u8, 105u8, 173u8, 254u8, 72u8, 45u8, 67u8, 227u8,
+							8u8, 224u8, 51u8, 186u8, 218u8, 229u8, 132u8, 229u8, 216u8, 92u8, 60u8,
+							195u8, 104u8, 46u8, 175u8, 56u8, 208u8, 15u8, 224u8, 222u8, 234u8,
 						],
 					)
 				}
@@ -6503,9 +6503,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							5u8, 47u8, 4u8, 78u8, 185u8, 195u8, 15u8, 145u8, 127u8, 14u8, 13u8,
-							65u8, 79u8, 175u8, 162u8, 134u8, 92u8, 141u8, 144u8, 87u8, 1u8, 3u8,
-							41u8, 132u8, 243u8, 43u8, 86u8, 77u8, 13u8, 220u8, 232u8, 127u8,
+							17u8, 113u8, 187u8, 172u8, 225u8, 166u8, 250u8, 4u8, 27u8, 229u8, 62u8,
+							253u8, 224u8, 254u8, 170u8, 163u8, 67u8, 38u8, 172u8, 21u8, 209u8,
+							28u8, 14u8, 83u8, 110u8, 15u8, 200u8, 17u8, 161u8, 158u8, 69u8, 230u8,
 						],
 					)
 				}
@@ -6525,9 +6525,10 @@ pub mod api {
 							auth_type,
 						},
 						[
-							16u8, 173u8, 193u8, 204u8, 86u8, 220u8, 164u8, 175u8, 121u8, 242u8,
-							91u8, 35u8, 6u8, 77u8, 135u8, 143u8, 90u8, 193u8, 119u8, 220u8, 134u8,
-							122u8, 247u8, 67u8, 163u8, 9u8, 208u8, 113u8, 141u8, 99u8, 139u8, 39u8,
+							98u8, 61u8, 111u8, 158u8, 211u8, 145u8, 144u8, 246u8, 124u8, 184u8,
+							13u8, 212u8, 47u8, 76u8, 139u8, 67u8, 23u8, 148u8, 250u8, 242u8, 187u8,
+							210u8, 156u8, 218u8, 103u8, 2u8, 242u8, 174u8, 224u8, 218u8, 70u8,
+							20u8,
 						],
 					)
 				}
@@ -6610,9 +6611,10 @@ pub mod api {
 						"request_intent",
 						types::RequestIntent { intent },
 						[
-							162u8, 208u8, 121u8, 60u8, 38u8, 9u8, 209u8, 37u8, 37u8, 74u8, 16u8,
-							84u8, 26u8, 62u8, 46u8, 229u8, 241u8, 54u8, 78u8, 183u8, 154u8, 192u8,
-							118u8, 134u8, 131u8, 82u8, 225u8, 191u8, 206u8, 80u8, 53u8, 89u8,
+							124u8, 41u8, 165u8, 17u8, 197u8, 175u8, 181u8, 153u8, 84u8, 204u8,
+							183u8, 222u8, 182u8, 28u8, 14u8, 231u8, 131u8, 238u8, 68u8, 41u8,
+							143u8, 41u8, 219u8, 214u8, 251u8, 9u8, 10u8, 247u8, 17u8, 138u8, 33u8,
+							205u8,
 						],
 					)
 				}
@@ -6647,10 +6649,9 @@ pub mod api {
 						"intent_executed",
 						types::IntentExecuted { who, intent, result },
 						[
-							16u8, 225u8, 18u8, 95u8, 61u8, 185u8, 77u8, 181u8, 189u8, 48u8, 136u8,
-							83u8, 29u8, 223u8, 147u8, 210u8, 119u8, 151u8, 105u8, 238u8, 214u8,
-							243u8, 203u8, 237u8, 33u8, 156u8, 198u8, 100u8, 6u8, 204u8, 89u8,
-							214u8,
+							9u8, 226u8, 82u8, 144u8, 252u8, 77u8, 165u8, 121u8, 44u8, 216u8, 242u8,
+							10u8, 168u8, 33u8, 248u8, 198u8, 39u8, 106u8, 173u8, 45u8, 161u8,
+							114u8, 87u8, 78u8, 39u8, 69u8, 197u8, 210u8, 146u8, 119u8, 137u8, 45u8,
 						],
 					)
 				}
@@ -8015,9 +8016,10 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							216u8, 186u8, 197u8, 158u8, 158u8, 107u8, 202u8, 25u8, 160u8, 153u8,
-							108u8, 189u8, 10u8, 162u8, 33u8, 220u8, 134u8, 94u8, 26u8, 139u8, 32u8,
-							122u8, 89u8, 235u8, 225u8, 96u8, 31u8, 187u8, 67u8, 104u8, 174u8, 16u8,
+							248u8, 29u8, 243u8, 151u8, 187u8, 249u8, 7u8, 165u8, 165u8, 174u8,
+							207u8, 243u8, 211u8, 163u8, 142u8, 183u8, 102u8, 109u8, 61u8, 253u8,
+							46u8, 112u8, 29u8, 145u8, 172u8, 57u8, 212u8, 210u8, 155u8, 16u8,
+							235u8, 244u8,
 						],
 					)
 				}
@@ -9780,6 +9782,25 @@ pub mod api {
 				#[encode_as_type(
 					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 				)]
+				pub struct Asset {
+					pub id: ::core::primitive::u128,
+					pub chain_id: ::core::primitive::u8,
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
 				pub struct CallEthereum {
 					pub address: ::subxt::ext::subxt_core::utils::H160,
 					pub input: runtime_types::bounded_collections::bounded_vec::BoundedVec<
@@ -9816,6 +9837,55 @@ pub mod api {
 					TransferNative(runtime_types::core_primitives::intent::TransferNative),
 					#[codec(index = 4)]
 					TransferSolana(runtime_types::core_primitives::intent::TransferSolana),
+					#[codec(index = 5)]
+					CrossChainSwap(runtime_types::core_primitives::intent::SwapOrder),
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub enum MultiAddress {
+					#[codec(index = 0)]
+					Address32(runtime_types::core_primitives::identity::Address32),
+					#[codec(index = 1)]
+					Address20(runtime_types::core_primitives::identity::Address20),
+					#[codec(index = 2)]
+					Address33(runtime_types::core_primitives::identity::Address33),
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct SwapOrder {
+					pub from_asset: runtime_types::core_primitives::intent::Asset,
+					pub from_amount: ::core::primitive::u64,
+					pub to_asset: runtime_types::core_primitives::intent::Asset,
+					pub to_min_amount: ::core::primitive::u64,
+					pub to_address: ::core::option::Option<
+						runtime_types::core_primitives::intent::MultiAddress,
+					>,
 				}
 				#[derive(
 					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,

@@ -17,14 +17,13 @@
 use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
+use cross_chain_intent_executor::CrossChainIntentExecutor;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_storage::{init_storage, StorageDB};
 use log::error;
-use native_task_handler::{
-	run_native_task_handler, Aes256KeyStore, ParentchainTxSigner, TaskHandlerContext,
-};
+use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
@@ -80,12 +79,20 @@ async fn main() -> Result<(), ()> {
 			));
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
+
+			let ethereum_intent_executor = EthereumIntentExecutor::new(&args.ethereum_url)?;
+			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
+			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
+
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				storage_db.clone(),
 				jwt_secret.clone(),
 				aes256_key,
+				Arc::new(ethereum_intent_executor),
+				Arc::new(solana_intent_executor),
+				Arc::new(cross_chain_intent_executor),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
@@ -131,7 +138,7 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db, transaction_signer).await.unwrap();
+			listen_to_parentchain(args, storage_db).await.unwrap();
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
@@ -153,27 +160,18 @@ async fn main() -> Result<(), ()> {
 async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
-	parentchain_tx_signer: Arc<ParentchainTxSigner>,
 ) -> Result<JoinHandle<()>, ()> {
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
-	let ethereum_intent_executor =
-		EthereumIntentExecutor::new(&args.ethereum_url).map_err(|e| log::error!("{:?}", e))?;
-	let solana_intent_executor =
-		SolanaIntentExecutor::new(args.solana_url).map_err(|e| log::error!("{:?}", e))?;
 
-	let mut parentchain_listener =
-		parentchain_listener::create_listener::<EthereumIntentExecutor, SolanaIntentExecutor>(
-			"litentry_rococo",
-			Handle::current(),
-			&args.parentchain_url,
-			ethereum_intent_executor,
-			solana_intent_executor,
-			sub_stop_receiver,
-			storage_db,
-			parentchain_tx_signer,
-			&args.log_path,
-		)
-		.await?;
+	let mut parentchain_listener = parentchain_listener::create_listener(
+		"litentry_rococo",
+		Handle::current(),
+		&args.parentchain_url,
+		sub_stop_receiver,
+		storage_db,
+		&args.log_path,
+	)
+	.await?;
 
 	Ok(thread::Builder::new()
 		.name("litentry_rococo_sync".to_string())
