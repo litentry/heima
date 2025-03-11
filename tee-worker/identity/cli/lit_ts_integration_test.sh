@@ -29,8 +29,8 @@ done
 
 # Using default port if none given as arguments.
 NPORT=${NPORT:-9944}
-NODEURL=${NODEURL:-"ws://litentry-node"}
-NODEHTTPURL=${NODEHTTPURL:-"http://litentry-node"}
+NODEURL=${NODEURL:-"ws://heima-node"}
+NODEHTTPURL=${NODEHTTPURL:-"http://heima-node"}
 WORKER1PORT=${WORKER1PORT:-2011}
 WORKER1URL=${WORKER1URL:-"ws://litentry-worker-1"}
 
