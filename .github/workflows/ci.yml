@@ -693,10 +693,10 @@ jobs:
         working-directory: ./parachain
         run: |
           echo "::group::paseo runtime test"
-          cargo test --locked -p paseo-parachain-runtime --lib
+          cargo test --locked -p paseo-runtime --lib
           echo "::endgroup::"
           echo "::group::heima runtime test"
-          cargo test --locked -p heima-parachain-runtime --lib
+          cargo test --locked -p heima-runtime --lib
           echo "::endgroup::"
 
       - name: Fail early

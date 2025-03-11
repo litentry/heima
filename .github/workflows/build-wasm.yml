@@ -36,23 +36,23 @@ jobs:
           PARACHAIN_PALLET_ID: "0x1e"
           AUTHORIZE_UPGRADE_PREFIX: "0x02"
         with:
-          chain: ${{ github.event.inputs.chain }}-parachain
+          chain: ${{ github.event.inputs.chain }}
           runtime_dir: runtime/${{ github.event.inputs.chain }}
           profile: production
 
       - name: Summary
         run: |
-          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ github.event.inputs.chain }}-parachain-srtool-digest.json
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ github.event.inputs.chain }}-srtool-digest.json
           echo "==============================================="
-          cat ${{ github.event.inputs.chain }}-parachain-srtool-digest.json
-          cp ${{ steps.srtool_build.outputs.wasm }} ${{ github.event.inputs.chain }}-parachain-runtime.compact.wasm
-          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ github.event.inputs.chain }}-parachain-runtime.compact.compressed.wasm
+          cat ${{ github.event.inputs.chain }}-srtool-digest.json
+          cp ${{ steps.srtool_build.outputs.wasm }} ${{ github.event.inputs.chain }}-runtime.compact.wasm
+          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ github.event.inputs.chain }}-runtime.compact.compressed.wasm
 
       - name: Upload wasm artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.chain }}-parachain-runtime
+          name: ${{ github.event.inputs.chain }}-runtime
           path: |
-            ${{ github.event.inputs.chain }}-parachain-srtool-digest.json
-            ${{ github.event.inputs.chain }}-parachain-runtime.compact.wasm
-            ${{ github.event.inputs.chain }}-parachain-runtime.compact.compressed.wasm
+            ${{ github.event.inputs.chain }}-srtool-digest.json
+            ${{ github.event.inputs.chain }}-runtime.compact.wasm
+            ${{ github.event.inputs.chain }}-runtime.compact.compressed.wasm

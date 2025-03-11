@@ -16,7 +16,7 @@
 
 use super::*;
 use cumulus_primitives_core::ParaId;
-use heima_parachain_runtime::{
+use heima_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
 	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig,
@@ -179,9 +179,9 @@ fn generate_genesis(
 				.cloned()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                   // account id
-						acc,                                           // validator id
-						heima_parachain_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                         // account id
+						acc,                                 // validator id
+						heima_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),

@@ -12,7 +12,7 @@ use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
 	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentExecutionResult},
-	paseo_parachain_runtime::RuntimeCall,
+	paseo_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
 	AccountId32, SubstrateRpcClient, SubstrateRpcClientFactory, ToSubxtType, XtStatus,

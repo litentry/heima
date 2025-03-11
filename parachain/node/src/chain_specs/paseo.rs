@@ -17,7 +17,7 @@
 use super::*;
 use core_primitives::PASEO_PARA_ID;
 use cumulus_primitives_core::ParaId;
-use paseo_parachain_runtime::{
+use paseo_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
 	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
@@ -183,9 +183,9 @@ fn generate_genesis(
 				.cloned()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                   // account id
-						acc,                                           // validator id
-						paseo_parachain_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                         // account id
+						acc,                                 // validator id
+						paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),

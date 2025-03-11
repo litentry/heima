@@ -1,13 +1,13 @@
 [
     {
       "name": "paseo",
-      "package": "paseo-parachain-runtime",
+      "package": "paseo-runtime",
       "path": "runtime/paseo",
       "uri": "wss://rpc.paseo-parachain.heima.network:443"
     },
     {
       "name": "heima",
-      "package": "heima-parachain-runtime",
+      "package": "heima-runtime",
       "path": "runtime/heima",
       "uri": "wss://rpc.heima-parachain.heima.network:443"
     }

@@ -275,8 +275,8 @@ heima-macros = { path = "../common/primitives/core/macros" }
 heima-proc-macros = { path = "../common/primitives/core/proc-macros" }
 heima-hex-utils = { path = "../common/utils/hex", default-features = false }
 runtime-common = { path = "runtime/common", default-features = false }
-heima-parachain-runtime = { path = "runtime/heima", default-features = false }
-paseo-parachain-runtime = { path = "runtime/paseo", default-features = false }
+heima-runtime = { path = "runtime/heima", default-features = false }
+paseo-runtime = { path = "runtime/paseo", default-features = false }
 pallet-account-fix = { path = "pallets/account-fix", default-features = false }
 pallet-asset-manager = { path = "pallets/xcm-asset-manager", default-features = false }
 pallet-assets-handler = { path = "pallets/bridge/assets-handler", default-features = false }

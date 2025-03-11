@@ -20,8 +20,8 @@ function print_divider() {
 
 # Download runtime wasm
 print_divider
-echo "Download $1-parachain-runtime.compact.compressed.wasm from release tag $3 ..."
-gh release download "$3" -p "$1-parachain-runtime.compact.compressed.wasm" -O "$new_wasm" || true
+echo "Download $1-runtime.compact.compressed.wasm from release tag $3 ..."
+gh release download "$3" -p "$1-runtime.compact.compressed.wasm" -O "$new_wasm" || true
 
 if [ -f "$new_wasm" ] && [ -s "$new_wasm" ]; then
   ls -l "$new_wasm"

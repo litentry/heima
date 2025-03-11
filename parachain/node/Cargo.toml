@@ -109,9 +109,9 @@ frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { workspace = true, optional = true }
 
 core-primitives = { workspace = true, features = ["std"] }
-heima-parachain-runtime = { workspace = true, features = ["std"] }
+heima-runtime = { workspace = true, features = ["std"] }
 pallet-omni-account-runtime-api = { workspace = true, features = ["std"] }
-paseo-parachain-runtime = { workspace = true, features = ["std"] }
+paseo-runtime = { workspace = true, features = ["std"] }
 runtime-common = { workspace = true, features = ["std"] }
 
 [build-dependencies]
@@ -120,18 +120,18 @@ substrate-build-script-utils = { workspace = true }
 [features]
 default = []
 fast-runtime = [
-    "heima-parachain-runtime/fast-runtime",
-    "paseo-parachain-runtime/fast-runtime",
+    "heima-runtime/fast-runtime",
+    "paseo-runtime/fast-runtime",
 ]
 runtime-benchmarks = [
     "cumulus-primitives-core/runtime-benchmarks",
     "frame-benchmarking-cli/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "heima-parachain-runtime/runtime-benchmarks",
+    "heima-runtime/runtime-benchmarks",
     "pallet-ethereum/runtime-benchmarks",
     "pallet-evm/runtime-benchmarks",
-    "paseo-parachain-runtime/runtime-benchmarks",
+    "paseo-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks",
     "polkadot-primitives/runtime-benchmarks",
     "polkadot-service/runtime-benchmarks",
@@ -141,11 +141,11 @@ runtime-benchmarks = [
 ]
 try-runtime = [
     "frame-support/try-runtime",
-    "heima-parachain-runtime/try-runtime",
+    "heima-runtime/try-runtime",
     "pallet-ethereum/try-runtime",
     "pallet-evm/try-runtime",
     "pallet-transaction-payment/try-runtime",
-    "paseo-parachain-runtime/try-runtime",
+    "paseo-runtime/try-runtime",
     "polkadot-cli/try-runtime",
     "polkadot-service/try-runtime",
     "runtime-common/try-runtime",

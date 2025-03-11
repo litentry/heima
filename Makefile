@@ -32,11 +32,11 @@ build-node:
 
 .PHONY: build-runtime-heima ## Build heima release runtime
 build-runtime-heima:
-	cd parachain && cargo build --locked -p heima-parachain-runtime --release
+	cd parachain && cargo build --locked -p heima-runtime --release
 
 .PHONY: build-runtime-paseo ## Build paseo release runtime
 build-runtime-paseo:
-	cd parachain && cargo build --locked -p paseo-parachain-runtime --release
+	cd parachain && cargo build --locked -p paseo-runtime --release
 
 .PHONY: build-docker-release ## Build docker image using cargo profile `release`
 build-docker-release:

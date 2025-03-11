@@ -120,7 +120,7 @@ fi
 if is_runtime_release; then
   echo "## Parachain runtime" >> "$1"
   for CHAIN in heima paseo; do
-    SRTOOL_DIGEST_FILE=$CHAIN-parachain-runtime/$CHAIN-parachain-srtool-digest.json
+    SRTOOL_DIGEST_FILE=$CHAIN-runtime/$CHAIN-srtool-digest.json
     RUNTIME_VERSION=$(grep spec_version parachain/runtime/$CHAIN/src/lib.rs | sed 's/.*version: //;s/,//')
     RUNTIME_COMPRESSED_SIZE=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.size | sed 's/"//g')
     RUNTIME_RUSTC_VERSION=$(cat "$SRTOOL_DIGEST_FILE" | jq .rustc | sed 's/"//g')

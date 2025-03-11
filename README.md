@@ -36,9 +36,9 @@ To build the heima runtime wasm:
 make build-runtime-heima
 ```
 
-The wasms should be located under `target/release/wbuild/heima-parachain-runtime/`
+The wasms should be located under `target/release/wbuild/heima-runtime/`
 
-Similarly, use `make build-runtime-paseo` to build the paseo-parachain-runtime.
+Similarly, use `make build-runtime-paseo` to build the paseo-runtime.
 
 ## Launch parachain
 ### Launch a parachain network with relaychains
