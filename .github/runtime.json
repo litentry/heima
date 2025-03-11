@@ -3,12 +3,12 @@
       "name": "paseo",
       "package": "paseo-parachain-runtime",
       "path": "runtime/paseo",
-      "uri": "wss://rpc.paseo-parachain.litentry.io:443"
+      "uri": "wss://rpc.paseo-parachain.heima.network:443"
     },
     {
       "name": "heima",
       "package": "heima-parachain-runtime",
       "path": "runtime/heima",
-      "uri": "wss://rpc.litentry-parachain.litentry.io:443"
+      "uri": "wss://rpc.heima-parachain.heima.network:443"
     }
 ]

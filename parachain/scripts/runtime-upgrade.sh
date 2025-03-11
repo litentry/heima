@@ -9,7 +9,7 @@ function usage() {
   echo
   echo "Usage: $0 <wasm-name> <endpoint> <release-tag> "
   echo "e.g.:"
-  echo "    $0 litentry wss://rpc.litentry-parachain.litentry.io v0.9.21-01"
+  echo "    $0 litentry wss://rpc.heima-parachain.heima.network v0.9.21-01"
 }
 
 [ $# -ne 3 ] && (usage; exit 1)
