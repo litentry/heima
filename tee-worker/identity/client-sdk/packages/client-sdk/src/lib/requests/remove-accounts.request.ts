@@ -15,6 +15,7 @@ import { createRequestType } from '../type-creators/request';
 
 import type { JsonRpcRequest } from '../util/types';
 import { getEnclaveNonce } from './get-enclave-nonce';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * Removes accounts from the Litentry Parachain.
@@ -35,10 +36,12 @@ export async function removeAccounts(
     who: LitentryIdentity;
     /** Accounts for removing */
     identities: Array<LitentryIdentity>;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -59,7 +62,7 @@ export async function removeAccounts(
   });
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -67,7 +70,6 @@ export async function removeAccounts(
   }> => {
     // prepare and encrypt request
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -105,7 +107,7 @@ export async function removeAccounts(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return { send };
   }
 

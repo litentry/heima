@@ -1,0 +1,8 @@
+[package]
+name = "parentchain-api-interface"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+subxt = { workspace = true }

@@ -48,4 +48,17 @@ describe('createTCAuthenticationType', () => {
       Sr25519: signature,
     });
   });
+
+  it('creates AuthToken authentication', () => {
+    const authTokenTCAuthentication = createTCAuthenticationType(registry, {
+      type: 'AuthToken',
+      token: 'test-token',
+    });
+
+    expect(authTokenTCAuthentication).toBeDefined();
+    expect(authTokenTCAuthentication.isAuthToken).toEqual(true);
+    expect(authTokenTCAuthentication.asAuthToken.toHuman()).toEqual(
+      'test-token'
+    );
+  });
 });

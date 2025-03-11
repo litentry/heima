@@ -7,6 +7,7 @@ import type {
   TrustedCall,
   LitentryIdentity,
   LitentryValidationData,
+  AuthOptions,
   Web3Network,
   Assertion,
 } from '@litentry/parachain-api';
@@ -97,6 +98,12 @@ type RequestPublicizeAccountParams = {
   identity: LitentryIdentity;
 };
 
+// LitentryIdentity, AuthOptions
+type RequestAuthTokenParams = {
+  who: LitentryIdentity;
+  options: AuthOptions;
+};
+
 /**
  * Creates the TrustedCall for the given method and provide the `param's` types expected for them.
  *
@@ -168,6 +175,13 @@ export async function createTrustedCallType(
   data: {
     method: 'publicize_account';
     params: RequestPublicizeAccountParams;
+  }
+): Promise<{ call: TrustedCall; key: CryptoKey }>;
+export async function createTrustedCallType(
+  registry: Registry,
+  data: {
+    method: 'request_auth_token';
+    params: RequestAuthTokenParams;
   }
 ): Promise<{ call: TrustedCall; key: CryptoKey }>;
 export async function createTrustedCallType(
@@ -314,7 +328,6 @@ export async function createTrustedCallType(
   if (isRequestAddAccountParams(method, params)) {
     const { who, identity, validation, isPublic } = params;
 
-
     const call = registry.createType('TrustedCall', {
       [trustedCallMethodsMap.add_account]: registry.createType(
         trusted_operations.types.TrustedCall._enum.add_account,
@@ -328,7 +341,10 @@ export async function createTrustedCallType(
   if (isRequestRemoveAccountsParams(method, params)) {
     const { who, identities } = params;
 
-    const identitiesVec = registry.createType('Vec<LitentryIdentity>', identities);
+    const identitiesVec = registry.createType(
+      'Vec<LitentryIdentity>',
+      identities
+    );
     const call = registry.createType('TrustedCall', {
       [trustedCallMethodsMap.remove_accounts]: registry.createType(
         trusted_operations.types.TrustedCall._enum.remove_accounts,
@@ -346,6 +362,19 @@ export async function createTrustedCallType(
       [trustedCallMethodsMap.publicize_account]: registry.createType(
         trusted_operations.types.TrustedCall._enum.publicize_account,
         [who, identity]
+      ),
+    }) as TrustedCall;
+
+    return { call, key };
+  }
+
+  if (isRequestAuthTokenParams(method, params)) {
+    const { who, options } = params;
+
+    const call = registry.createType('TrustedCall', {
+      [trustedCallMethodsMap.request_auth_token]: registry.createType(
+        trusted_operations.types.TrustedCall._enum.request_auth_token,
+        [who, options]
       ),
     }) as TrustedCall;
 
@@ -417,4 +446,11 @@ function isRequestPublicizeAccountParams(
   params: Record<string, unknown>
 ): params is RequestPublicizeAccountParams {
   return method === 'publicize_account';
+}
+
+function isRequestAuthTokenParams(
+  method: TrustedCallMethod,
+  params: Record<string, unknown>
+): params is RequestAuthTokenParams {
+  return method === 'request_auth_token';
 }

@@ -22,21 +22,23 @@
 
 use crate::{
 	pallet::{
-		BalanceOf, CandidateInfo, Config, DelegationScheduledRequests, DelegatorState, Error,
-		Event, Pallet, Round, RoundIndex, Total,
+		AutoCompoundingDelegations, BalanceOf, BottomDelegations, CandidateInfo, CandidatePool,
+		Config, DelegationScheduledRequests, DelegatorState, Error, Event, Pallet, Round,
+		RoundIndex, TopDelegations, Total,
 	},
 	weights::WeightInfo,
-	AutoCompoundDelegations, Delegator, OnAllDelegationRemoved,
+	AutoCompoundDelegations, Bond, Delegator, OnAllDelegationRemoved,
 };
 use frame_support::{
 	dispatch::DispatchResultWithPostInfo,
 	ensure,
+	pallet_prelude::DispatchResult,
 	traits::{Get, ReservableCurrency},
 };
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{Saturating, Zero};
 use sp_std::{vec, vec::Vec};
 
 /// An action that can be performed upon a delegation
@@ -84,6 +86,115 @@ impl<A, B> From<ScheduledRequest<A, B>> for CancelledScheduledRequest<B> {
 }
 
 impl<T: Config> Pallet<T> {
+	/// Schedules a [CollatorStatus::Leaving] for the candidate
+	pub(crate) fn candidate_schedule_revoke(collator: T::AccountId) -> DispatchResultWithPostInfo {
+		let mut state = <CandidateInfo<T>>::get(&collator).ok_or(Error::<T>::CandidateDNE)?;
+		let (now, when) = state.schedule_leave::<T>()?;
+		let mut candidates = <CandidatePool<T>>::get();
+		if candidates.remove(&Bond::from_owner(collator.clone())) {
+			<CandidatePool<T>>::put(candidates);
+		}
+		<CandidateInfo<T>>::insert(&collator, state);
+		Self::deposit_event(Event::CandidateScheduledExit {
+			exit_allowed_round: now,
+			candidate: collator,
+			scheduled_exit: when,
+		});
+		Ok(().into())
+	}
+
+	/// Executes a [CollatorStatus::Leaving] for the candidate
+	pub(crate) fn candidate_execute_schedule_revoke(
+		candidate: T::AccountId,
+	) -> DispatchResultWithPostInfo {
+		let state = <CandidateInfo<T>>::get(&candidate).ok_or(Error::<T>::CandidateDNE)?;
+		state.can_leave::<T>()?;
+		let return_stake = |bond: Bond<T::AccountId, BalanceOf<T>>| -> DispatchResult {
+			T::Currency::unreserve(&bond.owner, bond.amount);
+			// remove delegation from delegator state
+			let mut delegator = DelegatorState::<T>::get(&bond.owner).expect(
+				"Collator state and delegator state are consistent.
+					Collator state has a record of this delegation. Therefore,
+					Delegator state also has a record. qed.",
+			);
+
+			if let Some(remaining) = delegator.rm_delegation(&candidate) {
+				Self::delegation_remove_request_with_state(&candidate, &bond.owner, &mut delegator);
+				<AutoCompoundDelegations<T>>::remove_auto_compound(&candidate, &bond.owner);
+
+				if remaining.is_zero() {
+					// we do not remove the scheduled delegation requests from other collators
+					// since it is assumed that they were removed incrementally before only the
+					// last delegation was left.
+					<DelegatorState<T>>::remove(&bond.owner);
+					let _ = T::OnAllDelegationRemoved::on_all_delegation_removed(&bond.owner);
+				} else {
+					<DelegatorState<T>>::insert(&bond.owner, delegator);
+				}
+			}
+			Ok(())
+		};
+		// total backing stake is at least the candidate self bond
+		let mut total_backing = state.bond;
+		// return all top delegations
+		let top_delegations =
+			<TopDelegations<T>>::take(&candidate).expect("CandidateInfo existence checked");
+		for bond in top_delegations.delegations {
+			return_stake(bond)?;
+		}
+		total_backing = total_backing.saturating_add(top_delegations.total);
+		// return all bottom delegations
+		let bottom_delegations =
+			<BottomDelegations<T>>::take(&candidate).expect("CandidateInfo existence checked");
+		for bond in bottom_delegations.delegations {
+			return_stake(bond)?;
+		}
+		total_backing = total_backing.saturating_add(bottom_delegations.total);
+		// return stake to collator
+		T::Currency::unreserve(&candidate, state.bond);
+		<CandidateInfo<T>>::remove(&candidate);
+		<DelegationScheduledRequests<T>>::remove(&candidate);
+		<AutoCompoundingDelegations<T>>::remove(&candidate);
+		<TopDelegations<T>>::remove(&candidate);
+		<BottomDelegations<T>>::remove(&candidate);
+		let new_total_staked = <Total<T>>::get().saturating_sub(total_backing);
+		<Total<T>>::put(new_total_staked);
+		Self::deposit_event(Event::CandidateLeft {
+			ex_candidate: candidate,
+			unlocked_amount: total_backing,
+			new_total_amt_locked: new_total_staked,
+		});
+		let actual_weight =
+			Some(T::WeightInfo::execute_leave_candidates(state.delegation_count as u32));
+		Ok(actual_weight.into())
+	}
+
+	/// Schedules a [CandidateBondLessRequest] for the candidate
+	pub(crate) fn candidate_schedule_bond_decrease(
+		collator: T::AccountId,
+		less: BalanceOf<T>,
+	) -> DispatchResultWithPostInfo {
+		let mut state = <CandidateInfo<T>>::get(&collator).ok_or(Error::<T>::CandidateDNE)?;
+		let when = state.schedule_bond_less::<T>(less)?;
+		<CandidateInfo<T>>::insert(&collator, state);
+		Self::deposit_event(Event::CandidateBondLessRequested {
+			candidate: collator,
+			amount_to_decrease: less,
+			execute_round: when,
+		});
+		Ok(().into())
+	}
+
+	/// Executes a [CandidateBondLessRequest] for the candidate
+	pub(crate) fn candidate_execute_bond_decrease(
+		candidate: T::AccountId,
+	) -> DispatchResultWithPostInfo {
+		let mut state = <CandidateInfo<T>>::get(&candidate).ok_or(Error::<T>::CandidateDNE)?;
+		state.execute_bond_less::<T>(candidate.clone())?;
+		<CandidateInfo<T>>::insert(&candidate, state);
+		Ok(().into())
+	}
+
 	/// Schedules a [DelegationAction::Revoke] for the delegator, towards a given collator.
 	pub(crate) fn delegation_schedule_revoke(
 		collator: T::AccountId,
@@ -144,7 +255,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(decrease_amount <= max_subtracted_amount, <Error<T>>::DelegatorBondBelowMin);
 
 		let now = <Round<T>>::get().current;
-		let when = now.saturating_add(T::RevokeDelegationDelay::get());
+		let when = now.saturating_add(T::DelegationBondLessDelay::get());
 		scheduled_requests.push(ScheduledRequest {
 			delegator: delegator.clone(),
 			action: DelegationAction::Decrease(decrease_amount),

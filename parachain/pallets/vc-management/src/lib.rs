@@ -395,7 +395,7 @@ pub mod pallet {
 
 		// TODO: update the weight info to use on_vc_issued
 		#[pallet::call_index(32)]
-		#[pallet::weight(<T as Config>::WeightInfo::vc_issued())]
+		#[pallet::weight(<T as Config>::WeightInfo::on_vc_issued())]
 		pub fn on_vc_issued(
 			origin: OriginFor<T>,
 			identity: Identity,

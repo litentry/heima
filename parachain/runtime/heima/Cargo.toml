@@ -28,6 +28,7 @@ sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
 
 frame-executive = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
@@ -49,6 +50,7 @@ pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
+pallet-state-trie-migration = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
@@ -90,6 +92,7 @@ pallet-group = { workspace = true }
 pallet-identity-management = { workspace = true }
 pallet-omni-account = { workspace = true }
 pallet-omni-account-runtime-api = { workspace = true }
+pallet-omni-bridge = { workspace = true }
 pallet-parachain-staking = { workspace = true }
 pallet-score-staking = { workspace = true }
 pallet-teebag = { workspace = true }
@@ -111,8 +114,10 @@ pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
 
 pallet-evm-precompile-bridge-transfer = { workspace = true }
+pallet-evm-precompile-omni-bridge = { workspace = true }
 pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
+pallet-evm-precompile-vesting = { workspace = true }
 
 moonbeam-evm-tracer = { workspace = true }
 moonbeam-rpc-primitives-debug = { workspace = true }
@@ -129,7 +134,7 @@ xcm-simulator = { workspace = true }
 pallet-message-queue = { workspace = true, features = ["std"] }
 
 [build-dependencies]
-substrate-wasm-builder = { workspace = true }
+substrate-wasm-builder = { workspace = true, optional = true }
 
 [features]
 default = ["std"]
@@ -167,11 +172,13 @@ runtime-benchmarks = [
     "pallet-message-queue/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-omni-account/runtime-benchmarks",
+    "pallet-omni-bridge/runtime-benchmarks",
     "pallet-parachain-staking/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
     "pallet-proxy/runtime-benchmarks",
     "pallet-scheduler/runtime-benchmarks",
     "pallet-score-staking/runtime-benchmarks",
+    "pallet-state-trie-migration/runtime-benchmarks",
     "pallet-teebag/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "pallet-treasury/runtime-benchmarks",
@@ -210,6 +217,7 @@ std = [
     "frame-support/std",
     "frame-system-benchmarking?/std",
     "frame-system-rpc-runtime-api/std",
+    "frame-metadata-hash-extension/std",
     "frame-system/std",
     "frame-try-runtime?/std",
     "hex?/std",
@@ -236,6 +244,7 @@ std = [
     "pallet-evm-precompile-blake2/std",
     "pallet-evm-precompile-bn128/std",
     "pallet-evm-precompile-bridge-transfer/std",
+    "pallet-evm-precompile-omni-bridge/std",
     "pallet-evm-precompile-dispatch/std",
     "pallet-evm-precompile-ed25519/std",
     "pallet-evm-precompile-modexp/std",
@@ -243,6 +252,7 @@ std = [
     "pallet-evm-precompile-score-staking/std",
     "pallet-evm-precompile-sha3fips/std",
     "pallet-evm-precompile-simple/std",
+    "pallet-evm-precompile-vesting/std",
     "pallet-evm/std",
     "pallet-extrinsic-filter/std",
     "pallet-group/std",
@@ -253,12 +263,14 @@ std = [
     "pallet-multisig/std",
     "pallet-omni-account-runtime-api/std",
     "pallet-omni-account/std",
+    "pallet-omni-bridge/std",
     "pallet-parachain-staking/std",
     "pallet-preimage/std",
     "pallet-proxy/std",
     "pallet-scheduler/std",
     "pallet-score-staking/std",
     "pallet-session/std",
+    "pallet-state-trie-migration/std",
     "pallet-teebag/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
@@ -293,6 +305,7 @@ std = [
     "sp-std/std",
     "sp-transaction-pool/std",
     "sp-version/std",
+    "substrate-wasm-builder",
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",
@@ -308,7 +321,6 @@ try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
     "frame-try-runtime",
-    "frame-try-runtime?/try-runtime",
     "hex",
     "pallet-account-fix/try-runtime",
     "pallet-asset-manager/try-runtime",
@@ -339,6 +351,7 @@ try-runtime = [
     "pallet-scheduler/try-runtime",
     "pallet-score-staking/try-runtime",
     "pallet-session/try-runtime",
+    "pallet-state-trie-migration/try-runtime",
     "pallet-teebag/try-runtime",
     "pallet-timestamp/try-runtime",
     "pallet-transaction-payment/try-runtime",

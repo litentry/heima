@@ -109,6 +109,7 @@ itc-parentchain = { package = "id-itc-parentchain", path = "../core/parentchain/
 itc-parentchain-block-import-dispatcher = { package = "id-itc-parentchain-block-import-dispatcher", path = "../core/parentchain/block-import-dispatcher", default-features = false, features = ["sgx"] }
 itc-parentchain-test = { path = "../../common/core/parentchain/test", default-features = false }
 itc-peer-top-broadcaster = { path = "../core/peer-top-broadcaster", default-features = false, features = ["sgx"] }
+itc-system-version = { path = "../../common/core/system-version", default-features = false, features = ["sgx"] }
 itc-tls-websocket-server = { path = "../../common/core/tls-websocket-server", default-features = false, features = ["sgx"] }
 itp-attestation-handler = { path = "../../common/core-primitives/attestation-handler", default-features = false, features = ["sgx"] }
 itp-component-container = { path = "../../common/core-primitives/component-container", default-features = false, features = ["sgx"] }

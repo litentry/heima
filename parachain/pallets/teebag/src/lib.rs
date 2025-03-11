@@ -331,7 +331,6 @@ pub mod pallet {
 			enclave: Enclave,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_admin_or_root(origin)?;
-			Self::add_enclave_identifier_internal(enclave.worker_type, &who)?;
 			Self::add_enclave(&who, &enclave)?;
 			Ok(Pays::No.into())
 		}

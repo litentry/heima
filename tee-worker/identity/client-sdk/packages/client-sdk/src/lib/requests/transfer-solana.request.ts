@@ -14,6 +14,7 @@ import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
 
 import type { JsonRpcRequest } from '../util/types';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * Transfers SOL to another account on Solana.
@@ -39,10 +40,12 @@ export async function transferSolana(
     to: string;
     /** Amount to send in lamports */
     amount: bigint;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -71,7 +74,7 @@ export async function transferSolana(
   const nonce = await api.rpc.system.accountNextIndex(omniAccount.asSubstrate);
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -80,7 +83,6 @@ export async function transferSolana(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -118,7 +120,7 @@ export async function transferSolana(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return { send };
   }
 

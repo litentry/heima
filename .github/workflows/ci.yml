@@ -192,8 +192,13 @@ jobs:
         run: |
           cargo fmt --all -- --check
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: identity-worker ts-tests install npm deps
         working-directory: ./tee-worker/identity/ts-tests
@@ -542,7 +547,7 @@ jobs:
         if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: tee-worker/omni-executor/
+          context: .
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:latest
           target: executor-worker
@@ -587,8 +592,13 @@ jobs:
         run: |
           docker load < litentry-heima.tar.gz
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Run ts tests for ${{ matrix.chain }}
         if: needs.set-condition.outputs.run_parachain_test == 'true'
@@ -707,8 +717,9 @@ jobs:
           - test_name: lit-dr-vc-test
           - test_name: lit-parentchain-nonce
           - test_name: lit-test-failed-parentchain-extrinsic
-          - test_name: lit-omni-account-test
-          - test_name: lit-native-request-vc-test
+          # TODO: enable these tests once we use polkadot-sdk branch stable2412
+          # - test_name: lit-omni-account-test
+          # - test_name: lit-native-request-vc-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4
@@ -727,8 +738,13 @@ jobs:
           docker load < litentry-identity.tar.gz
           docker images
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Launch parachain network
         run: |
@@ -793,8 +809,9 @@ jobs:
           - test_name: lit-di-identity-multiworker-test
           - test_name: lit-dr-vc-multiworker-test
           - test_name: lit-resume-worker
-          - test_name: lit-omni-account-multiworker-test
-          - test_name: lit-native-request-vc-multiworker-test
+          # TODO: enable these tests once we use polkadot-sdk branch stable2412
+          # - test_name: lit-omni-account-multiworker-test
+          # - test_name: lit-native-request-vc-multiworker-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4
@@ -813,8 +830,13 @@ jobs:
           docker load < litentry-identity.tar.gz
           docker images
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Launch parachain network
         run: |
@@ -874,7 +896,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - test_name: omni-test
+          - test_name: omni-account-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4
@@ -893,12 +915,12 @@ jobs:
           docker load < litentry-omni.tar.gz
           docker images
 
-      # - name: Integration omni executor test ${{ matrix.test_name }}
-      #   working-directory: ./tee-worker/omni-executor/docker
-      #   if: needs.set-condition.outputs.run_omni_executor_test == 'true'
-      #   timeout-minutes: 40
-      #   run: |
-      #     docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
+      - name: Integration omni executor test ${{ matrix.test_name }}
+        working-directory: ./tee-worker/omni-executor/docker
+        if: needs.set-condition.outputs.run_omni_executor_test == 'true'
+        timeout-minutes: 40
+        run: |
+          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Collect docker logs if test fails
         continue-on-error: true

@@ -14,6 +14,7 @@ import { createTrustedCallType } from '../type-creators/trusted-call';
 import { createRequestType } from '../type-creators/request';
 
 import type { JsonRpcRequest } from '../util/types';
+import { AuthenticationData } from '../type-creators/tc-authentication';
 
 /**
  * Sends a remark to the Litentry Parachain.
@@ -37,10 +38,12 @@ export async function remark(
     who: LitentryIdentity;
     /** the message to be sent */
     message: string;
-  }
+  },
+  /** Whether the user is using Web3 authentication */
+  isWeb3Auth: boolean
 ): Promise<{
   payloadToSign?: string;
-  send: (args: { authentication: string }) => Promise<{
+  send: (args: { authentication: AuthenticationData }) => Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
     extrinsicHash: string;
@@ -68,7 +71,7 @@ export async function remark(
   );
 
   const send = async (args: {
-    authentication: string;
+    authentication: AuthenticationData;
   }): Promise<{
     response: WorkerRpcReturnValue;
     blockHash: string;
@@ -77,7 +80,6 @@ export async function remark(
     // prepare and encrypt request
 
     const request = await createRequestType(api, {
-      sender: who,
       authentication: args.authentication,
       call,
       nonce,
@@ -115,7 +117,7 @@ export async function remark(
     };
   };
 
-  if (who.isEmail) {
+  if (!isWeb3Auth) {
     return { send };
   }
 

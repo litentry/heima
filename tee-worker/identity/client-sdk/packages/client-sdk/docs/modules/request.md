@@ -20,6 +20,7 @@ requests
 - [publicizeAccount](request.md#publicizeaccount)
 - [remark](request.md#remark)
 - [removeAccounts](request.md#removeaccounts)
+- [requestAuthToken](request.md#requestauthtoken)
 - [requestBatchVC](request.md#requestbatchvc)
 - [requestVerificationCode](request.md#requestverificationcode)
 - [setIdentityNetworks](request.md#setidentitynetworks)
@@ -31,7 +32,7 @@ requests
 
 ### addAccount
 
-▸ **addAccount**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **addAccount**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Adds an account to the Litentry Parachain.
 
@@ -45,10 +46,11 @@ Adds an account to the Litentry Parachain.
 | `data.isPublic` | `boolean` | Whether the account is public |
 | `data.validation` | `LitentryValidationData` | The ownership proof. Use `createLitentryValidationDataType` helper to create this struct |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
 
@@ -64,13 +66,13 @@ signed payload.
 
 #### Defined in
 
-[lib/requests/add-account.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/add-account.request.ts#L31)
+[lib/requests/add-account.request.ts:32](https://github.com/litentry/client-sdk/blob/develop/lib/requests/add-account.request.ts#L32)
 
 ___
 
 ### callEthereum
 
-▸ **callEthereum**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **callEthereum**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 OmniAccount: Call an Ethereum contract.
 
@@ -84,10 +86,11 @@ OmniAccount: Call an Ethereum contract.
 | `data.input` | `U8aLike` | Contract input data |
 | `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to signature
 (if applicable) and a send function.
@@ -104,13 +107,13 @@ is the signed payload.
 
 #### Defined in
 
-[lib/requests/call-ethereum.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/call-ethereum.request.ts#L31)
+[lib/requests/call-ethereum.request.ts:32](https://github.com/litentry/client-sdk/blob/develop/lib/requests/call-ethereum.request.ts#L32)
 
 ___
 
 ### createAccountStore
 
-▸ **createAccountStore**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **createAccountStore**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Creates an account store on the Litentry Parachain.
 
@@ -122,10 +125,11 @@ Creates an account store on the Litentry Parachain.
 | `data` | `Object` | - |
 | `data.omniAccount` | `LitentryIdentity` | The user's OmniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
 
@@ -141,7 +145,7 @@ signed payload.
 
 #### Defined in
 
-[lib/requests/create-account-store.request.ts:29](https://github.com/litentry/client-sdk/blob/develop/lib/requests/create-account-store.request.ts#L29)
+[lib/requests/create-account-store.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/create-account-store.request.ts#L30)
 
 ___
 
@@ -241,7 +245,7 @@ Return the Enclave registry information of the latest registered TEE worker.
 | Name | Type | Default value |
 | :------ | :------ | :------ |
 | `api` | `ApiPromise` | `undefined` |
-| `workerType` | ``"Identity"`` \| ``"BitAcross"`` \| ``"OmniExecutor"`` | `'Identity'` |
+| `workerType` | ``"Identity"`` \| ``"OmniExecutor"`` | `'Identity'` |
 
 #### Returns
 
@@ -312,7 +316,7 @@ ___
 
 ### publicizeAccount
 
-▸ **publicizeAccount**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **publicizeAccount**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Publicizes a member account in the AccountStore on the Litentry Parachain.
 
@@ -324,10 +328,11 @@ Publicizes a member account in the AccountStore on the Litentry Parachain.
 | `data` | `Object` | - |
 | `data.identity` | `LitentryIdentity` | The member account for publicizing. Use `createLitentryIdentityType` helper to create this struct |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
 
@@ -341,13 +346,13 @@ send.args.authentication The authentication string. For email identities, this i
 
 #### Defined in
 
-[lib/requests/publicize-account.request.ts:28](https://github.com/litentry/client-sdk/blob/develop/lib/requests/publicize-account.request.ts#L28)
+[lib/requests/publicize-account.request.ts:29](https://github.com/litentry/client-sdk/blob/develop/lib/requests/publicize-account.request.ts#L29)
 
 ___
 
 ### remark
 
-▸ **remark**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **remark**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Sends a remark to the Litentry Parachain.
 
@@ -360,10 +365,11 @@ Sends a remark to the Litentry Parachain.
 | `data.message` | `string` | the message to be sent |
 | `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to sign
 (if applicable) and a send function.
@@ -380,13 +386,13 @@ this is the signed payload.
 
 #### Defined in
 
-[lib/requests/remark.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/remark.request.ts#L30)
+[lib/requests/remark.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/remark.request.ts#L31)
 
 ___
 
 ### removeAccounts
 
-▸ **removeAccounts**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **removeAccounts**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Removes accounts from the Litentry Parachain.
 
@@ -398,10 +404,11 @@ Removes accounts from the Litentry Parachain.
 | `data` | `Object` | - |
 | `data.identities` | `LitentryIdentity`[] | Accounts for removing |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
 
@@ -417,7 +424,44 @@ signed payload.
 
 #### Defined in
 
-[lib/requests/remove-accounts.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/remove-accounts.request.ts#L30)
+[lib/requests/remove-accounts.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/remove-accounts.request.ts#L31)
+
+___
+
+### requestAuthToken
+
+▸ **requestAuthToken**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `token`: `string`  }\>  }\>
+
+Requests an authentication token from the Enclave.
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
+| `data` | `Object` | - |
+| `data.expiresAt` | `number` | The block number at which the token expires |
+| `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
+| `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
+
+#### Returns
+
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `token`: `string`  }\>  }\>
+
+A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
+
+[payloadToSign] The payload to sign if the identity is not an email.
+
+send A function to send the request to the Enclave.
+
+send.args The arguments required to send the request.
+
+send.args.authentication The authentication string. For email identities, this is the verification code. For non-email identities, this is the signed payload.
+
+#### Defined in
+
+[lib/requests/request_auth_token.request.ts:25](https://github.com/litentry/client-sdk/blob/develop/lib/requests/request_auth_token.request.ts#L25)
 
 ___
 
@@ -511,7 +555,7 @@ ___
 
 ### transferEthereum
 
-▸ **transferEthereum**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **transferEthereum**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Transfers ETH to another account on Ethereum.
 
@@ -525,10 +569,11 @@ Transfers ETH to another account on Ethereum.
 | `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.to` | `string` | Ethereum address destination |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to signature
 (if applicable) and a send function.
@@ -545,13 +590,13 @@ this is the signed payload.
 
 #### Defined in
 
-[lib/requests/transfer-ethereum.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-ethereum.request.ts#L30)
+[lib/requests/transfer-ethereum.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-ethereum.request.ts#L31)
 
 ___
 
 ### transferNative
 
-▸ **transferNative**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **transferNative**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Transfers native tokens to another account on the Litentry Parachain.
 
@@ -565,10 +610,11 @@ Transfers native tokens to another account on the Litentry Parachain.
 | `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.to` | `string` | Account destination in hex or ss58 formatted address |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to sign
 (if applicable) and a send function.
@@ -585,13 +631,13 @@ this is the signed payload.
 
 #### Defined in
 
-[lib/requests/transfer-native.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-native.request.ts#L30)
+[lib/requests/transfer-native.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-native.request.ts#L31)
 
 ___
 
 ### transferSolana
 
-▸ **transferSolana**(`api`, `data`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+▸ **transferSolana**(`api`, `data`, `isWeb3Auth`): `Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 Transfers SOL to another account on Solana.
 
@@ -605,10 +651,11 @@ Transfers SOL to another account on Solana.
 | `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.to` | `string` | Solana address destination |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
+| `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
 
 #### Returns
 
-`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: `string`  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
+`Promise`\<\{ `payloadToSign?`: `string` ; `send`: (`args`: \{ `authentication`: [`AuthenticationData`](../README.md#authenticationdata)  }) => `Promise`\<\{ `blockHash`: `string` ; `extrinsicHash`: `string` ; `response`: `WorkerRpcReturnValue`  }\>  }\>
 
 - A promise that resolves to an object containing the payload to signature
 (if applicable) and a send function.
@@ -625,4 +672,4 @@ this is the signed payload.
 
 #### Defined in
 
-[lib/requests/transfer-solana.request.ts:30](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-solana.request.ts#L30)
+[lib/requests/transfer-solana.request.ts:31](https://github.com/litentry/client-sdk/blob/develop/lib/requests/transfer-solana.request.ts#L31)

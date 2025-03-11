@@ -31,7 +31,7 @@ use frame_support::{
 	genesis_builder_helper::{build_state, get_preset},
 	parameter_types,
 	traits::{
-		fungible::{Balanced, Credit, HoldConsideration},
+		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
 		tokens::imbalance::ResolveTo,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, EnsureOrigin, Everything,
@@ -130,6 +130,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -225,16 +226,24 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	// It's important to match `heima-parachain-runtime`, which is runtime pkg name
+	// has to match the on-chain registered spec-name, which is `litentry-parachain`
 	spec_name: create_runtime_str!("litentry-parachain"),
-	impl_name: create_runtime_str!("litentry-parachain"),
+	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9220,
+	spec_version: 9240,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
-	state_version: 0,
+	transaction_version: 2,
+	// https://hackmd.io/JagpUd8tTjuKf9HQtpvHIQ
+	// The trie is an abstraction that sits between the Runtime (and its Overlays) and the actual database, providing an important abstraction to the blockchain, namely storage proofs and state roots.
+	// The trie format has changed since this pull request(#9732) in substrate. The main new difference is, that nodes that contain values larger than 256 bits will not storage the value itself, but rather store the hash of that value. The value itself, is consequently stored in the node that lives in the path traversed by this new hash.
+	// The main benefit of this optimization is better PoV (proof of validity) size for parachains, since large values are moved out of the common trie paths.
+	// The new trie has been included in Polkadot client since release v0.9.16. Although, new new trie format is not yet enabled. This is only done once state_version in RuntimeVersion is set to 1. Once set to 1, the trie works in a hybrid format, meaning that no migration is needed. Instead, migration is done lazily on the fly. Any storage key that's written to will be migrated, if needed. This means that a part of all chain's state is will migrated to the new format pretty soon after setting state_version to 1.
+	// Nonetheless, it might take a long time for all chain's entire state to be migrated to the new format. The sooner this happens, the better, since the lazy migration is a small overhead. Moreover, this hybrid/lazy state mode does not support warp-sync and state import/export.
+	// To do this faster, we have developed pallet-state-trie-migration. This pallet is a configurable background task that starts reading and writing all keys in the storage based on some given schedule, until they are all read, ergo migrated. This pallet can be deployed to a runtime to make sure all keys are read/written once, to ensure that all trie nodes are migrated to the new format.
+	// All substrate-based chains are advised to switch their state_version to 1, and use this pallet to migrate to the new trie format as soon as they can. Switching the state_version will enable the hybrid, lazy migration mode, and this pallet will speed up the migration process.
+	state_version: 1,
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -437,7 +446,7 @@ parameter_types! {
 }
 
 impl pallet_preimage::Config for Runtime {
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = EnsureRootOrHalfCouncil;
@@ -459,7 +468,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
 	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
@@ -603,7 +612,7 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
 	type MembershipInitialized = Council;
 	type MembershipChanged = Council;
 	type MaxMembers = CouncilDefaultMaxMembers;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -633,7 +642,7 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
 	type MembershipInitialized = TechnicalCommittee;
 	type MembershipChanged = TechnicalCommittee;
 	type MaxMembers = CouncilDefaultMaxMembers;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 impl pallet_collective::Config<DeveloperCommitteeInstance> for Runtime {
@@ -709,7 +718,7 @@ impl pallet_treasury::Config for Runtime {
 	type BurnDestination = ();
 	type SpendFunds = Bounties;
 	type MaxApprovals = ConstU32<64>;
-	type AssetKind = (); // Only native asset is supported
+	type AssetKind = (); // Only native asset is supported - TODO: expand it to MultiAssets when required
 	type Beneficiary = AccountId;
 	type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
 	type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
@@ -762,7 +771,7 @@ impl pallet_identity::Config for Runtime {
 	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
 	type MaxSuffixLength = ConstU32<7>;
 	type MaxUsernameLength = ConstU32<32>;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
 impl pallet_account_fix::Config for Runtime {
@@ -937,7 +946,7 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type SuicideQuickClearLimit = ConstU32<0>;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -990,19 +999,19 @@ impl pallet_parachain_staking::Config for Runtime {
 	/// Rounds before the candidate bond increase/decrease can be executed
 	type CandidateBondLessDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
 	/// Rounds before the delegator exit can be executed
-	type LeaveDelegatorsDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type LeaveDelegatorsDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the delegator revocation can be executed
-	type RevokeDelegationDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type RevokeDelegationDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the delegator bond increase/decrease can be executed
-	type DelegationBondLessDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type DelegationBondLessDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the reward is paid
 	type RewardPaymentDelay = ConstU32<2>;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
 	type MinSelectedCandidates = ConstU32<1>;
 	/// Maximum top delegations per candidate
-	type MaxTopDelegationsPerCandidate = ConstU32<1000>;
+	type MaxTopDelegationsPerCandidate = ConstU32<300>;
 	/// Maximum bottom delegations per candidate
-	type MaxBottomDelegationsPerCandidate = ConstU32<200>;
+	type MaxBottomDelegationsPerCandidate = ConstU32<100>;
 	/// Maximum delegations per delegator
 	type MaxDelegationsPerDelegator = ConstU32<100>;
 	type DefaultCollatorCommission = DefaultCollatorCommission;
@@ -1017,7 +1026,7 @@ impl pallet_parachain_staking::Config for Runtime {
 	type MinDelegatorStk = MinDelegatorStk;
 	type OnCollatorPayout = ();
 	type OnNewRound = ();
-	type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
+	type WeightInfo = ();
 	type IssuanceAdapter = AssetsHandler;
 	type OnAllDelegationRemoved = ScoreStaking;
 }
@@ -1105,7 +1114,7 @@ impl pallet_teebag::Config for Runtime {
 
 impl pallet_identity_management::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
 	type ExtrinsicWhitelistOrigin = IMPExtrinsicWhitelist;
@@ -1206,6 +1215,16 @@ impl pallet_omni_account::Config for Runtime {
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 	type MaxPermissions = ConstU32<4>;
 	type Permission = OmniAccountPermission;
+}
+
+impl pallet_omni_bridge::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetKind = NativeOrWithId<AssetId>; // No XCM assets for now
+	type Assets =
+		fungible::UnionOf<Balances, Assets, NativeFromLeft, NativeOrWithId<AssetId>, AccountId>;
+	type TreasuryAccount = TreasuryAccount;
+	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 }
 
 impl pallet_evm_assertions::Config for Runtime {
@@ -1338,12 +1357,15 @@ construct_runtime! {
 		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 82,
 		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 83,
 		OmniAccount: pallet_omni_account = 84,
+		OmniBridge: pallet_omni_bridge = 85,
 
 		// Frontier
 		EVM: pallet_evm = 120,
 		Ethereum: pallet_ethereum = 121,
 
 		// TMP
+		// State Trie Migration
+		StateTrieMigration: pallet_state_trie_migration = 251,
 		AccountFix: pallet_account_fix = 254,
 	}
 }
@@ -1385,7 +1407,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 		matches!(
 			call,
 			// Vesting::vest
-			RuntimeCall::Vesting(pallet_vesting::Call::vest { .. }) |
+			RuntimeCall::Vesting(_) |
 			// ChainBridge
 			RuntimeCall::ChainBridge(_) |
 			// Bounties
@@ -1431,7 +1453,8 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::AssetsHandler(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
-			RuntimeCall::OmniAccount(_)
+			RuntimeCall::OmniAccount(_) |
+			RuntimeCall::OmniBridge(_)
 		)
 	}
 }
@@ -1440,27 +1463,29 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 mod benches {
 	define_benchmarks!(
 		[frame_system, SystemBench::<Runtime>]
+		[cumulus_pallet_xcmp_queue, XcmpQueue]
 		// [pallet_asset_manager, AssetManager]
 		[pallet_balances, Balances]
-		[pallet_timestamp, Timestamp]
-		[pallet_utility, Utility]
-		[pallet_treasury, Treasury]
-		[pallet_democracy, Democracy]
+		[pallet_bridge_transfer,BridgeTransfer]
+		[pallet_chain_bridge,ChainBridge]
 		[pallet_collective, Council]
-		[pallet_proxy, Proxy]
+		[pallet_democracy, Democracy]
+		[pallet_evm, EVM]
+		[pallet_extrinsic_filter, ExtrinsicFilter]
+		[pallet_identity, ParachainIdentity]
+		[pallet_identity_management, IdentityManagement]
 		[pallet_membership, CouncilMembership]
 		[pallet_multisig, Multisig]
-		[paleet_evm, EVM]
-		[pallet_extrinsic_filter, ExtrinsicFilter]
-		[pallet_scheduler, Scheduler]
+		// [pallet_parachain_staking, ParachainStaking]
 		[pallet_preimage, Preimage]
+		[pallet_proxy, Proxy]
+		[pallet_scheduler, Scheduler]
 		[pallet_session, SessionBench::<Runtime>]
-		[pallet_parachain_staking, ParachainStaking]
-		[pallet_identity_management, IdentityManagement]
-		[pallet_vc_management, VCManagement]
-		[pallet_chain_bridge,ChainBridge]
-		[pallet_bridge_transfer,BridgeTransfer]
 		[pallet_teebag, Teebag]
+		[pallet_timestamp, Timestamp]
+		// [pallet_treasury, Treasury]
+		[pallet_utility, Utility]
+		[pallet_vc_management, VCManagement]
 	);
 }
 
@@ -2140,4 +2165,26 @@ impl_runtime_apis! {
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
 	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+}
+
+parameter_types! {
+	// The deposit configuration for the signed migration. Specially if you want to allow any signed account to do the migration (see `SignedFilter`, these deposits should be high)
+	pub MigrationSignedDepositPerItem: Balance = 1 * CENTS;
+	pub MigrationSignedDepositBase: Balance = 20 * DOLLARS;
+	pub const MigrationMaxKeyLen: u32 = 512;
+}
+
+impl pallet_state_trie_migration::Config for Runtime {
+	// An origin that can control the whole pallet: should be Root, or a part of your council.
+	type ControlOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+	// specific account for the migration, can trigger the signed migrations.
+	type SignedFilter = frame_support::traits::NeverEnsureOrigin<AccountId>;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	type MaxKeyLen = MigrationMaxKeyLen;
+	type SignedDepositPerItem = MigrationSignedDepositPerItem;
+	type SignedDepositBase = MigrationSignedDepositBase;
+	// Replace this with weight based on your runtime.
+	type WeightInfo = pallet_state_trie_migration::weights::SubstrateWeight<Runtime>;
 }

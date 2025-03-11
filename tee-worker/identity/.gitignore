@@ -13,16 +13,7 @@ log*
 **/*.rs.bk
 
 # binaries
-bin/*.so
-bin/litentry-*
-bin/*.wasm
-
-# sealed data
-bin/*.bin
-
-# public RSA key
-bin/rsa_pubkey.txt
-bin/ecc_pubkey.txt
+bin/*
 
 # VS Code settings
 .vscode

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
-SGX_MODE ?= HW
+SGX ?= 1
 
 SELF_EXE = omni-executor-worker
 COMPILATION_FEATURES =
@@ -12,8 +12,8 @@ OMNI_DIR := $(ROOTDIR)/tee-worker/omni-executor
 
 .PHONY: all
 all: $(SELF_EXE) omni-executor.manifest
-ifeq ($(SGX_MODE), HW)
-COMPILATION_FEATURES = gramine-quote
+ifeq ($(SGX), 1)
+COMPILATION_FEATURES := $(COMPILATION_FEATURES),gramine-quote
 all: omni-executor.manifest.sgx omni-executor.sig
 endif
 
@@ -48,7 +48,7 @@ sgx_sign: omni-executor.manifest $(SELF_EXE)
 		--output $<.sgx \
 		--key enclave_key.pem
 
-ifeq ($(SGX_MODE), HW)
+ifeq ($(SGX), 1)
 GRAMINE = gramine-sgx
 else
 GRAMINE = gramine-direct
@@ -66,10 +66,13 @@ clean:
 distclean: clean
 	cargo clean
 
-# By default SGX_MODE=SW for docker image
+.PHONY: clean-data
+clean-data:
+	$(RM) -rf $(OMNI_DIR)/local/log $(OMNI_DIR)/storage_db
+
 .PHONY: build-docker
 build-docker:
-	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(OMNI_DIR)
+	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
@@ -79,6 +82,10 @@ start-local:
 stop-local:
 	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml down
 
-.PHONY: get-pallet-metadata
-get-pallet-metadata:
-	subxt metadata --url http://localhost:9944 --allow-insecure --pallets OmniAccount,Teebag > parentchain/artifacts/rococo-omni-account.scale
+.PHONY: get-metadata
+get-metadata:
+	subxt metadata --url http://localhost:9944 --allow-insecure --pallets System,Balances,OmniAccount,Teebag > parentchain/api-interface/artifacts/metadata.scale
+
+.PHONY: generate-api-interface
+generate-api-interface: get-metadata
+	subxt codegen --file parentchain/api-interface/artifacts/metadata.scale | rustfmt > parentchain/api-interface/src/interface.rs

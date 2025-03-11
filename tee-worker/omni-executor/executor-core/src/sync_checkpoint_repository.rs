@@ -19,6 +19,7 @@ use std::fmt::Debug;
 use std::fs;
 use std::fs::File;
 use std::io::{ErrorKind, Write};
+use std::path::Path;
 
 /// Represents the point in chain. It can be a whole block or a more precise unit, for example
 /// in case of substrate chain it is BLOCK_NUM::EVENT_NUM
@@ -66,7 +67,15 @@ pub struct FileCheckpointRepository {
 
 impl FileCheckpointRepository {
 	pub fn new(file_name: &str) -> Self {
-		// todo add regex check here
+		let file_name_regex = regex::Regex::new(r"^[a-zA-Z0-9_\-\.\/]+$").expect("Invalid regex");
+		if !file_name_regex.is_match(file_name) {
+			panic!("Invalid file name: {}", file_name);
+		}
+
+		if let Some(parent) = Path::new(file_name).parent() {
+			fs::create_dir_all(parent).expect("Failed to create directories");
+		}
+
 		Self { file_name: file_name.to_owned() }
 	}
 }

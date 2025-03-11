@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "ac-primitives",
  "log 0.4.20",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,7 +50,7 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "frame-system",
  "impl-serde",
@@ -579,6 +579,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "built"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b99c4cdc7b2c2364182331055623bdf45254fcb679fea565c40c3c11c101889a"
+dependencies = [
+ "cargo-lock",
+ "chrono 0.4.26",
+ "semver",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -649,6 +660,18 @@ dependencies = [
  "cc",
  "libc",
  "pkg-config",
+]
+
+[[package]]
+name = "cargo-lock"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e11c675378efb449ed3ce8de78d75d0d80542fc98487c26aba28eb3b82feac72"
+dependencies = [
+ "semver",
+ "serde 1.0.210",
+ "toml 0.7.8",
+ "url 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3332,6 +3355,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "itc-system-version"
+version = "0.1.0"
+dependencies = [
+ "built",
+ "sgx_tstd",
+]
+
+[[package]]
 name = "itc-tls-websocket-server"
 version = "0.1.0"
 dependencies = [
@@ -4979,6 +5010,7 @@ dependencies = [
  "id-ita-sgx-runtime",
  "id-ita-stf",
  "itc-rpc-client",
+ "itc-system-version",
  "itp-node-api",
  "itp-rpc",
  "itp-sgx-crypto",
@@ -7459,9 +7491,12 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "1.0.18"
+version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0293b4b29daaf487284529cc2f5675b8e57c61f70167ba415a463651fd6a918"
+checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
+dependencies = [
+ "serde 1.0.210",
+]
 
 [[package]]
 name = "serde"
@@ -8560,7 +8595,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -8598,7 +8633,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.9.1"
-source = "git+https://github.com/Kailai-Wang/substrate-api-client?branch=polkadot-v0.9.42-litentry#f867fea44a3de5352d419a605afdd7bf22859e78"
+source = "git+https://github.com/encointer/substrate-api-client?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
 dependencies = [
  "array-bytes 4.2.0",
  "async-trait",
@@ -8924,6 +8959,18 @@ dependencies = [
 
 [[package]]
 name = "toml"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd79e69d3b627db300ff956027cc6c3798cef26d22526befdfcd12feeb6d2257"
+dependencies = [
+ "serde 1.0.210",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_edit 0.19.15",
+]
+
+[[package]]
+name = "toml"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "185d8ab0dfbb35cf1399a6344d8484209c088f75f8f68230da55d48d95d43e3d"
@@ -8950,6 +8997,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
 dependencies = [
  "indexmap 2.6.0",
+ "serde 1.0.210",
+ "serde_spanned",
  "toml_datetime",
  "winnow",
 ]

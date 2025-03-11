@@ -5,9 +5,12 @@
 # rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
 FROM rust:1.82-bookworm AS plain-builder
 
-ENV SRC_DIR=/home/ubuntu/omni-executor
+RUN apt-get update && apt-get install -y clang
 
-COPY . $SRC_DIR
+
+ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
+COPY tee-worker/omni-executor $SRC_DIR
+COPY common /home/ubuntu/common
 WORKDIR $SRC_DIR
 
 RUN cargo build --release
@@ -17,12 +20,15 @@ RUN cargo build --release
 ##################################################
 FROM node:20-bookworm-slim AS executor-worker
 
-ENV SRC_DIR=/home/ubuntu/omni-executor
+ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
 ENV BIN_DIR=/usr/local/bin
 WORKDIR $BIN_DIR
 
-RUN apt update && apt install -y ca-certificates
+RUN apt update && apt install -y ca-certificates curl
+RUN corepack enable && corepack prepare pnpm@8.7.6 --activate && corepack enable pnpm
+
 COPY --from=plain-builder $SRC_DIR/target/release/executor-worker $BIN_DIR/executor-worker
+COPY --from=plain-builder $SRC_DIR/local/keystore $BIN_DIR/local/keystore
 
 RUN chmod +x $BIN_DIR/executor-worker
 RUN ls -al $BIN_DIR

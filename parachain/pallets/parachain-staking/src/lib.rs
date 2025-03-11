@@ -75,6 +75,12 @@ pub mod set;
 #[cfg(test)]
 mod tests;
 
+// Dedicated test for unbond delay = 0
+#[cfg(test)]
+mod mock_zero_delay;
+#[cfg(test)]
+mod tests_zero_delay;
+
 pub use inflation::{InflationInfo, Range};
 pub use weights::WeightInfo;
 
@@ -978,21 +984,13 @@ pub mod pallet {
 		/// removed from the candidate pool to prevent selection as a collator.
 		pub fn schedule_leave_candidates(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
-			let mut state = <CandidateInfo<T>>::get(&collator).ok_or(Error::<T>::CandidateDNE)?;
-			let (now, when) = state.schedule_leave::<T>()?;
-			let mut candidates = <CandidatePool<T>>::get();
-			if candidates.remove(&Bond::from_owner(collator.clone())) {
-				<CandidatePool<T>>::put(candidates);
+			let _ = Self::candidate_schedule_revoke(collator.clone())?;
+			if T::LeaveCandidatesDelay::get() == 0u32 {
+				Self::candidate_execute_schedule_revoke(collator)
+			} else {
+				Ok(().into())
 			}
-			<CandidateInfo<T>>::insert(&collator, state);
-			Self::deposit_event(Event::CandidateScheduledExit {
-				exit_allowed_round: now,
-				candidate: collator,
-				scheduled_exit: when,
-			});
-			Ok(().into())
 		}
-
 		#[pallet::call_index(11)]
 		#[pallet::weight(
 		< T as Config >::WeightInfo::execute_leave_candidates(
@@ -1006,70 +1004,7 @@ pub mod pallet {
 			candidate: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
-			let state = <CandidateInfo<T>>::get(&candidate).ok_or(Error::<T>::CandidateDNE)?;
-			state.can_leave::<T>()?;
-			let return_stake = |bond: Bond<T::AccountId, BalanceOf<T>>| -> DispatchResult {
-				T::Currency::unreserve(&bond.owner, bond.amount);
-				// remove delegation from delegator state
-				let mut delegator = DelegatorState::<T>::get(&bond.owner).expect(
-					"Collator state and delegator state are consistent.
-						Collator state has a record of this delegation. Therefore,
-						Delegator state also has a record. qed.",
-				);
-
-				if let Some(remaining) = delegator.rm_delegation(&candidate) {
-					Self::delegation_remove_request_with_state(
-						&candidate,
-						&bond.owner,
-						&mut delegator,
-					);
-					<AutoCompoundDelegations<T>>::remove_auto_compound(&candidate, &bond.owner);
-
-					if remaining.is_zero() {
-						// we do not remove the scheduled delegation requests from other collators
-						// since it is assumed that they were removed incrementally before only the
-						// last delegation was left.
-						<DelegatorState<T>>::remove(&bond.owner);
-						let _ = T::OnAllDelegationRemoved::on_all_delegation_removed(&bond.owner);
-					} else {
-						<DelegatorState<T>>::insert(&bond.owner, delegator);
-					}
-				}
-				Ok(())
-			};
-			// total backing stake is at least the candidate self bond
-			let mut total_backing = state.bond;
-			// return all top delegations
-			let top_delegations =
-				<TopDelegations<T>>::take(&candidate).expect("CandidateInfo existence checked");
-			for bond in top_delegations.delegations {
-				return_stake(bond)?;
-			}
-			total_backing = total_backing.saturating_add(top_delegations.total);
-			// return all bottom delegations
-			let bottom_delegations =
-				<BottomDelegations<T>>::take(&candidate).expect("CandidateInfo existence checked");
-			for bond in bottom_delegations.delegations {
-				return_stake(bond)?;
-			}
-			total_backing = total_backing.saturating_add(bottom_delegations.total);
-			// return stake to collator
-			T::Currency::unreserve(&candidate, state.bond);
-			<CandidateInfo<T>>::remove(&candidate);
-			<DelegationScheduledRequests<T>>::remove(&candidate);
-			<AutoCompoundingDelegations<T>>::remove(&candidate);
-			<TopDelegations<T>>::remove(&candidate);
-			<BottomDelegations<T>>::remove(&candidate);
-			let new_total_staked = <Total<T>>::get().saturating_sub(total_backing);
-			<Total<T>>::put(new_total_staked);
-			Self::deposit_event(Event::CandidateLeft {
-				ex_candidate: candidate,
-				unlocked_amount: total_backing,
-				new_total_amt_locked: new_total_staked,
-			});
-			let actual_weight =
-				Some(T::WeightInfo::execute_leave_candidates(state.delegation_count as u32));
-			Ok(actual_weight.into())
+			Self::candidate_execute_schedule_revoke(candidate)
 		}
 		#[pallet::call_index(12)]
 		#[pallet::weight(< T as Config >::WeightInfo::cancel_leave_candidates(< CandidatePool < T >>::get().0.len() as u32))]
@@ -1151,15 +1086,12 @@ pub mod pallet {
 			less: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let collator = ensure_signed(origin)?;
-			let mut state = <CandidateInfo<T>>::get(&collator).ok_or(Error::<T>::CandidateDNE)?;
-			let when = state.schedule_bond_less::<T>(less)?;
-			<CandidateInfo<T>>::insert(&collator, state);
-			Self::deposit_event(Event::CandidateBondLessRequested {
-				candidate: collator,
-				amount_to_decrease: less,
-				execute_round: when,
-			});
-			Ok(().into())
+			let _ = Self::candidate_schedule_bond_decrease(collator.clone(), less)?;
+			if T::CandidateBondLessDelay::get() == 0u32 {
+				Self::candidate_execute_bond_decrease(collator)
+			} else {
+				Ok(().into())
+			}
 		}
 		#[pallet::call_index(17)]
 		#[pallet::weight(< T as Config >::WeightInfo::execute_candidate_bond_less())]
@@ -1169,10 +1101,7 @@ pub mod pallet {
 			candidate: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?; // we may want to reward this if caller != candidate
-			let mut state = <CandidateInfo<T>>::get(&candidate).ok_or(Error::<T>::CandidateDNE)?;
-			state.execute_bond_less::<T>(candidate.clone())?;
-			<CandidateInfo<T>>::insert(&candidate, state);
-			Ok(().into())
+			Self::candidate_execute_bond_decrease(candidate)
 		}
 		#[pallet::call_index(18)]
 		#[pallet::weight(< T as Config >::WeightInfo::cancel_candidate_bond_less())]
@@ -1242,7 +1171,12 @@ pub mod pallet {
 		/// Success forbids future delegation requests until the request is invoked or cancelled.
 		pub fn schedule_leave_delegators(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			Self::delegator_schedule_revoke_all(delegator)
+			let _ = Self::delegator_schedule_revoke_all(delegator.clone())?;
+			if T::LeaveDelegatorsDelay::get() == 0u32 {
+				Self::delegator_execute_scheduled_revoke_all(delegator)
+			} else {
+				Ok(().into())
+			}
 		}
 		#[pallet::call_index(22)]
 		#[pallet::weight(< T as Config >::WeightInfo::execute_leave_delegators(
@@ -1275,7 +1209,12 @@ pub mod pallet {
 			collator: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			Self::delegation_schedule_revoke(collator, delegator)
+			let _ = Self::delegation_schedule_revoke(collator.clone(), delegator.clone())?;
+			if T::RevokeDelegationDelay::get() == 0u32 {
+				Self::delegation_execute_scheduled_request(collator, delegator)
+			} else {
+				Ok(().into())
+			}
 		}
 
 		#[pallet::call_index(25)]
@@ -1311,7 +1250,16 @@ pub mod pallet {
 			less: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			Self::delegation_schedule_bond_decrease(candidate, delegator, less)
+			let _ = Self::delegation_schedule_bond_decrease(
+				candidate.clone(),
+				delegator.clone(),
+				less,
+			)?;
+			if T::DelegationBondLessDelay::get() == 0u32 {
+				Self::delegation_execute_scheduled_request(candidate, delegator)
+			} else {
+				Ok(().into())
+			}
 		}
 
 		#[pallet::call_index(27)]

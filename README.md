@@ -1,7 +1,7 @@
 
 <div align="center">
 
-![](https://res.cloudinary.com/brandpad/image/upload/c_scale,dpr_auto,f_auto,w_768/v1673016042/19618/parachain-logo-color-black-t)
+![Image](https://github.com/user-attachments/assets/63bf12cf-f6cd-4021-8806-80405399c7cb)
 
 [![general ci](https://github.com/litentry/heima/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/litentry/heima/actions/workflows/ci.yml)
 [![release](https://github.com/litentry/heima/actions/workflows/create-release-draft.yml/badge.svg)](https://github.com/litentry/heima/actions/workflows/create-release-draft.yml)
@@ -9,10 +9,10 @@
 
 </div>
 
-Heima is a substrate-based, EVM-compatible parachain that connects to the relaychain (e.g. [Polkadot](https://polkadot.com/)) which ensures shared security and interoperability. It serves as the backbone of Heima network:
+ Being evolved from Litentry, a substrate-based L1 blockchain,  **Heima Network** inherits its modularity, flexibility and security, which forms a solid ground for chain abstraction and cross-chain operations. It is also an EVM-compatible blockchain that connects to the relaychain (e.g. [Polkadot](https://polkadot.com/)) which ensures shared security and interoperability, which serves as the backbone of Heima Network:
 - HEI token native features: transfer, governance, staking ...
 - Runtime logic such as enclave management, DID ...
-- parentchain of identity-worker, which is a TEE-based sidechain to achieve identity aggregation and crediential issuance without promising users' privacy 
+- parentchain of identity-worker, which is a TEE-based sidechain to achieve identity aggregation and crediential issuance without promising users' privacy
 - parentchain of bitacross-worker, which is a TEE-based offchain-worker to bridge assets across chains using native custodian and multisig
 
 ## Build parachain
@@ -70,16 +70,16 @@ In this case, parachain will author blocks by itself with instant block finalisa
 make launch-standalone
 ```
 
-## How to build and run tee-worker
+## How to build and run identity-worker
 
 ### Preparation
 
-- Env: [Setup **SGX TEE** Environment](https://web3builders.notion.site/Setup-SGX-TEE-Environment-68066770831b45b7b632e682cf159477?pvs=4) 
+- Env: [Setup **SGX TEE** Environment](https://web3builders.notion.site/Setup-SGX-TEE-Environment-68066770831b45b7b632e682cf159477?pvs=4)
 
 ### Build
 
 ```
-cd /tee-worker
+cd /tee-worker/identity
 source /opt/intel/sgxsdk/environment
 SGX_MODE=SW WORKER_DEV=1 make
 ```
@@ -91,7 +91,7 @@ Before executing `launch.py`, the following Python libraries need to be installe
 pip install python-dotenv pycurl docker toml
 ```
 
-TEE-workers need a running parachain to become operational. We have an all-in-one script `local-setup/launch.py` to launch both parachain and workers:
+Identity-workers need a running parachain to become operational. We have an all-in-one script `local-setup/launch.py` to launch both parachain and workers:
 ```
 ./local-setup/launch.py -p standalone
 ./local-setup/launch.py -p network
@@ -106,18 +106,18 @@ respectively.
 
 If you see the screenshot below, you can tell the worker is running:
 
-![](https://github.com/cryptoade1/litentry-parachain/assets/88367184/cb1cea60-bc5d-4b62-bae7-503583a135ee)
+![](https://github.com/cryptoade1/heima/assets/88367184/cb1cea60-bc5d-4b62-bae7-503583a135ee)
 
-### TEE worker tests 
+### Identity worker tests
 
-Refer to [tee-worker ts-tests](https://github.com/litentry/heima/blob/dev/tee-worker/identity/ts-tests/README.md)
+Refer to [identity-worker ts-tests](https://github.com/litentry/heima/blob/dev/tee-worker/identity/ts-tests/README.md)
 
-### Teardown
+#### Teardown
 
 In the worker launch terminal, `Ctrl + C` should interrupt and clean everything up automatically.
 
-### Additional Info:
+#### Additional Info:
 
-1. Change the RUST_LOG level: `heima/local-setup/py/worker.py`
-2. Check existing ts-tests: `heima/tee-worker/ts-tests/package.json`
-3. JSON config parameters: `heima/tee-worker/service/src/cli.yml`
+1. Change the RUST_LOG level: `local-setup/worker-log-level-config.toml`
+2. Check existing ts-tests: `tee-worker/identity/ts-tests/package.json`
+3. JSON config parameters: `tee-worker/identity/service/src/cli.yml`

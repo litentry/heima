@@ -49,6 +49,7 @@ pallet-asset-manager = { workspace = true }
 pallet-extrinsic-filter = { workspace = true }
 pallet-group = { workspace = true }
 pallet-omni-account = { workspace = true }
+pallet-omni-bridge = { workspace = true }
 pallet-teebag = { workspace = true }
 
 [features]
@@ -72,6 +73,7 @@ std = [
     "pallet-message-queue/std",
     "pallet-multisig/std",
     "pallet-omni-account/std",
+    "pallet-omni-bridge/std",
     "pallet-teebag/std",
     "pallet-transaction-payment/std",
     "pallet-treasury/std",
@@ -90,6 +92,8 @@ std = [
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",
+    "polkadot-parachain-primitives/std",
+    "scale-info/std",
 ]
 
 runtime-benchmarks = [
@@ -116,6 +120,7 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "xcm-executor/runtime-benchmarks",
+    "pallet-omni-bridge/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -140,6 +145,7 @@ try-runtime = [
     "parachain-info/try-runtime",
     "polkadot-runtime-parachains/try-runtime",
     "sp-runtime/try-runtime",
+    "pallet-omni-bridge/try-runtime",
 ]
 
 tests = ["std", "xcm-simulator"]

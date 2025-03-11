@@ -421,8 +421,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 
 	io_handler.add_sync_method("system_version", |_: Params| {
 		debug!("worker_api_direct rpc was called: system_version");
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+		Ok(Value::String(itc_system_version::get_system_version()))
 	});
 
 	let twitter_client_id = data_provider_config.twitter_client_id.clone();

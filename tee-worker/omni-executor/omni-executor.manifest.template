@@ -21,11 +21,12 @@ fs.mounts = [
   { path = "/data", uri = "file:data", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
   { path = "/etc", uri = "file:/etc" },
   { path = "/usr", uri = "file:/usr" },
+  { path = "/storage_db", uri = "file:storage_db", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
+  { path = "/local/keystore", uri = "file:local/keystore", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
 ]
 
-sgx.debug = true
+sgx.debug = {{ 'true' if env.get('SGX_DEBUG', '0') == '1' else 'false' }}
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-
 
 # dns
 sys.enable_extra_runtime_domain_names_conf = true

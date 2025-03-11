@@ -4,7 +4,6 @@ ARG PROFILE
 # ==========================
 # stage 1: build
 # https://hub.docker.com/_/rust
-# our host is based on bullseye/sid (ubuntu 20)
 # ==========================
 FROM rust:bullseye as builder
 
@@ -16,6 +15,7 @@ RUN apt-get update && apt-get install -yq clang libclang-dev cmake protobuf-comp
 ARG BUILD_ARGS
 ARG PROFILE
 
+RUN rustup toolchain install
 RUN cargo build --locked --profile $PROFILE $BUILD_ARGS
 
 # ==========================

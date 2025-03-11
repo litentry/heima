@@ -7,8 +7,6 @@ on:
         description: "an existing docker tag (e.g. v0.9.18)"
         required: true
         default: "latest"
-  schedule:
-    - cron: '0 12 * * 3,6' # Run every Wednesday and Saturday at 12:00 UTC
 
 env:
   DOCKER_TAG: ${{ github.event.inputs.docker-tag || 'latest' }}
@@ -33,8 +31,13 @@ jobs:
 
       - run: docker images --all
 
-      - name: Enable corepack and pnpm
-        run: corepack enable && corepack enable pnpm
+      - name: Use Latest Corepack
+        run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable && corepack enable pnpm
+          pnpm --version
 
       - name: Launch parachain network
         run: |

@@ -67,8 +67,6 @@ export async function linkIdentityCallback(
     },
   });
 
-  console.log('call', call.toHuman());
-
   const payloadToSign = createPayloadToSign({
     who,
     call,
@@ -86,8 +84,11 @@ export async function linkIdentityCallback(
   }> => {
     // prepare and encrypt request
     const request = await createRequestType(api, {
-      sender: signer,
-      authentication: args.signedPayload,
+      authentication: {
+        type: 'Web3',
+        signer,
+        signature: args.signedPayload,
+      },
       call,
       nonce,
       shard: shardU8,

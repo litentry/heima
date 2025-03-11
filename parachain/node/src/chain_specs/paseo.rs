@@ -19,8 +19,8 @@ use core_primitives::PASEO_PARA_ID;
 use cumulus_primitives_core::ParaId;
 use paseo_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
-	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
+	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
 	TechnicalCommitteeMembershipConfig, TeebagConfig, TeebagOperationalMode, VCManagementConfig,
 	WASM_BINARY,
 };
@@ -35,7 +35,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 /// Get default parachain properties for paseo which will be filled into chain spec
 /// We use 31 as the SS58Prefix (same as Heima)
 fn default_parachain_properties() -> Properties {
-	parachain_properties("LIT", 18, 31)
+	parachain_properties("HEI", 18, 31)
 }
 
 const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 1000 * UNIT;
@@ -55,14 +55,13 @@ struct GenesisInfo {
 }
 
 pub fn get_chain_spec_dev(is_standalone: bool) -> ChainSpec {
-	let id = if is_standalone { "standalone" } else { "litentry-paseo-dev" };
+	let id = if is_standalone { "standalone" } else { "heima-paseo-dev" };
 	ChainSpec::builder(
 		WASM_BINARY.expect("WASM binary was not built, please build it!"),
 		Extensions { relay_chain: "paseo".into(), para_id: PASEO_PARA_ID },
 	)
-	.with_name("Litentry-paseo-dev")
+	.with_name("Heima-paseo-dev")
 	.with_id(id)
-	.with_protocol_id("litentry-paseo")
 	.with_chain_type(ChainType::Development)
 	.with_properties(default_parachain_properties())
 	.with_genesis_config(generate_genesis(
@@ -94,8 +93,7 @@ pub fn get_chain_spec_dev(is_standalone: bool) -> ChainSpec {
 pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/paseo.json"),
-		"Litentry-paseo",
-		"litentry-paseo",
+		"Heima-paseo",
 		"litentry-paseo",
 		ChainType::Live,
 		"paseo".into(),
@@ -109,7 +107,6 @@ fn get_chain_spec_from_genesis_info(
 	genesis_info_bytes: &[u8],
 	name: &str,
 	id: &str,
-	protocol_id: &str,
 	chain_type: ChainType,
 	relay_chain_name: String,
 	para_id: ParaId,
@@ -130,7 +127,6 @@ fn get_chain_spec_from_genesis_info(
 	.with_name(name)
 	.with_id(id)
 	.with_chain_type(chain_type)
-	.with_protocol_id(protocol_id)
 	.with_properties(default_parachain_properties())
 	.with_boot_nodes(
 		boot_nodes
@@ -229,8 +225,12 @@ fn generate_genesis(
 			admin: Some(root_key.clone()),
 			mode: TeebagOperationalMode::Development,
 		},
-		bitacross: BitacrossConfig { admin: Some(root_key) },
+		bitacross: BitacrossConfig { admin: Some(root_key.clone()) },
 		score_staking: Default::default(),
+		omni_bridge: OmniBridgeConfig {
+			admin: Some(root_key.clone()),
+			default_relayers: vec![root_key],
+		},
 	};
 
 	serde_json::to_value(&config).expect("Could not build genesis config")

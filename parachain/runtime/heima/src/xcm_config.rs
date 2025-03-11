@@ -244,3 +244,9 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
 }
+
+// TODO:: remove after migration of storage version finished
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
+}

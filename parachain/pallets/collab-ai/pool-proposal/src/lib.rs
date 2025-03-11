@@ -71,7 +71,7 @@ pub mod pallet {
 	/// CollabAI investing pool proposal
 	const MODULE_ID: PalletId = PalletId(*b"cbai/ipp");
 	/// The current storage version.
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

@@ -27,6 +27,7 @@ members = [
     'pallets/xcm-asset-manager',
     'pallets/omni-account',
     'pallets/omni-account/runtime-api',
+    'pallets/omni-bridge',
     'precompiles/assets-erc20',
     'precompiles/bridge-transfer',
     'precompiles/collab-ai/aiusd-convertor',
@@ -34,8 +35,10 @@ members = [
     'precompiles/collab-ai/guardian',
     'precompiles/collab-ai/pool-proposal',
     'precompiles/collab-ai/investing-pool',
+    'precompiles/omni-bridge',
     'precompiles/parachain-staking',
     'precompiles/score-staking',
+    'precompiles/vesting',
     'runtime/heima',
     'runtime/paseo',
     'runtime/common',
@@ -118,13 +121,13 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/polkadot-
 cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 # evm-tracing, use the astar version to use "standard" substrate frame to avoid any conflicts
-moonbeam-primitives-ext = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-debug = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0" }
-moonbeam-rpc-primitives-debug = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-primitives-txpool = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-trace = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-rpc-txpool = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
-moonbeam-evm-tracer = { git = "https://github.com/AstarNetwork/Astar", tag = "v5.45.0", default-features = false }
+moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd" }
+moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-rpc-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
+moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "373c4fd", default-features = false }
 
 # polkadot client
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
@@ -201,6 +204,7 @@ frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch =
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-try-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
@@ -225,6 +229,7 @@ pallet-vesting = { git = "https://github.com/paritytech/polkadot-sdk", branch = 
 pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-whitelist = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+pallet-state-trie-migration = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-tips = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
@@ -253,6 +258,7 @@ cumulus-primitives-parachain-inherent = { git = 'https://github.com/paritytech/p
 pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 parachain-info = { package = "staging-parachain-info", git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
+assets-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 
@@ -261,7 +267,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branc
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", default-features = false }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
 cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/polkadot-sdk', branch = "stable2407", default-features = false }
-substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2407", features = ["metadata-hash"] }
 
 # local
 core-primitives = { path = "../common/primitives/core", default-features = false }
@@ -283,14 +289,17 @@ pallet-group = { path = "pallets/group", default-features = false }
 pallet-identity-management = { path = "pallets/identity-management", default-features = false }
 pallet-omni-account = { path = "pallets/omni-account", default-features = false }
 pallet-omni-account-runtime-api = { path = "pallets/omni-account/runtime-api", default-features = false }
+pallet-omni-bridge = { path = "pallets/omni-bridge", default-features = false }
 pallet-parachain-staking = { path = "pallets/parachain-staking", default-features = false }
 pallet-score-staking = { path = "pallets/score-staking", default-features = false }
 pallet-teebag = { path = "pallets/teebag", default-features = false }
 pallet-vc-management = { path = "pallets/vc-management", default-features = false }
 pallet-evm-precompile-assets-erc20 = { path = "precompiles/assets-erc20", default-features = false }
 pallet-evm-precompile-bridge-transfer = { path = "precompiles/bridge-transfer", default-features = false }
+pallet-evm-precompile-omni-bridge = { path = "precompiles/omni-bridge", default-features = false }
 pallet-evm-precompile-parachain-staking = { path = "precompiles/parachain-staking", default-features = false }
 pallet-evm-precompile-score-staking = { path = "precompiles/score-staking", default-features = false }
+pallet-evm-precompile-vesting = { path = "precompiles/vesting", default-features = false }
 
 pallet-evm-precompile-aiusd-convertor = { path = "precompiles/collab-ai/aiusd-convertor", default-features = false }
 pallet-evm-precompile-curator = { path = "precompiles/collab-ai/curator", default-features = false }
@@ -311,15 +320,3 @@ pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-fea
 
 [patch.crates-io]
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
-
-# TODO: investigate further if the overwriting is still valid
-[patch."https://github.com/AstarNetwork/frontier"]
-fc-api = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-consensus = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-db = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-rpc = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-rpc-core = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fc-storage = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fp-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-fp-rpc = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }
-pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "stable2407" }

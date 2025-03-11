@@ -18,9 +18,10 @@ use super::*;
 use cumulus_primitives_core::ParaId;
 use heima_parachain_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, CouncilMembershipConfig,
-	DeveloperCommitteeMembershipConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, TechnicalCommitteeMembershipConfig,
-	TeebagConfig, TeebagOperationalMode, VCManagementConfig, WASM_BINARY,
+	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig,
+	TechnicalCommitteeMembershipConfig, TeebagConfig, TeebagOperationalMode, VCManagementConfig,
+	WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -32,7 +33,7 @@ const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Get default parachain properties for heima which will be filled into chain spec
 fn default_parachain_properties() -> Properties {
-	parachain_properties("LIT", 18, 31)
+	parachain_properties("HEI", 18, 31)
 }
 
 const DEFAULT_ENDOWED_ACCOUNT_BALANCE: Balance = 1000 * UNIT;
@@ -57,7 +58,6 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 	)
 	.with_name("Heima-dev")
 	.with_id("heima-dev")
-	.with_protocol_id("heima")
 	.with_chain_type(ChainType::Development)
 	.with_properties(default_parachain_properties())
 	.with_genesis_config(generate_genesis(
@@ -88,30 +88,11 @@ pub fn get_chain_spec_dev() -> ChainSpec {
 	.build()
 }
 
-pub fn get_chain_spec_staging() -> ChainSpec {
-	// Staging keys are derivative keys based on a single master secret phrase:
-	//
-	// root: 	$SECRET
-	// account:	$SECRET//collator//<id>
-	// aura: 	$SECRET//collator//<id>//aura
-	get_chain_spec_from_genesis_info(
-		include_bytes!("../../res/genesis_info/staging.json"),
-		"Heima-staging",
-		"heima-staging",
-		"heima",
-		ChainType::Local,
-		"rococo-local".into(),
-		HEIMA_PARA_ID.into(),
-	)
-}
-
-// TODO: not sure if it can be changed - so we keep `litentry` for now
 pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/heima.json"),
-		"Litentry",
-		"litentry",
-		"litentry",
+		"Heima",
+		"litentry", // unchanged for now, so that node operators don't have to change the db path
 		ChainType::Live,
 		"polkadot".into(),
 		HEIMA_PARA_ID.into(),
@@ -124,7 +105,6 @@ fn get_chain_spec_from_genesis_info(
 	genesis_info_bytes: &[u8],
 	name: &str,
 	id: &str,
-	protocol_id: &str,
 	chain_type: ChainType,
 	relay_chain_name: String,
 	para_id: ParaId,
@@ -145,7 +125,6 @@ fn get_chain_spec_from_genesis_info(
 	.with_name(name)
 	.with_id(id)
 	.with_chain_type(chain_type)
-	.with_protocol_id(protocol_id)
 	.with_properties(default_parachain_properties())
 	.with_boot_nodes(
 		boot_nodes
@@ -243,6 +222,7 @@ fn generate_genesis(
 			mode: TeebagOperationalMode::Development,
 		},
 		score_staking: Default::default(),
+		omni_bridge: OmniBridgeConfig { admin: None, default_relayers: Default::default() },
 	};
 
 	serde_json::to_value(&config).expect("Could not build genesis config")

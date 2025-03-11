@@ -289,10 +289,6 @@ where
 		use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE, TEST8_SIGNER_PUB};
 		let signer: <T as frame_system::Config>::AccountId = get_signer(TEST8_SIGNER_PUB);
 		let enclave = core_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
-		let _ = pallet_teebag::Pallet::<T>::add_enclave_identifier_internal(
-			enclave.worker_type,
-			&signer,
-		);
 		if !pallet_teebag::EnclaveRegistry::<T>::contains_key(signer.clone()) {
 			assert_ok!(pallet_teebag::Pallet::<T>::add_enclave(&signer, &enclave));
 		}
@@ -301,3 +297,29 @@ where
 }
 
 pub type EnsureOmniAccount = pallet_omni_account::EnsureOmniAccount<AccountId>;
+
+pub struct EnsureOmniBridgeRelayer<T>(PhantomData<T>);
+impl<T> EnsureOrigin<T::RuntimeOrigin> for EnsureOmniBridgeRelayer<T>
+where
+	T: frame_system::Config + pallet_omni_bridge::Config,
+	<T as frame_system::Config>::AccountId: From<[u8; 32]>,
+	<T as frame_system::Config>::Hash: From<[u8; 32]>,
+{
+	type Success = T::AccountId;
+	fn try_origin(o: T::RuntimeOrigin) -> Result<Self::Success, T::RuntimeOrigin> {
+		o.into().and_then(|o| match o {
+			frame_system::RawOrigin::Signed(who)
+				if pallet_omni_bridge::Relayers::<T>::get(&who).is_some() =>
+			{
+				Ok(who)
+			},
+			r => Err(T::RuntimeOrigin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
+		let zero_account_id: T::AccountId = [0u8; 32].into();
+		Ok((frame_system::RawOrigin::Signed(zero_account_id)).into())
+	}
+}

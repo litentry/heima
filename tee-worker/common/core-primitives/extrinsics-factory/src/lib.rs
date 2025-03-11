@@ -140,9 +140,11 @@ where
 					additional_extrinsic_params,
 				);
 				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
-				log::info!("extrinsic created: {}", hex::encode(&xt));
-				log::info!("extrinsic nonce: {}", nonce_value);
-				log::info!("extrinsic hash: {}", hex::encode(blake2_256(&xt)));
+				log::info!(
+					"extrinsic created with nonce: {}, hash: {}",
+					nonce_value,
+					hex::encode(blake2_256(&xt))
+				);
 				nonce_value += 1;
 				xt
 			})

@@ -1,10 +1,23 @@
 [workspace]
 members = [
+    "executor-crypto",
     "executor-core",
     "executor-worker",
+    "executor-storage",
+    "executor-primitives",
+    "heima/authentication",
+    "heima/identity-verification",
+    "intent-executors/cross-chain-intent-executor",
+    "intent-executors/ethereum-intent-executor",
+    "intent-executors/solana-intent-executor",
+    "native-task-handler",
+    "oauth-providers",
     "parentchain/listener",
-    "ethereum/intent-executor",
-    "solana/intent-executor",
+    "parentchain/api-interface",
+    "parentchain/attestation",
+    "parentchain/rpc-client",
+    "parentchain/signer",
+    "rpc-server",
 ]
 
 resolver = "2"
@@ -13,16 +26,57 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-log = "0.4.22"
-tokio = "1.40.0"
-async-trait = "0.1.82"
-env_logger = "0.11.5"
-scale-encode = "0.7.1"
-parity-scale-codec = "3.6.12"
 alloy = "0.3.6"
+async-trait = "0.1.82"
+base64 = "0.22.1"
+bitcoin = "0.32.5"
 clap = "4.5.17"
-solana-sdk = "2.1.5"
+env_logger = "0.11.5"
+frame-support = { version = "39.0.0", features = ["std"] }
+hex = "0.4"
+jsonrpsee = { version = "0.24", features = ["server"] }
+jsonwebtoken = "9.3.0"
+log = "0.4.22"
+parity-scale-codec = "3.6.12"
+rand = "0.8.5"
+regex = "1.7"
+reqwest = { version = "0.12", features = ["json"] }
+ring = "0.16.20"
+rsa = "0.9.7"
+scale-encode = "0.10.0"
+scale-info = "2.11.6"
+secp256k1 = "=0.29.1"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0"
 solana-client = "2.1.5"
+solana-sdk = "2.1.5"
+sp-core = "35.0.0"
+sp-state-machine = { version = "0.44.0", features = ["std"] }
+subxt = "0.38.0"
+subxt-core = "0.38.0"
+subxt-signer = { version = "0.38.0", features = ["subxt"] }
+tokio = "1.43.0"
+url = "2.5.4"
+
+# Local dependencies
+cross-chain-intent-executor = { path = "intent-executors/cross-chain-intent-executor" }
+ethereum-intent-executor = { path = "intent-executors/ethereum-intent-executor" }
+executor-core = { path = "executor-core" }
+executor-crypto = { path = "executor-crypto" }
+executor-primitives = { path = "executor-primitives" }
+executor-storage = { path = "executor-storage" }
+heima-authentication = { path = "heima/authentication" }
+heima-identity-verification = { path = "heima/identity-verification" }
+heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
+native-task-handler = { path = "native-task-handler" }
+oauth-providers = { path = "oauth-providers" }
+parentchain-api-interface = { path = "parentchain/api-interface" }
+parentchain-attestation = { path = "parentchain/attestation" }
+parentchain-listener = { path = "parentchain/listener" }
+parentchain-rpc-client = { path = "parentchain/rpc-client" }
+parentchain-signer = { path = "parentchain/signer" }
+rpc-server = { path = "rpc-server" }
+solana-intent-executor = { path = "intent-executors/solana-intent-executor" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"

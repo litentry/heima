@@ -30,10 +30,12 @@ use pallet_evm_precompile_bridge_transfer::BridgeTransferPrecompile;
 use pallet_evm_precompile_dispatch::{Dispatch, DispatchValidateT};
 use pallet_evm_precompile_ed25519::Ed25519Verify;
 use pallet_evm_precompile_modexp::Modexp;
+use pallet_evm_precompile_omni_bridge::OmniBridgePrecompile;
 use pallet_evm_precompile_parachain_staking::ParachainStakingPrecompile;
 use pallet_evm_precompile_score_staking::ScoreStakingPrecompile;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
 use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripemd160, Sha256};
+use pallet_evm_precompile_vesting::VestingPrecompile;
 use precompile_utils::precompile_set::*;
 use sp_std::fmt::Debug;
 
@@ -124,6 +126,12 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<AddressU64<1026>, ECRecoverPublicKey, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<AddressU64<1027>, Ed25519Verify, (CallableByContract, CallableByPrecompile)>,
 	// Litentry precompiles (starts from 0x5000):
+	// Vesting: pallet_vesting = 11 + 20480
+	PrecompileAt<
+		AddressU64<20491>,
+		VestingPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
 	// ParachainStaking: pallet_parachain_staking = 45 + 20480
 	PrecompileAt<
 		AddressU64<20525>,
@@ -140,6 +148,12 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<
 		AddressU64<20555>,
 		ScoreStakingPrecompile<R>,
+		(CallableByContract, CallableByPrecompile),
+	>,
+	// OmniBridge: pallet_omni_bridge = 85 + 20480
+	PrecompileAt<
+		AddressU64<20565>,
+		OmniBridgePrecompile<R>,
 		(CallableByContract, CallableByPrecompile),
 	>,
 	// Curator: pallet_curator = 150 + 20480
@@ -180,7 +194,7 @@ pub type RococoNetworkPrecompiles<R> = PrecompileSetBuilder<
 		// Skip precompiles if out of range.
 		PrecompilesInRangeInclusive<
 			// We take range as last precompile index, UPDATE this once new prcompile is added
-			(AddressU64<1>, AddressU64<20635>),
+			(AddressU64<1>, AddressU64<20634>),
 			PrecompilesSetAt<R>,
 		>,
 		// Prefixed precompile sets (XC20)

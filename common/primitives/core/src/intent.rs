@@ -1,4 +1,4 @@
-use crate::{AccountId, Address32, Balance};
+use crate::{AccountId, Address20, Address32, Address33, AssetId, Balance};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -7,6 +7,8 @@ use sp_runtime::{traits::ConstU32, BoundedVec};
 pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
 
 pub const MAX_REMARK_LEN: u32 = u32::max_value();
+
+pub type ChainId = u8;
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub enum Intent {
@@ -20,6 +22,8 @@ pub enum Intent {
     TransferNative(TransferNative),
     #[codec(index = 4)]
     TransferSolana(TransferSolana),
+    #[codec(index = 5)]
+    CrossChainSwap(SwapOrder),
 }
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
@@ -44,6 +48,30 @@ pub struct TransferNative {
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct TransferSolana {
-    pub to: Address32,
+    pub to: [u8; 32],
     pub value: u64,
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+pub struct Asset {
+    pub id: AssetId,
+    pub chain_id: ChainId,
+}
+
+#[derive(
+    Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
+)]
+pub enum MultiAddress {
+    Address32(Address32),
+    Address20(Address20),
+    Address33(Address33),
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+pub struct SwapOrder {
+    pub from_asset: Asset,
+    pub from_amount: u64,
+    pub to_asset: Asset,
+    pub to_min_amount: u64,
+    pub to_address: Option<MultiAddress>,
 }

@@ -14,34 +14,34 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::primitives::{BlockEvent, EventId};
-use crate::rpc_client::SubstrateRpcClient;
-use crate::rpc_client::SubstrateRpcClientFactory;
 use async_trait::async_trait;
 use executor_core::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
+use executor_primitives::{BlockEvent, EventId};
 use log::error;
+use parentchain_rpc_client::SubstrateRpcClient;
+use parentchain_rpc_client::SubstrateRpcClientFactory;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
 /// Used for fetching data from parentchain
 pub struct Fetcher<
-	AccountId,
-	RpcClient: SubstrateRpcClient<AccountId>,
-	RpcClientFactory: SubstrateRpcClientFactory<AccountId, RpcClient>,
+	Header,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 > {
 	client_factory: Arc<RpcClientFactory>,
 	client: Option<RpcClient>,
-	phantom_data: PhantomData<AccountId>,
+	phantom_header: PhantomData<Header>,
 }
 
 impl<
-		AccountId,
-		RpcClient: SubstrateRpcClient<AccountId>,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, RpcClient>,
-	> Fetcher<AccountId, RpcClient, RpcClientFactory>
+		Header,
+		RpcClient: SubstrateRpcClient<Header>,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	> Fetcher<Header, RpcClient, RpcClientFactory>
 {
 	pub fn new(client_factory: Arc<RpcClientFactory>) -> Self {
-		Self { client: None, client_factory, phantom_data: PhantomData }
+		Self { client: None, client_factory, phantom_header: PhantomData }
 	}
 
 	async fn connect_if_needed(&mut self) {
@@ -56,17 +56,17 @@ impl<
 
 #[async_trait]
 impl<
-		AccountId: Sync + Send,
-		RpcClient: SubstrateRpcClient<AccountId> + Sync + Send,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, RpcClient> + Sync + Send,
-	> LastFinalizedBlockNumFetcher for Fetcher<AccountId, RpcClient, RpcClientFactory>
+		Header: Sync + Send,
+		RpcClient: SubstrateRpcClient<Header> + Sync + Send,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Sync + Send,
+	> LastFinalizedBlockNumFetcher for Fetcher<Header, RpcClient, RpcClientFactory>
 {
 	async fn get_last_finalized_block_num(&mut self) -> Result<Option<u64>, ()> {
 		self.connect_if_needed().await;
 
 		if let Some(ref mut client) = self.client {
 			let block_num = client.get_last_finalized_block_num().await?;
-			Ok(Some(block_num))
+			Ok(Some(block_num.into()))
 		} else {
 			Err(())
 		}
@@ -75,10 +75,10 @@ impl<
 
 #[async_trait]
 impl<
-		AccountId: Sync + Send,
-		RpcClient: SubstrateRpcClient<AccountId> + Sync + Send,
-		RpcClientFactory: SubstrateRpcClientFactory<AccountId, RpcClient> + Sync + Send,
-	> EventsFetcher<EventId, BlockEvent> for Fetcher<AccountId, RpcClient, RpcClientFactory>
+		Header: Sync + Send,
+		RpcClient: SubstrateRpcClient<Header> + Sync + Send,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Sync + Send,
+	> EventsFetcher<EventId, BlockEvent> for Fetcher<Header, RpcClient, RpcClientFactory>
 {
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
 		self.connect_if_needed().await;

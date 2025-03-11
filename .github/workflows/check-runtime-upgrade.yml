@@ -76,11 +76,6 @@ jobs:
       - name: Enable corepack and pnpm
         run: corepack enable && corepack enable pnpm
 
-      - name: Fork ${{ matrix.runtime.name }} and launch parachain
-        timeout-minutes: 20
-        run: |
-          ./scripts/fork-parachain-and-launch.sh ${{ matrix.runtime.name }}
-
       - name: Install subwasm ${{ env.SUBWASM_VERSION }}
         run: |
           wget https://github.com/chevdor/subwasm/releases/download/v${{ env.SUBWASM_VERSION }}/subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
@@ -92,24 +87,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 10
         run: |
-          ./scripts/runtime-upgrade.sh ${{ matrix.runtime.name }}-parachain-runtime.compact.compressed.wasm ${{ env.RELEASE_TAG }}
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.runtime.name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
+          ./parachain/scripts/runtime-upgrade.sh ${{ matrix.runtime.name }} ${{ matrix.runtime.uri }} ${{ env.RELEASE_TAG }}
 
   try-runtime:
     runs-on: ubuntu-22.04
@@ -127,10 +105,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run ${{ matrix.runtime.name }} try-runtime check
-        uses: paritytech/try-runtime-gha@v0.2.0
+      - name: Download try-runtime-cli
+        run: |
+          curl -sL https://github.com/paritytech/try-runtime-cli/releases/download/v0.8.0/try-runtime-x86_64-unknown-linux-musl -o try-runtime
+          chmod +x ./try-runtime
+          mv try-runtime parachain
+        shell: bash
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3.0.0
         with:
-          runtime-package: ${{ matrix.runtime.package }}
-          node-uri: ${{ matrix.runtime.uri }}
-          checks: "all"
-          extra-args: ""
+          version: "23.x"
+
+      - name: Add wasm32-unknown-unknown target
+        run: rustup target add wasm32-unknown-unknown
+        shell: bash
+
+      - name: Add rust-src component
+        run: rustup component add rust-src
+        shell: bash
+
+      - name: Build ${{ matrix.runtime.name }}
+        run: |
+          cd parachain
+          cargo build --profile production -p ${{ matrix.runtime.package }} --features try-runtime -q --locked
+        shell: bash
+
+      - name: Check migrations
+        run: |
+          cd parachain
+          PACKAGE_NAME=${{ matrix.runtime.package }}
+          RUNTIME_BLOB_NAME=$(echo $PACKAGE_NAME | sed 's/-/_/g').compact.compressed.wasm
+          RUNTIME_BLOB_PATH=./target/production/wbuild/$PACKAGE_NAME/$RUNTIME_BLOB_NAME
+          export RUST_LOG=remote-ext=debug,runtime=debug
+
+          # Store the command in a variable so we can log it
+          COMMAND="./try-runtime \
+            --runtime $RUNTIME_BLOB_PATH \
+            on-runtime-upgrade --disable-mbm-checks --blocktime 12000000 \
+            live --uri ${{ matrix.runtime.uri }}"
+
+          # Echo the command before running it, for debugging purposes
+          echo "Running command:"
+          echo "$COMMAND"
+          eval "$COMMAND"
+
+        shell: bash

@@ -36,33 +36,16 @@ const UNSUPPORTED_CHAIN_MESSAGE: &str =
 	"Unsupported chain spec, please use heima* or litentry-paseo*";
 
 trait IdentifyChain {
-	fn is_heima(&self) -> bool;
-	fn is_paseo(&self) -> bool;
 	fn is_standalone(&self) -> bool;
 }
 
 impl IdentifyChain for dyn sc_service::ChainSpec {
-	fn is_heima(&self) -> bool {
-		// we need the combined condition as the id in our paseo spec starts with `litentry-paseo`
-		// simply renaming `litentry-paseo` to `paseo` everywhere would have an impact on the
-		// existing litentry-paseo chain
-		self.id().starts_with("heima") && !self.id().starts_with("litentry-paseo")
-	}
-	fn is_paseo(&self) -> bool {
-		self.id().starts_with("litentry-paseo")
-	}
 	fn is_standalone(&self) -> bool {
 		self.id().eq("standalone") || self.id().eq("dev")
 	}
 }
 
 impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
-	fn is_heima(&self) -> bool {
-		<dyn sc_service::ChainSpec>::is_heima(self)
-	}
-	fn is_paseo(&self) -> bool {
-		<dyn sc_service::ChainSpec>::is_paseo(self)
-	}
 	fn is_standalone(&self) -> bool {
 		<dyn sc_service::ChainSpec>::is_standalone(self)
 	}
@@ -75,7 +58,6 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		"dev" | "standalone" => Box::new(chain_specs::paseo::get_chain_spec_dev(true)),
 		// Heima
 		"heima-dev" => Box::new(chain_specs::heima::get_chain_spec_dev()),
-		"heima-staging" => Box::new(chain_specs::heima::get_chain_spec_staging()),
 		"heima" => Box::new(chain_specs::ChainSpec::from_json_bytes(
 			&include_bytes!("../res/chain_specs/heima.json")[..],
 		)?),
@@ -90,12 +72,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		"generate-paseo" => Box::new(chain_specs::paseo::get_chain_spec_prod()),
 		path => {
 			let chain_spec = chain_specs::ChainSpec::from_json_file(path.into())?;
-			if chain_spec.is_paseo() {
-				Box::new(chain_specs::ChainSpec::from_json_file(path.into())?)
-			} else {
-				// Fallback: use heima chain spec
-				Box::new(chain_spec)
-			}
+			Box::new(chain_spec)
 		},
 	})
 }
@@ -171,24 +148,11 @@ impl SubstrateCli for RelayChainCli {
 /// Creates partial components for the runtimes that are supported by the benchmarks.
 macro_rules! construct_benchmark_partials {
 	($config:expr, |$partials:ident| $code:expr) => {
-		if $config.chain_spec.is_heima() {
-			let $partials = new_partial::<heima_parachain_runtime::RuntimeApi, _>(
-				&$config,
-				build_import_queue::<heima_parachain_runtime::RuntimeApi>,
-				false,
-				true,
-			)?;
-			$code
-		} else if $config.chain_spec.is_paseo() {
-			let $partials = new_partial::<paseo_parachain_runtime::RuntimeApi, _>(
-				&$config,
-				build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
-				false,
-				true,
-			)?;
-			$code
-		} else {
+		if $config.chain_spec.is_standalone() {
 			panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
+		} else {
+			let $partials = new_partial::<_>(&$config, build_import_queue, false, true)?;
+			$code
 		}
 	};
 }
@@ -197,37 +161,21 @@ macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 
-		if runner.config().chain_spec.is_heima() {
-			runner.async_run(|$config| {
-				let $components = new_partial::<
-					heima_parachain_runtime::RuntimeApi,
-					_
-				>(
-					&$config,
-					build_import_queue::<heima_parachain_runtime::RuntimeApi>,
-					false,
-					$cli.delayed_best_block,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			})
-		} else if runner.config().chain_spec.is_paseo() {
-			runner.async_run(|$config| {
-				let $components = new_partial::<
-					paseo_parachain_runtime::RuntimeApi,
-					_
-				>(
-					&$config,
-					build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
-					false,
-					$cli.delayed_best_block,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			})
-		}
-		else {
+		if runner.config().chain_spec.is_standalone() {
 			panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
+		} else {
+			runner.async_run(|$config| {
+				let $components = new_partial::<
+					_
+				>(
+					&$config,
+					build_import_queue,
+					false,
+					$cli.delayed_best_block,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
 		}
 	}}
 }
@@ -285,30 +233,18 @@ pub fn run() -> Result<()> {
 
 		Some(Subcommand::ExportGenesisHead(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			if runner.config().chain_spec.is_heima() {
-				runner.sync_run(|config| {
-					let sc_service::PartialComponents { client, .. } =
-						new_partial::<heima_parachain_runtime::RuntimeApi, _>(
-							&config,
-							build_import_queue::<heima_parachain_runtime::RuntimeApi>,
-							false,
-							cli.delayed_best_block,
-						)?;
-					cmd.run(client)
-				})
-			} else if runner.config().chain_spec.is_paseo() {
-				runner.sync_run(|config| {
-					let sc_service::PartialComponents { client, .. } =
-						new_partial::<paseo_parachain_runtime::RuntimeApi, _>(
-							&config,
-							build_import_queue::<paseo_parachain_runtime::RuntimeApi>,
-							false,
-							cli.delayed_best_block,
-						)?;
-					cmd.run(client)
-				})
-			} else {
+			if runner.config().chain_spec.is_standalone() {
 				panic!("{}", UNSUPPORTED_CHAIN_MESSAGE)
+			} else {
+				runner.sync_run(|config| {
+					let sc_service::PartialComponents { client, .. } = new_partial::<_>(
+						&config,
+						build_import_queue,
+						false,
+						cli.delayed_best_block,
+					)?;
+					cmd.run(client)
+				})
 			}
 		},
 		Some(Subcommand::ExportGenesisWasm(cmd)) => {
@@ -325,7 +261,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Pallet(cmd) => {
 					if cfg!(feature = "runtime-benchmarks") {
 						runner.sync_run(|config| {
-							cmd.run_with_spec::<sp_runtime::traits::HashingFor<crate::service::Block>, ()>(
+							cmd.run_with_spec::<sp_runtime::traits::HashingFor<crate::service::Block>, crate::service::HostFunctions>(
 								Some(config.chain_spec),
 							)
 						})
@@ -384,12 +320,9 @@ pub fn run() -> Result<()> {
 
 			runner.run_node_until_exit(|config| async move {
 				if is_standalone {
-					return start_standalone_node::<paseo_parachain_runtime::RuntimeApi>(
-						config,
-						evm_tracing_config,
-					)
-					.await
-					.map_err(Into::into);
+					return start_standalone_node(config, evm_tracing_config)
+						.await
+						.map_err(Into::into);
 				}
 
 				let hwbench = if !cli.no_hardware_benchmarks {
@@ -429,34 +362,21 @@ pub fn run() -> Result<()> {
 				let additional_config =
 					AdditionalConfig { evm_tracing_config, enable_evm_rpc: cli.enable_evm_rpc };
 
-				if config.chain_spec.is_heima() {
-					start_node::<heima_parachain_runtime::RuntimeApi>(
-						config,
-						polkadot_config,
-						collator_options,
-						para_id,
-						hwbench,
-						additional_config,
-						cli.delayed_best_block,
-					)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into)
-				} else if config.chain_spec.is_paseo() {
-					start_node::<paseo_parachain_runtime::RuntimeApi>(
-						config,
-						polkadot_config,
-						collator_options,
-						para_id,
-						hwbench,
-						additional_config,
-						cli.delayed_best_block,
-					)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into)
-				} else {
+				if config.chain_spec.is_standalone() {
 					Err(UNSUPPORTED_CHAIN_MESSAGE.into())
+				} else {
+					start_node(
+						config,
+						polkadot_config,
+						collator_options,
+						para_id,
+						hwbench,
+						additional_config,
+						cli.delayed_best_block,
+					)
+					.await
+					.map(|r| r.0)
+					.map_err(Into::into)
 				}
 			})
 		},
