@@ -70,7 +70,7 @@ pub async fn perform_attestation(
 	);
 
 	let mut client = client_factory.new_client_until_connected().await;
-	let signed_call = transaction_signer.sign(registration_call).await;
+	let signed_call = transaction_signer.sign(registration_call, None).await;
 	client.submit_tx(&signed_call).await.map_err(|e| {
 		log::error!("Error while submitting tx: {:?}", e);
 	})?;

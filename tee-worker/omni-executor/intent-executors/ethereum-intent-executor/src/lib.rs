@@ -23,7 +23,7 @@ use alloy::rpc::types::{TransactionInput, TransactionRequest};
 use alloy::signers::local::PrivateKeySigner;
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::primitives::Intent;
+use executor_primitives::intent::Intent;
 use log::{error, info};
 
 /// Executes intents on Ethereum network.
@@ -58,11 +58,11 @@ impl IntentExecutor for EthereumIntentExecutor {
 		let gas_price = provider.get_gas_price().await.unwrap();
 
 		match intent {
-			Intent::TransferEthereum(to, value) => {
+			Intent::TransferEthereum(transfer) => {
 				let mut tx = TransactionRequest::default()
-					.to(Address::from(to))
+					.to(Address::from(transfer.to.to_fixed_bytes()))
 					.nonce(nonce)
-					.value(U256::from_be_bytes(value));
+					.value(U256::from_be_bytes(transfer.value));
 
 				tx.set_gas_price(gas_price);
 				let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
@@ -73,11 +73,11 @@ impl IntentExecutor for EthereumIntentExecutor {
 					error!("Could not get transaction receipt: {:?}", e);
 				})?;
 			},
-			Intent::CallEthereum(address, input) => {
+			Intent::CallEthereum(call_ethereum) => {
 				let mut tx = TransactionRequest::default()
-					.to(Address::from(address))
+					.to(Address::from(call_ethereum.address.0))
 					.nonce(nonce)
-					.input(TransactionInput::from(input));
+					.input(TransactionInput::from(call_ethereum.input.to_vec()));
 
 				tx.set_gas_price(gas_price);
 				let pending_tx = provider.send_transaction(tx).await.map_err(|e| {

@@ -132,6 +132,7 @@ pub enum TrustedCallError {
 	NativeRequestSendFailed,
 	AuthTokenCreationFailed,
 	ParentchainHeaderRetrievalFailed,
+	UnexpectedIntent(String),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
