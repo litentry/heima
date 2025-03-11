@@ -1242,6 +1242,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d965446196e3b7decd44aa7ee49e31d630118f90ef12f97900f262eb915c951d"
 
 [[package]]
+name = "binance-api"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "hex",
+ "hmac 0.12.1",
+ "log",
+ "reqwest 0.12.8",
+ "serde",
+ "sha2 0.10.8",
+ "url",
+]
+
+[[package]]
 name = "binary-merkle-tree"
 version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
