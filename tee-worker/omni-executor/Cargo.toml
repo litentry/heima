@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "binance-api",
     "executor-crypto",
     "executor-core",
     "executor-worker",
@@ -34,6 +35,7 @@ clap = "4.5.17"
 env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
 hex = "0.4"
+hmac = "0.12.1"
 jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 log = "0.4.22"
@@ -48,6 +50,7 @@ scale-info = "2.11.6"
 secp256k1 = "=0.29.1"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10.8"
 solana-client = "2.1.5"
 solana-sdk = "2.1.5"
 sp-core = "35.0.0"
@@ -59,6 +62,7 @@ tokio = "1.43.0"
 url = "2.5.4"
 
 # Local dependencies
+binance-api = { path = "binance-api" }
 cross-chain-intent-executor = { path = "intent-executors/cross-chain-intent-executor" }
 ethereum-intent-executor = { path = "intent-executors/ethereum-intent-executor" }
 executor-core = { path = "executor-core" }
