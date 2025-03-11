@@ -16,24 +16,29 @@
 
 use std::str::FromStr;
 
-use alloy::network::{EthereumWallet, TransactionBuilder};
-use alloy::primitives::{Address, U256};
-use alloy::providers::{Provider, ProviderBuilder, WalletProvider};
-use alloy::rpc::types::{TransactionInput, TransactionRequest};
-use alloy::signers::local::PrivateKeySigner;
+use alloy::primitives::Address;
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::intent::Intent;
 use log::{error, info};
+use signer::get_omni_account_signer;
+use tx::submit;
+
+mod delegate_call;
+mod signer;
+mod tx;
 
 /// Executes intents on Ethereum network.
 pub struct EthereumIntentExecutor {
 	rpc_url: String,
+	#[allow(dead_code)]
+	delegation_contract_address: Address,
 }
 
 impl EthereumIntentExecutor {
-	pub fn new(rpc_url: &str) -> Result<Self, ()> {
-		Ok(Self { rpc_url: rpc_url.to_string() })
+	pub fn new(rpc_url: &str, delegation_contract_address: &str) -> Result<Self, ()> {
+		let delegation_contract_address = Address::from_str(delegation_contract_address).unwrap();
+		Ok(Self { rpc_url: rpc_url.to_string(), delegation_contract_address })
 	}
 }
 
@@ -41,52 +46,32 @@ impl EthereumIntentExecutor {
 impl IntentExecutor for EthereumIntentExecutor {
 	async fn execute(&self, intent: Intent) -> Result<(), ()> {
 		info!("Executing intent: {:?}", intent);
-		// todo: this should be retrieved from key_store
-		let signer = PrivateKeySigner::from_str(
-			"0x59c6995e998f97a5a0044964f0945389dc9e86dae86c7a8412f4603b6b78690d",
-		)
-		.unwrap();
-		let wallet = EthereumWallet::from(signer);
-		let provider = ProviderBuilder::new()
-			.with_recommended_fillers()
-			.wallet(wallet)
-			.on_http(self.rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
-		let nonce = provider
-			.get_transaction_count(provider.signer_addresses().next().unwrap())
-			.await
-			.unwrap();
-		let gas_price = provider.get_gas_price().await.unwrap();
+
+		let omni_account_signer = get_omni_account_signer();
+		info!("Omni account address: {:?}", omni_account_signer.address());
 
 		match intent {
 			Intent::TransferEthereum(transfer) => {
-				let mut tx = TransactionRequest::default()
-					.to(Address::from(transfer.to.to_fixed_bytes()))
-					.nonce(nonce)
-					.value(U256::from_be_bytes(transfer.value));
-
-				tx.set_gas_price(gas_price);
-				let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
-					error!("Could not send transaction: {:?}", e);
-				})?;
-				// wait for transaction to be included
-				pending_tx.get_receipt().await.map_err(|e| {
-					error!("Could not get transaction receipt: {:?}", e);
-				})?;
+				submit(
+					&self.rpc_url,
+					Address::from_slice(&transfer.to.as_bytes()),
+					transfer.value,
+					vec![],
+					omni_account_signer,
+					None,
+				)
+				.await?;
 			},
 			Intent::CallEthereum(call_ethereum) => {
-				let mut tx = TransactionRequest::default()
-					.to(Address::from(call_ethereum.address.0))
-					.nonce(nonce)
-					.input(TransactionInput::from(call_ethereum.input.to_vec()));
-
-				tx.set_gas_price(gas_price);
-				let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
-					error!("Could not send transaction: {:?}", e);
-				})?;
-				// wait for transaction to be included
-				pending_tx.get_receipt().await.map_err(|e| {
-					error!("Could not get transaction receipt: {:?}", e);
-				})?;
+				submit(
+					&self.rpc_url,
+					Address::from_slice(&call_ethereum.address.as_bytes()),
+					[0; 32],
+					call_ethereum.input.to_vec(),
+					omni_account_signer,
+					None,
+				)
+				.await?;
 			},
 			_ => {
 				error!("[EthereumIntentExecutor]: Unsupported intent: {:?}", intent);
