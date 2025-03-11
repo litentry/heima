@@ -1,7 +1,7 @@
 [package]
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition = '2021'
-homepage = 'https://litentry.com'
+homepage = 'https://www.heima.network'
 name = 'pallet-identity-management'
 repository = 'https://github.com/litentry/heima'
 version = '0.1.0'

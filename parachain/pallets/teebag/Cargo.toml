@@ -1,7 +1,7 @@
 [package]
 authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
 edition = '2021'
-homepage = 'https://litentry.com'
+homepage = 'https://www.heima.network'
 name = 'pallet-teebag'
 description = 'Pallet for tee-worker registration and management'
 repository = 'https://github.com/litentry/heima'

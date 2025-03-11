@@ -23,7 +23,7 @@
 //! WASM-EXECUTION: `Compiled`, CHAIN: `Some("litentry-dev")`, DB CACHE: 20
 
 // Executed Command:
-// ./litentry-collator
+// ./heima-node
 // benchmark
 // pallet
 // --chain=litentry-dev
