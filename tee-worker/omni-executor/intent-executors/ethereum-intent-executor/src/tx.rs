@@ -112,7 +112,6 @@ pub async fn submit(
 		.with_value(U256::from_be_bytes(value))
 		.with_authorization_list(authorization_list);
 
-	// tx.set_gas_price(gas_price);
 	let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 		error!("Could not send transaction: {:?}", e);
 	})?;
