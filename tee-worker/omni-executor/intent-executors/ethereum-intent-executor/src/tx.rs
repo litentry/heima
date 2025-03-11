@@ -46,6 +46,7 @@ pub async fn submit(
 
 	let tx_signer_wallet = EthereumWallet::from(tx_signer);
 
+	#[allow(clippy::type_complexity)]
 	let provider: alloy::providers::fillers::FillProvider<
 		alloy::providers::fillers::JoinFill<
 			alloy::providers::fillers::JoinFill<
@@ -103,7 +104,7 @@ pub async fn submit(
 	let (to, input, value) = if delegation_contract_address.is_some() {
 		(signer_key.address(), prepare_delegate_call_data(to, call_data), value)
 	} else {
-		(Address::from(to), call_data, value)
+		(to, call_data, value)
 	};
 
 	let tx = TransactionRequest::default()

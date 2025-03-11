@@ -54,7 +54,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 			Intent::TransferEthereum(transfer) => {
 				submit(
 					&self.rpc_url,
-					Address::from_slice(&transfer.to.as_bytes()),
+					Address::from_slice(transfer.to.as_bytes()),
 					transfer.value,
 					vec![],
 					omni_account_signer,
@@ -65,7 +65,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 			Intent::CallEthereum(call_ethereum) => {
 				submit(
 					&self.rpc_url,
-					Address::from_slice(&call_ethereum.address.as_bytes()),
+					Address::from_slice(call_ethereum.address.as_bytes()),
 					[0; 32],
 					call_ethereum.input.to_vec(),
 					omni_account_signer,
