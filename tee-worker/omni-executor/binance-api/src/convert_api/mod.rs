@@ -1,12 +1,11 @@
 mod types;
 
-use crate::{error::Error, BinanceApi, Method};
+use crate::{error::Error, types::AssetSymbol, BinanceApi, Method};
 use log::error;
 use std::collections::HashMap;
 use types::{
-	AssetInfo, AssetSymbol, CancelOrderLimit, ConvertOrder, ConvertOrderStatus,
-	ConvertTradeHistory, LimitOrder, OpenOrders, PlaceLimitOrderParams, Quote, RequestQuoteParams,
-	TokenPair,
+	AssetInfo, CancelOrderLimit, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, LimitOrder,
+	OpenOrders, PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,
 };
 
 /// https://developers.binance.com/docs/convert/general-info

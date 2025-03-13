@@ -1,5 +1,6 @@
 mod convert_api;
 mod error;
+mod types;
 
 use convert_api::ConvertApi;
 use error::Error;

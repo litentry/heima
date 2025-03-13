@@ -1,7 +1,6 @@
+use crate::types::AssetSymbol;
 use serde::Deserialize;
 use std::collections::HashMap;
-
-pub type AssetSymbol = String;
 
 /// Convertible token pair
 #[derive(Debug, Deserialize)]
