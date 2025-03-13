@@ -164,7 +164,7 @@ jobs:
       - name: Install pre-built taplo
         run: |
           mkdir -p $HOME/.local/bin
-          wget -q https://github.com/tamasfe/taplo/releases/download/0.8.1/taplo-linux-x86_64.gz
+          wget -q https://github.com/tamasfe/taplo/releases/latest/download/taplo-linux-x86_64.gz
           gzip -d taplo-linux-x86_64.gz
           cp taplo-linux-x86_64 $HOME/.local/bin/taplo
           chmod a+x $HOME/.local/bin/taplo
