@@ -1,4 +1,4 @@
-name: System check
+name: Identity-worker post check
 
 on:
   workflow_dispatch:
@@ -8,9 +8,6 @@ on:
         type: choice
         options:
           - litentry-prod
-          ## Target tee-prod only for now
-          # - litentry-dev
-          # - litentry-staging
         default: "litentry-prod"
 
 jobs:

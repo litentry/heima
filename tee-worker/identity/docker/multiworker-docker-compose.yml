@@ -1,10 +1,10 @@
 services:
-  litentry-node: # just traffic forwarding, the node network should be up already at this point
+  heima-node: # just traffic forwarding, the node network should be up already at this point
     image: qoomon/docker-host
     cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
     mem_limit: 8M
     restart: on-failure
-    container_name: litentry-node
+    container_name: heima-node
     networks:
       - litentry-test-network
   litentry-worker-1:
@@ -15,7 +15,7 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-worker
     depends_on:
-      litentry-node:
+      heima-node:
         condition: service_started
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
@@ -67,7 +67,7 @@ services:
       retries: 20
     entrypoint:
       "/usr/local/bin/litentry-worker --clean-reset --ws-external -M litentry-worker-1 -T ws://litentry-worker-1
-      -u ws://litentry-node -U ws://litentry-worker-1 -P 2011 -w 2101 -p 9944 -h 4645 --enable-mock-server
+      -u ws://heima-node -U ws://litentry-worker-1 -P 2011 -w 2101 -p 9944 -h 4645 --enable-mock-server
       run --dev --skip-ra"
     restart: "no"
   litentry-worker-2:
@@ -130,7 +130,7 @@ services:
       retries: 20
     entrypoint:
       "/usr/local/bin/litentry-worker --clean-reset --ws-external -M litentry-worker-2 -T ws://litentry-worker-2
-      -u ws://litentry-node -U ws://litentry-worker-2 -P 2011 -w 2101 -p 9944 -h 4645 --enable-mock-server
+      -u ws://heima-node -U ws://litentry-worker-2 -P 2011 -w 2101 -p 9944 -h 4645 --enable-mock-server
       run --dev --skip-ra"
     restart: "no"
   litentry-worker-3:
@@ -193,7 +193,7 @@ services:
       retries: 20
     entrypoint:
       "/usr/local/bin/litentry-worker --clean-reset --ws-external -M litentry-worker-3 -T ws://litentry-worker-3
-      -u ws://litentry-node -U ws://litentry-worker-3 -P 2011 -w 2101 -p 9944 -h 4645 --enable-mock-server
+      -u ws://heima-node -U ws://litentry-worker-3 -P 2011 -w 2101 -p 9944 -h 4645 --enable-mock-server
       run --dev --skip-ra"
     restart: "no"
 networks:

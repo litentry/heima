@@ -94,7 +94,7 @@ class GracefulKiller:
             new_folder_name = datetime.now().strftime("log-backup/log-%Y%m%d-%H%M%S")
             shutil.copytree(f"log", new_folder_name)
             print(f"Backup log into " + new_folder_name)
-        print("Cleaning up litentry-parachain...")
+        print("Cleaning up heima ...")
         subprocess.run(["./parachain/scripts/clean-network.sh", "||", "true"])
 
         sys.exit(0)

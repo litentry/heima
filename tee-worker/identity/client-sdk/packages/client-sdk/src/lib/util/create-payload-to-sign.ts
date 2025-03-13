@@ -34,7 +34,7 @@ export function createPayloadToSign(args: {
   return msg;
 }
 
-// https://github.com/litentry/litentry-parachain/blob/ca83789997b915c5b9dd6117a22a7bec4de0bf1c/tee-worker/app-libs/stf/src/trusted_call.rs#L262
+// https://github.com/litentry/heima/blob/ca83789997b915c5b9dd6117a22a7bec4de0bf1c/tee-worker/app-libs/stf/src/trusted_call.rs#L262
 function getSignatureMessagePrefix(call: TrustedCall): string {
   if (call.isLinkIdentity) {
     return "By linking your identity to our platform, you're taking a step towards a more integrated experience. Please be assured, this process is safe and involves no transactions of your assets. Token: ";

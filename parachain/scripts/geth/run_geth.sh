@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
-[ -d "$LITENTRY_PARACHAIN_DIR" ] || mkdir -p "$LITENTRY_PARACHAIN_DIR"
+HEIMA_DIR=${HEIMA_DIR:-"/tmp/parachain_dev"}
+[ -d "$HEIMA_DIR" ] || mkdir -p "$HEIMA_DIR"
 
 DOCKER='local'
 
@@ -19,9 +19,9 @@ GETH_BIN="geth"
 if ! geth version &>/dev/null; then
     echo "geth could not be found..download now"
     url="https://gethstore.blob.core.windows.net/builds/geth-linux-386-1.13.14-2bd6bd01.tar.gz"
-    GETH_BIN="$LITENTRY_PARACHAIN_DIR/geth"
-    wget -O "$LITENTRY_PARACHAIN_DIR/geth.tar.gz" -q "$url"
-    tar -xf "$LITENTRY_PARACHAIN_DIR/geth.tar.gz" --strip-components 1 -C "$LITENTRY_PARACHAIN_DIR"
+    GETH_BIN="$HEIMA_DIR/geth"
+    wget -O "$HEIMA_DIR/geth.tar.gz" -q "$url"
+    tar -xf "$HEIMA_DIR/geth.tar.gz" --strip-components 1 -C "$HEIMA_DIR"
     chmod a+x "$GETH_BIN"
 fi
 

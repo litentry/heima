@@ -1,11 +1,11 @@
 ---
 name: Release issue template
 about: Tracking issue for new releases
-title: Litentry-parachain {{ env.VERSION }} Release checklist
+title: Heima {{ env.VERSION }} Release checklist
 ---
 ## Release Checklist
 
-Here is a release checklist for Litentry-parachain {{ env.VERSION }}.
+Here is a release checklist for Heima {{ env.VERSION }}.
 
 The current release candidate can be checked out with `git checkout release-{{ env.VERSION }}`
 
@@ -33,4 +33,4 @@ These checks should be performed after forking to a release branch, that is, on 
 These are the general checks for the releasing process.
 
 - [ ] Verify a **`tag`** has been correctly acquired on `release-{{ env.VERSION }}` branch.
-- [ ] Verify **`release-draft`** has been created by [create-release-draft.yml](https://github.com/litentry/litentry-parachain/blob/dev/.github/workflows/create-release-draft.yml) and is ready to publish.
+- [ ] Verify **`release-draft`** has been created by [create-release-draft.yml](https://github.com/litentry/heima/blob/dev/.github/workflows/create-release-draft.yml) and is ready to publish.
