@@ -139,7 +139,7 @@ jobs:
 
       - name: Save docker image
         run: |
-          docker save litentry/heima:${{ env.RELEASE_TAG }} | gzip > litentry-heima.tar.gz
+          docker save litentry/heima:${{ env.RELEASE_TAG }} | gzip > heima.tar.gz
 
       - name: Upload the client binary
         uses: actions/upload-artifact@v4
@@ -148,7 +148,7 @@ jobs:
           if-no-files-found: ignore
           path: |
             heima-node
-            litentry-heima.tar.gz
+            heima.tar.gz
             ${{ env.GENESIS_RELEASE }}-genesis-state
             ${{ env.GENESIS_RELEASE }}-genesis-wasm
 
@@ -241,7 +241,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-heima.tar.gz
+          docker load < heima.tar.gz
           docker tag litentry/heima:${{ env.RELEASE_TAG }} litentry/heima:latest
           docker images
 

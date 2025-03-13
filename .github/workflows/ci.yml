@@ -368,13 +368,13 @@ jobs:
 
       - name: Save docker image
         run: |
-          docker save litentry/heima:latest litentry/heima-aio:latest | gzip > litentry-heima.tar.gz
+          docker save litentry/heima:latest litentry/heima-aio:latest | gzip > heima.tar.gz
 
       - name: Upload parachain docker image
         uses: actions/upload-artifact@v4
         with:
-          name: litentry-heima
-          path: litentry-heima.tar.gz
+          name: heima
+          path: heima.tar.gz
           if-no-files-found: error
 
       - name: Fail early
@@ -586,11 +586,11 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-heima
+          name: heima
 
       - name: Load docker image
         run: |
-          docker load < litentry-heima.tar.gz
+          docker load < heima.tar.gz
 
       - name: Use Latest Corepack
         run: |
@@ -726,7 +726,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-heima
+          name: heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -734,7 +734,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-heima.tar.gz
+          docker load < heima.tar.gz
           docker load < litentry-identity.tar.gz
           docker images
 
@@ -818,7 +818,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-heima
+          name: heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -826,7 +826,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-heima.tar.gz
+          docker load < heima.tar.gz
           docker load < litentry-identity.tar.gz
           docker images
 
@@ -903,7 +903,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-heima
+          name: heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -911,7 +911,7 @@ jobs:
 
       - name: Load docker image
         run: |
-          docker load < litentry-heima.tar.gz
+          docker load < heima.tar.gz
           docker load < litentry-omni.tar.gz
           docker images
 
@@ -964,7 +964,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-heima
+          name: heima
 
       - uses: actions/download-artifact@v4
         with:
@@ -983,7 +983,7 @@ jobs:
       - name: Push parachain image
         if: needs.set-condition.outputs.rebuild_parachain == 'true'
         run: |
-          docker load < litentry-heima.tar.gz
+          docker load < heima.tar.gz
           docker push litentry/heima
           docker push litentry/heima-aio
 
