@@ -17,9 +17,5 @@ HEIMA_DIR=${HEIMA_DIR:-"/tmp/parachain_dev"}
 pnpm install
 pnpm run test-filter 2>&1 | tee -a "$HEIMA_DIR/parachain_ci_test.log"
 
-# comment out for now - we use omni-bridge now
-# $ROOTDIR/parachain/scripts/launch-bridge.sh
-# pnpm run test-bridge 2>&1 | tee -a "$HEIMA_DIR/parachain_ci_test.log"
-
 pnpm run test-evm-contract 2>&1 | tee -a "$HEIMA_DIR/parachain_ci_test.log"
 pnpm run test-precompile-contract 2>&1 | tee -a "$HEIMA_DIR/parachain_ci_test.log"
