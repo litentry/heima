@@ -1,6 +1,6 @@
 mod types;
 
-use crate::{error::Error, types::AssetSymbol, BinanceApi, Method};
+use crate::{error::Error, traits::TryIntoParams, types::AssetSymbol, BinanceApi, Method};
 use log::error;
 use std::collections::HashMap;
 use types::{

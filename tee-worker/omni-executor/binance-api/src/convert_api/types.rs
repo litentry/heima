@@ -1,4 +1,4 @@
-use crate::types::AssetSymbol;
+use crate::{traits::TryIntoParams, types::AssetSymbol};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -168,26 +168,28 @@ impl PlaceLimitOrderParams {
 			expired_type,
 		}
 	}
+}
 
-	pub fn try_into_params(self) -> Result<HashMap<String, String>, &'static str> {
+impl TryIntoParams for PlaceLimitOrderParams {
+	fn try_into_params(&self) -> Result<HashMap<String, String>, &'static str> {
 		let mut params = HashMap::new();
-		params.insert("baseAsset".to_string(), self.base_asset);
-		params.insert("quoteAsset".to_string(), self.quote_asset);
-		params.insert("limitPrice".to_string(), self.limit_price);
+		params.insert("baseAsset".to_string(), self.base_asset.to_string());
+		params.insert("quoteAsset".to_string(), self.quote_asset.to_string());
+		params.insert("limitPrice".to_string(), self.limit_price.to_string());
 		if self.base_amount.is_none() && self.quote_amount.is_none() {
 			return Err("Missing amount for limit order");
 		}
-		if let Some(base_amount) = self.base_amount {
-			params.insert("baseAmount".to_string(), base_amount);
-		} else if let Some(quote_amount) = self.quote_amount {
-			params.insert("quoteAmount".to_string(), quote_amount);
+		if let Some(ref base_amount) = self.base_amount {
+			params.insert("baseAmount".to_string(), base_amount.to_string());
+		} else if let Some(ref quote_amount) = self.quote_amount {
+			params.insert("quoteAmount".to_string(), quote_amount.to_string());
 		}
 		let side = match self.side {
 			OrderSide::Buy => "BUY".to_string(),
 			OrderSide::Sell => "SELL".to_string(),
 		};
 		params.insert("side".to_string(), side);
-		if let Some(wallet_type) = self.wallet_type {
+		if let Some(ref wallet_type) = self.wallet_type {
 			let wallet_type = match wallet_type {
 				WalletType::Spot => "SPOT".to_string(),
 				WalletType::Funding => "FUNDING".to_string(),
