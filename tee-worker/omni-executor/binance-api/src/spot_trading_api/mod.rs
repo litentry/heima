@@ -154,4 +154,51 @@ impl<'a> SpotTradingApi<'a> {
 			.make_signed_request(&endpoint, Method::DELETE, Some(params), recv_window)
 			.await
 	}
+
+	// /// Cancels all active orders on a symbol. This includes orders that are part of an order list.
+	// /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#cancel-all-open-orders-on-a-symbol-trade
+	// TODO: check the response shape
+	// pub async fn cancel_all_orders(
+	// 	&self,
+	// 	symbol: &str,
+	// 	recv_window: Option<u32>,
+	// ) -> Result<Vec<TradeOrder>, Error> {
+	// 	let endpoint = format!("{}/openOrders", SPOT_TRADING_API);
+	// 	let mut params = HashMap::new();
+	// 	params.insert("symbol".to_string(), symbol.to_string());
+	// 	self.base_api
+	// 		.make_signed_request(&endpoint, Method::DELETE, Some(params), recv_window)
+	// 		.await
+	// }
+
+	/// Get all account orders; active, canceled, or filled.
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#all-orders-user_data
+	pub async fn get_all_orders(
+		&self,
+		symbol: &str,
+		order_id: Option<u64>,
+		start_time: Option<u64>,
+		end_time: Option<u64>,
+		limit: Option<u16>,
+		recv_window: Option<u32>,
+	) -> Result<Vec<TradeOrder>, Error> {
+		let endpoint = format!("{}/allOrders", SPOT_TRADING_API);
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), symbol.to_string());
+		if let Some(order_id) = order_id {
+			params.insert("orderId".to_string(), order_id.to_string());
+		}
+		if let Some(start_time) = start_time {
+			params.insert("startTime".to_string(), start_time.to_string());
+		}
+		if let Some(end_time) = end_time {
+			params.insert("endTime".to_string(), end_time.to_string());
+		}
+		if let Some(limit) = limit {
+			params.insert("limit".to_string(), limit.to_string());
+		}
+		self.base_api
+			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
+			.await
+	}
 }
