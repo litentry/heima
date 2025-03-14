@@ -1,7 +1,8 @@
 mod types;
 
 use crate::{error::Error, BinanceApi};
-use types::ServerTime;
+use std::collections::HashMap;
+use types::{ExchangeInfo, Permission, ServerTime};
 
 /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information
 const SPOT_TRADING_API: &str = "/api/v3";
@@ -29,4 +30,24 @@ impl<'a> SpotTradingApi<'a> {
 		Ok(server_time.server_time)
 	}
 
+	pub async fn get_exchange_info(
+		&self,
+		symbol: Option<String>,
+		symbols: Option<Vec<String>>,
+		permissions: Option<Permission>,
+	) -> Result<ExchangeInfo, Error> {
+		let endpoint = format!("{}/exchangeInfo", SPOT_TRADING_API);
+		let mut params = HashMap::new();
+		if let Some(symbol) = symbol {
+			params.insert("symbol".to_string(), symbol);
+		}
+		if let Some(symbols) = symbols {
+			params.insert("symbols".to_string(), symbols.join(","));
+		}
+		if let Some(permissions) = permissions {
+			params.insert("permissions".to_string(), format!("{}", permissions));
+		}
+
+		self.base_api.make_public_get_request(&endpoint, Some(params)).await
+	}
 }
