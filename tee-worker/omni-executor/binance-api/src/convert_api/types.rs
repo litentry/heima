@@ -35,12 +35,12 @@ pub struct Quote {
 
 /// Convert order status
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum OrderStatus {
-	Process,
-	AcceptSuccess,
-	Success,
-	Fail,
+	PROCESS,
+	ACCEPT_SUCCESS,
+	SUCCESS,
+	FAIL,
 }
 
 #[derive(Debug, Deserialize)]
