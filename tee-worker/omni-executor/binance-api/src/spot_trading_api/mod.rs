@@ -1,8 +1,8 @@
 mod types;
 
-use crate::{error::Error, BinanceApi};
+use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
 use std::collections::HashMap;
-use types::{ExchangeInfo, Permission, ServerTime};
+use types::{CreateOrderParams, ExchangeInfo, Permission, ServerTime, TradeOrder};
 
 /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information
 const SPOT_TRADING_API: &str = "/api/v3";
@@ -54,5 +54,22 @@ impl<'a> SpotTradingApi<'a> {
 		}
 
 		self.base_api.make_public_get_request(&endpoint, Some(params)).await
+	}
+
+	/// Create a new order
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#new-order-trade
+	pub async fn create_order(
+		&self,
+		create_order_params: CreateOrderParams,
+		recv_window: Option<u32>,
+	) -> Result<TradeOrder, Error> {
+		let endpoint = format!("{}/order", SPOT_TRADING_API);
+		let params = create_order_params.try_into_params().map_err(|e| {
+			log::error!("Error converting create order params: {}", e);
+			Error::InvalidParams
+		})?;
+		self.base_api
+			.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
+			.await
 	}
 }

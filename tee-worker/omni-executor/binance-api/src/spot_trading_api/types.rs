@@ -1,4 +1,6 @@
-use crate::types::AssetSymbol;
+use std::collections::HashMap;
+
+use crate::{traits::TryIntoParams, types::AssetSymbol};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -202,3 +204,176 @@ pub struct Sor {
 	pub base_asset: AssetSymbol,
 	pub symbols: Vec<String>,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOrderParams {
+	pub symbol: String,
+	pub side: OrderSide,
+	#[serde(rename = "type")]
+	pub order_type: OrderType,
+	pub time_in_force: Option<TimeInForce>,
+	pub quantity: Option<String>,
+	pub quote_order_qty: Option<String>,
+	pub price: Option<String>,
+	pub new_client_order_id: Option<String>,
+	pub strategy_id: Option<u64>,
+	pub strategy_type: Option<u32>,
+	pub stop_price: Option<String>,
+	pub trailing_delta: Option<u64>,
+	pub iceberg_qty: Option<String>,
+	pub new_order_resp_type: Option<NewOrderRespType>,
+	pub self_trade_prevention_mode: Option<SelfTradePreventionMode>,
+	pub recv_window: Option<u64>,
+	pub timestamp: u64,
+}
+
+impl CreateOrderParams {
+	pub fn new(
+		symbol: String,
+		side: OrderSide,
+		order_type: OrderType,
+		time_in_force: Option<TimeInForce>,
+		quantity: Option<String>,
+		quote_order_qty: Option<String>,
+		price: Option<String>,
+		new_client_order_id: Option<String>,
+		strategy_id: Option<u64>,
+		strategy_type: Option<u32>,
+		stop_price: Option<String>,
+		trailing_delta: Option<u64>,
+		iceberg_qty: Option<String>,
+		new_order_resp_type: Option<NewOrderRespType>,
+		self_trade_prevention_mode: Option<SelfTradePreventionMode>,
+		recv_window: Option<u64>,
+		timestamp: u64,
+	) -> CreateOrderParams {
+		CreateOrderParams {
+			symbol,
+			side,
+			order_type,
+			time_in_force,
+			quantity,
+			quote_order_qty,
+			price,
+			new_client_order_id,
+			strategy_id,
+			strategy_type,
+			stop_price,
+			trailing_delta,
+			iceberg_qty,
+			new_order_resp_type,
+			self_trade_prevention_mode,
+			recv_window,
+			timestamp,
+		}
+	}
+}
+
+impl TryIntoParams for CreateOrderParams {
+	fn try_into_params(&self) -> Result<HashMap<String, String>, &'static str> {
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), self.symbol.clone());
+		params.insert("side".to_string(), format!("{:?}", self.side));
+		params.insert("type".to_string(), format!("{:?}", self.order_type));
+		if let Some(ref time_in_force) = self.time_in_force {
+			params.insert("timeInForce".to_string(), format!("{:?}", time_in_force));
+		}
+		if let Some(quantity) = &self.quantity {
+			params.insert("quantity".to_string(), quantity.clone());
+		}
+		if let Some(quote_order_qty) = &self.quote_order_qty {
+			params.insert("quoteOrderQty".to_string(), quote_order_qty.clone());
+		}
+		if let Some(price) = &self.price {
+			params.insert("price".to_string(), price.clone());
+		}
+		if let Some(new_client_order_id) = &self.new_client_order_id {
+			params.insert("newClientOrderId".to_string(), new_client_order_id.clone());
+		}
+		if let Some(strategy_id) = self.strategy_id {
+			params.insert("strategyId".to_string(), strategy_id.to_string());
+		}
+		if let Some(strategy_type) = self.strategy_type {
+			params.insert("strategyType".to_string(), strategy_type.to_string());
+		}
+		if let Some(stop_price) = &self.stop_price {
+			params.insert("stopPrice".to_string(), stop_price.clone());
+		}
+		if let Some(trailing_delta) = self.trailing_delta {
+			params.insert("trailingDelta".to_string(), trailing_delta.to_string());
+		}
+		if let Some(iceberg_qty) = &self.iceberg_qty {
+			params.insert("icebergQty".to_string(), iceberg_qty.clone());
+		}
+		if let Some(ref new_order_resp_type) = self.new_order_resp_type {
+			params.insert("newOrderRespType".to_string(), format!("{:?}", new_order_resp_type));
+		}
+		if let Some(ref self_trade_prevention_mode) = self.self_trade_prevention_mode {
+			params.insert(
+				"selfTradePreventionMode".to_string(),
+				format!("{:?}", self_trade_prevention_mode),
+			);
+		}
+		if let Some(recv_window) = self.recv_window {
+			params.insert("recvWindow".to_string(), recv_window.to_string());
+		}
+		params.insert("timestamp".to_string(), self.timestamp.to_string());
+		Ok(params)
+	}
+}
+
+#[derive(Debug, Deserialize)]
+pub enum OrderSide {
+	BUY,
+	SELL,
+}
+
+/// This sets how long an order will be active before expiration.
+#[derive(Debug, Deserialize)]
+pub enum TimeInForce {
+	GTC,
+	IOC,
+	FOK,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub enum NewOrderRespType {
+	#[default]
+	ACK,
+	RESULT,
+	FULL,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeOrder {
+	pub symbol: String,
+	pub order_id: u64,
+	pub order_list_id: i64,
+	pub client_order_id: String,
+	pub transact_time: u64,
+	// pub price: String,
+	// pub orig_qty: String,
+	// pub executed_qty: String,
+	// pub orig_quote_order_qty: String,
+	// pub cummulative_quote_qty: String,
+	// pub status: OrderStatus,
+	// pub time_in_force: TimeInForce,
+	// #[serde(rename = "type")]
+	// pub order_type: OrderType,
+	// pub side: OrderSide,
+	// pub working_time: u64,
+	// pub self_trade_prevention_mode: SelfTradePreventionMode,
+	// pub fills: Vec<Fill>,
+}
+
+// #[derive(Debug, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct Fill {
+// 	pub price: String,
+// 	pub qty: String,
+// 	pub commission: String,
+// 	pub commission_asset: AssetSymbol,
+// 	pub trade_id: u64,
+// }
