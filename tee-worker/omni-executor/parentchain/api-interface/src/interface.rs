@@ -30,11 +30,11 @@ pub mod api {
 	#[doc = r" The error type that is returned when there is a runtime issue."]
 	pub type DispatchError = runtime_types::sp_runtime::DispatchError;
 	#[doc = r" The outer event enum."]
-	pub type Event = runtime_types::paseo_parachain_runtime::RuntimeEvent;
+	pub type Event = runtime_types::paseo_runtime::RuntimeEvent;
 	#[doc = r" The outer extrinsic enum."]
-	pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+	pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 	#[doc = r" The outer error enum represents the DispatchError's Module variant."]
-	pub type Error = runtime_types::paseo_parachain_runtime::RuntimeError;
+	pub type Error = runtime_types::paseo_runtime::RuntimeError;
 	pub fn constants() -> ConstantsApi {
 		ConstantsApi
 	}
@@ -211,7 +211,7 @@ pub mod api {
 				pub struct Version {}
 				pub mod execute_block {
 					use super::runtime_types;
-					pub type Block = runtime_types :: sp_runtime :: generic :: block :: Block < runtime_types :: sp_runtime :: generic :: header :: Header < :: core :: primitive :: u32 > , runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type Block = runtime_types :: sp_runtime :: generic :: block :: Block < runtime_types :: sp_runtime :: generic :: header :: Header < :: core :: primitive :: u32 > , runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub mod output {
 						use super::runtime_types;
 						pub type Output = ();
@@ -502,7 +502,7 @@ pub mod api {
 				use super::runtime_types;
 				pub mod apply_extrinsic {
 					use super::runtime_types;
-					pub type Extrinsic = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
+					pub type Extrinsic = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
 					pub mod output {
 						use super::runtime_types;
 						pub type Output = :: core :: result :: Result < :: core :: result :: Result < () , runtime_types :: sp_runtime :: DispatchError > , runtime_types :: sp_runtime :: transaction_validity :: TransactionValidityError > ;
@@ -556,7 +556,7 @@ pub mod api {
 					pub type Inherent = runtime_types::sp_inherents::InherentData;
 					pub mod output {
 						use super::runtime_types;
-						pub type Output = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+						pub type Output = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					}
 				}
 				#[derive(
@@ -579,7 +579,7 @@ pub mod api {
 				}
 				pub mod check_inherents {
 					use super::runtime_types;
-					pub type Block = runtime_types :: sp_runtime :: generic :: block :: Block < runtime_types :: sp_runtime :: generic :: header :: Header < :: core :: primitive :: u32 > , runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type Block = runtime_types :: sp_runtime :: generic :: block :: Block < runtime_types :: sp_runtime :: generic :: header :: Header < :: core :: primitive :: u32 > , runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub type Data = runtime_types::sp_inherents::InherentData;
 					pub mod output {
 						use super::runtime_types;
@@ -649,7 +649,7 @@ pub mod api {
 					use super::runtime_types;
 					pub type Source =
 						runtime_types::sp_runtime::transaction_validity::TransactionSource;
-					pub type Tx = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
+					pub type Tx = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
 					pub type BlockHash = ::subxt::ext::subxt_core::utils::H256;
 					pub mod output {
 						use super::runtime_types;
@@ -1172,7 +1172,7 @@ pub mod api {
 				use super::runtime_types;
 				pub mod query_info {
 					use super::runtime_types;
-					pub type Uxt = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
+					pub type Uxt = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
 					pub type Len = ::core::primitive::u32;
 					pub mod output {
 						use super::runtime_types;
@@ -1204,7 +1204,7 @@ pub mod api {
 				}
 				pub mod query_fee_details {
 					use super::runtime_types;
-					pub type Uxt = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
+					pub type Uxt = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
 					pub type Len = ::core::primitive::u32;
 					pub mod output {
 						use super::runtime_types;
@@ -1377,7 +1377,7 @@ pub mod api {
 				use super::runtime_types;
 				pub mod query_call_info {
 					use super::runtime_types;
-					pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+					pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 					pub type Len = ::core::primitive::u32;
 					pub mod output {
 						use super::runtime_types;
@@ -1409,7 +1409,7 @@ pub mod api {
 				}
 				pub mod query_call_fee_details {
 					use super::runtime_types;
-					pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+					pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 					pub type Len = ::core::primitive::u32;
 					pub mod output {
 						use super::runtime_types;
@@ -2316,7 +2316,7 @@ pub mod api {
 				pub struct CurrentAll {}
 				pub mod extrinsic_filter {
 					use super::runtime_types;
-					pub type Xts = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type Xts = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub mod output {
 						use super::runtime_types;
 						pub type Output = ::subxt::ext::subxt_core::alloc::vec::Vec<
@@ -2392,7 +2392,7 @@ pub mod api {
 				pub struct GasLimitMultiplierSupport {}
 				pub mod pending_block {
 					use super::runtime_types;
-					pub type Xts = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type Xts = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub mod output {
 						use super::runtime_types;
 						pub type Output = (
@@ -2487,7 +2487,7 @@ pub mod api {
 					pub type Transaction = runtime_types::ethereum::transaction::TransactionV2;
 					pub mod output {
 						use super::runtime_types;
-						pub type Output = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
+						pub type Output = runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > ;
 					}
 				}
 				#[derive(
@@ -2599,7 +2599,7 @@ pub mod api {
 				use super::runtime_types;
 				pub mod trace_transaction {
 					use super::runtime_types;
-					pub type Extrinsics = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type Extrinsics = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub type Transaction = runtime_types::ethereum::transaction::TransactionV2;
 					pub type Header =
 						runtime_types::sp_runtime::generic::header::Header<::core::primitive::u32>;
@@ -2631,7 +2631,7 @@ pub mod api {
 				}
 				pub mod trace_block {
 					use super::runtime_types;
-					pub type Extrinsics = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type Extrinsics = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub type KnownTransactions = ::subxt::ext::subxt_core::alloc::vec::Vec<
 						::subxt::ext::subxt_core::utils::H256,
 					>;
@@ -2750,8 +2750,8 @@ pub mod api {
 				use super::runtime_types;
 				pub mod extrinsic_filter {
 					use super::runtime_types;
-					pub type XtReady = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
-					pub type XtFuture = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_parachain_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type XtReady = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
+					pub type XtFuture = :: subxt :: ext :: subxt_core :: alloc :: vec :: Vec < runtime_types :: fp_self_contained :: unchecked_extrinsic :: UncheckedExtrinsic < :: subxt :: ext :: subxt_core :: utils :: MultiAddress < :: subxt :: ext :: subxt_core :: utils :: AccountId32 , () > , runtime_types :: paseo_runtime :: RuntimeCall , runtime_types :: sp_runtime :: MultiSignature , (runtime_types :: frame_system :: extensions :: check_non_zero_sender :: CheckNonZeroSender , runtime_types :: frame_system :: extensions :: check_spec_version :: CheckSpecVersion , runtime_types :: frame_system :: extensions :: check_tx_version :: CheckTxVersion , runtime_types :: frame_system :: extensions :: check_genesis :: CheckGenesis , runtime_types :: frame_system :: extensions :: check_mortality :: CheckMortality , runtime_types :: frame_system :: extensions :: check_nonce :: CheckNonce , runtime_types :: frame_system :: extensions :: check_weight :: CheckWeight , runtime_types :: pallet_transaction_payment :: ChargeTransactionPayment ,) > > ;
 					pub mod output {
 						use super::runtime_types;
 						pub type Output =
@@ -3871,7 +3871,7 @@ pub mod api {
 					use super::runtime_types;
 					pub type Events = ::subxt::ext::subxt_core::alloc::vec::Vec<
 						runtime_types::frame_system::EventRecord<
-							runtime_types::paseo_parachain_runtime::RuntimeEvent,
+							runtime_types::paseo_runtime::RuntimeEvent,
 							::subxt::ext::subxt_core::utils::H256,
 						>,
 					>;
@@ -5704,7 +5704,7 @@ pub mod api {
 					use super::runtime_types;
 					pub type Holds = runtime_types::bounded_collections::bounded_vec::BoundedVec<
 						runtime_types::frame_support::traits::tokens::misc::IdAmount<
-							runtime_types::paseo_parachain_runtime::RuntimeHoldReason,
+							runtime_types::paseo_runtime::RuntimeHoldReason,
 							::core::primitive::u128,
 						>,
 					>;
@@ -6184,7 +6184,7 @@ pub mod api {
 				pub mod dispatch_as_omni_account {
 					use super::runtime_types;
 					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
-					pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+					pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 					pub type AuthType =
 						runtime_types::core_primitives::omni_account::OmniAccountAuthType;
 				}
@@ -6215,7 +6215,7 @@ pub mod api {
 				pub mod dispatch_as_signed {
 					use super::runtime_types;
 					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
-					pub type Call = runtime_types::paseo_parachain_runtime::RuntimeCall;
+					pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 					pub type AuthType =
 						runtime_types::core_primitives::omni_account::OmniAccountAuthType;
 				}
@@ -6274,7 +6274,7 @@ pub mod api {
 						runtime_types::core_primitives::omni_account::MemberAccount;
 					pub type Permissions = ::core::option::Option<
 						::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+							runtime_types::paseo_runtime::OmniAccountPermission,
 						>,
 					>;
 				}
@@ -6448,7 +6448,7 @@ pub mod api {
 					use super::runtime_types;
 					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
 					pub type Permissions = ::subxt::ext::subxt_core::alloc::vec::Vec<
-						runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+						runtime_types::paseo_runtime::OmniAccountPermission,
 					>;
 				}
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for SetPermissions {
@@ -7005,7 +7005,7 @@ pub mod api {
 					use super::runtime_types;
 					pub type MemberAccountPermissions =
 						runtime_types::bounded_collections::bounded_vec::BoundedVec<
-							runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+							runtime_types::paseo_runtime::OmniAccountPermission,
 						>;
 					pub type Param0 = ::subxt::ext::subxt_core::utils::H256;
 				}
@@ -7673,7 +7673,7 @@ pub mod api {
 				pub mod batch {
 					use super::runtime_types;
 					pub type Calls = ::subxt::ext::subxt_core::alloc::vec::Vec<
-						runtime_types::paseo_parachain_runtime::RuntimeCall,
+						runtime_types::paseo_runtime::RuntimeCall,
 					>;
 				}
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for Batch {
@@ -12263,8 +12263,7 @@ pub mod api {
 					#[doc = "TODO::Reserve native token multilocation through GenesisBuild/RuntimeUpgrade"]
 					#[doc = "TODO::Add Multilocation filter for register"]
 					register_foreign_asset_type {
-						asset_type:
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+						asset_type: runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 						metadata: runtime_types::pallet_asset_manager::pallet::AssetMetadata<
 							::core::primitive::u128,
 						>,
@@ -12290,7 +12289,7 @@ pub mod api {
 					add_asset_type {
 						asset_id: ::core::primitive::u128,
 						new_asset_type:
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+							runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 					},
 					#[codec(index = 4)]
 					#[doc = "We do not allow the destroy of asset id so far; So at least one AssetTpye should be"]
@@ -12298,10 +12297,9 @@ pub mod api {
 					#[doc = "be an existing relation with asset_id"]
 					#[doc = "TODO: Change remove_asset_type with internal function wrapper"]
 					remove_asset_type {
-						asset_type:
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+						asset_type: runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 						new_default_asset_type: ::core::option::Option<
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+							runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 						>,
 					},
 				}
@@ -12340,8 +12338,7 @@ pub mod api {
 					#[doc = "New asset with the asset manager is registered"]
 					ForeignAssetTypeRegistered {
 						asset_id: ::core::primitive::u128,
-						asset_type:
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+						asset_type: runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 					},
 					#[codec(index = 3)]
 					#[doc = "New Event gives the info about involved asset_id, removed asset_type, and the new"]
@@ -12349,9 +12346,9 @@ pub mod api {
 					ForeignAssetTypeRemoved {
 						asset_id: ::core::primitive::u128,
 						removed_asset_type:
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+							runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 						default_asset_type:
-							runtime_types::paseo_parachain_runtime::asset_config::ForeignAssetType,
+							runtime_types::paseo_runtime::asset_config::ForeignAssetType,
 					},
 					#[codec(index = 4)]
 					#[doc = "Changed the amount of units we"]
@@ -14297,7 +14294,7 @@ pub mod api {
 						src_id: ::core::primitive::u8,
 						r_id: [::core::primitive::u8; 32usize],
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 5)]
@@ -14311,7 +14308,7 @@ pub mod api {
 						src_id: ::core::primitive::u8,
 						r_id: [::core::primitive::u8; 32usize],
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 6)]
@@ -14327,7 +14324,7 @@ pub mod api {
 						nonce: ::core::primitive::u64,
 						src_id: ::core::primitive::u8,
 						prop: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 				}
@@ -14544,7 +14541,7 @@ pub mod api {
 					#[doc = "- `P` complexity of dispatching `proposal`"]
 					execute {
 						proposal: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						#[codec(compact)]
 						length_bound: ::core::primitive::u32,
@@ -14568,7 +14565,7 @@ pub mod api {
 						#[codec(compact)]
 						threshold: ::core::primitive::u32,
 						proposal: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						#[codec(compact)]
 						length_bound: ::core::primitive::u32,
@@ -15162,7 +15159,7 @@ pub mod api {
 					#[doc = "Emits `Proposed`."]
 					propose {
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 						#[codec(compact)]
@@ -15213,7 +15210,7 @@ pub mod api {
 					#[doc = "- `proposal_hash`: The preimage hash of the proposal."]
 					external_propose {
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 					},
@@ -15231,7 +15228,7 @@ pub mod api {
 					#[doc = "Weight: `O(1)`"]
 					external_propose_majority {
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 					},
@@ -15249,7 +15246,7 @@ pub mod api {
 					#[doc = "Weight: `O(1)`"]
 					external_propose_default {
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 					},
@@ -17453,7 +17450,7 @@ pub mod api {
 							::subxt::ext::subxt_core::utils::AccountId32,
 						>,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 1)]
@@ -17505,7 +17502,7 @@ pub mod api {
 							runtime_types::pallet_multisig::Timepoint<::core::primitive::u32>,
 						>,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						max_weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
@@ -17679,7 +17676,7 @@ pub mod api {
 					dispatch_as_omni_account {
 						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						auth_type:
 							runtime_types::core_primitives::omni_account::OmniAccountAuthType,
@@ -17688,7 +17685,7 @@ pub mod api {
 					dispatch_as_signed {
 						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						auth_type:
 							runtime_types::core_primitives::omni_account::OmniAccountAuthType,
@@ -17702,7 +17699,7 @@ pub mod api {
 						member_account: runtime_types::core_primitives::omni_account::MemberAccount,
 						permissions: ::core::option::Option<
 							::subxt::ext::subxt_core::alloc::vec::Vec<
-								runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+								runtime_types::paseo_runtime::OmniAccountPermission,
 							>,
 						>,
 					},
@@ -17736,7 +17733,7 @@ pub mod api {
 					set_permissions {
 						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
 						permissions: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_parachain_runtime::OmniAccountPermission,
+							runtime_types::paseo_runtime::OmniAccountPermission,
 						>,
 					},
 					#[codec(index = 10)]
@@ -18585,11 +18582,10 @@ pub mod api {
 							::subxt::ext::subxt_core::utils::AccountId32,
 							(),
 						>,
-						force_proxy_type: ::core::option::Option<
-							runtime_types::paseo_parachain_runtime::ProxyType,
-						>,
+						force_proxy_type:
+							::core::option::Option<runtime_types::paseo_runtime::ProxyType>,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 1)]
@@ -18607,7 +18603,7 @@ pub mod api {
 							::subxt::ext::subxt_core::utils::AccountId32,
 							(),
 						>,
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						delay: ::core::primitive::u32,
 					},
 					#[codec(index = 2)]
@@ -18623,7 +18619,7 @@ pub mod api {
 							::subxt::ext::subxt_core::utils::AccountId32,
 							(),
 						>,
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						delay: ::core::primitive::u32,
 					},
 					#[codec(index = 3)]
@@ -18654,7 +18650,7 @@ pub mod api {
 					#[doc = ""]
 					#[doc = "Fails if there are insufficient funds to pay for deposit."]
 					create_pure {
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						delay: ::core::primitive::u32,
 						index: ::core::primitive::u16,
 					},
@@ -18680,7 +18676,7 @@ pub mod api {
 							::subxt::ext::subxt_core::utils::AccountId32,
 							(),
 						>,
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						index: ::core::primitive::u16,
 						#[codec(compact)]
 						height: ::core::primitive::u32,
@@ -18767,11 +18763,10 @@ pub mod api {
 							::subxt::ext::subxt_core::utils::AccountId32,
 							(),
 						>,
-						force_proxy_type: ::core::option::Option<
-							runtime_types::paseo_parachain_runtime::ProxyType,
-						>,
+						force_proxy_type:
+							::core::option::Option<runtime_types::paseo_runtime::ProxyType>,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 				}
@@ -18804,7 +18799,7 @@ pub mod api {
 					PureCreated {
 						pure: ::subxt::ext::subxt_core::utils::AccountId32,
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						disambiguation_index: ::core::primitive::u16,
 					},
 					#[codec(index = 2)]
@@ -18819,7 +18814,7 @@ pub mod api {
 					ProxyAdded {
 						delegator: ::subxt::ext::subxt_core::utils::AccountId32,
 						delegatee: ::subxt::ext::subxt_core::utils::AccountId32,
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						delay: ::core::primitive::u32,
 					},
 					#[codec(index = 4)]
@@ -18827,7 +18822,7 @@ pub mod api {
 					ProxyRemoved {
 						delegator: ::subxt::ext::subxt_core::utils::AccountId32,
 						delegatee: ::subxt::ext::subxt_core::utils::AccountId32,
-						proxy_type: runtime_types::paseo_parachain_runtime::ProxyType,
+						proxy_type: runtime_types::paseo_runtime::ProxyType,
 						delay: ::core::primitive::u32,
 					},
 				}
@@ -18866,10 +18861,10 @@ pub mod api {
 					#[doc = "Emits `Submitted`."]
 					submit {
 						proposal_origin: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::OriginCaller,
+							runtime_types::paseo_runtime::OriginCaller,
 						>,
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 						enactment_moment:
@@ -18974,7 +18969,7 @@ pub mod api {
 						index: ::core::primitive::u32,
 						track: ::core::primitive::u16,
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 					},
@@ -19004,7 +18999,7 @@ pub mod api {
 						index: ::core::primitive::u32,
 						track: ::core::primitive::u16,
 						proposal: runtime_types::frame_support::traits::preimages::Bounded<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 							runtime_types::sp_runtime::traits::BlakeTwo256,
 						>,
 						tally: runtime_types::pallet_conviction_voting::types::Tally<
@@ -19111,7 +19106,7 @@ pub mod api {
 						)>,
 						priority: ::core::primitive::u8,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 1)]
@@ -19128,7 +19123,7 @@ pub mod api {
 						)>,
 						priority: ::core::primitive::u8,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 3)]
@@ -19144,7 +19139,7 @@ pub mod api {
 						)>,
 						priority: ::core::primitive::u8,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 5)]
@@ -19158,7 +19153,7 @@ pub mod api {
 						)>,
 						priority: ::core::primitive::u8,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 6)]
@@ -19437,7 +19432,7 @@ pub mod api {
 					#[doc = "- `O(1)`. Actual cost depends on the number of length of `T::Keys::key_ids()` which is"]
 					#[doc = "  fixed."]
 					set_keys {
-						keys: runtime_types::paseo_parachain_runtime::SessionKeys,
+						keys: runtime_types::paseo_runtime::SessionKeys,
 						proof: ::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
 					},
 					#[codec(index = 1)]
@@ -19800,7 +19795,7 @@ pub mod api {
 					#[doc = "Authenticates the sudo key and dispatches a function call with `Root` origin."]
 					sudo {
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 1)]
@@ -19811,7 +19806,7 @@ pub mod api {
 					#[doc = "The dispatch origin for this call must be _Signed_."]
 					sudo_unchecked_weight {
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
@@ -19835,7 +19830,7 @@ pub mod api {
 							(),
 						>,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 4)]
@@ -19995,7 +19990,7 @@ pub mod api {
 					#[codec(index = 23)]
 					batch {
 						calls: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 24)]
@@ -20792,7 +20787,7 @@ pub mod api {
 					#[doc = "event is deposited."]
 					batch {
 						calls: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 1)]
@@ -20812,7 +20807,7 @@ pub mod api {
 					as_derivative {
 						index: ::core::primitive::u16,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 2)]
@@ -20831,7 +20826,7 @@ pub mod api {
 					#[doc = "- O(C) where C is the number of calls to be batched."]
 					batch_all {
 						calls: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 3)]
@@ -20843,10 +20838,10 @@ pub mod api {
 					#[doc = "- O(1)."]
 					dispatch_as {
 						as_origin: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::OriginCaller,
+							runtime_types::paseo_runtime::OriginCaller,
 						>,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 4)]
@@ -20865,7 +20860,7 @@ pub mod api {
 					#[doc = "- O(C) where C is the number of calls to be batched."]
 					force_batch {
 						calls: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 					#[codec(index = 5)]
@@ -20877,7 +20872,7 @@ pub mod api {
 					#[doc = "The dispatch origin for this call must be _Root_."]
 					with_weight {
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 						weight: runtime_types::sp_weights::weight_v2::Weight,
 					},
@@ -21331,7 +21326,7 @@ pub mod api {
 					#[codec(index = 3)]
 					dispatch_whitelisted_call_with_preimage {
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
-							runtime_types::paseo_parachain_runtime::RuntimeCall,
+							runtime_types::paseo_runtime::RuntimeCall,
 						>,
 					},
 				}
@@ -21622,7 +21617,7 @@ pub mod api {
 				}
 			}
 		}
-		pub mod paseo_parachain_runtime {
+		pub mod paseo_runtime {
 			use super::runtime_types;
 			pub mod asset_config {
 				use super::runtime_types;
@@ -21713,7 +21708,7 @@ pub mod api {
 			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
 			pub enum OriginCaller {
-				# [codec (index = 0)] system (runtime_types :: frame_support :: dispatch :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 22)] Council (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 24)] TechnicalCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 51)] PolkadotXcm (runtime_types :: pallet_xcm :: pallet :: Origin ,) , # [codec (index = 52)] CumulusXcm (runtime_types :: cumulus_pallet_xcm :: pallet :: Origin ,) , # [codec (index = 73)] DeveloperCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 84)] OmniAccount (runtime_types :: pallet_omni_account :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 121)] Ethereum (runtime_types :: pallet_ethereum :: RawOrigin ,) , # [codec (index = 172)] Origins (runtime_types :: paseo_parachain_runtime :: governance_v2 :: origins :: pallet_custom_origins :: Origin ,) , # [codec (index = 9)] Void (runtime_types :: sp_core :: Void ,) , }
+				# [codec (index = 0)] system (runtime_types :: frame_support :: dispatch :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 22)] Council (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 24)] TechnicalCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 51)] PolkadotXcm (runtime_types :: pallet_xcm :: pallet :: Origin ,) , # [codec (index = 52)] CumulusXcm (runtime_types :: cumulus_pallet_xcm :: pallet :: Origin ,) , # [codec (index = 73)] DeveloperCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 84)] OmniAccount (runtime_types :: pallet_omni_account :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 121)] Ethereum (runtime_types :: pallet_ethereum :: RawOrigin ,) , # [codec (index = 172)] Origins (runtime_types :: paseo_runtime :: governance_v2 :: origins :: pallet_custom_origins :: Origin ,) , # [codec (index = 9)] Void (runtime_types :: sp_core :: Void ,) , }
 			#[derive(
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,

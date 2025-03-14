@@ -7,7 +7,7 @@ jobs:
   release-bot:
     runs-on: ubuntu-22.04
     # this means the release contains a new docker image (thus a new client)
-    if: contains(github.event.release.body, 'litentry/litentry-parachain:v')
+    if: contains(github.event.release.body, 'litentry/heima:v')
     steps:
       - name: Post discord message
         env:
@@ -17,7 +17,6 @@ jobs:
         with:
           args: |
             Hi @everyone,
-            🚀 A new client release has been built: https://github.com/litentry/litentry-parachain/releases/tag/${{ github.event.release.tag_name }}
-            ✨ Please update the client using the docker image litentry/litentry-parachain:${{ github.event.release.tag_name }}
-
+            🚀 A new client release has been built: https://github.com/litentry/heima/releases/tag/${{ github.event.release.tag_name }}
+            ✨ Please update the client using the docker image litentry/heima:${{ github.event.release.tag_name }}
 

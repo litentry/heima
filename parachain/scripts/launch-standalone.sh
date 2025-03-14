@@ -4,16 +4,16 @@
 
 set -eo pipefail
 
-LITENTRY_PARACHAIN_DIR=${LITENTRY_PARACHAIN_DIR:-"/tmp/parachain_dev"}
-[ -d "$LITENTRY_PARACHAIN_DIR" ] || mkdir -p "$LITENTRY_PARACHAIN_DIR"
+HEIMA_DIR=${HEIMA_DIR:-"/tmp/parachain_dev"}
+[ -d "$HEIMA_DIR" ] || mkdir -p "$HEIMA_DIR"
 
 ROOTDIR=$(git rev-parse --show-toplevel)
-PARACHAIN_BIN="$ROOTDIR/parachain/target/release/litentry-collator"
+PARACHAIN_BIN="$ROOTDIR/parachain/target/release/heima-node"
 
 cd "$ROOTDIR"
 
 if [ ! -f "$PARACHAIN_BIN" ]; then
-  echo "no litentry-collator found, build it now ..."
+  echo "no heima-node found, build it now ..."
   make build-node
 fi
 
@@ -26,10 +26,10 @@ function print_divider() {
   echo "------------------------------------------------------------"
 }
 
-echo "Starting litentry-collator in standalone mode ..."
+echo "Starting heima-node in standalone mode ..."
 
 $PARACHAIN_BIN --dev --rpc-external --port "${CollatorPort:-30333}" --rpc-port "${CollatorWSPort:-9944}" \
-  &> "$LITENTRY_PARACHAIN_DIR/para.alice.log" &
+  &> "$HEIMA_DIR/para.alice.log" &
 
 sleep 10
 

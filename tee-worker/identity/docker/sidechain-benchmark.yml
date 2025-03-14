@@ -12,14 +12,14 @@ services:
       dockerfile: build.Dockerfile
       target: deployed-client
     depends_on:
-      litentry-node-${VERSION}:
+      heima-node-${VERSION}:
         condition: service_healthy
       litentry-worker-1-${VERSION}:
         condition: service_healthy
     networks:
       - litentry-test-network
     entrypoint:
-      "/usr/local/worker-cli/benchmark.sh -p 9944 -A 2011 -u ws://litentry-node
+      "/usr/local/worker-cli/benchmark.sh -p 9944 -A 2011 -u ws://heima-node
       -V wss://litentry-worker-1 -C /usr/local/bin/litentry-cli 2>&1"
     restart: "no"
 networks:

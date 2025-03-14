@@ -2,7 +2,7 @@
 set -eo pipefail
 
 function usage() {
-  echo "Usage: $0 litentry|paseo [docker-tag]"
+  echo "Usage: $0 heima|paseo [docker-tag]"
 }
 
 [ $# -lt 1 ] && (usage; exit 1)
@@ -12,7 +12,7 @@ cd "$ROOTDIR/parachain"
 
 CHAIN=$1
 TAG=${2:-latest}
-image="litentry/litentry-parachain:$TAG"
+image="litentry/heima:$TAG"
 
 docker pull "$image"
 

@@ -11,7 +11,7 @@ services:
             dockerfile: build.Dockerfile
             target: deployed-worker
         depends_on:
-            litentry-node:
+            heima-node:
                 condition: service_started
         networks:
             - litentry-test-network

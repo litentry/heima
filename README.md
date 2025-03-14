@@ -23,31 +23,31 @@ To build the binary:
 make build-node
 ```
 
-To build the `litentry/litentry-parachain` docker image, based on cargo profile:
+To build the `litentry/heima` docker image, based on cargo profile:
 
 ```
 make build-docker-release
 make build-docker-production
 ```
 
-To build the litentry-parachain runtime wasm:
+To build the heima runtime wasm:
 
 ```
-make build-runtime-litentry
+make build-runtime-heima
 ```
 
-The wasms should be located under `target/release/wbuild/litentry-parachain-runtime/`
+The wasms should be located under `target/release/wbuild/heima-runtime/`
 
-Similarly, use `make build-runtime-paseo` to build the paseo-parachain-runtime.
+Similarly, use `make build-runtime-paseo` to build the paseo-runtime.
 
 ## Launch parachain
 ### Launch a parachain network with relaychains
 
-Litentry uses [zombinet](https://github.com/paritytech/zombienet) to spin up a local network with 2 relaychain nodes and 1 parachain node:
+Heima uses [zombinet](https://github.com/paritytech/zombienet) to spin up a local network with 2 relaychain nodes and 1 parachain node:
 ```
-make launch-network-litentry
+make launch-network-heima
 ```
-It will firstly look for the `target/release/litentry-collator` binary - and if not found - copy the binary out from `litentry/litentry-parachain:latest` image if you are on Linux.
+It will firstly look for the `target/release/heima-node` binary - and if not found - copy the binary out from `litentry/heima:latest` image if you are on Linux.
 
 If you see the screenshot below, you can tell the network is successfully spun up and you can access the [polkadot-js block explorer](https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9944#/explorer) locally:
 

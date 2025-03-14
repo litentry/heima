@@ -47,7 +47,7 @@ pub mod test {
 	pub fn test_post_bool() {
 		// given
 		let client = MockedHttpClient::default();
-		let data = prepare_input_data("https://www.litentry.com/", "/bool", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "/bool", "{}");
 
 		// when
 		let result = http_post_bool(data, client).unwrap();
@@ -60,7 +60,7 @@ pub mod test {
 	pub fn test_post_i64() {
 		// given
 		let client = MockedHttpClient::default();
-		let data = prepare_input_data("https://www.litentry.com/", "/i64", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "/i64", "{}");
 
 		// when
 		let result = http_post_i64(data, client).unwrap();
@@ -76,7 +76,7 @@ pub mod test {
 	pub fn test_post_string() {
 		// given
 		let client = MockedHttpClient::default();
-		let data = prepare_input_data("https://www.litentry.com/", "/string", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "/string", "{}");
 
 		// when
 		let result = http_post_string(data, client).unwrap();
@@ -102,7 +102,7 @@ pub mod test {
 	pub fn returns_failure_for_invalid_json_pointer() {
 		// given
 		let client = MockedHttpClient::default();
-		let data = prepare_input_data("https://www.litentry.com/", "invalid_pointer", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "invalid_pointer", "{}");
 
 		// when
 		let result = http_post_string(data, client).unwrap();
@@ -115,7 +115,7 @@ pub mod test {
 	pub fn returns_failure_for_malformed_json() {
 		// given
 		let client = MockedHttpClient::malformed_json();
-		let data = prepare_input_data("https://www.litentry.com/", "string", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "string", "{}");
 
 		// when
 		let result = http_post_string(data, client).unwrap();
@@ -128,7 +128,7 @@ pub mod test {
 	pub fn returns_failure_for_value_of_type_other_than_expected() {
 		// given
 		let client = MockedHttpClient::default();
-		let data = prepare_input_data("https://www.litentry.com/", "/not_bool", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "/not_bool", "{}");
 
 		// when
 		let result = http_post_bool(data, client).unwrap();
@@ -155,7 +155,7 @@ pub mod test {
 	pub fn returns_error_for_http_error() {
 		// given
 		let client = MockedHttpClient::http_error();
-		let data = prepare_input_data("https://www.litentry.com/", "string", "{}");
+		let data = prepare_input_data("https://www.heima.network/", "string", "{}");
 
 		// when
 		let result = http_post_string(data, client).unwrap();

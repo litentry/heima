@@ -144,7 +144,7 @@ pub mod pallet {
 		},
 		// event errors caused by processing in TEE
 		// copied from core_primitives::IMPError, we use events instead of pallet::errors,
-		// see https://github.com/litentry/litentry-parachain/issues/1275
+		// see https://github.com/litentry/heima/issues/1275
 		//
 		// why is the `prime_identity` in the error event an Option?
 		// because in some erroneous cases we can't get the extrinsic sender (e.g. decode error)

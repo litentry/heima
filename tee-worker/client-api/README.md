@@ -39,5 +39,5 @@ Once update the `client-api/parachain-api` or `client-api/sidechain-api`, all yo
 
 ## Publish
 
-1. [parachain-api](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/parachain-api/README.md#publish-new-versions)
-2. [sidechain-api](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/sidechain-api/README.md#publish-new-versions)
+1. [parachain-api](https://github.com/litentry/heima/blob/dev/tee-worker/identity/client-api/parachain-api/README.md#publish-new-versions)
+2. [sidechain-api](https://github.com/litentry/heima/blob/dev/tee-worker/identity/client-api/sidechain-api/README.md#publish-new-versions)

@@ -212,7 +212,7 @@ where
 		}
 
 		// Try to reset nonce, see
-		// - https://github.com/litentry/litentry-parachain/issues/1036
+		// - https://github.com/litentry/heima/issues/1036
 		// - https://github.com/integritee-network/worker/issues/970
 		// It has to be done in a separate thread as nested ECALL/OCALL is disallowed
 		//
