@@ -1,6 +1,7 @@
 mod convert_api;
 mod error;
 mod spot_trading_api;
+mod traits;
 mod types;
 
 use convert_api::ConvertApi;
