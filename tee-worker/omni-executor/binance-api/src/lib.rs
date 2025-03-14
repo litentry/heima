@@ -1,5 +1,6 @@
 mod convert_api;
 mod error;
+mod spot_trading_api;
 mod types;
 
 use convert_api::ConvertApi;
@@ -8,6 +9,7 @@ use hmac::{Hmac, Mac};
 use log::error;
 use reqwest::{Client, Method};
 use sha2::Sha256;
+use spot_trading_api::SpotTradingApi;
 use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
@@ -37,6 +39,11 @@ impl BinanceApi {
 	/// Create a new ConvertApi instance
 	pub fn convert(&self) -> ConvertApi {
 		ConvertApi::new(self)
+	}
+
+	/// Create a new SpotTradingApi instance
+	pub fn spot_trading(&self) -> SpotTradingApi {
+		SpotTradingApi::new(self)
 	}
 
 	/// Create HMAC SHA256 signature for request parameters
