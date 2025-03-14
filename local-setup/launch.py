@@ -225,24 +225,24 @@ def main(processes, worker, workers_number, parachain_type, log_config_path, off
     worker_dir = "tee-worker/identity"
     worker_bin = "litentry-worker"
 
-    print("Starting litentry parachain in background ...")
+    print("Starting heima in background ...")
     if parachain_type == "standalone":
         add_collator_ports()        
-        os.environ['LITENTRY_PARACHAIN_DIR'] = parachain_dir
+        os.environ['HEIMA_DIR'] = parachain_dir
         setup_environment(offset, parachain_dir, worker_dir)
         run(["./parachain/scripts/launch-standalone.sh"], check=True)
     elif parachain_type == "network":
         add_collator_ports()        
-        os.environ['LITENTRY_PARACHAIN_DIR'] = parachain_dir
+        os.environ['HEIMA_DIR'] = parachain_dir
         setup_environment(offset, parachain_dir, worker_dir)
-        run(["./parachain/scripts/launch-network.sh", "litentry"], check=True)
+        run(["./parachain/scripts/launch-network.sh", "heima"], check=True)
     elif parachain_type == "remote":
         setup_environment(offset, "", worker_dir)
-        print("Litentry parachain should be started remotely")
+        print("Heima should be started remotely")
     else:
         sys.exit("Unsupported parachain_type")
 
-    print("Litentry parachain is running")
+    print("Heima is running")
     print("------------------------------------------------------------")
 
     c = pycurl.Curl()

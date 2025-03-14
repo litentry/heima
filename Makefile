@@ -4,7 +4,7 @@ all:
 
 # variant declaration
 
-NODE_BIN=litentry-collator
+NODE_BIN=heima-node
 
 .PHONY: help ## Display help commands
 help:
@@ -28,15 +28,15 @@ help:
 
 .PHONY: build-node ## Build release node
 build-node:
-	cd parachain && cargo build --locked -p litentry-collator --release
+	cd parachain && cargo build --locked -p heima-node --release
 
-.PHONY: build-runtime-litentry ## Build litentry release runtime
-build-runtime-litentry:
-	cd parachain && cargo build --locked -p litentry-parachain-runtime --release
+.PHONY: build-runtime-heima ## Build heima release runtime
+build-runtime-heima:
+	cd parachain && cargo build --locked -p heima-runtime --release
 
 .PHONY: build-runtime-paseo ## Build paseo release runtime
 build-runtime-paseo:
-	cd parachain && cargo build --locked -p paseo-parachain-runtime --release
+	cd parachain && cargo build --locked -p paseo-runtime --release
 
 .PHONY: build-docker-release ## Build docker image using cargo profile `release`
 build-docker-release:
@@ -60,11 +60,11 @@ build-node-tryruntime:
 launch-standalone:
 	@cd parachain && ./scripts/launch-standalone.sh
 
-.PHONY: launch-network-litentry ## Launch a local litentry network with relaychain network
-launch-network-litentry:
-	@cd parachain && ./scripts/launch-network.sh litentry
+.PHONY: launch-network-heima ## Launch a local heima network with relaychain network
+launch-network-heima:
+	@cd parachain && ./scripts/launch-network.sh heima
 
-.PHONY: launch-network-paseo ## Launch a local litentry network with relaychain network
+.PHONY: launch-network-paseo ## Launch a local paseo network with relaychain network
 launch-network-paseo:
 	@cd parachain && ./scripts/launch-network.sh paseo
 
@@ -78,9 +78,9 @@ test-cargo-all:
 test-cargo-all-benchmarks:
 	@cd parachain && cargo test --release --all --features runtime-benchmarks
 
-.PHONY: test-ts-litentry ## Run litentry ts tests without clean-up
-test-ts-litentry: launch-network-litentry
-	@trap "./scripts/clean-network.sh" EXIT; cd parachain && ./scripts/run-ts-test.sh litentry
+.PHONY: test-ts-heima ## Run heima ts tests without clean-up
+test-ts-heima: launch-network-heima
+	@trap "./scripts/clean-network.sh" EXIT; cd parachain && ./scripts/run-ts-test.sh heima
 
 .PHONY: test-ts-paseo ## Run paseo ts tests without clean-up
 test-ts-paseo: launch-network-paseo

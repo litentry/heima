@@ -60,7 +60,7 @@ pub(crate) fn query_tweet(
 						id: tweet_author_id.to_string(),
 						name: tweet_author_name.to_string(),
 						// intentionally return username with a different case, which shouldn't fail the verification
-						// see https://github.com/litentry/litentry-parachain/issues/1680
+						// see https://github.com/litentry/heima/issues/1680
 						username: tweet_author_name.to_string().to_uppercase(),
 						public_metrics: None,
 					}],

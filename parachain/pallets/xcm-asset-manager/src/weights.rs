@@ -21,7 +21,7 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("litmus-dev"), DB CACHE: 1024
 
 // Executed Command:
-// ./target/release/litentry-collator
+// ./target/release/heima-node
 // benchmark
 // pallet
 // --chain=litmus-dev

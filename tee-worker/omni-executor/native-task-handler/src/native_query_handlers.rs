@@ -2,7 +2,7 @@ use crate::{
 	types::{NativeOperationError, QueryResponse},
 	NativeOperationResponse, ResponseSender, TaskHandlerContext,
 };
-use executor_core::native_operation::NativeQuery;
+use executor_core::{intent_executor::IntentExecutor, native_operation::NativeQuery};
 use executor_crypto::aes256::{aes_decrypt, AesOutput};
 use executor_primitives::{Identity, MemberAccount};
 use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, Storage};
@@ -15,8 +15,20 @@ pub async fn handle_native_query<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<TaskHandlerContext<Header, RpcClient, RpcClientFactory>>,
+	ctx: Arc<
+		TaskHandlerContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 	query: NativeQuery,
 	response_sender: ResponseSender,
 ) {

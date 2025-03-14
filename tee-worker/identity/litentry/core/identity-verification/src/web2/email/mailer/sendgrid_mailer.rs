@@ -44,7 +44,7 @@ impl SendGridMail {
 	pub fn new(from_email: String, mail: Mail) -> Self {
 		let content = vec![Content { content_type: String::from("text/html"), value: mail.body }];
 		let to = Email { email: mail.to, name: None };
-		let from = Email { email: from_email, name: Some(String::from("Litentry")) };
+		let from = Email { email: from_email, name: Some(String::from("Heima")) };
 		Self {
 			personalizations: vec![Personalization { to: vec![to] }],
 			from,

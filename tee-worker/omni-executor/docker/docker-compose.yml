@@ -13,10 +13,10 @@ services:
     depends_on:
       ethereum-node:
         condition: service_started
-      litentry-node:
+      heima-node:
         condition: service_healthy
         restart: true
-    command: ["executor-worker", "run", "ws://litentry-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "ws://omni-executor:2100"]
+    command: ["executor-worker", "run", "ws://heima-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "ws://omni-executor:2100"]
     privileged: true
     restart: unless-stopped
     networks:
@@ -43,9 +43,9 @@ services:
   #     - "cast send --private-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6 0xf8d392519239c01a3a7a7a85d23abc2094d0ce53 --value 0.1ether -r http://ethereum-node:8545"
   #   depends_on:
   #     - ethereum-node
-  litentry-node:
-    image: litentry/litentry-parachain:latest
-    container_name: litentry-node
+  heima-node:
+    image: litentry/heima:latest
+    container_name: heima-node
     ports:
       - "9944:9944"
     command: ["--dev", "--rpc-external", "--rpc-port", "9944"]

@@ -9,7 +9,7 @@ use parentchain_api_interface::{
 			identity::Identity as SubxtIdentity, intent::Intent as SubxtIntent,
 			omni_account::MemberAccount as SubxtMemberAccount,
 		},
-		paseo_parachain_runtime::OmniAccountPermission as SubxtOmniAccountPermission,
+		paseo_runtime::OmniAccountPermission as SubxtOmniAccountPermission,
 	},
 };
 use parity_scale_codec::{Decode, Encode};

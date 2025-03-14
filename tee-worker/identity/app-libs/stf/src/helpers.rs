@@ -134,7 +134,7 @@ pub fn ensure_enclave_signer_or_self<AccountId: Encode + Decode + PartialEq>(
 // blake2_256(<sidechain nonce> + <primary account> + <identity-to-be-linked>)
 // ```
 // where <> means SCALE-encoded
-// see https://github.com/litentry/litentry-parachain/issues/1739 and P-174
+// see https://github.com/litentry/heima/issues/1739 and P-174
 pub fn get_expected_raw_message(
 	who: &Identity,
 	identity: &Identity,

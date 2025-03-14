@@ -32,7 +32,8 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_runtime::traits::AccountIdConversion;
 use std::net::SocketAddr;
 
-const UNSUPPORTED_CHAIN_MESSAGE: &str = "Unsupported chain spec, please use litentry*";
+const UNSUPPORTED_CHAIN_MESSAGE: &str =
+	"Unsupported chain spec, please use heima* or litentry-paseo*";
 
 trait IdentifyChain {
 	fn is_standalone(&self) -> bool;
@@ -55,18 +56,18 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		// `--chain=standalone or --chain=dev` to start a standalone node with paseo-dev chain spec
 		// mainly based on Acala's `dev` implementation
 		"dev" | "standalone" => Box::new(chain_specs::paseo::get_chain_spec_dev(true)),
-		// Litentry
-		"litentry-dev" => Box::new(chain_specs::litentry::get_chain_spec_dev()),
-		"litentry" => Box::new(chain_specs::ChainSpec::from_json_bytes(
-			&include_bytes!("../res/chain_specs/litentry.json")[..],
+		// Heima
+		"heima-dev" => Box::new(chain_specs::heima::get_chain_spec_dev()),
+		"heima" => Box::new(chain_specs::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/chain_specs/heima.json")[..],
 		)?),
 		// Paseo
 		"paseo-dev" => Box::new(chain_specs::paseo::get_chain_spec_dev(false)),
 		"paseo" => Box::new(chain_specs::ChainSpec::from_json_bytes(
 			&include_bytes!("../res/chain_specs/paseo.json")[..],
 		)?),
-		// Generate res/chain_specs/litentry.json
-		"generate-litentry" => Box::new(chain_specs::litentry::get_chain_spec_prod()),
+		// Generate res/chain_specs/heima.json
+		"generate-heima" => Box::new(chain_specs::heima::get_chain_spec_prod()),
 		// Generate res/chain_specs/paseo.json
 		"generate-paseo" => Box::new(chain_specs::paseo::get_chain_spec_prod()),
 		path => {
@@ -78,7 +79,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Litentry node".into()
+		"Heima node".into()
 	}
 
 	fn impl_version() -> String {
@@ -86,10 +87,10 @@ impl SubstrateCli for Cli {
 	}
 
 	fn description() -> String {
-		"Litentry node\n\nThe command-line arguments provided first will be \
+		"Heima node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		litentry-collator <parachain-args> -- <relay-chain-args>"
+		heima-node <parachain-args> -- <relay-chain-args>"
 			.into()
 	}
 
@@ -98,11 +99,11 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/litentry/litentry-parachain/issues/new".into()
+		"https://github.com/litentry/heima/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2019
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -112,7 +113,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Litentry node".into()
+		"Heima node".into()
 	}
 
 	fn impl_version() -> String {
@@ -120,10 +121,10 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Litentry node\n\nThe command-line arguments provided first will be \
+		"Heima node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		litentry-collator <parachain-args> -- <relay-chain-args>"
+		heima-node <parachain-args> -- <relay-chain-args>"
 			.into()
 	}
 
@@ -132,11 +133,11 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/litentry/litentry-parachain/issues/new".into()
+		"https://github.com/litentry/heima/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2019
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
