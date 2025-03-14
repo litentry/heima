@@ -225,7 +225,6 @@ pub struct CreateOrderParams {
 	pub new_order_resp_type: Option<NewOrderRespType>,
 	pub self_trade_prevention_mode: Option<SelfTradePreventionMode>,
 	pub recv_window: Option<u32>,
-	pub timestamp: u64,
 }
 
 impl TryIntoParams for CreateOrderParams {
@@ -288,7 +287,6 @@ impl TryIntoParams for CreateOrderParams {
 		params.insert("symbol".to_string(), self.symbol.clone());
 		params.insert("side".to_string(), format!("{:?}", self.side));
 		params.insert("type".to_string(), format!("{:?}", self.order_type));
-		params.insert("timestamp".to_string(), self.timestamp.to_string());
 
 		if let Some(ref time_in_force) = self.time_in_force {
 			params.insert("timeInForce".to_string(), format!("{:?}", time_in_force));
