@@ -324,6 +324,7 @@ impl TryIntoParams for CreateOrderParams {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum OrderSide {
 	BUY,
 	SELL,
@@ -331,6 +332,7 @@ pub enum OrderSide {
 
 /// This sets how long an order will be active before expiration.
 #[derive(Debug, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum TimeInForce {
 	GTC,
 	IOC,
@@ -338,6 +340,7 @@ pub enum TimeInForce {
 }
 
 #[derive(Debug, Deserialize, Default)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum NewOrderRespType {
 	#[default]
 	ACK,
@@ -353,27 +356,41 @@ pub struct TradeOrder {
 	pub order_list_id: i64,
 	pub client_order_id: String,
 	pub transact_time: u64,
-	// pub price: String,
-	// pub orig_qty: String,
-	// pub executed_qty: String,
-	// pub orig_quote_order_qty: String,
-	// pub cummulative_quote_qty: String,
-	// pub status: OrderStatus,
-	// pub time_in_force: TimeInForce,
-	// #[serde(rename = "type")]
-	// pub order_type: OrderType,
-	// pub side: OrderSide,
-	// pub working_time: u64,
-	// pub self_trade_prevention_mode: SelfTradePreventionMode,
-	// pub fills: Vec<Fill>,
+	pub price: String,
+	pub orig_qty: String,
+	pub executed_qty: String,
+	pub orig_quote_order_qty: String,
+	pub cummulative_quote_qty: String,
+	pub status: OrderStatus,
+	pub time_in_force: TimeInForce,
+	#[serde(rename = "type")]
+	pub order_type: OrderType,
+	pub side: OrderSide,
+	pub working_time: u64,
+	pub self_trade_prevention_mode: SelfTradePreventionMode,
+	pub fills: Vec<Fill>,
 }
 
-// #[derive(Debug, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct Fill {
-// 	pub price: String,
-// 	pub qty: String,
-// 	pub commission: String,
-// 	pub commission_asset: AssetSymbol,
-// 	pub trade_id: u64,
-// }
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Fill {
+	pub price: String,
+	pub qty: String,
+	pub commission: String,
+	pub commission_asset: AssetSymbol,
+	pub trade_id: u64,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
+pub enum OrderStatus {
+	NEW,
+	PENDING_NEW,
+	PARTIALLY_FILLED,
+	FILLED,
+	CANCELED,
+	PENDING_CANCEL,
+	REJECTED,
+	EXPIRED,
+	EXPIRED_IN_MATCH,
+}
