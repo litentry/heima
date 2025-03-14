@@ -30,6 +30,8 @@ impl<'a> SpotTradingApi<'a> {
 		Ok(server_time.server_time)
 	}
 
+	/// Get Current exchange trading rules and symbol information
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-endpoints#exchange-information
 	pub async fn get_exchange_info(
 		&self,
 		symbol: Option<String>,
@@ -38,14 +40,17 @@ impl<'a> SpotTradingApi<'a> {
 	) -> Result<ExchangeInfo, Error> {
 		let endpoint = format!("{}/exchangeInfo", SPOT_TRADING_API);
 		let mut params = HashMap::new();
+		if let Some(permissions) = permissions {
+			if symbols.is_some() || symbol.is_some() {
+				return Err(Error::InvalidParams);
+			}
+			params.insert("permissions".to_string(), format!("{}", permissions));
+		}
 		if let Some(symbol) = symbol {
 			params.insert("symbol".to_string(), symbol);
 		}
 		if let Some(symbols) = symbols {
 			params.insert("symbols".to_string(), symbols.join(","));
-		}
-		if let Some(permissions) = permissions {
-			params.insert("permissions".to_string(), format!("{}", permissions));
 		}
 
 		self.base_api.make_public_get_request(&endpoint, Some(params)).await
