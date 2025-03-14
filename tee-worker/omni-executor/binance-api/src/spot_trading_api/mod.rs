@@ -155,22 +155,6 @@ impl<'a> SpotTradingApi<'a> {
 			.await
 	}
 
-	// /// Cancels all active orders on a symbol. This includes orders that are part of an order list.
-	// /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#cancel-all-open-orders-on-a-symbol-trade
-	// TODO: check the response shape
-	// pub async fn cancel_all_orders(
-	// 	&self,
-	// 	symbol: &str,
-	// 	recv_window: Option<u32>,
-	// ) -> Result<Vec<TradeOrder>, Error> {
-	// 	let endpoint = format!("{}/openOrders", SPOT_TRADING_API);
-	// 	let mut params = HashMap::new();
-	// 	params.insert("symbol".to_string(), symbol.to_string());
-	// 	self.base_api
-	// 		.make_signed_request(&endpoint, Method::DELETE, Some(params), recv_window)
-	// 		.await
-	// }
-
 	/// Get all account orders; active, canceled, or filled.
 	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#all-orders-user_data
 	pub async fn get_all_orders(
