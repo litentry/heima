@@ -61,9 +61,9 @@ impl<'a> SpotTradingApi<'a> {
 	pub async fn create_order(
 		&self,
 		create_order_params: CreateOrderParams,
-		recv_window: Option<u32>,
 	) -> Result<TradeOrder, Error> {
 		let endpoint = format!("{}/order", SPOT_TRADING_API);
+		let recv_window = create_order_params.recv_window;
 		let params = create_order_params.try_into_params().map_err(|e| {
 			log::error!("Error converting create order params: {}", e);
 			Error::InvalidParams

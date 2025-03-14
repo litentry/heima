@@ -224,58 +224,72 @@ pub struct CreateOrderParams {
 	pub iceberg_qty: Option<String>,
 	pub new_order_resp_type: Option<NewOrderRespType>,
 	pub self_trade_prevention_mode: Option<SelfTradePreventionMode>,
-	pub recv_window: Option<u64>,
+	pub recv_window: Option<u32>,
 	pub timestamp: u64,
-}
-
-impl CreateOrderParams {
-	pub fn new(
-		symbol: String,
-		side: OrderSide,
-		order_type: OrderType,
-		time_in_force: Option<TimeInForce>,
-		quantity: Option<String>,
-		quote_order_qty: Option<String>,
-		price: Option<String>,
-		new_client_order_id: Option<String>,
-		strategy_id: Option<u64>,
-		strategy_type: Option<u32>,
-		stop_price: Option<String>,
-		trailing_delta: Option<u64>,
-		iceberg_qty: Option<String>,
-		new_order_resp_type: Option<NewOrderRespType>,
-		self_trade_prevention_mode: Option<SelfTradePreventionMode>,
-		recv_window: Option<u64>,
-		timestamp: u64,
-	) -> CreateOrderParams {
-		CreateOrderParams {
-			symbol,
-			side,
-			order_type,
-			time_in_force,
-			quantity,
-			quote_order_qty,
-			price,
-			new_client_order_id,
-			strategy_id,
-			strategy_type,
-			stop_price,
-			trailing_delta,
-			iceberg_qty,
-			new_order_resp_type,
-			self_trade_prevention_mode,
-			recv_window,
-			timestamp,
-		}
-	}
 }
 
 impl TryIntoParams for CreateOrderParams {
 	fn try_into_params(&self) -> Result<HashMap<String, String>, &'static str> {
+		match self.order_type {
+			OrderType::LIMIT => {
+				if self.price.is_none() && self.quantity.is_none() && self.time_in_force.is_none() {
+					return Err("price, quantity, and time_in_force are required for this order type (LIMIT)");
+				}
+			},
+			OrderType::MARKET => {
+				if self.quantity.is_none() || self.quote_order_qty.is_none() {
+					return Err(
+						"quantity or quote_order_qty are required for this order type (MARKET)",
+					);
+				}
+			},
+			OrderType::STOP_LOSS => {
+				if self.quantity.is_none()
+					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+				{
+					return Err("quantity, stop_price, or trailing_delta are required for this order type (STOP_LOSS)");
+				}
+			},
+			OrderType::STOP_LOSS_LIMIT => {
+				if self.time_in_force.is_none()
+					&& self.quantity.is_none()
+					&& self.price.is_none()
+					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+				{
+					return Err("price, quantity, stop_price, and time_in_force are required for this order type (STOP_LOSS_LIMIT)");
+				}
+			},
+			OrderType::TAKE_PROFIT => {
+				if self.quantity.is_none()
+					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+				{
+					return Err("quantity, stop_price, or trailing_delta are required for this order type (TAKE_PROFIT)");
+				}
+			},
+			OrderType::TAKE_PROFIT_LIMIT => {
+				if self.time_in_force.is_none()
+					&& self.quantity.is_none()
+					&& self.price.is_none()
+					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+				{
+					return Err("price, quantity, stop_price, and time_in_force are required for this order type (TAKE_PROFIT_LIMIT)");
+				}
+			},
+			OrderType::LIMIT_MAKER => {
+				if self.price.is_none() && self.quantity.is_none() {
+					return Err(
+						"price and quantity are required for this order type (LIMIT_MAKER)",
+					);
+				}
+			},
+		}
+
 		let mut params = HashMap::new();
 		params.insert("symbol".to_string(), self.symbol.clone());
 		params.insert("side".to_string(), format!("{:?}", self.side));
 		params.insert("type".to_string(), format!("{:?}", self.order_type));
+		params.insert("timestamp".to_string(), self.timestamp.to_string());
+
 		if let Some(ref time_in_force) = self.time_in_force {
 			params.insert("timeInForce".to_string(), format!("{:?}", time_in_force));
 		}
@@ -318,7 +332,6 @@ impl TryIntoParams for CreateOrderParams {
 		if let Some(recv_window) = self.recv_window {
 			params.insert("recvWindow".to_string(), recv_window.to_string());
 		}
-		params.insert("timestamp".to_string(), self.timestamp.to_string());
 		Ok(params)
 	}
 }
