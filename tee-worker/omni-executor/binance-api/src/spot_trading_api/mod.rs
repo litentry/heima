@@ -3,7 +3,7 @@ mod types;
 use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
 use std::collections::HashMap;
 use types::{
-	CancelOrderRestrictions, CreateOrderParams, ExchangeInfo, Permission, ServerTime,
+	AccountInfo, CancelOrderRestrictions, CreateOrderParams, ExchangeInfo, Permission, ServerTime,
 	TestTradeOrder, TradeOrder,
 };
 
@@ -180,6 +180,23 @@ impl<'a> SpotTradingApi<'a> {
 		}
 		if let Some(limit) = limit {
 			params.insert("limit".to_string(), limit.to_string());
+		}
+		self.base_api
+			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
+			.await
+	}
+
+	/// Get current account information.
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints#account-information-user_data
+	pub async fn get_account_info(
+		&self,
+		omit_zero_balances: Option<bool>,
+		recv_window: Option<u32>,
+	) -> Result<AccountInfo, Error> {
+		let endpoint = format!("{}/account", SPOT_TRADING_API);
+		let mut params = HashMap::new();
+		if let Some(omit_zero_balances) = omit_zero_balances {
+			params.insert("recvWindow".to_string(), format!("{}", omit_zero_balances));
 		}
 		self.base_api
 			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)

@@ -466,3 +466,80 @@ impl std::fmt::Display for CancelOrderRestrictions {
 		}
 	}
 }
+
+/*
+example account info response:
+{
+  "makerCommission": 15,
+  "takerCommission": 15,
+  "buyerCommission": 0,
+  "sellerCommission": 0,
+  "commissionRates": {
+	"maker": "0.00150000",
+	"taker": "0.00150000",
+	"buyer": "0.00000000",
+	"seller": "0.00000000"
+  },
+  "canTrade": true,
+  "canWithdraw": true,
+  "canDeposit": true,
+  "brokered": false,
+  "requireSelfTradePrevention": false,
+  "preventSor": false,
+  "updateTime": 123456789,
+  "accountType": "SPOT",
+  "balances": [
+	{
+	  "asset": "BTC",
+	  "free": "4723846.89208129",
+	  "locked": "0.00000000"
+	},
+	{
+	  "asset": "LTC",
+	  "free": "4763368.68006011",
+	  "locked": "0.00000000"
+	}
+  ],
+  "permissions": [
+	"SPOT"
+  ],
+  "uid": 354937868
+}
+*/
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountInfo {
+	pub maker_commission: u32,
+	pub taker_commission: u32,
+	pub buyer_commission: u32,
+	pub seller_commission: u32,
+	pub commission_rates: CommissionRates,
+	pub can_trade: bool,
+	pub can_withdraw: bool,
+	pub can_deposit: bool,
+	pub brokered: bool,
+	pub require_self_trade_prevention: bool,
+	pub prevent_sor: bool,
+	pub update_time: u64,
+	pub account_type: Permission, // Account type and Symbol Permissions are the same
+	pub balances: Vec<Balance>,
+	pub permissions: Vec<Permission>,
+	pub uid: u64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommissionRates {
+	pub maker: String,
+	pub taker: String,
+	pub buyer: String,
+	pub seller: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Balance {
+	pub asset: AssetSymbol,
+	pub free: String,
+	pub locked: String,
+}
