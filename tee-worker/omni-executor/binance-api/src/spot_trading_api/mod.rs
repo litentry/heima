@@ -91,4 +91,30 @@ impl<'a> SpotTradingApi<'a> {
 			.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
 			.await
 	}
+
+	/// Get order
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#query-order-user_data
+	pub async fn get_order(
+		&self,
+		symbol: &str,
+		order_id: Option<u64>,
+		orig_client_order_id: Option<&str>,
+		recv_window: Option<u32>,
+	) -> Result<TradeOrder, Error> {
+		let endpoint = format!("{}/order", SPOT_TRADING_API);
+		if order_id.is_none() && orig_client_order_id.is_none() {
+			return Err(Error::InvalidParams);
+		}
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), symbol.to_string());
+		if let Some(order_id) = order_id {
+			params.insert("orderId".to_string(), order_id.to_string());
+		}
+		if let Some(orig_client_order_id) = orig_client_order_id {
+			params.insert("origClientOrderId".to_string(), orig_client_order_id.to_string());
+		}
+		self.base_api
+			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
+			.await
+	}
 }
