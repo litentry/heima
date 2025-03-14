@@ -28,7 +28,7 @@ pub struct RateLimit {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum RateLimitType {
 	REQUEST_WEIGHT,
 	ORDERS,
@@ -36,6 +36,7 @@ pub enum RateLimitType {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum RateLimitInterval {
 	SECOND,
 	MINUTE,
@@ -44,8 +45,8 @@ pub enum RateLimitInterval {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "filterType")]
-#[allow(non_snake_case)]
-enum ExchangeFilter {
+#[allow(non_snake_case, clippy::enum_variant_names)]
+pub enum ExchangeFilter {
 	#[serde(rename = "EXCHANGE_MAX_NUM_ORDERS")]
 	MaxNumOrders { maxNumOrders: u32 },
 
@@ -84,12 +85,19 @@ pub struct Symbol {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum SymbolStatus {
-	TRADING, // TODO: find other possible values in the docs
+	PRE_TRADING,
+	TRADING,
+	POST_TRADING,
+	END_OF_DAY,
+	HALT,
+	AUCTION_MATCH,
+	BREAK,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum OrderType {
 	LIMIT,
 	LIMIT_MAKER,
@@ -103,7 +111,7 @@ pub enum OrderType {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "filterType")]
 #[allow(non_snake_case)]
-enum SymbolFilter {
+pub enum SymbolFilter {
 	#[serde(rename = "PRICE_FILTER")]
 	PriceFilter { minPrice: String, maxPrice: String, tickSize: String },
 
@@ -162,11 +170,11 @@ enum SymbolFilter {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Permission {
 	SPOT,
 	MARGIN,
 	LEVERAGED,
-	// TODO: find other possible values in the docs
 }
 
 impl std::fmt::Display for Permission {
@@ -180,9 +188,12 @@ impl std::fmt::Display for Permission {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum SelfTradePreventionMode {
 	NONE,
-	// TODO: find other possible values in the docs
+	EXPIRE_MAKER,
+	EXPIRE_TAKER,
+	EXPIRE_BOTH,
 }
 
 #[derive(Debug, Deserialize)]
