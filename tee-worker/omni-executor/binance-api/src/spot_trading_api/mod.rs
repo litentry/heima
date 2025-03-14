@@ -2,7 +2,7 @@ mod types;
 
 use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
 use std::collections::HashMap;
-use types::{CreateOrderParams, ExchangeInfo, Permission, ServerTime, TradeOrder};
+use types::{CreateOrderParams, ExchangeInfo, Permission, ServerTime, TestTradeOrder, TradeOrder};
 
 /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information
 const SPOT_TRADING_API: &str = "/api/v3";
@@ -68,6 +68,25 @@ impl<'a> SpotTradingApi<'a> {
 			log::error!("Error converting create order params: {}", e);
 			Error::InvalidParams
 		})?;
+		self.base_api
+			.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
+			.await
+	}
+
+	/// Test new order creation and signature/recvWindow long. Creates and validates a new order but does not send it into the matching engine.
+	pub async fn test_new_order(
+		&self,
+		create_order_params: CreateOrderParams,
+		compute_commission_rates: bool,
+	) -> Result<TestTradeOrder, Error> {
+		let endpoint = format!("{}/order/test", SPOT_TRADING_API);
+		let recv_window = create_order_params.recv_window;
+		let mut params = create_order_params.try_into_params().map_err(|e| {
+			log::error!("Error converting create order params: {}", e);
+			Error::InvalidParams
+		})?;
+		params
+			.insert("computeCommissionRates".to_string(), format!("{}", compute_commission_rates));
 		self.base_api
 			.make_signed_request(&endpoint, Method::POST, Some(params), recv_window)
 			.await

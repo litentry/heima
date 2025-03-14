@@ -407,3 +407,34 @@ pub enum OrderStatus {
 	EXPIRED,
 	EXPIRED_IN_MATCH,
 }
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+#[serde(rename_all = "camelCase")]
+pub enum TestTradeOrder {
+	WithCommissionRates {
+		standard_commission_for_order: CommissionForOrder,
+		tax_commission_for_order: CommissionForOrder,
+		discount: Discount,
+	},
+	Empty(EmptyResponse),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EmptyResponse {}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommissionForOrder {
+	pub maker: String,
+	pub taker: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Discount {
+	pub enabled_for_account: bool,
+	pub enabled_for_symbol: bool,
+	pub discount_asset: AssetSymbol,
+	pub discount: String,
+}
