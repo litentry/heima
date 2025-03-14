@@ -2,7 +2,10 @@ mod types;
 
 use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
 use std::collections::HashMap;
-use types::{CreateOrderParams, ExchangeInfo, Permission, ServerTime, TestTradeOrder, TradeOrder};
+use types::{
+	CancelOrderRestrictions, CreateOrderParams, ExchangeInfo, Permission, ServerTime,
+	TestTradeOrder, TradeOrder,
+};
 
 /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information
 const SPOT_TRADING_API: &str = "/api/v3";
@@ -115,6 +118,40 @@ impl<'a> SpotTradingApi<'a> {
 		}
 		self.base_api
 			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
+			.await
+	}
+
+	/// Cancel an active order.
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#cancel-order-trade
+	pub async fn cancel_order(
+		&self,
+		symbol: &str,
+		order_id: Option<u64>,
+		orig_client_order_id: Option<&str>,
+		new_client_order_id: Option<&str>,
+		cancel_restrictions: Option<CancelOrderRestrictions>,
+		recv_window: Option<u32>,
+	) -> Result<TradeOrder, Error> {
+		let endpoint = format!("{}/order", SPOT_TRADING_API);
+		if order_id.is_none() && orig_client_order_id.is_none() {
+			return Err(Error::InvalidParams);
+		}
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), symbol.to_string());
+		if let Some(order_id) = order_id {
+			params.insert("orderId".to_string(), order_id.to_string());
+		}
+		if let Some(orig_client_order_id) = orig_client_order_id {
+			params.insert("origClientOrderId".to_string(), orig_client_order_id.to_string());
+		}
+		if let Some(new_client_order_id) = new_client_order_id {
+			params.insert("newClientOrderId".to_string(), new_client_order_id.to_string());
+		}
+		if let Some(cancel_restrictions) = cancel_restrictions {
+			params.insert("cancelRestrictions".to_string(), format!("{}", cancel_restrictions));
+		}
+		self.base_api
+			.make_signed_request(&endpoint, Method::DELETE, Some(params), recv_window)
 			.await
 	}
 }

@@ -447,3 +447,22 @@ pub struct Discount {
 	pub discount_asset: AssetSymbol,
 	pub discount: String,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
+pub enum CancelOrderRestrictions {
+	ONLY_NEW,
+	ONLY_PARTIALLY_FILLED,
+	PARTIALLY_FILLED,
+}
+
+impl std::fmt::Display for CancelOrderRestrictions {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			CancelOrderRestrictions::ONLY_NEW => write!(f, "ONLY_NEW"),
+			CancelOrderRestrictions::ONLY_PARTIALLY_FILLED => write!(f, "ONLY_PARTIALLY_FILLED"),
+			CancelOrderRestrictions::PARTIALLY_FILLED => write!(f, "PARTIALLY_FILLED"),
+		}
+	}
+}
