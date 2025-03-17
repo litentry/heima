@@ -196,7 +196,7 @@ impl<'a> SpotTradingApi<'a> {
 		let endpoint = format!("{}/account", SPOT_TRADING_API);
 		let mut params = HashMap::new();
 		if let Some(omit_zero_balances) = omit_zero_balances {
-			params.insert("recvWindow".to_string(), format!("{}", omit_zero_balances));
+			params.insert("omitZeroBalances".to_string(), format!("{}", omit_zero_balances));
 		}
 		self.base_api
 			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
@@ -213,6 +213,4 @@ impl<'a> SpotTradingApi<'a> {
 			self.base_api.make_public_get_request(&endpoint, Some(params)).await?;
 		Ok(symbol_price.price)
 	}
-}
-
 }
