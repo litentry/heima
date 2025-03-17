@@ -95,7 +95,7 @@ export async function requestAuthToken(
 
     const callResponse = result.asOk.asCallResponse;
     if (!callResponse.isAuthToken) {
-      throw new Error('Unexpected response type');
+      throw new Error('Unexpected call response type');
     }
 
     const token = callResponse.asAuthToken.toString();
