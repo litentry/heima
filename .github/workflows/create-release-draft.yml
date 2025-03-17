@@ -321,8 +321,8 @@ jobs:
           body_path: ${{ github.workspace }}/.github/release_notes.md
           draft: true
           files: |
-            *-parachain-runtime/*-srtool-digest.json
-            *-parachain-runtime/*-runtime.compact.compressed.wasm
+            *-runtime/*-srtool-digest.json
+            *-runtime/*-runtime.compact.compressed.wasm
             heima-node/heima-node
             heima-node/*-genesis-state
             heima-node/*-genesis-wasm
