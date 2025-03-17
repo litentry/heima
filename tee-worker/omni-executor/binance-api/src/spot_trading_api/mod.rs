@@ -3,8 +3,8 @@ mod types;
 use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
 use std::collections::HashMap;
 use types::{
-	AccountInfo, CancelOrderRestrictions, CreateOrderParams, ExchangeInfo, Permission, ServerTime,
-	TestTradeOrder, TradeOrder,
+	AccountInfo, CancelOrderRestrictions, CreateOrderParams, EmptyResponse, ExchangeInfo,
+	Permission, ServerTime, SymbolPrice, TestTradeOrder, TradeOrder,
 };
 
 /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information
@@ -20,7 +20,7 @@ impl<'a> SpotTradingApi<'a> {
 	}
 
 	/// Test connectivity to the Rest API
-	pub async fn test_connectivity(&self) -> Result<(), Error> {
+	pub async fn test_connectivity(&self) -> Result<EmptyResponse, Error> {
 		let endpoint = format!("{}/ping", SPOT_TRADING_API);
 		self.base_api.make_public_get_request(&endpoint, None).await
 	}
