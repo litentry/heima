@@ -2,8 +2,8 @@
 name = "its-test"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>', 'Integritee AG <hello@integritee.network>']
-homepage = 'https://litentry.com/'
-repository = 'https://github.com/litentry/litentry-parachain'
+homepage = 'https://www.heima.network'
+repository = 'https://github.com/litentry/heima'
 license = "Apache-2.0"
 edition = "2021"
 

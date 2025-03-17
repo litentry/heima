@@ -23,7 +23,7 @@
 //! WASM-EXECUTION: `Compiled`, CHAIN: `Some("paseo-dev")`, DB CACHE: 20
 
 // Executed Command:
-// ./litentry-collator
+// ./heima-node
 // benchmark
 // pallet
 // --chain=paseo-dev

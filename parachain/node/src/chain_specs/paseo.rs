@@ -17,7 +17,7 @@
 use super::*;
 use core_primitives::PASEO_PARA_ID;
 use cumulus_primitives_core::ParaId;
-use paseo_parachain_runtime::{
+use paseo_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
 	ParachainStakingConfig, PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SudoConfig,
@@ -33,7 +33,7 @@ use sp_core::sr25519;
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Get default parachain properties for paseo which will be filled into chain spec
-/// We use 31 as the SS58Prefix (same as Litentry)
+/// We use 31 as the SS58Prefix (same as Heima)
 fn default_parachain_properties() -> Properties {
 	parachain_properties("HEI", 18, 31)
 }
@@ -94,7 +94,7 @@ pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/paseo.json"),
 		"Heima-paseo",
-		"litentry-paseo",
+		"heima-paseo",
 		ChainType::Live,
 		"paseo".into(),
 		PASEO_PARA_ID.into(),
@@ -183,9 +183,9 @@ fn generate_genesis(
 				.cloned()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                   // account id
-						acc,                                           // validator id
-						paseo_parachain_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                         // account id
+						acc,                                 // validator id
+						paseo_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),

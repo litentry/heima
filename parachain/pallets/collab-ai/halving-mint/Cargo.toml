@@ -3,9 +3,9 @@ name = 'pallet-halving-mint'
 description = 'pallet to mint tokens in a halving way similar to BTC'
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition = '2021'
-homepage = 'https://litentry.com/'
+homepage = 'https://www.heima.network'
 license = 'GPL-3.0'
-repository = 'https://github.com/litentry/litentry-parachain'
+repository = 'https://github.com/litentry/heima'
 version = '0.1.0'
 
 [package.metadata.docs.rs]

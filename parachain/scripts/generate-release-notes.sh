@@ -16,7 +16,7 @@ function usage() {
 ROOTDIR=$(git rev-parse --show-toplevel)
 cd "$ROOTDIR"
 
-REPO=https://github.com/litentry/litentry-parachain
+REPO=https://github.com/litentry/heima
 
 type=$2
 
@@ -47,14 +47,14 @@ if is_client_release; then
   # base image used to build the node binary
   NODE_BUILD_BASE_IMAGE=$(grep FROM parachain/docker/Dockerfile | head -n1 | sed 's/^FROM //;s/ as.*//')
 
-  # somehow `docker inspect` doesn't pull our litentry-parachain image sometimes
+  # somehow `docker inspect` doesn't pull our heima image sometimes
   docker pull "$NODE_BUILD_BASE_IMAGE"
-  docker pull "litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG"
+  docker pull "litentry/heima:$PARACHAIN_DOCKER_TAG"
 
   NODE_VERSION=$(grep version parachain/node/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
-  NODE_BIN=litentry-collator
+  NODE_BIN=heima-node
   # if is_client_release, files are downloaded in the upper layer
-  NODE_SHA1SUM=$(shasum litentry-collator/"$NODE_BIN" | awk '{print $1}')
+  NODE_SHA1SUM=$(shasum heima-node/"$NODE_BIN" | awk '{print $1}')
   if [ -f rust-toolchain.toml ]; then
     NODE_RUSTC_VERSION=$(rustc --version)
   else
@@ -111,7 +111,7 @@ version                      : $NODE_VERSION
 name                         : $NODE_BIN
 rustc                        : $NODE_RUSTC_VERSION
 sha1sum                      : $NODE_SHA1SUM
-docker image                 : litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG
+docker image                 : litentry/heima:$PARACHAIN_DOCKER_TAG
 <CODEBLOCK>
 
 EOF
@@ -119,8 +119,8 @@ fi
 
 if is_runtime_release; then
   echo "## Parachain runtime" >> "$1"
-  for CHAIN in litentry paseo; do
-    SRTOOL_DIGEST_FILE=$CHAIN-parachain-runtime/$CHAIN-parachain-srtool-digest.json
+  for CHAIN in heima paseo; do
+    SRTOOL_DIGEST_FILE=$CHAIN-runtime/$CHAIN-srtool-digest.json
     RUNTIME_VERSION=$(grep spec_version parachain/runtime/$CHAIN/src/lib.rs | sed 's/.*version: //;s/,//')
     RUNTIME_COMPRESSED_SIZE=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.size | sed 's/"//g')
     RUNTIME_RUSTC_VERSION=$(cat "$SRTOOL_DIGEST_FILE" | jq .rustc | sed 's/"//g')
@@ -151,15 +151,15 @@ if [ "$GENESIS_RELEASE" != "none" ]; then
     exit 1
   fi
 
-  GENESIS_STATE_HASH=$(shasum litentry-collator/$GENESIS_RELEASE-genesis-state | awk '{print $1}')
-  GENESIS_WASM_HASH=$(shasum litentry-collator/$GENESIS_RELEASE-genesis-wasm | awk '{print $1}')
+  GENESIS_STATE_HASH=$(shasum heima-node/$GENESIS_RELEASE-genesis-state | awk '{print $1}')
+  GENESIS_WASM_HASH=$(shasum heima-node/$GENESIS_RELEASE-genesis-wasm | awk '{print $1}')
 
   # double check that exported wasm matches what's written in chain-spec
   # intentionally use 'generate-prod' as chain type
-  docker run --rm "litentry/litentry-parachain:$PARACHAIN_DOCKER_TAG" build-spec --chain=generate-$GENESIS_RELEASE --raw | \
+  docker run --rm "litentry/heima:$PARACHAIN_DOCKER_TAG" build-spec --chain=generate-$GENESIS_RELEASE --raw | \
   grep -F '"0x3a636f6465"' | sed 's/.*"0x3a636f6465": "//;s/",$//' | tr -d '\n' > /tmp/built-wasm
 
-  if cmp /tmp/built-wasm litentry-collator/$GENESIS_RELEASE-genesis-wasm; then
+  if cmp /tmp/built-wasm heima-node/$GENESIS_RELEASE-genesis-wasm; then
     echo "genesis-wasm equal, all good."
     rm -f /tmp/built-wasm
   else

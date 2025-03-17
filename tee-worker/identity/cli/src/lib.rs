@@ -57,9 +57,9 @@ pub(crate) const ED25519_KEY_TYPE: KeyTypeId = KeyTypeId(*b"ed25");
 #[clap(name = "litentry-cli")]
 #[clap(version = VERSION)]
 #[clap(author = "Trust Computing GmbH <info@litentry.com>")]
-#[clap(about = "cli tool to interact with litentry-parachain and workers", long_about = None)]
-#[cfg_attr(feature = "sidechain", clap(about = "interact with litentry-parachain and sidechain", long_about = None))]
-#[cfg_attr(feature = "offchain-worker", clap(about = "interact with litentry-parachain and offchain-worker", long_about = None))]
+#[clap(about = "cli tool to interact with heima and workers", long_about = None)]
+#[cfg_attr(feature = "sidechain", clap(about = "interact with heima and sidechain", long_about = None))]
+#[cfg_attr(feature = "offchain-worker", clap(about = "interact with heima and offchain-worker", long_about = None))]
 #[clap(after_help = "stf subcommands depend on the stf crate this has been built against")]
 pub struct Cli {
 	/// node url

@@ -24,7 +24,7 @@
 #[macro_use]
 extern crate frame_benchmarking;
 
-use core_primitives::LITENTRY_PARA_ID;
+use core_primitives::HEIMA_PARA_ID;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
@@ -238,13 +238,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
 	// https://hackmd.io/JagpUd8tTjuKf9HQtpvHIQ
-	// The trie is an abstraction that sits between the Runtime (and its Overlays) and the actual database, providing an important abstraction to the blockchain, namely storage proofs and state roots.
-	// The trie format has changed since this pull request(#9732) in substrate. The main new difference is, that nodes that contain values larger than 256 bits will not storage the value itself, but rather store the hash of that value. The value itself, is consequently stored in the node that lives in the path traversed by this new hash.
-	// The main benefit of this optimization is better PoV (proof of validity) size for parachains, since large values are moved out of the common trie paths.
-	// The new trie has been included in Polkadot client since release v0.9.16. Although, new new trie format is not yet enabled. This is only done once state_version in RuntimeVersion is set to 1. Once set to 1, the trie works in a hybrid format, meaning that no migration is needed. Instead, migration is done lazily on the fly. Any storage key that's written to will be migrated, if needed. This means that a part of all chain's state is will migrated to the new format pretty soon after setting state_version to 1.
-	// Nonetheless, it might take a long time for all chain's entire state to be migrated to the new format. The sooner this happens, the better, since the lazy migration is a small overhead. Moreover, this hybrid/lazy state mode does not support warp-sync and state import/export.
-	// To do this faster, we have developed pallet-state-trie-migration. This pallet is a configurable background task that starts reading and writing all keys in the storage based on some given schedule, until they are all read, ergo migrated. This pallet can be deployed to a runtime to make sure all keys are read/written once, to ensure that all trie nodes are migrated to the new format.
-	// All substrate-based chains are advised to switch their state_version to 1, and use this pallet to migrate to the new trie format as soon as they can. Switching the state_version will enable the hybrid, lazy migration mode, and this pallet will speed up the migration process.
 	state_version: 1,
 };
 
@@ -959,7 +952,7 @@ impl pallet_evm::FeeCalculator for TransactionPaymentAsGasPrice {
 
 parameter_types! {
 	pub WeightPerGas: Weight = Weight::from_parts(WEIGHT_PER_GAS, 0);
-	pub ChainId: u64 = LITENTRY_PARA_ID.into();
+	pub ChainId: u64 = HEIMA_PARA_ID.into();
 	pub BlockGasLimit: U256 = U256::from(
 		NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT.ref_time() / WEIGHT_PER_GAS
 	);
@@ -1452,7 +1445,7 @@ construct_runtime! {
 		// I assume it's the desired behavior though or it doesn't really matter.
 		//
 		// also see the comment above `AllPalletsWithSystem` and
-		// https://github.com/litentry/litentry-parachain/issues/336
+		// https://github.com/litentry/heima/issues/336
 		Authorship: pallet_authorship = 40,
 		// 41 was: CollatorSelection
 		Session: pallet_session = 42,
