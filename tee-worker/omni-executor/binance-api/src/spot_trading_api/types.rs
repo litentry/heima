@@ -80,7 +80,9 @@ pub struct Symbol {
 	pub is_spot_trading_allowed: bool,
 	pub is_margin_trading_allowed: bool,
 	pub filters: Vec<SymbolFilter>,
+	#[serde(deserialize_with = "deserialize_permissions")]
 	pub permissions: Vec<Permission>,
+	#[serde(deserialize_with = "deserialize_permission_sets")]
 	pub permission_sets: Vec<Vec<Permission>>,
 	pub default_self_trade_prevention_mode: SelfTradePreventionMode,
 	pub allowed_self_trade_prevention_modes: Vec<SelfTradePreventionMode>,
@@ -172,11 +174,33 @@ pub enum SymbolFilter {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(clippy::upper_case_acronyms)]
+#[allow(clippy::upper_case_acronyms, non_camel_case_types)]
 pub enum Permission {
 	SPOT,
 	MARGIN,
 	LEVERAGED,
+	TradingGroup(u32), // Holds the number extracted from "TRD_GRP_XXX"
+	Unknown(String),   //  Catch-all for unexpected values
+}
+
+impl From<String> for Permission {
+	fn from(s: String) -> Self {
+		match s.as_str() {
+			"SPOT" => Permission::SPOT,
+			"MARGIN" => Permission::MARGIN,
+			"LEVERAGED" => Permission::LEVERAGED,
+			_ => match s.strip_prefix("TRD_GRP_") {
+				Some(group_number) => {
+					if let Ok(group_number) = group_number.parse() {
+						Permission::TradingGroup(group_number)
+					} else {
+						Permission::Unknown(s)
+					}
+				},
+				None => Permission::Unknown(s),
+			},
+		}
+	}
 }
 
 impl std::fmt::Display for Permission {
@@ -185,8 +209,29 @@ impl std::fmt::Display for Permission {
 			Permission::SPOT => write!(f, "SPOT"),
 			Permission::MARGIN => write!(f, "MARGIN"),
 			Permission::LEVERAGED => write!(f, "LEVERAGED"),
+			Permission::TradingGroup(group_number) => write!(f, "TRD_GRP_{}", group_number),
+			Permission::Unknown(s) => write!(f, "{}", s),
 		}
 	}
+}
+
+fn deserialize_permissions<'de, D>(deserializer: D) -> Result<Vec<Permission>, D::Error>
+where
+	D: serde::Deserializer<'de>,
+{
+	let permissions: Vec<String> = Deserialize::deserialize(deserializer)?;
+	Ok(permissions.into_iter().map(Permission::from).collect())
+}
+
+fn deserialize_permission_sets<'de, D>(deserializer: D) -> Result<Vec<Vec<Permission>>, D::Error>
+where
+	D: serde::Deserializer<'de>,
+{
+	let permission_sets: Vec<Vec<String>> = Deserialize::deserialize(deserializer)?;
+	Ok(permission_sets
+		.into_iter()
+		.map(|permissions| permissions.into_iter().map(Permission::from).collect())
+		.collect())
 }
 
 #[derive(Debug, Deserialize)]
