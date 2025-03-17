@@ -282,7 +282,7 @@ impl TryIntoParams for CreateOrderParams {
 				}
 			},
 			OrderType::MARKET => {
-				if self.quantity.is_none() || self.quote_order_qty.is_none() {
+				if self.quantity.is_none() && self.quote_order_qty.is_none() {
 					return Err(
 						"quantity or quote_order_qty are required for this order type (MARKET)",
 					);
@@ -290,7 +290,7 @@ impl TryIntoParams for CreateOrderParams {
 			},
 			OrderType::STOP_LOSS => {
 				if self.quantity.is_none()
-					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+					&& (self.stop_price.is_none() && self.trailing_delta.is_none())
 				{
 					return Err("quantity, stop_price, or trailing_delta are required for this order type (STOP_LOSS)");
 				}
@@ -299,14 +299,14 @@ impl TryIntoParams for CreateOrderParams {
 				if self.time_in_force.is_none()
 					&& self.quantity.is_none()
 					&& self.price.is_none()
-					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+					&& (self.stop_price.is_none() && self.trailing_delta.is_none())
 				{
 					return Err("price, quantity, stop_price, and time_in_force are required for this order type (STOP_LOSS_LIMIT)");
 				}
 			},
 			OrderType::TAKE_PROFIT => {
 				if self.quantity.is_none()
-					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+					&& (self.stop_price.is_none() && self.trailing_delta.is_none())
 				{
 					return Err("quantity, stop_price, or trailing_delta are required for this order type (TAKE_PROFIT)");
 				}
@@ -315,7 +315,7 @@ impl TryIntoParams for CreateOrderParams {
 				if self.time_in_force.is_none()
 					&& self.quantity.is_none()
 					&& self.price.is_none()
-					&& (self.stop_price.is_none() || self.trailing_delta.is_none())
+					&& (self.stop_price.is_none() && self.trailing_delta.is_none())
 				{
 					return Err("price, quantity, stop_price, and time_in_force are required for this order type (TAKE_PROFIT_LIMIT)");
 				}
