@@ -100,9 +100,10 @@ pub enum SymbolStatus {
 	BREAK,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum OrderType {
+	#[default]
 	LIMIT,
 	LIMIT_MAKER,
 	MARKET,
@@ -250,7 +251,7 @@ pub struct Sor {
 	pub symbols: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateOrderParams {
 	pub symbol: String,
@@ -379,9 +380,10 @@ impl TryIntoParams for CreateOrderParams {
 	}
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum OrderSide {
+	#[default]
 	BUY,
 	SELL,
 }
