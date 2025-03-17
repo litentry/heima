@@ -551,3 +551,8 @@ pub struct Balance {
 	pub free: String,
 	pub locked: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct SymbolPrice {
+	pub price: String,
+}

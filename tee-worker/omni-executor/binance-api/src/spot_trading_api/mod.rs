@@ -202,4 +202,17 @@ impl<'a> SpotTradingApi<'a> {
 			.make_signed_request(&endpoint, Method::GET, Some(params), recv_window)
 			.await
 	}
+
+	/// Get latest price for a symbol
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints#symbol-price-ticker
+	pub async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error> {
+		let endpoint = format!("{}/ticker/price", SPOT_TRADING_API);
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), symbol.to_string());
+		let symbol_price: SymbolPrice =
+			self.base_api.make_public_get_request(&endpoint, Some(params)).await?;
+		Ok(symbol_price.price)
+	}
+}
+
 }
