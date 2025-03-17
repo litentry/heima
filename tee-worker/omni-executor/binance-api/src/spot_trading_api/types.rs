@@ -141,7 +141,7 @@ pub enum SymbolFilter {
 	#[serde(rename = "NOTIONAL")]
 	Notional {
 		minNotional: String,
-		applyToMarket: bool,
+		applyMinToMarket: bool,
 		maxNotional: String,
 		applyMaxToMarket: bool,
 		avgPriceMins: u32,
@@ -167,10 +167,10 @@ pub enum SymbolFilter {
 
 	#[serde(rename = "TRAILING_DELTA")]
 	TrailingDelta {
-		minTrailingAboveDelta: String,
-		maxTrailingAboveDelta: String,
-		minTrailingBelowDelta: String,
-		maxTrailingBelowDelta: String,
+		minTrailingAboveDelta: u32,
+		maxTrailingAboveDelta: u32,
+		minTrailingBelowDelta: u32,
+		maxTrailingBelowDelta: u32,
 	},
 }
 
