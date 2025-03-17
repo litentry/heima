@@ -1,6 +1,6 @@
 {
   "name": "Heima-paseo",
-  "id": "litentry-paseo",
+  "id": "heima-paseo",
   "chainType": "Live",
   "bootNodes": [
     "/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWAkLyq5ktkfGK3HHaWTnqqa26x2LYTsDVj4zu5dLDQ1NA"
