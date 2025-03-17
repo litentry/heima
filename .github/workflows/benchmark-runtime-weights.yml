@@ -8,9 +8,9 @@ on:
         description: rebuild-docker
         required: true
         default: true
-      litentry:
+      heima:
         type: boolean
-        description: litentry
+        description: heima
         required: true
         default: true
       paseo:
@@ -64,7 +64,7 @@ jobs:
 
       - name: Push docker image
         run: |
-          docker push litentry/litentry-parachain:runtime-benchmarks
+          docker push litentry/heima:runtime-benchmarks
 
   ## Run the benchmarking remotely
   benchmark:
@@ -77,8 +77,8 @@ jobs:
       - name: Set environment variables
         run: |
           chain=""
-          if [ "${{ github.event.inputs.litentry }}" = "true" ]; then
-            chain="$chain litentry"
+          if [ "${{ github.event.inputs.heima }}" = "true" ]; then
+            chain="$chain heima"
           fi
           if [ "${{ github.event.inputs.paseo }}" = "true" ]; then
             chain="$chain paseo"
@@ -96,7 +96,7 @@ jobs:
 
       - name: Pull docker image
         run: |
-          docker pull litentry/litentry-parachain:runtime-benchmarks
+          docker pull litentry/heima:runtime-benchmarks
 
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
@@ -184,7 +184,7 @@ jobs:
 
             Pallets: "${{ github.event.inputs.pallets }}"
             Chain: "${{ env.CHAIN }}"
-            Github action run: https://github.com/litentry/litentry-parachain/actions/runs/${{ github.run_id }}
+            Github action run: https://github.com/litentry/heima/actions/runs/${{ github.run_id }}
           labels: |
             automated-pr
           assignees: ${{ github.actor }}

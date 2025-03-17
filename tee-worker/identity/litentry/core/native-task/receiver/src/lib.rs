@@ -346,6 +346,15 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					)),
 					auth_type
 				)),
+			_ => {
+				log::warn!("Received unsupported intent: {:?}", intent);
+				let result: TrustedCallResult = Err(TrustedCallError::UnexpectedIntent(format!(
+					"Unexpected intent: {:?}",
+					intent
+				)));
+				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
+				return
+			},
 		},
 		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
 			&metadata,

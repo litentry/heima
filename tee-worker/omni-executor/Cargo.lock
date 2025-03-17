@@ -1242,6 +1242,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d965446196e3b7decd44aa7ee49e31d630118f90ef12f97900f262eb915c951d"
 
 [[package]]
+name = "binance-api"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "hex",
+ "hmac 0.12.1",
+ "log",
+ "reqwest 0.12.8",
+ "serde",
+ "sha2 0.10.8",
+ "url",
+]
+
+[[package]]
 name = "binary-merkle-tree"
 version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2050,6 +2064,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cross-chain-intent-executor"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "executor-core",
+ "executor-primitives",
+ "log",
+]
+
+[[package]]
 name = "crossbeam-channel"
 version = "0.5.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2757,6 +2781,7 @@ dependencies = [
  "alloy",
  "async-trait",
  "executor-core",
+ "executor-primitives",
  "log",
  "tokio",
 ]
@@ -2928,6 +2953,7 @@ name = "executor-worker"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "cross-chain-intent-executor",
  "env_logger",
  "ethereum-intent-executor",
  "executor-core",
@@ -5476,6 +5502,7 @@ dependencies = [
  "env_logger",
  "executor-core",
  "executor-crypto",
+ "executor-primitives",
  "log",
  "parentchain-rpc-client",
  "parity-scale-codec",
@@ -7911,6 +7938,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "executor-core",
+ "executor-primitives",
  "log",
  "solana-client",
  "solana-sdk",

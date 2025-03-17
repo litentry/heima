@@ -90,7 +90,7 @@ export async function sendRequest(
 }
 
 // TrustedCalls are defined in:
-// https://github.com/litentry/litentry-parachain/blob/d4be11716fdb46021194bbe9fe791b15249a369e/tee-worker/app-libs/stf/src/trusted_call.rs#L61
+// https://github.com/litentry/heima/blob/d4be11716fdb46021194bbe9fe791b15249a369e/tee-worker/app-libs/stf/src/trusted_call.rs#L61
 //
 // About the signature, it's signed with `KeyringPair` here.
 // In reality we need to get the user's signature on the `payload`.

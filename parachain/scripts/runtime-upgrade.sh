@@ -9,7 +9,7 @@ function usage() {
   echo
   echo "Usage: $0 <wasm-name> <endpoint> <release-tag> "
   echo "e.g.:"
-  echo "    $0 litentry wss://rpc.litentry-parachain.litentry.io v0.9.21-01"
+  echo "    $0 litentry wss://rpc.heima-parachain.heima.network v0.9.21-01"
 }
 
 [ $# -ne 3 ] && (usage; exit 1)
@@ -20,8 +20,8 @@ function print_divider() {
 
 # Download runtime wasm
 print_divider
-echo "Download $1-parachain-runtime.compact.compressed.wasm from release tag $3 ..."
-gh release download "$3" -p "$1-parachain-runtime.compact.compressed.wasm" -O "$new_wasm" || true
+echo "Download $1-runtime.compact.compressed.wasm from release tag $3 ..."
+gh release download "$3" -p "$1-runtime.compact.compressed.wasm" -O "$new_wasm" || true
 
 if [ -f "$new_wasm" ] && [ -s "$new_wasm" ]; then
   ls -l "$new_wasm"

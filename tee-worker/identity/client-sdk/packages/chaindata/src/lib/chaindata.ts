@@ -52,7 +52,7 @@ export const litentryProd: ChainSpec = {
   isDefault: true,
   rpcs: [
     { url: 'wss://litentry-rpc.dwellir.com' },
-    { url: 'wss://rpc.litentry-parachain.litentry.io' },
+    { url: 'wss://rpc.heima-parachain.heima.network' },
   ],
   enclaveRpcs: [{ url: 'wss://enclave-prod.litentry.io' }],
 };
