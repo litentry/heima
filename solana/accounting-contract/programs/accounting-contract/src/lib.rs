@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use serde::{Deserialize, Serialize};
 
 declare_id!("31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub");
 
@@ -7,22 +8,17 @@ declare_id!("31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub");
 pub mod accounting_contract {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
-    }
-
     pub fn set_admin(ctx: Context<SetAdmin>, new_admin: Pubkey) -> Result<()> {
-        let upgrade_authority = ctx
-            .accounts
-            .program_account
-            .upgrade_authority_address
-            .unwrap();
+        let upgrade_authority = match ctx.accounts.program_account.upgrade_authority_address {
+            Some(address) => address,
+            None => return Err(ErrorCode::UpgradeAuthorityNotFound.into()),
+        };
         require!(
             ctx.accounts.caller.key() == upgrade_authority,
             ErrorCode::Unauthorized
         );
-        ctx.accounts.admin_account.admin = new_admin;
+        let admin = &mut ctx.accounts.admin_account.admin;
+        *admin = new_admin;
         Ok(())
     }
 
@@ -49,10 +45,35 @@ pub mod accounting_contract {
         Ok(())
     }
 
+    pub fn withdraw_funds(ctx: Context<WithdrawFunds>, amount: u64) -> Result<()> {
+        require!(
+            ctx.accounts.admin_account.admin == ctx.accounts.signer.key(),
+            ErrorCode::Unauthorized
+        );
+
+        require!(
+            ctx.accounts.treasury.to_account_info().lamports() >= amount,
+            ErrorCode::OutOfBalance
+        );
+
+        **ctx
+            .accounts
+            .treasury
+            .to_account_info()
+            .try_borrow_mut_lamports()? -= amount;
+        **ctx
+            .accounts
+            .beneficiary
+            .to_account_info()
+            .try_borrow_mut_lamports()? += amount;
+
+        Ok(())
+    }
+
     pub fn create_pay_request(
         ctx: Context<CreatePayRequest>,
-        amount: u64,
         nonce: u64,
+        amount: u64,
     ) -> Result<()> {
         require!(
             ctx.accounts.worker.worker == ctx.accounts.signer.key(),
@@ -60,61 +81,75 @@ pub mod accounting_contract {
         );
 
         require!(
-            ctx.accounts.treasury.balance >= amount,
+            ctx.accounts.treasury.to_account_info().lamports() >= amount,
             ErrorCode::OutOfBalance
         );
 
-        system_program::transfer(
-            CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                system_program::Transfer {
-                    from: ctx.accounts.treasury.to_account_info(),
-                    to: ctx.accounts.beneficiary.to_account_info(),
-                },
-            ),
-            amount,
-        )?;
+        require!(
+            ctx.accounts.account_nonce.nonce < nonce,
+            ErrorCode::InvalidNonce
+        );
+
+        **ctx
+            .accounts
+            .treasury
+            .to_account_info()
+            .try_borrow_mut_lamports()? -= amount;
+        **ctx
+            .accounts
+            .beneficiary
+            .to_account_info()
+            .try_borrow_mut_lamports()? += amount;
 
         let payout_request = &mut ctx.accounts.pay_out_request;
         payout_request.beneficiary = *ctx.accounts.beneficiary.key;
         payout_request.amount = amount;
         payout_request.nonce = nonce;
 
+        let nonce = &mut ctx.accounts.account_nonce.nonce;
+        *nonce += 1;
+
         Ok(())
     }
 }
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Serialize, Deserialize, Debug)]
 pub struct AdminAccount {
     pub admin: Pubkey,
 }
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Serialize, Deserialize, Debug)]
 pub struct WorkerAccount {
     pub worker: Pubkey,
 }
 
 #[account]
-#[derive(InitSpace)]
-pub struct TreasuryAccount {
-    pub balance: u64,
-}
+#[derive(InitSpace, Serialize, Deserialize, Debug)]
+pub struct TreasuryAccount {}
 
 #[account]
 #[derive(InitSpace)]
 pub struct PayoutRequest {
     pub beneficiary: Pubkey,
+    pub nonce: u64,
     pub amount: u64,
+}
+
+#[account]
+#[derive(InitSpace, Serialize, Deserialize, Debug)]
+pub struct Nonce {
     pub nonce: u64,
 }
 
 #[derive(Accounts)]
 #[instruction(nonce: u64)]
 pub struct CreatePayRequest<'info> {
-    #[account(init_if_needed, payer = signer, space = 8 + PayoutRequest::INIT_SPACE, seeds = [beneficiary.to_account_info().key().to_bytes().as_ref(), &nonce.to_be_bytes(), b"payout_request"], bump)]
+    #[account(init, payer = signer, space = 8 + PayoutRequest::INIT_SPACE, seeds = [beneficiary.to_account_info().key().to_bytes().as_ref(), nonce.to_le_bytes().as_ref(), b"payout_request"], bump)]
     pub pay_out_request: Account<'info, PayoutRequest>,
+    #[account(init_if_needed, payer = signer, space = 8 + Nonce::INIT_SPACE, seeds = [beneficiary.to_account_info().key().to_bytes().as_ref(), b"nonce"], bump)]
+    pub account_nonce: Account<'info, Nonce>,
     #[account(mut)]
     pub signer: Signer<'info>,
     #[account(seeds = [b"worker"], bump)]
@@ -132,6 +167,18 @@ pub struct DepositFunds<'info> {
     pub treasury: Account<'info, TreasuryAccount>,
     #[account(mut)]
     pub depositor: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawFunds<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+    #[account(mut, seeds = [b"admin"], bump)]
+    pub admin_account: Account<'info, AdminAccount>,
+    #[account(mut, seeds = [b"treasury"], bump)]
+    pub treasury: Account<'info, TreasuryAccount>,
+    pub beneficiary: SystemAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -156,9 +203,6 @@ pub struct SetAdmin<'info> {
     pub system_program: Program<'info, System>,
 }
 
-#[derive(Accounts)]
-pub struct Initialize {}
-
 // ✅ Error handling
 #[error_code]
 pub enum ErrorCode {
@@ -170,4 +214,6 @@ pub enum ErrorCode {
     UpgradeAuthorityNotFound,
     #[msg("The program has run out of Sol tokens")]
     OutOfBalance,
+    #[msg("The nonce is invalid")]
+    InvalidNonce,
 }

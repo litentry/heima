@@ -11,8 +11,9 @@ accounting_contract = "31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub"
 url = "https://api.apr.dev"
 
 [provider]
+url = "http://localhost:8899"
 cluster = "Localnet"
-wallet = "//Alice"
+wallet = "test-account.json"
 
 [scripts]
 test = "cargo test"
