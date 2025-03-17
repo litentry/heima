@@ -1,6 +1,6 @@
 {
   "name": "Heima",
-  "id": "litentry",
+  "id": "heima",
   "chainType": "Live",
   "bootNodes": [
     "/dns/rpc0.heima-parachain-de.heima.network/tcp/40333/ws/p2p/12D3KooWBy6nNAuca2ZrxNEH93bzmb7ZjRpzRbbz7CtNEraiHtSC",
