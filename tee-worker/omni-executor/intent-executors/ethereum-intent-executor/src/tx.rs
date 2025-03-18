@@ -24,9 +24,14 @@ use alloy::signers::local::PrivateKeySigner;
 use alloy::signers::Signer;
 use log::error;
 
-pub struct DelegationDetails {
+pub struct DelegationDetailsOrPrefund {
 	pub pay_master: PrivateKeySigner,
-	pub delegation_contract_address: Address,
+	pub delegation_contract_address: Option<Address>,
+	pub prefund: bool,
+}
+
+pub struct SubmissionDetails {
+	prefund_amount: Option<u128>,
 }
 
 pub async fn submit(
@@ -35,16 +40,22 @@ pub async fn submit(
 	value: [u8; 32],
 	call_data: Vec<u8>,
 	signer_key: PrivateKeySigner,
-	delegation_details: Option<DelegationDetails>,
-) -> Result<(), ()> {
-	let (tx_signer, delegation_contract_address) =
-		if let Some(delegation_details) = delegation_details {
-			(delegation_details.pay_master, Some(delegation_details.delegation_contract_address))
-		} else {
+	delegation_or_prefund_details: Option<DelegationDetailsOrPrefund>,
+) -> Result<SubmissionDetails, ()> {
+	// if we delegate call we need to use another signer
+	let (tx_signer, delegation_contract_address) = if let Some(ref delegation_details) =
+		delegation_or_prefund_details
+	{
+		if delegation_details.prefund {
 			(signer_key.clone(), None)
-		};
+		} else {
+			(delegation_details.pay_master.clone(), delegation_details.delegation_contract_address)
+		}
+	} else {
+		(signer_key.clone(), None)
+	};
 
-	let tx_signer_wallet = EthereumWallet::from(tx_signer);
+	let tx_signer_wallet = EthereumWallet::from(tx_signer.clone());
 
 	let provider = ProviderBuilder::new()
 		.with_recommended_fillers()
@@ -84,11 +95,55 @@ pub async fn submit(
 		(to, call_data, value)
 	};
 
-	let tx = TransactionRequest::default()
+	let mut tx: TransactionRequest = TransactionRequest::default()
 		.with_to(to)
 		.with_input(input)
-		.with_value(U256::from_be_bytes(value))
-		.with_authorization_list(authorization_list);
+		.with_value(U256::from_be_bytes(value));
+
+	if !authorization_list.is_empty() {
+		tx.set_authorization_list(authorization_list);
+	}
+
+	// prefund account if needed
+	let prefund_amount = if let Some(ref details) = delegation_or_prefund_details {
+		if details.prefund {
+			let gas_required = provider.estimate_gas(&tx).await.unwrap();
+			let gas_price = provider.get_gas_price().await.unwrap();
+
+			let prefund_amount = gas_required * gas_price;
+
+			let tx_signer_wallet = EthereumWallet::from(details.pay_master.clone());
+
+			let provider = ProviderBuilder::new()
+				.with_recommended_fillers()
+				.wallet(tx_signer_wallet)
+				.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+
+			let balance = provider.get_balance(signer_key.address()).await.unwrap();
+
+			if balance < U256::from(prefund_amount) {
+				let prefund_tx = TransactionRequest::default()
+					.with_to(tx_signer.address())
+					.with_value(U256::from(prefund_amount));
+
+				let pending_tx = provider.send_transaction(prefund_tx).await.map_err(|e| {
+					error!("Could not send transaction: {:?}", e);
+				})?;
+				// wait for transaction to be included
+				let _ =
+					pending_tx.with_required_confirmations(1).get_receipt().await.map_err(|e| {
+						error!("Could not get transaction receipt: {:?}", e);
+					})?;
+				Some(prefund_amount)
+			} else {
+				None
+			}
+		} else {
+			None
+		}
+	} else {
+		None
+	};
 
 	let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 		error!("Could not send transaction: {:?}", e);
@@ -98,5 +153,32 @@ pub async fn submit(
 		error!("Could not get transaction receipt: {:?}", e);
 	})?;
 
-	Ok(())
+	Ok(SubmissionDetails { prefund_amount })
+}
+
+#[cfg(test)]
+pub mod tests {
+	use alloy::primitives::Address;
+
+	use crate::signer::{get_omni_account_signer, get_sponsor_account_signer};
+
+	use super::{submit, DelegationDetailsOrPrefund};
+
+	#[ignore = "manual"]
+	#[tokio::test]
+	pub async fn check_submit() {
+		let url = "http://localhost:8545";
+		let to = Address::default();
+		let value = [0; 32];
+		let call_data = vec![];
+		let signer = get_omni_account_signer();
+		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
+			delegation_contract_address: None,
+			pay_master: get_sponsor_account_signer(),
+			prefund: true,
+		};
+		submit(url, to, value, call_data, signer, Some(delegation_or_prefund_details))
+			.await
+			.unwrap();
+	}
 }
