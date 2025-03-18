@@ -43,6 +43,13 @@ pub struct RunArgs {
 		value_name = "log file path"
 	)]
 	pub log_path: String,
+	#[arg(
+		short,
+		long,
+		default_value = "0xc07cb79754cf3b252038e2713a138363d55df9e0",
+		value_name = "delegation contract address"
+	)]
+	pub delegation_contract_address: String,
 }
 
 #[derive(Args)]

@@ -31,7 +31,7 @@ on:
         options:
           - none
           - paseo
-          - litentry
+          - heima
 
 env:
   RELEASE_TAG: ${{ github.event.inputs.release_tag }}
@@ -70,7 +70,7 @@ jobs:
       matrix:
         chain:
           - paseo
-          - litentry
+          - heima
     name: ${{ matrix.chain }}
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
@@ -88,24 +88,24 @@ jobs:
           PARACHAIN_PALLET_ID: "0x1e"
           AUTHORIZE_UPGRADE_PREFIX: "0x02"
         with:
-          chain: ${{ matrix.chain }}-parachain
+          chain: ${{ matrix.chain }}
           runtime_dir: parachain/runtime/${{ matrix.chain }}
           profile: production
 
       - name: Summary
         run: |
-          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.chain }}-parachain-srtool-digest.json
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > ${{ matrix.chain }}-srtool-digest.json
           echo "==============================================="
-          cat ${{ matrix.chain }}-parachain-srtool-digest.json
-          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ matrix.chain }}-parachain-runtime.compact.compressed.wasm
+          cat ${{ matrix.chain }}-srtool-digest.json
+          cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ matrix.chain }}-runtime.compact.compressed.wasm
 
       - name: Upload wasm artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.chain }}-parachain-runtime
+          name: ${{ matrix.chain }}-runtime
           path: |
-            ${{ matrix.chain }}-parachain-srtool-digest.json
-            ${{ matrix.chain }}-parachain-runtime.compact.compressed.wasm
+            ${{ matrix.chain }}-srtool-digest.json
+            ${{ matrix.chain }}-runtime.compact.compressed.wasm
 
   build-parachain-client:
     if: ${{ github.event.inputs.parachain_client == 'true' }}
@@ -130,25 +130,25 @@ jobs:
       - name: Generate genesis artefacts if need
         if: github.event.inputs.genesis_release != 'none'
         run: |
-          docker run --rm litentry/litentry-parachain:${{ env.RELEASE_TAG }} export-genesis-state --chain=${{ env.GENESIS_RELEASE }} > ${{ env.GENESIS_RELEASE }}-genesis-state
-          docker run --rm litentry/litentry-parachain:${{ env.RELEASE_TAG }} export-genesis-wasm --chain=${{ env.GENESIS_RELEASE }} > ${{ env.GENESIS_RELEASE }}-genesis-wasm
+          docker run --rm litentry/heima:${{ env.RELEASE_TAG }} export-genesis-state --chain=${{ env.GENESIS_RELEASE }} > ${{ env.GENESIS_RELEASE }}-genesis-state
+          docker run --rm litentry/heima:${{ env.RELEASE_TAG }} export-genesis-wasm --chain=${{ env.GENESIS_RELEASE }} > ${{ env.GENESIS_RELEASE }}-genesis-wasm
 
       - name: Copy client binary to disk
         run: |
-          docker cp $(docker create --rm litentry/litentry-parachain:${{ env.RELEASE_TAG }}):/usr/local/bin/litentry-collator .
+          docker cp $(docker create --rm litentry/heima:${{ env.RELEASE_TAG }}):/usr/local/bin/heima-node .
 
       - name: Save docker image
         run: |
-          docker save litentry/litentry-parachain:${{ env.RELEASE_TAG }} | gzip > litentry-parachain-dev.tar.gz
+          docker save litentry/heima:${{ env.RELEASE_TAG }} | gzip > heima.tar.gz
 
       - name: Upload the client binary
         uses: actions/upload-artifact@v4
         with:
-          name: litentry-collator
+          name: heima-node
           if-no-files-found: ignore
           path: |
-            litentry-collator
-            litentry-parachain-dev.tar.gz
+            heima-node
+            heima.tar.gz
             ${{ env.GENESIS_RELEASE }}-genesis-state
             ${{ env.GENESIS_RELEASE }}-genesis-wasm
 
@@ -227,7 +227,7 @@ jobs:
     strategy:
       matrix:
         chain:
-          - litentry
+          - heima
     name: ${{ matrix.chain }}
     steps:
       - name: Checkout codes
@@ -237,12 +237,12 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: litentry-collator
+          name: heima-node
 
       - name: Load docker image
         run: |
-          docker load < litentry-parachain-dev.tar.gz
-          docker tag litentry/litentry-parachain:${{ env.RELEASE_TAG }} litentry/litentry-parachain:latest
+          docker load < heima.tar.gz
+          docker tag litentry/heima:${{ env.RELEASE_TAG }} litentry/heima:latest
           docker images
 
       - name: Use Latest Corepack
@@ -276,7 +276,7 @@ jobs:
 
       - name: Push docker image
         run: |
-          docker push litentry/litentry-parachain:${{ env.RELEASE_TAG }}
+          docker push litentry/heima:${{ env.RELEASE_TAG }}
 
       - name: Clean up for ${{ matrix.chain }}
         if: ${{ always() }}
@@ -321,8 +321,8 @@ jobs:
           body_path: ${{ github.workspace }}/.github/release_notes.md
           draft: true
           files: |
-            *-parachain-runtime/*-parachain-srtool-digest.json
-            *-parachain-runtime/*-parachain-runtime.compact.compressed.wasm
-            litentry-collator/litentry-collator
-            litentry-collator/*-genesis-state
-            litentry-collator/*-genesis-wasm
+            *-runtime/*-srtool-digest.json
+            *-runtime/*-runtime.compact.compressed.wasm
+            heima-node/heima-node
+            heima-node/*-genesis-state
+            heima-node/*-genesis-wasm

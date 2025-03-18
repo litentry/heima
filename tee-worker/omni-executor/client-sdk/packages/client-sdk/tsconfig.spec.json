@@ -17,11 +17,15 @@
       ],
       "@utils/*": [
         "src/lib/utils/*"
+      ],
+      "@test-utils/*": [
+        "src/lib/test-utils/*"
       ]
     }
   },
   "include": [
     "jest.config.ts",
+    "src/lib/test-utils/*",
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/*.d.ts"

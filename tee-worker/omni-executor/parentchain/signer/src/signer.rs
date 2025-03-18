@@ -1,4 +1,5 @@
 use executor_core::key_store::KeyStore;
+use executor_primitives::AccountId;
 use log::error;
 use parentchain_rpc_client::{
 	metadata::{MetadataProvider, SubxtMetadataProvider},
@@ -11,6 +12,7 @@ use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder};
 use subxt_core::tx::payload::Payload;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_core::{tx, Config, Metadata};
+use subxt_signer::sr25519::Keypair;
 use subxt_signer::sr25519::SecretKeyBytes;
 
 pub struct TransactionSigner<
@@ -56,32 +58,22 @@ impl<
 		Self { metadata_provider, rpc_client_factory, key_store, phantom_data: PhantomData }
 	}
 
-	pub async fn sign<Call: Payload>(&self, call: Call) -> Vec<u8> {
-		let secret_key_bytes = self
-			.key_store
-			.read()
-			.map_err(|e| {
-				error!("Could not unseal key: {:?}", e);
-			})
-			.unwrap();
-
-		let signer = subxt_signer::sr25519::Keypair::from_secret_key(secret_key_bytes)
-			.map_err(|e| {
-				error!("Could not create secret key: {:?}", e);
-			})
-			.unwrap();
+	pub async fn sign<Call: Payload>(&self, call: Call, next_nonce: Option<u64>) -> Vec<u8> {
+		let signer = self.get_signer();
 		let mut client = self.rpc_client_factory.new_client().await.unwrap();
 		let runtime_version = client.runtime_version().await.unwrap();
 
 		let genesis_hash = client.get_genesis_hash().await.unwrap();
 
-		let account_id = AccountId32::from(signer.public_key());
+		let account_id = signer.public_key().to_account_id().to_primitive_type();
 
-		let nonce = client
-			.get_account_nonce(&account_id.to_primitive_type())
-			.await
-			.map_err(|e| error!("Could not read nonce: {:?}", e))
-			.unwrap();
+		let nonce: u64;
+
+		if let Some(n) = next_nonce {
+			nonce = n;
+		} else {
+			nonce = client.get_account_nonce(&account_id).await.unwrap();
+		}
 
 		// we should get latest metadata
 		let metadata = self.metadata_provider.get(None).await;
@@ -98,5 +90,24 @@ impl<
 		let signed_call = tx::create_signed(&call, &state, &signer, params).unwrap();
 
 		signed_call.encoded().to_vec()
+	}
+
+	pub fn get_signer_account_id(&self) -> AccountId {
+		self.get_signer().public_key().to_account_id().to_primitive_type()
+	}
+
+	fn get_signer(&self) -> Keypair {
+		let secret_key_bytes = self
+			.key_store
+			.read()
+			.map_err(|e| {
+				error!("Could not unseal key: {:?}", e);
+			})
+			.unwrap();
+		Keypair::from_secret_key(secret_key_bytes)
+			.map_err(|e| {
+				error!("Could not create secret key: {:?}", e);
+			})
+			.unwrap()
 	}
 }

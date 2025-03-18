@@ -20,7 +20,6 @@ use crate::sync_checkpoint::SyncCheckpoint;
 use executor_core::listener::Listener;
 use executor_primitives::{BlockEvent, EventId};
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-use parentchain_signer::key_store::SubstrateKeyStore;
 use subxt::Metadata;
 use subxt_core::Config;
 
@@ -31,8 +30,6 @@ pub type ParentchainListener<
 	RpcClientFactory,
 	CheckpointRepository,
 	ChainConfig,
-	EthereumIntentExecutor,
-	SolanaIntentExecutor,
 	AccountStoreStorage,
 	MemberAccountStorage,
 > = Listener<
@@ -42,14 +39,8 @@ pub type ParentchainListener<
 	IntentEventId,
 	BlockEvent,
 	EventHandler<
-		ChainConfig,
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		SubstrateKeyStore,
-		RpcClient,
-		RpcClientFactory,
 		AccountStoreStorage,
 		MemberAccountStorage,
 	>,

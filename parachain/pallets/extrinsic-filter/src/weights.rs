@@ -21,7 +21,7 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("dev"), DB CACHE: 20
 
 // Executed Command:
-// ./target/release/litentry-collator
+// ./target/release/heima-node
 // benchmark
 // --chain=dev
 // --execution=wasm

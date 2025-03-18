@@ -1010,7 +1010,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 
 	// TODO(Kai@Litentry):
 	// originally we had an outer loop to try to handle the disconnection,
-	// see https://github.com/litentry/litentry-parachain/commit/b8059d0fad928e4bba99178451cd0d473791c437
+	// see https://github.com/litentry/heima/commit/b8059d0fad928e4bba99178451cd0d473791c437
 	// but I reverted it because:
 	// - no graceful shutdown, we could have many mpsc channel when it doesn't go right
 	// - we might have multiple `sync_parentchain` running concurrently, which causes chaos in enclave side

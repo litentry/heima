@@ -224,7 +224,7 @@ pub mod pallet {
 	// with specific mrenclaves.
 	//
 	// Update:
-	// this storage is deprecated and will be removed (discarded) once we move to litentry-parachain
+	// this storage is deprecated and will be removed (discarded) once we move to heima
 	// see https://linear.app/litentry/issue/P-882/simplify-scheduledenclave-usage
 	//
 	// use `AuthorizedEnclave` instead

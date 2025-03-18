@@ -3,7 +3,7 @@
   "$schema": "node_modules/nx/schemas/project-schema.json",
   "targets": {
     "local-registry": {
-      "executor": "@nrwl/js:verdaccio",
+      "executor": "@nx/js:verdaccio",
       "options": {
         "port": 4873,
         "config": ".verdaccio/config.yml",

@@ -1,7 +1,7 @@
 #!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-PARACHAIN_BASEDIR="/opt/litentry/parachain"
+PARACHAIN_BASEDIR="/opt/heima/parachain"
 REPO_DIR="/code"
 CHAIN='paseo'
 ZOMBIENET_DIR=$(LC_ALL=C tr -dc A-Za-z0-9 </dev/urandom | head -c 8; echo)
@@ -11,7 +11,7 @@ check(){
         export CHAIN="paseo"
     fi
 
-    ALLOWED_VALUES=("paseo" "litentry")
+    ALLOWED_VALUES=("paseo" "heima")
 
     if [[ " ${ALLOWED_VALUES[@]} " =~ " ${CHAIN} " ]]; then
         echo "CHAIN is set to a valid value: $CHAIN"
@@ -32,7 +32,7 @@ run_zombienet(){
     cp ${REPO_DIR}/parachain/zombienet/config.toml .
     zombienet setup polkadot -y || true
     export PATH=${PATH}:${PARACHAIN_BASEDIR}
-    cp /usr/local/bin/litentry-collator .
+    cp /usr/local/bin/heima-node .
     nohup zombienet -d $ZOMBIENET_DIR -l silent spawn config.toml >> ${PARACHAIN_BASEDIR}/zombienet.log 2>&1 &
     zombienet_pid=$!
 }

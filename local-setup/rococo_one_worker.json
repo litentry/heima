@@ -14,7 +14,7 @@
         "-h",
         "4545",
         "-u",
-        "wss://rpc.litentry-parachain.litentry.io",
+        "wss://rpc.heima-parachain.heima.network",
         "-p",
         "443",
         "--parentchain-start-block",

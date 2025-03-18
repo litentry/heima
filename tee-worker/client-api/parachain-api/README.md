@@ -73,4 +73,4 @@ Versions in the pattern of `x.x.x-next.x` feature the most recent code version t
 
 ## How to regenerate types
 
-Please read the commands of [client-api](https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/identity/client-api/README.md).
+Please read the commands of [client-api](https://github.com/litentry/heima/blob/dev/tee-worker/identity/client-api/README.md).

@@ -10,7 +10,7 @@ export function calculateIdGraphHash(idGraph: IdGraph): `0x${string}` {
   const sorted: Uint8Array[] = idGraph
     .filter(Boolean) // shallow copy
     // Sorting
-    // Reference: https://github.com/litentry/litentry-parachain/blob/dev/tee-worker/litentry/pallets/identity-management/src/identity_context.rs#L75-L85
+    // Reference: https://github.com/litentry/heima/blob/dev/tee-worker/litentry/pallets/identity-management/src/identity_context.rs#L75-L85
     .sort((entry1, entry2) => {
       return entry1[1].link_block.toNumber() - entry2[1].link_block.toNumber();
     })

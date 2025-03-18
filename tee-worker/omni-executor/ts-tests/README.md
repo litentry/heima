@@ -12,7 +12,7 @@ ts-tests of omni-executor
 
 Before running the ts-tests, the client-api types generation needs to be completed.
 
-See client-api [README.md](https://github.com/litentry/heima-parachain/blob/dev/tee-worker/client-api/README.md)
+See client-api [README.md](https://github.com/litentry/heima/blob/dev/tee-worker/client-api/README.md)
 
 ## Installation
 
@@ -27,7 +27,7 @@ pnpm install
 
 ## Local
 
-[Start parachain && omni-executor worker](https://github.com/litentry/litentry-parachain/blob/dev/README.md)
+[Start parachain && omni-executor worker](https://github.com/litentry/heima/blob/dev/README.md)
 
 ## Usage(ts-tests folder)
 

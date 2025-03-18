@@ -19,7 +19,7 @@ while getopts ":u" opt; do
     esac
 done
 
-NODE_URL=${NODE_URL:-"http://litentry-node:9944"}
+NODE_URL=${NODE_URL:-"http://heima-node:9944"}
 echo "Using node url $NODE_URL"
 
 function usage() {
@@ -53,4 +53,4 @@ cd /ts-tests
 pnpm install --force
 
 echo "Running integration tests"
-OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://litentry-node:9944 pnpm --filter integration-tests run test $TEST
+OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter integration-tests run test $TEST

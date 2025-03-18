@@ -11,7 +11,7 @@
       ]
     },
     "build": {
-      "executor": "@nrwl/js:tsc",
+      "executor": "@nx/js:tsc",
       "outputs": [
         "{options.outputPath}"
       ],
@@ -26,14 +26,14 @@
       }
     },
     "generate-doc": {
-      "executor": "@nrwl/workspace:run-commands",
+      "executor": "nx:run-commands",
       "options": {
         "cwd": "./packages/client-sdk",
         "command": "typedoc --options ./typedoc.json"
       }
     },
     "lint": {
-      "executor": "@nrwl/linter:eslint",
+      "executor": "@nx/linter:eslint",
       "outputs": [
         "{options.outputFile}"
       ],
@@ -45,13 +45,15 @@
       }
     },
     "test": {
-      "executor": "@nrwl/jest:jest",
+      "executor": "@nx/jest:jest",
       "outputs": [
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
         "jestConfig": "packages/client-sdk/jest.config.ts",
-        "passWithNoTests": true
+        "passWithNoTests": true,
+        "silent": false,
+        "testTimeout": 600000
       },
       "configurations": {
         "ci": {
