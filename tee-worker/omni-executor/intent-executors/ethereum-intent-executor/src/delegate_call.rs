@@ -18,10 +18,9 @@ use alloy::primitives::{Address, Uint};
 use alloy::sol_types::SolValue;
 use alloy::{hex, sol};
 
-
 sol!(
-    #[sol(rpc)]
-    "artifacts/SimpleDelegateContract.sol"
+	#[sol(rpc)]
+	"artifacts/SimpleDelegateContract.sol"
 );
 
 pub fn prepare_delegate_call_data(address: Address, input: Vec<u8>) -> Vec<u8> {

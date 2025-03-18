@@ -46,30 +46,7 @@ pub async fn submit(
 
 	let tx_signer_wallet = EthereumWallet::from(tx_signer);
 
-	#[allow(clippy::type_complexity)]
-	let provider: alloy::providers::fillers::FillProvider<
-		alloy::providers::fillers::JoinFill<
-			alloy::providers::fillers::JoinFill<
-				alloy::providers::Identity,
-				alloy::providers::fillers::JoinFill<
-					alloy::providers::fillers::GasFiller,
-					alloy::providers::fillers::JoinFill<
-						alloy::providers::fillers::BlobGasFiller,
-						alloy::providers::fillers::JoinFill<
-							alloy::providers::fillers::NonceFiller,
-							alloy::providers::fillers::ChainIdFiller,
-						>,
-					>,
-				>,
-			>,
-			alloy::providers::fillers::WalletFiller<EthereumWallet>,
-		>,
-		alloy::providers::RootProvider<
-			alloy::transports::http::Http<alloy::transports::http::Client>,
-		>,
-		alloy::transports::http::Http<alloy::transports::http::Client>,
-		alloy::network::Ethereum,
-	> = ProviderBuilder::new()
+	let provider = ProviderBuilder::new()
 		.with_recommended_fillers()
 		.wallet(tx_signer_wallet)
 		.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
