@@ -30,6 +30,7 @@ pub struct DelegationDetailsOrPrefund {
 	pub prefund: bool,
 }
 
+#[allow(dead_code)]
 pub struct SubmissionDetails {
 	prefund_amount: Option<u128>,
 }
