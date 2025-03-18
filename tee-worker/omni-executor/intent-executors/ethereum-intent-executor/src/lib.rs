@@ -106,7 +106,6 @@ pub mod test {
 		let wallet = EthereumWallet::from(signer);
 
 		let provider = ProviderBuilder::new()
-			.with_recommended_fillers()
 			.wallet(wallet)
 			.on_http(url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e)).unwrap());
 		let nonce = provider

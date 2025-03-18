@@ -59,7 +59,6 @@ pub async fn submit(
 	let tx_signer_wallet = EthereumWallet::from(tx_signer.clone());
 
 	let provider = ProviderBuilder::new()
-		.with_recommended_fillers()
 		.wallet(tx_signer_wallet)
 		.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
@@ -109,9 +108,9 @@ pub async fn submit(
 	let prefund_amount = if let Some(ref details) = delegation_or_prefund_details {
 		if details.prefund {
 			let gas_required = provider
-				.estimate_gas(&tx)
+				.estimate_gas(tx.clone())
 				.await
-				.map_err(|e| error!("Could not estimate gas: {:?}", e))?;
+				.map_err(|e| error!("Could not estimate gas: {:?}", e))? as u128;
 			let gas_price = provider
 				.get_gas_price()
 				.await
@@ -122,7 +121,6 @@ pub async fn submit(
 			let tx_signer_wallet = EthereumWallet::from(details.pay_master.clone());
 
 			let provider = ProviderBuilder::new()
-				.with_recommended_fillers()
 				.wallet(tx_signer_wallet)
 				.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
