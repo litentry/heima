@@ -3,10 +3,15 @@ import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
+import { getChain } from '@heima/chaindata';
 import { identity, omniAccount, omniExecutor } from '@heima/parachain-api';
 
+import { createAccountStore } from '@requests/create-account-store.request';
 import { requestAuthToken } from '@requests/request-auth-token.request';
 import { createIdentityType } from '@type-creators/identity';
+import { toHash } from '@utils/identity';
+
+import { getAndWaitForAccountStoreCreation } from '@test-utils/helpers';
 
 const types = {
   ...identity.types, // Identity is defined here
@@ -19,7 +24,7 @@ describe('request-auth-token', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider('ws://localhost:9944'),
+      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
       types,
     });
 
@@ -30,11 +35,26 @@ describe('request-auth-token', () => {
   it('web3', async () => {
     const keyring = new Keyring({ type: 'sr25519' });
     const memberSigner = keyring.addFromUri('//Dave');
-    // ensure the omni account is created for this identity
     const member = createIdentityType(api.registry, {
       addressOrHandle: memberSigner.address,
       type: 'Substrate',
     });
+
+    await (async () => {
+      const { send, payloadToSign = '' } = await createAccountStore(api, { member });
+
+      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+
+      await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: signatureHex,
+        },
+      });
+    })();
+
+    await getAndWaitForAccountStoreCreation(api, toHash(member));
 
     const { send, payloadToSign = '' } = await requestAuthToken(api, {
       member,
