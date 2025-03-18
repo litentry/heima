@@ -108,8 +108,14 @@ pub async fn submit(
 	// prefund account if needed
 	let prefund_amount = if let Some(ref details) = delegation_or_prefund_details {
 		if details.prefund {
-			let gas_required = provider.estimate_gas(&tx).await.unwrap();
-			let gas_price = provider.get_gas_price().await.unwrap();
+			let gas_required = provider
+				.estimate_gas(&tx)
+				.await
+				.map_err(|e| error!("Could not estimate gas: {:?}", e))?;
+			let gas_price = provider
+				.get_gas_price()
+				.await
+				.map_err(|e| error!("Could not get gas price: {:?}", e))?;
 
 			let prefund_amount = gas_required * gas_price;
 
@@ -120,7 +126,10 @@ pub async fn submit(
 				.wallet(tx_signer_wallet)
 				.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
-			let balance = provider.get_balance(signer_key.address()).await.unwrap();
+			let balance = provider
+				.get_balance(signer_key.address())
+				.await
+				.map_err(|e| error!("Could not get balance: {:?}", e))?;
 
 			if balance < U256::from(prefund_amount) {
 				let prefund_tx = TransactionRequest::default()
