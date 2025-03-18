@@ -18,15 +18,21 @@ export async function getAndWaitForAccountStoreCreation(
   api: ApiPromise,
   account: string | AccountId32 | Uint8Array,
 ): Promise<CorePrimitivesOmniAccountMemberAccount[]> {
-  // wait account store created
   let accountStore: Option<Vec<CorePrimitivesOmniAccountMemberAccount>> | undefined;
-  do {
+
+  // wait account store created
+  while (true) {
     try {
       accountStore = await api.query.omniAccount.accountStore(account);
+      if (accountStore && !accountStore.isEmpty) {
+        // break when account store is created
+        break;
+      }
     } catch (_) {
       // do nothing
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
-  } while (!accountStore || accountStore.isEmpty);
+  }
+
   return accountStore.value.toArray();
 }
