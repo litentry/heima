@@ -24,6 +24,6 @@ pub fn get_omni_account_signer() -> PrivateKeySigner {
 
 #[allow(dead_code)]
 pub fn get_sponsor_account_signer() -> PrivateKeySigner {
-	PrivateKeySigner::from_str("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a")
+	PrivateKeySigner::from_str("0x59c6995e998f97a5a0044964f0945389dc9e86dae86c7a8412f4603b6b78690d")
 		.unwrap()
 }
