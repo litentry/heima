@@ -45,4 +45,17 @@ describe('native call', () => {
     expect(operation.asRequestAuthToken[0]).toEqual(member); // signer
     expect(operation.asRequestAuthToken[1].toJSON().expires_at).toEqual(1000); // auth options
   });
+
+  it('create_account_store', async () => {
+    const { operation } = createNativeCallType(registry, {
+      method: 'create_account_store',
+      params: {
+        member,
+      },
+    });
+
+    expect(operation).toBeDefined();
+    expect(operation.isCreateAccountStore).toBeTruthy();
+    expect(operation.asCreateAccountStore).toEqual(member); // signer
+  });
 });

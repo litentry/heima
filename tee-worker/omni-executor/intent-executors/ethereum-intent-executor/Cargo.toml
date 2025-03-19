@@ -5,7 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types"] }
+alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
 async-trait = { workspace = true }
 executor-core = { workspace = true }
 log = { workspace = true }
