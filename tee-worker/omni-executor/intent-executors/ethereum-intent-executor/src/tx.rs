@@ -143,18 +143,35 @@ pub async fn submit<
 #[cfg(test)]
 pub mod tests {
 	use std::collections::HashMap;
+	use std::str::FromStr;
 
+	use alloy::hex::FromHex;
 	use alloy::primitives::Address;
 	use alloy::primitives::U256;
 	use alloy::rpc::types::TransactionRequest;
+	use alloy::signers::local::PrivateKeySigner;
+	use mockall::predicate;
 
 	use crate::{
 		rpc::tests::MockedRpcProviderFactory,
 		rpc::{AlloyRpcProviderFactory, MockRpcProvider},
-		signer::{get_omni_account_signer, get_sponsor_account_signer},
 	};
 
 	use super::{submit, DelegationDetailsOrPrefund};
+
+	fn prepare_omni_account_signer() -> PrivateKeySigner {
+		PrivateKeySigner::from_str(
+			"0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+		)
+		.unwrap()
+	}
+
+	fn prepare_sponsor_signer() -> PrivateKeySigner {
+		PrivateKeySigner::from_str(
+			"0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+		)
+		.unwrap()
+	}
 
 	#[ignore = "manual"]
 	#[tokio::test]
@@ -163,10 +180,10 @@ pub mod tests {
 		let to = Address::default();
 		let value = [0; 32];
 		let call_data = vec![];
-		let signer = get_omni_account_signer();
+		let signer = prepare_omni_account_signer();
 		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
 			delegation_contract_address: None,
-			sponsor: get_sponsor_account_signer(),
+			sponsor: prepare_sponsor_signer(),
 			prefund: true,
 		};
 		let rpc_factory = AlloyRpcProviderFactory { url: url.to_string() };
@@ -176,14 +193,14 @@ pub mod tests {
 	}
 
 	#[tokio::test]
-	pub async fn account_not_prefunded_if_enough_balance() {
+	pub async fn expect_account_not_prefunded_if_enough_balance() {
 		let to = Address::default();
 		let value = [0; 32];
 		let call_data = vec![];
-		let signer = get_omni_account_signer();
+		let signer = prepare_omni_account_signer();
 		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
 			delegation_contract_address: None,
-			sponsor: get_sponsor_account_signer(),
+			sponsor: prepare_sponsor_signer(),
 			prefund: true,
 		};
 		let mut signer_rpc_provider = MockRpcProvider::new();
@@ -218,15 +235,15 @@ pub mod tests {
 	}
 
 	#[tokio::test]
-	pub async fn account_prefunded_if_not_enough_balance() {
+	pub async fn expect_account_prefunded_if_not_enough_balance() {
 		let to = Address::default();
 		let value = [0; 32];
 		let call_data = vec![];
-		let signer = get_omni_account_signer();
-		let sponsor = get_sponsor_account_signer();
+		let signer = prepare_omni_account_signer();
+		let sponsor = prepare_sponsor_signer();
 		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
 			delegation_contract_address: None,
-			sponsor: get_sponsor_account_signer(),
+			sponsor: prepare_sponsor_signer(),
 			prefund: true,
 		};
 		let mut signer_rpc_provider = MockRpcProvider::new();
@@ -259,6 +276,47 @@ pub mod tests {
 
 		let mut providers = HashMap::new();
 		providers.insert(signer.address(), signer_rpc_provider);
+		providers.insert(sponsor.address(), sponsor_rpc_provider);
+
+		let rpc_factory = MockedRpcProviderFactory::new(providers);
+
+		submit(&rpc_factory, to, value, call_data, signer, Some(delegation_or_prefund_details))
+			.await
+			.unwrap();
+	}
+
+	#[tokio::test]
+	pub async fn expect_call_delegated() {
+		let to = Address::default();
+		let value = [0; 32];
+		let call_data = vec![];
+		let signer = prepare_omni_account_signer();
+		let sponsor = prepare_sponsor_signer();
+		let delegation_contract_address =
+			Address::from_hex("0xc07cb79754cf3b252038e2713a138363d55df9e0").unwrap();
+		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
+			delegation_contract_address: Some(delegation_contract_address.clone()),
+			sponsor: prepare_sponsor_signer(),
+			prefund: false,
+		};
+
+		let mut sponsor_rpc_provider = MockRpcProvider::new();
+
+		sponsor_rpc_provider
+			.expect_get_transaction_count()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(10))));
+
+		sponsor_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.with(predicate::function(move |t: &TransactionRequest| {
+				matches!(t.authorization_list, Some(ref authorization_list) if authorization_list.len() == 1 
+				&& authorization_list.get(0).unwrap().nonce == 10 && authorization_list.get(0).unwrap().address == delegation_contract_address)
+			} ))
+			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+
+		let mut providers = HashMap::new();
 		providers.insert(sponsor.address(), sponsor_rpc_provider);
 
 		let rpc_factory = MockedRpcProviderFactory::new(providers);
