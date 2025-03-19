@@ -69,18 +69,18 @@ pub fn register_submit_aes_requests<
 				response_sender,
 			};
 			if ctx.native_task_sender.send(native_task).await.is_err() {
-				log::error!("Failed to send request to native call executor");
+				log::error!("Failed to send request to native query executor");
 				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
 				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
 				Err(e) => {
-					log::error!("Failed to receive response from native call handler: {:?}", e);
+					log::error!("Failed to receive response from native query handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())
 				},
 			}
 		})
-		.expect("Failed to register native_submitCallAesRequest method");
+		.expect("Failed to register native_submitQueryAesRequest method");
 }
 
 fn handle_aes_request<

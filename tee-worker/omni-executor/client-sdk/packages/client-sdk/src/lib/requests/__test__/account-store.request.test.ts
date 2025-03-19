@@ -1,0 +1,240 @@
+import { ApiPromise, Keyring } from '@polkadot/api';
+import type { KeyringPair } from '@polkadot/keyring/types';
+import { WsProvider } from '@polkadot/rpc-provider';
+import { u8aToHex } from '@polkadot/util';
+import { cryptoWaitReady, encodeAddress } from '@polkadot/util-crypto';
+
+import { getChain } from '@heima/chaindata';
+import {
+  identity,
+  ValidationData,
+  omniAccount,
+  OmniAccountPermission,
+  omniExecutor,
+  Identity,
+} from '@heima/parachain-api';
+
+import { createIdentityType } from '@type-creators/identity';
+import { addAccount } from '@requests/add-account.request';
+import { createAccountStore } from '@requests/create-account-store.request';
+import { getAccountNonce } from '@requests/get-nonce.request';
+import { publicizeAccount } from '@requests/publicize-account.request';
+import { removeAccounts } from '@requests/remove-accounts.request';
+import { setPermissions } from '@requests/set-permissions.request';
+import { createVerificationMessage } from '@utils/create-verification-message';
+import { toHash } from '@utils/identity';
+
+import { getAndWaitForAccountStoreCreation } from '@test-utils/helpers';
+
+const types = {
+  ...identity.types, // Identity is defined here
+  ...omniAccount.types, // AuthOptions is defined here
+  ...omniExecutor.types, // NativeCall is defined here
+};
+
+describe('account-store', () => {
+  let api: ApiPromise;
+  let member: Identity;
+  let memberSigner: KeyringPair;
+  let memberToAdd: Identity;
+  let memberToAddSigner: KeyringPair;
+
+  beforeAll(async () => {
+    api = new ApiPromise({
+      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      types,
+    });
+
+    await api.isReady;
+    await cryptoWaitReady();
+
+    const keyring = new Keyring({ type: 'sr25519' });
+    memberSigner = keyring.addFromUri(`//Bob`);
+    member = createIdentityType(api.registry, {
+      addressOrHandle: memberSigner.address,
+      type: 'Substrate',
+    });
+    memberToAddSigner = keyring.addFromUri('//Charlie');
+    memberToAdd = createIdentityType(api.registry, {
+      addressOrHandle: memberToAddSigner.address,
+      type: 'Substrate',
+    });
+  });
+
+  it('web3 authentication', async () => {
+    // Step 1: create account store
+    console.log('Step 1: create account store');
+    await (async () => {
+      const { send, payloadToSign = '' } = await createAccountStore(api, { member });
+      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+
+      await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: signatureHex,
+        },
+      });
+    })();
+    const omniAccount = toHash(member);
+    const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
+    expect(omniAccount).toBeDefined();
+    expect(encodeAddress(omniAccount)).toBe('5H8eg2qghG4ZRCePpqCTbj5sFa7FCGV5w9xnCkKwtQ9v6hLZ');
+
+    // Check account store
+    console.log('Step 1: check account store');
+    await (async () => {
+      expect(accountStore.length).toBe(1);
+      expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty',
+      );
+    })();
+
+    // Step 2: add account
+    console.log('Step 2: add account');
+    await (async () => {
+      const omniAccountNonce = await getAccountNonce(api, omniAccount);
+      const message = createVerificationMessage(api.registry, {
+        member,
+        memberToAdd,
+        omniAccountNonce,
+      });
+
+      const validation = api.createType<ValidationData>('ValidationData', {
+        Web3Validation: {
+          Substrate: {
+            message,
+            signature: {
+              Sr25519: u8aToHex(memberToAddSigner.sign(message)),
+            },
+          },
+        },
+      });
+
+      const { send, payloadToSign = '' } = await addAccount(api, {
+        member,
+        memberToAdd,
+        validation,
+        isPublic: false,
+      });
+
+      await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: u8aToHex(memberSigner.sign(payloadToSign)),
+        },
+      });
+    })();
+
+    // wait 10 seconds
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Check account store after account added
+    console.log('Step 2: check account store after account added');
+    await (async () => {
+      const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
+      expect(accountStore.length).toBe(2);
+      expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
+      );
+      expect(accountStore[1].isPrivate).toBeTruthy(); // Charlie
+
+      // Check permissions
+      const permissions = await api.query.omniAccount.memberAccountPermissions(toHash(memberToAdd));
+      expect(permissions.toJSON()).toEqual(['All']);
+    })();
+
+    // Step 3: set permissions
+    console.log('Step 3: set permissions');
+    await (async () => {
+      const { send, payloadToSign = '' } = await setPermissions(api, {
+        member,
+        memberToSetPermissions: memberToAdd,
+        permissions: [
+          api.createType<OmniAccountPermission>('OmniAccountPermission', 'All'),
+          api.createType<OmniAccountPermission>('OmniAccountPermission', 'AccountManagement'),
+        ],
+      });
+
+      await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: u8aToHex(memberSigner.sign(payloadToSign)),
+        },
+      });
+    })();
+
+    // wait 10 seconds
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Check permissions after permissions set
+    console.log('Step 3: check permissions after permissions set');
+    const permissions = await api.query.omniAccount.memberAccountPermissions(toHash(memberToAdd));
+    expect(permissions.toJSON()).toEqual(['All', 'AccountManagement']);
+
+    // Step 4: publicize account
+    console.log('Step 4: publicize account');
+    await (async () => {
+      const { send, payloadToSign = '' } = await publicizeAccount(api, { member, memberToPublicize: memberToAdd });
+
+      const result = await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: u8aToHex(memberSigner.sign(payloadToSign)),
+        },
+      });
+
+      expect(result.extrinsicHash.length).toBe(66);
+      expect(result.blockHash.length).toBe(66);
+      expect(result.status).toBeDefined();
+    })();
+
+    // wait 10 seconds
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Check account store after account publicized
+    console.log('Step 4: check account store after account publicized');
+    await (async () => {
+      const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
+      expect(accountStore.length).toBe(2);
+      expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
+      );
+      expect(encodeAddress(accountStore[1].asPublic.asSubstrate.toU8a())).toBe(
+        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
+      );
+    })();
+
+    // Step 5: remove accounts
+    console.log('Step 5: remove accounts');
+    await (async () => {
+      const { send, payloadToSign = '' } = await removeAccounts(api, { member, membersToRemove: [memberToAdd] });
+
+      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+
+      await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: signatureHex,
+        },
+      });
+    })();
+
+    // wait 10 seconds
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    // Check account store after account removed
+    console.log('Step 5: check account store after account removed');
+    await (async () => {
+      const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
+      expect(accountStore.length).toBe(1);
+      expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
+      );
+    })();
+  });
+});

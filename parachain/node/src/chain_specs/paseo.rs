@@ -94,7 +94,7 @@ pub fn get_chain_spec_prod() -> ChainSpec {
 	get_chain_spec_from_genesis_info(
 		include_bytes!("../../res/genesis_info/paseo.json"),
 		"Heima-paseo",
-		"litentry-paseo",
+		"heima-paseo",
 		ChainType::Live,
 		"paseo".into(),
 		PASEO_PARA_ID.into(),

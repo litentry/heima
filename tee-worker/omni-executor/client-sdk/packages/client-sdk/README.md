@@ -20,7 +20,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 
     You can set what stage to use by setting the `HEIMA_NETWORK` environment variable. Valid values are:
 
-    - `heima-local`: will point to a local enclave `ws://localhost:8080`
+    - `heima-local`: will point to a local enclave `ws://localhost:2100`
     - `heima-dev` (default): will point to `tee-dev`'s Enclave.
     - `heima-prod`: will point to `tee-prod`'s Enclave.
 

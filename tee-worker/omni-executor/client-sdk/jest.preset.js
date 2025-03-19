@@ -1,3 +1,5 @@
-const nxPreset = require('@nrwl/jest/preset').default;
+const nxPreset = require('@nx/jest/preset').default;
+
+process.env.HEIMA_NETWORK = 'heima-local'
 
 module.exports = { ...nxPreset };

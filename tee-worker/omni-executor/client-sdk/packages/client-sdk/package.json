@@ -5,6 +5,7 @@
 	"license": "GPL-3.0-or-later",
 	"dependencies": {},
 	"devDependencies": {
+		"@polkadot/keyring": "^13.4.3",
 		"@polkadot/rpc-provider": "^15.0.2",
 		"@types/ws": "^8.5.13"
 	},
@@ -16,6 +17,7 @@
 		"@polkadot/types-codec": "^15.0.2",
 		"@polkadot/util": "^13.4.3",
 		"@polkadot/util-crypto": "^13.4.3",
+		"@scure/base": "^1.2.4",
 		"isomorphic-ws": "^5.0.0",
 		"tslib": "^2.5.3",
 		"ws": "^8.18.0"

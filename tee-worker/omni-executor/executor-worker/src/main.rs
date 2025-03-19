@@ -80,7 +80,8 @@ async fn main() -> Result<(), ()> {
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let ethereum_intent_executor = EthereumIntentExecutor::new(&args.ethereum_url)?;
+			let ethereum_intent_executor =
+				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
 			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
 
