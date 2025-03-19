@@ -62,7 +62,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 					transfer.value,
 					vec![],
 					omni_account_signer,
-					None,
+					tx::Paymode::Standard,
 				)
 				.await?;
 			},
@@ -73,7 +73,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 					[0; 32],
 					call_ethereum.input.to_vec(),
 					omni_account_signer,
-					None,
+					tx::Paymode::Standard,
 				)
 				.await?;
 			},
