@@ -58,7 +58,7 @@ fn test_full_workerflow() {
         .request()
         .accounts(accounting_contract::accounts::SetAdmin {
             admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
-            caller: payer.pubkey(),
+            signer: payer.pubkey(),
             program_account: address,
             system_program: anchor_client::solana_sdk::system_program::ID,
         })
@@ -72,7 +72,7 @@ fn test_full_workerflow() {
         .request()
         .accounts(accounting_contract::accounts::SetWorker {
             worker_account: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
-            caller: payer.pubkey(),
+            signer: payer.pubkey(),
             admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
             system_program: anchor_client::solana_sdk::system_program::ID,
         })
@@ -106,7 +106,7 @@ fn test_full_workerflow() {
         .request()
         .accounts(accounting_contract::accounts::DepositFunds {
             treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
-            depositor: payer.pubkey(),
+            signer: payer.pubkey(),
             system_program: anchor_client::solana_sdk::system_program::ID,
         })
         .args(accounting_contract::instruction::DepositFunds {

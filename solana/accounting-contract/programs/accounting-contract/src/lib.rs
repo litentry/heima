@@ -14,7 +14,7 @@ pub mod accounting_contract {
             None => return Err(ErrorCode::UpgradeAuthorityNotFound.into()),
         };
         require!(
-            ctx.accounts.caller.key() == upgrade_authority,
+            ctx.accounts.signer.key() == upgrade_authority,
             ErrorCode::Unauthorized
         );
         let admin = &mut ctx.accounts.admin_account.admin;
@@ -24,7 +24,7 @@ pub mod accounting_contract {
 
     pub fn set_worker(ctx: Context<SetWorker>, new_worker: Pubkey) -> Result<()> {
         require!(
-            ctx.accounts.admin_account.admin == ctx.accounts.caller.key(),
+            ctx.accounts.admin_account.admin == ctx.accounts.signer.key(),
             ErrorCode::Unauthorized
         );
         ctx.accounts.worker_account.worker = new_worker;
@@ -36,7 +36,7 @@ pub mod accounting_contract {
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
                 system_program::Transfer {
-                    from: ctx.accounts.depositor.to_account_info(),
+                    from: ctx.accounts.signer.to_account_info(),
                     to: ctx.accounts.treasury.to_account_info(),
                 },
             ),
@@ -163,10 +163,10 @@ pub struct CreatePayRequest<'info> {
 
 #[derive(Accounts)]
 pub struct DepositFunds<'info> {
-    #[account(init_if_needed, payer = depositor, space = 8 + TreasuryAccount::INIT_SPACE, seeds = [b"treasury"], bump)]
+    #[account(init_if_needed, payer = signer, space = 8 + TreasuryAccount::INIT_SPACE, seeds = [b"treasury"], bump)]
     pub treasury: Account<'info, TreasuryAccount>,
     #[account(mut)]
-    pub depositor: Signer<'info>,
+    pub signer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -184,10 +184,10 @@ pub struct WithdrawFunds<'info> {
 
 #[derive(Accounts)]
 pub struct SetWorker<'info> {
-    #[account(init_if_needed, payer = caller, space = 8 + WorkerAccount::INIT_SPACE, seeds = [b"worker"], bump)]
+    #[account(init_if_needed, payer = signer, space = 8 + WorkerAccount::INIT_SPACE, seeds = [b"worker"], bump)]
     pub worker_account: Account<'info, WorkerAccount>,
     #[account(mut)]
-    pub caller: Signer<'info>,
+    pub signer: Signer<'info>,
     #[account(seeds = [b"admin"], bump)]
     pub admin_account: Account<'info, AdminAccount>,
     pub system_program: Program<'info, System>,
@@ -195,10 +195,10 @@ pub struct SetWorker<'info> {
 
 #[derive(Accounts)]
 pub struct SetAdmin<'info> {
-    #[account(init_if_needed, payer = caller, space = 8 + AdminAccount::INIT_SPACE, seeds = [b"admin"], bump)]
+    #[account(init_if_needed, payer = signer, space = 8 + AdminAccount::INIT_SPACE, seeds = [b"admin"], bump)]
     pub admin_account: Account<'info, AdminAccount>,
     #[account(mut)]
-    pub caller: Signer<'info>,
+    pub signer: Signer<'info>,
     pub program_account: Account<'info, ProgramData>,
     pub system_program: Program<'info, System>,
 }
