@@ -115,11 +115,11 @@ pub async fn submit<
 
 			let tx_signer_wallet = EthereumWallet::from(details.pay_master.clone());
 
-			let provider = rpc_provider_factory.create(tx_signer_wallet);
-
 			let balance = provider.get_balance(signer_key.address()).await?;
 
 			if balance < U256::from(prefund_amount) {
+				let provider = rpc_provider_factory.create(tx_signer_wallet);
+
 				let prefund_tx = TransactionRequest::default()
 					.with_to(tx_signer.address())
 					.with_value(U256::from(prefund_amount));
@@ -143,10 +143,15 @@ pub async fn submit<
 
 #[cfg(test)]
 pub mod tests {
+	use std::collections::HashMap;
+
 	use alloy::primitives::Address;
+	use alloy::primitives::U256;
+	use alloy::rpc::types::TransactionRequest;
 
 	use crate::{
-		rpc::AlloyRpcProviderFactory,
+		rpc::tests::MockedRpcProviderFactory,
+		rpc::{AlloyRpcProviderFactory, MockRpcProvider},
 		signer::{get_omni_account_signer, get_sponsor_account_signer},
 	};
 
@@ -166,6 +171,99 @@ pub mod tests {
 			prefund: true,
 		};
 		let rpc_factory = AlloyRpcProviderFactory { url: url.to_string() };
+		submit(&rpc_factory, to, value, call_data, signer, Some(delegation_or_prefund_details))
+			.await
+			.unwrap();
+	}
+
+	#[tokio::test]
+	pub async fn account_not_prefunded_if_enough_balance() {
+		let to = Address::default();
+		let value = [0; 32];
+		let call_data = vec![];
+		let signer = get_omni_account_signer();
+		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
+			delegation_contract_address: None,
+			pay_master: get_sponsor_account_signer(),
+			prefund: true,
+		};
+		let mut signer_rpc_provider = MockRpcProvider::new();
+
+		signer_rpc_provider
+			.expect_estimate_gas()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(10))));
+		signer_rpc_provider
+			.expect_get_gas_price()
+			.times(1)
+			.returning(|| Box::pin(futures::future::ready(Ok(10))));
+
+		signer_rpc_provider
+			.expect_get_balance()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(U256::from(1000)))));
+
+		signer_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+
+		let mut providers = HashMap::new();
+		providers.insert(signer.address(), signer_rpc_provider);
+
+		let rpc_factory = MockedRpcProviderFactory::new(providers);
+
+		submit(&rpc_factory, to, value, call_data, signer, Some(delegation_or_prefund_details))
+			.await
+			.unwrap();
+	}
+
+	#[tokio::test]
+	pub async fn account_prefunded_if_not_enough_balance() {
+		let to = Address::default();
+		let value = [0; 32];
+		let call_data = vec![];
+		let signer = get_omni_account_signer();
+		let sponsor = get_sponsor_account_signer();
+		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
+			delegation_contract_address: None,
+			pay_master: get_sponsor_account_signer(),
+			prefund: true,
+		};
+		let mut signer_rpc_provider = MockRpcProvider::new();
+
+		signer_rpc_provider
+			.expect_estimate_gas()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(10))));
+		signer_rpc_provider
+			.expect_get_gas_price()
+			.times(1)
+			.returning(|| Box::pin(futures::future::ready(Ok(10))));
+
+		signer_rpc_provider
+			.expect_get_balance()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(U256::from(0)))));
+
+		signer_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+
+		let mut paymaster_rpc_provider = MockRpcProvider::new();
+
+		paymaster_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+
+		let mut providers = HashMap::new();
+		providers.insert(signer.address(), signer_rpc_provider);
+		providers.insert(sponsor.address(), paymaster_rpc_provider);
+
+		let rpc_factory = MockedRpcProviderFactory::new(providers);
+
 		submit(&rpc_factory, to, value, call_data, signer, Some(delegation_or_prefund_details))
 			.await
 			.unwrap();

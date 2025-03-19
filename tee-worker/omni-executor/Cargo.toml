@@ -60,6 +60,8 @@ subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
 url = "2.5.4"
+mockall = "0.13.1"
+futures = "0.3.31"
 
 # Local dependencies
 binance-api = { path = "binance-api" }

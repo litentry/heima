@@ -6,6 +6,8 @@ use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
 use log::error;
+#[cfg(test)]
+use mockall::automock;
 
 pub trait RpcProviderFactory {
 	type Provider;
@@ -28,6 +30,7 @@ impl RpcProviderFactory for AlloyRpcProviderFactory {
 }
 
 #[async_trait]
+#[cfg_attr(test, automock(type Addr=Address; type Transaction=TransactionRequest;))]
 pub trait RpcProvider {
 	type Addr;
 	type Transaction;
@@ -106,5 +109,34 @@ impl RpcProvider for AlloyRpcProvider {
 			.get_gas_price()
 			.await
 			.map_err(|e| error!("Could not get gas price: {:?}", e))
+	}
+}
+
+#[cfg(test)]
+pub mod tests {
+	use crate::rpc::MockRpcProvider;
+	use crate::rpc::RpcProviderFactory;
+	use alloy::network::EthereumWallet;
+	use alloy::primitives::Address;
+	use std::cell::RefCell;
+	use std::collections::HashMap;
+
+	pub struct MockedRpcProviderFactory {
+		providers: RefCell<HashMap<Address, MockRpcProvider>>,
+	}
+
+	impl MockedRpcProviderFactory {
+		pub fn new(providers: HashMap<Address, MockRpcProvider>) -> Self {
+			Self { providers: RefCell::new(providers) }
+		}
+	}
+
+	impl RpcProviderFactory for MockedRpcProviderFactory {
+		type Provider = MockRpcProvider;
+		type Context = EthereumWallet;
+
+		fn create(&self, wallet: Self::Context) -> Self::Provider {
+			self.providers.borrow_mut().remove(&wallet.default_signer().address()).unwrap()
+		}
 	}
 }
