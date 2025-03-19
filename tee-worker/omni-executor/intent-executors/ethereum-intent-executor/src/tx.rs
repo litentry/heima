@@ -15,10 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::delegate_call::prepare_delegate_call_data;
+use crate::rpc::RpcProvider;
+use crate::rpc::RpcProviderFactory;
 use alloy::eips::eip7702::Authorization;
 use alloy::network::{EthereumWallet, NetworkWallet, TransactionBuilder, TransactionBuilder7702};
 use alloy::primitives::{Address, U256};
-use alloy::providers::{Provider, ProviderBuilder};
 use alloy::rpc::types::TransactionRequest;
 use alloy::signers::local::PrivateKeySigner;
 use alloy::signers::Signer;
@@ -35,8 +36,11 @@ pub struct SubmissionDetails {
 	prefund_amount: Option<u128>,
 }
 
-pub async fn submit(
-	rpc_url: &str,
+pub async fn submit<
+	RP: RpcProvider<Addr = Address, Transaction = TransactionRequest>,
+	RPF: RpcProviderFactory<Context = EthereumWallet, Provider = RP>,
+>(
+	rpc_provider_factory: &RPF,
 	to: Address,
 	value: [u8; 32],
 	call_data: Vec<u8>,
@@ -58,9 +62,7 @@ pub async fn submit(
 
 	let tx_signer_wallet = EthereumWallet::from(tx_signer.clone());
 
-	let provider = ProviderBuilder::new()
-		.wallet(tx_signer_wallet)
-		.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+	let provider = rpc_provider_factory.create(tx_signer_wallet);
 
 	// Create an authorization in case we are going to use delegation contract and pay fees
 	let authorization_list = if let Some(delegation_contract_address) = delegation_contract_address
@@ -76,8 +78,7 @@ pub async fn submit(
 				>>::default_signer_address(&EthereumWallet::from(
 					signer_key.clone(),
 				)))
-				.await
-				.map_err(|e| error!("Could not get default signer: {:?}", e))?,
+				.await?,
 		};
 		let signature = signer_key
 			.sign_hash(&authorization.signature_hash())
@@ -107,41 +108,23 @@ pub async fn submit(
 	// prefund account if needed
 	let prefund_amount = if let Some(ref details) = delegation_or_prefund_details {
 		if details.prefund {
-			let gas_required = provider
-				.estimate_gas(tx.clone())
-				.await
-				.map_err(|e| error!("Could not estimate gas: {:?}", e))? as u128;
-			let gas_price = provider
-				.get_gas_price()
-				.await
-				.map_err(|e| error!("Could not get gas price: {:?}", e))?;
+			let gas_required = provider.estimate_gas(tx.clone()).await? as u128;
+			let gas_price = provider.get_gas_price().await?;
 
 			let prefund_amount = gas_required * gas_price;
 
 			let tx_signer_wallet = EthereumWallet::from(details.pay_master.clone());
 
-			let provider = ProviderBuilder::new()
-				.wallet(tx_signer_wallet)
-				.on_http(rpc_url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+			let provider = rpc_provider_factory.create(tx_signer_wallet);
 
-			let balance = provider
-				.get_balance(signer_key.address())
-				.await
-				.map_err(|e| error!("Could not get balance: {:?}", e))?;
+			let balance = provider.get_balance(signer_key.address()).await?;
 
 			if balance < U256::from(prefund_amount) {
 				let prefund_tx = TransactionRequest::default()
 					.with_to(tx_signer.address())
 					.with_value(U256::from(prefund_amount));
 
-				let pending_tx = provider.send_transaction(prefund_tx).await.map_err(|e| {
-					error!("Could not send transaction: {:?}", e);
-				})?;
-				// wait for transaction to be included
-				let _ =
-					pending_tx.with_required_confirmations(1).get_receipt().await.map_err(|e| {
-						error!("Could not get transaction receipt: {:?}", e);
-					})?;
+				provider.send_transaction(prefund_tx).await?;
 				Some(prefund_amount)
 			} else {
 				None
@@ -153,13 +136,7 @@ pub async fn submit(
 		None
 	};
 
-	let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
-		error!("Could not send transaction: {:?}", e);
-	})?;
-	// wait for transaction to be included
-	let _ = pending_tx.get_receipt().await.map_err(|e| {
-		error!("Could not get transaction receipt: {:?}", e);
-	})?;
+	provider.send_transaction(tx).await?;
 
 	Ok(SubmissionDetails { prefund_amount })
 }
@@ -168,7 +145,10 @@ pub async fn submit(
 pub mod tests {
 	use alloy::primitives::Address;
 
-	use crate::signer::{get_omni_account_signer, get_sponsor_account_signer};
+	use crate::{
+		rpc::AlloyRpcProviderFactory,
+		signer::{get_omni_account_signer, get_sponsor_account_signer},
+	};
 
 	use super::{submit, DelegationDetailsOrPrefund};
 
@@ -185,7 +165,8 @@ pub mod tests {
 			pay_master: get_sponsor_account_signer(),
 			prefund: true,
 		};
-		submit(url, to, value, call_data, signer, Some(delegation_or_prefund_details))
+		let rpc_factory = AlloyRpcProviderFactory { url: url.to_string() };
+		submit(&rpc_factory, to, value, call_data, signer, Some(delegation_or_prefund_details))
 			.await
 			.unwrap();
 	}

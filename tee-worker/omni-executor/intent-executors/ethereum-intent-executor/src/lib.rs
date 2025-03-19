@@ -21,10 +21,12 @@ use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::intent::Intent;
 use log::{error, info};
+use rpc::AlloyRpcProviderFactory;
 use signer::get_omni_account_signer;
 use tx::submit;
 
 mod delegate_call;
+mod rpc;
 mod signer;
 mod tx;
 
@@ -50,10 +52,12 @@ impl IntentExecutor for EthereumIntentExecutor {
 		let omni_account_signer = get_omni_account_signer();
 		info!("Omni account address: {:?}", omni_account_signer.address());
 
+		let rpc_factory = AlloyRpcProviderFactory { url: self.rpc_url.to_string() };
+
 		match intent {
 			Intent::TransferEthereum(transfer) => {
 				submit(
-					&self.rpc_url,
+					&rpc_factory,
 					Address::from_slice(transfer.to.as_bytes()),
 					transfer.value,
 					vec![],
@@ -64,7 +68,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 			},
 			Intent::CallEthereum(call_ethereum) => {
 				submit(
-					&self.rpc_url,
+					&rpc_factory,
 					Address::from_slice(call_ethereum.address.as_bytes()),
 					[0; 32],
 					call_ethereum.input.to_vec(),
