@@ -26,7 +26,7 @@ use alloy::signers::Signer;
 use log::error;
 
 pub struct DelegationDetailsOrPrefund {
-	pub pay_master: PrivateKeySigner,
+	pub sponsor: PrivateKeySigner,
 	pub delegation_contract_address: Option<Address>,
 	pub prefund: bool,
 }
@@ -48,17 +48,16 @@ pub async fn submit<
 	delegation_or_prefund_details: Option<DelegationDetailsOrPrefund>,
 ) -> Result<SubmissionDetails, ()> {
 	// if we delegate call we need to use another signer
-	let (tx_signer, delegation_contract_address) = if let Some(ref delegation_details) =
-		delegation_or_prefund_details
-	{
-		if delegation_details.prefund {
-			(signer_key.clone(), None)
+	let (tx_signer, delegation_contract_address) =
+		if let Some(ref delegation_details) = delegation_or_prefund_details {
+			if delegation_details.prefund {
+				(signer_key.clone(), None)
+			} else {
+				(delegation_details.sponsor.clone(), delegation_details.delegation_contract_address)
+			}
 		} else {
-			(delegation_details.pay_master.clone(), delegation_details.delegation_contract_address)
-		}
-	} else {
-		(signer_key.clone(), None)
-	};
+			(signer_key.clone(), None)
+		};
 
 	let tx_signer_wallet = EthereumWallet::from(tx_signer.clone());
 
@@ -113,7 +112,7 @@ pub async fn submit<
 
 			let prefund_amount = gas_required * gas_price;
 
-			let tx_signer_wallet = EthereumWallet::from(details.pay_master.clone());
+			let tx_signer_wallet = EthereumWallet::from(details.sponsor.clone());
 
 			let balance = provider.get_balance(signer_key.address()).await?;
 
@@ -167,7 +166,7 @@ pub mod tests {
 		let signer = get_omni_account_signer();
 		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
 			delegation_contract_address: None,
-			pay_master: get_sponsor_account_signer(),
+			sponsor: get_sponsor_account_signer(),
 			prefund: true,
 		};
 		let rpc_factory = AlloyRpcProviderFactory { url: url.to_string() };
@@ -184,7 +183,7 @@ pub mod tests {
 		let signer = get_omni_account_signer();
 		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
 			delegation_contract_address: None,
-			pay_master: get_sponsor_account_signer(),
+			sponsor: get_sponsor_account_signer(),
 			prefund: true,
 		};
 		let mut signer_rpc_provider = MockRpcProvider::new();
@@ -227,7 +226,7 @@ pub mod tests {
 		let sponsor = get_sponsor_account_signer();
 		let delegation_or_prefund_details = DelegationDetailsOrPrefund {
 			delegation_contract_address: None,
-			pay_master: get_sponsor_account_signer(),
+			sponsor: get_sponsor_account_signer(),
 			prefund: true,
 		};
 		let mut signer_rpc_provider = MockRpcProvider::new();
@@ -251,16 +250,16 @@ pub mod tests {
 			.times(1)
 			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
 
-		let mut paymaster_rpc_provider = MockRpcProvider::new();
+		let mut sponsor_rpc_provider = MockRpcProvider::new();
 
-		paymaster_rpc_provider
+		sponsor_rpc_provider
 			.expect_send_transaction()
 			.times(1)
 			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
 
 		let mut providers = HashMap::new();
 		providers.insert(signer.address(), signer_rpc_provider);
-		providers.insert(sponsor.address(), paymaster_rpc_provider);
+		providers.insert(sponsor.address(), sponsor_rpc_provider);
 
 		let rpc_factory = MockedRpcProviderFactory::new(providers);
 
