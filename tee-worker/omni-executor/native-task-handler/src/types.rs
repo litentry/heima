@@ -43,4 +43,5 @@ pub enum NativeOperationError {
 	InternalError,
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
+	AuthTokenExpirationTooLong,
 }

@@ -13,9 +13,11 @@ pub enum Error {
 	JsonError,
 }
 
+pub const MAX_AUTH_TOKEN_EXPIRATION: u32 = 50_400; // 1 week in blocks
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
-	expires_at: BlockNumber,
+	pub expires_at: BlockNumber,
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]

@@ -6,7 +6,7 @@ use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCal
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{intent::Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
-use heima_authentication::auth_token::AuthTokenClaims;
+use heima_authentication::auth_token::{AuthTokenClaims, MAX_AUTH_TOKEN_EXPIRATION};
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
@@ -62,6 +62,22 @@ pub async fn handle_native_call<
 				}
 				return;
 			};
+			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
+				log::error!("Failed to get last finalized block number");
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			if auth_options.expires_at > current_block + MAX_AUTH_TOKEN_EXPIRATION {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenExpirationTooLong);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			}
 			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
 			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
 				let response =
