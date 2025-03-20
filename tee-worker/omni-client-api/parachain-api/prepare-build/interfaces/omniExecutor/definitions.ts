@@ -146,7 +146,6 @@ export default {
                 InternalError: "Null",
                 InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
-                AuthTokenExpirationTooLong: "Null",
             },
         },
     },
