@@ -1,14 +1,12 @@
-use crate::{
-	error::Error,
-	types::{
-		AssetInfo, AssetSymbol, CancelOrderLimit, ConvertOrder, ConvertOrderStatus,
-		ConvertTradeHistory, LimitOrder, OpenOrders, PlaceLimitOrderParams, Quote,
-		RequestQuoteParams, TokenPair,
-	},
-	BinanceApi, Method,
-};
+mod types;
+
+use crate::{error::Error, traits::TryIntoParams, types::AssetSymbol, BinanceApi, Method};
 use log::error;
 use std::collections::HashMap;
+use types::{
+	AssetInfo, CancelOrderLimit, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, LimitOrder,
+	OpenOrders, PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,
+};
 
 /// https://developers.binance.com/docs/convert/general-info
 const CONVERT_API: &str = "/sapi/v1/convert";
