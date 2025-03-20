@@ -73,7 +73,12 @@ pub async fn start_server<
 	jwt_secret: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
-	let server = Server::builder().build(address.parse::<SocketAddr>()?).await?;
+	let max_connections: u32 =
+		env::var("RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
+	let server = Server::builder()
+		.max_connections(max_connections)
+		.build(address.parse::<SocketAddr>()?)
+		.await?;
 
 	// TODO: move to config
 	let mailer_api_key = env::var("SENDGRID_API_KEY").unwrap_or("".to_string());
