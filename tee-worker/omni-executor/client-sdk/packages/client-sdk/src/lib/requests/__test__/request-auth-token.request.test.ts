@@ -14,63 +14,62 @@ import { toHash } from '@utils/identity';
 import { getAndWaitForAccountStoreCreation } from '@test-utils/helpers';
 
 const types = {
-  ...identity.types, // Identity is defined here
-  ...omniAccount.types, // AuthOptions is defined here
-  ...omniExecutor.types, // NativeCall is defined here
+    ...identity.types, // Identity is defined here
+    ...omniAccount.types, // AuthOptions is defined here
+    ...omniExecutor.types, // NativeCall is defined here
 };
 
 describe('request-auth-token', () => {
-  let api: ApiPromise;
+    let api: ApiPromise;
 
-  beforeAll(async () => {
-    api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
-      types,
+    beforeAll(async () => {
+        api = new ApiPromise({
+            provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+            types,
+        });
+
+        await api.isReady;
+        await cryptoWaitReady();
     });
 
-    await api.isReady;
-    await cryptoWaitReady();
-  });
+    it('web3', async () => {
+        const keyring = new Keyring({ type: 'sr25519' });
+        const memberSigner = keyring.addFromUri('//Dave');
+        const member = createIdentityType(api.registry, {
+            addressOrHandle: memberSigner.address,
+            type: 'Substrate',
+        });
 
-  it('web3', async () => {
-    const keyring = new Keyring({ type: 'sr25519' });
-    const memberSigner = keyring.addFromUri('//Dave');
-    const member = createIdentityType(api.registry, {
-      addressOrHandle: memberSigner.address,
-      type: 'Substrate',
+        await (async () => {
+            const { send, payloadToSign = '' } = await createAccountStore(api, { member });
+
+            const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+
+            await send({
+                authentication: {
+                    type: 'Web3',
+                    signer: member,
+                    signature: signatureHex,
+                },
+            });
+        })();
+
+        await getAndWaitForAccountStoreCreation(api, toHash(member));
+
+        const { send, payloadToSign = '' } = await requestAuthToken(api, {
+            member,
+        });
+
+        const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+
+        const result = await send({
+            authentication: {
+                type: 'Web3',
+                signer: member,
+                signature: signatureHex,
+            },
+        });
+
+        expect(result.token.length).toBeGreaterThan(0);
     });
-
-    await (async () => {
-      const { send, payloadToSign = '' } = await createAccountStore(api, { member });
-
-      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
-
-      await send({
-        authentication: {
-          type: 'Web3',
-          signer: member,
-          signature: signatureHex,
-        },
-      });
-    })();
-
-    await getAndWaitForAccountStoreCreation(api, toHash(member));
-
-    const { send, payloadToSign = '' } = await requestAuthToken(api, {
-      member,
-      expiresAt: 99999999,
-    });
-
-    const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
-
-    const result = await send({
-      authentication: {
-        type: 'Web3',
-        signer: member,
-        signature: signatureHex,
-      },
-    });
-
-    expect(result.token.length).toBeGreaterThan(0);
-  });
 });

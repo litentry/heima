@@ -31,91 +31,87 @@ import { enclave } from '@lib/enclave';
  * @returns {HexString} send.return.status - Status of the transaction
  */
 export async function requestAuthToken(
-  api: ApiPromise,
-  data: {
-    member: Identity;
-    expiresAt: number;
-  },
-): Promise<{
-  payloadToSign?: string;
-  send: (args: { authentication: AuthenticationData }) => Promise<{
-    token: string;
-  }>;
-}> {
-  const { member, expiresAt } = data;
-
-  const [nonce, mrEnclave] = await Promise.all([
-    getOmniAccountNonceWithIdentity(api, member),
-    enclave.getMrEnclave(api),
-  ]);
-
-  const { operation } = createNativeCallType(api.registry, {
-    method: 'request_auth_token',
-    params: {
-      member,
-      authOptions: {
-        expiresAt,
-      },
+    api: ApiPromise,
+    data: {
+        member: Identity;
     },
-  });
+): Promise<{
+    payloadToSign?: string;
+    send: (args: { authentication: AuthenticationData }) => Promise<{
+        token: string;
+    }>;
+}> {
+    const { member } = data;
 
-  const mrEnclaveU8 = hexToU8a(mrEnclave);
+    const [nonce, mrEnclave] = await Promise.all([
+        getOmniAccountNonceWithIdentity(api, member),
+        enclave.getMrEnclave(api),
+    ]);
 
-  const send = async (args: {
-    authentication: AuthenticationData;
-  }): Promise<{
-    token: string;
-  }> => {
-    // prepare and encrypt request
-    const request = await createCallRequestType(api, {
-      authentication: args.authentication,
-      operation,
-      nonce,
-      mrEnclave: mrEnclaveU8,
+    const { operation } = createNativeCallType(api.registry, {
+        method: 'request_auth_token',
+        params: {
+            member,
+        },
     });
 
-    // send the request to the Enclave
-    const rpcRequest: JsonRpcRequest = {
-      jsonrpc: '2.0',
-      method: 'native_submitCallAesRequest',
-      params: [request.toHex()],
+    const mrEnclaveU8 = hexToU8a(mrEnclave);
+
+    const send = async (args: {
+        authentication: AuthenticationData;
+    }): Promise<{
+        token: string;
+    }> => {
+        // prepare and encrypt request
+        const request = await createCallRequestType(api, {
+            authentication: args.authentication,
+            operation,
+            nonce,
+            mrEnclave: mrEnclaveU8,
+        });
+
+        // send the request to the Enclave
+        const rpcRequest: JsonRpcRequest = {
+            jsonrpc: '2.0',
+            method: 'native_submitCallAesRequest',
+            params: [request.toHex()],
+        };
+
+        const data = await enclave.send(rpcRequest);
+
+        const result = api.createType<NativeOperationResponse>('NativeOperationResponse', data);
+
+        if (result.isErr) {
+            throw new Error(result.asErr.toString());
+        }
+
+        if (!result.asOk.isCallResponse) {
+            throw new Error('Unexpected response type');
+        }
+
+        const callResponse = result.asOk.asCallResponse;
+        if (!callResponse.isAuthToken) {
+            throw new Error('Unexpected call response type');
+        }
+
+        const token = callResponse.asAuthToken.toString();
+
+        return { token };
     };
 
-    const data = await enclave.send(rpcRequest);
+    if (isWeb3(member)) {
+        const payloadToSign = createPayloadToSign({
+            who: member,
+            operation,
+            nonce,
+            mrEnclave: mrEnclaveU8,
+        });
 
-    const result = api.createType<NativeOperationResponse>('NativeOperationResponse', data);
-
-    if (result.isErr) {
-      throw new Error(result.asErr.toString());
+        return {
+            payloadToSign,
+            send,
+        };
     }
 
-    if (!result.asOk.isCallResponse) {
-      throw new Error('Unexpected response type');
-    }
-
-    const callResponse = result.asOk.asCallResponse;
-    if (!callResponse.isAuthToken) {
-      throw new Error('Unexpected call response type');
-    }
-
-    const token = callResponse.asAuthToken.toString();
-
-    return { token };
-  };
-
-  if (isWeb3(member)) {
-    const payloadToSign = createPayloadToSign({
-      who: member,
-      operation,
-      nonce,
-      mrEnclave: mrEnclaveU8,
-    });
-
-    return {
-      payloadToSign,
-      send,
-    };
-  }
-
-  return { send };
+    return { send };
 }

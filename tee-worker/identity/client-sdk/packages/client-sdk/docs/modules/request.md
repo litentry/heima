@@ -440,7 +440,6 @@ Requests an authentication token from the Enclave.
 | :------ | :------ | :------ |
 | `api` | `ApiPromise` | Litentry Parachain API instance from Polkadot.js |
 | `data` | `Object` | - |
-| `data.expiresAt` | `number` | The block number at which the token expires |
 | `data.omniAccount` | `LitentryIdentity` | The user's omniAccount. Use `createLitentryIdentityType` helper to create this struct |
 | `data.who` | `LitentryIdentity` | The user's account. Use `createLitentryIdentityType` helper to create this struct |
 | `isWeb3Auth` | `boolean` | Whether the user is using Web3 authentication |
