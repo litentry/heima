@@ -56,6 +56,9 @@ describe('request-auth-token', () => {
 
         await getAndWaitForAccountStoreCreation(api, toHash(member));
 
+        // Wait 1 second for the omni_account can be retrieved from the omni_account_storage in omni-executor.
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
         const { send, payloadToSign = '' } = await requestAuthToken(api, {
             member,
         });

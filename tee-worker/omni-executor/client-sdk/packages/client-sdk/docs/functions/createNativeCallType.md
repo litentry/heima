@@ -10,7 +10,7 @@
 
 > **createNativeCallType**(`registry`, `data`): `object`
 
-Defined in: [type-creators/native-call.ts:66](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L66)
+Defined in: [type-creators/native-call.ts:79](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L79)
 
 Creates the NativeCall for the given method and provide the `param's` types expected for them.
 
@@ -52,7 +52,7 @@ Similarly, our types definitions must match also.
 
 > **createNativeCallType**(`registry`, `data`): `object`
 
-Defined in: [type-creators/native-call.ts:74](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L74)
+Defined in: [type-creators/native-call.ts:87](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L87)
 
 Creates the NativeCall for the given method and provide the `param's` types expected for them.
 
@@ -94,7 +94,7 @@ Similarly, our types definitions must match also.
 
 > **createNativeCallType**(`registry`, `data`): `object`
 
-Defined in: [type-creators/native-call.ts:82](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L82)
+Defined in: [type-creators/native-call.ts:95](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L95)
 
 Creates the NativeCall for the given method and provide the `param's` types expected for them.
 
@@ -136,7 +136,7 @@ Similarly, our types definitions must match also.
 
 > **createNativeCallType**(`registry`, `data`): `object`
 
-Defined in: [type-creators/native-call.ts:90](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L90)
+Defined in: [type-creators/native-call.ts:103](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L103)
 
 Creates the NativeCall for the given method and provide the `param's` types expected for them.
 
@@ -178,7 +178,7 @@ Similarly, our types definitions must match also.
 
 > **createNativeCallType**(`registry`, `data`): `object`
 
-Defined in: [type-creators/native-call.ts:98](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L98)
+Defined in: [type-creators/native-call.ts:111](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L111)
 
 Creates the NativeCall for the given method and provide the `param's` types expected for them.
 
@@ -220,7 +220,49 @@ Similarly, our types definitions must match also.
 
 > **createNativeCallType**(`registry`, `data`): `object`
 
-Defined in: [type-creators/native-call.ts:106](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L106)
+Defined in: [type-creators/native-call.ts:119](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L119)
+
+Creates the NativeCall for the given method and provide the `param's` types expected for them.
+
+Heads-up:
+This must match the Rust implementation of the NativeCall
+
+### Parameters
+
+#### registry
+
+`Registry`
+
+#### data
+
+##### method
+
+`"request_intent"`
+
+##### params
+
+`RequestIntentParams`
+
+### Returns
+
+`object`
+
+#### operation
+
+> **operation**: `NativeCall`
+
+### See
+
+ - https://github.com/litentry/heima/blob/dev/tee-worker/omni-executor/executor-core/src/native_operation.rs
+
+Similarly, our types definitions must match also.
+ - https://github.com/litentry/heima/blob/dev/tee-worker/client-api/parachain-api/prepare-build/interfaces/omniExecutor/definitions.ts
+
+## Call Signature
+
+> **createNativeCallType**(`registry`, `data`): `object`
+
+Defined in: [type-creators/native-call.ts:127](https://github.com/litentry/heima/blob/dev/type-creators/native-call.ts#L127)
 
 Creates the NativeCall for the given method and provide the `param's` types expected for them.
 

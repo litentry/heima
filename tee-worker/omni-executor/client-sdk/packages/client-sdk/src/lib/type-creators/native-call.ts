@@ -1,5 +1,12 @@
 import { Registry } from '@polkadot/types-codec/types';
-import { Identity, ValidationData, NativeCall, OmniAccountPermission, omniExecutor } from '@heima/parachain-api';
+import {
+  Intent,
+  Identity,
+  ValidationData,
+  NativeCall,
+  OmniAccountPermission,
+  omniExecutor,
+} from '@heima/parachain-api';
 
 const NativeCallEnum = omniExecutor.types.NativeCall._enum;
 
@@ -43,6 +50,12 @@ type RequestSetPermissionsParams = {
   member: Identity;
   memberToSetPermissions: Identity;
   permissions: Array<OmniAccountPermission>;
+};
+
+// Identity, Intent
+type RequestIntentParams = {
+  member: Identity;
+  intent: Intent;
 };
 
 // Identity, AuthOptions
@@ -100,6 +113,14 @@ export function createNativeCallType(
   data: {
     method: 'set_permissions';
     params: RequestSetPermissionsParams;
+  },
+): { operation: NativeCall };
+
+export function createNativeCallType(
+  registry: Registry,
+  data: {
+    method: 'request_intent';
+    params: RequestIntentParams;
   },
 ): { operation: NativeCall };
 
@@ -186,6 +207,16 @@ export function createNativeCallType(
     return { operation };
   }
 
+  if (isRequestIntentCall(method, params)) {
+    const { member, intent } = params;
+
+    const operation = registry.createType<NativeCall>('NativeCall', {
+      [nativeCallMethodsMap.request_intent]: registry.createType(NativeCallEnum.request_intent, [member, intent]),
+    });
+
+    return { operation };
+  }
+
   if (isRequestAuthTokenCall(method, params)) {
     const { member, authOptions } = params;
 
@@ -238,6 +269,10 @@ function isRequestSetPermissionsCall(
   params: Record<string, unknown>,
 ): params is RequestSetPermissionsParams {
   return method === nativeCallMethodsMap.set_permissions;
+}
+
+function isRequestIntentCall(method: NativeCallMethod, params: Record<string, unknown>): params is RequestIntentParams {
+  return method === nativeCallMethodsMap.request_intent;
 }
 
 function isRequestAuthTokenCall(
