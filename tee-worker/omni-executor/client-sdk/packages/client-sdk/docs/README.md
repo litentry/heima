@@ -37,5 +37,6 @@
 - [createIdentityType](functions/createIdentityType.md)
 - [createKeyAesOutputType](functions/createKeyAesOutputType.md)
 - [createNativeCallType](functions/createNativeCallType.md)
+- [createQueryRequestType](functions/createQueryRequestType.md)
 - [createValidationDataType](functions/createValidationDataType.md)
 - [toPublicKey](functions/toPublicKey.md)
