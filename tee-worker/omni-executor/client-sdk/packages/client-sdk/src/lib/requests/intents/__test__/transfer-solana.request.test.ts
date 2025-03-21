@@ -1,17 +1,12 @@
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
-import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 import { getChain } from '@heima/chaindata';
 import { identity, omniAccount, omniExecutor } from '@heima/parachain-api';
 
-import { createAccountStore } from '@requests/create-account-store.request';
-import { requestAuthToken } from '@requests/request-auth-token.request';
 import { createIdentityType } from '@type-creators/identity';
-import { toHash } from '@utils/identity';
-
-import { getAndWaitForAccountStoreCreation } from '@test-utils/helpers';
+import { transferSolana } from '@requests/intents/transfer-solana.request';
 
 const types = {
   ...identity.types, // Identity is defined here
@@ -19,7 +14,7 @@ const types = {
   ...omniExecutor.types, // NativeCall is defined here
 };
 
-describe('request-auth-token', () => {
+describe.skip('transfer-solana', () => {
   let api: ApiPromise;
 
   beforeAll(async () => {
@@ -29,10 +24,9 @@ describe('request-auth-token', () => {
     });
 
     await api.isReady;
-    await cryptoWaitReady();
   });
 
-  it('web3', async () => {
+  it('web3 authentication', async () => {
     const keyring = new Keyring({ type: 'sr25519' });
     const memberSigner = keyring.addFromUri('//Dave');
     const member = createIdentityType(api.registry, {
@@ -40,28 +34,10 @@ describe('request-auth-token', () => {
       type: 'Substrate',
     });
 
-    await (async () => {
-      const { send, payloadToSign = '' } = await createAccountStore(api, { member });
-
-      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
-
-      await send({
-        authentication: {
-          type: 'Web3',
-          signer: member,
-          signature: signatureHex,
-        },
-      });
-    })();
-
-    await getAndWaitForAccountStoreCreation(api, toHash(member));
-
-    // Wait 1 second for the omni_account can be retrieved from the omni_account_storage in omni-executor.
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const { send, payloadToSign = '' } = await requestAuthToken(api, {
+    const { send, payloadToSign = '' } = await transferSolana(api, {
       member,
-      expiresAt: 99999999,
+      to: '3uohKMHs1AUJj1X263C63BATPeyP81gMdGpxuajhRUHd',
+      amount: BigInt(100),
     });
 
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
@@ -74,6 +50,8 @@ describe('request-auth-token', () => {
       },
     });
 
-    expect(result.token.length).toBeGreaterThan(0);
+    expect(result.extrinsicHash.length).toBe(66);
+    expect(result.blockHash.length).toBe(66);
+    expect(result.status).toBeDefined();
   });
 });
