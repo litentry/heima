@@ -8,7 +8,7 @@
 
 > **transferSolana**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/transfer-solana.request.ts:30](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-solana.request.ts#L30)
+Defined in: [requests/intents/transfer-solana.request.ts:29](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-solana.request.ts#L29)
 
 Intent Request: Transfers SOL to another account on Solana.
 

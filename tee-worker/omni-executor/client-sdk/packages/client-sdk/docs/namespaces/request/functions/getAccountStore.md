@@ -8,7 +8,7 @@
 
 > **getAccountStore**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<`Identity`[]\>; \}\>
 
-Defined in: [requests/get-account-store.request.ts:24](https://github.com/litentry/heima/blob/dev/requests/get-account-store.request.ts#L24)
+Defined in: [requests/get-account-store.request.ts:23](https://github.com/litentry/heima/blob/dev/requests/get-account-store.request.ts#L23)
 
 Gets an account store from the Enclave.
 

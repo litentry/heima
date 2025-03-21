@@ -8,7 +8,7 @@
 
 > **transferNative**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/transfer-native.request.ts:29](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-native.request.ts#L29)
+Defined in: [requests/intents/transfer-native.request.ts:28](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-native.request.ts#L28)
 
 Intent Request: Transfers native tokens to another account on the  Parachain.
 

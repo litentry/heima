@@ -1,3 +1,4 @@
+import { getChain } from '@heima/chaindata';
 import { ApiPromise, identity, WsProvider } from '@heima/parachain-api';
 
 import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
@@ -12,7 +13,7 @@ describe('get-nonce', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider('ws://localhost:9944'),
+      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
       types,
     });
 

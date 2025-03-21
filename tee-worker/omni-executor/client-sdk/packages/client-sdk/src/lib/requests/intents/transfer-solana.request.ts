@@ -14,7 +14,6 @@ import { intent } from './intent.request';
  * @param {ApiPromise} api - The  Parachain API instance from Polkadot.js.
  * @param {Object} data - The data object containing the following properties:
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
- * @param {Identity} data.who - The user's account. Use the `createIdentityType` helper to create this struct.
  * @param {string} data.to - The Solana address destination.
  * @param {bigint} data.amount - The amount to send in lamports.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
