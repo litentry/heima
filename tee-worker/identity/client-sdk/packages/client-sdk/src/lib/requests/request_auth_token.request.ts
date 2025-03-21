@@ -30,6 +30,8 @@ export async function requestAuthToken(
     omniAccount: LitentryIdentity;
     /** The user's account. Use `createLitentryIdentityType` helper to create this struct */
     who: LitentryIdentity;
+    /** The block number at which the token expires */
+    expiresAt: number;
   },
   /** Whether the user is using Web3 authentication */
   isWeb3Auth: boolean
@@ -39,7 +41,7 @@ export async function requestAuthToken(
     token: string;
   }>;
 }> {
-  const { who, omniAccount } = data;
+  const { who, expiresAt, omniAccount } = data;
 
   assert(omniAccount.isSubstrate, 'OmniAccount must be a Substrate identity');
 
@@ -49,11 +51,13 @@ export async function requestAuthToken(
 
   const shard = await enclave.getShard(api);
   const shardU8 = hexToU8a(shard);
+  const authOptions = api.createType('AuthOptions', { expires_at: expiresAt });
 
   const { call } = await createTrustedCallType(api.registry, {
     method: 'request_auth_token',
     params: {
       who,
+      options: authOptions,
     },
   });
 
