@@ -19,8 +19,8 @@ export async function getOAuth2GoogleAuthorizationUrl(args: {
 }): Promise<string> {
   const { googleAccount, redirectUri } = args;
 
-  assert((googleAccount?.length ?? 0) > 0, 'Google account is required');
-  assert((redirectUri?.length ?? 0) > 0, 'Redirect URI is required');
+  assert(googleAccount.length > 0, 'Google account is required');
+  assert(redirectUri.length > 0, 'Redirect URI is required');
 
   // send the request to the Enclave
   const rpcRequest: JsonRpcRequest = {

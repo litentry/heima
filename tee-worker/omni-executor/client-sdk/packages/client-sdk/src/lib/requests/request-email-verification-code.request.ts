@@ -6,7 +6,7 @@ import { enclave } from '@lib/enclave';
 
 export async function requestEmailVerificationCode(args: { email: string }): Promise<void> {
   const { email } = args;
-  assert((email?.length ?? 0) > 0, 'Email is required');
+  assert(email.length > 0, 'Email is required');
 
   // send the request to the Enclave
   const rpcRequest: JsonRpcRequest = {
