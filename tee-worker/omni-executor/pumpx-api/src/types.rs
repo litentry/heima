@@ -4,7 +4,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
-pub enum ChainType {
+pub enum ChainId {
 	EVM = 1,
 	Solana = 2,
 }
@@ -13,7 +13,7 @@ pub enum ChainType {
 #[serde(rename_all = "camelCase")]
 pub struct Wallet {
 	pub user_wallet_address: String,
-	pub chain_type: ChainType,
+	pub chain_type: ChainId,
 	pub wallet_index: u32,
 }
 
@@ -62,7 +62,7 @@ pub enum GasType {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewMarketOrder {
-	pub chain_id: ChainType,
+	pub chain_id: ChainId,
 	pub token_ca: String,
 	pub swap_type: SwapType,
 	pub amount_in: String,
