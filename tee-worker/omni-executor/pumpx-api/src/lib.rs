@@ -39,17 +39,14 @@ impl PumpxApi {
 	) -> Result<ApiResponse<EmptyData>, Error> {
 		let endpoint = format!("{}/v3/account/user_register", self.base_url);
 		let new_user = NewUser { invite_code, wallet_list, email };
-		let response: ApiResponse<EmptyData> =
-			self.http_client.post(&endpoint).json(&new_user).send().await?.json().await?;
-		Ok(response)
+		self.http_client.post(&endpoint).json(&new_user).send().await?.json().await
 	}
 
 	// TODO: double check how this works
 	pub async fn login_user(&self) -> Result<ApiResponse<User>, Error> {
 		let endpoint = format!("{}/v3/account/user_login", self.base_url);
-		let response: ApiResponse<User> =
-			self.http_client.post(&endpoint).send().await?.json().await?;
-		Ok(response)
+		self.http_client.post(&endpoint).send().await?.json().await
+	}
 
 	pub async fn create_market_order(
 		&self,
