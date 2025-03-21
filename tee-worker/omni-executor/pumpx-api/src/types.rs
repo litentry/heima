@@ -35,3 +35,9 @@ pub struct ApiResponse<T> {
 
 #[derive(Deserialize)]
 pub struct EmptyData {}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct User {
+	pub user_id: u32,
+}

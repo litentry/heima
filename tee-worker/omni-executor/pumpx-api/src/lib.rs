@@ -4,7 +4,7 @@ use reqwest::{
 	header::{HeaderMap, HeaderValue},
 	Client, Error,
 };
-use types::{ApiResponse, EmptyData, NewUser, Wallet};
+use types::{ApiResponse, EmptyData, NewUser, User, Wallet};
 use url::Url;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
@@ -41,6 +41,14 @@ impl PumpxApi {
 		let new_user = NewUser { invite_code, wallet_list, email };
 		let response: ApiResponse<EmptyData> =
 			self.http_client.post(&endpoint).json(&new_user).send().await?.json().await?;
+		Ok(response)
+	}
+
+	// TODO: double check how this works
+	pub async fn login_user(&self) -> Result<ApiResponse<User>, Error> {
+		let endpoint = format!("{}/v3/account/user_login", self.base_url);
+		let response: ApiResponse<User> =
+			self.http_client.post(&endpoint).send().await?.json().await?;
 		Ok(response)
 	}
 }
