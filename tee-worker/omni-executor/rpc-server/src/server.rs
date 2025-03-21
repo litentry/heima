@@ -74,20 +74,20 @@ pub async fn start_server<
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
-		env::var("RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
+		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
 	let server = Server::builder()
 		.max_connections(max_connections)
 		.build(address.parse::<SocketAddr>()?)
 		.await?;
 
 	// TODO: move to config
-	let mailer_api_key = env::var("SENDGRID_API_KEY").unwrap_or("".to_string());
-	let mailer_from_email = env::var("SENDGRID_FROM_EMAIL").unwrap_or("".to_string());
-	let mailer_from_name = env::var("SENDGRID_FROM_NAME").unwrap_or("".to_string());
+	let mailer_api_key = env::var("OE_SENDGRID_API_KEY").unwrap_or("".to_string());
+	let mailer_from_email = env::var("OE_SENDGRID_FROM_EMAIL").unwrap_or("".to_string());
+	let mailer_from_name = env::var("OE_SENDGRID_FROM_NAME").unwrap_or("".to_string());
 	let mailer = Mailer::new(mailer_api_key, mailer_from_email, mailer_from_name);
 
-	let google_client_id = env::var("GOOGLE_CLIENT_ID").unwrap_or("".to_string());
-	let google_client_secret = env::var("GOOGLE_CLIENT_SECRET").unwrap_or("".to_string());
+	let google_client_id = env::var("OE_GOOGLE_CLIENT_ID").unwrap_or("".to_string());
+	let google_client_secret = env::var("OE_GOOGLE_CLIENT_SECRET").unwrap_or("".to_string());
 
 	let ctx = RpcContext::new(
 		shielding_key,
