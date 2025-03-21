@@ -63,7 +63,7 @@ async fn main() -> Result<(), ()> {
 	match cli.cmd {
 		Commands::Run(args) => {
 			// TODO: move to config
-			let jwt_secret = env::var("JWT_SECRET").unwrap_or("secret".to_string());
+			let jwt_secret = env::var("OE_JWT_SECRET").unwrap_or("secret".to_string());
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 
