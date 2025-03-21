@@ -21,7 +21,8 @@ impl PumpxApi {
 			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
 		};
 		let mut headers = HeaderMap::new();
-		headers.insert("Authorization", HeaderValue::from_str(&api_key).unwrap());
+		let auth_header = format!("Bearer {}", api_key);
+		headers.insert("Authorization", HeaderValue::from_str(&auth_header).unwrap());
 		headers.insert("X-Language", HeaderValue::from_static("en"));
 		let http_client = Client::builder()
 			.default_headers(headers)
