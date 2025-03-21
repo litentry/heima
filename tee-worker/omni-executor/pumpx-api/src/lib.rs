@@ -2,7 +2,9 @@ mod types;
 
 use reqwest::{
 	header::{HeaderMap, HeaderValue},
+	Client, Error,
 };
+use types::{ApiResponse, EmptyData, NewUser, Wallet};
 use url::Url;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
@@ -26,5 +28,18 @@ impl PumpxApi {
 			.build()
 			.expect("Failed to build HTTP client");
 		PumpxApi { http_client, base_url }
+	}
+
+	pub async fn register_user(
+		&self,
+		invite_code: String,
+		wallet_list: Vec<Wallet>,
+		email: Option<String>,
+	) -> Result<ApiResponse<EmptyData>, Error> {
+		let endpoint = format!("{}/v3/account/user_register", self.base_url);
+		let new_user = NewUser { invite_code, wallet_list, email };
+		let response: ApiResponse<EmptyData> =
+			self.http_client.post(&endpoint).json(&new_user).send().await?.json().await?;
+		Ok(response)
 	}
 }
