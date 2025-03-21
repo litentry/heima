@@ -64,4 +64,18 @@ impl PumpxApi {
 			.json()
 			.await
 	}
+
+	pub async fn send_market_order_tx(
+		&self,
+		market_order_tx: MarketOrderTx,
+	) -> Result<ApiResponse<TxData>, Error> {
+		let endpoint = format!("{}/v3/trade/send_tx", self.base_url);
+		self.http_client
+			.post(&endpoint)
+			.json(&market_order_tx)
+			.send()
+			.await?
+			.json()
+			.await
+	}
 }

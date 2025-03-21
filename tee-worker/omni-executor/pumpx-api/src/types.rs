@@ -82,3 +82,17 @@ pub struct MarketOrderUnsignedTx {
 	pub order_id: String,
 	pub tx_data: Vec<String>,
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketOrderTx {
+	pub order_id: String,
+	pub tx_data: Vec<String>,
+	pub chain_id: ChainId,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TxData {
+	pub tx_hash: String,
+}
