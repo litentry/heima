@@ -76,9 +76,9 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MarketOrder {
+pub struct MarketOrderUnsignedTx {
 	pub order_id: String,
 	pub tx_data: Vec<String>,
 }
