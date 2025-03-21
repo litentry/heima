@@ -4,7 +4,7 @@ use reqwest::{
 	header::{HeaderMap, HeaderValue},
 	Client, Error,
 };
-use types::{ApiResponse, EmptyData, NewUser, User, Wallet};
+use types::{ApiResponse, EmptyData, MarketOrder, NewMarketOrder, NewUser, User, Wallet};
 use url::Url;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
@@ -50,5 +50,18 @@ impl PumpxApi {
 		let response: ApiResponse<User> =
 			self.http_client.post(&endpoint).send().await?.json().await?;
 		Ok(response)
+
+	pub async fn create_market_order(
+		&self,
+		new_market_order: NewMarketOrder,
+	) -> Result<ApiResponse<MarketOrder>, Error> {
+		let endpoint = format!("{}/v3/trade/create_market_order_unsigned_tx", self.base_url);
+		self.http_client
+			.post(&endpoint)
+			.json(&new_market_order)
+			.send()
+			.await?
+			.json()
+			.await
 	}
 }
