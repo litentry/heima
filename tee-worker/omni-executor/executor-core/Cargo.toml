@@ -9,7 +9,7 @@ async-trait = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 regex = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["sync", "rt"] }
 
 # Local dependencies
 executor-primitives = { workspace = true }
