@@ -2,7 +2,7 @@ use crate::{AccountId, Address20, Address32, Address33, Balance, ChainType};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
-use sp_runtime::{traits::ConstU32, BoundedVec};
+use sp_runtime::{traits::ConstU32, BoundedVec, Vec};
 
 pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
 
@@ -11,17 +11,17 @@ pub const MAX_REMARK_LEN: u32 = u32::max_value();
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
 pub enum Intent {
     #[codec(index = 0)]
-    TransferEthereum(TransferEthereum),
-    #[codec(index = 1)]
-    CallEthereum(CallEthereum),
-    #[codec(index = 2)]
-    SystemRemark(BoundedVec<u8, ConstU32<MAX_REMARK_LEN>>),
-    #[codec(index = 3)]
-    TransferNative(TransferNative),
-    #[codec(index = 4)]
-    TransferSolana(TransferSolana),
-    #[codec(index = 5)]
     CrossChainSwap(SwapOrder),
+    #[codec(index = 1)]
+    TransferEthereum(TransferEthereum),
+    #[codec(index = 2)]
+    CallEthereum(CallEthereum),
+    #[codec(index = 3)]
+    SystemRemark(BoundedVec<u8, ConstU32<MAX_REMARK_LEN>>),
+    #[codec(index = 4)]
+    TransferNative(TransferNative),
+    #[codec(index = 5)]
+    TransferSolana(TransferSolana),
 }
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
