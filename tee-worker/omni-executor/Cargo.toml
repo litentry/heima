@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "binance-api",
+    "ethereum-rpc",
     "executor-crypto",
     "executor-core",
     "executor-worker",
@@ -11,6 +12,7 @@ members = [
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
+    "intent/token-query",
     "native-task-handler",
     "oauth-providers",
     "parentchain/listener",
@@ -53,6 +55,7 @@ serde_json = "1.0"
 sha2 = "0.10.8"
 solana-client = "2.1.5"
 solana-sdk = "2.1.5"
+spl-token = "7.0.0"
 sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
 subxt = "0.38.0"
@@ -65,9 +68,11 @@ futures = "0.3.31"
 
 # Local dependencies
 binance-api = { path = "binance-api" }
+ethereum-rpc = { path = "ethereum-rpc" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
 solana-intent-executor = { path = "intent/executors/solana" }
+intent-token-query = { path = "intent/token-query" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
