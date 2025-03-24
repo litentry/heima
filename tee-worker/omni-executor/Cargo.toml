@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "binance-api",
+    "ethereum-rpc",
     "executor-crypto",
     "executor-core",
     "executor-worker",
@@ -11,6 +12,7 @@ members = [
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
+    "intent/token-query",
     "native-task-handler",
     "oauth-providers",
     "parentchain/listener",
@@ -57,6 +59,7 @@ solana-client = "2.1.5"
 solana-sdk = "2.1.5"
 sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
+spl-token = "7.0.0"
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
@@ -67,6 +70,7 @@ url = "2.5.4"
 binance-api = { path = "binance-api" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
+ethereum-rpc = { path = "ethereum-rpc" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
@@ -74,6 +78,7 @@ executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
+intent-token-query = { path = "intent/token-query" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
