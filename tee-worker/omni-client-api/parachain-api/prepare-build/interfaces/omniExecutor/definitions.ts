@@ -17,7 +17,7 @@ export default {
         MrEnclave: "H256",
         NativeCall: {
             _enum: {
-                request_auth_token: "(Identity, AuthOptions)",
+                request_auth_token: "(Identity)",
                 request_intent: "(Identity, Intent)",
                 create_account_store: "(Identity)",
                 add_account: "(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>)",

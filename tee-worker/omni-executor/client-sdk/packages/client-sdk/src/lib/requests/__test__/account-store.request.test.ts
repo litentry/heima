@@ -17,6 +17,7 @@ import {
 import { createIdentityType } from '@type-creators/identity';
 import { addAccount } from '@requests/add-account.request';
 import { createAccountStore } from '@requests/create-account-store.request';
+import { getAccountStore } from '@requests/get-account-store.request';
 import { getAccountNonce } from '@requests/get-nonce.request';
 import { publicizeAccount } from '@requests/publicize-account.request';
 import { removeAccounts } from '@requests/remove-accounts.request';
@@ -90,6 +91,9 @@ describe('account-store', () => {
       );
     })();
 
+    // Wait 1 second for the omni_account can be retrieved from the omni_account_storage in omni-executor.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Step 2: add account
     console.log('Step 2: add account');
     await (async () => {
@@ -133,12 +137,31 @@ describe('account-store', () => {
     // Check account store after account added
     console.log('Step 2: check account store after account added');
     await (async () => {
+      // Check account store from parachain api
       const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
       expect(accountStore.length).toBe(2);
       expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
       expect(accountStore[1].isPrivate).toBeTruthy(); // Charlie
+
+      // Check account store from getAccountStore request
+      const { send, payloadToSign = '' } = await getAccountStore(api, { member });
+      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+      const accountStoreFromRquest = await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: signatureHex,
+        },
+      });
+      expect(accountStoreFromRquest).toHaveLength(2);
+      expect(encodeAddress(accountStoreFromRquest[0].asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
+      );
+      expect(encodeAddress(accountStoreFromRquest[1].asSubstrate.toU8a())).toBe(
+        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
+      );
 
       // Check permissions
       const permissions = await api.query.omniAccount.memberAccountPermissions(toHash(memberToAdd));
@@ -198,12 +221,31 @@ describe('account-store', () => {
     // Check account store after account publicized
     console.log('Step 4: check account store after account publicized');
     await (async () => {
+      // Check account store from parachain api
       const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
       expect(accountStore.length).toBe(2);
       expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
       expect(encodeAddress(accountStore[1].asPublic.asSubstrate.toU8a())).toBe(
+        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
+      );
+
+      // Check account store from getAccountStore request
+      const { send, payloadToSign = '' } = await getAccountStore(api, { member });
+      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+      const accountStoreFromRquest = await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: signatureHex,
+        },
+      });
+      expect(accountStoreFromRquest).toHaveLength(2);
+      expect(encodeAddress(accountStoreFromRquest[0].asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
+      );
+      expect(encodeAddress(accountStoreFromRquest[1].asSubstrate.toU8a())).toBe(
         '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
       );
     })();
@@ -230,9 +272,26 @@ describe('account-store', () => {
     // Check account store after account removed
     console.log('Step 5: check account store after account removed');
     await (async () => {
+      // Check account store from parachain api
       const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
       expect(accountStore.length).toBe(1);
       expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
+        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
+      );
+
+      // Check account store from getAccountStore request
+      const { send, payloadToSign = '' } = await getAccountStore(api, { member });
+      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
+      const accountStoreFromRquest = await send({
+        authentication: {
+          type: 'Web3',
+          signer: member,
+          signature: signatureHex,
+        },
+      });
+      expect(accountStoreFromRquest).toHaveLength(1);
+      expect(accountStoreFromRquest[0].isSubstrate).toBe(true);
+      expect(encodeAddress(accountStoreFromRquest[0].asSubstrate.toU8a())).toBe(
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
     })();

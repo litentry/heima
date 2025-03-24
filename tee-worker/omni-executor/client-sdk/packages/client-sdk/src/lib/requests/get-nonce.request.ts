@@ -1,5 +1,4 @@
 import { AccountId, Index } from '@polkadot/types/interfaces';
-import { assert } from '@polkadot/util';
 
 import { ApiPromise, Identity } from '@heima/parachain-api';
 
