@@ -16,7 +16,7 @@
 
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::intent::Intent;
+use executor_primitives::Intent;
 
 pub struct CrossChainIntentExecutor {}
 

@@ -14,31 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use async_trait::async_trait;
-use tokio::sync::mpsc;
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
-use executor_primitives::Intent;
-
-/// Used to perform intent on destination chain
-#[async_trait]
-pub trait IntentExecutor: Send {
-	async fn execute(&self, intent: Intent) -> Result<(), ()>;
-}
-
-pub struct MockedIntentExecutor {
-	sender: mpsc::UnboundedSender<()>,
-}
-
-impl MockedIntentExecutor {
-	pub fn new() -> (Self, mpsc::UnboundedReceiver<()>) {
-		let (sender, receiver) = mpsc::unbounded_channel();
-		(Self { sender }, receiver)
-	}
-}
-
-#[async_trait]
-impl IntentExecutor for MockedIntentExecutor {
-	async fn execute(&self, _intent: Intent) -> Result<(), ()> {
-		self.sender.send(()).map_err(|_| ())
-	}
+// TODO: maybe using xcm Location is better
+//       but we'd need enums for all foreign types, or use GeneralIndex
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum ChainType {
+    Heima,         // this chain
+    Ethereum(u32), // with chain id
+    Solana,
 }

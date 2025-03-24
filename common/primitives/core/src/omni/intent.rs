@@ -10,7 +10,7 @@ pub const MAX_REMARK_LEN: u32 = u32::max_value();
 
 pub type ChainId = u8;
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
 pub enum Intent {
     #[codec(index = 0)]
     TransferEthereum(TransferEthereum),
@@ -52,10 +52,13 @@ pub struct TransferSolana {
     pub value: u64,
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
 pub struct Asset {
-    pub id: AssetId,
-    pub chain_id: ChainId,
+    // `name` is intentionally defined as string-like type to:
+    // - allow easier integration with external service. E.g. APIs of binance/pumpx definitely expect strings
+    // -
+    pub name: Vec<u8>,
+    pub chain: ChainId,
 }
 
 #[derive(
@@ -67,7 +70,7 @@ pub enum MultiAddress {
     Address33(Address33),
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
 pub struct SwapOrder {
     pub from_asset: Asset,
     pub from_amount: u64,

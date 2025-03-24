@@ -19,7 +19,7 @@ use std::str::FromStr;
 use alloy::primitives::Address;
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::intent::Intent;
+use executor_primitives::Intent;
 use log::{error, info};
 use rpc::AlloyRpcProviderFactory;
 use signer::get_omni_account_signer;
