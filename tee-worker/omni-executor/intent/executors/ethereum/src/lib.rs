@@ -18,7 +18,7 @@ use std::str::FromStr;
 
 use alloy::primitives::Address;
 use async_trait::async_trait;
-use executor_core::intent_executor::IntentExecutor;
+use executor_core::intent_executor::{AccountId, IntentExecutor};
 use executor_primitives::intent::Intent;
 use log::{error, info};
 use rpc::AlloyRpcProviderFactory;
@@ -46,7 +46,7 @@ impl EthereumIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for EthereumIntentExecutor {
-	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+	async fn execute(&self, _account_id: &AccountId, intent: Intent) -> Result<(), ()> {
 		info!("Executing intent: {:?}", intent);
 
 		let omni_account_signer = get_omni_account_signer();

@@ -175,7 +175,11 @@ pub async fn handle_native_call<
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					if let Err(e) = ctx.ethereum_intent_executor.execute(intent.clone()).await {
+					if let Err(e) = ctx
+						.ethereum_intent_executor
+						.execute(omni_account.as_ref(), intent.clone())
+						.await
+					{
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
 					}
@@ -188,7 +192,11 @@ pub async fn handle_native_call<
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
 				Intent::TransferSolana(_) => {
-					if let Err(e) = ctx.solana_intent_executor.execute(intent.clone()).await {
+					if let Err(e) = ctx
+						.solana_intent_executor
+						.execute(omni_account.as_ref(), intent.clone())
+						.await
+					{
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
 					}
@@ -201,7 +209,11 @@ pub async fn handle_native_call<
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
 				Intent::CrossChainSwap(_) => {
-					if let Err(e) = ctx.cross_chain_intent_executor.execute(intent.clone()).await {
+					if let Err(e) = ctx
+						.cross_chain_intent_executor
+						.execute(omni_account.as_ref(), intent.clone())
+						.await
+					{
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
 					}
