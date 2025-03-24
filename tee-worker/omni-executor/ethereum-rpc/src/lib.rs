@@ -147,7 +147,7 @@ impl RpcProvider for AlloyRpcProvider {
 	}
 }
 
-#[cfg(feature= "mocks")]
+#[cfg(feature = "mocks")]
 pub mod mocks {
 	use crate::RpcProvider as RpcProviderTrait;
 	use crate::RpcProviderFactory;
