@@ -1,3 +1,19 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use alloy::network::EthereumWallet;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
@@ -6,8 +22,6 @@ use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
 use log::error;
-#[cfg(test)]
-use mockall::automock;
 
 pub trait RpcProviderFactory {
 	type Provider;
@@ -25,12 +39,11 @@ impl RpcProviderFactory for AlloyRpcProviderFactory {
 	type Context = EthereumWallet;
 
 	fn create(&self, ctx: Self::Context) -> Self::Provider {
-		AlloyRpcProvider::new(&self.url, ctx)
+		AlloyRpcProvider::new_with_wallet(&self.url, ctx)
 	}
 }
 
 #[async_trait]
-#[cfg_attr(test, automock(type Addr=Address; type Transaction=TransactionRequest;))]
 pub trait RpcProvider {
 	type Addr;
 	type Transaction;
@@ -40,20 +53,24 @@ pub trait RpcProvider {
 	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()>;
 	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()>;
 	async fn get_gas_price(&self) -> Result<u128, ()>;
+	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, ()>;
 }
 
 pub struct AlloyRpcProvider {
 	url: String,
-	wallet: EthereumWallet,
+	wallet: Option<EthereumWallet>,
 }
 
 impl AlloyRpcProvider {
-	pub fn new(url: &str, wallet: EthereumWallet) -> Self {
-		Self { url: url.to_string(), wallet }
+	pub fn new_with_wallet(url: &str, wallet: EthereumWallet) -> Self {
+		Self { url: url.to_string(), wallet: Some(wallet) }
+	}
+
+	pub fn new(url: &str) -> Self {
+		Self { url: url.to_string(), wallet: None }
 	}
 }
 
-//todo: remove unwraps
 #[async_trait]
 impl RpcProvider for AlloyRpcProvider {
 	type Addr = Address;
@@ -76,9 +93,18 @@ impl RpcProvider for AlloyRpcProvider {
 			.await
 			.map_err(|e| error!("Could not get transaction count: {:?}", e))
 	}
+
 	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()> {
+		if self.wallet.is_none() {
+			return Err(());
+		}
+
 		let provider = ProviderBuilder::new()
-			.wallet(self.wallet.clone())
+			.wallet(
+				self.wallet
+					.clone()
+					.ok_or(error!("Provider without a wallet cannot send transactions"))?,
+			)
 			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
 		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
@@ -110,16 +136,50 @@ impl RpcProvider for AlloyRpcProvider {
 			.await
 			.map_err(|e| error!("Could not get gas price: {:?}", e))
 	}
+
+	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, ()> {
+		let provider = ProviderBuilder::new()
+			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+
+		let result = provider.call(tx).await.map_err(|e| error!("Could not call: {:?}", e))?;
+
+		Ok(result.to_vec())
+	}
 }
 
-#[cfg(test)]
-pub mod tests {
-	use crate::rpc::MockRpcProvider;
-	use crate::rpc::RpcProviderFactory;
+#[cfg(feature = "mocks")]
+pub mod mocks {
+	use crate::RpcProvider as RpcProviderTrait;
+	use crate::RpcProviderFactory;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::Address;
+	use alloy::primitives::U256;
+	use alloy::rpc::types::TransactionRequest;
+	use async_trait::async_trait;
+	use mockall::mock;
 	use std::cell::RefCell;
 	use std::collections::HashMap;
+
+	mock! {
+		pub RpcProvider {}
+
+
+		#[async_trait]
+		impl RpcProviderTrait for RpcProvider {
+			type Addr = Address;
+			type Transaction = TransactionRequest;
+
+			async fn get_balance(&self, address: Address) -> Result<U256, ()>;
+			async fn get_transaction_count(&self, address: Address) -> Result<u64, ()>;
+			async fn send_transaction(&self, tx: TransactionRequest) -> Result<(), ()>;
+			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;
+			async fn get_gas_price(&self) -> Result<u128, ()>;
+			async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, ()>;
+		}
+
+
+
+	}
 
 	pub struct MockedRpcProviderFactory {
 		providers: RefCell<HashMap<Address, MockRpcProvider>>,

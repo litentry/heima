@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "binance-api",
+    "ethereum-rpc",
     "executor-crypto",
     "executor-core",
     "executor-worker",
@@ -11,6 +12,7 @@ members = [
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
+    "intent/token-query",
     "native-task-handler",
     "oauth-providers",
     "parentchain/listener",
@@ -35,11 +37,13 @@ bitcoin = "0.32.5"
 clap = "4.5.17"
 env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
+futures = "0.3.31"
 hex = "0.4"
 hmac = "0.12.1"
 jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 log = "0.4.22"
+mockall = "0.13.1"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
 regex = "1.7"
@@ -57,19 +61,18 @@ solana-client = "2.1.5"
 solana-sdk = "2.1.5"
 sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
+spl-token = "7.0.0"
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
 url = "2.5.4"
-mockall = "0.13.1"
-futures = "0.3.31"
 
 # Local dependencies
 binance-api = { path = "binance-api" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
-solana-intent-executor = { path = "intent/executors/solana" }
+ethereum-rpc = { path = "ethereum-rpc" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
@@ -77,6 +80,7 @@ executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
+intent-token-query = { path = "intent/token-query" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }
@@ -86,6 +90,7 @@ parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
 pumpx-api = { path = "pumpx-api" }
 rpc-server = { path = "rpc-server" }
+solana-intent-executor = { path = "intent/executors/solana" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"

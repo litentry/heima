@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
-use executor_core::intent_executor::IntentExecutor;
+use executor_core::intent_executor::{AccountId, IntentExecutor};
 use executor_primitives::intent::Intent;
 use log::{error, info};
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -42,7 +42,7 @@ impl SolanaIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for SolanaIntentExecutor {
-	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+	async fn execute(&self, _account_id: &AccountId, intent: Intent) -> Result<(), ()> {
 		info!("Executing intent: {:?}", intent);
 		// TODO: get key from key store
 		let signer_key_pair = Keypair::read_from_file("dev-key.json")

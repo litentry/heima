@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
+use executor_core::intent_executor::AccountId;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::intent::Intent;
 
@@ -28,7 +29,7 @@ impl CrossChainIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for CrossChainIntentExecutor {
-	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+	async fn execute(&self, _account_id: &AccountId, intent: Intent) -> Result<(), ()> {
 		match intent {
 			Intent::CrossChainSwap(_swap_order) => {
 				// TODO:
