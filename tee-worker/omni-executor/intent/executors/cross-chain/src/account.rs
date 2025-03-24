@@ -3,15 +3,11 @@ use std::{collections::HashMap, sync::RwLock};
 
 pub type AssetId = u8;
 
-pub struct AccountAssetLocks {
-	locks: RwLock<HashMap<AccountId, Account>>,
+pub struct AccountAssetLocks<AL: AssetsLock> {
+	locks: RwLock<HashMap<AccountId, AL>>,
 }
 
-pub struct Account {
-	locked_assets: HashMap<AssetId, u128>,
-}
-
-impl AccountAssetLocks {
+impl<AL: AssetsLock> AccountAssetLocks<AL> {
 	pub fn empty() -> Self {
 		Self { locks: RwLock::new(HashMap::new()) }
 	}
@@ -28,7 +24,7 @@ impl AccountAssetLocks {
 		if let Some(account) = account_lock.get_mut(&account_id) {
 			account.lock(asset_id, amount_to_lock, available_amount)?;
 		} else {
-			let account = Account::with_lock(asset_id, amount_to_lock, available_amount)?;
+			let account = AL::with_lock(asset_id, amount_to_lock, available_amount)?;
 			account_lock.insert(account_id, account);
 		}
 
@@ -50,8 +46,30 @@ impl AccountAssetLocks {
 	}
 }
 
-impl Account {
-	pub fn with_lock(
+pub trait AssetsLock {
+	fn with_lock(
+		asset_id: AssetId,
+		amount_to_lock: u128,
+		available_amount: u128,
+	) -> Result<Self, ()>
+	where
+		Self: Sized;
+	fn lock(
+		&mut self,
+		asset_id: AssetId,
+		amount_to_lock: u128,
+		available_amount: u128,
+	) -> Result<(), ()>;
+
+	fn release(&mut self, asset_id: AssetId, amount_to_release: u128) -> Result<(), ()>;
+}
+
+pub struct PreciseAssetsLock {
+	locked_assets: HashMap<AssetId, u128>,
+}
+
+impl AssetsLock for PreciseAssetsLock {
+	fn with_lock(
 		asset_id: AssetId,
 		amount_to_lock: u128,
 		available_amount: u128,
@@ -66,7 +84,7 @@ impl Account {
 		Ok(Self { locked_assets })
 	}
 
-	pub fn lock(
+	fn lock(
 		&mut self,
 		asset_id: AssetId,
 		amount_to_lock: u128,
@@ -86,7 +104,7 @@ impl Account {
 		Ok(())
 	}
 
-	pub fn release(&mut self, asset_id: AssetId, amount_to_release: u128) -> Result<(), ()> {
+	fn release(&mut self, asset_id: AssetId, amount_to_release: u128) -> Result<(), ()> {
 		if let Some(lock) = self.locked_assets.get_mut(&asset_id) {
 			if *lock < amount_to_release {
 				// this is some kind of inconsistency - we should either set lock to 0 and return Ok or return Err
@@ -103,7 +121,8 @@ impl Account {
 
 #[cfg(test)]
 pub mod tests {
-	use crate::account::Account;
+	use crate::account::AssetsLock;
+	use crate::account::PreciseAssetsLock;
 
 	use super::AccountAssetLocks;
 
@@ -113,7 +132,7 @@ pub mod tests {
 		let asset_id = 1_u8;
 		let amount_to_lock = 10;
 		let available_amount = 20;
-		let account_assets_locks = AccountAssetLocks::empty();
+		let account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		assert!(account_assets_locks
 			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
 			.is_ok());
@@ -137,7 +156,7 @@ pub mod tests {
 		let asset_id = 1_u8;
 		let amount_to_lock = 10;
 		let available_amount = 9;
-		let account_assets_locks = AccountAssetLocks::empty();
+		let account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		assert!(account_assets_locks
 			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
 			.is_err());
@@ -150,12 +169,11 @@ pub mod tests {
 		let asset_id = 1_u8;
 		let amount_to_lock = 10;
 		let available_amount = 20;
-		let mut account_assets_locks = AccountAssetLocks::empty();
-		account_assets_locks
-			.locks
-			.get_mut()
-			.unwrap()
-			.insert(account_id.clone(), Account::with_lock(asset_id.clone(), 10, 10).unwrap());
+		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
+		account_assets_locks.locks.get_mut().unwrap().insert(
+			account_id.clone(),
+			PreciseAssetsLock::with_lock(asset_id.clone(), 10, 10).unwrap(),
+		);
 
 		assert!(account_assets_locks
 			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
@@ -180,12 +198,11 @@ pub mod tests {
 		let asset_id = 1_u8;
 		let amount_to_lock = 10;
 		let available_amount = 15;
-		let mut account_assets_locks = AccountAssetLocks::empty();
-		account_assets_locks
-			.locks
-			.get_mut()
-			.unwrap()
-			.insert(account_id.clone(), Account::with_lock(asset_id.clone(), 10, 10).unwrap());
+		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
+		account_assets_locks.locks.get_mut().unwrap().insert(
+			account_id.clone(),
+			PreciseAssetsLock::with_lock(asset_id.clone(), 10, 10).unwrap(),
+		);
 
 		assert!(account_assets_locks
 			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
@@ -209,12 +226,11 @@ pub mod tests {
 		let account_id = [1; 32];
 		let asset_id = 1_u8;
 		let amount_to_release = 15;
-		let mut account_assets_locks = AccountAssetLocks::empty();
-		account_assets_locks
-			.locks
-			.get_mut()
-			.unwrap()
-			.insert(account_id.clone(), Account::with_lock(asset_id.clone(), 10, 10).unwrap());
+		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
+		account_assets_locks.locks.get_mut().unwrap().insert(
+			account_id.clone(),
+			PreciseAssetsLock::with_lock(asset_id.clone(), 10, 10).unwrap(),
+		);
 
 		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_err());
 	}
@@ -224,7 +240,7 @@ pub mod tests {
 		let account_id = [1; 32];
 		let asset_id = 1_u8;
 		let amount_to_release = 15;
-		let account_assets_locks = AccountAssetLocks::empty();
+		let account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 
 		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_err());
 	}
@@ -234,12 +250,11 @@ pub mod tests {
 		let account_id = [1; 32];
 		let asset_id = 2_u8;
 		let amount_to_release = 15;
-		let mut account_assets_locks = AccountAssetLocks::empty();
-		account_assets_locks
-			.locks
-			.get_mut()
-			.unwrap()
-			.insert(account_id.clone(), Account::with_lock(asset_id.clone(), 10, 10).unwrap());
+		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
+		account_assets_locks.locks.get_mut().unwrap().insert(
+			account_id.clone(),
+			PreciseAssetsLock::with_lock(asset_id.clone(), 10, 10).unwrap(),
+		);
 
 		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_err());
 	}
