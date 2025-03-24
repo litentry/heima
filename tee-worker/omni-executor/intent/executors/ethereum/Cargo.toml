@@ -10,7 +10,7 @@ async-trait = { workspace = true }
 log = { workspace = true }
 
 # Local dependencies
-ethereum-rpc = {workspace = true }
+ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 
@@ -18,7 +18,7 @@ executor-primitives = { workspace = true }
 tokio = { workspace = true }
 mockall = { workspace = true }
 futures = { workspace = true }
-ethereum-rpc = {workspace = true, features = ["mocks"] }
+ethereum-rpc = { workspace = true, features = ["mocks"] }
 
 [lints]
 workspace = true
