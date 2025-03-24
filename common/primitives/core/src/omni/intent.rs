@@ -1,4 +1,4 @@
-use crate::{AccountId, Address20, Address32, Address33, AssetId, Balance};
+use crate::{AccountId, Address20, Address32, Address33, Balance, ChainType};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -7,8 +7,6 @@ use sp_runtime::{traits::ConstU32, BoundedVec};
 pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
 
 pub const MAX_REMARK_LEN: u32 = u32::max_value();
-
-pub type ChainId = u8;
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
 pub enum Intent {
@@ -56,9 +54,10 @@ pub struct TransferSolana {
 pub struct Asset {
     // `name` is intentionally defined as string-like type to:
     // - allow easier integration with external service. E.g. APIs of binance/pumpx definitely expect strings
-    // -
+    // - be future-compatible: meme-coins/alt-coins could have arbitrary names
     pub name: Vec<u8>,
-    pub chain: ChainId,
+    // `chain` is of enum type, we don't expect we support any chain
+    pub chain: ChainType,
 }
 
 #[derive(
@@ -75,6 +74,5 @@ pub struct SwapOrder {
     pub from_asset: Asset,
     pub from_amount: u64,
     pub to_asset: Asset,
-    pub to_min_amount: u64,
     pub to_address: Option<MultiAddress>,
 }

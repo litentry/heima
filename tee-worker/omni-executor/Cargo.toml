@@ -34,11 +34,13 @@ bitcoin = "0.32.5"
 clap = "4.5.17"
 env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
+futures = "0.3.31"
 hex = "0.4"
 hmac = "0.12.1"
 jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 log = "0.4.22"
+mockall = "0.13.1"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
 regex = "1.7"
@@ -60,14 +62,11 @@ subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
 url = "2.5.4"
-mockall = "0.13.1"
-futures = "0.3.31"
 
 # Local dependencies
 binance-api = { path = "binance-api" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
-solana-intent-executor = { path = "intent/executors/solana" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
@@ -83,6 +82,7 @@ parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
 rpc-server = { path = "rpc-server" }
+solana-intent-executor = { path = "intent/executors/solana" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
