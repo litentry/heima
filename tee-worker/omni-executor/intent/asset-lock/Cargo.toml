@@ -7,6 +7,7 @@ edition.workspace = true
 [dependencies]
 # Local dependencies
 executor-core = { workspace = true }
+heima-primitives = { package = "core-primitives", path = "../../../../common/primitives/core", default-features = false, features = ["std"] }
 
 [lints]
 workspace = true

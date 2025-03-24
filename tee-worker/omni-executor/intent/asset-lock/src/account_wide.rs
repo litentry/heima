@@ -67,15 +67,17 @@ impl AssetsLock for AccountWideAssetsLock {
 
 #[cfg(test)]
 pub mod tests {
-	use super::AssetsLock;
+	use crate::AssetId;
+
 	use super::AccountWideAssetsLock;
+	use super::AssetsLock;
 
 	use crate::AccountAssetLocks;
 
 	#[test]
 	pub fn locks_asset_for_not_tracked_account_if_enough_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 20;
 		let account_assets_locks = AccountAssetLocks::<AccountWideAssetsLock>::empty();
@@ -96,7 +98,7 @@ pub mod tests {
 	#[test]
 	pub fn not_locks_asset_for_not_tracked_account_if_not_enough_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 9;
 		let account_assets_locks = AccountAssetLocks::<AccountWideAssetsLock>::empty();
@@ -109,7 +111,7 @@ pub mod tests {
 	#[test]
 	pub fn not_locks_if_already_locked() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 15;
 		let mut account_assets_locks = AccountAssetLocks::<AccountWideAssetsLock>::empty();
@@ -135,7 +137,7 @@ pub mod tests {
 	#[test]
 	pub fn returns_error_if_called_release_for_not_locked_account() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_release = 15;
 		let account_assets_locks = AccountAssetLocks::<AccountWideAssetsLock>::empty();
 
@@ -145,7 +147,7 @@ pub mod tests {
 	#[test]
 	pub fn releases_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_release: u128 = 5;
 		let mut account_assets_locks = AccountAssetLocks::<AccountWideAssetsLock>::empty();
 		account_assets_locks.locks.get_mut().unwrap().insert(

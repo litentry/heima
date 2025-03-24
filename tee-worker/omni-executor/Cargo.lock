@@ -4520,6 +4520,7 @@ dependencies = [
 name = "intent-asset-lock"
 version = "0.1.0"
 dependencies = [
+ "core-primitives",
  "executor-core",
 ]
 

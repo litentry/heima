@@ -15,14 +15,15 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use executor_core::intent_executor::AccountId;
+use heima_primitives::Asset;
 use std::{collections::HashMap, sync::RwLock};
 
-pub type AssetId = u8;
+pub type AssetId = Asset;
 
 #[allow(dead_code)]
-pub mod precise;
-#[allow(dead_code)]
 pub mod account_wide;
+#[allow(dead_code)]
+pub mod precise;
 
 pub struct AccountAssetLocks<AL: AssetsLock> {
 	locks: RwLock<HashMap<AccountId, AL>>,

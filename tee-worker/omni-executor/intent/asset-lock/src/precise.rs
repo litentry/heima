@@ -77,18 +77,19 @@ impl AssetsLock for PreciseAssetsLock {
 pub mod tests {
 	use super::AssetsLock;
 	use super::PreciseAssetsLock;
+	use crate::AssetId;
 
 	use crate::AccountAssetLocks;
 
 	#[test]
 	pub fn locks_asset_for_not_tracked_account_if_enough_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 20;
 		let account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		assert!(account_assets_locks
-			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
+			.check_and_insert(account_id, asset_id.clone(), amount_to_lock, available_amount)
 			.is_ok());
 		assert_eq!(
 			*account_assets_locks
@@ -107,7 +108,7 @@ pub mod tests {
 	#[test]
 	pub fn not_locks_asset_for_not_tracked_account_if_not_enough_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 9;
 		let account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
@@ -120,7 +121,7 @@ pub mod tests {
 	#[test]
 	pub fn locks_asset_for_tracked_account_if_enough_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 20;
 		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
@@ -130,7 +131,7 @@ pub mod tests {
 		);
 
 		assert!(account_assets_locks
-			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
+			.check_and_insert(account_id, asset_id.clone(), amount_to_lock, available_amount)
 			.is_ok());
 		assert_eq!(
 			*account_assets_locks
@@ -149,7 +150,7 @@ pub mod tests {
 	#[test]
 	pub fn not_locks_asset_for_tracked_account_if_not_enough_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_lock = 10;
 		let available_amount = 15;
 		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
@@ -159,7 +160,7 @@ pub mod tests {
 		);
 
 		assert!(account_assets_locks
-			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
+			.check_and_insert(account_id, asset_id.clone(), amount_to_lock, available_amount)
 			.is_err());
 		assert_eq!(
 			*account_assets_locks
@@ -178,7 +179,7 @@ pub mod tests {
 	#[test]
 	pub fn returns_error_if_locked_amount_is_lower_that_requested_release() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_release = 15;
 		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		account_assets_locks.locks.get_mut().unwrap().insert(
@@ -192,7 +193,7 @@ pub mod tests {
 	#[test]
 	pub fn returns_error_if_called_release_for_not_tracked_account() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_release = 15;
 		let account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 
@@ -202,7 +203,7 @@ pub mod tests {
 	#[test]
 	pub fn returns_error_if_called_release_for_not_tracked_asset_for_account() {
 		let account_id = [1; 32];
-		let asset_id = 2_u8;
+		let asset_id = AssetId { id: 1, chain_id: 1 };
 		let amount_to_release = 15;
 		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		account_assets_locks.locks.get_mut().unwrap().insert(
@@ -216,7 +217,7 @@ pub mod tests {
 	#[test]
 	pub fn releases_assets() {
 		let account_id = [1; 32];
-		let asset_id = 1_u8;
+		let asset_id = AssetId { id: 0, chain_id: 0 };
 		let amount_to_release: u128 = 5;
 		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		account_assets_locks.locks.get_mut().unwrap().insert(
@@ -224,7 +225,9 @@ pub mod tests {
 			PreciseAssetsLock::with_lock(asset_id.clone(), 10, 10).unwrap(),
 		);
 
-		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_ok());
+		assert!(account_assets_locks
+			.release(account_id, asset_id.clone(), amount_to_release)
+			.is_ok());
 		assert_eq!(
 			*account_assets_locks
 				.locks
