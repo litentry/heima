@@ -1,69 +1,23 @@
-use executor_core::intent_executor::AccountId;
-use std::{collections::HashMap, sync::RwLock};
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-pub type AssetId = u8;
+use crate::{AssetId, AssetsLock};
+use std::collections::HashMap;
 
-pub struct AccountAssetLocks<AL: AssetsLock> {
-	locks: RwLock<HashMap<AccountId, AL>>,
-}
-
-impl<AL: AssetsLock> AccountAssetLocks<AL> {
-	pub fn empty() -> Self {
-		Self { locks: RwLock::new(HashMap::new()) }
-	}
-
-	pub fn check_and_insert(
-		&self,
-		account_id: AccountId,
-		asset_id: AssetId,
-		amount_to_lock: u128,
-		available_amount: u128,
-	) -> Result<(), ()> {
-		let mut account_lock = self.locks.write().unwrap();
-
-		if let Some(account) = account_lock.get_mut(&account_id) {
-			account.lock(asset_id, amount_to_lock, available_amount)?;
-		} else {
-			let account = AL::with_lock(asset_id, amount_to_lock, available_amount)?;
-			account_lock.insert(account_id, account);
-		}
-
-		Ok(())
-	}
-
-	pub fn release(
-		&self,
-		account_id: AccountId,
-		asset_id: AssetId,
-		amount_to_release: u128,
-	) -> Result<(), ()> {
-		let mut account_lock = self.locks.write().unwrap();
-		if let Some(account) = account_lock.get_mut(&account_id) {
-			account.release(asset_id, amount_to_release)
-		} else {
-			Err(())
-		}
-	}
-}
-
-pub trait AssetsLock {
-	fn with_lock(
-		asset_id: AssetId,
-		amount_to_lock: u128,
-		available_amount: u128,
-	) -> Result<Self, ()>
-	where
-		Self: Sized;
-	fn lock(
-		&mut self,
-		asset_id: AssetId,
-		amount_to_lock: u128,
-		available_amount: u128,
-	) -> Result<(), ()>;
-
-	fn release(&mut self, asset_id: AssetId, amount_to_release: u128) -> Result<(), ()>;
-}
-
+// Manages asset locks per account. Used for precise tracking of currently locked assets.
 pub struct PreciseAssetsLock {
 	locked_assets: HashMap<AssetId, u128>,
 }
@@ -121,10 +75,10 @@ impl AssetsLock for PreciseAssetsLock {
 
 #[cfg(test)]
 pub mod tests {
-	use crate::account::AssetsLock;
-	use crate::account::PreciseAssetsLock;
+	use super::AssetsLock;
+	use super::PreciseAssetsLock;
 
-	use super::AccountAssetLocks;
+	use crate::AccountAssetLocks;
 
 	#[test]
 	pub fn locks_asset_for_not_tracked_account_if_enough_assets() {
@@ -257,5 +211,31 @@ pub mod tests {
 		);
 
 		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_err());
+	}
+
+	#[test]
+	pub fn releases_assets() {
+		let account_id = [1; 32];
+		let asset_id = 1_u8;
+		let amount_to_release: u128 = 5;
+		let mut account_assets_locks = AccountAssetLocks::<PreciseAssetsLock>::empty();
+		account_assets_locks.locks.get_mut().unwrap().insert(
+			account_id.clone(),
+			PreciseAssetsLock::with_lock(asset_id.clone(), 10, 10).unwrap(),
+		);
+
+		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_ok());
+		assert_eq!(
+			*account_assets_locks
+				.locks
+				.read()
+				.unwrap()
+				.get(&account_id)
+				.unwrap()
+				.locked_assets
+				.get(&asset_id)
+				.unwrap(),
+			5
+		);
 	}
 }

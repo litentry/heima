@@ -19,9 +19,6 @@ use executor_core::intent_executor::AccountId;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::intent::Intent;
 
-#[allow(dead_code)]
-mod account;
-
 pub struct CrossChainIntentExecutor {}
 
 impl CrossChainIntentExecutor {

@@ -4517,6 +4517,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "intent-asset-lock"
+version = "0.1.0"
+dependencies = [
+ "executor-core",
+]
+
+[[package]]
 name = "intent-token-query"
 version = "0.1.0"
 dependencies = [
