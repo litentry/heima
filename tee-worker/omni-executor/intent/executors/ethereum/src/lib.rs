@@ -21,10 +21,12 @@ use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::intent::Intent;
 use log::{error, info};
+use rpc::AlloyRpcProviderFactory;
 use signer::get_omni_account_signer;
 use tx::submit;
 
 mod delegate_call;
+mod rpc;
 mod signer;
 mod tx;
 
@@ -50,26 +52,28 @@ impl IntentExecutor for EthereumIntentExecutor {
 		let omni_account_signer = get_omni_account_signer();
 		info!("Omni account address: {:?}", omni_account_signer.address());
 
+		let rpc_factory = AlloyRpcProviderFactory { url: self.rpc_url.to_string() };
+
 		match intent {
 			Intent::TransferEthereum(transfer) => {
 				submit(
-					&self.rpc_url,
+					&rpc_factory,
 					Address::from_slice(transfer.to.as_bytes()),
 					transfer.value,
 					vec![],
 					omni_account_signer,
-					None,
+					tx::Paymode::Standard,
 				)
 				.await?;
 			},
 			Intent::CallEthereum(call_ethereum) => {
 				submit(
-					&self.rpc_url,
+					&rpc_factory,
 					Address::from_slice(call_ethereum.address.as_bytes()),
 					[0; 32],
 					call_ethereum.input.to_vec(),
 					omni_account_signer,
-					None,
+					tx::Paymode::Standard,
 				)
 				.await?;
 			},
@@ -106,7 +110,6 @@ pub mod test {
 		let wallet = EthereumWallet::from(signer);
 
 		let provider = ProviderBuilder::new()
-			.with_recommended_fillers()
 			.wallet(wallet)
 			.on_http(url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e)).unwrap());
 		let nonce = provider

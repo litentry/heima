@@ -8,9 +8,9 @@ members = [
     "executor-primitives",
     "heima/authentication",
     "heima/identity-verification",
-    "intent-executors/cross-chain-intent-executor",
-    "intent-executors/ethereum-intent-executor",
-    "intent-executors/solana-intent-executor",
+    "intent/executors/cross-chain",
+    "intent/executors/ethereum",
+    "intent/executors/solana",
     "native-task-handler",
     "oauth-providers",
     "parentchain/listener",
@@ -27,7 +27,7 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-alloy = "0.3.6"
+alloy = "0.12.5"
 async-trait = "0.1.82"
 base64 = "0.22.1"
 bitcoin = "0.32.5"
@@ -60,11 +60,14 @@ subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
 tokio = "1.43.0"
 url = "2.5.4"
+mockall = "0.13.1"
+futures = "0.3.31"
 
 # Local dependencies
 binance-api = { path = "binance-api" }
-cross-chain-intent-executor = { path = "intent-executors/cross-chain-intent-executor" }
-ethereum-intent-executor = { path = "intent-executors/ethereum-intent-executor" }
+cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
+ethereum-intent-executor = { path = "intent/executors/ethereum" }
+solana-intent-executor = { path = "intent/executors/solana" }
 executor-core = { path = "executor-core" }
 executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
@@ -80,7 +83,6 @@ parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
 rpc-server = { path = "rpc-server" }
-solana-intent-executor = { path = "intent-executors/solana-intent-executor" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
