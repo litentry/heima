@@ -14,13 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::RwLock;
-
 use crate::AssetsLock;
 
 // Manages whether any asset is locked for particular account or not.
 pub struct AccountWideAssetsLock {
-	locked: RwLock<bool>,
+	locked: bool,
 }
 
 impl AssetsLock for AccountWideAssetsLock {
@@ -35,7 +33,7 @@ impl AssetsLock for AccountWideAssetsLock {
 		if amount_to_lock > available_amount {
 			return Err(());
 		}
-		Ok(Self { locked: RwLock::new(true) })
+		Ok(Self { locked: true })
 	}
 
 	fn lock(
@@ -44,23 +42,19 @@ impl AssetsLock for AccountWideAssetsLock {
 		_amount_to_lock: u128,
 		_available_amount: u128,
 	) -> Result<(), ()> {
-		let mut locked = self.locked.write().unwrap();
-
-		if *locked {
+		if self.locked {
 			return Err(());
 		}
-		*locked = true;
+		self.locked = true;
 		Ok(())
 	}
 
 	fn release(&mut self, _asset_id: crate::AssetId, _amount_to_release: u128) -> Result<(), ()> {
-		let mut locked = self.locked.write().unwrap();
-
-		if !*locked {
+		if !self.locked {
 			return Err(());
 		}
 
-		*locked = false;
+		self.locked = false;
 		Ok(())
 	}
 }
@@ -84,15 +78,7 @@ pub mod tests {
 		assert!(account_assets_locks
 			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
 			.is_ok());
-		assert!(*account_assets_locks
-			.locks
-			.read()
-			.unwrap()
-			.get(&account_id)
-			.unwrap()
-			.locked
-			.read()
-			.unwrap());
+		assert!(account_assets_locks.locks.read().unwrap().get(&account_id).unwrap().locked);
 	}
 
 	#[test]
@@ -123,15 +109,7 @@ pub mod tests {
 		assert!(account_assets_locks
 			.check_and_insert(account_id, asset_id, amount_to_lock, available_amount)
 			.is_err());
-		assert!(*account_assets_locks
-			.locks
-			.read()
-			.unwrap()
-			.get(&account_id)
-			.unwrap()
-			.locked
-			.read()
-			.unwrap());
+		assert!(account_assets_locks.locks.read().unwrap().get(&account_id).unwrap().locked);
 	}
 
 	#[test]
@@ -156,14 +134,6 @@ pub mod tests {
 		);
 
 		assert!(account_assets_locks.release(account_id, asset_id, amount_to_release).is_ok());
-		assert!(!*account_assets_locks
-			.locks
-			.read()
-			.unwrap()
-			.get(&account_id)
-			.unwrap()
-			.locked
-			.read()
-			.unwrap());
+		assert!(!account_assets_locks.locks.read().unwrap().get(&account_id).unwrap().locked);
 	}
 }
