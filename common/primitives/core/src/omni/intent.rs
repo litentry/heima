@@ -1,8 +1,9 @@
 use crate::{AccountId, Address20, Address32, Address33, Balance, ChainType};
+use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
-use sp_runtime::{traits::ConstU32, BoundedVec, Vec};
+use sp_runtime::{traits::ConstU32, BoundedVec};
 
 pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
 
