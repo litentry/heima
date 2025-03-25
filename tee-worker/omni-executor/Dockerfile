@@ -51,7 +51,7 @@ RUN curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/in
 RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
 | tee /etc/apt/sources.list.d/intel-sgx.list
 
-RUN apt update && apt install -y gramine
+RUN apt update && apt install -y gramine clang
 
 # Build
 ENV HOME=/home/ubuntu

@@ -349,10 +349,11 @@ jobs:
       - set-release-type
       - build-parachain-runtime
       - build-identity-worker
+      - build-omni-executor
       - parachain-ts-tests
     if: |
       !failure()  &&
-      (success('build-parachain-runtime') || success('parachain-ts-tests') || success('build-identity-worker'))
+      (success('build-parachain-runtime') || success('parachain-ts-tests') || success('build-identity-worker') || success('build-omni-executor'))
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
         uses: actions/checkout@v4
