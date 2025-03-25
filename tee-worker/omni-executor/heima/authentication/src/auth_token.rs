@@ -23,12 +23,13 @@ pub struct AuthOptions {
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct AuthTokenClaims {
 	sub: String,
+	typ: String,
 	pub exp: BlockNumber,
 }
 
 impl AuthTokenClaims {
-	pub fn new(sub: String, options: AuthOptions) -> Self {
-		Self { sub, exp: options.expires_at }
+	pub fn new(sub: String, typ: String, options: AuthOptions) -> Self {
+		Self { sub, typ, exp: options.expires_at }
 	}
 }
 
@@ -82,7 +83,11 @@ mod tests {
 	#[test]
 	fn test_auth_token() {
 		let private_key = include_bytes!("../test_private_key.pem");
-		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
+		let claims = AuthTokenClaims::new(
+			"test".to_string(),
+			"login".to_string(),
+			AuthOptions { expires_at: 100 },
+		);
 		let token = jwt::create(&claims, private_key).unwrap();
 
 		let current_block = 50;
@@ -96,7 +101,11 @@ mod tests {
 	#[test]
 	fn test_auth_token_expired() {
 		let private_key = include_bytes!("../test_private_key.pem");
-		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
+		let claims = AuthTokenClaims::new(
+			"test".to_string(),
+			"login".to_string(),
+			AuthOptions { expires_at: 100 },
+		);
 		let token = jwt::create(&claims, private_key).unwrap();
 
 		let current_block = 150;
@@ -110,7 +119,11 @@ mod tests {
 	#[test]
 	fn test_auth_token_invalid_subject() {
 		let private_key = include_bytes!("../test_private_key.pem");
-		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
+		let claims = AuthTokenClaims::new(
+			"test".to_string(),
+			"login".to_string(),
+			AuthOptions { expires_at: 100 },
+		);
 		let token = jwt::create(&claims, private_key).unwrap();
 
 		let current_block = 50;
