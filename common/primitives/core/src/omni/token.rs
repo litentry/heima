@@ -20,14 +20,14 @@ use sp_runtime::RuntimeDebug;
 
 use crate::{Address20, Address32};
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash)]
 
 pub enum SolanaToken {
     Native,
     SPL(Address32), // mint address
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash)]
 
 pub enum EthereumToken {
     Native,

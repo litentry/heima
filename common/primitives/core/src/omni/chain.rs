@@ -29,7 +29,7 @@ pub enum ChainType {
     Solana,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash)]
 pub enum ChainAsset {
     Ethereum(u32, EthereumToken), // with chain id
     Solana(SolanaToken),
