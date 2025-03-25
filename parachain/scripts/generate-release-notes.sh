@@ -206,8 +206,8 @@ EOF
 fi
 
 if is_omni_executor_release; then
-  WORKER_VERSION=$(grep version tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
-  WORKER_BIN=$(grep name tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
+  WORKER_VERSION=$(grep '^version' tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed -E 's/^version *= *["'\''](.*)["'\'']/\1/')
+  WORKER_BIN=$(grep '^name' tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed -E 's/^name *= *["'\''](.*)["'\'']/\1/')
   WORKER_RUSTC_VERSION=$(cd tee-worker/omni-executor && rustc --version)
 cat << EOF >> "$1"
 ## Omni-Executor
