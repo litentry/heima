@@ -3,15 +3,15 @@ import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
 import { getChain } from '@heima/chaindata';
-import { identity, omniAccount, omniExecutor } from '@heima/parachain-api';
+import { identity, omniExecutor, sidechain } from '@heima/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 import { systemRemark } from '@requests/intents/system-remark.request';
 
 const types = {
   ...identity.types, // Identity is defined here
-  ...omniAccount.types, // AuthOptions is defined here
   ...omniExecutor.types, // NativeCall is defined here
+  ...sidechain.types, // AesOutput is defined here
 };
 
 describe.skip('system-remark', () => {
