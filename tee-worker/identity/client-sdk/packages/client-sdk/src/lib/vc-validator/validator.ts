@@ -2,7 +2,7 @@ import { ApiPromise } from '@polkadot/api';
 import { hexToU8a, stringToU8a } from '@polkadot/util';
 import { base58Decode, signatureVerify } from '@polkadot/util-crypto';
 
-import type { CorePrimitivesTeebagTypesEnclave } from '@litentry/parachain-api';
+import type { CorePrimitivesTeebagTypesEnclave } from '@heima/parachain-api';
 
 import { RUNTIME_ENCLAVE_REGISTRY } from './runtime-enclave-registry';
 

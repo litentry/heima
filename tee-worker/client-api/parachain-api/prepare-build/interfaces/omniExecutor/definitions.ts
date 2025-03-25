@@ -12,13 +12,13 @@ export default {
         MrEnclave: "H256",
         NativeCall: {
             _enum: {
-                request_auth_token: "(LitentryIdentity, AuthOptions)",
-                request_intent: "(LitentryIdentity, Intent)",
-                create_account_store: "(LitentryIdentity)",
-                add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
-                remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
-                publicize_account: "(LitentryIdentity, LitentryIdentity)",
-                set_permissions: "(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)",
+                request_auth_token: "(Identity)",
+                request_intent: "(Identity, Intent)",
+                create_account_store: "(Identity)",
+                add_account: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
+                remove_accounts: "(Identity, Vec<Identity>)",
+                publicize_account: "(Identity, Identity)",
+                set_permissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
             },
         },
         NativeCallAuthenticatedOperation: {
@@ -33,7 +33,7 @@ export default {
         },
         Authentication: {
             _enum: {
-                Web3: "(LitentryMultiSignature)",
+                Web3: "(MultiSignature)",
                 Email: "(Text)",
                 AuthToken: "(Text)",
                 OAuth2: "(OAuth2Data)",
@@ -41,7 +41,7 @@ export default {
         },
         NativeQuery: {
             _enum: {
-                get_account_store: "(LitentryIdentity)",
+                get_account_store: "(Identity)",
             },
         },
         OAuth2Data: {
@@ -68,7 +68,7 @@ export default {
         },
         QueryResponse: {
             _enum: {
-                AccountStore: "Vec<LitentryIdentity>",
+                AccountStore: "Vec<Identity>",
             },
         },
         XtReport: {

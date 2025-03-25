@@ -5,7 +5,7 @@ import {
   randomAsHex,
 } from '@polkadot/util-crypto';
 
-import { identity } from '@litentry/parachain-api';
+import { identity } from '@heima/parachain-api';
 
 import { createLitentryIdentityType } from './litentry-identity';
 import { createLitentryMultiSignature } from './litentry-multi-signature';

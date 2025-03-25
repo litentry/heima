@@ -2,7 +2,7 @@ import { TypeRegistry, Metadata } from '@polkadot/types';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 import metadataRpc from '@litentry/sidechain-api/prepare-build/litentry-sidechain-metadata.json';
-import { identity } from '@litentry/parachain-api';
+import { identity } from '@heima/parachain-api';
 
 import { calculateIdGraphHash } from './calculate-id-graph-hash';
 import { createIdGraphType } from '../type-creators/id-graph';

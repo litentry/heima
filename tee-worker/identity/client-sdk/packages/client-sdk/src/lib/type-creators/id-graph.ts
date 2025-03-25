@@ -5,7 +5,7 @@ import type { U8aLike } from '@polkadot/util/types';
 import type {
   IdentityContext,
   LitentryIdentity,
-} from '@litentry/parachain-api';
+} from '@heima/parachain-api';
 
 /**
  * The Identity Graph type
