@@ -1,16 +1,15 @@
 [package]
-name = "cross-chain-intent-executor"
+name = "intent-asset-lock"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-async-trait = { workspace = true }
-log = { workspace = true }
+ruint = "1.13.1"
 
 # Local dependencies
 executor-core = { workspace = true }
-executor-primitives = { workspace = true }
+heima-primitives = { package = "core-primitives", path = "../../../../common/primitives/core", default-features = false, features = ["std"] }
 
 [lints]
 workspace = true

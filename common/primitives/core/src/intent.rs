@@ -52,7 +52,7 @@ pub struct TransferSolana {
     pub value: u64,
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo, Hash)]
 pub struct Asset {
     pub id: AssetId,
     pub chain_id: ChainId,
