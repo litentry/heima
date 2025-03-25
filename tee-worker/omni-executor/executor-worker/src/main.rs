@@ -31,7 +31,6 @@ use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::{get_signer, TransactionSigner};
 use rpc_server::{start_server as start_rpc_server, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
-use std::env;
 use std::io::Write;
 use std::sync::Arc;
 use std::thread;
@@ -62,8 +61,11 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			// TODO: move to config
-			let jwt_secret = env::var("OE_JWT_SECRET").unwrap_or("secret".to_string());
+			// TODO: get jwt rsa keys from the key store
+			// https://linear.app/litentry/issue/P-1397/keys-management-in-omni-executor
+			let jwt_rsa_private_key = "TODO".to_string();
+			let jwt_rsa_public_key = "TODO".to_string();
+
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 
@@ -89,7 +91,8 @@ async fn main() -> Result<(), ()> {
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				storage_db.clone(),
-				jwt_secret.clone(),
+				jwt_rsa_private_key.clone(),
+				jwt_rsa_public_key.clone(),
 				aes256_key,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
@@ -132,7 +135,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(native_task_sender),
 				storage_db.clone(),
 				mrenclave,
-				jwt_secret,
+				jwt_rsa_private_key,
 			)
 			.await
 			.map_err(|e| {
