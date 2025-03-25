@@ -81,39 +81,42 @@ mod tests {
 
 	#[test]
 	fn test_auth_token() {
-		let secret = b"secret";
+		let private_key = include_bytes!("../test_private_key.pem");
 		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
-		let token = jwt::create(&claims, secret).unwrap();
+		let token = jwt::create(&claims, private_key).unwrap();
 
 		let current_block = 50;
 		let validation = Validation::new("test".to_string(), current_block);
-		let result = token.validate(secret, validation);
+		let public_key = include_bytes!("../test_public_key.pem");
+		let result = token.validate(public_key, validation);
 
 		assert_eq!(result, Ok(()));
 	}
 
 	#[test]
 	fn test_auth_token_expired() {
-		let secret = b"secret";
+		let private_key = include_bytes!("../test_private_key.pem");
 		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
-		let token = jwt::create(&claims, secret).unwrap();
+		let token = jwt::create(&claims, private_key).unwrap();
 
 		let current_block = 150;
 		let validation = Validation::new("test".to_string(), current_block);
-		let result = token.validate(secret, validation);
+		let public_key = include_bytes!("../test_public_key.pem");
+		let result = token.validate(public_key, validation);
 
 		assert_eq!(result, Err(Error::ExpiredToken));
 	}
 
 	#[test]
 	fn test_auth_token_invalid_subject() {
-		let secret = b"secret";
+		let private_key = include_bytes!("../test_private_key.pem");
 		let claims = AuthTokenClaims::new("test".to_string(), AuthOptions { expires_at: 100 });
-		let token = jwt::create(&claims, secret).unwrap();
+		let token = jwt::create(&claims, private_key).unwrap();
 
 		let current_block = 50;
 		let validation = Validation::new("invalid-sub".to_string(), current_block);
-		let result = token.validate(secret, validation);
+		let public_key = include_bytes!("../test_public_key.pem");
+		let result = token.validate(public_key, validation);
 
 		assert_eq!(result, Err(Error::InvalidSubject));
 	}
