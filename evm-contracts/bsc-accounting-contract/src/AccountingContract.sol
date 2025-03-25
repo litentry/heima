@@ -9,6 +9,7 @@ contract AccountingContract is Ownable {
         address initialWorker
     ) Ownable(initialOwner) {
         require(initialWorker != address(0), "Worker can't be zero address");
+        require(initialOwner != address(0), "Owner can't be zero address");
         admin = initialOwner;
         worker = initialWorker;
     }
