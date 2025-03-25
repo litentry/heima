@@ -2,7 +2,7 @@ import type { Registry } from '@polkadot/types-codec/types';
 import type {
   LitentryIdentity,
   LitentryMultiSignature,
-} from '@litentry/parachain-api';
+} from '@heima/parachain-api';
 import { decodeSignature } from '../util/decode-signature';
 
 /**

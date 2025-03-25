@@ -1,7 +1,7 @@
 import { ApiPromise } from '@polkadot/api';
 import { TypeRegistry, Metadata } from '@polkadot/types';
 
-import metadataRpc from '@litentry/parachain-api/prepare-build/litentry-parachain-metadata.json';
+import metadataRpc from '@heima/parachain-api/prepare-build/litentry-parachain-metadata.json';
 
 import {
   getIssuerAccount,
