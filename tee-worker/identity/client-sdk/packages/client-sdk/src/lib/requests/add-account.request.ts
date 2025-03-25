@@ -6,7 +6,7 @@ import type {
   LitentryValidationData,
   TrustedCallResult,
   WorkerRpcReturnValue,
-} from '@litentry/parachain-api';
+} from '@heima/parachain-api';
 
 import { enclave } from '../enclave';
 import { codecToString } from '../util/codec-to-string';

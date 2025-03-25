@@ -32,7 +32,7 @@ export default {
          */
         MemberAccount: {
             _enum: {
-                Public: "LitentryIdentity",
+                Public: "Identity",
                 Private: "(Bytes,H256)",
             },
         },

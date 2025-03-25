@@ -8,6 +8,6 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/packages/client-sdk',
-  transformIgnorePatterns: ['node_modules/(?!(@litentry/|.pnpm/@litentry)).*'],
+  transformIgnorePatterns: ['node_modules/(?!(@litentry/|.pnpm/@litentry|@heima|.pnpm/@heima)).*'],
   moduleNameMapper: {},
 };
