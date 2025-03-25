@@ -100,6 +100,7 @@ jobs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
+      rebuild_evm_contracts: ${{ steps.env.outputs.rebuild_evm_contracts }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
