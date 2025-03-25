@@ -40,7 +40,6 @@ pub async fn query_solana(rpc_url: &str, key: &Pubkey, token: SolanaToken) -> Re
 			.await
 			.map_err(|e| error!("Could not get solana native balance: {:?}", e)),
 		SolanaToken::SPL(mint) => {
-			// let mint = Pubkey::new_from_array(mint.as_ref().clone());
 			let mint: Pubkey = (*mint.as_ref()).into();
 			let accounts = client
 				.get_token_accounts_by_owner(key, TokenAccountsFilter::Mint(mint))
