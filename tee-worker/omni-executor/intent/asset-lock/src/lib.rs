@@ -16,9 +16,11 @@
 
 use executor_core::intent_executor::AccountId;
 use heima_primitives::Asset;
+use ruint::Uint;
 use std::{collections::HashMap, sync::RwLock};
 
 pub type AssetId = Asset;
+pub type AmountType = Uint<256, 4>;
 
 #[allow(dead_code)]
 pub mod account_wide;
@@ -38,8 +40,8 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		&self,
 		account_id: AccountId,
 		asset_id: AssetId,
-		amount_to_lock: u128,
-		available_amount: u128,
+		amount_to_lock: AmountType,
+		available_amount: AmountType,
 	) -> Result<(), ()> {
 		let mut account_lock = self.locks.write().unwrap();
 
@@ -57,7 +59,7 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		&self,
 		account_id: AccountId,
 		asset_id: AssetId,
-		amount_to_release: u128,
+		amount_to_release: AmountType,
 	) -> Result<(), ()> {
 		let mut account_lock = self.locks.write().unwrap();
 		if let Some(account) = account_lock.get_mut(&account_id) {
@@ -71,17 +73,17 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 pub trait AssetsLock {
 	fn with_lock(
 		asset_id: AssetId,
-		amount_to_lock: u128,
-		available_amount: u128,
+		amount_to_lock: AmountType,
+		available_amount: AmountType,
 	) -> Result<Self, ()>
 	where
 		Self: Sized;
 	fn lock(
 		&mut self,
 		asset_id: AssetId,
-		amount_to_lock: u128,
-		available_amount: u128,
+		amount_to_lock: AmountType,
+		available_amount: AmountType,
 	) -> Result<(), ()>;
 
-	fn release(&mut self, asset_id: AssetId, amount_to_release: u128) -> Result<(), ()>;
+	fn release(&mut self, asset_id: AssetId, amount_to_release: AmountType) -> Result<(), ()>;
 }
