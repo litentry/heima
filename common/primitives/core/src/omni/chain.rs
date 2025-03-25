@@ -18,6 +18,8 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
+use crate::{EthereumToken, SolanaToken};
+
 // TODO: maybe using xcm Location is better
 //       but we'd need enums for all foreign types, or use GeneralIndex
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
@@ -25,4 +27,10 @@ pub enum ChainType {
     Heima,         // this chain
     Ethereum(u32), // with chain id
     Solana,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum ChainAsset {
+    Ethereum(u32, EthereumToken), // with chain id
+    Solana(SolanaToken),
 }

@@ -14,16 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-// This file contains the primitives definition for various omni-* services
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
-mod account;
-pub use account::*;
+use crate::{Address20, Address32};
 
-mod chain;
-pub use chain::*;
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 
-mod intent;
-pub use intent::*;
+pub enum SolanaToken {
+    Native,
+    SPL(Address32), // mint address
+}
 
-mod token;
-pub use token::*;
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+
+pub enum EthereumToken {
+    Native,
+    ERC20(Address20), // token contract address
+}

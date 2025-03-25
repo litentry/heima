@@ -1,5 +1,4 @@
-use crate::{AccountId, Address20, Address32, Address33, Balance, ChainType};
-use alloc::vec::Vec;
+use crate::{AccountId, Address20, Address32, Address33, Balance, ChainAsset};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -51,16 +50,6 @@ pub struct TransferSolana {
     pub value: u64,
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
-pub struct Asset {
-    // `name` is intentionally defined as string-like type to:
-    // - allow easier integration with external service. E.g. APIs of binance/pumpx definitely expect strings
-    // - be future-compatible: meme-coins/alt-coins could have arbitrary names
-    pub name: Vec<u8>,
-    // `chain` is of enum type, we don't expect we support any chain
-    pub chain: ChainType,
-}
-
 #[derive(
     Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
 )]
@@ -72,8 +61,8 @@ pub enum MultiAddress {
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
 pub struct SwapOrder {
-    pub from_asset: Asset,
+    pub from_asset: ChainAsset,
     pub from_amount: u64,
-    pub to_asset: Asset,
+    pub to_asset: ChainAsset,
     pub to_address: Option<MultiAddress>,
 }
