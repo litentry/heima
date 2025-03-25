@@ -2,47 +2,49 @@
 # Put all defined set of files here, similar to https://github.com/getsentry/sentry/blob/master/.github/workflows/getsentry-dispatch.yml
 
 parachain_src: &parachain_src
-  - 'parachain/node/**'
-  - 'parachain/pallets/**'
-  - 'common/**'
-  - 'parachain/runtime/**'
-  - 'parachain/docker/Dockerfile'
-  - 'parachain/Cargo.*'
-  - 'parachain/rust-toolchain.toml'
-  - 'parachain/scripts/build-docker.sh'
+  - "parachain/node/**"
+  - "parachain/pallets/**"
+  - "common/**"
+  - "parachain/runtime/**"
+  - "parachain/docker/Dockerfile"
+  - "parachain/Cargo.*"
+  - "parachain/rust-toolchain.toml"
+  - "parachain/scripts/build-docker.sh"
 
 parachain_test: &parachain_test
-  - 'parachain/ts-tests/**'
-  - 'parachain/docker/**'
-  - 'parachain/scripts/build-bridge.sh'
-  - 'parachain/scripts/launch-network.sh'
-  - 'parachain/scripts/launch-bridge.sh'
+  - "parachain/ts-tests/**"
+  - "parachain/docker/**"
+  - "parachain/scripts/build-bridge.sh"
+  - "parachain/scripts/launch-network.sh"
+  - "parachain/scripts/launch-bridge.sh"
 
 coverage_src: &coverage_src
   - *parachain_src
-  - '.github/workflows/coverage.yml'
+  - ".github/workflows/coverage.yml"
 
 identity_src: &identity_src
-  - 'common/**'
-  - 'tee-worker/Cargo.toml'
-  - 'tee-worker/Cargo.lock'
-  - 'tee-worker/identity/**/*.rs'
-  - 'tee-worker/identity/**/rust-toolchain.toml'
-  - 'tee-worker/identity/build.Dockerfile'
-  - 'tee-worker/identity/enclave-runtime/**'
+  - "common/**"
+  - "tee-worker/Cargo.toml"
+  - "tee-worker/Cargo.lock"
+  - "tee-worker/identity/**/*.rs"
+  - "tee-worker/identity/**/rust-toolchain.toml"
+  - "tee-worker/identity/build.Dockerfile"
+  - "tee-worker/identity/enclave-runtime/**"
 
 identity_test: &identity_test
-  - 'tee-worker/identity/client-api/**'
-  - 'tee-worker/identity/ts-tests/**'
+  - "tee-worker/identity/client-api/**"
+  - "tee-worker/identity/ts-tests/**"
 
 omni_executor_src: &omni_executor_src
-  - 'tee-worker/omni-executor/Cargo.toml'
-  - 'tee-worker/omni-executor/Cargo.lock'
-  - 'tee-worker/omni-executor/**/*.rs'
-  - 'tee-worker/omni-executor/rust-toolchain.toml'
-  - 'tee-worker/omni-executor/**/*.scale'
-
+  - "tee-worker/omni-executor/Cargo.toml"
+  - "tee-worker/omni-executor/Cargo.lock"
+  - "tee-worker/omni-executor/**/*.rs"
+  - "tee-worker/omni-executor/rust-toolchain.toml"
+  - "tee-worker/omni-executor/**/*.scale"
 
 omni_executor_test: &omni_executor_test
-  - 'parachain/docker/**'
-  - 'tee-worker/omni-executor/docker/*.yml'
+  - "parachain/docker/**"
+  - "tee-worker/omni-executor/docker/*.yml"
+
+evm_contracts_src:
+  - "evm-contracts/bsc-accounting-contract/**"
