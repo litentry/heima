@@ -22,7 +22,7 @@ type=$2
 
 export PARACHAIN_DOCKER_TAG=$RELEASE_TAG
 export IDENTITY_WORKER_DOCKER_TAG=$RELEASE_TAG
-export BITACROSS_WORKER_DOCKER_TAG=$RELEASE_TAG
+export OMNI_EXECUTOR_DOCKER_TAG=$RELEASE_TAG
 
 # helper functions to parse the type mask
 is_client_release() {
@@ -37,7 +37,7 @@ is_identity_worker_release() {
   [ "${type:2:1}" = "1" ]
 }
 
-is_bitacross_worker_release() {
+is_omni_executor_release() {
   [ "${type:3:1}" = "1" ]
 }
 
@@ -82,10 +82,10 @@ if is_identity_worker_release; then
 else
   echo "- [ ] Identity TEE worker" >> "$1"
 fi
-if is_bitacross_worker_release; then
-  echo "- [x] Bitacross TEE worker" >> "$1"
+if is_omni_executor_release; then
+  echo "- [x] Omni TEE Executor" >> "$1"
 else
-  echo "- [ ] Bitacross TEE worker" >> "$1"
+  echo "- [ ] Omni TEE Executor" >> "$1"
 fi
 echo >> "$1"
 
@@ -205,30 +205,22 @@ mrenclave:                   : $MRENCLAVE
 EOF
 fi
 
-if is_bitacross_worker_release; then
-  WORKER_VERSION=$(grep version tee-worker/bitacross/service/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
-  WORKER_BIN=$(grep name tee-worker/bitacross/service/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
-  WORKER_RUSTC_VERSION=$(cd tee-worker/bitacross && rustc --version)
-  UPSTREAM_COMMIT=$(cat tee-worker/bitacross/upstream_commit)
-  RUNTIME_VERSION=$(grep spec_version tee-worker/bitacross/app-libs/sgx-runtime/src/lib.rs | sed 's/.*version: //;s/,//')
-  ENCLAVE_SHASUM=$(docker run --entrypoint sha1sum litentry/bitacross-worker:$BITACROSS_WORKER_DOCKER_TAG /origin/enclave.signed.so | awk '{print $1}')
-  MRENCLAVE=$(docker run --entrypoint cat litentry/bitacross-worker:$BITACROSS_WORKER_DOCKER_TAG /origin/mrenclave.txt)
+if is_omni_executor_release; then
+  WORKER_VERSION=$(grep version tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
+  WORKER_BIN=$(grep name tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed "s/'$//;s/.*'//")
+  WORKER_RUSTC_VERSION=$(cd tee-worker/omni-executor && rustc --version)
 cat << EOF >> "$1"
-## Bitacross TEE worker
+## Omni-Executor
 
 <CODEBLOCK>
 client version               : $WORKER_VERSION
 client name                  : $WORKER_BIN
 rustc                        : $WORKER_RUSTC_VERSION
-upstream commit:             : $UPSTREAM_COMMIT
-docker image                 : litentry/bitacross-worker:$BITACROSS_WORKER_DOCKER_TAG
-
-runtime version:             : $RUNTIME_VERSION
-enclave sha1sum:             : $ENCLAVE_SHASUM
-mrenclave:                   : $MRENCLAVE
+docker image                 : litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG
 <CODEBLOCK>
 
 EOF
+
 fi
 
 # restore ``` in markdown doc
