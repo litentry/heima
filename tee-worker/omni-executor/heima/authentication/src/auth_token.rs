@@ -20,7 +20,7 @@ pub enum Error {
 
 pub const AUTH_TOKEN_EXPIRATION: u32 = 50_400; // 1 week in blocks
 pub const AUTH_TOKEN_SESSION_TYPE: &str = "session_token";
-pub const AUTH_TOKEN_TRADE_TYPE: &str = "trade_token";
+pub const AUTH_TOKEN_TRADE_TYPE: &str = "trade_token"; // Used by pumpx
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
