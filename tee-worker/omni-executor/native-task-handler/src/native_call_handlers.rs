@@ -6,7 +6,10 @@ use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCal
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{intent::Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
-use heima_authentication::auth_token::{AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION};
+use heima_authentication::auth_token::{
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
+	AUTH_TOKEN_TRADE_TYPE,
+};
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
@@ -71,17 +74,17 @@ pub async fn handle_native_call<
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let login_claims = AuthTokenClaims::new(
+			let session_claims = AuthTokenClaims::new(
 				sender_identity.hash().to_string(),
-				"login".to_string(),
+				AUTH_TOKEN_SESSION_TYPE.to_string(),
 				auth_options.clone(),
 			);
 			let trade_claims = AuthTokenClaims::new(
 				sender_identity.hash().to_string(),
-				"login".to_string(),
+				AUTH_TOKEN_TRADE_TYPE.to_string(),
 				auth_options,
 			);
-			let Ok(login_token) = jwt::create(&login_claims, &ctx.jwt_rsa_private_key) else {
+			let Ok(login_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -100,7 +103,7 @@ pub async fn handle_native_call<
 
 			let auth_token_requested_call = parentchain_api_interface::tx()
 				.omni_account()
-				.auth_token_requested(AccountId32(omni_account.into()), login_claims.exp);
+				.auth_token_requested(AccountId32(omni_account.into()), session_claims.exp);
 
 			let tx = ctx.transaction_signer.sign(auth_token_requested_call, None).await;
 
