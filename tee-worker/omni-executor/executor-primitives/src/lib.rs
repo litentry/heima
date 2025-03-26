@@ -23,10 +23,8 @@ pub use validation_data::{
 pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
-	intent,
-	omni_account::{MemberAccount, OmniAccountAuthType, OmniAccountPermission},
-	teebag::DcapQuote,
-	AccountId, BlockNumber, Hash, Identity, MrEnclave, Nonce, ShardIdentifier, Web2IdentityType,
+	omni::*, teebag::DcapQuote, AccountId, BlockNumber, Hash, Identity, MrEnclave, Nonce,
+	ShardIdentifier, Web2IdentityType,
 };
 use std::fmt::Debug;
 

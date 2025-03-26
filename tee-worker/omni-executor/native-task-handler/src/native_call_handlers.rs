@@ -4,7 +4,7 @@ use crate::{
 };
 use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
-use executor_primitives::{intent::Intent, MemberAccount, OmniAccountAuthType, ValidationData};
+use executor_primitives::{Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
 use heima_authentication::auth_token::{
 	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,

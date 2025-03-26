@@ -15,11 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use executor_core::intent_executor::AccountId;
-use heima_primitives::Asset;
+use heima_primitives::ChainAsset;
 use ruint::Uint;
 use std::{collections::HashMap, sync::RwLock};
 
-pub type AssetId = Asset;
+pub type AssetId = ChainAsset;
 pub type AmountType = Uint<256, 4>;
 
 #[allow(dead_code)]

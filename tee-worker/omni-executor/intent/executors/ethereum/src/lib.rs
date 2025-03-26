@@ -20,7 +20,7 @@ use alloy::primitives::Address;
 use async_trait::async_trait;
 use ethereum_rpc::AlloyRpcProviderFactory;
 use executor_core::intent_executor::{AccountId, IntentExecutor};
-use executor_primitives::intent::Intent;
+use executor_primitives::Intent;
 use log::{error, info};
 use signer::get_omni_account_signer;
 use tx::submit;
