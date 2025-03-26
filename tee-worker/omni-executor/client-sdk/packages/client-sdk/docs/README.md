@@ -6,7 +6,7 @@
 
 ## Namespaces
 
-- [request](namespaces/request/README.md)
+- [request](@heima/namespaces/request/README.md)
 
 ## Enumerations
 
