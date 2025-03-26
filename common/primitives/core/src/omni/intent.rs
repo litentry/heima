@@ -5,7 +5,6 @@ use sp_core::H160;
 use sp_runtime::{traits::ConstU32, BoundedVec};
 
 pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
-
 pub const MAX_REMARK_LEN: u32 = u32::max_value();
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
