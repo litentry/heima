@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/client-sdk",
+    "outDir": "dist/packages/client-sdk",
     "module": "commonjs",
     "types": ["jest", "node"],
     "baseUrl": "./",
