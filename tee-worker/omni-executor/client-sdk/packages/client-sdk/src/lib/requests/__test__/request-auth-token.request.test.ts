@@ -4,7 +4,7 @@ import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 import { getChain } from '@heima/chaindata';
-import { identity, omniAccount, omniExecutor } from '@heima/parachain-api';
+import { identity, omniExecutor, sidechain } from '@heima/parachain-api';
 
 import { createAccountStore } from '@requests/create-account-store.request';
 import { requestAuthToken } from '@requests/request-auth-token.request';
@@ -15,8 +15,8 @@ import { getAndWaitForAccountStoreCreation } from '@test-utils/helpers';
 
 const types = {
     ...identity.types, // Identity is defined here
-    ...omniAccount.types, // AuthOptions is defined here
     ...omniExecutor.types, // NativeCall is defined here
+    ...sidechain.types, // AesOutput is defined here
 };
 
 describe('request-auth-token', () => {

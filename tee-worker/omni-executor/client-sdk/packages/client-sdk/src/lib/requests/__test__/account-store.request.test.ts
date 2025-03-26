@@ -8,10 +8,11 @@ import { getChain } from '@heima/chaindata';
 import {
   identity,
   ValidationData,
-  omniAccount,
   OmniAccountPermission,
   omniExecutor,
   Identity,
+  sidechain,
+  omniAccount,
 } from '@heima/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
@@ -29,8 +30,9 @@ import { getAndWaitForAccountStoreCreation } from '@test-utils/helpers';
 
 const types = {
   ...identity.types, // Identity is defined here
-  ...omniAccount.types, // AuthOptions is defined here
+  ...omniAccount.types, // OmniAccountPermission is defined here
   ...omniExecutor.types, // NativeCall is defined here
+  ...sidechain.types, // AesOutput is defined here
 };
 
 describe('account-store', () => {

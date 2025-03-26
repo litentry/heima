@@ -20,7 +20,6 @@ import { enclave } from '@lib/enclave';
  * @param {ApiPromise} api - The Heima Parachain API instance from Polkadot.js.
  * @param {Object} data - The data object containing the following properties:
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
- * @param {number} data.expiresAt - The block number at which the token expires.
  * @returns {Promise<Object>} A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {string} payloadToSign - The payload to sign if the identity is a Web3 identity.
  * @returns {Function} send - A function to send the request to the Enclave.

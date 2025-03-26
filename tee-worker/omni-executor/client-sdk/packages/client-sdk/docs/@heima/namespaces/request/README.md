@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../../README.md)
+[**@heima/client-sdk**](../../../README.md)
 
 ***
 
-[@heima/client-sdk](../../README.md) / request
+[@heima/client-sdk](../../../README.md) / request
 
 # request
 

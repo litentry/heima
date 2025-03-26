@@ -19,7 +19,9 @@ The proof to pass depends on the identity network (IdentityType):
 
 ## Type Parameters
 
-• **IIdentityType** *extends* `"Twitter"` \| `"Discord"` \| `"Github"` \| `"Substrate"` \| `"Evm"` \| `"Bitcoin"` \| `"Solana"` \| `"Email"`
+### IIdentityType
+
+`IIdentityType` *extends* `"Twitter"` \| `"Discord"` \| `"Github"` \| `"Substrate"` \| `"Evm"` \| `"Bitcoin"` \| `"Solana"` \| `"Email"`
 
 ## Parameters
 
