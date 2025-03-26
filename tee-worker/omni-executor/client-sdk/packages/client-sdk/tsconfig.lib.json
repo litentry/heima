@@ -1,33 +1,19 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/out-tsc",
+    "outDir": "../../dist/packages/client-sdk",
     "declaration": true,
+    "rootDir": "src",
     "types": ["node"],
     "baseUrl": "./",
     "paths": {
-      "@lib/*": [
-        "src/lib/*"
-      ],
-      "@requests/*": [
-        "src/lib/requests/*"
-      ],
-      "@type-creators/*": [
-        "src/lib/type-creators/*"
-      ],
-      "@utils/*": [
-        "src/lib/utils/*"
-      ],
-      "@test-utils/*": [
-        "src/lib/test-utils/*"
-      ]
+      "@lib/*": ["src/lib/*"],
+      "@requests/*": ["src/lib/requests/*"],
+      "@type-creators/*": ["src/lib/type-creators/*"],
+      "@utils/*": ["src/lib/utils/*"],
+      "@test-utils/*": ["src/lib/test-utils/*"]
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": [
-    "jest.config.ts",
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "src/lib/test-utils/*"
-  ]
+  "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts", "src/lib/test-utils/*"]
 }
