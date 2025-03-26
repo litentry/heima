@@ -1306,10 +1306,9 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							211u8, 39u8, 228u8, 190u8, 133u8, 124u8, 14u8, 39u8, 107u8, 121u8,
-							147u8, 236u8, 248u8, 209u8, 14u8, 17u8, 250u8, 21u8, 79u8, 182u8,
-							156u8, 128u8, 155u8, 113u8, 205u8, 140u8, 255u8, 169u8, 43u8, 180u8,
-							68u8, 254u8,
+							8u8, 124u8, 138u8, 190u8, 24u8, 246u8, 116u8, 248u8, 212u8, 235u8,
+							19u8, 125u8, 83u8, 115u8, 8u8, 212u8, 178u8, 251u8, 52u8, 130u8, 65u8,
+							145u8, 141u8, 16u8, 242u8, 99u8, 171u8, 102u8, 246u8, 6u8, 35u8, 107u8,
 						],
 					)
 				}
@@ -1327,10 +1326,9 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							126u8, 63u8, 98u8, 223u8, 12u8, 66u8, 7u8, 205u8, 250u8, 46u8, 28u8,
-							184u8, 11u8, 193u8, 162u8, 167u8, 5u8, 149u8, 94u8, 215u8, 210u8,
-							183u8, 192u8, 115u8, 135u8, 71u8, 19u8, 78u8, 223u8, 213u8, 242u8,
-							99u8,
+							49u8, 28u8, 82u8, 39u8, 55u8, 96u8, 93u8, 47u8, 23u8, 185u8, 105u8,
+							144u8, 224u8, 124u8, 38u8, 43u8, 176u8, 116u8, 161u8, 105u8, 52u8,
+							36u8, 94u8, 94u8, 106u8, 189u8, 106u8, 54u8, 163u8, 212u8, 118u8, 6u8,
 						],
 					)
 				}
@@ -3071,9 +3069,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				52u8, 56u8, 75u8, 137u8, 42u8, 174u8, 10u8, 165u8, 145u8, 71u8, 166u8, 135u8, 53u8,
-				220u8, 65u8, 183u8, 246u8, 41u8, 69u8, 5u8, 204u8, 41u8, 108u8, 64u8, 165u8, 167u8,
-				231u8, 242u8, 174u8, 235u8, 35u8, 79u8,
+				110u8, 77u8, 46u8, 71u8, 193u8, 186u8, 189u8, 238u8, 238u8, 236u8, 25u8, 72u8,
+				213u8, 90u8, 118u8, 118u8, 223u8, 8u8, 186u8, 33u8, 110u8, 124u8, 39u8, 206u8,
+				223u8, 154u8, 250u8, 127u8, 64u8, 76u8, 167u8, 112u8,
 			]
 	}
 	pub mod system {
@@ -4226,9 +4224,10 @@ pub mod api {
 						"Events",
 						(),
 						[
-							98u8, 59u8, 94u8, 240u8, 105u8, 173u8, 254u8, 72u8, 45u8, 67u8, 227u8,
-							8u8, 224u8, 51u8, 186u8, 218u8, 229u8, 132u8, 229u8, 216u8, 92u8, 60u8,
-							195u8, 104u8, 46u8, 175u8, 56u8, 208u8, 15u8, 224u8, 222u8, 234u8,
+							156u8, 108u8, 218u8, 81u8, 51u8, 32u8, 113u8, 92u8, 235u8, 232u8,
+							129u8, 88u8, 95u8, 87u8, 179u8, 127u8, 171u8, 63u8, 68u8, 198u8, 41u8,
+							181u8, 185u8, 193u8, 160u8, 29u8, 83u8, 200u8, 142u8, 60u8, 189u8,
+							115u8,
 						],
 					)
 				}
@@ -6483,6 +6482,36 @@ pub mod api {
 					const PALLET: &'static str = "OmniAccount";
 					const CALL: &'static str = "auth_token_requested";
 				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct EmitIntentEvent {
+					pub who: emit_intent_event::Who,
+					pub intent: emit_intent_event::Intent,
+					pub event: emit_intent_event::Event,
+				}
+				pub mod emit_intent_event {
+					use super::runtime_types;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type Intent = runtime_types::core_primitives::intent::Intent;
+					pub type Event = runtime_types::pallet_omni_account::pallet::IntentEvent;
+				}
+				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for EmitIntentEvent {
+					const PALLET: &'static str = "OmniAccount";
+					const CALL: &'static str = "emit_intent_event";
+				}
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -6503,9 +6532,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							17u8, 113u8, 187u8, 172u8, 225u8, 166u8, 250u8, 4u8, 27u8, 229u8, 62u8,
-							253u8, 224u8, 254u8, 170u8, 163u8, 67u8, 38u8, 172u8, 21u8, 209u8,
-							28u8, 14u8, 83u8, 110u8, 15u8, 200u8, 17u8, 161u8, 158u8, 69u8, 230u8,
+							132u8, 75u8, 246u8, 46u8, 175u8, 164u8, 210u8, 178u8, 218u8, 24u8,
+							92u8, 21u8, 109u8, 110u8, 229u8, 98u8, 6u8, 100u8, 20u8, 27u8, 50u8,
+							23u8, 137u8, 76u8, 138u8, 56u8, 13u8, 53u8, 239u8, 196u8, 71u8, 113u8,
 						],
 					)
 				}
@@ -6525,10 +6554,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							98u8, 61u8, 111u8, 158u8, 211u8, 145u8, 144u8, 246u8, 124u8, 184u8,
-							13u8, 212u8, 47u8, 76u8, 139u8, 67u8, 23u8, 148u8, 250u8, 242u8, 187u8,
-							210u8, 156u8, 218u8, 103u8, 2u8, 242u8, 174u8, 224u8, 218u8, 70u8,
-							20u8,
+							157u8, 83u8, 67u8, 21u8, 138u8, 213u8, 237u8, 67u8, 53u8, 117u8, 197u8,
+							228u8, 98u8, 169u8, 146u8, 48u8, 11u8, 6u8, 242u8, 98u8, 167u8, 196u8,
+							13u8, 135u8, 157u8, 146u8, 245u8, 21u8, 138u8, 61u8, 151u8, 47u8,
 						],
 					)
 				}
@@ -6687,6 +6715,25 @@ pub mod api {
 							22u8, 223u8, 15u8, 107u8, 49u8, 159u8, 167u8, 221u8, 170u8, 224u8,
 							189u8, 107u8, 220u8, 216u8, 29u8, 128u8, 177u8, 169u8, 178u8, 14u8,
 							85u8,
+						],
+					)
+				}
+				pub fn emit_intent_event(
+					&self,
+					who: types::emit_intent_event::Who,
+					intent: types::emit_intent_event::Intent,
+					event: types::emit_intent_event::Event,
+				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::EmitIntentEvent>
+				{
+					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
+						"OmniAccount",
+						"emit_intent_event",
+						types::EmitIntentEvent { who, intent, event },
+						[
+							51u8, 178u8, 128u8, 246u8, 195u8, 113u8, 132u8, 109u8, 143u8, 78u8,
+							225u8, 85u8, 210u8, 249u8, 91u8, 100u8, 191u8, 145u8, 60u8, 41u8, 74u8,
+							145u8, 57u8, 249u8, 137u8, 124u8, 170u8, 199u8, 119u8, 44u8, 79u8,
+							166u8,
 						],
 					)
 				}
@@ -6932,6 +6979,32 @@ pub mod api {
 			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentExecuted {
 				const PALLET: &'static str = "OmniAccount";
 				const EVENT: &'static str = "IntentExecuted";
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub struct IntentEvent {
+				pub who: intent_event::Who,
+				pub intent: intent_event::Intent,
+				pub event: intent_event::Event,
+			}
+			pub mod intent_event {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type Intent = runtime_types::core_primitives::intent::Intent;
+				pub type Event = runtime_types::pallet_omni_account::pallet::IntentEvent;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentEvent {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "IntentEvent";
 			}
 			#[derive(
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -8016,10 +8089,10 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							248u8, 29u8, 243u8, 151u8, 187u8, 249u8, 7u8, 165u8, 165u8, 174u8,
-							207u8, 243u8, 211u8, 163u8, 142u8, 183u8, 102u8, 109u8, 61u8, 253u8,
-							46u8, 112u8, 29u8, 145u8, 172u8, 57u8, 212u8, 210u8, 155u8, 16u8,
-							235u8, 244u8,
+							206u8, 29u8, 251u8, 139u8, 124u8, 89u8, 7u8, 220u8, 204u8, 31u8, 126u8,
+							245u8, 163u8, 120u8, 201u8, 131u8, 13u8, 148u8, 57u8, 224u8, 126u8,
+							0u8, 219u8, 57u8, 188u8, 242u8, 104u8, 101u8, 116u8, 45u8, 180u8,
+							162u8,
 						],
 					)
 				}
@@ -17775,6 +17848,31 @@ pub mod api {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						expires_at: ::core::primitive::u32,
 					},
+					#[codec(index = 11)]
+					emit_intent_event {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent: runtime_types::core_primitives::intent::Intent,
+						event: runtime_types::pallet_omni_account::pallet::IntentEvent,
+					},
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub enum CrossChainSwapProcessingEvent {
+					#[codec(index = 0)]
+					Accepted,
 				}
 				#[derive(
 					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -17894,12 +17992,18 @@ pub mod api {
 						result: runtime_types::pallet_omni_account::pallet::IntentExecutionResult,
 					},
 					#[codec(index = 9)]
+					IntentEvent {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent: runtime_types::core_primitives::intent::Intent,
+						event: runtime_types::pallet_omni_account::pallet::IntentEvent,
+					},
+					#[codec(index = 10)]
 					#[doc = "Member permission set"]
 					AccountPermissionsSet {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 11)]
 					#[doc = "An auth token is requested"]
 					AuthTokenRequested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
@@ -17921,11 +18025,55 @@ pub mod api {
 				#[encode_as_type(
 					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 				)]
+				pub enum IntentEvent {
+					#[codec(index = 0)]
+					Requested,
+					#[codec(index = 1)]
+					Processing(runtime_types::pallet_omni_account::pallet::IntentProcessingEvent),
+					#[codec(index = 2)]
+					Executed,
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
 				pub enum IntentExecutionResult {
 					#[codec(index = 0)]
 					Success,
 					#[codec(index = 1)]
 					Failure,
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub enum IntentProcessingEvent {
+					#[codec(index = 0)]
+					CrossChainSwap(
+						runtime_types::pallet_omni_account::pallet::CrossChainSwapProcessingEvent,
+					),
 				}
 			}
 			#[derive(
