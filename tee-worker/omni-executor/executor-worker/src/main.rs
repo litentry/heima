@@ -83,7 +83,10 @@ async fn main() -> Result<(), ()> {
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
 			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
-			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
+			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
+				parentchain_rpc_client_factory.clone(),
+				transaction_signer.clone(),
+			)?;
 
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),

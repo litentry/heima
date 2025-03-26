@@ -2172,6 +2172,9 @@ dependencies = [
  "executor-core",
  "executor-primitives",
  "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
+ "parentchain-signer",
 ]
 
 [[package]]
@@ -4533,6 +4536,7 @@ version = "0.1.0"
 dependencies = [
  "core-primitives",
  "executor-core",
+ "executor-primitives",
  "ruint",
 ]
 

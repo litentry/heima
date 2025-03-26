@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use executor_core::intent_executor::AccountId;
+use executor_primitives::AccountId;
 use heima_primitives::Asset;
 use ruint::Uint;
 use std::{collections::HashMap, sync::RwLock};

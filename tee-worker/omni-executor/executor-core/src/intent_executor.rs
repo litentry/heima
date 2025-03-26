@@ -17,9 +17,7 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use executor_primitives::intent::Intent;
-
-pub type AccountId = [u8; 32];
+use executor_primitives::{intent::Intent, AccountId};
 
 /// Used to perform intent on destination chain
 #[async_trait]

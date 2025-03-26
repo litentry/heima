@@ -15,8 +15,9 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
-use executor_core::intent_executor::{AccountId, IntentExecutor};
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::intent::Intent;
+use executor_primitives::AccountId;
 use log::{error, info};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
