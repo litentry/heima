@@ -53,8 +53,8 @@ pub struct TransferSolana {
     Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
 )]
 pub enum MultiAddress {
-    Address32(Address32),
     Address20(Address20),
+    Address32(Address32),
     Address33(Address33),
 }
 
