@@ -157,7 +157,7 @@ pub fn verify_auth_token_authentication<
 
 	let validation = Validation::new(sender_identity.hash().to_string(), current_block);
 
-	if auth_token.validate(ctx.jwt_rsa_private_key.as_bytes(), validation).is_err() {
+	if auth_token.validate(&ctx.jwt_rsa_private_key, validation).is_err() {
 		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));
 	}
 
