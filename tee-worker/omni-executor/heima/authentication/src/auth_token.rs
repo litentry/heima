@@ -98,10 +98,7 @@ impl AuthTokenValidator for &str {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use rsa::{
-		pkcs1::{EncodeRsaPrivateKey, EncodeRsaPublicKey},
-		RsaPrivateKey,
-	};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 
 	#[test]
 	fn test_auth_token() {
