@@ -63,8 +63,12 @@ export default {
         CallResponse: {
             _enum: {
                 ExtrinsicReport: "XtReport",
-                AuthToken: "Text",
+                AuthToken: "AuthToken",
             },
+        },
+        AuthToken: {
+            session_token: "Text",
+            trade_token: "Text",
         },
         QueryResponse: {
             _enum: {
