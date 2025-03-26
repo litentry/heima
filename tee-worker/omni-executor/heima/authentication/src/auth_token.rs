@@ -14,6 +14,8 @@ pub enum Error {
 }
 
 pub const AUTH_TOKEN_EXPIRATION: u32 = 50_400; // 1 week in blocks
+pub const AUTH_TOKEN_SESSION_TYPE: &str = "session_token";
+pub const AUTH_TOKEN_TRADE_TYPE: &str = "trade_token";
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
@@ -79,57 +81,73 @@ impl AuthTokenValidator for &str {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use rsa::{
+		pkcs1::{EncodeRsaPrivateKey, EncodeRsaPublicKey},
+		RsaPrivateKey,
+	};
 
 	#[test]
 	fn test_auth_token() {
-		let private_key = include_bytes!("../test_private_key.pem");
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
+		let public_key = rsa_private_key.to_public_key().to_pkcs1_der().unwrap();
+
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
-			"login".to_string(),
+			AUTH_TOKEN_SESSION_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
-		let token = jwt::create(&claims, private_key).unwrap();
+		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
 		let current_block = 50;
 		let validation = Validation::new("test".to_string(), current_block);
-		let public_key = include_bytes!("../test_public_key.pem");
-		let result = token.validate(public_key, validation);
+		let result = token.validate(public_key.as_bytes(), validation);
 
 		assert_eq!(result, Ok(()));
 	}
 
 	#[test]
 	fn test_auth_token_expired() {
-		let private_key = include_bytes!("../test_private_key.pem");
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
+		let public_key = rsa_private_key.to_public_key().to_pkcs1_der().unwrap();
+
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
-			"login".to_string(),
+			AUTH_TOKEN_SESSION_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
-		let token = jwt::create(&claims, private_key).unwrap();
+		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
 		let current_block = 150;
 		let validation = Validation::new("test".to_string(), current_block);
-		let public_key = include_bytes!("../test_public_key.pem");
-		let result = token.validate(public_key, validation);
+		let result = token.validate(public_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::ExpiredToken));
 	}
 
 	#[test]
 	fn test_auth_token_invalid_subject() {
-		let private_key = include_bytes!("../test_private_key.pem");
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
+		let public_key = rsa_private_key.to_public_key().to_pkcs1_der().unwrap();
+
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
-			"login".to_string(),
+			AUTH_TOKEN_SESSION_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
-		let token = jwt::create(&claims, private_key).unwrap();
+		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
 		let current_block = 50;
 		let validation = Validation::new("invalid-sub".to_string(), current_block);
-		let public_key = include_bytes!("../test_public_key.pem");
-		let result = token.validate(public_key, validation);
+		let result = token.validate(public_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::InvalidSubject));
 	}
