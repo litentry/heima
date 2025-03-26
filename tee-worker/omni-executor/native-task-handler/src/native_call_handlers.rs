@@ -81,8 +81,7 @@ pub async fn handle_native_call<
 				"login".to_string(),
 				auth_options,
 			);
-			let Ok(login_token) = jwt::create(&login_claims, ctx.jwt_rsa_private_key.as_bytes())
-			else {
+			let Ok(login_token) = jwt::create(&login_claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -90,8 +89,7 @@ pub async fn handle_native_call<
 				}
 				return;
 			};
-			let Ok(trade_token) = jwt::create(&trade_claims, ctx.jwt_rsa_private_key.as_bytes())
-			else {
+			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
