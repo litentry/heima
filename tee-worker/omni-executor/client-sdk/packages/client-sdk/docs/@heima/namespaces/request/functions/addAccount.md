@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../../../README.md)
+[**@heima/client-sdk**](../../../../README.md)
 
 ***
 
-[@heima/client-sdk](../../../README.md) / [request](../README.md) / addAccount
+[@heima/client-sdk](../../../../README.md) / [request](../README.md) / addAccount
 
 # Function: addAccount()
 
@@ -59,17 +59,3 @@ The ownership proof. Use the `createValidationDataType` helper to create this st
 `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
 - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
-
-payloadToSign - The payload to sign if the identity is a Web3 identity.
-
-send - A function to send the request to the Enclave.
-
-send.args - The arguments required to send the request.
-
-send.args.authentication - The authentication data.
-
-send.return.blockHash - Block hash of the transaction
-
-send.return.extrinsicHash - Extrinsic hash of the transaction
-
-send.return.status - Status of the transaction
