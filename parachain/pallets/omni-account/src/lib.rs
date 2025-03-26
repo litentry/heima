@@ -173,15 +173,29 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// An account store is created
-		AccountStoreCreated { who: T::AccountId },
+		AccountStoreCreated {
+			who: T::AccountId,
+		},
 		/// Some member account is added
-		AccountAdded { who: T::AccountId, member_account_hash: H256 },
+		AccountAdded {
+			who: T::AccountId,
+			member_account_hash: H256,
+		},
 		/// Some member accounts are removed
-		AccountRemoved { who: T::AccountId, member_account_hashes: Vec<H256> },
+		AccountRemoved {
+			who: T::AccountId,
+			member_account_hashes: Vec<H256>,
+		},
 		/// Some member account is made public
-		AccountMadePublic { who: T::AccountId, member_account_hash: H256 },
+		AccountMadePublic {
+			who: T::AccountId,
+			member_account_hash: H256,
+		},
 		/// An account store is updated
-		AccountStoreUpdated { who: T::AccountId, account_store: MemberAccounts<T> },
+		AccountStoreUpdated {
+			who: T::AccountId,
+			account_store: MemberAccounts<T>,
+		},
 		/// Some call is dispatched as omni-account origin
 		DispatchedAsOmniAccount {
 			who: T::AccountId,
@@ -195,13 +209,50 @@ pub mod pallet {
 			result: DispatchResult,
 		},
 		/// Intent is requested
-		IntentRequested { who: T::AccountId, intent: Intent },
+		IntentRequested {
+			who: T::AccountId,
+			intent: Intent,
+		},
 		/// Intent is executed
-		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
+		IntentExecuted {
+			who: T::AccountId,
+			intent: Intent,
+			result: IntentExecutionResult,
+		},
+
+		IntentEvent {
+			who: T::AccountId,
+			intent: Intent,
+			event: IntentEvent,
+		},
+
 		/// Member permission set
-		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
+		AccountPermissionsSet {
+			who: T::AccountId,
+			member_account_hash: H256,
+		},
 		/// An auth token is requested
-		AuthTokenRequested { who: T::AccountId, expires_at: BlockNumberFor<T> },
+		AuthTokenRequested {
+			who: T::AccountId,
+			expires_at: BlockNumberFor<T>,
+		},
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum IntentEvent {
+		Requested,
+		Processing(IntentProcessingEvent),
+		Executed,
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum IntentProcessingEvent {
+		CrossChainSwap(CrossChainSwapProcessingEvent),
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum CrossChainSwapProcessingEvent {
+		Accepted,
 	}
 
 	#[pallet::error]
@@ -468,6 +519,19 @@ pub mod pallet {
 		) -> DispatchResult {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			Self::deposit_event(Event::AuthTokenRequested { who, expires_at });
+			Ok(())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn emit_intent_event(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent: Intent,
+			event: IntentEvent,
+		) -> DispatchResult {
+			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
+			Self::deposit_event(Event::IntentEvent { who, intent, event });
 			Ok(())
 		}
 	}
