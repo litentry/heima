@@ -8,6 +8,7 @@ edition.workspace = true
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 serde = { workspace = true }
+rsa = { workspace = true }
 
 # Local dependencies
 executor-crypto = { workspace = true }
@@ -15,7 +16,6 @@ executor-primitives = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }
-rsa = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,6 +1,10 @@
 use executor_crypto::jwt;
 use executor_primitives::BlockNumber;
 use parity_scale_codec::{Decode, Encode};
+use rsa::{
+	pkcs1::{DecodeRsaPrivateKey, EncodeRsaPublicKey},
+	RsaPrivateKey,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq)]
@@ -11,6 +15,7 @@ pub enum Error {
 	InvalidSubject,
 	Base64DecodeError,
 	JsonError,
+	InternalError,
 }
 
 pub const AUTH_TOKEN_EXPIRATION: u32 = 50_400; // 1 week in blocks
@@ -63,16 +68,28 @@ pub trait AuthTokenValidator {
 }
 
 impl AuthTokenValidator for String {
-	fn validate(&self, secret: &[u8], validation: Validation) -> Result<(), Error> {
-		jwt::decode::<AuthTokenClaims>(self, secret)
+	fn validate(&self, private_key: &[u8], validation: Validation) -> Result<(), Error> {
+		let rsa_private_key =
+			RsaPrivateKey::from_pkcs1_der(private_key).map_err(|_| Error::InternalError)?;
+		let public_key = rsa_private_key
+			.to_public_key()
+			.to_pkcs1_der()
+			.map_err(|_| Error::InternalError)?;
+		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes())
 			.map_err(|_| Error::InvalidToken)
 			.and_then(|claims| validation.validate(&claims))
 	}
 }
 
 impl AuthTokenValidator for &str {
-	fn validate(&self, secret: &[u8], validation: Validation) -> Result<(), Error> {
-		jwt::decode::<AuthTokenClaims>(self, secret)
+	fn validate(&self, private_key: &[u8], validation: Validation) -> Result<(), Error> {
+		let rsa_private_key =
+			RsaPrivateKey::from_pkcs1_der(private_key).map_err(|_| Error::InternalError)?;
+		let public_key = rsa_private_key
+			.to_public_key()
+			.to_pkcs1_der()
+			.map_err(|_| Error::InternalError)?;
+		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes())
 			.map_err(|_| Error::InvalidToken)
 			.and_then(|claims| validation.validate(&claims))
 	}
@@ -92,7 +109,6 @@ mod tests {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let public_key = rsa_private_key.to_public_key().to_pkcs1_der().unwrap();
 
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
@@ -103,7 +119,7 @@ mod tests {
 
 		let current_block = 50;
 		let validation = Validation::new("test".to_string(), current_block);
-		let result = token.validate(public_key.as_bytes(), validation);
+		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Ok(()));
 	}
@@ -114,7 +130,6 @@ mod tests {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let public_key = rsa_private_key.to_public_key().to_pkcs1_der().unwrap();
 
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
@@ -125,7 +140,7 @@ mod tests {
 
 		let current_block = 150;
 		let validation = Validation::new("test".to_string(), current_block);
-		let result = token.validate(public_key.as_bytes(), validation);
+		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::ExpiredToken));
 	}
@@ -136,7 +151,6 @@ mod tests {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let public_key = rsa_private_key.to_public_key().to_pkcs1_der().unwrap();
 
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
@@ -147,7 +161,7 @@ mod tests {
 
 		let current_block = 50;
 		let validation = Validation::new("invalid-sub".to_string(), current_block);
-		let result = token.validate(public_key.as_bytes(), validation);
+		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::InvalidSubject));
 	}
