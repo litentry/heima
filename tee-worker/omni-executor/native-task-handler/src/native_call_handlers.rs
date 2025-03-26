@@ -84,7 +84,7 @@ pub async fn handle_native_call<
 				AUTH_TOKEN_TRADE_TYPE.to_string(),
 				auth_options,
 			);
-			let Ok(login_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
+			let Ok(session_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -117,7 +117,7 @@ pub async fn handle_native_call<
 			}
 
 			let response: NativeOperationResponse =
-				CallResponse::AuthToken { login_token, trade_token }.into();
+				CallResponse::AuthToken { session_token, trade_token }.into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");

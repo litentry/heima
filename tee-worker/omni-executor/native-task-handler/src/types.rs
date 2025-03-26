@@ -17,7 +17,7 @@ pub enum CallResponse {
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken {
-		login_token: String,
+		session_token: String,
 		trade_token: String,
 	},
 }
