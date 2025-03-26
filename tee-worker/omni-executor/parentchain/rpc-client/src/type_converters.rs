@@ -1,6 +1,5 @@
 use executor_primitives::{
-	intent::Intent, AccountId, Hash, Identity, MemberAccount, OmniAccountAuthType,
-	OmniAccountPermission,
+	AccountId, Hash, Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountPermission,
 };
 use parentchain_api_interface::{
 	omni_account::calls::types::dispatch_as_omni_account::AuthType as SubxtOmniAccountAuthType,

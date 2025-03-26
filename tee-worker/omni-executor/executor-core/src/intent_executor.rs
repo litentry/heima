@@ -17,7 +17,7 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use executor_primitives::intent::Intent;
+use executor_primitives::Intent;
 
 pub type AccountId = [u8; 32];
 
