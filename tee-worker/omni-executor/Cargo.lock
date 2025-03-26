@@ -4547,6 +4547,7 @@ dependencies = [
  "alloy",
  "ethereum-rpc",
  "executor-primitives",
+ "hex-literal",
  "log",
  "serde_json",
  "solana-account-decoder-client-types",

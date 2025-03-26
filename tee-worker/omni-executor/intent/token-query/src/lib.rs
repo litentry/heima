@@ -97,10 +97,9 @@ pub async fn query_ethereum(
 
 #[cfg(test)]
 pub mod tests {
-	use std::str::FromStr;
-
-	use alloy::{hex::FromHex, primitives::Address};
+	use hex_literal::hex;
 	use solana_sdk::pubkey::Pubkey;
+	use std::str::FromStr;
 
 	use crate::{query_ethereum, query_solana};
 
@@ -115,7 +114,7 @@ pub mod tests {
 			rpc_url,
 			account,
 			crate::EthereumToken::ERC20(
-				Address::from_hex("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707").unwrap(),
+				hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707").try_into().unwrap(),
 			),
 		)
 		.await
@@ -138,7 +137,10 @@ pub mod tests {
 		// key with SPL on devnet
 		let key = Pubkey::from_str("J9DZj7dzbBYEVfaaBwQ7kBzGkKVTZssBPiatKyfxE3ZL").unwrap();
 		let mint_key = Pubkey::from_str("HHSfQJEhWkXQZbxuNzmtCwZGNYwAX2VNezdXuVYJbrgE").unwrap();
-		let balance = query_solana(rpc_url, &key, crate::SolanaToken::SPL(mint_key)).await.unwrap();
+		let balance =
+			query_solana(rpc_url, &key, crate::SolanaToken::SPL(mint_key.to_bytes().into()))
+				.await
+				.unwrap();
 
 		println!("Balance is {:?}", balance);
 	}
