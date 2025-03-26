@@ -17,7 +17,8 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use executor_primitives::{intent::Intent, AccountId};
+use executor_primitives::AccountId;
+use executor_primitives::Intent;
 
 /// Used to perform intent on destination chain
 #[async_trait]

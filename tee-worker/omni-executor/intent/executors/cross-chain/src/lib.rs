@@ -16,7 +16,7 @@
 
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::intent::Intent;
+use executor_primitives::Intent;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -65,11 +65,7 @@ impl<
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
 	) -> Result<Self, ()> {
-		Ok(Self {
-			parentchain_rpc_client_factory,
-			transaction_signer,
-			phantom: PhantomData::default(),
-		})
+		Ok(Self { parentchain_rpc_client_factory, transaction_signer, phantom: PhantomData })
 	}
 }
 
@@ -104,7 +100,7 @@ impl<
 						},
 					};
 
-					// another tx is probably submitted before so we need to increment nonce here (this should be fixed?)
+					// intent requested is submited before so nonce needs to be updated
 					nonce += 1;
 
 					let intent_accepted_event_emit_call =

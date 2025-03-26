@@ -32,11 +32,8 @@ pub use assertion::Assertion;
 pub mod identity;
 pub use identity::*;
 
-pub mod intent;
-pub use intent::*;
-
-pub mod omni_account;
-pub use omni_account::*;
+pub mod omni;
+pub use omni::*;
 
 extern crate alloc;
 extern crate core;
