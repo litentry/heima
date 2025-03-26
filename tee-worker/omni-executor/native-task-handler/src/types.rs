@@ -16,10 +16,7 @@ pub enum CallResponse {
 		block_hash: Option<Hash>,
 		status: TransactionStatus<Hash>,
 	},
-	AuthToken {
-		session_token: String,
-		trade_token: String,
-	},
+	AuthToken(String),
 }
 
 impl From<CallResponse> for Result<NativeOperationOk, NativeOperationError> {

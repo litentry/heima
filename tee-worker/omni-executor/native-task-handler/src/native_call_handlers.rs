@@ -74,17 +74,12 @@ pub async fn handle_native_call<
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let session_claims = AuthTokenClaims::new(
+			let claims = AuthTokenClaims::new(
 				sender_identity.hash().to_string(),
 				AUTH_TOKEN_SESSION_TYPE.to_string(),
-				auth_options.clone(),
-			);
-			let trade_claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
-				AUTH_TOKEN_TRADE_TYPE.to_string(),
 				auth_options,
 			);
-			let Ok(session_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
+			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -92,18 +87,9 @@ pub async fn handle_native_call<
 				}
 				return;
 			};
-			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
-				let response =
-					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-
 			let auth_token_requested_call = parentchain_api_interface::tx()
 				.omni_account()
-				.auth_token_requested(AccountId32(omni_account.into()), session_claims.exp);
+				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
 
 			let tx = ctx.transaction_signer.sign(auth_token_requested_call, None).await;
 
@@ -116,8 +102,7 @@ pub async fn handle_native_call<
 				return;
 			}
 
-			let response: NativeOperationResponse =
-				CallResponse::AuthToken { session_token, trade_token }.into();
+			let response: NativeOperationResponse = CallResponse::AuthToken(token).into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
