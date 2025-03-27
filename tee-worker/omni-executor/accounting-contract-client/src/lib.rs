@@ -54,10 +54,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<
 			input: TransactionInput { data: Some(call.into()), ..Default::default() },
 			..Default::default()
 		};
-		let nonce = self.provider.call(tx).await.map_or(Err(()), |nonce| {
+		self.provider.call(tx).await.map_or(Err(()), |nonce| {
 			let nonce = U256::abi_decode(&nonce, true).unwrap();
 			Ok(nonce)
-		});
-		nonce
+		})
 	}
 }
