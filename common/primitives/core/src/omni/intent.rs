@@ -5,7 +5,6 @@ use sp_core::H160;
 use sp_runtime::{traits::ConstU32, BoundedVec};
 
 pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
-
 pub const MAX_REMARK_LEN: u32 = u32::max_value();
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
@@ -53,9 +52,9 @@ pub struct TransferSolana {
 #[derive(
     Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
 )]
-pub enum MultiAddress {
-    Address32(Address32),
+pub enum HeimaMultiAddress {
     Address20(Address20),
+    Address32(Address32),
     Address33(Address33),
 }
 
@@ -64,5 +63,5 @@ pub struct SwapOrder {
     pub from_asset: ChainAsset,
     pub from_amount: u64,
     pub to_asset: ChainAsset,
-    pub to_address: Option<MultiAddress>,
+    pub to_address: Option<HeimaMultiAddress>,
 }
