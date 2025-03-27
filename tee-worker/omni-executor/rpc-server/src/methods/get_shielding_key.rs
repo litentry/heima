@@ -49,7 +49,7 @@ mod test {
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTask>(1);
 		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
-		let db = StorageDB::open_default("test_storage_db").unwrap();
+		let db = StorageDB::open_default("test_get_shielding_key_storage_db").unwrap();
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
