@@ -5,17 +5,17 @@
   "projectType": "library",
   "targets": {
     "publish": {
-      "command": "npm publish --access public --tag {args.tag}",
+      "command": "node tools/scripts/publish.mjs client-sdk {args.tag}",
       "dependsOn": ["build"]
     },
     "build": {
       "executor": "nx:run-commands",
       "outputs": ["{options.outDir}"],
       "options": {
-        "outDir": "../../dist/packages/client-sdk",
-        "cwd": "packages/client-sdk",
+        "cwd": "./packages/client-sdk",
         "command": "npx tsup",
-        "assets": ["packages/client-sdk/*.md", "packages/client-sdk/LICENSE"]
+        "assets": ["packages/client-sdk/*.md", "packages/client-sdk/LICENSE"],
+        "outDir": "dist"
       }
     },
     "generate-doc": {

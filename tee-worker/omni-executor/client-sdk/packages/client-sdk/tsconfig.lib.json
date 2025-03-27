@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "packages/client-sdk",
+    "outDir": "./dist",
     "declaration": true,
     "rootDir": ".",
     "types": ["node"],
