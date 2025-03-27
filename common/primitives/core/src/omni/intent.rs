@@ -52,7 +52,7 @@ pub struct TransferSolana {
 #[derive(
     Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
 )]
-pub enum MultiAddress {
+pub enum HeimaMultiAddress {
     Address20(Address20),
     Address32(Address32),
     Address33(Address33),
@@ -63,5 +63,5 @@ pub struct SwapOrder {
     pub from_asset: ChainAsset,
     pub from_amount: u64,
     pub to_asset: ChainAsset,
-    pub to_address: Option<MultiAddress>,
+    pub to_address: Option<HeimaMultiAddress>,
 }

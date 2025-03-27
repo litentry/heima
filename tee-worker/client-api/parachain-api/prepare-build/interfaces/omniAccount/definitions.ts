@@ -18,7 +18,7 @@ export default {
             from_asset: "ChainAsset",
             from_amount: "u64",
             to_asset: "ChainAsset",
-            to_address: "Option<MultiAddress>",
+            to_address: "Option<HeimaMultiAddress>",
         },
         IntentTransferEthereum: {
             to: "H160",
@@ -72,7 +72,7 @@ export default {
                 SPL: "Address32",
             },
         },
-        MultiAddress: {
+        HeimaMultiAddress: {
             _enum: {
                 Address20: "Address20",
                 Address32: "Address32",
