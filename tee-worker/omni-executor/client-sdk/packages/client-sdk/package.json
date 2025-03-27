@@ -1,7 +1,7 @@
 {
   "name": "@heima-network/client-sdk",
   "description": "This package provides helpers for dApps to interact with the Heima Protocol.",
-  "version": "1.0.0-next.999",
+  "version": "1.0.0-next.1",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "module": "./dist/index.js",
