@@ -2,7 +2,7 @@ import { TypeRegistry } from '@polkadot/types';
 import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady, addressEq } from '@polkadot/util-crypto';
 
-import { identity } from '@heima/parachain-api';
+import { identity } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 

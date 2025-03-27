@@ -1,5 +1,5 @@
 {
-    "name": "@heima/parachain-api",
+    "name": "@heima-network/parachain-api",
     "type": "module",
     "license": "ISC",
     "main": "./dist/src/index.cjs",

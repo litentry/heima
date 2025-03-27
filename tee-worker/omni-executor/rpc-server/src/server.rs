@@ -18,7 +18,7 @@ pub(crate) struct RpcContext<
 	pub storage_db: Arc<StorageDB>,
 	pub mrenclave: MrEnclave,
 	pub mailer: Mailer,
-	pub jwt_secret: String,
+	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
 	phantom_header: PhantomData<Header>,
@@ -39,7 +39,7 @@ impl<
 		storage_db: Arc<StorageDB>,
 		mrenclave: [u8; 32],
 		mailer: Mailer,
-		jwt_secret: String,
+		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
 	) -> Self {
@@ -50,7 +50,7 @@ impl<
 			storage_db,
 			mrenclave: MrEnclave::from(mrenclave),
 			mailer,
-			jwt_secret,
+			jwt_rsa_private_key,
 			google_client_id,
 			google_client_secret,
 			phantom_header: PhantomData,
@@ -70,7 +70,7 @@ pub async fn start_server<
 	native_task_sender: Arc<NativeTaskSender>,
 	storage_db: Arc<StorageDB>,
 	mrenclave: [u8; 32],
-	jwt_secret: String,
+	jwt_rsa_private_key: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
@@ -96,7 +96,7 @@ pub async fn start_server<
 		storage_db,
 		mrenclave,
 		mailer,
-		jwt_secret,
+		jwt_rsa_private_key,
 		google_client_id,
 		google_client_secret,
 	);

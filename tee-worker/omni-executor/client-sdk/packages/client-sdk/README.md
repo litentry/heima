@@ -1,4 +1,4 @@
-# @heima/client-sdk
+# @heima-network/client-sdk
 
 This package provides helpers for dApps to interact with the Heima Protocol.
 
@@ -11,7 +11,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 1. Install from NPM
 
     ```
-    npm install @heima/parachain-api @heima/sidechain-api @heima/client-sdk
+    npm install @heima-network/parachain-api @heima-network/sidechain-api @heima-network/client-sdk
     ```
 
 2. Set the right environment
@@ -30,7 +30,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 
 This package is distributed under two main tags: `next` and `latest`.
 
-Versions in the pattern of `x.x.x-next.x` feature the most recent code version to work with `tee-dev`. E.g., `1.0.0-next.0`. Once stable and once the Heima Protocol is upgraded, the version will be tagged as `latest` and should be used against `tee-prod`. E.g., `1.0.0`. You can find all versions on https://www.npmjs.com/package/@heima/client-sdk?activeTab=versions
+Versions in the pattern of `x.x.x-next.x` feature the most recent code version to work with `tee-dev`. E.g., `1.0.0-next.0`. Once stable and once the Heima Protocol is upgraded, the version will be tagged as `latest` and should be used against `tee-prod`. E.g., `1.0.0`. You can find all versions on https://www.npmjs.com/package/@heima-network/client-sdk?activeTab=versions
 
 ## Examples & API documentation
 

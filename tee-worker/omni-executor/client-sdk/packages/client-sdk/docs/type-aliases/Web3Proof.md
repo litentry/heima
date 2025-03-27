@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / Web3Proof
+[@heima-network/client-sdk](../README.md) / Web3Proof
 
 # Type Alias: Web3Proof
 

@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / AuthenticationData
+[@heima-network/client-sdk](../README.md) / AuthenticationData
 
 # Type Alias: AuthenticationData
 

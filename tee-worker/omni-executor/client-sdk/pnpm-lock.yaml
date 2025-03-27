@@ -114,12 +114,12 @@ importers:
 
   packages/client-sdk:
     dependencies:
-      '@litentry/chaindata':
+      '@heima-network/chaindata':
         specifier: '*'
-        version: 0.3.0
-      '@litentry/parachain-api':
-        specifier: 0.9.24-next.989
-        version: 0.9.24-next.989(@swc/core@1.11.12)(typescript@5.4.5)
+        version: link:../chaindata
+      '@heima-network/parachain-api':
+        specifier: 0.9.24-next.0
+        version: 0.9.24-next.0
       '@polkadot/api':
         specifier: ^15.0.2
         version: 15.8.1
@@ -1802,6 +1802,29 @@ packages:
       '@shikijs/types': 3.2.1
       '@shikijs/vscode-textmate': 10.0.2
     dev: true
+
+  /@heima-network/parachain-api@0.9.24-next.0:
+    resolution: {integrity: sha512-cPS8ThoQPSr5oKsXuppFYIXb9LoJI8UKyAop4rRzjpzV7DdJmMbapbQ6Wprn/EHSGFwaWSjv97WvhkbZtNFWZQ==}
+    dependencies:
+      '@polkadot/api': 15.8.1
+      '@polkadot/api-augment': 15.8.1
+      '@polkadot/api-base': 15.8.1
+      '@polkadot/api-derive': 15.8.1
+      '@polkadot/keyring': 13.4.3(@polkadot/util-crypto@13.4.3)(@polkadot/util@13.4.3)
+      '@polkadot/rpc-core': 15.8.1
+      '@polkadot/types': 15.8.1
+      '@polkadot/types-augment': 15.8.1
+      '@polkadot/types-codec': 15.8.1
+      '@polkadot/types-create': 15.8.1
+      '@polkadot/types-known': 15.8.1
+      '@polkadot/types-support': 15.8.1
+      '@polkadot/util': 13.4.3
+      '@polkadot/util-crypto': 13.4.3(@polkadot/util@13.4.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: false
 
   /@humanfs/core@0.19.1:
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}

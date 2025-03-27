@@ -1,4 +1,4 @@
-import { Authentication, Identity } from '@heima/parachain-api';
+import { Authentication, Identity } from '@heima-network/parachain-api';
 import { Registry } from '@polkadot/types-codec/types';
 import { createMultiSignature } from './multi-signature';
 import { createOAuth2Data, type OAuth2DataType } from './oauth2';

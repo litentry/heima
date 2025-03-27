@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / DiscordOAuth2Proof
+[@heima-network/client-sdk](../README.md) / DiscordOAuth2Proof
 
 # Type Alias: DiscordOAuth2Proof
 
