@@ -1804,7 +1804,7 @@ packages:
     dev: true
 
   /@heima-network/parachain-api@0.9.24-next.0:
-    resolution: {integrity: sha512-cPS8ThoQPSr5oKsXuppFYIXb9LoJI8UKyAop4rRzjpzV7DdJmMbapbQ6Wprn/EHSGFwaWSjv97WvhkbZtNFWZQ==}
+    resolution: {integrity: sha512-p+nB7vre7tO1Ptl6R/Dc0w1a5Vj2RsMLUgvXMVnIPtZ0ppqQgunBmbaHlmlJ3RxjSiZqjUzGYWtGk3bkttuMkQ==}
     dependencies:
       '@polkadot/api': 15.8.1
       '@polkadot/api-augment': 15.8.1
@@ -2126,43 +2126,6 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
-
-  /@litentry/chaindata@0.3.0:
-    resolution: {integrity: sha512-IVgNWk52AMepIP8BlP3DE8yHIQBW15L9gauIn7P5RuOEkI8Tc7uBSFja+RkHCY42D5ULueTOMwEAogRugL5Jdw==}
-    dependencies:
-      tslib: 2.8.1
-    dev: false
-
-  /@litentry/parachain-api@0.9.24-next.989(@swc/core@1.11.12)(typescript@5.4.5):
-    resolution: {integrity: sha512-D94AloXemC/p42OMaYdyqOZfzKRe4myoNcaIp7FOKp7wAxnaAcQP74zh3Pwwy55aPlBcJrivMoyNeRi56gd2Iw==}
-    dependencies:
-      '@polkadot/api': 15.8.1
-      '@polkadot/api-augment': 15.8.1
-      '@polkadot/api-base': 15.8.1
-      '@polkadot/api-derive': 15.8.1
-      '@polkadot/keyring': 13.4.3(@polkadot/util-crypto@13.4.3)(@polkadot/util@13.4.3)
-      '@polkadot/rpc-core': 15.8.1
-      '@polkadot/types': 15.8.1
-      '@polkadot/types-augment': 15.8.1
-      '@polkadot/types-codec': 15.8.1
-      '@polkadot/types-create': 15.8.1
-      '@polkadot/types-known': 15.8.1
-      '@polkadot/types-support': 15.8.1
-      '@polkadot/util': 13.4.3
-      '@polkadot/util-crypto': 13.4.3(@polkadot/util@13.4.3)
-      tsup: 8.4.0(@swc/core@1.11.12)(typescript@5.4.5)
-    transitivePeerDependencies:
-      - '@microsoft/api-extractor'
-      - '@swc/core'
-      - bufferutil
-      - jiti
-      - postcss
-      - supports-color
-      - tsx
-      - typescript
-      - utf-8-validate
-      - yaml
-    dev: false
 
   /@napi-rs/wasm-runtime@0.2.4:
     resolution: {integrity: sha512-9zESzOO5aDByvhIAsOy9TbpZ0Ur2AJbUI7UT73kcUTS2mxAMHOBaa1st/jAymNoCtvrit99kkzT1FZuXVcgfIQ==}

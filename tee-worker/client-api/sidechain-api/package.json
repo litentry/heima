@@ -1,5 +1,5 @@
 {
-    "name": "@heima/sidechain-api",
+    "name": "@heima-network/sidechain-api",
     "type": "module",
     "license": "ISC",
     "main": "./dist/src/index.cjs",
