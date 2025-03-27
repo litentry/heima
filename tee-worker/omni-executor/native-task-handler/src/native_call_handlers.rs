@@ -394,15 +394,6 @@ pub async fn handle_native_call<
 			(response_sender, tx)
 		},
 		NativeCall::request_pumpx_jwt(sender_identity) => {
-			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
-				let response =
-					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
 			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
 				log::error!("Failed to get last finalized block number");
 				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
@@ -439,21 +430,6 @@ pub async fn handle_native_call<
 				}
 				return;
 			};
-			// TODO: should we track this?
-			let auth_token_requested_call = parentchain_api_interface::tx()
-				.omni_account()
-				.auth_token_requested(AccountId32(omni_account.into()), expires_at);
-
-			let tx = ctx.transaction_signer.sign(auth_token_requested_call, None).await;
-
-			if rpc_client.submit_tx(&tx).await.is_err() {
-				log::error!("Failed to submit tx");
-				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			}
 
 			let response: NativeOperationResponse =
 				CallResponse::PumpxJwt { session_token, trade_token }.into();
