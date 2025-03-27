@@ -1,7 +1,7 @@
 import type { ApiPromise } from '@polkadot/api';
 import { HexString } from '@polkadot/util/types';
 
-import type { Identity } from '@heima/parachain-api';
+import type { Identity } from '@heima-network/parachain-api';
 
 import { AuthenticationData } from '@type-creators/authentication';
 import { createNativeCallType } from '@type-creators/native-call';

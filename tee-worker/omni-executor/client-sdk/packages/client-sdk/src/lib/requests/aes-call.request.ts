@@ -2,7 +2,7 @@ import type { ApiPromise } from '@polkadot/api';
 import { hexToU8a } from '@polkadot/util';
 import { HexString } from '@polkadot/util/types';
 
-import type { Identity, NativeCall, NativeOperationResponse } from '@heima/parachain-api';
+import type { Identity, NativeCall, NativeOperationResponse } from '@heima-network/parachain-api';
 
 import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
 import { AuthenticationData } from '@type-creators/authentication';

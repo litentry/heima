@@ -5,7 +5,7 @@ import {
   base64Decode,
 } from '@polkadot/util-crypto';
 
-import { identity, trusted_operations } from '@heima/parachain-api';
+import { identity, trusted_operations } from '@heima-network/parachain-api';
 
 import { createLitentryValidationDataType } from './validation-data';
 

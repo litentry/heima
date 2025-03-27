@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / createValidationDataType
+[@heima-network/client-sdk](../README.md) / createValidationDataType
 
 # Function: createValidationDataType()
 
@@ -58,8 +58,8 @@ The ownership proof
 ## Examples
 
 ```ts
-import { createValidationDataType } from '@heima/client-sdk';
-import type { Web3Proof } from '@heima/client-sdk';
+import { createValidationDataType } from '@heima-network/client-sdk';
+import type { Web3Proof } from '@heima-network/client-sdk';
 
 const userAddress = '0x123';
 
@@ -79,8 +79,8 @@ const validationData = createValidationDataType(
 ```
 
 ```ts
-import { createValidationDataType } from '@heima/client-sdk';
-import type { TwitterProof } from '@heima/client-sdk';
+import { createValidationDataType } from '@heima-network/client-sdk';
+import type { TwitterProof } from '@heima-network/client-sdk';
 
 const userHandle = '@heima';
 

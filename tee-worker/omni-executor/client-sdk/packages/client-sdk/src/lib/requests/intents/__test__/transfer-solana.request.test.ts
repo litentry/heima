@@ -2,8 +2,8 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
-import { getChain } from '@heima/chaindata';
-import { identity, omniExecutor, sidechain } from '@heima/parachain-api';
+import { getChain } from '@heima-network/chaindata';
+import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 import { transferSolana } from '@requests/intents/transfer-solana.request';

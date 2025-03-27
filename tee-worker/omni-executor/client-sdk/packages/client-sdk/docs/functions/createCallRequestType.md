@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / createCallRequestType
+[@heima-network/client-sdk](../README.md) / createCallRequestType
 
 # Function: createCallRequestType()
 

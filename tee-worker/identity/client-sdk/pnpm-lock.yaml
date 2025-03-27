@@ -114,7 +114,7 @@ importers:
 
   packages/client-sdk:
     dependencies:
-      '@heima/parachain-api':
+      '@heima-network/parachain-api':
         specifier: 0.9.24-next.0
         version: 0.9.24-next.0
       '@litentry/chaindata':
@@ -1520,7 +1520,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
-  /@heima/parachain-api@0.9.24-next.0:
+  /@heima-network/parachain-api@0.9.24-next.0:
     resolution: {integrity: sha512-+DoK68BJDEeK/TUL/ek1FynuutqyWWJF0znELRzum+tqoVurkDs/ATj0Z2gm5Wi16lBud2fCYnhTTbfH39WJrQ==}
     dependencies:
       '@polkadot/api': 15.8.1

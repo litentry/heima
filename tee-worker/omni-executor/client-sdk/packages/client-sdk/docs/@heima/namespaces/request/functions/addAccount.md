@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../../../../README.md)
+[**@heima-network/client-sdk**](../../../../README.md)
 
 ***
 
-[@heima/client-sdk](../../../../README.md) / [request](../README.md) / addAccount
+[@heima-network/client-sdk](../../../../README.md) / [request](../README.md) / addAccount
 
 # Function: addAccount()
 
