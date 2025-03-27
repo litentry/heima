@@ -175,6 +175,11 @@ impl<
 				//    - Call Binance convert via binance account (e.g Swap USDC to SOL)
 				// 4. Send locked balance to binance account (refill)
 
+				self.account_asset_lock.release(
+					account_id.clone(),
+					swap_order.from_asset.clone(),
+					AmountType::from(swap_order.from_amount),
+				)?;
 				todo!("CrossChainSwap is not implemented yet");
 			},
 			_ => {
