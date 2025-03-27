@@ -5,8 +5,8 @@ use reqwest::{
 	Client, Error,
 };
 use types::{
-	ApiResponse, EmptyData, MarketOrderTx, MarketOrderUnsignedTx, NewMarketOrder, NewUser, TxData,
-	User, Wallet,
+	ApiResponse, ConnectUser, ConnectedUser, MarketOrderTx, MarketOrderUnsignedTx, NewMarketOrder,
+	TxData,
 };
 use url::Url;
 
@@ -32,21 +32,23 @@ impl PumpxApi {
 		PumpxApi { http_client, base_url }
 	}
 
-	pub async fn register_user(
+	pub async fn connect_user(
 		&self,
-		invite_code: String,
-		wallet_list: Vec<Wallet>,
-		email: Option<String>,
-	) -> Result<ApiResponse<EmptyData>, Error> {
-		let endpoint = format!("{}/v3/account/user_register", self.base_url);
-		let new_user = NewUser { invite_code, wallet_list, email };
-		self.http_client.post(&endpoint).json(&new_user).send().await?.json().await
-	}
-
-	// TODO: double check how this works
-	pub async fn login_user(&self) -> Result<ApiResponse<User>, Error> {
-		let endpoint = format!("{}/v3/account/user_login", self.base_url);
-		self.http_client.post(&endpoint).send().await?.json().await
+		session_token: &str,
+		email: String,
+		invite_code: Option<String>,
+		google_code: Option<String>,
+	) -> Result<ApiResponse<ConnectedUser>, Error> {
+		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
+		let connect_user = ConnectUser { email, invite_code, google_code };
+		self.http_client
+			.post(&endpoint)
+			.bearer_auth(session_token)
+			.json(&connect_user)
+			.send()
+			.await?
+			.json()
+			.await
 	}
 
 	pub async fn create_market_order_unsigned_tx(

@@ -11,18 +11,17 @@ pub enum ChainId {
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Wallet {
-	pub user_wallet_address: String,
-	pub chain_type: ChainId,
-	pub wallet_index: u32,
+pub struct ConnectUser {
+	pub email: String,
+	pub invite_code: Option<String>,
+	pub google_code: Option<String>,
 }
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NewUser {
-	pub invite_code: String,
-	pub wallet_list: Vec<Wallet>,
-	pub email: Option<String>,
+pub struct ConnectedUser {
+	pub user_id: String,
+	pub google_auth_check: bool,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -31,15 +30,6 @@ pub struct ApiResponse<T> {
 	code: u32,
 	message: String,
 	data: T,
-}
-
-#[derive(Deserialize)]
-pub struct EmptyData {}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct User {
-	pub user_id: u32,
 }
 
 #[derive(Deserialize_repr, Serialize_repr)]
