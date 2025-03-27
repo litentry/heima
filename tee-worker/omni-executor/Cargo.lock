@@ -3923,6 +3923,8 @@ dependencies = [
  "executor-primitives",
  "log",
  "parity-scale-codec",
+ "rand 0.8.5",
+ "rsa",
  "serde",
 ]
 
@@ -6793,6 +6795,7 @@ dependencies = [
  "parentchain-rpc-client",
  "parity-scale-codec",
  "rand 0.8.5",
+ "rsa",
  "serde",
  "serde_json",
  "tokio",
