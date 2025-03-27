@@ -79,7 +79,7 @@ pub async fn handle_native_call<
 				AUTH_TOKEN_SESSION_TYPE.to_string(),
 				auth_options,
 			);
-			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
+			let Ok(token) = jwt::create(&claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
