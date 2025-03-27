@@ -18,6 +18,7 @@ use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use pumpx_api::PumpxApi;
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use types::{NativeOperationError, NativeOperationOk};
@@ -64,6 +65,7 @@ pub struct TaskHandlerContext<
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
+	pub pumpx_api: Arc<PumpxApi>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -95,6 +97,7 @@ impl<
 		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
+		pumpx_api: Arc<PumpxApi>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -105,6 +108,7 @@ impl<
 			ethereum_intent_executor,
 			solana_intent_executor,
 			cross_chain_intent_executor,
+			pumpx_api,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}

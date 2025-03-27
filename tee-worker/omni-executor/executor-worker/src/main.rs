@@ -29,6 +29,7 @@ use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::{get_signer, TransactionSigner};
+use pumpx_api::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::io::Write;
@@ -86,6 +87,9 @@ async fn main() -> Result<(), ()> {
 			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
 
+			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
+			let pumpx_api = PumpxApi::new(pumpx_api_base_url);
+
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
@@ -95,6 +99,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
+				Arc::new(pumpx_api),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;

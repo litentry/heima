@@ -25,6 +25,7 @@ parentchain-attestation = { workspace = true }
 parentchain-listener = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
+pumpx-api = { workspace = true }
 rpc-server = { workspace = true }
 solana-intent-executor = { workspace = true }
 
