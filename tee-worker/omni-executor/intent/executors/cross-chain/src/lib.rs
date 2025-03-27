@@ -16,7 +16,14 @@
 
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
+use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
+use intent_asset_lock::AmountType;
+use intent_token_query::query_ethereum;
+use intent_token_query::query_solana;
+use intent_token_query::EthereumAddress;
+use intent_token_query::SolanaPubkey;
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -36,6 +43,17 @@ use parentchain_rpc_client::XtStatus;
 use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::TransactionSigner;
 
+use intent_asset_lock::account_wide::AccountWideAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
+
+#[derive(PartialEq, Hash, Eq)]
+pub enum Chain {
+	Ethereum(u32),
+	Solana,
+}
+
+pub type RpcEndpointRegistry = HashMap<Chain, String>;
+
 pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
 	SubxtClient<CustomConfig>,
@@ -52,6 +70,8 @@ pub struct CrossChainIntentExecutor<
 > {
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	transaction_signer: Arc<ParentchainTxSigner>,
+	account_asset_lock: AccountAssetLocks<AccountWideAssetsLock>,
+	rpc_endpoint_registry: RpcEndpointRegistry,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -64,8 +84,16 @@ impl<
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
+		rpc_endpoint_registry: RpcEndpointRegistry,
 	) -> Result<Self, ()> {
-		Ok(Self { parentchain_rpc_client_factory, transaction_signer, phantom: PhantomData })
+		let account_asset_lock = AccountAssetLocks::<AccountWideAssetsLock>::empty();
+		Ok(Self {
+			parentchain_rpc_client_factory,
+			transaction_signer,
+			account_asset_lock,
+			rpc_endpoint_registry,
+			phantom: PhantomData,
+		})
 	}
 }
 
@@ -78,53 +106,68 @@ impl<
 {
 	async fn execute(&self, account_id: &AccountId, intent: Intent) -> Result<(), ()> {
 		match intent {
-			Intent::CrossChainSwap(ref _swap_order) => {
+			Intent::CrossChainSwap(ref swap_order) => {
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
 				else {
 					log::error!("Failed to create rpc client");
 					return Err(());
 				};
+				let available_amount = match &swap_order.from_asset {
+					ChainAsset::Ethereum(chain_id, token) => {
+						let rpc_url =
+							self.rpc_endpoint_registry.get(&Chain::Ethereum(*chain_id)).ok_or(())?;
+						// query pumpx signer wallet
+						let address = EthereumAddress::default();
+						query_ethereum(rpc_url, address, token).await?
+					},
+					ChainAsset::Solana(token) => {
+						let rpc_url = self.rpc_endpoint_registry.get(&Chain::Solana).ok_or(())?;
+						// query pumpx signer wallet
+						let pubkey = SolanaPubkey::default();
+						query_solana(rpc_url, &pubkey, token).await.map(|v| AmountType::from(v))?
+					},
+				};
 
-				// 1. Check if user has enough balance on the source chain
-				// 2. Lock the balance on the source chain
+				self.account_asset_lock.check_and_insert(
+					account_id.clone(),
+					swap_order.from_asset.clone(),
+					AmountType::from(swap_order.from_amount),
+					available_amount,
+				)?;
 
-				let sanity_check_passed = true;
+				let signer_account_id = self.transaction_signer.get_signer_account_id();
+				let mut nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
+					Ok(n) => n,
+					Err(e) => {
+						log::error!("Failed to get account nonce: {:?}", e);
+						return Err(());
+					},
+				};
 
-				if sanity_check_passed {
-					let signer_account_id = self.transaction_signer.get_signer_account_id();
-					let mut nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
-						Ok(n) => n,
-						Err(e) => {
-							log::error!("Failed to get account nonce: {:?}", e);
-							return Err(());
-						},
-					};
+				// intent requested is submited before so nonce needs to be updated
+				nonce += 1;
 
-					// intent requested is submited before so nonce needs to be updated
-					nonce += 1;
+				let intent_accepted_event_emit_call =
+					parentchain_api_interface::tx().omni_account().emit_intent_event(
+						account_id.to_subxt_type(),
+						intent.to_subxt_type(),
+						IntentEvent::Processing(IntentProcessingEvent::CrossChainSwap(
+							CrossChainSwapProcessingEvent::Accepted,
+						)),
+					);
 
-					let intent_accepted_event_emit_call =
-						parentchain_api_interface::tx().omni_account().emit_intent_event(
-							account_id.to_subxt_type(),
-							intent.to_subxt_type(),
-							IntentEvent::Processing(IntentProcessingEvent::CrossChainSwap(
-								CrossChainSwapProcessingEvent::Accepted,
-							)),
-						);
+				let tx = self
+					.transaction_signer
+					.sign(intent_accepted_event_emit_call, Some(nonce))
+					.await;
 
-					let tx = self
-						.transaction_signer
-						.sign(intent_accepted_event_emit_call, Some(nonce))
-						.await;
-
-					match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
-						Ok(report) => report,
-						Err(e) => {
-							log::error!("Failed to submit and watch tx: {:?}", e);
-							return Err(());
-						},
-					};
-				}
+				match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
+					Ok(report) => report,
+					Err(e) => {
+						log::error!("Failed to submit and watch tx: {:?}", e);
+						return Err(());
+					},
+				};
 
 				// TODO:
 				// 3. Swap assets:

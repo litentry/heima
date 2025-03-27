@@ -2171,6 +2171,8 @@ dependencies = [
  "async-trait",
  "executor-core",
  "executor-primitives",
+ "intent-asset-lock",
+ "intent-token-query",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",

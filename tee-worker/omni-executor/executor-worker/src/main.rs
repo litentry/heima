@@ -17,7 +17,7 @@
 use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
-use cross_chain_intent_executor::CrossChainIntentExecutor;
+use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
@@ -83,9 +83,22 @@ async fn main() -> Result<(), ()> {
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
 			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
+
+			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
+			rpc_endpoint_registry.insert(Chain::Solana, args.solana_url.clone());
+
+			if let Some(ref bsc_url) = args.bsc_url {
+				rpc_endpoint_registry.insert(Chain::Ethereum(56), bsc_url.to_owned());
+			}
+
+			if let Some(ref bsc_testnet_url) = args.bsc_testnet_url {
+				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
+			}
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
+				rpc_endpoint_registry,
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(
@@ -142,7 +155,7 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db).await.unwrap();
+			listen_to_parentchain(*args, storage_db).await.unwrap();
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
