@@ -118,8 +118,8 @@ importers:
         specifier: '*'
         version: link:../chaindata
       '@heima-network/parachain-api':
-        specifier: 0.9.24-next.0
-        version: 0.9.24-next.0
+        specifier: 0.9.24-next.1
+        version: 0.9.24-next.1(@swc/core@1.11.12)(typescript@5.4.5)
       '@polkadot/api':
         specifier: ^15.0.2
         version: 15.8.1
@@ -1803,8 +1803,8 @@ packages:
       '@shikijs/vscode-textmate': 10.0.2
     dev: true
 
-  /@heima-network/parachain-api@0.9.24-next.0:
-    resolution: {integrity: sha512-p+nB7vre7tO1Ptl6R/Dc0w1a5Vj2RsMLUgvXMVnIPtZ0ppqQgunBmbaHlmlJ3RxjSiZqjUzGYWtGk3bkttuMkQ==}
+  /@heima-network/parachain-api@0.9.24-next.1(@swc/core@1.11.12)(typescript@5.4.5):
+    resolution: {integrity: sha512-M38OI8lw5QX1KiLCGEJfthpvwkK6AZhhxRFJ3yZhgC1xgXlYLLqlE6hMYVU50hDDCU9PH9to208bC+NZeKpWvQ==}
     dependencies:
       '@polkadot/api': 15.8.1
       '@polkadot/api-augment': 15.8.1
@@ -1820,10 +1820,18 @@ packages:
       '@polkadot/types-support': 15.8.1
       '@polkadot/util': 13.4.3
       '@polkadot/util-crypto': 13.4.3(@polkadot/util@13.4.3)
+      tsup: 8.4.0(@swc/core@1.11.12)(typescript@5.4.5)
     transitivePeerDependencies:
+      - '@microsoft/api-extractor'
+      - '@swc/core'
       - bufferutil
+      - jiti
+      - postcss
       - supports-color
+      - tsx
+      - typescript
       - utf-8-validate
+      - yaml
     dev: false
 
   /@humanfs/core@0.19.1:

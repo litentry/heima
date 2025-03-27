@@ -8,6 +8,7 @@ import "../build/interfaces/registry.js";
 // augment API interfaces
 import "../build/interfaces/augment-api.js";
 
+export * from "@polkadot/types/lookup";
 export * from "../build/interfaces";
 import { default as identity } from "../build/interfaces/identity/definitions";
 import { default as vc } from "../build/interfaces/vc/definitions";
