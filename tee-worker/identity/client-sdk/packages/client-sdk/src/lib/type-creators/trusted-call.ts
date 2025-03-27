@@ -2,7 +2,7 @@ import { compactAddLength } from '@polkadot/util';
 
 import type { Registry } from '@polkadot/types-codec/types';
 
-import { trusted_operations, type Intent } from '@heima/parachain-api';
+import { trusted_operations, type Intent } from '@heima-network/parachain-api';
 import type {
   TrustedCall,
   LitentryIdentity,
@@ -10,7 +10,7 @@ import type {
   AuthOptions,
   Web3Network,
   Assertion,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 import * as shieldingKeyUtils from '../util/shielding-key';
 

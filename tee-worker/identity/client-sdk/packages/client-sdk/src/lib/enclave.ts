@@ -2,7 +2,7 @@ import type {
   RequestVcResultOrError,
   StfError,
   WorkerRpcReturnValue,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 import { JsonRpcRequest, JsonRpcResponse } from './util/types';
 import { compactStripLength, hexToU8a, u8aToString } from '@polkadot/util';
 

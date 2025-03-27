@@ -2,7 +2,7 @@ import { ApiPromise } from '@polkadot/api';
 import { Option, Vec } from '@polkadot/types-codec';
 import { AccountId32 } from '@polkadot/types/interfaces';
 
-import { CorePrimitivesOmniAccountMemberAccount } from '@heima/parachain-api';
+import { CorePrimitivesOmniAccountMemberAccount } from '@heima-network/parachain-api';
 
 /**
  * Retrieves and waits for the account store to be created for the specified account.

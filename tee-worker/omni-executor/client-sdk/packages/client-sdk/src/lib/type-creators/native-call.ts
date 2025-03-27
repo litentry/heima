@@ -6,7 +6,7 @@ import {
   NativeCall,
   OmniAccountPermission,
   omniExecutor,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 const NativeCallEnum = omniExecutor.types.NativeCall._enum;
 

@@ -8,7 +8,7 @@ import type {
   TrustedCall,
   AesRequest,
   AesOutput,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 import {
   encrypt,
   generateNonce12,

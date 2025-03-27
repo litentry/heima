@@ -1,5 +1,5 @@
 import { blake2AsHex } from '@polkadot/util-crypto';
-import { Identity } from '@heima/parachain-api';
+import { Identity } from '@heima-network/parachain-api';
 import { HexString } from '@polkadot/util/types';
 
 /**

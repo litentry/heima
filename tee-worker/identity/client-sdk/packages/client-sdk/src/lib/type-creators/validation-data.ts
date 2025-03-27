@@ -4,7 +4,7 @@ import { assert, isHex, stringToHex } from '@polkadot/util';
 import type {
   LitentryIdentity,
   LitentryValidationData,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 import { decodeSignature } from '../util/decode-signature';
 import { getSignatureCryptoType } from '../util/get-signature-crypto-type';
