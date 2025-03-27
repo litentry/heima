@@ -41,6 +41,13 @@ pub struct RunArgs {
 	#[arg(
 		short,
 		long,
+		default_value = "local/keystore/auth_token_key.bin",
+		value_name = "Auth token (JWT) keystore file path"
+	)]
+	pub auth_token_key_store_path: String,
+	#[arg(
+		short,
+		long,
 		default_value = "local/log/parentchain_last_log.bin",
 		value_name = "log file path"
 	)]
