@@ -32,6 +32,12 @@ pub struct ApiResponse<T> {
 	data: T,
 }
 
+impl<T> ApiResponse<T> {
+	pub fn data(&self) -> &T {
+		&self.data
+	}
+}
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]

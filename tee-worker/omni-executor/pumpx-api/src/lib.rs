@@ -18,9 +18,9 @@ pub struct PumpxApi {
 }
 
 impl PumpxApi {
-	pub fn new(base_url: Option<&str>) -> Self {
+	pub fn new(base_url: Option<String>) -> Self {
 		let base_url = match base_url {
-			Some(url) => Url::parse(url).expect("Invalid base URL"),
+			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
 		};
 		let mut headers = HeaderMap::new();
