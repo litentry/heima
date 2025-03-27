@@ -524,6 +524,7 @@ describe('account-store', () => {
     })();
   });
 
+  // This test is just an example. It requires receiving email verification codes, which cannot be done by running this unit test.
   it.skip('web2 identity (email) & auth token authentication', async () => {
     const email = 'test@test.com';
 
