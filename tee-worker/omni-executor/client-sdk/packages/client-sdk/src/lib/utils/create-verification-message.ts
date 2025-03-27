@@ -4,7 +4,7 @@ import { stringToHex, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { HexString } from '@polkadot/util/types';
 
-import { Identity } from '@heima/parachain-api';
+import { Identity } from '@heima-network/parachain-api';
 
 /**
  * Creates a verification message for adding a new member to an Omni account

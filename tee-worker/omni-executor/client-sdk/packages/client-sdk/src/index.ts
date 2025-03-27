@@ -1,4 +1,4 @@
-import '@heima/parachain-api';
+import '@heima-network/parachain-api';
 
 export { Enclave, enclave, ConnectionState } from '@lib/enclave';
 

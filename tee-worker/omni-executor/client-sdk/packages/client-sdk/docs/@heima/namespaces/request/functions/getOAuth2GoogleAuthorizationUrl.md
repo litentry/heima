@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../../../../README.md)
+[**@heima-network/client-sdk**](../../../../README.md)
 
 ***
 
-[@heima/client-sdk](../../../../README.md) / [request](../README.md) / getOAuth2GoogleAuthorizationUrl
+[@heima-network/client-sdk](../../../../README.md) / [request](../README.md) / getOAuth2GoogleAuthorizationUrl
 
 # Function: getOAuth2GoogleAuthorizationUrl()
 

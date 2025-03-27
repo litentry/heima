@@ -23,8 +23,8 @@
           "error",
           {
             "ignoredDependencies": [
-              "@heima/chaindata",
-              "@heima/parachain-api",
+              "@heima-network/chaindata",
+              "@heima-network/parachain-api",
               "@polkadot/api",
               "@polkadot/types",
               "@polkadot/types-codec",

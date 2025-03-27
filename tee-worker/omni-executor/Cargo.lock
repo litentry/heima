@@ -3111,6 +3111,7 @@ dependencies = [
  "parentchain-listener",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "pumpx",
  "pumpx-api",
  "rpc-server",
  "scale-encode 0.10.0",
@@ -6297,6 +6298,14 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
+]
+
+[[package]]
+name = "pumpx"
+version = "0.1.0"
+dependencies = [
+ "executor-core",
+ "executor-crypto",
 ]
 
 [[package]]

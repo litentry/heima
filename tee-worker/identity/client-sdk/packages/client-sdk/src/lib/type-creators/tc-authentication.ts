@@ -1,4 +1,4 @@
-import { LitentryIdentity, TCAuthentication } from '@heima/parachain-api';
+import { LitentryIdentity, TCAuthentication } from '@heima-network/parachain-api';
 import { Registry } from '@polkadot/types-codec/types';
 import { createLitentryMultiSignature } from './litentry-multi-signature';
 

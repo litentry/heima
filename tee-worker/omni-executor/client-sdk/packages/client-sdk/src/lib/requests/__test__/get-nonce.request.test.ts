@@ -1,4 +1,4 @@
-import { ApiPromise, identity, WsProvider } from '@heima/parachain-api';
+import { ApiPromise, identity, WsProvider } from '@heima-network/parachain-api';
 
 import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
 import { createIdentityType } from '@type-creators/identity';

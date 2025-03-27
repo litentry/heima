@@ -8,7 +8,7 @@
 		"@polkadot/rpc-provider": "^15.0.2"
 	},
 	"peerDependencies": {
-		"@heima/parachain-api": "0.9.24-next.0",
+		"@heima-network/parachain-api": "0.9.24-next.0",
 		"@litentry/sidechain-api": "0.9.20-next.8",
 		"@litentry/chaindata": "*",
 		"@polkadot/api": "^15.0.2",

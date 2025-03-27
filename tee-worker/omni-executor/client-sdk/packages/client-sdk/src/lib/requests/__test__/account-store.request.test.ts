@@ -4,7 +4,7 @@ import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady, encodeAddress } from '@polkadot/util-crypto';
 
-import { getChain } from '@heima/chaindata';
+import { getChain } from '@heima-network/chaindata';
 import {
   identity,
   ValidationData,
@@ -13,7 +13,7 @@ import {
   Identity,
   sidechain,
   omniAccount,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 import { addAccount } from '@requests/add-account.request';

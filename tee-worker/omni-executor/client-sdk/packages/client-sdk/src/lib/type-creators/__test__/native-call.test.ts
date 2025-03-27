@@ -2,7 +2,7 @@ import { Keyring } from '@polkadot/api';
 import { TypeRegistry } from '@polkadot/types';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
-import { identity, Identity, omniExecutor, sidechain } from '@heima/parachain-api';
+import { identity, Identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 import { createNativeCallType } from '@type-creators/native-call';

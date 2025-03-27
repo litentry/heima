@@ -2,7 +2,7 @@ import type { Registry } from '@polkadot/types-codec/types';
 import { isHex, u8aToHex } from '@polkadot/util';
 import { base58Decode, decodeAddress } from '@polkadot/util-crypto';
 
-import type { Identity } from '@heima/parachain-api';
+import type { Identity } from '@heima-network/parachain-api';
 
 /**
  * Creates a Identity chain type.
