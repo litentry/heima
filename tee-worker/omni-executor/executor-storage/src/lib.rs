@@ -6,6 +6,8 @@ mod account_store;
 pub use account_store::AccountStoreStorage;
 mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
+mod pumpx_auth_token;
+pub use pumpx_auth_token::PumpxAuthTokenStorage;
 
 use executor_crypto::hashing::{blake2_128, twox_128};
 use executor_primitives::{AccountId, MemberAccount};
