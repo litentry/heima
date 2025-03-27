@@ -12,7 +12,7 @@
       "executor": "nx:run-commands",
       "outputs": ["{options.outDir}"],
       "options": {
-        "outDir": "dist/packages/client-sdk",
+        "outDir": "../../dist/packages/client-sdk",
         "cwd": "packages/client-sdk",
         "command": "npx tsup",
         "assets": ["packages/client-sdk/*.md", "packages/client-sdk/LICENSE"]
