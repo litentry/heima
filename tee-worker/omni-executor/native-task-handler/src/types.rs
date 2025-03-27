@@ -47,4 +47,6 @@ pub enum NativeOperationError {
 	InternalError,
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
+	UnsupportedIdentityType,
+	PumpxApiError,
 }

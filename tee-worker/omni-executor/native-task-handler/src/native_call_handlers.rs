@@ -4,7 +4,7 @@ use crate::{
 };
 use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
-use executor_primitives::{Intent, MemberAccount, OmniAccountAuthType, ValidationData};
+use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
 use heima_authentication::auth_token::{
 	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
@@ -74,11 +74,31 @@ pub async fn handle_native_call<
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
-				AUTH_TOKEN_SESSION_TYPE.to_string(),
-				auth_options,
-			);
+
+			let claims = match sender_identity {
+				Identity::Email(ref identity_string) => {
+					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
+						let response = NativeOperationResponse::Err(
+							NativeOperationError::InvalidMemberIdentity,
+						);
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
+						}
+						return;
+					};
+					AuthTokenClaims::new(
+						email.to_string(),
+						AUTH_TOKEN_SESSION_TYPE.to_string(),
+						auth_options,
+					)
+				},
+				_ => AuthTokenClaims::new(
+					sender_identity.hash().to_string(),
+					AUTH_TOKEN_SESSION_TYPE.to_string(),
+					auth_options,
+				),
+			};
+
 			let Ok(token) = jwt::create(&claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
@@ -393,7 +413,29 @@ pub async fn handle_native_call<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeCall::request_pumpx_jwt(sender_identity) => {
+		NativeCall::pumpx_request_jwt(sender_identity, invite_code, google_code) => {
+			let email = match sender_identity {
+				Identity::Email(ref identity_string) => {
+					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
+						let response = NativeOperationResponse::Err(
+							NativeOperationError::InvalidMemberIdentity,
+						);
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
+						}
+						return;
+					};
+					email.to_string()
+				},
+				_ => {
+					let response =
+						NativeOperationResponse::Err(NativeOperationError::UnsupportedIdentityType);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
 			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
 				log::error!("Failed to get last finalized block number");
 				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
@@ -405,7 +447,7 @@ pub async fn handle_native_call<
 			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
 			let auth_options = AuthOptions { expires_at };
 			let session_claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
+				email.clone(),
 				AUTH_TOKEN_SESSION_TYPE.to_string(),
 				auth_options.clone(),
 			);
@@ -417,11 +459,24 @@ pub async fn handle_native_call<
 				}
 				return;
 			};
-			let trade_claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
-				AUTH_TOKEN_TRADE_TYPE.to_string(),
-				auth_options,
-			);
+
+			if ctx
+				.pumpx_api
+				.connect_user(&session_token, email.clone(), invite_code, google_code)
+				.await
+				.is_err()
+			{
+				log::error!("Failed to connect user");
+				let response = NativeOperationResponse::Err(NativeOperationError::PumpxApiError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			// TODO: rename this token type or use other strategy (e.g: permissions/roles)
+			let trade_claims =
+				AuthTokenClaims::new(email, AUTH_TOKEN_TRADE_TYPE.to_string(), auth_options);
 			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);

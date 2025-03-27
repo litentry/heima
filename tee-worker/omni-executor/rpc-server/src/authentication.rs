@@ -70,6 +70,7 @@ impl Display for AuthenticationError {
 pub enum AuthTokenError {
 	InvalidToken,
 	BlockNumberError,
+	InvalidIdentity,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -155,7 +156,15 @@ pub fn verify_auth_token_authentication<
 		})
 		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
 
-	let validation = Validation::new(sender_identity.hash().to_string(), current_block);
+	let validation = match sender_identity {
+		Identity::Email(identity_string) => {
+			let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
+				return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidIdentity));
+			};
+			Validation::new(email.to_string(), current_block)
+		},
+		_ => Validation::new(sender_identity.hash().to_string(), current_block),
+	};
 
 	if auth_token.validate(&ctx.jwt_rsa_private_key, validation).is_err() {
 		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));
