@@ -2,7 +2,7 @@ import { stringToHex, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import type { Index } from '@polkadot/types/interfaces';
 
-import type { Identity, NativeCall, NativeQuery } from '@heima/parachain-api';
+import type { Identity, NativeCall, NativeQuery } from '@heima-network/parachain-api';
 
 type Operation = NativeCall | NativeQuery;
 

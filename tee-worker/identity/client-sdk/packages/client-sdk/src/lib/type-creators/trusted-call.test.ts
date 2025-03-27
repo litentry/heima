@@ -9,7 +9,7 @@ import {
   trusted_operations,
   type LitentryIdentity,
   type Assertion,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 import { createTrustedCallType } from './trusted-call';
 import { createLitentryIdentityType } from './litentry-identity';

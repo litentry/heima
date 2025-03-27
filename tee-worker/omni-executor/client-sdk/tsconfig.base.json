@@ -18,10 +18,10 @@
 		"skipDefaultLibCheck": true,
 		"baseUrl": ".",
 		"paths": {
-			"@heima/chaindata": [
+			"@heima-network/chaindata": [
 				"packages/chaindata/src/index.ts"
 			],
-			"@heima/client-sdk": [
+			"@heima-network/client-sdk": [
 				"packages/client-sdk/src/index.ts"
 			],
 		}

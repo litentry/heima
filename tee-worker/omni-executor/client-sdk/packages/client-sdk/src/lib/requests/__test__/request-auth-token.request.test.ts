@@ -3,8 +3,8 @@ import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
-import { getChain } from '@heima/chaindata';
-import { identity, omniExecutor, sidechain } from '@heima/parachain-api';
+import { getChain } from '@heima-network/chaindata';
+import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createAccountStore } from '@requests/create-account-store.request';
 import { requestAuthToken } from '@requests/request-auth-token.request';

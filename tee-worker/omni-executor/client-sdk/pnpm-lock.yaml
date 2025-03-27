@@ -114,10 +114,10 @@ importers:
 
   packages/client-sdk:
     dependencies:
-      '@heima/chaindata':
+      '@heima-network/chaindata':
         specifier: '*'
         version: link:../chaindata
-      '@heima/parachain-api':
+      '@heima-network/parachain-api':
         specifier: 0.9.24-next.0
         version: 0.9.24-next.0
       '@polkadot/api':
@@ -1575,7 +1575,7 @@ packages:
       '@shikijs/vscode-textmate': 10.0.2
     dev: true
 
-  /@heima/parachain-api@0.9.24-next.0:
+  /@heima-network/parachain-api@0.9.24-next.0:
     resolution: {integrity: sha512-cPS8ThoQPSr5oKsXuppFYIXb9LoJI8UKyAop4rRzjpzV7DdJmMbapbQ6Wprn/EHSGFwaWSjv97WvhkbZtNFWZQ==}
     dependencies:
       '@polkadot/api': 15.8.1

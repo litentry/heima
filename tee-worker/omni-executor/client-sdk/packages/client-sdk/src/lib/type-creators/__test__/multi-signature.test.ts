@@ -1,7 +1,7 @@
 import { TypeRegistry } from '@polkadot/types';
 import { base64Decode, cryptoWaitReady, randomAsHex } from '@polkadot/util-crypto';
 
-import { identity } from '@heima/parachain-api';
+import { identity } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 import { createMultiSignature } from '@type-creators/multi-signature';

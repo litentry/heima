@@ -2,7 +2,7 @@ import { isHex, u8aToHex } from '@polkadot/util';
 import { base58Decode, decodeAddress } from '@polkadot/util-crypto';
 
 import type { Registry } from '@polkadot/types-codec/types';
-import type { LitentryIdentity } from '@heima/parachain-api';
+import type { LitentryIdentity } from '@heima-network/parachain-api';
 
 /**
  * Creates a LitentryIdentity chain type.
