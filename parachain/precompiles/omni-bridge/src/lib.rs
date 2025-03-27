@@ -17,19 +17,17 @@
 
 use fp_evm::{PrecompileFailure, PrecompileHandle};
 
-use core_primitives::AssetId;
+use core_primitives::{AssetId, ChainType};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::fungible::NativeOrWithId,
 };
 use pallet_evm::AddressMapping;
+use pallet_omni_bridge::PayInRequest;
 use precompile_utils::prelude::*;
-use sp_runtime::traits::Dispatchable;
-
 use sp_core::U256;
+use sp_runtime::traits::Dispatchable;
 use sp_std::{marker::PhantomData, vec::Vec};
-
-use pallet_omni_bridge::{ChainType, PayInRequest};
 
 pub struct OmniBridgePrecompile<Runtime>(PhantomData<Runtime>);
 
