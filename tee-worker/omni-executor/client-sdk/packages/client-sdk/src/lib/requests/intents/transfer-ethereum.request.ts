@@ -2,7 +2,7 @@ import type { ApiPromise } from '@polkadot/api';
 import { hexToU8a } from '@polkadot/util';
 import { HexString } from '@polkadot/util/types';
 
-import type { Intent, IntentTransferEthereum, Identity } from '@heima/parachain-api';
+import type { Intent, IntentTransferEthereum, Identity } from '@heima-network/parachain-api';
 
 import { AuthenticationData } from '@type-creators/authentication';
 

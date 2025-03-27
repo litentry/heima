@@ -2,7 +2,7 @@ import type { Index } from '@polkadot/types/interfaces';
 import type { ApiPromise } from '@polkadot/api';
 import { compactAddLength, u8aToHex } from '@polkadot/util';
 
-import type { AesOutput, NativeCall, NativeQuery, OmniAesRequest as AesRequest, PlainRequest } from '@heima/parachain-api';
+import type { AesOutput, NativeCall, NativeQuery, OmniAesRequest as AesRequest, PlainRequest } from '@heima-network/parachain-api';
 import { encrypt, generateNonce12, generate, exportKey } from '@utils/shielding-key';
 import { createKeyAesOutputType } from './key-aes-output';
 import { createAuthentication, AuthenticationData } from './authentication';

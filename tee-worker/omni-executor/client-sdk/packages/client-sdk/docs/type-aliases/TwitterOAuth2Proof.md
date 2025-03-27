@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / TwitterOAuth2Proof
+[@heima-network/client-sdk](../README.md) / TwitterOAuth2Proof
 
 # Type Alias: TwitterOAuth2Proof
 

@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../../../../README.md)
+[**@heima-network/client-sdk**](../../../../README.md)
 
 ***
 
-[@heima/client-sdk](../../../../README.md) / [request](../README.md) / setPermissions
+[@heima-network/client-sdk](../../../../README.md) / [request](../README.md) / setPermissions
 
 # Function: setPermissions()
 

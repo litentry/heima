@@ -1,8 +1,8 @@
-**@heima/client-sdk**
+**@heima-network/client-sdk**
 
 ***
 
-# @heima/client-sdk
+# @heima-network/client-sdk
 
 ## Namespaces
 

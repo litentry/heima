@@ -10,7 +10,7 @@ import {
   identity,
   sidechain,
   trusted_operations,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 import { enclave } from '../enclave';
 import { getEnclaveNonce } from '../requests/get-enclave-nonce';

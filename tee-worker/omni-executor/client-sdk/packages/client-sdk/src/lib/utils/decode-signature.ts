@@ -1,4 +1,4 @@
-import { Identity } from '@heima/parachain-api';
+import { Identity } from '@heima-network/parachain-api';
 import { hexToU8a, isHex } from '@polkadot/util';
 import { base58Decode, base64Decode } from '@polkadot/util-crypto';
 

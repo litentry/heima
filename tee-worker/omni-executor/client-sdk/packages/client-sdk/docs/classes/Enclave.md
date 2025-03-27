@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / Enclave
+[@heima-network/client-sdk](../README.md) / Enclave
 
 # Class: Enclave
 
@@ -22,7 +22,7 @@ ensuring clients are connected to a trusted worker.
 ## Example
 
 ```ts
-import { enclave } from '@heima/client-sdk';
+import { enclave } from '@heima-network/client-sdk';
 
 const mrEnclave = await enclave.getMrEnclave(api);
 const key = await enclave.getShieldingKey();

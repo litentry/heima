@@ -1,7 +1,7 @@
 import { stringToHex, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 
-import type { LitentryIdentity, TrustedCall } from '@heima/parachain-api';
+import type { LitentryIdentity, TrustedCall } from '@heima-network/parachain-api';
 import type { U8aLike } from '@polkadot/util/types';
 import type { Index } from '@polkadot/types/interfaces';
 
