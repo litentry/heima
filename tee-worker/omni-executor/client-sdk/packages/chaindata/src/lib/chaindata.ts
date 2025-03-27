@@ -32,8 +32,8 @@ export const heimaDev: ChainSpec = {
   isTestnet: true,
   isDefault: false,
   // TODO update url below
-  rpcs: [{ url: 'wss://tee-dev.litentry.io' }],
-  enclaveRpcs: [{ url: 'wss://enclave-dev.litentry.io' }],
+  rpcs: [{ url: 'wss://tee-dev.heima.network' }],
+  enclaveRpcs: [{ url: 'wss://enclave-dev.heima.network' }],
 };
 
 export const heimaProd: ChainSpec = {
@@ -41,12 +41,9 @@ export const heimaProd: ChainSpec = {
   name: 'Heima Production Network',
   isTestnet: false,
   isDefault: true,
-  rpcs: [
-    { url: 'wss://litentry-rpc.dwellir.com' },
-    { url: 'wss://rpc.litentry-parachain.litentry.io' },
-  ],
+  rpcs: [{ url: 'wss://litentry-rpc.dwellir.com' }, { url: 'wss://rpc.heima-parachain.heima.network' }],
   // TODO update url below
-  enclaveRpcs: [{ url: 'wss://enclave-prod.litentry.io' }],
+  enclaveRpcs: [{ url: 'wss://enclave-prod.heima.network' }],
 };
 
 export const all = [heimaProd, heimaDev, heimaLocal];
