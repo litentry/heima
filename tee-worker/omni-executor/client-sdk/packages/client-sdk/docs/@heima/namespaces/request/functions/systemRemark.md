@@ -1,8 +1,8 @@
-[**@heima/client-sdk**](../../../../README.md)
+[**@heima-network/client-sdk**](../../../../README.md)
 
 ***
 
-[@heima/client-sdk](../../../../README.md) / [request](../README.md) / systemRemark
+[@heima-network/client-sdk](../../../../README.md) / [request](../README.md) / systemRemark
 
 # Function: systemRemark()
 

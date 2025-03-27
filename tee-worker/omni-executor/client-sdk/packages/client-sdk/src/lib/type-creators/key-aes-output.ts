@@ -2,7 +2,7 @@ import type { Registry } from '@polkadot/types-codec/types';
 import { assert } from '@polkadot/util';
 import type { HexString } from '@polkadot/util/types';
 
-import type { AesOutput } from '@heima/parachain-api';
+import type { AesOutput } from '@heima-network/parachain-api';
 
 /**
  * Creates a KeyAesOutput sidechain type.

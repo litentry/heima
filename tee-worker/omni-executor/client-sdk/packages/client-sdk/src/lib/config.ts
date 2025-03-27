@@ -1,4 +1,4 @@
-import { type ChainId, getChain } from '@heima/chaindata';
+import { type ChainId, getChain } from '@heima-network/chaindata';
 
 const CURRENT_NETWORK =
   process.env.HEIMA_NETWORK ||

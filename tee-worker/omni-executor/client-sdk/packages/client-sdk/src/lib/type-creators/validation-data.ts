@@ -1,7 +1,7 @@
 import type { Registry } from '@polkadot/types-codec/types';
 import { assert, isHex, stringToHex } from '@polkadot/util';
 
-import type { Identity, ValidationData } from '@heima/parachain-api';
+import type { Identity, ValidationData } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@lib/type-creators/identity';
 import { decodeSignature } from '@utils/decode-signature';
@@ -77,8 +77,8 @@ export type EmailProof = {
  *
  * @example Web3
  * ```ts
- * import { createValidationDataType } from '@heima/client-sdk';
- * import type { Web3Proof } from '@heima/client-sdk';
+ * import { createValidationDataType } from '@heima-network/client-sdk';
+ * import type { Web3Proof } from '@heima-network/client-sdk';
  *
  * const userAddress = '0x123';
  *
@@ -99,8 +99,8 @@ export type EmailProof = {
  *
  * @example Twitter
  * ```ts
- * import { createValidationDataType } from '@heima/client-sdk';
- * import type { TwitterProof } from '@heima/client-sdk';
+ * import { createValidationDataType } from '@heima-network/client-sdk';
+ * import type { TwitterProof } from '@heima-network/client-sdk';
  *
  * const userHandle = '@heima';
  *

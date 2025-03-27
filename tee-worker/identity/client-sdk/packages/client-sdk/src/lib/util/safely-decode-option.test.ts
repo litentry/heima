@@ -1,5 +1,5 @@
 import { TypeRegistry } from '@polkadot/types';
-import { identity } from '@heima/parachain-api';
+import { identity } from '@heima-network/parachain-api';
 
 import { safelyDecodeOption } from './safely-decode-option';
 

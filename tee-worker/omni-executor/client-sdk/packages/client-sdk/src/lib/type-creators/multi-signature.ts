@@ -1,6 +1,6 @@
 import type { Registry } from '@polkadot/types-codec/types';
 
-import type { Identity, MultiSignature } from '@heima/parachain-api';
+import type { Identity, MultiSignature } from '@heima-network/parachain-api';
 
 import { decodeSignature } from '@utils/decode-signature';
 

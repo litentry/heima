@@ -1,5 +1,5 @@
 import '@litentry/sidechain-api';
-import '@heima/parachain-api';
+import '@heima-network/parachain-api';
 
 export { enclave, Enclave } from './lib/enclave';
 
