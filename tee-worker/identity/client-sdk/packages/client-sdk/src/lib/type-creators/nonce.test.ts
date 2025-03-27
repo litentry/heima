@@ -2,7 +2,7 @@ import { TypeRegistry } from '@polkadot/types';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 import { createNonceType } from './nonce';
-import { WorkerRpcReturnValue } from '@litentry/parachain-api';
+import { WorkerRpcReturnValue } from '@heima/parachain-api';
 
 const types = {
   // No custom types are needed for Index

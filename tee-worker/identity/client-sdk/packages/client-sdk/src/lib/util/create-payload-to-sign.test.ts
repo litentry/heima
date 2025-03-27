@@ -9,7 +9,7 @@ import {
   type LitentryIdentity,
   type TrustedCall,
   identity,
-} from '@litentry/parachain-api';
+} from '@heima/parachain-api';
 
 import { createPayloadToSign } from './create-payload-to-sign';
 import { createLitentryIdentityType } from '../type-creators/litentry-identity';

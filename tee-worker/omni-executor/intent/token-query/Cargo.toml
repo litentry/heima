@@ -14,8 +14,11 @@ solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 spl-token = { workspace = true }
 
+executor-primitives = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true }
+hex-literal = { workspace = true }
 
 [lints]
 workspace = true

@@ -42,9 +42,9 @@ const response = await enclave.send({
 
 ## Constructors
 
-### new Enclave()
+### Constructor
 
-> **new Enclave**(`endpoint`, `config`): [`Enclave`](Enclave.md)
+> **new Enclave**(`endpoint`, `config`): `Enclave`
 
 Defined in: [enclave.ts:90](https://github.com/litentry/heima/blob/dev/enclave.ts#L90)
 
@@ -66,7 +66,7 @@ Optional configuration overrides
 
 #### Returns
 
-[`Enclave`](Enclave.md)
+`Enclave`
 
 ## Methods
 
@@ -198,10 +198,10 @@ Promise that resolves with the response
 
 ### getInstance()
 
-> `static` **getInstance**(): [`Enclave`](Enclave.md)
+> `static` **getInstance**(): `Enclave`
 
 Defined in: [enclave.ts:78](https://github.com/litentry/heima/blob/dev/enclave.ts#L78)
 
 #### Returns
 
-[`Enclave`](Enclave.md)
+`Enclave`

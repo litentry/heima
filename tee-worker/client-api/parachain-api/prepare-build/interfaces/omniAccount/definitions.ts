@@ -1,13 +1,24 @@
+import * as identity from "../identity/definitions";
+
+const { Address20, Address32, Address33 } = identity.default.types;
+
 export default {
     types: {
         Intent: {
             _enum: {
+                CrossChainSwap: "SwapOrder",
                 TransferEthereum: "IntentTransferEthereum",
                 CallEthereum: "IntentCallEthereum",
                 SystemRemark: "Bytes",
                 TransferNative: "IntentTransferNative",
                 TransferSolana: "IntentTransferSolana",
             },
+        },
+        SwapOrder: {
+            from_asset: "ChainAsset",
+            from_amount: "u64",
+            to_asset: "ChainAsset",
+            to_address: "Option<HeimaMultiAddress>",
         },
         IntentTransferEthereum: {
             to: "H160",
@@ -32,7 +43,7 @@ export default {
          */
         MemberAccount: {
             _enum: {
-                Public: "LitentryIdentity",
+                Public: "Identity",
                 Private: "(Bytes,H256)",
             },
         },
@@ -41,6 +52,32 @@ export default {
         },
         AuthOptions: {
             expires_at: "u32",
+        },
+
+        ChainAsset: {
+            _enum: {
+                Ethereum: "(u32, EthereumToken)",
+                Solana: "SolanaToken",
+            },
+        },
+        EthereumToken: {
+            _enum: {
+                Native: "Null",
+                ERC20: "Address20",
+            },
+        },
+        SolanaToken: {
+            _enum: {
+                Native: "Null",
+                SPL: "Address32",
+            },
+        },
+        HeimaMultiAddress: {
+            _enum: {
+                Address20: "Address20",
+                Address32: "Address32",
+                Address33: "Address33",
+            },
         },
     },
 };

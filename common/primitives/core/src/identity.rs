@@ -95,7 +95,18 @@ impl Debug for IdentityString {
 }
 
 #[derive(
-    Encode, Decode, Copy, Clone, Default, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd,
+    Encode,
+    Decode,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    TypeInfo,
+    MaxEncodedLen,
+    Ord,
+    PartialOrd,
+    Hash,
 )]
 pub struct Address20([u8; 20]);
 
@@ -134,7 +145,18 @@ impl Debug for Address20 {
 }
 
 #[derive(
-    Encode, Decode, Copy, Clone, Default, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd,
+    Encode,
+    Decode,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    TypeInfo,
+    MaxEncodedLen,
+    Ord,
+    PartialOrd,
+    Hash,
 )]
 pub struct Address32([u8; 32]);
 impl AsRef<[u8; 32]> for Address32 {
@@ -204,7 +226,9 @@ impl Debug for Address32 {
 }
 
 // TODO: maybe use macros to reduce verbosity
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, PartialOrd, Ord)]
+#[derive(
+    Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, PartialOrd, Ord, Hash,
+)]
 pub struct Address33([u8; 33]);
 impl AsRef<[u8; 33]> for Address33 {
     fn as_ref(&self) -> &[u8; 33] {

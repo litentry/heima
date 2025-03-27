@@ -1,4 +1,4 @@
-use executor_primitives::{intent::Intent, Identity, OmniAccountPermission, ValidationData};
+use executor_primitives::{Identity, Intent, OmniAccountPermission, ValidationData};
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::vec::Vec;
 
