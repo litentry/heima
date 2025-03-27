@@ -39,7 +39,6 @@ use parentchain_rpc_client::SubstrateRpcClientFactory;
 use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_rpc_client::ToSubxtType;
-use parentchain_rpc_client::XtStatus;
 use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::TransactionSigner;
 
@@ -161,7 +160,7 @@ impl<
 					.sign(intent_accepted_event_emit_call, Some(nonce))
 					.await;
 
-				match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
+				match rpc_client.submit_tx(&tx).await {
 					Ok(report) => report,
 					Err(e) => {
 						log::error!("Failed to submit and watch tx: {:?}", e);
