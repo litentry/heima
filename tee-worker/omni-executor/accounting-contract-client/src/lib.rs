@@ -1,7 +1,9 @@
-use alloy::primitives::{Address, TxKind, U256};
-use alloy::rpc::types::{TransactionInput, TransactionRequest};
-use alloy::sol;
-use alloy::sol_types::{SolInterface, SolValue};
+use alloy::{
+	primitives::{Address, TxKind, U256},
+	rpc::types::{TransactionInput, TransactionRequest},
+	sol,
+	sol_types::{SolInterface, SolValue},
+};
 use ethereum_rpc::RpcProvider;
 use AccountingContract::AccountingContractCalls;
 
