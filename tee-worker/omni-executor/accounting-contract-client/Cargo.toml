@@ -6,9 +6,9 @@ edition.workspace = true
 [dependencies]
 alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
 async-trait = { workspace = true }
+ethereum-rpc = { workspace = true }
 log = { workspace = true }
 mockall = { workspace = true }
-ethereum-rpc = { workspace = true }
 
 [lints]
 workspace = true
