@@ -39,6 +39,7 @@ env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
 hex = "0.4"
+hex-literal = "0.4"
 hmac = "0.12.1"
 jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
