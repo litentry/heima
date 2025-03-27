@@ -92,7 +92,7 @@ pub async fn handle_native_call<
 				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
 
 			// Without increase nonce, all requests after request_auth_token will failure with below error.
-			// Could not submit tx: Rpc(ClientError(Call(ErrorObject { code: ServerError(1014), message: "Priority is too low: (2564 vs 2564)", 
+			// Could not submit tx: Rpc(ClientError(Call(ErrorObject { code: ServerError(1014), message: "Priority is too low: (2564 vs 2564)",
 			// data: Some(RawValue("The transaction has too low priority to replace another transaction already in the pool.")) })))
 			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
 			let nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
