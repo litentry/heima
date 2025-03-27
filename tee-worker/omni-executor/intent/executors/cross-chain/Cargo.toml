@@ -9,9 +9,9 @@ async-trait = { workspace = true }
 log = { workspace = true }
 
 # Local dependencies
-intent-asset-lock = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
+intent-asset-lock = { workspace = true }
 intent-token-query = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
