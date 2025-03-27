@@ -3070,9 +3070,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				203u8, 80u8, 165u8, 84u8, 10u8, 40u8, 208u8, 133u8, 208u8, 240u8, 95u8, 167u8,
-				99u8, 181u8, 162u8, 169u8, 36u8, 220u8, 16u8, 242u8, 198u8, 195u8, 123u8, 177u8,
-				225u8, 104u8, 138u8, 70u8, 73u8, 57u8, 124u8, 110u8,
+				131u8, 26u8, 9u8, 165u8, 167u8, 180u8, 71u8, 67u8, 2u8, 162u8, 254u8, 55u8, 56u8,
+				194u8, 234u8, 63u8, 198u8, 205u8, 6u8, 144u8, 72u8, 156u8, 172u8, 54u8, 18u8, 88u8,
+				64u8, 205u8, 165u8, 24u8, 157u8, 117u8,
 			]
 	}
 	pub mod system {
@@ -9907,6 +9907,29 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
+					pub enum HeimaMultiAddress {
+						#[codec(index = 0)]
+						Address20(runtime_types::core_primitives::identity::Address20),
+						#[codec(index = 1)]
+						Address32(runtime_types::core_primitives::identity::Address32),
+						#[codec(index = 2)]
+						Address33(runtime_types::core_primitives::identity::Address33),
+					}
+					#[derive(
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+						Debug,
+					)]
+					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+					#[codec(dumb_trait_bound)]
+					#[decode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+					)]
+					#[encode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+					)]
 					pub enum Intent {
 						#[codec(index = 0)]
 						CrossChainSwap(runtime_types::core_primitives::omni::intent::SwapOrder),
@@ -9946,35 +9969,12 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub enum MultiAddress {
-						#[codec(index = 0)]
-						Address32(runtime_types::core_primitives::identity::Address32),
-						#[codec(index = 1)]
-						Address20(runtime_types::core_primitives::identity::Address20),
-						#[codec(index = 2)]
-						Address33(runtime_types::core_primitives::identity::Address33),
-					}
-					#[derive(
-						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-						Debug,
-					)]
-					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-					#[codec(dumb_trait_bound)]
-					#[decode_as_type(
-						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-					)]
-					#[encode_as_type(
-						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-					)]
 					pub struct SwapOrder {
 						pub from_asset: runtime_types::core_primitives::omni::chain::ChainAsset,
 						pub from_amount: ::core::primitive::u64,
 						pub to_asset: runtime_types::core_primitives::omni::chain::ChainAsset,
 						pub to_address: ::core::option::Option<
-							runtime_types::core_primitives::omni::intent::MultiAddress,
+							runtime_types::core_primitives::omni::intent::HeimaMultiAddress,
 						>,
 					}
 					#[derive(
