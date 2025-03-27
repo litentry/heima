@@ -17,6 +17,7 @@
 use alloy::network::TransactionBuilder;
 use alloy::primitives::{Address, U256};
 use alloy::rpc::types::TransactionRequest;
+use alloy::sol;
 use alloy::sol_types::SolCall;
 use ethereum_rpc::RpcProvider;
 use log::error;
@@ -26,19 +27,7 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 
-use alloy::sol;
-
-pub enum SolanaToken {
-	Native,
-	//mint address
-	SPL(Pubkey),
-}
-
-pub enum EthereumToken {
-	Native,
-	//token address
-	ERC20(Address),
-}
+use executor_primitives::{EthereumToken, SolanaToken};
 
 sol!("artifacts/IERC20.sol");
 
@@ -51,6 +40,7 @@ pub async fn query_solana(rpc_url: &str, key: &Pubkey, token: SolanaToken) -> Re
 			.await
 			.map_err(|e| error!("Could not get solana native balance: {:?}", e)),
 		SolanaToken::SPL(mint) => {
+			let mint: Pubkey = (*mint.as_ref()).into();
 			let accounts = client
 				.get_token_accounts_by_owner(key, TokenAccountsFilter::Mint(mint))
 				.await
@@ -97,6 +87,7 @@ pub async fn query_ethereum(
 	match token {
 		EthereumToken::Native => provider.get_balance(account).await,
 		EthereumToken::ERC20(address) => {
+			let address = address.as_ref().into();
 			let call = IERC20::balanceOfCall { account };
 			let tx = TransactionRequest::default().with_to(address).with_input(call.abi_encode());
 			provider.call(tx).await.map(|balance| U256::from_be_slice(&balance))
@@ -106,10 +97,9 @@ pub async fn query_ethereum(
 
 #[cfg(test)]
 pub mod tests {
-	use std::str::FromStr;
-
-	use alloy::{hex::FromHex, primitives::Address};
+	use hex_literal::hex;
 	use solana_sdk::pubkey::Pubkey;
+	use std::str::FromStr;
 
 	use crate::{query_ethereum, query_solana};
 
@@ -124,7 +114,7 @@ pub mod tests {
 			rpc_url,
 			account,
 			crate::EthereumToken::ERC20(
-				Address::from_hex("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707").unwrap(),
+				hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707").try_into().unwrap(),
 			),
 		)
 		.await
@@ -147,7 +137,10 @@ pub mod tests {
 		// key with SPL on devnet
 		let key = Pubkey::from_str("J9DZj7dzbBYEVfaaBwQ7kBzGkKVTZssBPiatKyfxE3ZL").unwrap();
 		let mint_key = Pubkey::from_str("HHSfQJEhWkXQZbxuNzmtCwZGNYwAX2VNezdXuVYJbrgE").unwrap();
-		let balance = query_solana(rpc_url, &key, crate::SolanaToken::SPL(mint_key)).await.unwrap();
+		let balance =
+			query_solana(rpc_url, &key, crate::SolanaToken::SPL(mint_key.to_bytes().into()))
+				.await
+				.unwrap();
 
 		println!("Balance is {:?}", balance);
 	}

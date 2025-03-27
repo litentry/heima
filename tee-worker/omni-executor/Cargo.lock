@@ -4542,6 +4542,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "ethereum-rpc",
+ "executor-primitives",
+ "hex-literal",
  "log",
  "serde_json",
  "solana-account-decoder-client-types",
