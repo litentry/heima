@@ -17,6 +17,10 @@ pub enum CallResponse {
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken(String),
+	PumpxJwt {
+		session_token: String,
+		trade_token: String,
+	},
 }
 
 impl From<CallResponse> for Result<NativeOperationOk, NativeOperationError> {

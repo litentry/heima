@@ -58,12 +58,9 @@ type RequestIntentParams = {
   intent: Intent;
 };
 
-// Identity, AuthOptions
+// Identity
 type RequestAuthTokenParams = {
   member: Identity;
-  authOptions: {
-    expiresAt: number;
-  };
 };
 
 /**
@@ -218,15 +215,10 @@ export function createNativeCallType(
   }
 
   if (isRequestAuthTokenCall(method, params)) {
-    const { member, authOptions } = params;
+    const { member } = params;
 
     const operation = registry.createType<NativeCall>('NativeCall', {
-      [nativeCallMethodsMap.request_auth_token]: registry.createType(NativeCallEnum.request_auth_token, [
-        member,
-        registry.createType('AuthOptions', {
-          expires_at: authOptions.expiresAt,
-        }),
-      ]),
+      [nativeCallMethodsMap.request_auth_token]: member,
     });
 
     return { operation };

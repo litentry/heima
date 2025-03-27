@@ -29,9 +29,8 @@ use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::{get_signer, TransactionSigner};
-use rpc_server::{start_server as start_rpc_server, ShieldingKey};
+use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
-use std::env;
 use std::io::Write;
 use std::sync::Arc;
 use std::thread;
@@ -62,8 +61,10 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			// TODO: move to config
-			let jwt_secret = env::var("OE_JWT_SECRET").unwrap_or("secret".to_string());
+			let auth_token_key_store =
+				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
+			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
+
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 
@@ -89,7 +90,7 @@ async fn main() -> Result<(), ()> {
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				storage_db.clone(),
-				jwt_secret.clone(),
+				jwt_rsa_private_key.clone(),
 				aes256_key,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
@@ -132,7 +133,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(native_task_sender),
 				storage_db.clone(),
 				mrenclave,
-				jwt_secret,
+				jwt_rsa_private_key,
 			)
 			.await
 			.map_err(|e| {

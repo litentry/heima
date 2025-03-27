@@ -17,6 +17,8 @@ sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
+core-primitives = { workspace = true }
+
 [dev-dependencies]
 sp-keyring = { workspace = true }
 sp-io = { workspace = true, features = ["std"] }
@@ -42,6 +44,7 @@ std = [
     "sp-runtime/std",
     "frame-support/std",
     "frame-system/std",
+    "core-primitives/std",
 ]
 try-runtime = [
     "frame-support/try-runtime",

@@ -6,7 +6,7 @@
 
 # Function: createCallRequestType()
 
-> **createCallRequestType**(`api`, `data`): `Promise`\<`AesRequest` \| `PlainRequest`\>
+> **createCallRequestType**(`api`, `data`): `Promise`\<`OmniAesRequest` \| `PlainRequest`\>
 
 Defined in: [type-creators/request.ts:19](https://github.com/litentry/heima/blob/dev/type-creators/request.ts#L19)
 
@@ -47,4 +47,4 @@ The shielding key is encrypted using the Enclave's shielding key and attached in
 
 ## Returns
 
-`Promise`\<`AesRequest` \| `PlainRequest`\>
+`Promise`\<`OmniAesRequest` \| `PlainRequest`\>

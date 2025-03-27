@@ -23,6 +23,7 @@ mod test {
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTask;
 	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::sync::Arc;
 	use tokio::sync::mpsc;
 
@@ -33,7 +34,11 @@ mod test {
 		let (sender, _) = mpsc::channel::<NativeTask>(1);
 		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
 		let db = StorageDB::open_default("test_storage_db").unwrap();
-		let jwt_secret = "secret".to_string();
+
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 
 		start_server(
 			port,
@@ -42,7 +47,7 @@ mod test {
 			Arc::new(sender),
 			Arc::new(db),
 			[0u8; 32],
-			jwt_secret,
+			jwt_private_key.as_bytes().to_vec(),
 		)
 		.await
 		.unwrap();

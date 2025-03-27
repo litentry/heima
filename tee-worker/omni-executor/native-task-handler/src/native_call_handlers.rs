@@ -4,9 +4,12 @@ use crate::{
 };
 use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
-use executor_primitives::{intent::Intent, MemberAccount, OmniAccountAuthType, ValidationData};
+use executor_primitives::{Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
-use heima_authentication::auth_token::{AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION};
+use heima_authentication::auth_token::{
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
+	AUTH_TOKEN_TRADE_TYPE,
+};
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
@@ -71,8 +74,12 @@ pub async fn handle_native_call<
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
-			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
+			let claims = AuthTokenClaims::new(
+				sender_identity.hash().to_string(),
+				AUTH_TOKEN_SESSION_TYPE.to_string(),
+				auth_options,
+			);
+			let Ok(token) = jwt::create(&claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -385,6 +392,52 @@ pub async fn handle_native_call<
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
+		},
+		NativeCall::request_pumpx_jwt(sender_identity) => {
+			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
+				log::error!("Failed to get last finalized block number");
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
+			let auth_options = AuthOptions { expires_at };
+			let session_claims = AuthTokenClaims::new(
+				sender_identity.hash().to_string(),
+				AUTH_TOKEN_SESSION_TYPE.to_string(),
+				auth_options.clone(),
+			);
+			let Ok(session_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let trade_claims = AuthTokenClaims::new(
+				sender_identity.hash().to_string(),
+				AUTH_TOKEN_TRADE_TYPE.to_string(),
+				auth_options,
+			);
+			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let response: NativeOperationResponse =
+				CallResponse::PumpxJwt { session_token, trade_token }.into();
+
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
 		},
 	};
 	let report = match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {

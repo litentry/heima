@@ -6,10 +6,10 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-executor-core = { workspace = true }
 log = { workspace = true }
 
 # Local dependencies
+executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 
 [lints]
