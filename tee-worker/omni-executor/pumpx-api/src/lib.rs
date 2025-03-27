@@ -18,14 +18,12 @@ pub struct PumpxApi {
 }
 
 impl PumpxApi {
-	pub fn new(api_key: String, base_url: Option<&str>) -> Self {
+	pub fn new(base_url: Option<&str>) -> Self {
 		let base_url = match base_url {
 			Some(url) => Url::parse(url).expect("Invalid base URL"),
 			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
 		};
 		let mut headers = HeaderMap::new();
-		let auth_header = format!("Bearer {}", api_key);
-		headers.insert("Authorization", HeaderValue::from_str(&auth_header).unwrap());
 		headers.insert("X-Language", HeaderValue::from_static("en"));
 		let http_client = Client::builder()
 			.default_headers(headers)
