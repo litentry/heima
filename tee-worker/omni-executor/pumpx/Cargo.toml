@@ -5,6 +5,12 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+log = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_repr = { workspace = true }
+url = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }

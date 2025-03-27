@@ -18,7 +18,7 @@ use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
-use pumpx_api::PumpxApi;
+use pumpx::PumpxApi;
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use types::{NativeOperationError, NativeOperationOk};

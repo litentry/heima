@@ -30,7 +30,7 @@ use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::{get_signer, TransactionSigner};
-use pumpx_api::PumpxApi;
+use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;

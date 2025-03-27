@@ -21,7 +21,7 @@ heima-identity-verification = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
-pumpx-api = { workspace = true }
+pumpx = { workspace = true }
 
 [lints]
 workspace = true
