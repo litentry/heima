@@ -5,24 +5,18 @@
   "projectType": "library",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outDir}"],
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/chaindata",
-        "main": "packages/chaindata/src/index.ts",
-        "tsConfig": "packages/chaindata/tsconfig.lib.json",
-        "assets": [
-          "packages/chaindata/*.md"
-        ]
+        "cwd": "./packages/chaindata",
+        "command": "npx tsup",
+        "assets": ["packages/chaindata/*.md"],
+        "outDir": "dist"
       }
     },
     "publish": {
-      "command": "node tools/scripts/publish.mjs chaindata {args.ver} {args.tag}",
-      "dependsOn": [
-        "build"
-      ]
+      "command": "node tools/scripts/publish.mjs chaindata {args.tag}",
+      "dependsOn": ["build"]
     },
     "lint": {
       "executor": "@nx/linter:eslint",
@@ -39,3 +33,5 @@
   },
   "tags": []
 }
+
+      

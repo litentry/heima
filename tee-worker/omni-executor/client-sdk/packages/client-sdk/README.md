@@ -89,5 +89,5 @@ These are the steps for publishing the package locally for development purposes.
 4. Publish the distribution files
 
     ```
-    pnpm nx run client-sdk:publish --ver 1.0.0 --tag latest
+    pnpm nx run client-sdk:publish --tag latest
     ```

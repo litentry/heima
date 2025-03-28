@@ -58,14 +58,20 @@ impl SignerClient {
 		Self { url, request_signer }
 	}
 
-	pub async fn request_wallet(&self) -> Result<Vec<u8>, ()> {
-		let client = HttpClient::builder().build(&self.url).unwrap();
-		let wallet = Wallet { chain_type: ChainType::Evm, index: 0, omni_account: [0; 32] };
+	pub async fn request_wallet(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+	) -> Result<Vec<u8>, ()> {
+		let client = HttpClient::builder()
+			.build(&self.url)
+			.map_err(|e| error!("Could not create client: {:?}", e))?;
+		let wallet = Wallet { chain_type, index, omni_account };
 		let get_wallet = GetWalletPayload { wallet };
-		let signature = self
-			.request_signer
-			.sign_prehashed(&keccak_256(&serde_json::to_vec(&get_wallet).unwrap()))
-			.0;
+		let serialized_get_wallet = serde_json::to_vec(&get_wallet)
+			.map_err(|e| error!("Could not serialize dex_getWallet request: {:?}", e))?;
+		let signature = self.request_signer.sign_prehashed(&keccak_256(&serialized_get_wallet)).0;
 		let signed: SignedParams<GetWalletPayload> =
 			SignedParams { payload: get_wallet, signature };
 		let hex_encoded: String = client
@@ -75,14 +81,21 @@ impl SignerClient {
 		hex::decode(hex_encoded).map_err(|e| error!("Could not decode wallet: {:?}", e))
 	}
 
-	pub async fn request_signature(&self, message_to_sign: &[u8]) -> Result<Vec<u8>, ()> {
-		let client = HttpClient::builder().build(&self.url).unwrap();
-		let wallet = Wallet { chain_type: ChainType::Evm, index: 0, omni_account: [0; 32] };
-		let sign_wallet = SignWalletPayload { wallet, msg: message_to_sign.to_vec() };
-		let signature = self
-			.request_signer
-			.sign_prehashed(&keccak_256(&serde_json::to_vec(&sign_wallet).unwrap()))
-			.0;
+	pub async fn request_signature(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+		message_to_sign: Vec<u8>,
+	) -> Result<Vec<u8>, ()> {
+		let client = HttpClient::builder()
+			.build(&self.url)
+			.map_err(|e| error!("Could not create client: {:?}", e))?;
+		let wallet = Wallet { chain_type, index, omni_account };
+		let sign_wallet = SignWalletPayload { wallet, msg: message_to_sign };
+		let serialized_sign_wallet = serde_json::to_vec(&sign_wallet)
+			.map_err(|e| error!("Could not serialize dex_signWallet request: {:?}", e))?;
+		let signature = self.request_signer.sign_prehashed(&keccak_256(&serialized_sign_wallet)).0;
 		let signed: SignedParams<SignWalletPayload> =
 			SignedParams { payload: sign_wallet, signature };
 		let hex_encoded: String = client
@@ -95,7 +108,7 @@ impl SignerClient {
 
 impl<P: Serialize> ToRpcParams for SignedParams<P> {
 	fn to_rpc_params(self) -> Result<Option<Box<serde_json::value::RawValue>>, serde_json::Error> {
-		Ok(Some(to_raw_value(&self).unwrap()))
+		Ok(Some(to_raw_value(&self)?))
 	}
 }
 
@@ -104,7 +117,7 @@ pub mod tests {
 	use jsonrpsee::tokio;
 	use sp_core::{ecdsa, Pair};
 
-	use crate::signer_client::SignerClient;
+	use crate::signer_client::{ChainType, SignerClient};
 
 	#[ignore = "manual"]
 	#[tokio::test]
@@ -118,7 +131,7 @@ pub mod tests {
 		);
 		let client = SignerClient::new("http://localhost:2000".to_string(), pair);
 
-		let wallet = client.request_wallet().await;
+		let wallet = client.request_wallet(ChainType::Evm, 0, [0u8; 32]).await;
 		println!("Got wallet: {:?}", wallet);
 	}
 
@@ -133,7 +146,8 @@ pub mod tests {
 				.unwrap(),
 		);
 		let client = SignerClient::new("http://localhost:2000".to_string(), pair);
-		let signature = client.request_signature(&[0u8; 32]).await;
+		let signature =
+			client.request_signature(ChainType::Evm, 0, [0u8; 32], [0u8; 32].to_vec()).await;
 		println!("Got signature: {:?}", signature);
 	}
 }
