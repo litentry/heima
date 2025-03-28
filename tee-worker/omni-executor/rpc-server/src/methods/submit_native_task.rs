@@ -1,13 +1,13 @@
 use crate::{
 	error_code::*,
-	request::{AesRequest, DecryptableRequest, RawRequest},
+	request::{DecryptableRequest, RawRequest},
 	server::RpcContext,
 	verify_auth::*,
 };
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_primitives::{
 	utils::hex::{hex_encode, FromHexPrefixed},
-	OmniAccountAuthType, OmniAuth,
+	OmniAuth,
 };
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject, Params},

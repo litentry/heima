@@ -1,16 +1,18 @@
 export default {
     types: {
-        OmniAesRequest: {
-            mrenclave: "MrEnclave",
-            key: "Vec<u8>",
-            payload: "AesOutput",
+        RawRequest: {
+            _enum: {
+                Plain: "NativeTaskWrapper",
+                Aes: "AesRequest",
+            },
         },
-        PlainRequest: {
-            mrenclave: "MrEnclave",
-            payload: "Vec<u8>",
+        NativeTaskWrapper: {
+            task: "NativeTask",
+            nonce: "Option<Nonce>",
+            auth: "Option<OmniAuth>",
         },
         MrEnclave: "H256",
-        NativeCall: {
+        NativeTask: {
             _enum: {
                 request_auth_token: "(Identity)",
                 request_intent: "(Identity, Intent)",
@@ -19,21 +21,12 @@ export default {
                 remove_accounts: "(Identity, Vec<Identity>)",
                 publicize_account: "(Identity, Identity)",
                 set_permissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
+                request_pumpx_jwt: "(Identity)",
             },
         },
-        NativeCallAuthenticatedOperation: {
-            operation: "NativeCall",
-            nonce: "Index",
-            authentication: "Authentication",
-        },
-        NativeQueryAuthenticatedOperation: {
-            operation: "NativeQuery",
-            nonce: "Index",
-            authentication: "Authentication",
-        },
-        Authentication: {
+        OmniAuth: {
             _enum: {
-                Web3: "(MultiSignature)",
+                Web3: "(HeimaMultiSignature)",
                 Email: "(Text)",
                 AuthToken: "(Text)",
                 OAuth2: "(OAuth2Data)",
@@ -53,8 +46,8 @@ export default {
         OAuth2Provider: {
             _enum: ["Google"],
         },
-        NativeOperationResponse: "Result<NativeOperationOk, NativeOperationError>",
-        NativeOperationOk: {
+        NativeTaskResponse: "Result<NativeTaskOk, NativeTaskError>",
+        NativeTaskOk: {
             _enum: {
                 CallResponse: "CallResponse",
                 QueryResponse: "QueryResponse",
@@ -106,7 +99,7 @@ export default {
                 Invalid: "Null",
             },
         },
-        NativeOperationError: {
+        NativeTaskError: {
             _enum: {
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
@@ -115,5 +108,15 @@ export default {
                 ValidationDataVerificationFailed: "Null",
             },
         },
+        HeimaMultiSignature: {
+            _enum: {
+                Ed25519: "Ed25519Signature",
+                Sr25519: "Sr25519Signature",
+                Ecdsa: "EcdsaSignature",
+                Ethereum: "EthereumSignature",
+                Bitcoin: "BitcoinSignature",
+            },
+        },
+        Nonce: "u32",
     },
 };

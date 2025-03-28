@@ -3,7 +3,7 @@ use executor_core::native_task::NativeTaskTrait;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave, OAuth2Data,
-	OAuth2Provider, OmniAccountAuthType, OmniAuth, VerificationCode, Web2IdentityType,
+	OAuth2Provider, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
@@ -11,10 +11,7 @@ use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Encode;
-use std::{
-	fmt::{write, Display},
-	sync::Arc,
-};
+use std::{fmt::Display, sync::Arc};
 use tokio::runtime::Handle;
 
 #[derive(Debug)]

@@ -9,7 +9,7 @@ ruint = "1.13.1"
 
 # Local dependencies
 executor-core = { workspace = true }
-heima-primitives = { package = "core-primitives", path = "../../../../common/primitives/core", default-features = false, features = ["std"] }
+heima-primitives = { package = "core-primitives", workspace = true }
 
 [lints]
 workspace = true

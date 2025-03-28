@@ -19,6 +19,7 @@ use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key as RequestAesKey, AesOutput},
 	traits::Decrypt,
 };
+use heima_primitives::ShardIdentifier;
 use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
@@ -45,6 +46,7 @@ pub trait DecryptableRequest {
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
 pub struct AesRequest {
+	pub shard: ShardIdentifier, // TODO: remove this field, it's just to make client-api compile
 	pub key: Vec<u8>,
 	pub payload: AesOutput,
 }
