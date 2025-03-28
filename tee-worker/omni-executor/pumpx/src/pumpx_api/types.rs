@@ -2,6 +2,12 @@ use parity_scale_codec::{Codec, Decode, Encode};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+pub type UserConnectResponse = ApiResponse<ConnectedUser>;
+
+pub type MarketOrderUnsignedTxResponse = ApiResponse<MarketOrderUnsignedTx>;
+
+pub type MarketOrderTxResponse = ApiResponse<TxData>;
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
@@ -32,8 +38,6 @@ pub struct ApiResponse<T: Codec> {
 	message: String,
 	data: T,
 }
-
-pub type UserConnectResponse = ApiResponse<ConnectedUser>;
 
 impl<T: Codec> ApiResponse<T> {
 	pub fn data(&self) -> &T {
