@@ -7,11 +7,6 @@
   "module": "./dist/index.js",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
   "dependencies": {},
   "devDependencies": {
     "@polkadot/keyring": "^13.4.3",
