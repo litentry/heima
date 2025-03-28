@@ -19,8 +19,11 @@ pub enum CallResponse {
 	},
 	AuthToken(String),
 	PumpxJwt {
-		session_token: String,
-		trade_token: String,
+		/// Used for less sensitive operations
+		access_token: String,
+		/// Used for user's identity verification before making sensitive operations
+		id_token: String,
+
 		user_connect_response: UserConnectResponse,
 	},
 }

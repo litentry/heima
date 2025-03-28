@@ -7,8 +7,7 @@ use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenStorage, Storage};
 use heima_authentication::auth_token::{
-	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
-	AUTH_TOKEN_TRADE_TYPE,
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_ID_TYPE,
 };
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
@@ -88,13 +87,13 @@ pub async fn handle_native_call<
 					};
 					AuthTokenClaims::new(
 						email.to_string(),
-						AUTH_TOKEN_SESSION_TYPE.to_string(),
+						AUTH_TOKEN_ACCESS_TYPE.to_string(),
 						auth_options,
 					)
 				},
 				_ => AuthTokenClaims::new(
 					sender_identity.hash().to_string(),
-					AUTH_TOKEN_SESSION_TYPE.to_string(),
+					AUTH_TOKEN_ACCESS_TYPE.to_string(),
 					auth_options,
 				),
 			};
@@ -446,12 +445,13 @@ pub async fn handle_native_call<
 			};
 			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
 			let auth_options = AuthOptions { expires_at };
-			let session_claims = AuthTokenClaims::new(
+			let access_token_claims = AuthTokenClaims::new(
 				email.clone(),
-				AUTH_TOKEN_SESSION_TYPE.to_string(),
+				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
-			let Ok(session_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
+			let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
+			else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -462,7 +462,7 @@ pub async fn handle_native_call<
 
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
-				.connect_user(&session_token, email.clone(), invite_code, google_code, lang)
+				.connect_user(&access_token, email.clone(), invite_code, google_code, lang)
 				.await
 			else {
 				log::error!("Failed to connect user");
@@ -473,10 +473,9 @@ pub async fn handle_native_call<
 				return;
 			};
 
-			// TODO: rename this token type or use other strategy (e.g: permissions/roles)
-			let trade_claims =
-				AuthTokenClaims::new(email, AUTH_TOKEN_TRADE_TYPE.to_string(), auth_options);
-			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
+			let id_token_claims =
+				AuthTokenClaims::new(email, AUTH_TOKEN_ID_TYPE.to_string(), auth_options);
+			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -486,12 +485,12 @@ pub async fn handle_native_call<
 			};
 
 			let storage = PumpxAuthTokenStorage::new(ctx.storage_db.clone());
-			if storage.insert(sender_identity.hash(), trade_token.clone()).is_err() {
+			if storage.insert(sender_identity.hash(), id_token.clone()).is_err() {
 				log::error!("Failed to insert pumpx_auth_token into storage");
 			};
 
 			let response: NativeOperationResponse =
-				CallResponse::PumpxJwt { session_token, trade_token, user_connect_response }.into();
+				CallResponse::PumpxJwt { access_token, id_token, user_connect_response }.into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");

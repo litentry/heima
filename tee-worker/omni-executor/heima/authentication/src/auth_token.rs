@@ -19,8 +19,8 @@ pub enum Error {
 }
 
 pub const AUTH_TOKEN_EXPIRATION: u32 = 50_400; // 1 week in blocks
-pub const AUTH_TOKEN_SESSION_TYPE: &str = "session_token";
-pub const AUTH_TOKEN_TRADE_TYPE: &str = "trade_token"; // Used by pumpx
+pub const AUTH_TOKEN_ACCESS_TYPE: &str = "access";
+pub const AUTH_TOKEN_ID_TYPE: &str = "id";
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
@@ -109,7 +109,7 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
-			AUTH_TOKEN_SESSION_TYPE.to_string(),
+			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
@@ -130,7 +130,7 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
-			AUTH_TOKEN_SESSION_TYPE.to_string(),
+			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
@@ -151,7 +151,7 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			"test".to_string(),
-			AUTH_TOKEN_SESSION_TYPE.to_string(),
+			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
