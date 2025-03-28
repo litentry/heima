@@ -21,8 +21,9 @@ use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRe
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
+use executor_crypto::{ecdsa, PairTrait};
 use executor_storage::{init_storage, StorageDB};
-use log::error;
+use log::{error, info};
 use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
@@ -31,6 +32,7 @@ use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::{get_signer, TransactionSigner};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
+use std::env;
 use std::io::Write;
 use std::sync::Arc;
 use std::thread;
@@ -61,9 +63,20 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			let _binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
 			let auth_token_key_store =
 				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
+
+			let pumpx_auth_key_store =
+				pumpx::auth_key_store::AuthKeyStore::new(args.pumpx_auth_key_store_path.clone());
+
+			let pumpx_signer_key =
+				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
+			info!(
+				"PumpX auth public key: {:?}",
+				ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap().public()
+			);
 
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
