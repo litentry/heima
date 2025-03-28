@@ -5,7 +5,7 @@ use crate::{
 use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
-use executor_storage::{MemberOmniAccountStorage, Storage};
+use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenStorage, Storage};
 use heima_authentication::auth_token::{
 	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
 	AUTH_TOKEN_TRADE_TYPE,
@@ -483,6 +483,11 @@ pub async fn handle_native_call<
 					log::error!("Failed to send response");
 				}
 				return;
+			};
+
+			let storage = PumpxAuthTokenStorage::new(ctx.storage_db.clone());
+			if storage.insert(sender_identity.hash(), trade_token.clone()).is_err() {
+				log::error!("Failed to insert pumpx_auth_token into storage");
 			};
 
 			let response: NativeOperationResponse =
