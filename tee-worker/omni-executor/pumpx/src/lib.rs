@@ -15,3 +15,4 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod auth_key_store;
+pub mod signer_client;
