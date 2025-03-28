@@ -6306,6 +6306,7 @@ dependencies = [
  "executor-core",
  "executor-crypto",
  "log",
+ "parity-scale-codec",
  "reqwest 0.12.8",
  "serde",
  "serde_json",

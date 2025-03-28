@@ -1,3 +1,4 @@
+use parity_scale_codec::{Codec, Decode, Encode};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -17,22 +18,24 @@ pub struct ConnectUser {
 	pub google_code: Option<String>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Decode, Encode, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectedUser {
 	pub user_id: String,
 	pub google_auth_check: bool,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct ApiResponse<T> {
+pub struct ApiResponse<T: Codec> {
 	code: u32,
 	message: String,
 	data: T,
 }
 
-impl<T> ApiResponse<T> {
+pub type UserConnectResponse = ApiResponse<ConnectedUser>;
+
+impl<T: Codec> ApiResponse<T> {
 	pub fn data(&self) -> &T {
 		&self.data
 	}
@@ -72,7 +75,7 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderUnsignedTx {
 	pub order_id: String,
@@ -87,7 +90,7 @@ pub struct MarketOrderTx {
 	pub chain_id: ChainId,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
 	pub tx_hash: String,

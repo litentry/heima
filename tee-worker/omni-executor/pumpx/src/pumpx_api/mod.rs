@@ -1,12 +1,12 @@
-mod types;
+pub mod types;
 
 use reqwest::{
 	header::{HeaderMap, HeaderValue},
 	Client, Error,
 };
 use types::{
-	ApiResponse, ConnectUser, ConnectedUser, MarketOrderTx, MarketOrderUnsignedTx, NewMarketOrder,
-	TxData,
+	ApiResponse, ConnectUser, MarketOrderTx, MarketOrderUnsignedTx, NewMarketOrder, TxData,
+	UserConnectResponse,
 };
 use url::Url;
 
@@ -38,7 +38,7 @@ impl PumpxApi {
 		email: String,
 		invite_code: Option<String>,
 		google_code: Option<String>,
-	) -> Result<ApiResponse<ConnectedUser>, Error> {
+	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
 		let connect_user = ConnectUser { email, invite_code, google_code };
 		self.http_client
