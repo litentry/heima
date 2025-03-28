@@ -460,12 +460,11 @@ pub async fn handle_native_call<
 				return;
 			};
 
-			if ctx
+			let Ok(user_connect_response) = ctx
 				.pumpx_api
 				.connect_user(&session_token, email.clone(), invite_code, google_code)
 				.await
-				.is_err()
-			{
+			else {
 				log::error!("Failed to connect user");
 				let response = NativeOperationResponse::Err(NativeOperationError::PumpxApiError);
 				if response_sender.send(response.encode()).is_err() {
@@ -487,7 +486,7 @@ pub async fn handle_native_call<
 			};
 
 			let response: NativeOperationResponse =
-				CallResponse::PumpxJwt { session_token, trade_token }.into();
+				CallResponse::PumpxJwt { session_token, trade_token, user_connect_response }.into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");

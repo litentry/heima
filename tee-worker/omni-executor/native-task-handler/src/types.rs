@@ -1,6 +1,7 @@
 use executor_primitives::{Hash, Identity};
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
+use pumpx::types::UserConnectResponse;
 use std::vec::Vec;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
@@ -20,6 +21,7 @@ pub enum CallResponse {
 	PumpxJwt {
 		session_token: String,
 		trade_token: String,
+		user_connect_response: UserConnectResponse,
 	},
 }
 
