@@ -21,15 +21,16 @@ use cross_chain_intent_executor::CrossChainIntentExecutor;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
+use executor_crypto::{ecdsa, PairTrait};
 use executor_storage::{init_storage, StorageDB};
-use log::error;
+use log::{error, info};
 use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 use parentchain_signer::key_store::SubstrateKeyStore;
 use parentchain_signer::{get_signer, TransactionSigner};
-use rpc_server::{start_server as start_rpc_server, ShieldingKey};
+use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
@@ -62,8 +63,21 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			// TODO: move to config
-			let jwt_secret = env::var("OE_JWT_SECRET").unwrap_or("secret".to_string());
+			let _binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
+			let auth_token_key_store =
+				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
+			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
+
+			let pumpx_auth_key_store =
+				pumpx::auth_key_store::AuthKeyStore::new(args.pumpx_auth_key_store_path.clone());
+
+			let pumpx_signer_key =
+				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
+			info!(
+				"PumpX auth public key: {:?}",
+				ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap().public()
+			);
+
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
 
@@ -89,7 +103,7 @@ async fn main() -> Result<(), ()> {
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				storage_db.clone(),
-				jwt_secret.clone(),
+				jwt_rsa_private_key.clone(),
 				aes256_key,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
@@ -132,14 +146,14 @@ async fn main() -> Result<(), ()> {
 				Arc::new(native_task_sender),
 				storage_db.clone(),
 				mrenclave,
-				jwt_secret,
+				jwt_rsa_private_key,
 			)
 			.await
 			.map_err(|e| {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(args, storage_db).await.unwrap();
+			listen_to_parentchain(*args, storage_db).await.unwrap();
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},

@@ -1,12 +1,12 @@
-**@heima/client-sdk**
+**@heima-network/client-sdk**
 
 ***
 
-# @heima/client-sdk
+# @heima-network/client-sdk
 
 ## Namespaces
 
-- [request](@heima/namespaces/request/README.md)
+- [request](@heima-network/namespaces/request/README.md)
 
 ## Enumerations
 

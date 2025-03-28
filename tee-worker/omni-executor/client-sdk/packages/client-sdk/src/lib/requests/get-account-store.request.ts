@@ -1,6 +1,6 @@
 import type { ApiPromise } from '@polkadot/api';
 
-import type { Identity } from '@heima/parachain-api';
+import type { Identity } from '@heima-network/parachain-api';
 
 import { AuthenticationData } from '@type-creators/authentication';
 import { createNativeQueryType } from '@type-creators/native-query';

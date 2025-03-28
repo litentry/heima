@@ -14,7 +14,7 @@ import type {
   LitentryValidationData,
   Web3Network,
   WorkerRpcReturnValue,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 import type { JsonRpcRequest } from '../util/types';
 import type { ApiPromise } from '@polkadot/api';
 

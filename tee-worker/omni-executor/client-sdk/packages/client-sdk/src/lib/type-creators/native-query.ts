@@ -1,5 +1,5 @@
 import { Registry } from '@polkadot/types-codec/types';
-import { Identity, NativeQuery, omniExecutor } from '@heima/parachain-api';
+import { Identity, NativeQuery, omniExecutor } from '@heima-network/parachain-api';
 
 const NativeQueryEnum = omniExecutor.types.NativeQuery._enum;
 

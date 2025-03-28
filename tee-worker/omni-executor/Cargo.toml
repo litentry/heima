@@ -22,6 +22,7 @@ members = [
     "parentchain/attestation",
     "parentchain/rpc-client",
     "parentchain/signer",
+    "pumpx",
     "rpc-server",
 ]
 
@@ -91,6 +92,7 @@ parentchain-attestation = { path = "parentchain/attestation" }
 parentchain-listener = { path = "parentchain/listener" }
 parentchain-rpc-client = { path = "parentchain/rpc-client" }
 parentchain-signer = { path = "parentchain/signer" }
+pumpx = { path = "pumpx" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "intent/executors/solana" }
 

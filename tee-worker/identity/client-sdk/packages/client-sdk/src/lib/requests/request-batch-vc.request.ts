@@ -18,7 +18,7 @@ import type {
   Assertion,
   LitentryIdentity,
   WorkerRpcReturnValue,
-} from '@heima/parachain-api';
+} from '@heima-network/parachain-api';
 
 /**
  * Request a Batch of Verifiable Credential (VC) from the Litentry Protocol.

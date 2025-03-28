@@ -3111,6 +3111,7 @@ dependencies = [
  "parentchain-listener",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "pumpx",
  "rpc-server",
  "scale-encode 0.10.0",
  "serde_json",
@@ -3923,6 +3924,8 @@ dependencies = [
  "executor-primitives",
  "log",
  "parity-scale-codec",
+ "rand 0.8.5",
+ "rsa",
  "serde",
 ]
 
@@ -6296,6 +6299,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pumpx"
+version = "0.1.0"
+dependencies = [
+ "executor-core",
+ "executor-crypto",
+]
+
+[[package]]
 name = "qstring"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6780,6 +6791,7 @@ dependencies = [
  "parentchain-rpc-client",
  "parity-scale-codec",
  "rand 0.8.5",
+ "rsa",
  "serde",
  "serde_json",
  "tokio",

@@ -6,7 +6,7 @@ import { enclave } from '../enclave';
 
 import type { ApiPromise } from '@polkadot/api';
 import type { Index } from '@polkadot/types/interfaces';
-import type { LitentryIdentity } from '@heima/parachain-api';
+import type { LitentryIdentity } from '@heima-network/parachain-api';
 import type { JsonRpcRequest } from '../util/types';
 
 /**

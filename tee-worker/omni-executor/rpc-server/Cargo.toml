@@ -10,6 +10,7 @@ jsonrpsee = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
+rsa = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

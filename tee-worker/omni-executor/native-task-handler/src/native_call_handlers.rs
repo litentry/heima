@@ -6,7 +6,10 @@ use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCal
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{Intent, MemberAccount, OmniAccountAuthType, ValidationData};
 use executor_storage::{MemberOmniAccountStorage, Storage};
-use heima_authentication::auth_token::{AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION};
+use heima_authentication::auth_token::{
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
+	AUTH_TOKEN_TRADE_TYPE,
+};
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
@@ -71,8 +74,12 @@ pub async fn handle_native_call<
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let claims = AuthTokenClaims::new(sender_identity.hash().to_string(), auth_options);
-			let Ok(token) = jwt::create(&claims, ctx.jwt_secret.as_bytes()) else {
+			let claims = AuthTokenClaims::new(
+				sender_identity.hash().to_string(),
+				AUTH_TOKEN_SESSION_TYPE.to_string(),
+				auth_options,
+			);
+			let Ok(token) = jwt::create(&claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -84,7 +91,24 @@ pub async fn handle_native_call<
 				.omni_account()
 				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
 
-			let tx = ctx.transaction_signer.sign(auth_token_requested_call, None).await;
+			// Without increase nonce, all requests after request_auth_token will failure with below error.
+			// Could not submit tx: Rpc(ClientError(Call(ErrorObject { code: ServerError(1014), message: "Priority is too low: (2564 vs 2564)",
+			// data: Some(RawValue("The transaction has too low priority to replace another transaction already in the pool.")) })))
+			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
+			let nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
+				Ok(n) => n,
+				Err(e) => {
+					log::error!("Failed to get account nonce: {:?}", e);
+					let response =
+						NativeOperationResponse::Err(NativeOperationError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
+			// Increment nonce for the next transaction
+			let tx = ctx.transaction_signer.sign(auth_token_requested_call, Some(nonce + 1)).await;
 
 			if rpc_client.submit_tx(&tx).await.is_err() {
 				log::error!("Failed to submit tx");
@@ -385,6 +409,52 @@ pub async fn handle_native_call<
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
+		},
+		NativeCall::request_pumpx_jwt(sender_identity) => {
+			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
+				log::error!("Failed to get last finalized block number");
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
+			let auth_options = AuthOptions { expires_at };
+			let session_claims = AuthTokenClaims::new(
+				sender_identity.hash().to_string(),
+				AUTH_TOKEN_SESSION_TYPE.to_string(),
+				auth_options.clone(),
+			);
+			let Ok(session_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let trade_claims = AuthTokenClaims::new(
+				sender_identity.hash().to_string(),
+				AUTH_TOKEN_TRADE_TYPE.to_string(),
+				auth_options,
+			);
+			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let response: NativeOperationResponse =
+				CallResponse::PumpxJwt { session_token, trade_token }.into();
+
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
 		},
 	};
 	let report = match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {

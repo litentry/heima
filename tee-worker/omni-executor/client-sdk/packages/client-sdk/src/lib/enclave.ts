@@ -36,7 +36,7 @@ const log = process.env.NODE_ENV !== 'production' ? console.log.bind(console) : 
  *
  * @example
  * ```ts
- * import { enclave } from '@heima/client-sdk';
+ * import { enclave } from '@heima-network/client-sdk';
  *
  * const mrEnclave = await enclave.getMrEnclave(api);
  * const key = await enclave.getShieldingKey();
