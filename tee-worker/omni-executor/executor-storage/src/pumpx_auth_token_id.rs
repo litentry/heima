@@ -4,19 +4,19 @@ use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::sync::Arc;
 
-const STORAGE_NAME: &str = "pumpx_auth_token_storage";
+const STORAGE_NAME: &str = "pumpx_auth_token_id_storage";
 
-pub struct PumpxAuthTokenStorage {
+pub struct PumpxAuthTokenIdStorage {
 	db: Arc<DB>,
 }
 
-impl PumpxAuthTokenStorage {
+impl PumpxAuthTokenIdStorage {
 	pub fn new(db: Arc<DB>) -> Self {
 		Self { db }
 	}
 }
 
-impl Storage<Hash, String> for PumpxAuthTokenStorage {
+impl Storage<Hash, String> for PumpxAuthTokenIdStorage {
 	fn get(&self, identity_hash: &Hash) -> Option<String> {
 		match self.db.get(storage_key(STORAGE_NAME, &identity_hash.encode())) {
 			Ok(Some(value)) => String::decode(&mut &value[..]).ok(),
