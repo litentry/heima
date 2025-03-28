@@ -34,9 +34,10 @@ cd /client-api/parachain-api
 curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > prepare-build/litentry-parachain-metadata.json
 echo "Parachain metadata fetched"
 
-echo "Installing dependencies and building client-api"
+echo "Installing dependencies and building parachain-api"
 cd /client-api
 pnpm install --force
+cd /client-api/parachain-api
 pnpm build
 
 echo "Installing dependencies and running client-sdk tests"
