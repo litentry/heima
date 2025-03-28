@@ -14,26 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use executor_core::native_task::{NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key as RequestAesKey, AesOutput},
 	traits::Decrypt,
 };
-use executor_primitives::MrEnclave;
 use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug)]
-pub struct PlainRequest {
-	pub mrenclave: MrEnclave,
-	pub payload: Vec<u8>,
+pub enum RawRequest<T: NativeTaskTrait> {
+	Plain(NativeTaskWrapper<T>),
+	Aes(AesRequest),
+}
+
+impl<T: NativeTaskTrait> RawRequest<T> {
+	pub fn is_encrypted(&self) -> bool {
+		matches!(self, Self::Aes(_))
+	}
 }
 
 // Represent a request that can be decrypted by the enclave
 pub trait DecryptableRequest {
 	type Error;
-	// the mrenclave getter
-	fn mrenclave(&self) -> MrEnclave;
-	// how to decrypt the payload
 	fn decrypt<T: Debug>(
 		&mut self,
 		shielding_key: Box<dyn Decrypt<Error = T>>,
@@ -42,17 +45,12 @@ pub trait DecryptableRequest {
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, Debug)]
 pub struct AesRequest {
-	pub mrenclave: MrEnclave,
 	pub key: Vec<u8>,
 	pub payload: AesOutput,
 }
 
 impl DecryptableRequest for AesRequest {
 	type Error = ();
-
-	fn mrenclave(&self) -> MrEnclave {
-		self.mrenclave
-	}
 
 	fn decrypt<T: Debug>(
 		&mut self,

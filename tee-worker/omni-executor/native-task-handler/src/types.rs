@@ -4,7 +4,7 @@ use parity_scale_codec::{Decode, Encode};
 use std::vec::Vec;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub enum NativeOperationOk {
+pub enum NativeTaskOk {
 	CallResponse(CallResponse),
 	QueryResponse(QueryResponse),
 }
@@ -23,9 +23,9 @@ pub enum CallResponse {
 	},
 }
 
-impl From<CallResponse> for Result<NativeOperationOk, NativeOperationError> {
+impl From<CallResponse> for Result<NativeTaskOk, NativeTaskError> {
 	fn from(response: CallResponse) -> Self {
-		Ok(NativeOperationOk::CallResponse(response))
+		Ok(NativeTaskOk::CallResponse(response))
 	}
 }
 
@@ -34,14 +34,14 @@ pub enum QueryResponse {
 	AccountStore(Vec<Identity>),
 }
 
-impl From<QueryResponse> for Result<NativeOperationOk, NativeOperationError> {
+impl From<QueryResponse> for Result<NativeTaskOk, NativeTaskError> {
 	fn from(response: QueryResponse) -> Self {
-		Ok(NativeOperationOk::QueryResponse(response))
+		Ok(NativeTaskOk::QueryResponse(response))
 	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum NativeOperationError {
+pub enum NativeTaskError {
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
 	InternalError,
