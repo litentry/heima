@@ -31,7 +31,7 @@ function usage() {
 echo "Running client-sdk tests"
 
 cd /client-api/parachain-api
-curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > prepare-build/heima-parachain-metadata.json
+curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > prepare-build/litentry-parachain-metadata.json
 echo "Parachain metadata fetched"
 
 echo "Installing dependencies and building client-api"
@@ -45,4 +45,4 @@ cd /client-sdk/packages/client-sdk
 jq '.peerDependencies["@heima/parachain-api"] = "file:/client-api/parachain-api"' package.json > temp.json && mv temp.json package.json
 cd /client-sdk
 pnpm install --force
-pnpm test
+pnpm nx run client-sdk:test

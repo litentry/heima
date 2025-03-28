@@ -39,7 +39,6 @@ describe.skip('transfer-native', () => {
     console.log('Step 1: request auth token');
     const { send, payloadToSign = '' } = await requestAuthToken(api, {
       member,
-      expiresAt: 99999999,
     });
 
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));

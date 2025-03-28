@@ -4,7 +4,7 @@ services:
     container_name: litentry-omni-client-sdk-test
     volumes:
       - ../client-sdk:/client-sdk
-      - ../../omni-client-api:/client-api
+      - ../../client-api:/client-api
       - ../cli:/usr/local/executor-worker-cli
     build:
       context: ${PWD}/../../
