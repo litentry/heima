@@ -3,13 +3,12 @@ import type { IntegrationTestContext } from './common-types';
 
 import {
     AddressOrPair,
-    ApiPromise,
-    ApiTypes,
     FrameSystemEventRecord,
-    Keyring,
-    SubmittableExtrinsic,
 } from 'parachain-api';
 
+import { Keyring } from '@polkadot/keyring';
+import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
+import { ApiPromise } from '@polkadot/api';
 // for DI-test
 export const subscribeToEventsWithExtHash = async (
     requestIdentifier: string,
