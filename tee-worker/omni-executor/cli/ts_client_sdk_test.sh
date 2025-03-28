@@ -42,7 +42,7 @@ pnpm build
 echo "Installing dependencies and running client-sdk tests"
 apt-get update && apt-get install -y jq || true
 cd /client-sdk/packages/client-sdk
-jq '.peerDependencies["@heima/parachain-api"] = "file:/client-api/parachain-api"' package.json > temp.json && mv temp.json package.json
+jq '.peerDependencies["@heima-network/parachain-api"] = "file:/client-api/parachain-api"' package.json > temp.json && mv temp.json package.json
 cd /client-sdk
 pnpm install --force
 pnpm nx run client-sdk:test
