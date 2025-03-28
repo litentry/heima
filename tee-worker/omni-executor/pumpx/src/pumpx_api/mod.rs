@@ -1,9 +1,6 @@
 pub mod types;
 
-use reqwest::{
-	header::{HeaderMap, HeaderValue},
-	Client, Error,
-};
+use reqwest::{Client, Error};
 use types::{
 	ApiResponse, ConnectUser, MarketOrderTx, MarketOrderUnsignedTx, NewMarketOrder, TxData,
 	UserConnectResponse,
@@ -23,12 +20,8 @@ impl PumpxApi {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
 		};
-		let mut headers = HeaderMap::new();
-		headers.insert("X-Language", HeaderValue::from_static("en"));
-		let http_client = Client::builder()
-			.default_headers(headers)
-			.build()
-			.expect("Failed to build HTTP client");
+		let http_client = Client::builder().build().expect("Failed to build HTTP client");
+
 		PumpxApi { http_client, base_url }
 	}
 
@@ -38,11 +31,13 @@ impl PumpxApi {
 		email: String,
 		invite_code: Option<String>,
 		google_code: Option<String>,
+		lang: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
 		let connect_user = ConnectUser { email, invite_code, google_code };
 		self.http_client
 			.post(&endpoint)
+			.header("X-Language", lang.unwrap_or("en".to_string()))
 			.bearer_auth(session_token)
 			.json(&connect_user)
 			.send()

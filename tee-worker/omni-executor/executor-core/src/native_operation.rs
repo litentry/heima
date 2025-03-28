@@ -20,7 +20,7 @@ pub enum NativeCall {
 	remove_accounts(Identity, Vec<Identity>),
 	publicize_account(Identity, Identity),
 	set_permissions(Identity, Identity, Vec<OmniAccountPermission>),
-	pumpx_request_jwt(Identity, Option<String>, Option<String>),
+	pumpx_request_jwt(Identity, Option<String>, Option<String>, Option<String>),
 }
 
 impl NativeOperation for NativeCall {

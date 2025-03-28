@@ -413,7 +413,7 @@ pub async fn handle_native_call<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeCall::pumpx_request_jwt(sender_identity, invite_code, google_code) => {
+		NativeCall::pumpx_request_jwt(sender_identity, invite_code, google_code, lang) => {
 			let email = match sender_identity {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -462,7 +462,7 @@ pub async fn handle_native_call<
 
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
-				.connect_user(&session_token, email.clone(), invite_code, google_code)
+				.connect_user(&session_token, email.clone(), invite_code, google_code, lang)
 				.await
 			else {
 				log::error!("Failed to connect user");
