@@ -87,13 +87,13 @@ pub async fn handle_native_call<
 					};
 					AuthTokenClaims::new(
 						email.to_string(),
-						AUTH_TOKEN_ACCESS_TYPE.to_string(),
+						AUTH_TOKEN_ID_TYPE.to_string(),
 						auth_options,
 					)
 				},
 				_ => AuthTokenClaims::new(
 					sender_identity.hash().to_string(),
-					AUTH_TOKEN_ACCESS_TYPE.to_string(),
+					AUTH_TOKEN_ID_TYPE.to_string(),
 					auth_options,
 				),
 			};
