@@ -12,3 +12,7 @@ export * from '@type-creators/request';
 export * from '@type-creators/native-call';
 export * from '@type-creators/validation-data';
 export * from '@type-creators/authentication';
+
+// utils
+export * from '@lib/test-utils/helpers';
+export * from '@lib/utils';
