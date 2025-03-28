@@ -1,10 +1,7 @@
 import { hexToU8a } from '@polkadot/util';
 import type { IntegrationTestContext } from './common-types';
 
-import {
-    AddressOrPair,
-    FrameSystemEventRecord,
-} from 'parachain-api';
+import { AddressOrPair, FrameSystemEventRecord } from 'parachain-api';
 
 import { Keyring } from '@polkadot/keyring';
 import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';

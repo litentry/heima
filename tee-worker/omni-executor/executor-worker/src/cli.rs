@@ -10,7 +10,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-	Run(RunArgs),
+	Run(Box<RunArgs>),
 	GenKey(GenKeyArgs),
 }
 
@@ -37,12 +37,18 @@ pub struct RunArgs {
 	)]
 	pub aes256_key_store_path: String,
 	#[arg(
-		short,
 		long,
 		default_value = "local/keystore/auth_token_key.bin",
 		value_name = "Auth token (JWT) keystore file path"
 	)]
 	pub auth_token_key_store_path: String,
+	#[arg(
+		short,
+		long,
+		default_value = "local/keystore/pumpx_auth_key.bin",
+		value_name = "PumpX auth keystore file path"
+	)]
+	pub pumpx_auth_key_store_path: String,
 	#[arg(
 		short,
 		long,
