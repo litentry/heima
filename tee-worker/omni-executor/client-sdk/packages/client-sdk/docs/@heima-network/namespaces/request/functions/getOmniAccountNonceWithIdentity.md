@@ -8,7 +8,7 @@
 
 > **getOmniAccountNonceWithIdentity**(`api`, `identity`): `Promise`\<`Index`\>
 
-Defined in: [requests/get-nonce.request.ts:14](https://github.com/litentry/heima/blob/dev/requests/get-nonce.request.ts#L14)
+Defined in: [requests/get-nonce.request.ts:15](https://github.com/litentry/heima/blob/dev/requests/get-nonce.request.ts#L15)
 
 Retrieves the omni account nonce for a given identity.
 
