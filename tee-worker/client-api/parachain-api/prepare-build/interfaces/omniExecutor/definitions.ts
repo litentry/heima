@@ -1,9 +1,9 @@
 export default {
     types: {
-        RawRequest: {
+        RawTask: {
             _enum: {
                 Plain: "NativeTaskWrapper",
-                Aes: "AesRequest",
+                Aes: "AesTask",
             },
         },
         NativeTaskWrapper: {
@@ -14,14 +14,27 @@ export default {
         MrEnclave: "H256",
         NativeTask: {
             _enum: {
-                request_auth_token: "(Identity)",
-                request_intent: "(Identity, Intent)",
-                create_account_store: "(Identity)",
-                add_account: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
-                remove_accounts: "(Identity, Vec<Identity>)",
-                publicize_account: "(Identity, Identity)",
-                set_permissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
-                request_pumpx_jwt: "(Identity)",
+                RequestAuthToken: "(Identity)",
+                RequestIntent: "(Identity, Intent)",
+                CreateAccountStore: "(Identity)",
+                AddAccount: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
+                RemoveAccounts: "(Identity, Vec<Identity>)",
+                PublicizeAccount: "(Identity, Identity)",
+                SetPermissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
+                __Unused7: "Null",
+                __Unused8: "Null",
+                __Unused9: "Null",
+                __Unused10: "Null",
+                __Unused11: "Null",
+                __Unused12: "Null",
+                __Unused13: "Null",
+                __Unused14: "Null",
+                __Unused15: "Null",
+                __Unused16: "Null",
+                __Unused17: "Null",
+                __Unused18: "Null",
+                __Unused19: "Null",
+                PumpxRequestJwt: "(Identity)",
             },
         },
         OmniAuth: {
@@ -113,5 +126,9 @@ export default {
             },
         },
         Nonce: "u32",
+        AesTask: {
+            key: "Vec<u8>",
+            payload: "AesOutput",
+        },
     },
 };

@@ -10,7 +10,7 @@ import {
     HeimaMultiSignature,
     NativeTask,
     OmniAccountPermission,
-    RawRequest,
+    RawTask,
     NativeTaskWrapper,
 } from 'parachain-api';
 import { Signer } from './signer';
@@ -112,11 +112,11 @@ export async function createNativeTaskWrapper(
     });
 }
 
-export function createRawRequestPlain(
+export function createRawTaskPlain(
     api: ApiPromise,
     nativeTaskWrapper: NativeTaskWrapper
-): RawRequest {
-    return api.createType('RawRequest', {
+): RawTask {
+    return api.createType('RawTask', {
         ['Plain']: nativeTaskWrapper,
     });
 }

@@ -9,7 +9,7 @@ import {
     createNativeTaskWrapper,
     createOmniAccountPermission,
 } from './utils/type_creators';
-import { sendRawRequestPlain } from './utils/requests';
+import { sendRawTaskPlain } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -33,7 +33,7 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        const nativeTask = createNativeTask(context.api, ['create_account_store', 'LitentryIdentity'], aliceIdentity);
+        const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'LitentryIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -41,7 +41,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawRequestPlain(context, nativeTaskWrapper);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isSome, 'account store not found');
@@ -72,7 +72,7 @@ describe('OmniAccount', function () {
         const nativeTask = createNativeTask(
             context.api,
             [
-                'add_account',
+                'AddAccount',
                 '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)',
             ],
             [
@@ -90,7 +90,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawRequestPlain(context, nativeTaskWrapper);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -111,7 +111,7 @@ describe('OmniAccount', function () {
         const bobIdentity = await bob.getIdentity(context.api);
         const nativeTask = createNativeTask(
             context.api,
-            ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
+            ['PublicizeAccount', '(LitentryIdentity, LitentryIdentity)'],
             [aliceIdentity, bobIdentity]
         );
         const nativeTaskWrapper = await createNativeTaskWrapper(
@@ -121,7 +121,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawRequestPlain(context, nativeTaskWrapper);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -161,7 +161,7 @@ describe('OmniAccount', function () {
         ];
         const nativeTask = createNativeTask(
             context.api,
-            ['set_permissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
+            ['SetPermissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
         const nativeTaskWrapper = await createNativeTaskWrapper(
@@ -171,7 +171,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawRequestPlain(context, nativeTaskWrapper);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
@@ -199,7 +199,7 @@ describe('OmniAccount', function () {
 
         const nativeTask = createNativeTask(
             context.api,
-            ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+            ['RemoveAccounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
         const nativeTaskWrapper = await createNativeTaskWrapper(
@@ -209,7 +209,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawRequestPlain(context, nativeTaskWrapper);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -233,7 +233,7 @@ describe('OmniAccount', function () {
         });
         const nativeTask = createNativeTask(
             context.api,
-            ['request_intent', '(LitentryIdentity, Intent)'],
+            ['RequestIntent', '(LitentryIdentity, Intent)'],
             [aliceIdentity, intent]
         );
         const nativeTaskWrapper = await createNativeTaskWrapper(
@@ -243,7 +243,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawRequestPlain(context, nativeTaskWrapper);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);

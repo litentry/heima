@@ -24,31 +24,31 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-#[allow(non_camel_case_types)]
 pub enum NativeTask {
-	request_auth_token(Identity),
-	request_intent(Identity, Intent),
-	create_account_store(Identity),
-	add_account(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
-	remove_accounts(Identity, Vec<Identity>),
-	publicize_account(Identity, Identity),
-	set_permissions(Identity, Identity, Vec<OmniAccountPermission>),
+	RequestAuthToken(Identity),
+	RequestIntent(Identity, Intent),
+	CreateAccountStore(Identity),
+	AddAccount(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
+	RemoveAccounts(Identity, Vec<Identity>),
+	PublicizeAccount(Identity, Identity),
+	SetPermissions(Identity, Identity, Vec<OmniAccountPermission>),
 
-	// pumpx specific
-	request_pumpx_jwt(Identity),
+	// pumpx specific, starting from index 20
+	#[codec(index = 20)]
+	PumpxRequestJwt(Identity),
 }
 
 impl NativeTaskTrait for NativeTask {
 	fn sender(&self) -> &Identity {
 		match self {
-			Self::request_auth_token(sender, ..) => sender,
-			Self::request_intent(sender, ..) => sender,
-			Self::create_account_store(sender) => sender,
-			Self::add_account(sender, ..) => sender,
-			Self::remove_accounts(sender, ..) => sender,
-			Self::publicize_account(sender, ..) => sender,
-			Self::set_permissions(sender, ..) => sender,
-			Self::request_pumpx_jwt(sender) => sender,
+			Self::RequestAuthToken(sender, ..) => sender,
+			Self::RequestIntent(sender, ..) => sender,
+			Self::CreateAccountStore(sender) => sender,
+			Self::AddAccount(sender, ..) => sender,
+			Self::RemoveAccounts(sender, ..) => sender,
+			Self::PublicizeAccount(sender, ..) => sender,
+			Self::SetPermissions(sender, ..) => sender,
+			Self::PumpxRequestJwt(sender) => sender,
 		}
 	}
 

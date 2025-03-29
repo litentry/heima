@@ -8,7 +8,7 @@ import {
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';
-import { createRawRequestPlain } from './type_creators';
+import { createRawTaskPlain } from './type_creators';
 import WebSocketAsPromised from 'websocket-as-promised';
 
 type JsonRpcRequest = {
@@ -27,16 +27,16 @@ function createJsonRpcRequest(method: string, params: unknown, id: number): Json
     };
 }
 
-export async function sendRawRequestPlain(
+export async function sendRawTaskPlain(
     context: IntegrationTestContext,
     nativeTaskWrapper: NativeTaskWrapper,
     onMessageReceived?: (response: NativeTaskResponse) => void
 ) {
-    const plainRequest = createRawRequestPlain(context.api, nativeTaskWrapper);
+    const plainTask = createRawTaskPlain(context.api, nativeTaskWrapper);
 
     const request = createJsonRpcRequest(
         'omni_submitNativeTask',
-        [u8aToHex(plainRequest.toU8a())],
+        [u8aToHex(plainTask.toU8a())],
         nextRequestId(context)
     );
 

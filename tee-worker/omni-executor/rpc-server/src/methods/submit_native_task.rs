@@ -1,7 +1,7 @@
 use crate::{
 	error_code::*,
-	request::{DecryptableRequest, RawRequest},
 	server::RpcContext,
+	task::{DecryptableTask, RawTask},
 	verify_auth::*,
 };
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
@@ -60,15 +60,15 @@ fn parse<
 		let Ok(hex_request) = params.one::<String>() else {
 			return Err(ErrorCode::ParseError.into());
 		};
-		let Ok(request) = RawRequest::<NativeTask>::from_hex(&hex_request) else {
+		let Ok(request) = RawTask::<NativeTask>::from_hex(&hex_request) else {
 			return Err(ErrorCode::ServerError(INVALID_RAW_REQUEST_CODE).into());
 		};
 
 		let request_is_encrypted = request.is_encrypted();
 
 		let wrapper = match request {
-			RawRequest::Plain(w) => w,
-			RawRequest::Aes(mut r) => {
+			RawTask::Plain(w) => w,
+			RawTask::Aes(mut r) => {
 				let r = r
 					.decrypt(Box::new(ctx.shielding_key.clone()))
 					.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;

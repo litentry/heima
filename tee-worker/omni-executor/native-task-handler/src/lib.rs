@@ -177,7 +177,7 @@ async fn handle_native_task<
 	};
 
 	let (response_sender, tx) = match wrapper.task {
-		NativeTask::request_auth_token(sender) => {
+		NativeTask::RequestAuthToken(sender) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
@@ -229,7 +229,7 @@ async fn handle_native_task<
 			}
 			return;
 		},
-		NativeTask::request_intent(sender, intent) => {
+		NativeTask::RequestIntent(sender, intent) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
@@ -239,12 +239,11 @@ async fn handle_native_task<
 				return;
 			};
 
-			let request_intent_call =
-				OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
+			let call = OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(request_intent_call),
+					RuntimeCall::OmniAccount(call),
 					auth_type.to_subxt_type(),
 				);
 
@@ -263,7 +262,7 @@ async fn handle_native_task<
 
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await;
 			if rpc_client.submit_tx(&tx).await.is_err() {
-				log::error!("Failed to submit request_intent tx");
+				log::error!("Failed to submit RequestIntent tx");
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
@@ -354,7 +353,7 @@ async fn handle_native_task<
 
 			(response_sender, tx)
 		},
-		NativeTask::create_account_store(sender) => {
+		NativeTask::CreateAccountStore(sender) => {
 			let sender_bytes = sender.encode();
 			let create_account_store_call = parentchain_api_interface::tx()
 				.omni_account()
@@ -362,7 +361,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(create_account_store_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::add_account(sender, identity, validation_data, public_account, permissions) => {
+		NativeTask::AddAccount(sender, identity, validation_data, public_account, permissions) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
@@ -447,21 +446,21 @@ async fn handle_native_task<
 					identity.hash(),
 				),
 			};
-			let add_account_call = OmniAccountCall::add_account {
+			let call = OmniAccountCall::add_account {
 				member_account: member_account.to_subxt_type(),
 				permissions: permissions.map(|p| p.to_subxt_type()),
 			};
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(add_account_call),
+					RuntimeCall::OmniAccount(call),
 					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::remove_accounts(sender, identities) => {
-			let remove_accounts = OmniAccountCall::remove_accounts {
+		NativeTask::RemoveAccounts(sender, identities) => {
+			let call = OmniAccountCall::remove_accounts {
 				member_account_hashes: identities
 					.iter()
 					.map(|i| i.hash().to_subxt_type())
@@ -470,39 +469,39 @@ async fn handle_native_task<
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(remove_accounts),
+					RuntimeCall::OmniAccount(call),
 					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::publicize_account(sender, identity) => {
-			let publicize_account_call =
+		NativeTask::PublicizeAccount(sender, identity) => {
+			let call =
 				OmniAccountCall::publicize_account { member_account: identity.to_subxt_type() };
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(publicize_account_call),
+					RuntimeCall::OmniAccount(call),
 					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::set_permissions(sender, identity, permissions) => {
-			let set_permissions_call = OmniAccountCall::set_permissions {
+		NativeTask::SetPermissions(sender, identity, permissions) => {
+			let call = OmniAccountCall::set_permissions {
 				member_account_hash: identity.hash().to_subxt_type(),
 				permissions: permissions.to_subxt_type(),
 			};
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(set_permissions_call),
+					RuntimeCall::OmniAccount(call),
 					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::request_pumpx_jwt(sender) => {
+		NativeTask::PumpxRequestJwt(sender) => {
 			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
 				log::error!("Failed to get last finalized block number");
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
