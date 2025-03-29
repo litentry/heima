@@ -32,11 +32,6 @@ export default {
                 OAuth2: "(OAuth2Data)",
             },
         },
-        NativeQuery: {
-            _enum: {
-                get_account_store: "(Identity)",
-            },
-        },
         OAuth2Data: {
             provider: "OAuth2Provider",
             code: "Text",

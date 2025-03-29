@@ -1,6 +1,6 @@
 import type { Enum } from '@polkadot/types-codec';
 import { HexString } from '@polkadot/util/types';
-import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
+import { u8aToHex, hexToU8a, stringToU8a, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
@@ -117,7 +117,7 @@ export function createRawRequestPlain(
     nativeTaskWrapper: NativeTaskWrapper
 ): RawRequest {
     return api.createType('RawRequest', {
-        ['Plain']: NativeTaskWrapper,
+        ['Plain']: nativeTaskWrapper,
     });
 }
 
