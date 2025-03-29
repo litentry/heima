@@ -21,7 +21,7 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use native_task_handler::NativeTask;
+	use native_task_handler::NativeTaskChannelType;
 	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::sync::Arc;
@@ -31,7 +31,7 @@ mod test {
 	pub async fn get_health_works() {
 		let port = 2000;
 		let shielding_key = ShieldingKey::new();
-		let (sender, _) = mpsc::channel::<NativeTask>(1);
+		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
 		let db = StorageDB::open_default("test_storage_db").unwrap();
 

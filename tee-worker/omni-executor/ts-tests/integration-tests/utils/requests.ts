@@ -35,7 +35,7 @@ export async function sendRawRequestPlain(
     const plainRequest = createRawRequestPlain(context.api, nativeTaskWrapper);
 
     const request = createJsonRpcRequest(
-        'native_submitCallPlainRequest',
+        'native_submitNativeTask',
         [u8aToHex(plainRequest.toU8a())],
         nextRequestId(context)
     );

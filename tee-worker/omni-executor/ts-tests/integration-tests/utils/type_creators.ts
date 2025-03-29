@@ -117,7 +117,7 @@ export function createRawRequestPlain(
     nativeTaskWrapper: NativeTaskWrapper
 ): RawRequest {
     return api.createType('RawRequest', {
-        ['plain']: compactAddLength(nativeTaskWrapper.toU8a()),
+        ['Plain']: NativeTaskWrapper,
     });
 }
 

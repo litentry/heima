@@ -14,7 +14,7 @@ scale-info = { workspace = true }
 serde = { workspace = true }
 
 executor-crypto = { workspace = true }
-heima-primitives = { package = "core-primitives", workspace = true }
+heima-primitives = { workspace = true }
 sp-core = { workspace = true }
 
 [lints]

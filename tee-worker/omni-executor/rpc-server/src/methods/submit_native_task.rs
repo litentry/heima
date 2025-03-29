@@ -81,10 +81,8 @@ fn parse<
 			return Err(ErrorCode::ServerError(REQUIRE_ENCRYPTED_REQUEST_CODE).into());
 		}
 
-		if wrapper.task.require_auth() {
-			if verify_auth(ctx, Handle::current(), &wrapper).is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
-			}
+		if wrapper.task.require_auth() && verify_auth(ctx, Handle::current(), &wrapper).is_err() {
+			return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 		}
 
 		Ok(wrapper)

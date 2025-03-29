@@ -22,7 +22,7 @@ executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
-heima-primitives = { package = "core-primitives", workspace = true }
+heima-primitives = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
