@@ -1,30 +1,22 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract AccountingContract is Ownable, ReentrancyGuard {
-    constructor(
-        address initialOwner,
-        address initialWorker
-    ) Ownable(initialOwner) {
+contract AccountingContract is AccessControl, ReentrancyGuard {
+    constructor(address initialAdmin, address initialWorker) {
         require(initialWorker != address(0), "Worker can't be zero address");
-        require(initialOwner != address(0), "Owner can't be zero address");
-        admin = initialOwner;
-        worker = initialWorker;
+        require(initialAdmin != address(0), "Owner can't be zero address");
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        _grantRole(WORKER_ROLE, initialWorker);
     }
 
-    address public admin;
+    bytes32 public constant WORKER_ROLE = keccak256("WORKER_ROLE");
     address public worker;
     mapping(address => uint256) public nonces;
 
-    struct Payout {
-        uint256 amount;
-        bool paid;
-    }
-
-    mapping(address => mapping(uint256 => Payout)) public payouts;
+    mapping(address => mapping(uint256 => uint256)) public payouts;
 
     event AdminUpdated(address indexed oldAdmin, address indexed newAdmin);
     event WorkerUpdated(address indexed oldWorker, address indexed newWorker);
@@ -36,26 +28,29 @@ contract AccountingContract is Ownable, ReentrancyGuard {
         uint256 nonce
     );
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Unauthorized: not admin");
-        _;
-    }
-
-    modifier onlyWorker() {
-        require(msg.sender == worker, "Unauthorized: not worker");
-        _;
-    }
-
-    function setAdmin(address newAdmin) external onlyOwner {
+    function setAdmin(address newAdmin) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newAdmin != address(0), "New admin cannot be zero address");
-        emit AdminUpdated(admin, newAdmin);
-        admin = newAdmin;
+        emit AdminUpdated(msg.sender, newAdmin);
+        grantRole(DEFAULT_ADMIN_ROLE, newAdmin);
+        renounceRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function setWorker(address newWorker) external onlyAdmin {
+    function isAdmin(address account) public view returns (bool) {
+        return hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    function setWorker(
+        address newWorker
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newWorker != address(0), "New worker cannot be zero address");
         emit WorkerUpdated(worker, newWorker);
+        grantRole(WORKER_ROLE, newWorker);
+        revokeRole(WORKER_ROLE, worker);
         worker = newWorker;
+    }
+
+    function isWorker(address account) public view returns (bool) {
+        return hasRole(WORKER_ROLE, account);
     }
 
     function depositFunds() external payable {
@@ -66,7 +61,7 @@ contract AccountingContract is Ownable, ReentrancyGuard {
     function withdrawFunds(
         address payable beneficiary,
         uint256 amount
-    ) external onlyAdmin nonReentrant {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
         require(address(this).balance >= amount, "OutOfBalance");
 
         emit FundsWithdrawn(beneficiary, amount);
@@ -79,15 +74,13 @@ contract AccountingContract is Ownable, ReentrancyGuard {
         address payable beneficiary,
         uint256 nonce,
         uint256 amount
-    ) external onlyWorker nonReentrant {
+    ) external onlyRole(WORKER_ROLE) nonReentrant {
         require(beneficiary != address(0), "Invalid beneficiary");
         require(address(this).balance >= amount, "OutOfBalance");
         require(nonces[beneficiary] < nonce, "InvalidNonce");
 
-        Payout memory request = payouts[beneficiary][nonce];
-        require(request.amount == 0, "Already exists");
-
-        payouts[beneficiary][nonce] = Payout({amount: amount, paid: true});
+        require(payouts[beneficiary][nonce] == 0, "Already exists");
+        payouts[beneficiary][nonce] = amount;
         nonces[beneficiary] = nonce;
 
         emit PayoutRequestExecuted(beneficiary, amount, nonce);
