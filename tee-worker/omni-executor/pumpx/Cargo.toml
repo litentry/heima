@@ -7,9 +7,9 @@ edition.workspace = true
 [dependencies]
 hex = { workspace = true }
 jsonrpsee = { workspace = true, features = ["client"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { workspace = true }
 serde_json = { workspace = true }
-serde_with = { version = "3.11", features = ["hex"] }
+serde_with = { workspace = true }
 sp-core = { workspace = true }
 
 
