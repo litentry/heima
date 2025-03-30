@@ -88,14 +88,18 @@ contract AccountingContractTest is Test {
         accountingContract.setWorker(worker);
     }
 
-    function testCreatePayRequest() public {
+    function testExecutePayOutRequest() public {
         vm.prank(owner);
         accountingContract.depositFunds{value: 1 ether}();
 
         uint256 initialBalance = beneficiary.balance;
 
         vm.prank(worker);
-        accountingContract.createPayRequest(payable(beneficiary), 1, 0.5 ether);
+        accountingContract.executePayOutRequest(
+            payable(beneficiary),
+            1,
+            0.5 ether
+        );
 
         (uint256 amount, bool paid) = accountingContract.payouts(
             beneficiary,
@@ -107,33 +111,49 @@ contract AccountingContractTest is Test {
         assertEq(beneficiary.balance, initialBalance + 0.5 ether);
     }
 
-    function testCreatePayRequestNonceInvalidError() public {
+    function testExecutePayOutRequestNonceInvalidError() public {
         vm.prank(owner);
         accountingContract.depositFunds{value: 1 ether}();
 
         vm.prank(worker);
-        accountingContract.createPayRequest(payable(beneficiary), 1, 0.5 ether);
+        accountingContract.executePayOutRequest(
+            payable(beneficiary),
+            1,
+            0.5 ether
+        );
 
         vm.prank(worker);
         vm.expectRevert("InvalidNonce");
-        accountingContract.createPayRequest(payable(beneficiary), 1, 0.5 ether);
+        accountingContract.executePayOutRequest(
+            payable(beneficiary),
+            1,
+            0.5 ether
+        );
     }
 
-    function testCreatePayRequestOutOfFundsError() public {
+    function testExecutePayOutRequestOutOfFundsError() public {
         vm.prank(owner);
         accountingContract.depositFunds{value: 1 ether}();
 
         uint256 initialBalance = beneficiary.balance;
 
         vm.prank(worker);
-        accountingContract.createPayRequest(payable(beneficiary), 1, 0.5 ether);
+        accountingContract.executePayOutRequest(
+            payable(beneficiary),
+            1,
+            0.5 ether
+        );
 
         vm.prank(worker);
         vm.expectRevert("OutOfBalance");
-        accountingContract.createPayRequest(payable(beneficiary), 1, 1 ether);
+        accountingContract.executePayOutRequest(
+            payable(beneficiary),
+            1,
+            1 ether
+        );
     }
 
-    function testPayRequestUnauthorizedError() public {
+    function testExecutePayOutRequestUnauthorizedError() public {
         vm.prank(owner);
         accountingContract.depositFunds{value: 1 ether}();
 
@@ -141,6 +161,10 @@ contract AccountingContractTest is Test {
 
         vm.prank(beneficiary);
         vm.expectRevert("Unauthorized: not worker");
-        accountingContract.createPayRequest(payable(beneficiary), 1, 0.5 ether);
+        accountingContract.executePayOutRequest(
+            payable(beneficiary),
+            1,
+            0.5 ether
+        );
     }
 }

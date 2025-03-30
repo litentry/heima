@@ -24,14 +24,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<
 		Self { provider, contract_address }
 	}
 
-	pub async fn create_pay_request(
+	pub async fn execute_pay_out_request(
 		&self,
 		beneficiary: Address,
 		nonce: U256,
 		amount: U256,
 	) -> Result<(), ()> {
 		let call =
-			AccountingContractCalls::createPayRequest(AccountingContract::createPayRequestCall {
+			AccountingContractCalls::executePayOutRequest(AccountingContract::executePayOutRequestCall {
 				beneficiary,
 				nonce,
 				amount,

@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract AccountingContract is Ownable {
+contract AccountingContract is Ownable, ReentrancyGuard {
     constructor(
         address initialOwner,
         address initialWorker
@@ -29,7 +30,7 @@ contract AccountingContract is Ownable {
     event WorkerUpdated(address indexed oldWorker, address indexed newWorker);
     event FundsDeposited(address indexed from, uint256 amount);
     event FundsWithdrawn(address indexed to, uint256 amount);
-    event PayoutRequestCreated(
+    event PayoutRequestExecuted(
         address indexed beneficiary,
         uint256 amount,
         uint256 nonce
@@ -65,18 +66,20 @@ contract AccountingContract is Ownable {
     function withdrawFunds(
         address payable beneficiary,
         uint256 amount
-    ) external onlyAdmin {
+    ) external onlyAdmin nonReentrant {
         require(address(this).balance >= amount, "OutOfBalance");
+
+        emit FundsWithdrawn(beneficiary, amount);
+
         (bool sent, ) = beneficiary.call{value: amount}("");
         require(sent, "Withdraw failed");
-        emit FundsWithdrawn(beneficiary, amount);
     }
 
-    function createPayRequest(
+    function executePayOutRequest(
         address payable beneficiary,
         uint256 nonce,
         uint256 amount
-    ) external onlyWorker {
+    ) external onlyWorker nonReentrant {
         require(beneficiary != address(0), "Invalid beneficiary");
         require(address(this).balance >= amount, "OutOfBalance");
         require(nonces[beneficiary] < nonce, "InvalidNonce");
@@ -84,13 +87,13 @@ contract AccountingContract is Ownable {
         Payout memory request = payouts[beneficiary][nonce];
         require(request.amount == 0, "Already exists");
 
-        (bool sent, ) = beneficiary.call{value: amount}("");
-        require(sent, "Payout failed");
-
         payouts[beneficiary][nonce] = Payout({amount: amount, paid: true});
         nonces[beneficiary] = nonce;
 
-        emit PayoutRequestCreated(beneficiary, amount, nonce);
+        emit PayoutRequestExecuted(beneficiary, amount, nonce);
+
+        (bool sent, ) = beneficiary.call{value: amount}("");
+        require(sent, "Payout failed");
     }
 
     function getNonce(address user) external view returns (uint256) {
