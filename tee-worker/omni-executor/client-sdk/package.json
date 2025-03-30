@@ -9,7 +9,6 @@
 		"clean:dist": "rm -rf dist",
 		"clean:packages": "rm -rf node_modules && pnpm -r exec rm -rf node_modules && pnpm i"
 	},
-	"private": true,
 	"dependencies": {
 		"ts-node": "10.9.1",
 		"tslib": "^2.5.3",
