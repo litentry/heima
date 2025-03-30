@@ -1,7 +1,6 @@
 import { u8aToHex } from '@polkadot/util';
+import { ApiPromise } from '@polkadot/api';
 import {
-    ApiPromise,
-    NativeTask,
     NativeTaskWrapper,
     NativeTaskResponse,
 } from 'parachain-api';

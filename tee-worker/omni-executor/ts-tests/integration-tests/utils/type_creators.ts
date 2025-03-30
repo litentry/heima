@@ -1,10 +1,9 @@
-import type { Enum } from '@polkadot/types-codec';
+import { ApiPromise } from '@polkadot/api';
 import { HexString } from '@polkadot/util/types';
 import { u8aToHex, hexToU8a, stringToU8a, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
-    ApiPromise,
     OmniAuth,
     CorePrimitivesIdentity,
     HeimaMultiSignature,
