@@ -5,7 +5,7 @@ const CURRENT_NETWORK =
   process.env.NX_HEIMA_NETWORK ||
   process.env.PARACHAIN_NETWORK ||
   process.env.NX_PARACHAIN_NETWORK ||
-  'heima-prod';
+  'heima-dev';
 
 export let ENCLAVE_ENDPOINT = '';
 
