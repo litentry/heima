@@ -8,6 +8,7 @@ contract AccountingContract is AccessControl, ReentrancyGuard {
     constructor(address initialAdmin, address initialWorker) {
         require(initialWorker != address(0), "Worker can't be zero address");
         require(initialAdmin != address(0), "Owner can't be zero address");
+        worker = initialWorker;
         _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
         _grantRole(WORKER_ROLE, initialWorker);
     }
