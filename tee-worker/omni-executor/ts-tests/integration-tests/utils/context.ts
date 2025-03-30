@@ -1,6 +1,7 @@
 import type { HexString } from '@polkadot/util/types';
 
-import { ApiPromise, WsProvider, identity, omniAccount, omniExecutor } from 'parachain-api';
+import { identity, omniAccount, omniExecutor } from 'parachain-api';
+import { ApiPromise, WsProvider } from '@polkadot/api';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WsAsPromiseOptions from 'websocket-as-promised/types/options';
