@@ -9,8 +9,17 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@lib/*": ["src/lib/*"],
+      "@requests/*": ["src/lib/requests/*"],
+      "@type-creators/*": ["src/lib/type-creators/*"],
+      "@utils/*": ["src/lib/utils/*"],
+      "@test-utils/*": ["src/lib/test-utils/*"]
+    }
   },
+
   "files": [],
   "include": [],
   "references": [
