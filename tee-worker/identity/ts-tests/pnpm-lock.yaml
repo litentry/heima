@@ -5571,7 +5571,7 @@ packages:
 
   file:../../client-api/parachain-api:
     resolution: {directory: ../../client-api/parachain-api, type: directory}
-    name: '@litentry/parachain-api'
+    name: '@heima/parachain-api'
     dependencies:
       '@polkadot/api': 15.8.1
       '@polkadot/api-augment': 15.8.1

@@ -897,6 +897,8 @@ jobs:
       matrix:
         include:
           - test_name: omni-account-test
+          # TODO: fix client-sdk
+          # - test_name: omni-client-sdk-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4

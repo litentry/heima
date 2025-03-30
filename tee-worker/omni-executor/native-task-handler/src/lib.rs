@@ -211,7 +211,23 @@ async fn handle_native_task<
 				.omni_account()
 				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
 
-			let tx = ctx.transaction_signer.sign(auth_token_requested_call, None).await;
+			// Without increase nonce, all requests after request_auth_token will failure with below error.
+			// Could not submit tx: Rpc(ClientError(Call(ErrorObject { code: ServerError(1014), message: "Priority is too low: (2564 vs 2564)",
+			// data: Some(RawValue("The transaction has too low priority to replace another transaction already in the pool.")) })))
+			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
+			let nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
+				Ok(n) => n,
+				Err(e) => {
+					log::error!("Failed to get account nonce: {:?}", e);
+					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
+			// Increment nonce for the next transaction
+			let tx = ctx.transaction_signer.sign(auth_token_requested_call, Some(nonce + 1)).await;
 
 			if rpc_client.submit_tx(&tx).await.is_err() {
 				log::error!("Failed to submit tx");
