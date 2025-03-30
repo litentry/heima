@@ -30,12 +30,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<
 		nonce: U256,
 		amount: U256,
 	) -> Result<(), ()> {
-		let call =
-			AccountingContractCalls::executePayOutRequest(AccountingContract::executePayOutRequestCall {
-				beneficiary,
-				nonce,
-				amount,
-			});
+		let call = AccountingContractCalls::executePayOutRequest(
+			AccountingContract::executePayOutRequestCall { beneficiary, nonce, amount },
+		);
 
 		let tx = TransactionRequest {
 			to: Some(TxKind::Call(self.contract_address)),
