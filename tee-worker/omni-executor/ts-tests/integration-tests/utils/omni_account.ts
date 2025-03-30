@@ -1,4 +1,5 @@
-import { ApiPromise, CorePrimitivesIdentity } from 'parachain-api';
+import { CorePrimitivesIdentity } from 'parachain-api';
+import { ApiPromise } from '@polkadot/api';
 import { encodeAddress } from '@polkadot/util-crypto';
 import { Index } from '@polkadot/types/interfaces';
 
