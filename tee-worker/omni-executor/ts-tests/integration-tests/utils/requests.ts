@@ -72,7 +72,7 @@ async function sendRequest(
 }
 
 export const getTeeShieldingKey = async (context: IntegrationTestContext) => {
-    const request = createJsonRpcRequest('native_getShieldingKey', Uint8Array.from([]), nextRequestId(context));
+    const request = createJsonRpcRequest('omni_getShieldingKey', Uint8Array.from([]), nextRequestId(context));
     const response = new Promise<string>((resolve, reject) =>
         context.teeWsClient.onMessage.addListener((data) => {
             const parsed = JSON.parse(data);

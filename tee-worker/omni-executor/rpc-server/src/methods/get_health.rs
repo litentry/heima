@@ -10,7 +10,7 @@ pub fn register_get_health<
 	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
 	module
-		.register_method("get_health", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))
+		.register_method("omni_getHealth", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))
 		.expect("Failed to register getHealth method");
 }
 
@@ -54,7 +54,7 @@ mod test {
 
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
-		let response: String = client.request("get_health", rpc_params![]).await.unwrap();
+		let response: String = client.request("omni_getHealth", rpc_params![]).await.unwrap();
 
 		assert_eq!(response, "OK");
 	}
