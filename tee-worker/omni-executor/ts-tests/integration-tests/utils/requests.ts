@@ -1,10 +1,10 @@
 import { u8aToHex } from '@polkadot/util';
 import {
-    ApiPromise,
     NativeCallAuthenticatedOperation,
     NativeOperationResponse,
     NativeQueryAuthenticatedOperation,
 } from 'parachain-api';
+import { ApiPromise } from '@polkadot/api';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';

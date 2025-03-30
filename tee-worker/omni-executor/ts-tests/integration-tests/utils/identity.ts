@@ -1,5 +1,6 @@
 import type { HexString } from '@polkadot/util/types';
-import type { ApiPromise, CorePrimitivesIdentity, LitentryValidationData } from 'parachain-api';
+import type { CorePrimitivesIdentity, LitentryValidationData } from 'parachain-api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { ethers } from 'ethers';
