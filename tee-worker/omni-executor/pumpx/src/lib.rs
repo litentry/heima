@@ -18,3 +18,5 @@ pub mod auth_key_store;
 
 mod pumpx_api;
 pub use pumpx_api::*;
+
+pub mod signer_client;
