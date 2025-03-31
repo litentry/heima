@@ -118,7 +118,7 @@ importers:
   packages/client-sdk:
     dependencies:
       '@heima-network/chaindata':
-        specifier: ^0.0.4
+        specifier: '*'
         version: link:../chaindata
       '@heima-network/parachain-api':
         specifier: 0.9.24-next.1
