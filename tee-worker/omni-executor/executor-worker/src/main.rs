@@ -22,12 +22,16 @@ use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
+use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
 use log::{error, info};
 use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
+use parentchain_rpc_client::{
+	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory,
+	ToPrimitiveType,
+};
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
@@ -82,13 +86,27 @@ async fn main() -> Result<(), ()> {
 
 			let client_factory = SubxtClientFactory::<CustomConfig>::new(&args.parentchain_url);
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
+			let parentchain_rpc_client_factory = Arc::new(client_factory);
+
 			let substrate_key_store =
 				Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path.clone()));
-			let parentchain_rpc_client_factory = Arc::new(client_factory);
+			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
+			let signer_account_id: AccountId =
+				parentchain_signer.public_key().to_account_id().to_primitive_type();
+			let mut parentchain_rpc_client = parentchain_rpc_client_factory
+				.new_client()
+				.await
+				.expect("Could not create RPC client");
+			let signer_account_nonce = parentchain_rpc_client
+				.get_account_nonce(&signer_account_id)
+				.await
+				.expect("Could not get signer account nonce");
+
 			let tx_signer = Arc::new(TxSigner::new(
 				metadata_provider,
 				parentchain_rpc_client_factory.clone(),
-				substrate_key_store.clone(),
+				parentchain_signer.clone(),
+				signer_account_nonce,
 			));
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
@@ -113,8 +131,6 @@ async fn main() -> Result<(), ()> {
 			let native_task_sender =
 				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
 
-			let signer = parentchain_signer::get_signer(substrate_key_store.clone());
-
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
 
@@ -128,7 +144,7 @@ async fn main() -> Result<(), ()> {
 
 			let mrenclave = perform_attestation(
 				parentchain_rpc_client_factory.clone(),
-				signer,
+				parentchain_signer,
 				tx_signer.clone(),
 				worker_url.as_str(),
 				shielding_pubkey_vec,

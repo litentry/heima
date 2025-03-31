@@ -3103,6 +3103,7 @@ dependencies = [
  "ethereum-intent-executor",
  "executor-core",
  "executor-crypto",
+ "executor-primitives",
  "executor-storage",
  "hex",
  "log",
