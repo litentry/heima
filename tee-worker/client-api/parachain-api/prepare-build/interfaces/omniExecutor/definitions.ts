@@ -57,19 +57,8 @@ export default {
         NativeTaskResponse: "Result<NativeTaskOk, NativeTaskError>",
         NativeTaskOk: {
             _enum: {
-                CallResponse: "CallResponse",
-                QueryResponse: "QueryResponse",
-            },
-        },
-        CallResponse: {
-            _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
-            },
-        },
-        QueryResponse: {
-            _enum: {
-                AccountStore: "Vec<Identity>",
             },
         },
         XtReport: {

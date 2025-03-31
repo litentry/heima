@@ -28,7 +28,7 @@ use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Decode, Encode};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
-use types::{CallResponse, NativeTaskError, NativeTaskOk};
+use types::{NativeTaskError, NativeTaskOk};
 
 pub use aes256_key_store::Aes256KeyStore;
 
@@ -171,10 +171,7 @@ async fn handle_native_task<
 		return;
 	};
 
-	let auth_type: OmniAccountAuthType = match wrapper.auth {
-		Some(auth) => auth.into(),
-		None => OmniAccountAuthType::NoAuth,
-	};
+	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.into();
 
 	let (response_sender, tx) = match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
@@ -238,7 +235,7 @@ async fn handle_native_task<
 				return;
 			}
 
-			let response: NativeTaskResponse = CallResponse::AuthToken(token).into();
+			let response = NativeTaskResponse::Ok(NativeTaskOk::AuthToken(token));
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
@@ -553,8 +550,8 @@ async fn handle_native_task<
 				return;
 			};
 
-			let response: NativeTaskResponse =
-				CallResponse::PumpxJwt { session_token, trade_token }.into();
+			let response =
+				NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt { session_token, trade_token });
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
@@ -573,12 +570,11 @@ async fn handle_native_task<
 			return;
 		},
 	};
-	let response: NativeTaskResponse = CallResponse::ExtrinsicReport {
+	let response = NativeTaskResponse::Ok(NativeTaskOk::ExtrinsicReport {
 		extrinsic_hash: report.extrinsic_hash,
 		block_hash: report.block_hash,
 		status: report.status,
-	}
-	.into();
+	});
 
 	if response_sender.send(response.encode()).is_err() {
 		log::error!("Failed to send response");

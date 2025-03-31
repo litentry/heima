@@ -21,7 +21,6 @@ use sp_runtime::RuntimeDebug;
 
 #[derive(Encode, Decode, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
 pub enum OmniAccountAuthType {
-    NoAuth,
     Web3,
     Email,
     OAuth2,
