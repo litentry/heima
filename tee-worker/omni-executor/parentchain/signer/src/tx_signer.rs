@@ -78,7 +78,7 @@ impl<
 		signed_call.encoded().to_vec()
 	}
 
-	pub fn get_signer_account_id(&self) -> AccountId {
+	fn get_signer_account_id(&self) -> AccountId {
 		self.signer.public_key().to_account_id().to_primitive_type()
 	}
 
