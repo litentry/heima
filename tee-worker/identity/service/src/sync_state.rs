@@ -47,8 +47,10 @@ pub(crate) fn sync_state<
 	let provider_url = match WorkerModeProvider::worker_mode() {
 		WorkerMode::Sidechain | WorkerMode::OffChainWorker =>
 		// TODO(Litentry P-629): maybe implement `get_enclave_url_of_last_active`
+		{
 			executor::block_on(get_enclave_url_of_primary_worker_for_shard(node_api, shard))
-				.expect("Author of primary worker for shard could not be found"),
+				.expect("Author of primary worker for shard could not be found")
+		},
 	};
 
 	println!("Requesting state provisioning from worker at {}", &provider_url);

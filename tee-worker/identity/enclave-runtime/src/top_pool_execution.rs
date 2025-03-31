@@ -82,7 +82,7 @@ use std::{sync::Arc, time::Instant, vec::Vec};
 #[no_mangle]
 pub unsafe extern "C" fn execute_trusted_calls() -> sgx_status_t {
 	if let Err(e) = execute_top_pool_trusted_calls_internal() {
-		return e.into()
+		return e.into();
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -202,7 +202,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			};
 			if !is_single_worker && slot.duration_remaining().is_none() {
 				warn!("No time remaining in slot, skipping AURA execution");
-				return Ok(())
+				return Ok(());
 			}
 			log_remaining_slot_duration(&slot, "Before AURA");
 
@@ -255,7 +255,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 		},
 		None => {
 			debug!("No slot yielded. Skipping block production.");
-			return Ok(())
+			return Ok(());
 		},
 	};
 

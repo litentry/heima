@@ -111,7 +111,7 @@ pub(crate) fn query_user_by_name(
 			let user_fields = p.get("user.fields").unwrap_or(&default);
 
 			if user_fields.as_str() != "public_metrics" {
-				return Response::builder().status(400).body(String::from("Error query"))
+				return Response::builder().status(400).body(String::from("Error query"));
 			}
 
 			let user: Option<TwitterUser> = match user_name.as_str() {

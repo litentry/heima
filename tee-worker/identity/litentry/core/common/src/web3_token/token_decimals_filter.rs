@@ -182,27 +182,27 @@ impl TokenDecimalsFilter {
 
 		let (decimals, data) = TOKEN_DECIMALS_18;
 		if data.contains(&target) {
-			return decimals
+			return decimals;
 		}
 
 		let (decimals, data) = TOKEN_DECIMALS_8;
 		if data.contains(&target) {
-			return decimals
+			return decimals;
 		}
 
 		let (decimals, data) = TOKEN_DECIMALS_9;
 		if data.contains(&target) {
-			return decimals
+			return decimals;
 		}
 
 		let (decimals, data) = TOKEN_DECIMALS_6;
 		if data.contains(&target) {
-			return decimals
+			return decimals;
 		}
 
 		let (decimals, data) = TOKEN_DECIMALS_2;
 		if data.contains(&target) {
-			return decimals
+			return decimals;
 		}
 
 		DEFAULT_TOKEN_DECIMALS

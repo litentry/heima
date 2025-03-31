@@ -98,8 +98,9 @@ impl TargetBSolochainHandler {
 				validator_accessor.clone(),
 				extrinsics_factory.clone(),
 			)?,
-			WorkerMode::Sidechain =>
-				create_sidechain_triggered_import_dispatcher_for_target_b(block_importer),
+			WorkerMode::Sidechain => {
+				create_sidechain_triggered_import_dispatcher_for_target_b(block_importer)
+			},
 		};
 
 		let solochain_handler = Self {

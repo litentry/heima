@@ -107,7 +107,7 @@ where
 					error!("Block {:?} contained invalid justification: {:?}", block_num, err);
 					relay.unjustified_headers.push(block_hash);
 					relay.set_last_finalized_block_header(header);
-					return Err(err)
+					return Err(err);
 				}
 				Self::schedule_validator_set_change(relay, &header);
 

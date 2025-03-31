@@ -40,7 +40,7 @@ pub fn is_user(
 			Ok(response) => {
 				is_user = response.user;
 				if is_user {
-					break
+					break;
 				}
 			},
 			Err(err) => return Err(err.into_error_detail()),

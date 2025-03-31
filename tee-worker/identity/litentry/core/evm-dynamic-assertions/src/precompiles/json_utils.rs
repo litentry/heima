@@ -22,7 +22,7 @@ pub fn get_array_len(input: Vec<u8>, precompiles: &Precompiles) -> PrecompileRes
 				let message = std::format!("Could not decode bytes {:?}, reason: {:?}", input, e);
 				log::debug!("{}", message);
 				contract_logging(precompiles, LOGGING_LEVEL_WARN, message);
-				return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+				return Ok(failure_precompile_output(ethabi::Token::String(Default::default())));
 			},
 		};
 
@@ -35,7 +35,7 @@ pub fn get_array_len(input: Vec<u8>, precompiles: &Precompiles) -> PrecompileRes
 			let message = std::format!("Could not parse json {:?}, reason: {:?}", json, e);
 			log::debug!("{}", message);
 			contract_logging(precompiles, LOGGING_LEVEL_WARN, message);
-			return Ok(failure_precompile_output(Token::Int(Default::default())))
+			return Ok(failure_precompile_output(Token::Int(Default::default())));
 		},
 	};
 
@@ -49,14 +49,14 @@ pub fn get_array_len(input: Vec<u8>, precompiles: &Precompiles) -> PrecompileRes
 				);
 				log::debug!("{}", message);
 				contract_logging(precompiles, LOGGING_LEVEL_WARN, message);
-				return Ok(failure_precompile_output(Token::Int(Default::default())))
+				return Ok(failure_precompile_output(Token::Int(Default::default())));
 			},
 		},
 		None => {
 			let message = std::format!("No value under given pointer: :{:?}", pointer);
 			log::debug!("{}", message);
 			contract_logging(precompiles, LOGGING_LEVEL_WARN, message);
-			return Ok(failure_precompile_output(Token::Int(Default::default())))
+			return Ok(failure_precompile_output(Token::Int(Default::default())));
 		},
 	};
 

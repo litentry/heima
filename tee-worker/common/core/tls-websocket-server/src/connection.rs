@@ -78,13 +78,13 @@ where
 								"TLS session is blocked (connection {})",
 								self.connection_token.0
 							);
-							return ConnectionState::Blocked
+							return ConnectionState::Blocked;
 						}
 						warn!(
 							"I/O error after reading TLS data (connection {}): {:?}",
 							self.connection_token.0, err
 						);
-						return ConnectionState::Closing
+						return ConnectionState::Closing;
 					},
 				}
 
@@ -92,7 +92,7 @@ where
 					Ok(_) => {
 						if tls_session.is_handshaking() {
 							trace!("TLS session is in handshake");
-							return ConnectionState::TlsHandshake
+							return ConnectionState::TlsHandshake;
 						}
 						ConnectionState::Alive
 					},
@@ -113,7 +113,7 @@ where
 				Ok(_) => {
 					trace!("TLS write successful, connection {} is alive", self.connection_token.0);
 					if s.sess.is_handshaking() {
-						return ConnectionState::TlsHandshake
+						return ConnectionState::TlsHandshake;
 					}
 					ConnectionState::Alive
 				},
@@ -136,17 +136,19 @@ where
 				web_socket.can_read()
 			);
 			match web_socket.read_message() {
-				Ok(m) =>
+				Ok(m) => {
 					if let Err(e) = self.handle_message(m) {
 						error!(
 							"Failed to handle web-socket message (connection {}): {:?}",
 							self.connection_token.0, e
 						);
-					},
-				Err(e) =>
+					}
+				},
+				Err(e) => {
 					return match e {
-						tungstenite::Error::Io(e) if e.kind() == io::ErrorKind::WouldBlock =>
-							Ok(false),
+						tungstenite::Error::Io(e) if e.kind() == io::ErrorKind::WouldBlock => {
+							Ok(false)
+						},
 						_ => {
 							trace!(
 								"Error while reading web-socket message (connection {}): {:?}",
@@ -155,7 +157,8 @@ where
 							);
 							Ok(true)
 						},
-					},
+					}
+				},
 			}
 			trace!("Read successful for connection {}", self.connection_token.0);
 		} else {
@@ -163,7 +166,7 @@ where
 			self.stream_state = std::mem::take(&mut self.stream_state).attempt_handshake();
 			if self.stream_state.is_invalid() {
 				warn!("Web-socket connection ({:?}) failed, closing", self.connection_token);
-				return Ok(true)
+				return Ok(true);
 			}
 			debug!("Initialized connection {} successfully", self.connection_token.0);
 		}
@@ -235,15 +238,16 @@ where
 		match &mut self.stream_state {
 			StreamState::Established(web_socket) => {
 				if !web_socket.can_write() {
-					return Err(WebSocketError::ConnectionClosed)
+					return Err(WebSocketError::ConnectionClosed);
 				}
 				debug!("Write message to connection {}: {}", self.connection_token.0, message);
 				web_socket
 					.write_message(Message::Text(message))
 					.map_err(|e| WebSocketError::SocketWriteError(format!("{:?}", e)))
 			},
-			_ =>
-				Err(WebSocketError::SocketWriteError("No active web-socket available".to_string())),
+			_ => {
+				Err(WebSocketError::SocketWriteError("No active web-socket available".to_string()))
+			},
 		}
 	}
 }

@@ -41,13 +41,14 @@ pub fn is_user(
 	loop_with_abort_strategy(
 		addresses,
 		|address| match client.user_verification(address.to_string(), true) {
-			Ok(response) =>
+			Ok(response) => {
 				if response.result.is_valid {
 					result = true;
 					Ok(LoopControls::Break)
 				} else {
 					Ok(LoopControls::Continue)
-				},
+				}
+			},
 			Err(err) => Err(err.into_error_detail()),
 		},
 		AbortStrategy::ContinueUntilEnd::<fn(&_) -> bool>,

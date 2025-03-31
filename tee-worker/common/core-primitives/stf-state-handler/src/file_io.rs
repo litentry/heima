@@ -207,7 +207,7 @@ pub mod sgx {
 			let mut bytes = io_read(path)?;
 
 			if bytes.is_empty() {
-				return Ok(bytes)
+				return Ok(bytes);
 			}
 
 			let state_key = self.state_key_repository.retrieve_key()?;
@@ -246,7 +246,7 @@ pub mod sgx {
 			state_id: StateId,
 		) -> Result<Self::StateType> {
 			if !self.state_dir.file_for_state_exists(shard_identifier, state_id) {
-				return Err(Error::InvalidStateId(state_id))
+				return Err(Error::InvalidStateId(state_id));
 			}
 
 			let state_path = self.state_dir.state_file_path(shard_identifier, state_id);

@@ -39,7 +39,7 @@ fn sgx_init_quote(
 		Ok(r) => r,
 		Err(e) => {
 			error!("[-]  Failed to init quote: {:?}", e);
-			return e.into()
+			return e.into();
 		},
 	};
 

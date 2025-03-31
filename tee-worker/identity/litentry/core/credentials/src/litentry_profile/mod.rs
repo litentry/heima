@@ -34,7 +34,7 @@ impl BalanceRangeIndex for BalanceRange {
 	{
 		for (index, item) in source.iter().enumerate() {
 			if balance < *item {
-				return Some(index - 1)
+				return Some(index - 1);
 			}
 		}
 

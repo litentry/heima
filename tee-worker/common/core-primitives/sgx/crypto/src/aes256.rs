@@ -64,7 +64,7 @@ pub fn aes_encrypt_default(key: &Aes256Key, data: &[u8]) -> AesOutput {
 					ciphertext: in_out.to_vec(),
 					aad: aad.to_vec(),
 					nonce: nonce.nonce,
-				}
+				};
 			}
 		}
 	}
@@ -89,7 +89,7 @@ pub fn aes_encrypt_nonce(key: &Aes256Key, data: &[u8], nonce: Aes256KeyNonce) ->
 			)
 			.is_ok()
 		{
-			return AesOutput { ciphertext: in_out.to_vec(), aad: aad.to_vec(), nonce }
+			return AesOutput { ciphertext: in_out.to_vec(), aad: aad.to_vec(), nonce };
 		}
 	}
 
@@ -107,7 +107,7 @@ pub fn aes_decrypt(key: &Aes256Key, data: &mut AesOutput) -> Option<Vec<u8>> {
 				in_out,
 			)
 			.ok()
-			.map(|data| data.to_vec())
+			.map(|data| data.to_vec());
 	}
 	None
 }

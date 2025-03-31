@@ -135,10 +135,12 @@ where
 {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
 		match self {
-			TrustedOperation::direct_call(trusted_call_signed) =>
-				Ok(Self::validate_trusted_call(trusted_call_signed)),
-			TrustedOperation::indirect_call(trusted_call_signed) =>
-				Ok(Self::validate_trusted_call(trusted_call_signed)),
+			TrustedOperation::direct_call(trusted_call_signed) => {
+				Ok(Self::validate_trusted_call(trusted_call_signed))
+			},
+			TrustedOperation::indirect_call(trusted_call_signed) => {
+				Ok(Self::validate_trusted_call(trusted_call_signed))
+			},
 			TrustedOperation::get(getter) => getter.validate(),
 		}
 	}

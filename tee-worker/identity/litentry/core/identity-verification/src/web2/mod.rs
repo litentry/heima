@@ -111,14 +111,15 @@ pub fn verify(
 								),
 							))
 						})?,
-						Err(e) =>
+						Err(e) => {
 							return Err(Error::LinkIdentityFailed(ErrorDetail::StfError(
 								ErrorString::truncate_from(
 									std::format!("failed to get oauth data: {}", e)
 										.as_bytes()
 										.to_vec(),
 								),
-							))),
+							)))
+						},
 					};
 
 				ensure!(

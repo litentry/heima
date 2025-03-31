@@ -252,7 +252,7 @@ mod tests {
 
 			fn filter(&self, value: &Self::Value) -> bool {
 				if value.eq(&String::from("world")) {
-					return true
+					return true;
 				}
 				false
 			}

@@ -102,7 +102,7 @@ pub fn get_eligible_identities<T: Config>(
 				let mut networks = item.0.default_web3networks();
 
 				if skip_filtering {
-					return Some((item.0.clone(), networks))
+					return Some((item.0.clone(), networks));
 				}
 				// filter out identities whose web3networks are not supported by this specific `assertion`.
 				// We do it here before every request sending because:

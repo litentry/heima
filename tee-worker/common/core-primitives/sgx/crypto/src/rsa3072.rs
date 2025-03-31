@@ -139,7 +139,7 @@ pub mod sgx {
 		fn create_sealed_if_absent(&self) -> Result<()> {
 			if !self.exists() {
 				info!("Keyfile not found, creating new! {}", self.path().display());
-				return self.create_sealed()
+				return self.create_sealed();
 			}
 			Ok(())
 		}

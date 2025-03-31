@@ -61,13 +61,13 @@ where
 					AbortStrategy::ContinueUntil(ref predicate) => {
 						// If ContinueUntil is chosen, decide whether to return the error based on the predicate function or return the error when processing the last item
 						if predicate(item) || index == items.len() - 1 {
-							return Err(errors)
+							return Err(errors);
 						}
 					},
 					AbortStrategy::ContinueUntilEnd => {
 						// If ContinueUntilEnd is chosen, return the error when processing the last item
 						if index == items.len() - 1 {
-							return Err(errors)
+							return Err(errors);
 						}
 					},
 				}
@@ -94,7 +94,7 @@ mod tests {
 			|item| {
 				result = *item;
 				if *item == "item2" {
-					return Ok(LoopControls::Break)
+					return Ok(LoopControls::Break);
 				}
 
 				Ok(LoopControls::Continue)
@@ -118,7 +118,7 @@ mod tests {
 				if *item == "item2" {
 					return Err(Error::DataProviderError(ErrorString::truncate_from(
 						"test error".as_bytes().to_vec(),
-					)))
+					)));
 				}
 
 				Ok(LoopControls::Continue)
@@ -189,7 +189,7 @@ mod tests {
 				result = *item;
 
 				if *item == "item4" {
-					return Ok(LoopControls::Break)
+					return Ok(LoopControls::Break);
 				}
 				Err(Error::DataProviderError(ErrorString::truncate_from(
 					"test error".as_bytes().to_vec(),

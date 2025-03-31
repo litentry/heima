@@ -267,7 +267,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		if remaining_duration == Duration::default() {
 			debug!("Skipping proposal slot {} since there's no time left to propose", *slot,);
 
-			return None
+			return None;
 		}
 
 		let latest_integritee_parentchain_header =
@@ -276,7 +276,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				Ok(None) => slot_info.last_imported_integritee_parentchain_head.clone(),
 				Err(e) => {
 					warn!("Failed to peek latest Litentry parentchain block header: {:?}", e);
-					return None
+					return None;
 				},
 			};
 		trace!(
@@ -321,7 +321,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 					e,
 				);
 
-				return None
+				return None;
 			},
 		};
 
@@ -408,7 +408,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			Ok(p) => p,
 			Err(e) => {
 				warn!("Could not create proposer: {:?}", e);
-				return None
+				return None;
 			},
 		};
 
@@ -416,7 +416,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			Ok(p) => p,
 			Err(e) => {
 				warn!("Could not propose: {:?}", e);
-				return None
+				return None;
 			},
 		};
 
@@ -428,7 +428,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				*slot, proposing.block.block().header().block_number(),
 			);
 
-			return None
+			return None;
 		}
 
 		info!(
@@ -486,7 +486,7 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 			if shard_remaining_duration.as_millis() == u128::default() {
 				info!("⌛️ Could not produce blocks for all shards; block production took too long",);
 
-				return slot_results
+				return slot_results;
 			}
 
 			let shard_slot_ends_at = now + shard_remaining_duration;
