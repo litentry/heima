@@ -113,13 +113,13 @@ where
 			Ok(c) => c,
 			Err(e) => {
 				error!("Error: {:?}", e);
-				return Ok(ExecutedOperation::failed(operation_hash, top_or_hash, vec![], vec![]))
+				return Ok(ExecutedOperation::failed(operation_hash, top_or_hash, vec![], vec![]));
 			},
 		};
 
 		if !trusted_call.verify_signature(&mrenclave.m, &shard) {
 			error!("TrustedCallSigned: bad signature");
-			return Ok(ExecutedOperation::failed(operation_hash, top_or_hash, vec![], vec![]))
+			return Ok(ExecutedOperation::failed(operation_hash, top_or_hash, vec![], vec![]));
 		}
 
 		debug!("execute on STF, call with nonce {}", trusted_call.nonce());
@@ -176,7 +176,7 @@ where
 					force_connection_wait,
 				))
 			},
-		}
+		};
 	}
 }
 
@@ -231,7 +231,7 @@ where
 
 		if parentchain_id != &ParentchainId::Litentry {
 			// nothing else to do
-			return Ok(())
+			return Ok(());
 		}
 
 		// look for new shards and initialize them
@@ -348,7 +348,7 @@ where
 			// Break if allowed time window is over.
 			if ends_at < duration_now() {
 				info!("Aborting execution of trusted calls because slot time is up");
-				break
+				break;
 			}
 
 			match self.execute_trusted_call_on_stf(

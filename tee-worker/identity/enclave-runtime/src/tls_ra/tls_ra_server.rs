@@ -191,7 +191,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -199,7 +199,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn run_state_provisioning_server(
 		seal_handler,
 	) {
 		error!("Failed to provision state due to: {:?}", e);
-		return e.into()
+		return e.into();
 	};
 
 	sgx_status_t::SGX_SUCCESS

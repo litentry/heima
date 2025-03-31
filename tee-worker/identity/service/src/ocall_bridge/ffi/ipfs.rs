@@ -57,7 +57,7 @@ fn write_ipfs(
 			error!("OCall to write_ipfs failed: {:?}", e);
 			sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
-	}
+	};
 }
 
 fn read_ipfs(cid: *const u8, cid_size: u32, ipfs_api: Arc<dyn IpfsBridge>) -> sgx_status_t {

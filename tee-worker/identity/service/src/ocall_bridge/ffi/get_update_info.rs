@@ -49,7 +49,7 @@ fn get_update_info(
 		Ok(r) => r,
 		Err(e) => {
 			error!("[-]  Failed to get update info: {:?}", e);
-			return e.into()
+			return e.into();
 		},
 	};
 

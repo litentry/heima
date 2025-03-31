@@ -98,8 +98,9 @@ pub fn verify_tca_oauth2_authentication(
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google =>
-			verify_google_oauth2(data_providers_config, sender_identity_hash, omni_account, payload),
+		OAuth2Provider::Google => {
+			verify_google_oauth2(data_providers_config, sender_identity_hash, omni_account, payload)
+		},
 	}
 }
 
@@ -116,7 +117,7 @@ fn verify_google_oauth2(
 		));
 	};
 	if state_verifier != payload.state {
-		return Err(AuthenticationError::OAuth2Error(String::from("Invalid state")))
+		return Err(AuthenticationError::OAuth2Error(String::from("Invalid state")));
 	}
 
 	let mut google_client = GoogleOAuth2Client::new(

@@ -738,7 +738,7 @@ where
 					return Ok(TrustedCallResult::DeactivateIdentity(DeactivateIdentityResult {
 						mutated_id_graph: aes_encrypt_default(&key, &mutated_id_graph.encode()),
 						id_graph_hash,
-					}))
+					}));
 				}
 
 				Ok(TrustedCallResult::Empty)
@@ -783,7 +783,7 @@ where
 					return Ok(TrustedCallResult::ActivateIdentity(ActivateIdentityResult {
 						mutated_id_graph: aes_encrypt_default(&key, &mutated_id_graph.encode()),
 						id_graph_hash,
-					}))
+					}));
 				}
 
 				Ok(TrustedCallResult::Empty)
@@ -852,7 +852,7 @@ where
 					return Ok(TrustedCallResult::SetIdentityNetworks(SetIdentityNetworksResult {
 						mutated_id_graph: aes_encrypt_default(&key, &mutated_id_graph.encode()),
 						id_graph_hash,
-					}))
+					}));
 				}
 
 				Ok(TrustedCallResult::Empty)

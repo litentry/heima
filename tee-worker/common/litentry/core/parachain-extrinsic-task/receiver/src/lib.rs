@@ -42,7 +42,7 @@ where
 				Ok(call) => {
 					calls.push(call);
 					if calls.len() == MAX_BATCH_SIZE {
-						break
+						break;
 					}
 				},
 				Err(RecvTimeoutError::Timeout) => continue,
@@ -56,7 +56,7 @@ where
 					Ok(extrinsic) => extrinsic,
 					Err(e) => {
 						error!("Failed to create extrinsic: {:?}", e);
-						continue
+						continue;
 					},
 				};
 			if api

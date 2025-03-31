@@ -75,7 +75,7 @@ pub fn setup_reasonable_account_funding(
 		let missing_funds = needed.saturating_sub(free);
 
 		if missing_funds < needed * 2 / 3 {
-			return Ok(())
+			return Ok(());
 		}
 
 		if is_development_mode {
@@ -125,8 +125,9 @@ pub fn estimate_fee(api: &ParentchainApi, encoded_extrinsic: Vec<u8>) -> Result<
 				"Inclusion fee for the registration of the enclave is None!".into(),
 			)),
 		},
-		None =>
-			Err(Error::Custom("Fee Details for the registration of the enclave is None !".into())),
+		None => {
+			Err(Error::Custom("Fee Details for the registration of the enclave is None !".into()))
+		},
 	}
 }
 
@@ -149,7 +150,7 @@ fn bootstrap_funds_from_alice(
             "funding amount is too high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
             funding_amount
         );
-		return Err(Error::ApplicationSetup)
+		return Err(Error::ApplicationSetup);
 	}
 
 	let mut alice_signer_api = api.clone();

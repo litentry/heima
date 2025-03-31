@@ -59,14 +59,15 @@ where
 			.map_err(|e| DirectRpcError::Other(format!("{:?}", e).into()))?;
 
 		if !rpc_return_value.do_watch {
-			return Ok(None)
+			return Ok(None);
 		}
 
 		match rpc_return_value.status {
-			DirectRequestStatus::TrustedOperationStatus(_, top_hash) =>
+			DirectRequestStatus::TrustedOperationStatus(_, top_hash) => {
 				Self::Hash::decode::<_>(&mut top_hash.as_ref())
 					.map(Some)
-					.map_err(DirectRpcError::EncodingError),
+					.map_err(DirectRpcError::EncodingError)
+			},
 			_ => Ok(None),
 		}
 	}

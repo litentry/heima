@@ -142,10 +142,11 @@ where
 	let metadata = match context.node_metadata_repo.get_from_metadata(|m| m.get_metadata().cloned())
 	{
 		Ok(Some(metadata)) => metadata,
-		_ =>
+		_ => {
 			return Err(RequestVcErrorDetail::MetadataRetrievalFailed(
 				"Failed to retrieve metadata".to_string(),
-			)),
+			))
+		},
 	};
 
 	let mut is_new_account_store = false;
@@ -305,7 +306,7 @@ fn get_elegible_identities(
 
 			// if `skip_filtering` is true, we basically let assertion logic itself to handle those identities.
 			if skip_filtering {
-				return Some((identity.clone(), networks))
+				return Some((identity.clone(), networks));
 			}
 
 			networks.retain(|n| supported_networks.contains(n));
@@ -395,7 +396,7 @@ impl VcRequestRegistry {
 			entry.processed += 1;
 			all_processed = entry.processed == entry.total;
 		} else {
-			return Err("Item not found in map")
+			return Err("Item not found in map");
 		}
 
 		if all_processed {

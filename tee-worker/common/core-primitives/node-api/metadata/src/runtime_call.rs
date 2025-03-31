@@ -24,7 +24,7 @@ pub trait RuntimeCall {
 impl RuntimeCall for NodeMetadata {
 	fn retrieve(&self) -> Result<u32> {
 		if self.node_metadata.as_ref().is_none() {
-			return Err(Error::MetadataNotSet)
+			return Err(Error::MetadataNotSet);
 		}
 		let node_metadata = self.node_metadata.as_ref().unwrap();
 

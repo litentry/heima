@@ -81,8 +81,9 @@ impl GetterAuthorization for Getter {
 impl PoolTransactionValidation for Getter {
 	fn validate(&self) -> Result<ValidTransaction, TransactionValidityError> {
 		match self {
-			Self::public(_) =>
-				Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup)),
+			Self::public(_) => {
+				Err(TransactionValidityError::Unknown(UnknownTransaction::CannotLookup))
+			},
 			Self::trusted(trusted_getter_signed) => Ok(ValidTransaction {
 				priority: 1 << 20,
 				requires: vec![],
@@ -212,7 +213,7 @@ impl ExecuteGetter for Getter {
 impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self.getter {
-			TrustedGetter::free_balance(who) =>
+			TrustedGetter::free_balance(who) => {
 				if let Some(account_id) = who.to_native_account() {
 					let info = System::account(&account_id);
 					debug!("TrustedGetter free_balance");
@@ -221,8 +222,9 @@ impl ExecuteGetter for TrustedGetterSigned {
 					Some(info.data.free.encode())
 				} else {
 					None
-				},
-			TrustedGetter::reserved_balance(who) =>
+				}
+			},
+			TrustedGetter::reserved_balance(who) => {
 				if let Some(account_id) = who.to_native_account() {
 					let info = System::account(&account_id);
 					debug!("TrustedGetter reserved_balance");
@@ -231,9 +233,10 @@ impl ExecuteGetter for TrustedGetterSigned {
 					Some(info.data.reserved.encode())
 				} else {
 					None
-				},
+				}
+			},
 			#[cfg(feature = "evm")]
-			TrustedGetter::evm_nonce(who) =>
+			TrustedGetter::evm_nonce(who) => {
 				if let Some(account_id) = who.to_native_account() {
 					let evm_account = get_evm_account(&account_id);
 					let evm_account = HashedAddressMapping::into_account_id(evm_account);
@@ -243,27 +246,32 @@ impl ExecuteGetter for TrustedGetterSigned {
 					Some(nonce.encode())
 				} else {
 					None
-				},
+				}
+			},
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_codes(_who, evm_account) =>
 			// TODO: This probably needs some security check if who == evm_account (or assosciated)
+			{
 				if let Some(info) = get_evm_account_codes(&evm_account) {
 					debug!("TrustedGetter Evm Account Codes");
 					debug!("AccountCodes for {} is {:?}", evm_account, info);
 					Some(info) // TOOD: encoded?
 				} else {
 					None
-				},
+				}
+			},
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_account_storages(_who, evm_account, index) =>
 			// TODO: This probably needs some security check if who == evm_account (or assosciated)
+			{
 				if let Some(value) = get_evm_account_storages(&evm_account, &index) {
 					debug!("TrustedGetter Evm Account Storages");
 					debug!("AccountStorages for {} is {:?}", evm_account, value);
 					Some(value.encode())
 				} else {
 					None
-				},
+				}
+			},
 			// litentry
 			TrustedGetter::id_graph(who) => Some(IdentityManagement::id_graph(&who).encode()),
 		}
@@ -278,7 +286,7 @@ impl ExecuteGetter for PublicGetter {
 	fn execute(self) -> Option<Vec<u8>> {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
-			PublicGetter::nonce(identity) =>
+			PublicGetter::nonce(identity) => {
 				if let Some(account_id) = identity.to_native_account() {
 					let nonce = System::account_nonce(&account_id);
 					debug!("PublicGetter nonce");
@@ -286,9 +294,11 @@ impl ExecuteGetter for PublicGetter {
 					Some(nonce.encode())
 				} else {
 					None
-				},
-			PublicGetter::id_graph_hash(identity) =>
-				IdentityManagement::id_graph_hash(&identity).map(|h| h.encode()),
+				}
+			},
+			PublicGetter::id_graph_hash(identity) => {
+				IdentityManagement::id_graph_hash(&identity).map(|h| h.encode())
+			},
 		}
 	}
 

@@ -142,7 +142,7 @@ fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, String> {
 	let addrs = (host, port).to_socket_addrs().map_err(|e| format!("{:?}", e))?;
 	for addr in addrs {
 		if let SocketAddr::V4(_) = addr {
-			return Ok(addr)
+			return Ok(addr);
 		}
 	}
 

@@ -28,7 +28,7 @@ pub fn parse_decimal(input: Vec<u8>) -> PrecompileResult {
 			Ok(d) => d,
 			Err(e) => {
 				log::debug!("Could not decode input {:?}, reason: {:?}", input, e);
-				return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+				return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 			},
 		};
 
@@ -45,7 +45,7 @@ pub fn parse_decimal(input: Vec<u8>) -> PrecompileResult {
 				Ok(d) => d,
 				Err(e) => {
 					log::debug!("Cannot parse string {:?} to decimal, reason: {:?}", s, e);
-					return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+					return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 				},
 			};
 
@@ -69,7 +69,7 @@ pub fn parse_decimal(input: Vec<u8>) -> PrecompileResult {
 		},
 		None => {
 			log::debug!("Could not decode input {:?}, reason: string value is invalid", input);
-			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 		},
 	};
 

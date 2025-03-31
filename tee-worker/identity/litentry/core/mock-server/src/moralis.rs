@@ -93,7 +93,7 @@ pub(crate) fn query_solana(
 	warp::get()
 		.and(warp::path!("moralis_solana" / "account" / "mainnet" / String / String))
 		.map(move |address: String, api: String| match api.as_str() {
-			"balance" =>
+			"balance" => {
 				if address == "EJpLyTeE8XHG9CeREeHd6pr6hNhaRnTRJx4Z5DPhEJJ6" {
 					let body = GetSolanaNativeBalanceByWalletResponse {
 						lamports: "5903457912".into(),
@@ -106,8 +106,9 @@ pub(crate) fn query_solana(
 						solana: "0".into(),
 					};
 					Response::builder().body(serde_json::to_string(&body).unwrap())
-				},
-			"tokens" =>
+				}
+			},
+			"tokens" => {
 				if address == "EJpLyTeE8XHG9CeREeHd6pr6hNhaRnTRJx4Z5DPhEJJ6" {
 					let body = vec![
 						GetSolanaTokenBalanceByWalletResponse {
@@ -123,7 +124,8 @@ pub(crate) fn query_solana(
 				} else {
 					let body: Vec<GetSolanaTokenBalanceByWalletResponse> = vec![];
 					Response::builder().body(serde_json::to_string(&body).unwrap())
-				},
+				}
+			},
 			_ => Response::builder().status(404).body(String::from("Error query")),
 		})
 }
