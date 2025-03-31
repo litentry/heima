@@ -171,7 +171,7 @@ async fn handle_native_task<
 		return;
 	};
 
-	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.into();
+	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
 
 	let (response_sender, tx) = match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
@@ -257,7 +257,7 @@ async fn handle_native_task<
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
 					RuntimeCall::OmniAccount(call),
-					auth_type.to_subxt_type(),
+					auth_type.clone().map(|t| t.to_subxt_type()),
 				);
 
 			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
@@ -294,7 +294,7 @@ async fn handle_native_task<
 						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
 							sender.hash().to_subxt_type(),
 							RuntimeCall::System(remark_call),
-							auth_type.to_subxt_type(),
+							auth_type.map(|t| t.to_subxt_type()),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
@@ -307,7 +307,7 @@ async fn handle_native_task<
 						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
 							sender.hash().to_subxt_type(),
 							RuntimeCall::Balances(transfer_call),
-							auth_type.to_subxt_type(),
+							auth_type.map(|t| t.to_subxt_type()),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
@@ -467,7 +467,7 @@ async fn handle_native_task<
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
 					RuntimeCall::OmniAccount(call),
-					auth_type.to_subxt_type(),
+					auth_type.map(|t| t.to_subxt_type()),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
@@ -483,7 +483,7 @@ async fn handle_native_task<
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
 					RuntimeCall::OmniAccount(call),
-					auth_type.to_subxt_type(),
+					auth_type.map(|t| t.to_subxt_type()),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
@@ -495,7 +495,7 @@ async fn handle_native_task<
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
 					RuntimeCall::OmniAccount(call),
-					auth_type.to_subxt_type(),
+					auth_type.map(|t| t.to_subxt_type()),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
@@ -509,7 +509,7 @@ async fn handle_native_task<
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
 					sender.hash().to_subxt_type(),
 					RuntimeCall::OmniAccount(call),
-					auth_type.to_subxt_type(),
+					auth_type.map(|t| t.to_subxt_type()),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
