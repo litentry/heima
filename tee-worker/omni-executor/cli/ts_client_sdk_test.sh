@@ -47,4 +47,4 @@ jq '.peerDependencies["@heima-network/parachain-api"] = "file:/client-api/parach
 cd /client-sdk
 pnpm install --force
 pnpm nx run chaindata:build
-OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm nx run client-sdk:test
+OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm nx run client-sdk:test --maxWorkers=1
