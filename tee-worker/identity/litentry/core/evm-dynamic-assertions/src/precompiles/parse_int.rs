@@ -23,7 +23,7 @@ pub fn parse_int(input: Vec<u8>) -> PrecompileResult {
 		Ok(d) => d,
 		Err(e) => {
 			log::debug!("Could not decode string {:?}, reason: {:?}", input, e);
-			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 		},
 	};
 
@@ -34,12 +34,12 @@ pub fn parse_int(input: Vec<u8>) -> PrecompileResult {
 			Ok(n) => n,
 			Err(e) => {
 				log::debug!("Cannot parse string {:?} to U256, reason: {:?}", v, e);
-				return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+				return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 			},
 		},
 		None => {
 			log::debug!("Could not decode input {:?}, reason: string value is invalid", input);
-			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 		},
 	};
 

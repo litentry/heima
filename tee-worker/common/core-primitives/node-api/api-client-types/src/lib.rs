@@ -177,16 +177,21 @@ impl<Hash, BlockHash> From<substrate_api_client::TransactionStatus<Hash, BlockHa
 			substrate_api_client::TransactionStatus::Future => TransactionStatus::Future,
 			substrate_api_client::TransactionStatus::Ready => TransactionStatus::Ready,
 			substrate_api_client::TransactionStatus::Broadcast(_) => TransactionStatus::Broadcasted,
-			substrate_api_client::TransactionStatus::InBlock(block_hash) =>
-				TransactionStatus::InBlock(block_hash),
-			substrate_api_client::TransactionStatus::Retracted(block_hash) =>
-				TransactionStatus::Retracted(block_hash),
-			substrate_api_client::TransactionStatus::FinalityTimeout(block_hash) =>
-				TransactionStatus::FinalityTimeout(block_hash),
-			substrate_api_client::TransactionStatus::Finalized(block_hash) =>
-				TransactionStatus::Finalized(block_hash),
-			substrate_api_client::TransactionStatus::Usurped(hash) =>
-				TransactionStatus::Usurped(hash),
+			substrate_api_client::TransactionStatus::InBlock(block_hash) => {
+				TransactionStatus::InBlock(block_hash)
+			},
+			substrate_api_client::TransactionStatus::Retracted(block_hash) => {
+				TransactionStatus::Retracted(block_hash)
+			},
+			substrate_api_client::TransactionStatus::FinalityTimeout(block_hash) => {
+				TransactionStatus::FinalityTimeout(block_hash)
+			},
+			substrate_api_client::TransactionStatus::Finalized(block_hash) => {
+				TransactionStatus::Finalized(block_hash)
+			},
+			substrate_api_client::TransactionStatus::Usurped(hash) => {
+				TransactionStatus::Usurped(hash)
+			},
 			substrate_api_client::TransactionStatus::Dropped => TransactionStatus::Dropped,
 			substrate_api_client::TransactionStatus::Invalid => TransactionStatus::Invalid,
 		}

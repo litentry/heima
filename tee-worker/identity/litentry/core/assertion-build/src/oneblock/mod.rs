@@ -111,7 +111,7 @@ impl OneBlockData {
 				if self.check_student_number(&columns)
 					&& addresses.contains(&self.get_student_address(&columns))
 				{
-					return self.qualify(&columns, course_type)
+					return self.qualify(&columns, course_type);
 				}
 			}
 		}
@@ -195,7 +195,7 @@ pub fn check_oneblock_data(
 		.cloned()
 	{
 		let data = OneBlockData::new(rows);
-		return data.check(course_type, addresses)
+		return data.check(course_type, addresses);
 	}
 
 	false

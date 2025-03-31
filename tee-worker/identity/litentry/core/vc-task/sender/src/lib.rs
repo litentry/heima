@@ -102,7 +102,7 @@ impl VcTaskSender {
 
 	fn send(&self, request: VCRequest) -> Result<(), String> {
 		if self.paused {
-			return Err("Failed to send vc task: sender is paused".to_string())
+			return Err("Failed to send vc task: sender is paused".to_string());
 		}
 
 		self.sender

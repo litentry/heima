@@ -761,7 +761,7 @@ impl AchainableTotalTransactionsParser for AchainableClient {
 			// text field format: Total transactions under 1 (Transactions: 0)
 			let split_text = display_text.split(": ").collect::<Vec<&str>>();
 			if split_text.len() != 2 {
-				return Err(Error::AchainableError("Invalid array".to_string()))
+				return Err(Error::AchainableError("Invalid array".to_string()));
 			}
 
 			let mut value_text = split_text[1].to_string();
@@ -773,7 +773,7 @@ impl AchainableTotalTransactionsParser for AchainableClient {
 				.parse::<u64>()
 				.map_err(|e| Error::AchainableError(format!("Parse txn count error: {:?}", e)))?;
 
-			return Ok(value)
+			return Ok(value);
 		}
 
 		Err(Error::AchainableError("Invalid response".to_string()))
@@ -848,14 +848,14 @@ impl AchainableUtils for AchainableClient {
 			// If it is a newly created brand new account, Achainable returns `Address has no [token] balance`,
 			// so it will not be parsed and will directly return 0
 			if display_text.contains("Address has no") {
-				return Ok(0_f64)
+				return Ok(0_f64);
 			}
 
 			// TODO:
 			// text field format: Balance over 0 (Balance is 588.504602529)
 			let split_text = display_text.split("Balance is ").collect::<Vec<&str>>();
 			if split_text.len() != 2 {
-				return Err(Error::AchainableError("Invalid array".to_string()))
+				return Err(Error::AchainableError("Invalid array".to_string()));
 			}
 
 			let mut value_text = split_text[1].to_string();
@@ -867,7 +867,7 @@ impl AchainableUtils for AchainableClient {
 				.parse::<f64>()
 				.map_err(|e| Error::AchainableError(format!("Parse balance error: {:?}", e)))?;
 
-			return Ok(value)
+			return Ok(value);
 		}
 
 		Err(Error::AchainableError("Invalid response".to_string()))
@@ -1276,7 +1276,7 @@ impl AchainableTagDeFi for AchainableClient {
 		if request_basic_type_with_token(self, address, name_trader, &chain, None)?
 			|| request_basic_type_with_token(self, address, name_provider, &chain, None)?
 		{
-			return Ok(true)
+			return Ok(true);
 		}
 
 		Ok(false)
@@ -1292,7 +1292,7 @@ impl AchainableTagDeFi for AchainableClient {
 		if request_basic_type_with_token(self, address, name_trader, &chain, None)?
 			|| request_basic_type_with_token(self, address, name_provider, &chain, None)?
 		{
-			return Ok(true)
+			return Ok(true);
 		}
 
 		Ok(false)
@@ -1340,7 +1340,7 @@ impl AchainableTagDeFi for AchainableClient {
 		// Uniswap V2 {token} liquidity provider
 		// Uniswap V3 {token} liquidity provider
 		if self.usdt_uniswap_v2_lp(address)? || self.usdt_uniswap_v3_lp(address)? {
-			return Ok(true)
+			return Ok(true);
 		}
 
 		Ok(false)

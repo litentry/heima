@@ -230,21 +230,27 @@ impl ReceiveEnclaveMetrics for EnclaveMetricsReceiver {
 			EnclaveMetric::FailedTrustedOperationIncrement(metric_name) => {
 				ENCLAVE_FAILED_TRUSTED_OPERATION.with_label_values(&[&metric_name]).inc();
 			},
-			EnclaveMetric::ParentchainBlockImportTime(time) =>
-				ENCLAVE_PARENTCHAIN_BLOCK_IMPORT_TIME.observe(time.as_secs_f64()),
+			EnclaveMetric::ParentchainBlockImportTime(time) => {
+				ENCLAVE_PARENTCHAIN_BLOCK_IMPORT_TIME.observe(time.as_secs_f64())
+			},
 			EnclaveMetric::ParentchainEventProcessed(event) => {
 				ENCLAVE_PARENTCHAIN_EVENT_PROCESSED.with_label_values(&[&event]).inc();
 			},
-			EnclaveMetric::SidechainBlockImportTime(time) =>
-				ENCLAVE_SIDECHAIN_BLOCK_IMPORT_TIME.observe(time.as_secs_f64()),
-			EnclaveMetric::SidechainSlotPrepareTime(time) =>
-				ENCLAVE_SIDECHAIN_SLOT_PREPARE_TIME.observe(time.as_secs_f64()),
-			EnclaveMetric::SidechainSlotStfExecutionTime(time) =>
-				ENCLAVE_SIDECHAIN_SLOT_STF_EXECUTION_TIME.observe(time.as_secs_f64()),
-			EnclaveMetric::SidechainSlotBlockCompositionTime(time) =>
-				ENCLAVE_SIDECHAIN_SLOT_BLOCK_COMPOSITION_TIME.observe(time.as_secs_f64()),
-			EnclaveMetric::SidechainBlockBroadcastingTime(time) =>
-				ENCLAVE_SIDECHAIN_BLOCK_BROADCASTING_TIME.observe(time.as_secs_f64()),
+			EnclaveMetric::SidechainBlockImportTime(time) => {
+				ENCLAVE_SIDECHAIN_BLOCK_IMPORT_TIME.observe(time.as_secs_f64())
+			},
+			EnclaveMetric::SidechainSlotPrepareTime(time) => {
+				ENCLAVE_SIDECHAIN_SLOT_PREPARE_TIME.observe(time.as_secs_f64())
+			},
+			EnclaveMetric::SidechainSlotStfExecutionTime(time) => {
+				ENCLAVE_SIDECHAIN_SLOT_STF_EXECUTION_TIME.observe(time.as_secs_f64())
+			},
+			EnclaveMetric::SidechainSlotBlockCompositionTime(time) => {
+				ENCLAVE_SIDECHAIN_SLOT_BLOCK_COMPOSITION_TIME.observe(time.as_secs_f64())
+			},
+			EnclaveMetric::SidechainBlockBroadcastingTime(time) => {
+				ENCLAVE_SIDECHAIN_BLOCK_BROADCASTING_TIME.observe(time.as_secs_f64())
+			},
 			EnclaveMetric::VCBuildTime(assertion, time) => VC_BUILD_TIME
 				.with_label_values(&[&assertion_to_string(assertion)])
 				.observe(time.as_secs_f64()),

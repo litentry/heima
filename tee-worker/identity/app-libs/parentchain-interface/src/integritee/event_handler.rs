@@ -233,7 +233,7 @@ where
 			))
 		})?;
 		if block_number <= last_block_number {
-			return Ok(())
+			return Ok(());
 		}
 		OmniAccountStore::insert_account_store(account_id.clone(), members).map_err(|e| {
 			Error::AccountStoreError(format!(

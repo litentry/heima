@@ -117,7 +117,7 @@ where
 		snapshot_history: SnapshotHistory<FileIo::HashType>,
 	) -> Result<Self> {
 		if snapshot_history_cache_size == 0usize {
-			return Err(Error::ZeroCacheSize)
+			return Err(Error::ZeroCacheSize);
 		}
 
 		Ok(StateSnapshotRepository { file_io, snapshot_history_cache_size, snapshot_history })
@@ -235,7 +235,7 @@ where
 	) -> Result<()> {
 		if !self.shard_exists(shard_identifier) {
 			self.initialize_shard_with_snapshot(shard_identifier, state)?;
-			return Ok(())
+			return Ok(());
 		}
 
 		let (_state_hash, state_id) = self.write_new_state(shard_identifier, state)?;

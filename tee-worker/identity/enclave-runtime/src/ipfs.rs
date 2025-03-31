@@ -41,12 +41,13 @@ impl IpfsContent {
 				cid_str, self.stats.blocks, self.stats.block_bytes
 			);
 			match self.cid.as_ref() {
-				Ok(initial_cid) =>
+				Ok(initial_cid) => {
 					if last_cid.hash().eq(&initial_cid.hash()) {
 						Ok(())
 					} else {
 						Err(IpfsError::Verification)
-					},
+					}
+				},
 				Err(_) => Err(IpfsError::InputCidInvalid),
 			}
 		} else {

@@ -62,13 +62,14 @@ pub fn has_nft_721(
 								block_number: "latest".into(),
 							};
 							match client.get_token_balance_721(&param, false) {
-								Ok(balance) =>
+								Ok(balance) => {
 									if balance > 0 {
 										result = true;
 										Ok(LoopControls::Break)
 									} else {
 										Ok(LoopControls::Continue)
-									},
+									}
+								},
 								Err(err) => Err(err.into_error_detail()),
 							}
 						},
@@ -85,7 +86,7 @@ pub fn has_nft_721(
 						Ok(r) => {
 							if r {
 								result = true;
-								return Ok(LoopControls::Break)
+								return Ok(LoopControls::Break);
 							}
 							Ok(LoopControls::Continue)
 						},
@@ -126,10 +127,11 @@ pub fn check_nft_via_moralis(
 						cursor = resp.cursor;
 						for item in &resp.result {
 							match item.amount.parse::<u32>() {
-								Ok(balance) =>
+								Ok(balance) => {
 									if balance > 0 {
-										return Ok(true)
-									},
+										return Ok(true);
+									}
+								},
 								Err(_) => return Err(ErrorDetail::ParseError),
 							}
 						}
@@ -137,7 +139,7 @@ pub fn check_nft_via_moralis(
 					Err(err) => return Err(err.into_error_detail()),
 				}
 				if cursor.is_none() {
-					break 'inner
+					break 'inner;
 				}
 			}
 			Ok(false)
@@ -174,7 +176,7 @@ pub fn has_nft_1155(
 						Ok(r) => {
 							if r {
 								result = true;
-								return Ok(LoopControls::Break)
+								return Ok(LoopControls::Break);
 							}
 							Ok(LoopControls::Continue)
 						},

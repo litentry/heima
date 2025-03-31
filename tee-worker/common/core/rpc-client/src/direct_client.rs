@@ -288,7 +288,7 @@ mod tests {
 
 			if do_close {
 				info!("Client closing connection");
-				break
+				break;
 			}
 		}
 

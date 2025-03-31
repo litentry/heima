@@ -203,7 +203,7 @@ impl TwitterOfficialClient {
 		// have to replace user_id with includes -> users -> username, otherwise the handle verification would fail
 		if let Some(tweet_users) = resp.includes {
 			if tweet_users.users.is_empty() {
-				return Err(Error::RequestError("user not found from tweet".to_string()))
+				return Err(Error::RequestError("user not found from tweet".to_string()));
 			}
 			tweet.author_id = tweet_users.users[0].id.clone();
 		}

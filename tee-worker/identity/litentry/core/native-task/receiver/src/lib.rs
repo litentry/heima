@@ -178,7 +178,7 @@ where
 			let res: TrustedCallResult =
 				Err(TrustedCallError::ShieldingKeyRetrievalFailed(format!("{}", e)));
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("Shielding key retrieval failed")
+			return Err("Shielding key retrieval failed");
 		},
 	};
 	let tca: TrustedCallAuthenticated = match request
@@ -193,7 +193,7 @@ where
 		None => {
 			let res: TrustedCallResult = Err(TrustedCallError::RequestPayloadDecodingFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("Request payload decoding failed")
+			return Err("Request payload decoding failed");
 		},
 	};
 	let mrenclave = match context.ocall_api.get_mrenclave_of_self() {
@@ -201,7 +201,7 @@ where
 		Err(_) => {
 			let res: TrustedCallResult = Err(TrustedCallError::MrEnclaveRetrievalFailed);
 			context.author_api.send_rpc_response(connection_hash, res.encode(), false);
-			return Err("MrEnclave retrieval failed")
+			return Err("MrEnclave retrieval failed");
 		},
 	};
 
@@ -304,7 +304,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				"Failed to get node metadata".to_string(),
 			));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-			return
+			return;
 		},
 	};
 
@@ -332,7 +332,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				)),
 				auth_type
 			)),
-			Intent::CallEthereum(_) | Intent::TransferEthereum(_) | Intent::TransferSolana(_) =>
+			Intent::CallEthereum(_) | Intent::TransferEthereum(_) | Intent::TransferSolana(_) => {
 				OpaqueCall::from_tuple(&compose_call!(
 					&metadata,
 					"OmniAccount",
@@ -345,7 +345,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 						intent
 					)),
 					auth_type
-				)),
+				))
+			},
 			_ => {
 				log::warn!("Received unsupported intent: {:?}", intent);
 				let result: TrustedCallResult = Err(TrustedCallError::UnexpectedIntent(format!(
@@ -353,7 +354,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					intent
 				)));
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-				return
+				return;
 			},
 		},
 		TrustedCall::create_account_store(who) => OpaqueCall::from_tuple(&compose_call!(
@@ -369,7 +370,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					log::error!("Failed to get omni account: {:?}", e);
 					let result: TrustedCallResult = Err(TrustedCallError::UnauthorizedSigner);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-					return
+					return;
 				},
 			};
 			let repository = OmniAccountRepository::new(context.ocall_api.clone());
@@ -377,7 +378,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			let raw_msg = get_expected_raw_message(&who, &identity, nonce);
 
 			let validation_result = match validation_data {
-				ValidationData::Web2(validation_data) =>
+				ValidationData::Web2(validation_data) => {
 					if !identity.is_web2() {
 						Err(TrustedCallError::InvalidMemberIdentity)
 					} else {
@@ -392,8 +393,9 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 							log::error!("Failed to verify web2 identity: {:?}", e);
 							TrustedCallError::ValidationDataVerificationFailed
 						})
-					},
-				ValidationData::Web3(validation_data) =>
+					}
+				},
+				ValidationData::Web3(validation_data) => {
 					if !identity.is_web3() {
 						Err(TrustedCallError::InvalidMemberIdentity)
 					} else {
@@ -401,13 +403,14 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 							log::error!("Failed to verify web3 identity: {:?}", e);
 							TrustedCallError::ValidationDataVerificationFailed
 						})
-					},
+					}
+				},
 			};
 
 			if let Err(e) = validation_result {
 				let result: TrustedCallResult = Err(e);
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-				return
+				return;
 			}
 
 			let member_account = match create_member_account(
@@ -420,7 +423,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					log::error!("Failed to create member account: {:?}", e);
 					let result: TrustedCallResult = Err(e);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-					return
+					return;
 				},
 			};
 
@@ -480,7 +483,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 				req_ext_hash,
 			);
 			send_vc_response(connection_hash, context, result, 0u8, 1u8, false);
-			return
+			return;
 		},
 		TrustedCall::request_batch_vc(signer, who, assertions, maybe_key, req_ext_hash) => {
 			// use local registry to manage request reponse status
@@ -575,7 +578,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					}
 				}
 			}
-			return
+			return;
 		},
 		TrustedCall::request_auth_token(who, auth_options) => {
 			let omni_account = match get_omni_account(context.ocall_api.clone(), &who, None) {
@@ -584,7 +587,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					log::error!("Failed to get omni account: {:?}", e);
 					let result: TrustedCallResult = Err(TrustedCallError::UnauthorizedSigner);
 					context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-					return
+					return;
 				},
 			};
 			let subject = account_id_to_string_without_prefix(&omni_account);
@@ -626,14 +629,14 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 
 			let result: TrustedCallResult = Ok(auth_token.into());
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-			return
+			return;
 		},
 		_ => {
 			log::warn!("Received unsupported call: {:?}", call);
 			let result: TrustedCallResult =
 				Err(TrustedCallError::UnexpectedCall(format!("Unexpected call: {:?}", call)));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-			return
+			return;
 		},
 	};
 
@@ -648,7 +651,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 			let result: TrustedCallResult =
 				Err(TrustedCallError::ExtrinsicConstructionFailed(e.to_string()));
 			context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-			return
+			return;
 		},
 	};
 
@@ -657,7 +660,7 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 		&ParentchainId::Litentry,
 		Some(XtStatus::Finalized),
 	) {
-		Ok(extrinsic_reports) =>
+		Ok(extrinsic_reports) => {
 			if let Some(report) = extrinsic_reports.first() {
 				let result: TrustedCallResult = Ok(report.into());
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
@@ -667,7 +670,8 @@ fn handle_trusted_call<ShieldingKeyRepository, AA, SES, OA, EF, NMR, AKR, AR, SH
 					"Failed to get extrinsic report".to_string(),
 				));
 				context.author_api.send_rpc_response(connection_hash, result.encode(), false);
-			},
+			}
+		},
 		Err(e) => {
 			log::error!("Failed to send extrinsic to parentchain: {:?}", e);
 			let result: TrustedCallResult =
@@ -686,7 +690,7 @@ where
 	Aes256KeyRepository: AccessKey<KeyType = Aes256Key>,
 {
 	if is_public {
-		return Ok(MemberAccount::Public(identity.clone()))
+		return Ok(MemberAccount::Public(identity.clone()));
 	}
 
 	let aes_key = match aes256_key_repository.retrieve_key() {

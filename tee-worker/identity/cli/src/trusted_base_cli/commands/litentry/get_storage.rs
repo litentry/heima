@@ -113,12 +113,13 @@ fn get_storage_value(
 	write_storage_address_root_bytes(pallet_name, storage_name, &mut entry_bytes);
 
 	let return_ty_id = match storage_entry.ty {
-		StorageEntryType::Plain(ty) =>
+		StorageEntryType::Plain(ty) => {
 			if !storage_entry_keys.is_empty() {
 				panic!("Wrong Number Of Keys, expected: 0");
 			} else {
 				ty.id
-			},
+			}
+		},
 		StorageEntryType::Map { hashers, key, value } => {
 			if hashers.len() != storage_entry_keys.len() {
 				panic!("Wrong Number Of Keys, expected: {}", hashers.len());

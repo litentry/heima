@@ -95,11 +95,12 @@ where
 		let mut maybe_account: Option<AccountId> = None;
 		for account in identifiers {
 			match self.enclave(&account, at_block)? {
-				Some(e) =>
+				Some(e) => {
 					if e.mrenclave == shard.as_ref() {
 						maybe_account = Some(account.clone());
-						break
-					},
+						break;
+					}
+				},
 				None => continue,
 			}
 		}
