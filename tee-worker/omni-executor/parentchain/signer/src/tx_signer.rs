@@ -53,7 +53,6 @@ impl<
 		Self { metadata_provider, rpc_client_factory, signer, nonce, phantom_data: PhantomData }
 	}
 
-	/// Signs a transaction with the current nonce, then increments the nonce.
 	pub async fn sign<Call: Payload>(&self, call: Call) -> Vec<u8> {
 		let mut client = self.rpc_client_factory.new_client().await.unwrap();
 
