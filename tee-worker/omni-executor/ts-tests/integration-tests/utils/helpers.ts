@@ -1,6 +1,6 @@
+import { ApiPromise, Keyring } from '@polkadot/api';
 import { hexToU8a, compactStripLength, u8aToString } from '@polkadot/util';
 import { HexString } from '@polkadot/util/types';
-import { ApiPromise, Keyring } from 'parachain-api';
 
 export function decodeRpcBytesAsString(value: HexString): string {
     return u8aToString(compactStripLength(hexToU8a(value))[1]);

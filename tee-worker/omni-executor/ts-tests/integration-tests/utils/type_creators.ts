@@ -1,13 +1,13 @@
+import { ApiPromise } from '@polkadot/api';
 import type { Enum } from '@polkadot/types-codec';
 import { HexString } from '@polkadot/util/types';
 import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
-    ApiPromise,
     Authentication,
-    CorePrimitivesIdentity,
-    LitentryMultiSignature,
+    Identity,
+    MultiSignature,
     NativeCall,
     NativeCallAuthenticatedOperation,
     NativeQuery,
@@ -20,18 +20,18 @@ import { Signer } from './signer';
 export async function createIdentityType(
     api: ApiPromise,
     address: HexString | string,
-    type: CorePrimitivesIdentity['type']
-): Promise<CorePrimitivesIdentity> {
+    type: Identity['type']
+): Promise<Identity> {
     const identity = {
         [type]: address,
     };
-    return api.createType('CorePrimitivesIdentity', identity);
+    return api.createType('Identity', identity);
 }
 
-export async function createLitentryMultiSignature(
+export async function createMultiSignature(
     api: ApiPromise,
     args: { signer: Signer; payload: Uint8Array | string }
-): Promise<LitentryMultiSignature> {
+): Promise<MultiSignature> {
     const { signer, payload } = args;
     const signerType = signer.type();
 
@@ -40,7 +40,7 @@ export async function createLitentryMultiSignature(
     if (payload instanceof Uint8Array) {
         const signature = await signer.sign(signerType === 'bitcoin' ? u8aToHex(payload).substring(2) : payload);
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType<MultiSignature>('MultiSignature', {
             [signerType]: signature,
         });
     }
@@ -50,7 +50,7 @@ export async function createLitentryMultiSignature(
     if (payload.startsWith('0x')) {
         const signature = await signer.sign(signerType === 'bitcoin' ? payload.substring(2) : hexToU8a(payload));
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType<MultiSignature>('MultiSignature', {
             [signerType]: signature,
         });
     }
@@ -59,7 +59,7 @@ export async function createLitentryMultiSignature(
     // For Bitcoin, pass it as it is, for other types, convert it to raw bytes
     const signature = await signer.sign(signerType === 'bitcoin' ? payload : stringToU8a(payload));
 
-    return api.createType('LitentryMultiSignature', {
+    return api.createType<MultiSignature>('MultiSignature', {
         [signerType]: signature,
     });
 }
@@ -101,13 +101,13 @@ export async function createNativeAuthenticatedOperation<OP extends Enum>(
         console.log('Signing message: ', payload);
     }
 
-    const signature = await createLitentryMultiSignature(api, {
+    const signature = await createMultiSignature(api, {
         signer,
         payload,
     });
 
     const authentication: Authentication = api.createType('Authentication', {
-        Web3: api.createType('(LitentryMultiSignature)', signature),
+        Web3: api.createType('(MultiSignature)', signature),
     });
 
     if ('isGetAccountStore' in operation) {

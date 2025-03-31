@@ -1,6 +1,6 @@
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex } from '@polkadot/util';
 import {
-    ApiPromise,
     NativeCallAuthenticatedOperation,
     NativeOperationResponse,
     NativeQueryAuthenticatedOperation,

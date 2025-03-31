@@ -14,7 +14,7 @@
     "@types/ws": "^8.5.13"
   },
   "peerDependencies": {
-    "@heima-network/chaindata": "*",
+    "@heima-network/chaindata": "^0.0.4",
     "@heima-network/parachain-api": "0.9.24-next.1",
     "@polkadot/api": "^15.0.2",
     "@polkadot/types": "^15.0.2",

@@ -1,5 +1,6 @@
+import { ApiPromise } from '@polkadot/api';
 import type { HexString } from '@polkadot/util/types';
-import type { ApiPromise, CorePrimitivesIdentity, LitentryValidationData } from 'parachain-api';
+import type { Identity, LitentryValidationData } from 'parachain-api';
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { ethers } from 'ethers';
@@ -8,14 +9,14 @@ import { Signer } from './signer';
 // blake2_256(<OmniAccount nonce> + <MemberIdentity AccountId> + <identity-to-be-linked>)
 export function generateVerificationMessage(
     api: ApiPromise,
-    memberIdentity: CorePrimitivesIdentity,
-    identityToAdd: CorePrimitivesIdentity,
+    memberIdentity: Identity,
+    identityToAdd: Identity,
     omniAccountNonce: number,
     options?: { prettifiedMessage?: boolean }
 ): string {
     const opts = { prettifiedMessage: false, ...options };
-    const encodedMemberIdentity = api.createType('CorePrimitivesIdentity', memberIdentity).toU8a();
-    const encodedIdentityToAdd = api.createType('CorePrimitivesIdentity', identityToAdd).toU8a();
+    const encodedMemberIdentity = api.createType('Identity', memberIdentity).toU8a();
+    const encodedIdentityToAdd = api.createType('Identity', identityToAdd).toU8a();
     const encodedOmniAccountNonce = api.createType('u64', omniAccountNonce);
     const msg = Buffer.concat([encodedOmniAccountNonce.toU8a(), encodedMemberIdentity, encodedIdentityToAdd]);
     const hash = blake2AsHex(msg, 256);
@@ -31,24 +32,24 @@ export type Web2ValidationConfig =
     | {
           identityType: 'Discord';
           api: ApiPromise;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: Identity;
+          linkIdentity: Identity;
           verificationType: 'PublicMessage' | 'OAuth2';
           validationNonce: number;
       }
     | {
           identityType: 'Twitter';
           api: ApiPromise;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: Identity;
+          linkIdentity: Identity;
           verificationType: 'PublicTweet';
           validationNonce: number;
       }
     | {
           identityType: 'Twitter';
           api: ApiPromise;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: Identity;
+          linkIdentity: Identity;
           verificationType: 'OAuth2';
           validationNonce: number;
           oauthState: string;
@@ -113,8 +114,8 @@ export async function buildWeb2Validation(config: Web2ValidationConfig): Promise
 
 export async function buildValidations(
     api: ApiPromise,
-    signerIdentitity: CorePrimitivesIdentity,
-    linkIdentity: CorePrimitivesIdentity,
+    signerIdentitity: Identity,
+    linkIdentity: Identity,
     startingSidechainNonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer?: Signer
@@ -204,8 +205,8 @@ export async function buildValidations(
 
 export async function buildWeb3ValidationData(
     api: ApiPromise,
-    sender: CorePrimitivesIdentity,
-    accountToAdd: CorePrimitivesIdentity,
+    sender: Identity,
+    accountToAdd: Identity,
     nonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer: Signer
