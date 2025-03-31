@@ -142,7 +142,7 @@ impl RequestVcCommand {
 		.into_trusted_operation(trusted_cli.direct);
 
 		match prepare_request_data_and_send_direct_vc_request(cli, trusted_cli, &top, key) {
-			Ok(result) =>
+			Ok(result) => {
 				for res in result {
 					match res.result {
 						Err(err) => {
@@ -153,7 +153,8 @@ impl RequestVcCommand {
 							print_vc(&key, vc);
 						},
 					}
-				},
+				}
+			},
 			Err(e) => {
 				println!("{:?}", e);
 			},

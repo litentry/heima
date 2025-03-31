@@ -50,7 +50,7 @@ pub struct GoogleClaims {
 pub fn decode_jwt(jwt: &str) -> Result<GoogleClaims, &'static str> {
 	let parts: Vec<&str> = jwt.split('.').collect();
 	if parts.len() != 3 {
-		return Err("Invalid JWT")
+		return Err("Invalid JWT");
 	}
 	let payload = base64_decode(parts[1])?;
 	let claims: GoogleClaims =

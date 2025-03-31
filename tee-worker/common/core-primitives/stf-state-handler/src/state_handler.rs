@@ -231,14 +231,15 @@ where
 	fn migrate_shard(&self, new_shard: ShardIdentifier) -> Result<Self::HashType> {
 		if self.shard_exists(&new_shard)? {
 			let (_, state_hash) = self.load_cloned(&new_shard)?;
-			return Ok(state_hash)
+			return Ok(state_hash);
 		}
 		let old_shard = match self.list_shards()? {
 			shards if shards.len() == 1 => shards[0],
-			_ =>
+			_ => {
 				return Err(Error::Other(
 					"Cannot migrate shard. There is more than 1 shard in the list".into(),
-				)),
+				))
+			},
 		};
 
 		let (old_shard_state, old_shard_state_hash) = self.load_cloned(&old_shard)?;
@@ -249,13 +250,13 @@ where
 		let comparison_result =
 			state_snapshot_lock.compare_shards_state_file_size(&old_shard, &new_shard)?;
 		if comparison_result != ShardStateFileComparison::Equal {
-			return Err(Error::Other("State files size do not match after migration".into()))
+			return Err(Error::Other("State files size do not match after migration".into()));
 		}
 
 		let (_, new_shard_state_hash) = self.load_cloned(&new_shard)?;
 
 		if new_shard_state_hash != old_shard_state_hash {
-			return Err(Error::Other("State hash does not match after migration".into()))
+			return Err(Error::Other("State hash does not match after migration".into()));
 		}
 
 		Ok(new_shard_state_hash)

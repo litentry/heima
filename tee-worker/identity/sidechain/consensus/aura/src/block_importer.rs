@@ -323,7 +323,7 @@ impl<
 		let parentchain_header_hash_to_peek = sidechain_block.block_data().layer_one_head();
 		if parentchain_header_hash_to_peek == last_imported_parentchain_header.hash() {
 			debug!("No queue peek necessary, sidechain block references latest imported parentchain block");
-			return Ok(last_imported_parentchain_header.clone())
+			return Ok(last_imported_parentchain_header.clone());
 		}
 
 		let maybe_signed_parentchain_block = self

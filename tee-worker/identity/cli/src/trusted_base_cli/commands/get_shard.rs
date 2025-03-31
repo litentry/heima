@@ -54,7 +54,7 @@ impl GetShardCommand {
 
 		if rpc_return_value.status == DirectRequestStatus::Error {
 			error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
-			return Err(CliError::WorkerRpcApi { msg: "rpc error".to_string() })
+			return Err(CliError::WorkerRpcApi { msg: "rpc error".to_string() });
 		}
 
 		let shard = H256::decode(&mut rpc_return_value.value.as_slice())

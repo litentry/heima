@@ -83,7 +83,7 @@ pub fn build(
 
 				if resp.data {
 					has_commented = true;
-					return Ok(LoopControls::Break)
+					return Ok(LoopControls::Break);
 				}
 			}
 			Ok(LoopControls::Continue)

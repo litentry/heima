@@ -135,7 +135,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 					0u8,
 					false,
 				);
-				continue
+				continue;
 			},
 		};
 		let tcs = match request
@@ -156,7 +156,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 					0u8,
 					false,
 				);
-				continue
+				continue;
 			},
 		};
 		let mrenclave = match context.ocall_api.get_mrenclave_of_self() {
@@ -170,7 +170,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 					0u8,
 					false,
 				);
-				continue
+				continue;
 			},
 		};
 		if !tcs.verify_signature(&mrenclave, &request.shard) {
@@ -182,7 +182,7 @@ pub fn run_vc_handler_runner<ShieldingKeyRepository, A, S, H, O, Z, N, AR>(
 				0u8,
 				false,
 			);
-			continue
+			continue;
 		}
 
 		// Until now, preparation work is done. If any error happens, error message would have been returned already.
@@ -374,7 +374,7 @@ impl RequestRegistry {
 			entry.processed += 1;
 			all_processed = entry.processed == entry.total;
 		} else {
-			return Err("Item not found in map")
+			return Err("Item not found in map");
 		}
 
 		if all_processed {

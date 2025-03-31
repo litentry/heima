@@ -94,7 +94,7 @@ where
 
 		if signed_blocks.is_empty() {
 			debug!("Enclave did not produce sidechain blocks");
-			return status
+			return status;
 		}
 
 		info!(

@@ -36,10 +36,11 @@ pub fn subscribe_to_parentchain_events(api: &ParentchainApi, parentchain_id: Par
 				"Balances" => match event.variant_name() {
 					"Deposit" => continue,
 					"Withdraw" => continue,
-					"Transfer" =>
+					"Transfer" => {
 						if let Ok(Some(ev)) = event.as_event::<BalanceTransfer>() {
 							println!("[L1Event:{}] {:?}", parentchain_id, ev);
-						},
+						}
+					},
 					_ => println!(
 						"[L1Event:{}] {}::{}",
 						parentchain_id,

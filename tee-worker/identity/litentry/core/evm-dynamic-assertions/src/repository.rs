@@ -92,7 +92,7 @@ impl AssertionLogicRepository for EvmAssertionRepository {
 				.lock()
 				.map_err(|e| format!("Could not acquire lock on inner state: {:?}", e))?
 				.remove(&id);
-			return Err(format!("Could not seal assertions state: {:?}", e))
+			return Err(format!("Could not seal assertions state: {:?}", e));
 		}
 		Ok(())
 	}

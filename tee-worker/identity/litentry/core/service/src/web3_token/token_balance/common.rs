@@ -105,7 +105,7 @@ pub fn get_balance(
 					);
 
 					match result {
-						Ok(items) =>
+						Ok(items) => {
 							if !items.is_empty() {
 								match items[0].balance.parse::<u128>() {
 									Ok(balance) => {
@@ -124,7 +124,8 @@ pub fn get_balance(
 								}
 							} else {
 								Ok(LoopControls::Continue)
-							},
+							}
+						},
 						Err(err) => Err(err.into_error_detail()),
 					}
 				},

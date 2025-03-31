@@ -134,7 +134,9 @@ where
 			};
 
 		if block_number != aposteriori_state.get_block_number().unwrap_or(0) {
-			return Err(Error::Other("[Sidechain] BlockNumber is not LastBlock's Number + 1".into()))
+			return Err(Error::Other(
+				"[Sidechain] BlockNumber is not LastBlock's Number + 1".into(),
+			));
 		}
 
 		// create encrypted payload

@@ -88,8 +88,9 @@ pub(crate) fn get_identifiers(trusted_args: &TrustedCli, cli: &Cli) -> ([u8; 32]
 			.expect("Unable to retrieve MRENCLAVE from endpoint")
 	};
 	let shard = match &trusted_args.shard {
-		Some(val) =>
-			ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded")),
+		Some(val) => {
+			ShardIdentifier::from_slice(&val.from_base58().expect("shard has to be base58 encoded"))
+		},
 		None => ShardIdentifier::from_slice(&mrenclave),
 	};
 	(mrenclave, shard)
@@ -156,7 +157,7 @@ pub(crate) fn get_pending_trusted_calls_for(
 	if rpc_return_value.status == DirectRequestStatus::Error {
 		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
 		direct_api.close().unwrap();
-		return vec![]
+		return vec![];
 	}
 
 	direct_api.close().unwrap();

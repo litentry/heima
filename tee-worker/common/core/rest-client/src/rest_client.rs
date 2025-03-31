@@ -168,7 +168,7 @@ where
 		if !status_code.is_success() {
 			let status_code_num = u16::from(status_code);
 			let reason = String::from(status_code.reason().unwrap_or("none"));
-			return Err(Error::HttpError(status_code_num, reason))
+			return Err(Error::HttpError(status_code_num, reason));
 		}
 
 		let body = String::from_utf8_lossy(&encoded_body).to_string();
