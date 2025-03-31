@@ -7,13 +7,12 @@ use parentchain_rpc_client::{
 	metadata::SubxtMetadataProvider, CustomConfig, SubstrateRpcClient, SubxtClient,
 	SubxtClientFactory,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use parentchain_signer::TxSigner;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
 
-type TxSigner = TransactionSigner<
-	SubstrateKeyStore,
+type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
 	CustomConfig,
@@ -25,7 +24,7 @@ type TxSigner = TransactionSigner<
 pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
-	transaction_signer: Arc<TxSigner>,
+	transaction_signer: Arc<ParentchainTxSigner>,
 	worker_url: &str,
 	shielding_pubkey: Vec<u8>,
 ) -> Result<MrEnclave, ()> {

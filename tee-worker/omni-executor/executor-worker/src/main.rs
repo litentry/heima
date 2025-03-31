@@ -28,8 +28,7 @@ use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerCo
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
-use parentchain_signer::key_store::SubstrateKeyStore;
-use parentchain_signer::{get_signer, TransactionSigner};
+use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
@@ -86,7 +85,7 @@ async fn main() -> Result<(), ()> {
 			let substrate_key_store =
 				Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
-			let transaction_signer = Arc::new(TransactionSigner::new(
+			let tx_signer = Arc::new(TxSigner::new(
 				metadata_provider,
 				parentchain_rpc_client_factory.clone(),
 				substrate_key_store.clone(),
@@ -101,7 +100,7 @@ async fn main() -> Result<(), ()> {
 
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
-				transaction_signer.clone(),
+				tx_signer.clone(),
 				storage_db.clone(),
 				jwt_rsa_private_key.clone(),
 				aes256_key,
@@ -114,7 +113,7 @@ async fn main() -> Result<(), ()> {
 			let native_task_sender =
 				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
 
-			let signer = get_signer(substrate_key_store.clone());
+			let signer = parentchain_signer::get_signer(substrate_key_store.clone());
 
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
@@ -130,7 +129,7 @@ async fn main() -> Result<(), ()> {
 			let mrenclave = perform_attestation(
 				parentchain_rpc_client_factory.clone(),
 				signer,
-				transaction_signer.clone(),
+				tx_signer.clone(),
 				worker_url.as_str(),
 				shielding_pubkey_vec,
 			)

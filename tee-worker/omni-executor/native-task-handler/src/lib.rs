@@ -24,7 +24,7 @@ use parentchain_rpc_client::{
 	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
 	SubxtClientFactory, ToSubxtType, XtStatus,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
@@ -38,8 +38,7 @@ pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
 type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
 
-pub type ParentchainTxSigner = TransactionSigner<
-	SubstrateKeyStore,
+pub type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
 	CustomConfig,
