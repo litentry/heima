@@ -227,7 +227,7 @@ impl TrustedCallSigned {
 			return Ok(TrustedCallResult::LinkIdentity(LinkIdentityResult {
 				mutated_id_graph: aes_encrypt_default(&key, &mutated_id_graph.encode()),
 				id_graph_hash,
-			}))
+			}));
 		}
 
 		Ok(TrustedCallResult::Empty)

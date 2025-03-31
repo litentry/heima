@@ -231,10 +231,11 @@ impl<
 		// check if shard exists
 		match self.state_facade.shard_exists(&shard) {
 			Err(_) => return Box::pin(ready(Err(ClientError::InvalidShard.into()))),
-			Ok(shard_exists) =>
+			Ok(shard_exists) => {
 				if !shard_exists {
-					return Box::pin(ready(Err(ClientError::InvalidShard.into())))
-				},
+					return Box::pin(ready(Err(ClientError::InvalidShard.into())));
+				}
+			},
 		};
 
 		// decrypt call
@@ -259,7 +260,7 @@ impl<
 		// is not allowed by the filter
 		if !self.top_filter.filter(&trusted_operation) {
 			warn!("unsupported operation");
-			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())))
+			return Box::pin(ready(Err(ClientError::UnsupportedOperation.into())));
 		}
 
 		//let best_block_hash = self.client.info().best_hash;

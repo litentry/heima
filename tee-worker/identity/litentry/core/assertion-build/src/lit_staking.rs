@@ -204,7 +204,7 @@ impl DelegatorState {
 		if let Some(storage_in_hex_without_prefix) = storage_in_hex.strip_prefix("0x") {
 			if let Ok(decoded) = hex::decode(storage_in_hex_without_prefix) {
 				if let Ok(delegator) = Delegator::decode(&mut decoded.as_bytes_ref()) {
-					return Ok(delegator)
+					return Ok(delegator);
 				}
 			}
 		}

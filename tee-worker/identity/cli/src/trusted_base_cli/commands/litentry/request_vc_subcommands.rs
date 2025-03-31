@@ -299,78 +299,89 @@ impl Command {
 			},
 			Command::A14 => Ok(A14),
 			Command::Achainable(c) => Ok(match c {
-				AchainableCommand::AmountHolding(arg) =>
+				AchainableCommand::AmountHolding(arg) => {
 					Achainable(AchainableParams::AmountHolding(AchainableAmountHolding {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						amount: to_para_str(&arg.amount),
 						date: to_para_str(&arg.date),
 						token: arg.token.as_ref().map(to_para_str),
-					})),
-				AchainableCommand::AmountToken(arg) =>
+					}))
+				},
+				AchainableCommand::AmountToken(arg) => {
 					Achainable(AchainableParams::AmountToken(AchainableAmountToken {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						amount: to_para_str(&arg.amount),
 						token: arg.token.as_ref().map(to_para_str),
-					})),
-				AchainableCommand::Amount(arg) =>
+					}))
+				},
+				AchainableCommand::Amount(arg) => {
 					Achainable(AchainableParams::Amount(AchainableAmount {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						amount: to_para_str(&arg.amount),
-					})),
-				AchainableCommand::Amounts(arg) =>
+					}))
+				},
+				AchainableCommand::Amounts(arg) => {
 					Achainable(AchainableParams::Amounts(AchainableAmounts {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						amount1: to_para_str(&arg.amount1),
 						amount2: to_para_str(&arg.amount2),
-					})),
-				AchainableCommand::Basic(arg) =>
+					}))
+				},
+				AchainableCommand::Basic(arg) => {
 					Achainable(AchainableParams::Basic(AchainableBasic {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
-					})),
-				AchainableCommand::BetweenPercents(arg) =>
+					}))
+				},
+				AchainableCommand::BetweenPercents(arg) => {
 					Achainable(AchainableParams::BetweenPercents(AchainableBetweenPercents {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						greater_than_or_equal_to: to_para_str(&arg.greater_than_or_equal_to),
 						less_than_or_equal_to: to_para_str(&arg.less_than_or_equal_to),
-					})),
-				AchainableCommand::ClassOfYear(arg) =>
+					}))
+				},
+				AchainableCommand::ClassOfYear(arg) => {
 					Achainable(AchainableParams::ClassOfYear(AchainableClassOfYear {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
-					})),
-				AchainableCommand::DateInterval(arg) =>
+					}))
+				},
+				AchainableCommand::DateInterval(arg) => {
 					Achainable(AchainableParams::DateInterval(AchainableDateInterval {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						start_date: to_para_str(&arg.start_date),
 						end_date: to_para_str(&arg.end_date),
-					})),
-				AchainableCommand::DatePercent(arg) =>
+					}))
+				},
+				AchainableCommand::DatePercent(arg) => {
 					Achainable(AchainableParams::DatePercent(AchainableDatePercent {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						date: to_para_str(&arg.date),
 						percent: to_para_str(&arg.percent),
 						token: to_para_str(&arg.token),
-					})),
-				AchainableCommand::Date(arg) =>
+					}))
+				},
+				AchainableCommand::Date(arg) => {
 					Achainable(AchainableParams::Date(AchainableDate {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						date: to_para_str(&arg.date),
-					})),
-				AchainableCommand::Token(arg) =>
+					}))
+				},
+				AchainableCommand::Token(arg) => {
 					Achainable(AchainableParams::Token(AchainableToken {
 						name: to_para_str(&arg.name),
 						chain: to_chains(&arg.chain),
 						token: to_para_str(&arg.token),
-					})),
+					}))
+				},
 			}),
 			Command::A20 => Ok(A20),
 			Command::OneBlock(c) => Ok(match c {
@@ -380,33 +391,41 @@ impl Command {
 			}),
 			Command::GenericDiscordRole(c) => Ok(match c {
 				GenericDiscordRoleCommand::Contest(s) => match s {
-					ContestCommand::Legend =>
-						GenericDiscordRole(GenericDiscordRoleType::Contest(ContestType::Legend)),
-					ContestCommand::Popularity =>
-						GenericDiscordRole(GenericDiscordRoleType::Contest(ContestType::Popularity)),
+					ContestCommand::Legend => {
+						GenericDiscordRole(GenericDiscordRoleType::Contest(ContestType::Legend))
+					},
+					ContestCommand::Popularity => {
+						GenericDiscordRole(GenericDiscordRoleType::Contest(ContestType::Popularity))
+					},
 					ContestCommand::Participant => GenericDiscordRole(
 						GenericDiscordRoleType::Contest(ContestType::Participant),
 					),
 				},
 				GenericDiscordRoleCommand::SoraQuiz(s) => match s {
-					SoraQuizCommand::Attendee =>
-						GenericDiscordRole(GenericDiscordRoleType::SoraQuiz(SoraQuizType::Attendee)),
-					SoraQuizCommand::Master =>
-						GenericDiscordRole(GenericDiscordRoleType::SoraQuiz(SoraQuizType::Master)),
+					SoraQuizCommand::Attendee => {
+						GenericDiscordRole(GenericDiscordRoleType::SoraQuiz(SoraQuizType::Attendee))
+					},
+					SoraQuizCommand::Master => {
+						GenericDiscordRole(GenericDiscordRoleType::SoraQuiz(SoraQuizType::Master))
+					},
 				},
 			}),
 			Command::BnbDomainHolding => Ok(BnbDomainHolding),
 			Command::BnbDigitalDomainClub(c) => Ok(match c {
-				BnbDigitalDomainClubCommand::Bnb999ClubMember =>
-					BnbDigitDomainClub(BnbDigitDomainType::Bnb999ClubMember),
-				BnbDigitalDomainClubCommand::Bnb10kClubMember =>
-					BnbDigitDomainClub(BnbDigitDomainType::Bnb10kClubMember),
+				BnbDigitalDomainClubCommand::Bnb999ClubMember => {
+					BnbDigitDomainClub(BnbDigitDomainType::Bnb999ClubMember)
+				},
+				BnbDigitalDomainClubCommand::Bnb10kClubMember => {
+					BnbDigitDomainClub(BnbDigitDomainType::Bnb10kClubMember)
+				},
 			}),
 			Command::VIP3MembershipCard(arg) => Ok(match arg {
-				VIP3MembershipCardLevelCommand::Gold =>
-					VIP3MembershipCard(VIP3MembershipCardLevel::Gold),
-				VIP3MembershipCardLevelCommand::Silver =>
-					VIP3MembershipCard(VIP3MembershipCardLevel::Silver),
+				VIP3MembershipCardLevelCommand::Gold => {
+					VIP3MembershipCard(VIP3MembershipCardLevel::Gold)
+				},
+				VIP3MembershipCardLevelCommand::Silver => {
+					VIP3MembershipCard(VIP3MembershipCardLevel::Silver)
+				},
 			}),
 			Command::WeirdoGhostGangHolder => Ok(WeirdoGhostGangHolder),
 			Command::EVMAmountHolding(c) => Ok(match c {
@@ -449,8 +468,9 @@ impl Command {
 			}),
 			Command::PlatformUser(arg) => Ok(match arg {
 				PlatformUserCommand::KaratDao => PlatformUser(PlatformUserType::KaratDao),
-				PlatformUserCommand::MagicCraftStaking =>
-					PlatformUser(PlatformUserType::MagicCraftStaking),
+				PlatformUserCommand::MagicCraftStaking => {
+					PlatformUser(PlatformUserType::MagicCraftStaking)
+				},
 				PlatformUserCommand::DarenMarket => PlatformUser(PlatformUserType::DarenMarket),
 			}),
 			Command::NftHolder(arg) => Ok(match arg {

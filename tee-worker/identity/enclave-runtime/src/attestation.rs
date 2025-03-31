@@ -65,13 +65,13 @@ use std::{prelude::v1::*, slice, vec::Vec};
 #[no_mangle]
 pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize) -> sgx_status_t {
 	if mrenclave.is_null() || mrenclave_size < MR_ENCLAVE_SIZE {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	match attestation_handler.get_mrenclave() {
@@ -81,7 +81,7 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize
 				write_slice_and_whitespace_pad(mrenclave_slice, mrenclave_value.to_vec())
 			{
 				error!("Failed to transfer mrenclave to o-call buffer: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
+				return sgx_status_t::SGX_ERROR_UNEXPECTED;
 			}
 			sgx_status_t::SGX_SUCCESS
 		},
@@ -101,7 +101,7 @@ pub fn create_ra_report_and_signature(
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
-			return Err(e.into())
+			return Err(e.into());
 		},
 	};
 
@@ -141,14 +141,16 @@ pub unsafe extern "C" fn generate_ias_ra_extrinsic(
 	skip_ra: c_int,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let url = match String::decode(&mut url_slice) {
 		// Litentry: the teebag extrinsic expects an URL with plain utf8 encoded Vec<u8>, not string scale-encoded
 		Ok(url) => url.as_bytes().to_vec(),
-		Err(_) =>
-			return EnclaveError::Other("Could not decode url slice to a valid String".into()).into(),
+		Err(_) => {
+			return EnclaveError::Other("Could not decode url slice to a valid String".into())
+				.into()
+		},
 	};
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
@@ -178,14 +180,16 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	quote_size: Option<&u32>,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let url = match String::decode(&mut url_slice) {
 		// Litentry: the teebag extrinsic expects an URL with plain utf8 encoded Vec<u8>, not string scale-encoded
 		Ok(url) => url.as_bytes().to_vec(),
-		Err(_) =>
-			return EnclaveError::Other("Could not decode url slice to a valid String".into()).into(),
+		Err(_) => {
+			return EnclaveError::Other("Could not decode url slice to a valid String".into())
+				.into()
+		},
 	};
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
@@ -241,7 +245,7 @@ pub unsafe extern "C" fn generate_dcap_ra_quote(
 	dcap_quote_size: u32,
 ) -> sgx_status_t {
 	if dcap_quote_p.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let dcap_quote = match generate_dcap_ra_quote_internal(
 		skip_ra == 1,
@@ -255,7 +259,7 @@ pub unsafe extern "C" fn generate_dcap_ra_quote(
 	let dcap_quote_slice = slice::from_raw_parts_mut(dcap_quote_p, dcap_quote_size as usize);
 
 	if let Err(e) = write_slice_and_whitespace_pad(dcap_quote_slice, dcap_quote) {
-		return EnclaveError::BufferError(e).into()
+		return EnclaveError::BufferError(e).into();
 	};
 
 	sgx_status_t::SGX_SUCCESS
@@ -288,14 +292,16 @@ pub unsafe extern "C" fn generate_dcap_ra_extrinsic_from_quote(
 	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if w_url.is_null() || unchecked_extrinsic.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
 	let url = match String::decode(&mut url_slice) {
 		// Litentry: the teebag extrinsic expects an URL with plain utf8 encoded Vec<u8>, not string scale-encoded
 		Ok(url) => url.as_bytes().to_vec(),
-		Err(_) =>
-			return EnclaveError::Other("Could not decode url slice to a valid String".into()).into(),
+		Err(_) => {
+			return EnclaveError::Other("Could not decode url slice to a valid String".into())
+				.into()
+		},
 	};
 
 	let extrinsic_slice =
@@ -435,7 +441,7 @@ pub unsafe extern "C" fn generate_register_quoting_enclave_extrinsic(
 	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if unchecked_extrinsic.is_null() || collateral.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
@@ -467,7 +473,7 @@ pub unsafe extern "C" fn generate_register_tcb_info_extrinsic(
 	unchecked_extrinsic_size: *mut u32,
 ) -> sgx_status_t {
 	if unchecked_extrinsic.is_null() || collateral.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let extrinsic_slice =
 		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
@@ -519,7 +525,7 @@ pub extern "C" fn dump_ias_ra_cert_to_disk() -> sgx_status_t {
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	match attestation_handler.dump_ias_ra_cert_to_disk() {
@@ -537,7 +543,7 @@ pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(
 		Ok(r) => r,
 		Err(e) => {
 			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	match attestation_handler.dump_dcap_ra_cert_to_disk(quoting_enclave_target_info, quote_size) {

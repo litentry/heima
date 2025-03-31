@@ -115,9 +115,10 @@ pub enum LitentryMultiSignature {
 impl LitentryMultiSignature {
 	pub fn verify(&self, msg: &[u8], signer: &Identity) -> bool {
 		match signer {
-			Identity::Substrate(address) =>
+			Identity::Substrate(address) => {
 				self.verify_substrate(substrate_wrap(msg).as_slice(), address)
-					|| self.verify_substrate(msg, address),
+					|| self.verify_substrate(msg, address)
+			},
 			Identity::Evm(address) => self.verify_evm(msg, address),
 			Identity::Bitcoin(address) => self.verify_bitcoin(msg, address),
 			Identity::Solana(address) => self.verify_solana(msg, address),
@@ -138,8 +139,9 @@ impl LitentryMultiSignature {
 			(Self::Ecdsa(ref sig), who) => {
 				let m = blake2_256(msg);
 				match sp_io::crypto::secp256k1_ecdsa_recover_compressed(sig.as_ref(), &m) {
-					Ok(pubkey) =>
-						&blake2_256(pubkey.as_ref()) == <dyn AsRef<[u8; 32]>>::as_ref(who),
+					Ok(pubkey) => {
+						&blake2_256(pubkey.as_ref()) == <dyn AsRef<[u8; 32]>>::as_ref(who)
+					},
 					_ => false,
 				}
 			},
@@ -149,21 +151,23 @@ impl LitentryMultiSignature {
 
 	fn verify_evm(&self, msg: &[u8], signer: &Address20) -> bool {
 		match self {
-			Self::Ethereum(ref sig) =>
+			Self::Ethereum(ref sig) => {
 				return verify_evm_signature(evm_eip191_wrap(msg).as_slice(), sig, signer)
-					|| verify_evm_signature(msg, sig, signer),
+					|| verify_evm_signature(msg, sig, signer)
+			},
 			_ => false,
 		}
 	}
 
 	fn verify_bitcoin(&self, msg: &[u8], signer: &Address33) -> bool {
 		match self {
-			Self::Bitcoin(ref sig) =>
+			Self::Bitcoin(ref sig) => {
 				verify_bitcoin_signature(hex::encode(msg).as_str(), sig, signer)
 					|| match std::str::from_utf8(msg) {
 						Err(_) => false,
 						Ok(prettified) => verify_bitcoin_signature(prettified, sig, signer),
-					},
+					}
+			},
 			_ => false,
 		}
 	}
@@ -188,7 +192,7 @@ pub fn verify_evm_signature(msg: &[u8], sig: &EthereumSignature, who: &Address20
 			error!("Could not verify evm signature msg: {:?}, signer {:?}", msg, who);
 			false
 		},
-	}
+	};
 }
 
 pub fn verify_bitcoin_signature(msg: &str, sig: &BitcoinSignature, who: &Address33) -> bool {
@@ -201,7 +205,7 @@ pub fn verify_bitcoin_signature(msg: &str, sig: &BitcoinSignature, who: &Address
 				error!("Could not recover pubkey from bitcoin msg: {:?}, signer {:?}", msg, who);
 				false
 			},
-		}
+		};
 	}
 
 	false

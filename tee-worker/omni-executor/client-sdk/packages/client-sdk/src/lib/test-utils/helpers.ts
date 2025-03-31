@@ -2,7 +2,7 @@ import { ApiPromise } from '@polkadot/api';
 import { Option, Vec } from '@polkadot/types-codec';
 import { AccountId32 } from '@polkadot/types/interfaces';
 
-import { CorePrimitivesOmniAccountMemberAccount } from '@heima-network/parachain-api';
+import { MemberAccount } from '@heima-network/parachain-api';
 
 /**
  * Retrieves and waits for the account store to be created for the specified account.
@@ -17,8 +17,8 @@ import { CorePrimitivesOmniAccountMemberAccount } from '@heima-network/parachain
 export async function getAndWaitForAccountStoreCreation(
   api: ApiPromise,
   account: string | AccountId32 | Uint8Array,
-): Promise<CorePrimitivesOmniAccountMemberAccount[]> {
-  let accountStore: Option<Vec<CorePrimitivesOmniAccountMemberAccount>> | undefined;
+): Promise<MemberAccount[]> {
+  let accountStore: Option<Vec<MemberAccount>> | undefined;
 
   // wait account store created
   while (true) {

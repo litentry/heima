@@ -23,7 +23,7 @@ pub fn hex_to_number(input: Vec<u8>) -> PrecompileResult {
 		Ok(d) => d,
 		Err(e) => {
 			log::debug!("Could not decode string {:?}, reason: {:?}", input, e);
-			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 		},
 	};
 
@@ -36,13 +36,13 @@ pub fn hex_to_number(input: Vec<u8>) -> PrecompileResult {
 				Ok(n) => n,
 				Err(e) => {
 					log::debug!("Cannot parse hex {:?} to U256, reason: {:?}", s, e);
-					return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+					return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 				},
 			}
 		},
 		None => {
 			log::debug!("Could not decode input {:?}, reason: string value is invalid", input);
-			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Uint(Default::default())));
 		},
 	};
 

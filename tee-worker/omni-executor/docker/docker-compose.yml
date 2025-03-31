@@ -24,7 +24,7 @@ services:
     ports:
       - "2100:2100"
     healthcheck:
-      test: [ "CMD-SHELL", "curl -X POST -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"get_health\",\"id\":1}' http://localhost:2100 || exit 1"]
+      test: [ "CMD-SHELL", "curl -X POST -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"omni_getHealth\",\"id\":1}' http://localhost:2100 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5

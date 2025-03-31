@@ -298,7 +298,7 @@ pub mod pallet {
 			IDGraphLens::<T>::try_mutate(owner, |len| {
 				let new_len = len.checked_add(1).ok_or(Error::<T>::IDGraphLenLimitReached)?;
 				if new_len > T::MaxIDGraphLength::get() {
-					return Err(Error::<T>::IDGraphLenLimitReached.into())
+					return Err(Error::<T>::IDGraphLenLimitReached.into());
 				}
 				*len = new_len;
 				Result::<(), DispatchError>::Ok(())

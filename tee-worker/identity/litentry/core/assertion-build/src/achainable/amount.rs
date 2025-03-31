@@ -176,7 +176,7 @@ fn get_assertion_content(
 			"You are a deployer of a smart contract on these networks: Ethereum",
 			"Contract Creator",
 			"$is_contract_creator",
-		)
+		);
 	}
 
 	if name == BALANCE_OVER_AMOUNT {
@@ -190,7 +190,7 @@ fn get_assertion_content(
 			"Unsupported"
 		};
 
-		return ("The number of a particular token you hold > 0", "Token Holder", c)
+		return ("The number of a particular token you hold > 0", "Token Holder", c);
 	}
 
 	("", "", "")

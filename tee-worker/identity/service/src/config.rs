@@ -149,7 +149,7 @@ impl Config {
 				// Can be done better, but this code is obsolete anyhow with clap v4.
 				self.target_a_parentchain_rpc_url.clone().unwrap(),
 				self.target_a_parentchain_rpc_port.clone().unwrap()
-			))
+			));
 		};
 
 		None
@@ -164,7 +164,7 @@ impl Config {
 				// Can be done better, but this code is obsolete anyhow with clap v4.
 				self.target_b_parentchain_rpc_url.clone().unwrap(),
 				self.target_b_parentchain_rpc_port.clone().unwrap()
-			))
+			));
 		};
 
 		None

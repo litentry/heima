@@ -77,7 +77,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	// Test can only be run in Sidechain mode
 	if WorkerModeProvider::worker_mode() != WorkerMode::Sidechain {
 		info!("Ignoring sidechain block production test: Not in sidechain mode");
-		return
+		return;
 	}
 
 	let _ = env_logger::builder().is_test(true).try_init();

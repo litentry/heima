@@ -19,6 +19,8 @@ pub use validation_data::{
 	DiscordValidationData, TwitterValidationData, ValidationData, Web2ValidationData,
 	Web3ValidationData,
 };
+mod auth;
+pub use auth::*;
 
 pub mod signature;
 pub mod utils;

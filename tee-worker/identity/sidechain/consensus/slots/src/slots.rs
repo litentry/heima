@@ -44,7 +44,7 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 
 	if slot_duration.as_millis() == u128::default() {
 		log::warn!("[Slots]: slot_duration.as_millis() is 0");
-		return Default::default()
+		return Default::default();
 	}
 
 	let next_slot = (now + slot_duration.as_millis()) / slot_duration.as_millis();
@@ -98,7 +98,7 @@ impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 	pub fn duration_remaining(&self) -> Option<Duration> {
 		let duration_now = duration_now();
 		if self.ends_at <= duration_now {
-			return None
+			return None;
 		}
 		Some(self.ends_at - duration_now)
 	}
@@ -150,14 +150,14 @@ where
 	ParentchainBlock: ParentchainBlockTrait,
 {
 	if duration == Default::default() {
-		return Err(ConsensusError::Other("Tried to yield next slot with 0 duration".into()))
+		return Err(ConsensusError::Other("Tried to yield next slot with 0 duration".into()));
 	}
 
 	let last_slot = last_slot_getter.get_last_slot()?;
 	let slot = slot_from_timestamp_and_duration(timestamp, duration);
 
 	if slot <= last_slot {
-		return Ok(None)
+		return Ok(None);
 	}
 
 	last_slot_getter.set_last_slot(slot)?;

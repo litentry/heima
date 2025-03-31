@@ -66,7 +66,7 @@ fn get_qve_report_on_quote(
 		|| p_supplemental_data.is_null()
 		|| supplemental_data_size == 0
 	{
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER
+		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
 	}
 	let quote: Vec<u8> = unsafe { slice::from_raw_parts(p_quote, quote_len as usize).to_vec() };
 	let quote_collateral = unsafe { &*p_quote_collateral };
@@ -82,7 +82,7 @@ fn get_qve_report_on_quote(
 		Ok(return_values) => return_values,
 		Err(e) => {
 			error!("Failed to get quote: {:?}", e);
-			return e.into()
+			return e.into();
 		},
 	};
 

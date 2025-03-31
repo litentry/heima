@@ -354,7 +354,7 @@ where
 			Ok(_) => info!("Cert is good"),
 			Err(e) => {
 				error!("Cert verification error {:?}", e);
-				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 			},
 		}
 
@@ -364,7 +364,7 @@ where
 			Ok(_) => info!("Signature good"),
 			Err(e) => {
 				error!("Signature verification error {:?}", e);
-				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+				return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 			},
 		}
 
@@ -400,7 +400,7 @@ where
 		info!("Time diff = {}", now - ts);
 	} else {
 		error!("Failed to fetch timestamp from attestation report");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 	}
 
 	// 2. Verify quote status (mandatory field)
@@ -447,7 +447,7 @@ where
 		}
 	} else {
 		error!("Failed to fetch isvEnclaveQuoteStatus from attestation report");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 	}
 
 	// 3. Verify quote body
@@ -463,7 +463,7 @@ where
 				"mr_enclave is not equal to self {:?} != {:?}",
 				sgx_quote.report_body.mr_enclave.m, ti.m
 			);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		// ATTENTION
@@ -490,7 +490,7 @@ where
 		}
 	} else {
 		error!("Failed to fetch isvEnclaveQuoteBody from attestation report");
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 	}
 
 	Ok(())

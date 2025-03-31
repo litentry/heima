@@ -1,4 +1,5 @@
-import { WsProvider, ApiPromise, CorePrimitivesTeebagTypesEnclave } from 'parachain-api';
+import { CorePrimitivesTeebagTypesEnclave } from 'parachain-api';
+import { ApiPromise, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';

@@ -62,7 +62,7 @@ fn get_mr_enclave_from_hex_string(input_str: &str) -> Result<[u8; SGX_HASH_SIZE]
 	let decoded_str = hex::decode(input_str)?;
 
 	if decoded_str.len() != SGX_HASH_SIZE {
-		return Err(FromHexError::InvalidStringLength)
+		return Err(FromHexError::InvalidStringLength);
 	}
 
 	let mut mr_enclave = [0u8; SGX_HASH_SIZE];

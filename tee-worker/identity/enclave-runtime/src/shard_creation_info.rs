@@ -50,7 +50,7 @@ pub unsafe extern "C" fn init_shard_creation_parentchain_header(
 		Ok(hdr) => hdr,
 		Err(e) => {
 			error!("Could not decode header: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	let parentchain_id =
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn init_shard_creation_parentchain_header(
 			Ok(id) => id,
 			Err(e) => {
 				error!("Could not decode parentchain id: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
+				return sgx_status_t::SGX_ERROR_UNEXPECTED;
 			},
 		};
 
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn init_shard_creation_parentchain_header(
 			"Failed to initialize first relevant parentchain header [{:?}]: {:?}",
 			parentchain_id, e
 		);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 	sgx_status_t::SGX_SUCCESS
 }
@@ -86,7 +86,7 @@ fn init_shard_creation_parentchain_header_internal(
 		return Err(Error::Other(
 			"first relevant parentchain header has been previously initialized. cannot change"
 				.into(),
-		))
+		));
 	}
 	debug!("initializing shard creation header: {:?}", parentchain_id);
 
@@ -95,7 +95,7 @@ fn init_shard_creation_parentchain_header_internal(
 		.shard_exists(&shard)
 		.map_err(|_| Error::Other("get shard_exists failed".into()))?
 	{
-		return Err(Error::Other("shard not initialized".into()))
+		return Err(Error::Other("shard not initialized".into()));
 	};
 
 	let (state_lock, mut state) = state_handler.load_for_mutation(&shard)?;
@@ -129,14 +129,14 @@ pub unsafe extern "C" fn get_shard_creation_info(
 		Ok(creation) => creation,
 		Err(e) => {
 			warn!("Failed to fetch creation header: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	trace!("fetched shard creation header from state: {:?}", shard_creation_info);
 
 	let creation_slice = slice::from_raw_parts_mut(creation, creation_size as usize);
 	if let Err(e) = write_slice_and_whitespace_pad(creation_slice, shard_creation_info.encode()) {
-		return Error::BufferError(e).into()
+		return Error::BufferError(e).into();
 	};
 	sgx_status_t::SGX_SUCCESS
 }

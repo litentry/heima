@@ -106,12 +106,15 @@ fn get_generic_discord_role_id(
 ) -> core::result::Result<String, ErrorDetail> {
 	match rtype {
 		GenericDiscordRoleType::Contest(ctype) => match ctype {
-			ContestType::Legend =>
-				Ok(data_provider_config.contest_legend_discord_role_id.to_string()),
-			ContestType::Popularity =>
-				Ok(data_provider_config.contest_popularity_discord_role_id.to_string()),
-			ContestType::Participant =>
-				Ok(data_provider_config.contest_participant_discord_role_id.to_string()),
+			ContestType::Legend => {
+				Ok(data_provider_config.contest_legend_discord_role_id.to_string())
+			},
+			ContestType::Popularity => {
+				Ok(data_provider_config.contest_popularity_discord_role_id.to_string())
+			},
+			ContestType::Participant => {
+				Ok(data_provider_config.contest_participant_discord_role_id.to_string())
+			},
 		},
 		GenericDiscordRoleType::SoraQuiz(qtype) => match qtype {
 			SoraQuizType::Attendee => Ok(data_provider_config.sora_quiz_attendee_id.to_string()),

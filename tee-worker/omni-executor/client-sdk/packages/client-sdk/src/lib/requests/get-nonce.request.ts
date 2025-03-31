@@ -1,6 +1,7 @@
 import { AccountId, Index } from '@polkadot/types/interfaces';
 
-import { ApiPromise, Identity } from '@heima-network/parachain-api';
+import { Identity } from '@heima-network/parachain-api';
+import { ApiPromise } from '@polkadot/api';
 
 import { toHash } from '@utils/identity';
 

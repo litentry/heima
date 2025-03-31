@@ -10,8 +10,6 @@ import "../build/interfaces/augment-api.js";
 
 export * from "@polkadot/types/lookup";
 export * from "../build/interfaces";
-export * from "@polkadot/api";
-export * from "@polkadot/api/types";
 import { default as identity } from "../build/interfaces/identity/definitions";
 import { default as vc } from "../build/interfaces/vc/definitions";
 import { default as omniAccount } from "../build/interfaces/omniAccount/definitions";

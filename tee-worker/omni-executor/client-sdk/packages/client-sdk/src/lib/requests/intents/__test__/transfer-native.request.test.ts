@@ -6,6 +6,7 @@ import { getChain } from '@heima-network/chaindata';
 import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
+import { requestAuthToken } from '@requests/request-auth-token.request';
 import { transferNative } from '@requests/intents/transfer-native.request';
 
 const types = {
@@ -26,7 +27,7 @@ describe.skip('transfer-native', () => {
     await api.isReady;
   });
 
-  it('web3 authentication', async () => {
+  it('auth token authentication', async () => {
     const keyring = new Keyring({ type: 'sr25519' });
     const memberSigner = keyring.addFromUri('//Dave');
     const member = createIdentityType(api.registry, {
@@ -34,10 +35,10 @@ describe.skip('transfer-native', () => {
       type: 'Substrate',
     });
 
-    const { send, payloadToSign = '' } = await transferNative(api, {
+    // Step 1: request auth token
+    console.log('Step 1: request auth token');
+    const { send, payloadToSign = '' } = await requestAuthToken(api, {
       member,
-      to: '5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw',
-      amount: BigInt(100),
     });
 
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
@@ -50,8 +51,23 @@ describe.skip('transfer-native', () => {
       },
     });
 
-    expect(result.extrinsicHash.length).toBe(66);
-    expect(result.blockHash.length).toBe(66);
-    expect(result.status).toBeDefined();
+    const token = result.token;
+    expect(token).toBeDefined();
+
+    // Step 2: transfer native
+    console.log('Step 2: transfer native');
+    await (async () => {
+      const { send } = await transferNative(api, {
+        member,
+        to: '5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw',
+        amount: BigInt(100),
+      });
+
+      const result = await send({ authentication: { type: 'AuthToken', token } });
+
+      expect(result.extrinsicHash.length).toBe(66);
+      expect(result.blockHash.length).toBe(66);
+      expect(result.status).toBeDefined();
+    })();
   });
 });
