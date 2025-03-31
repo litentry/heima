@@ -70,7 +70,7 @@ impl<Item> PopFromQueue for ImportQueue<Item> {
 		let mut queue_lock = self.queue.write().map_err(|_| Error::PoisonedLock)?;
 		let queue_length = queue_lock.len();
 		if queue_length < 2 {
-			return Ok(Vec::<Item>::default())
+			return Ok(Vec::<Item>::default());
 		}
 		Ok(queue_lock.drain(..queue_length - 1).collect::<Vec<_>>())
 	}
@@ -101,7 +101,7 @@ impl<Item> PopFromQueue for ImportQueue<Item> {
 		if amount > queue_lock.len() {
 			return Err(Error::Other(
 				"Cannot Pop more items from the queue than are available".into(),
-			))
+			));
 		}
 		Ok(queue_lock.drain(..amount).collect::<Vec<_>>())
 	}

@@ -85,7 +85,7 @@ fn fetch_sidechain_blocks_from_peer(
 		Ok(r) => r,
 		Err(e) => {
 			error!("fetch sidechain blocks from peer failed: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -95,7 +95,7 @@ fn fetch_sidechain_blocks_from_peer(
 		write_slice_and_whitespace_pad(sidechain_blocks_encoded_slice, sidechain_blocks_encoded)
 	{
 		error!("Failed to transfer encoded sidechain blocks to o-call buffer: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS

@@ -469,7 +469,7 @@ mod impl_ffi {
 
 			if collateral_ptr.is_null() {
 				error!("PCK quote collateral data is null, sgx_status is: {}", sgx_status);
-				return Err(Error::SgxQuote(sgx_status))
+				return Err(Error::SgxQuote(sgx_status));
 			}
 
 			trace!("collateral:");
@@ -619,7 +619,7 @@ mod impl_ffi {
 
 			if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
 				error!("sgx_qv_set_enclave_load_policy failed: {:#04x}", dcap_ret as u32);
-				return Err(Error::SgxQuote(dcap_ret))
+				return Err(Error::SgxQuote(dcap_ret));
 			}
 
 			// Retrieve supplemental data size from QvE.
@@ -629,11 +629,11 @@ mod impl_ffi {
 
 			if dcap_ret != sgx_quote3_error_t::SGX_QL_SUCCESS {
 				error!("sgx_qv_get_quote_supplemental_data_size failed: {:?}", dcap_ret);
-				return Err(Error::SgxQuote(dcap_ret))
+				return Err(Error::SgxQuote(dcap_ret));
 			}
 			if qve_supplemental_data_size != supplemental_data_size {
 				warn!("Quote supplemental data size is different between DCAP QVL and QvE, please make sure you installed DCAP QVL and QvE from same release.");
-				return Err(Error::Sgx(sgx_status_t::SGX_ERROR_INVALID_PARAMETER))
+				return Err(Error::Sgx(sgx_status_t::SGX_ERROR_INVALID_PARAMETER));
 			}
 
 			// Check if a collateral has been given, or if it's a simple zero assignment.
@@ -668,7 +668,7 @@ mod impl_ffi {
 			if sgx_quote3_error_t::SGX_QL_SUCCESS != dcap_ret {
 				error!("sgx_qv_verify_quote failed: {:?}", dcap_ret);
 				error!("quote_verification_result: {:?}", quote_verification_result);
-				return Err(Error::SgxQuote(dcap_ret))
+				return Err(Error::SgxQuote(dcap_ret));
 			}
 
 			// Check and print verification result.
@@ -840,7 +840,7 @@ mod impl_ffi {
 		let ret_val = unsafe { sgx_ql_set_path(path_type, create_system_path(path).as_ptr() as _) };
 		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
 			error!("Could not set {:?}", path_type);
-			return Err(Error::SgxQuote(ret_val))
+			return Err(Error::SgxQuote(ret_val));
 		}
 		Ok(())
 	}
@@ -849,7 +849,7 @@ mod impl_ffi {
 		let ret_val = unsafe { sgx_qv_set_path(path_type, create_system_path(path).as_ptr() as _) };
 		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
 			error!("Could not set {:?}", path_type);
-			return Err(Error::SgxQuote(ret_val))
+			return Err(Error::SgxQuote(ret_val));
 		}
 		Ok(())
 	}
@@ -860,7 +860,7 @@ mod impl_ffi {
 	pub extern "C" fn forward_qpl_log(log_level: sgx_ql_log_level_t, log_slice_ptr: *const c_char) {
 		if log_slice_ptr.is_null() {
 			error!("[QPL - ERROR], slice to print was NULL");
-			return
+			return;
 		}
 		// This is safe, as the previous block checks for `NULL` pointer.
 		let slice = unsafe { core::ffi::CStr::from_ptr(log_slice_ptr) };

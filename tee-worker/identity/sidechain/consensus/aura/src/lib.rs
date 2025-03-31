@@ -210,12 +210,12 @@ impl<
 
 		if expected_author == &self.authority_pair.public() {
 			log::info!("Claiming slot ({})", *slot);
-			return Some(self.authority_pair.public())
+			return Some(self.authority_pair.public());
 		}
 
 		if self.claim_strategy == SlotClaimStrategy::Always {
 			log::debug!("Not our slot but we still claim it.");
-			return Some(self.authority_pair.public())
+			return Some(self.authority_pair.public());
 		}
 
 		None

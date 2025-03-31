@@ -92,8 +92,9 @@ pub(crate) fn perform_trusted_operation<T: Decode + Debug>(
 	match top {
 		TrustedOperation::indirect_call(_) => send_indirect_request::<T>(cli, trusted_args, top),
 		TrustedOperation::direct_call(_) => send_direct_request::<T>(cli, trusted_args, top),
-		TrustedOperation::get(getter) =>
-			execute_getter_from_cli_args::<T>(cli, trusted_args, getter),
+		TrustedOperation::get(getter) => {
+			execute_getter_from_cli_args::<T>(cli, trusted_args, getter)
+		},
 	}
 }
 
@@ -138,7 +139,7 @@ pub(crate) fn get_state<T: Decode + Debug>(
 		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
 		return Err(TrustedOperationError::Default {
 			msg: "[Error] DirectRequestStatus::Error".to_string(),
-		})
+		});
 	}
 
 	let maybe_state: Option<Vec<u8>> = Option::decode(&mut rpc_return_value.value.as_slice())
@@ -200,7 +201,9 @@ fn send_indirect_request<T: Decode + Debug>(
 		},
 		Err(e) => {
 			error!("invoke TrustedOperation extrinsic failed {:?}", e);
-			return Err(TrustedOperationError::IndirectInvocationFailed { msg: format!("{:?}", e) })
+			return Err(TrustedOperationError::IndirectInvocationFailed {
+				msg: format!("{:?}", e),
+			});
 		},
 	};
 	let invocation_block_number = chain_api
@@ -218,7 +221,7 @@ fn send_indirect_request<T: Decode + Debug>(
 		let events = subscription.next_events_from_metadata().unwrap().unwrap();
 		blocks += 1;
 		if blocks > TIMEOUT_BLOCKS {
-			return Err(TrustedOperationError::ConfirmationTimedOut(blocks))
+			return Err(TrustedOperationError::ConfirmationTimedOut(blocks));
 		}
 		for event in events.iter() {
 			let event = event.unwrap();
@@ -237,7 +240,7 @@ fn send_indirect_request<T: Decode + Debug>(
 								return Err(TrustedOperationError::ConfirmedBlockNumberTooHigh(
 									ev.block_number,
 									invocation_block_number,
-								))
+								));
 							}
 							// The block number is correct, but the block hash does not fit.
 							if invocation_block_number == ev.block_number
@@ -248,13 +251,13 @@ fn send_indirect_request<T: Decode + Debug>(
 										ev.block_hash,
 										invocation_block_hash,
 									),
-								)
+								);
 							}
 							if ev.block_hash == invocation_block_hash {
 								let value = decode_response_value(
 									&mut invocation_block_hash.encode().as_slice(),
 								)?;
-								return Ok(value)
+								return Ok(value);
 							}
 						}
 					},
@@ -276,12 +279,13 @@ pub fn read_shard(
 			_ => panic!("shard argument must be base58 encoded"),
 		},
 		None => match trusted_args.mrenclave.clone() {
-			Some(mrenclave) =>
+			Some(mrenclave) => {
 				if let Ok(s) = mrenclave.from_base58() {
 					ShardIdentifier::decode(&mut &s[..])
 				} else {
 					panic!("Mrenclave argument must be base58 encoded")
-				},
+				}
+			},
 			None => {
 				// Fetch mrenclave from worker
 				let direct_api = get_worker_api_direct(cli);
@@ -328,7 +332,7 @@ fn send_direct_request<T: Decode + Debug>(
 							direct_api.close().unwrap();
 							return Err(TrustedOperationError::Default {
 								msg: "[Error] DirectRequestStatus::Error".to_string(),
-							})
+							});
 						},
 						DirectRequestStatus::TrustedOperationStatus(status, top_hash) => {
 							debug!("request status is: {:?}, top_hash: {:?}", status, top_hash);
@@ -343,7 +347,7 @@ fn send_direct_request<T: Decode + Debug>(
 										"[Error] Error occurred while executing trusted call: {:?}",
 										error
 									),
-								})
+								});
 							}
 							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
 								debug!("Trusted call {:?} is {:?}", value, status);
@@ -352,7 +356,7 @@ fn send_direct_request<T: Decode + Debug>(
 								direct_api.close().unwrap();
 								let value =
 									decode_response_value(&mut return_value.value.as_slice())?;
-								return Ok(value)
+								return Ok(value);
 							}
 						},
 						DirectRequestStatus::Ok => {
@@ -360,7 +364,7 @@ fn send_direct_request<T: Decode + Debug>(
 							direct_api.close().unwrap();
 							return Err(TrustedOperationError::Default {
 								msg: "Unexpected status: DirectRequestStatus::Ok".to_string(),
-							})
+							});
 						},
 						DirectRequestStatus::Processing(hash) => {
 							debug!("request status (Processing) is ignored, hash: {:?}", hash);
@@ -368,7 +372,7 @@ fn send_direct_request<T: Decode + Debug>(
 							return Err(TrustedOperationError::Default {
 								msg: "Unexpected status: DirectRequestStatus::Processing"
 									.to_string(),
-							})
+							});
 						},
 					}
 				};
@@ -378,7 +382,7 @@ fn send_direct_request<T: Decode + Debug>(
 				direct_api.close().unwrap();
 				return Err(TrustedOperationError::Default {
 					msg: "failed to receive rpc response".to_string(),
-				})
+				});
 			},
 		};
 	}
@@ -411,7 +415,7 @@ pub(crate) fn send_direct_vc_request(
 						// There will be one response coming back immediately from RPC callback to indicate
 						// the request is already submitted and will be processed later.
 						ignore_first = false;
-						continue
+						continue;
 					}
 					req_cnt += 1;
 					match return_value.status {
@@ -425,7 +429,7 @@ pub(crate) fn send_direct_vc_request(
 								vec_result.push(value);
 								if req_cnt >= len {
 									client.close().unwrap();
-									return Ok(vec_result)
+									return Ok(vec_result);
 								}
 							} else {
 								// Should never happen.
@@ -434,7 +438,7 @@ pub(crate) fn send_direct_vc_request(
 								return Err(TrustedOperationError::Default {
 									msg: "[Error] failed to decode RequestVcResultOrError."
 										.to_string(),
-								})
+								});
 							}
 						},
 						_ => {
@@ -444,7 +448,7 @@ pub(crate) fn send_direct_vc_request(
 							return Err(TrustedOperationError::Default {
 								msg: "[Error] Wrong RpcReturnValue. Should never happen."
 									.to_string(),
-							})
+							});
 						},
 					}
 				};
@@ -454,7 +458,7 @@ pub(crate) fn send_direct_vc_request(
 				client.close().unwrap();
 				return Err(TrustedOperationError::Default {
 					msg: "failed to receive rpc response".to_string(),
-				})
+				});
 			},
 		};
 	}
@@ -537,7 +541,7 @@ pub(crate) fn wait_until(
 								{
 									error!("{}", value);
 								}
-								return None
+								return None;
 							},
 							DirectRequestStatus::TrustedOperationStatus(status, top_hash) => {
 								debug!("request status is: {:?}, top_hash: {:?}", status, top_hash);
@@ -545,20 +549,20 @@ pub(crate) fn wait_until(
 								{
 									debug!("Trusted call {:?} is {:?}", value, status);
 									if until(status.clone()) {
-										return Some((top_hash, Instant::now()))
+										return Some((top_hash, Instant::now()));
 									} else if status == TrustedOperationStatus::Invalid {
 										error!("Invalid request");
-										return None
+										return None;
 									}
 								}
 							},
 							DirectRequestStatus::Ok => {
 								debug!("request status (Ok) is ignored");
-								return None
+								return None;
 							},
 							DirectRequestStatus::Processing(hash) => {
 								debug!("request status (Processing) is ignored, hash: {:?}", hash);
-								return None
+								return None;
 							},
 						}
 					};
@@ -568,7 +572,7 @@ pub(crate) fn wait_until(
 			},
 			Err(e) => {
 				error!("failed to receive rpc response: {:?}", e);
-				return None
+				return None;
 			},
 		};
 	}

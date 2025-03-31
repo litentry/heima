@@ -103,7 +103,7 @@ where
 	async fn broadcast_blocks(&self, blocks: Vec<SignedSidechainBlock>) -> WorkerResult<()> {
 		if blocks.is_empty() {
 			debug!("No blocks to broadcast, returning");
-			return Ok(())
+			return Ok(());
 		}
 		let nr_blocks = blocks.len();
 		let encoded_blocks = blocks.to_hex();

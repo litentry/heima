@@ -61,7 +61,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	// Test can only be run in Sidechain mode
 	if WorkerModeProvider::worker_mode() != WorkerMode::Sidechain {
 		info!("Ignoring sidechain block production test: Not in sidechain mode");
-		return
+		return;
 	}
 
 	let _ = env_logger::builder().is_test(true).try_init();

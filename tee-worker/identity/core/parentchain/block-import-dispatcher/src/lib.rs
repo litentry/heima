@@ -80,16 +80,18 @@ impl<TriggeredDispatcher, ImmediateDispatcher>
 
 	pub fn triggered_dispatcher(&self) -> Option<Arc<TriggeredDispatcher>> {
 		match self {
-			BlockImportDispatcher::TriggeredDispatcher(triggered_dispatcher) =>
-				Some(triggered_dispatcher.clone()),
+			BlockImportDispatcher::TriggeredDispatcher(triggered_dispatcher) => {
+				Some(triggered_dispatcher.clone())
+			},
 			_ => None,
 		}
 	}
 
 	pub fn immediate_dispatcher(&self) -> Option<Arc<ImmediateDispatcher>> {
 		match self {
-			BlockImportDispatcher::ImmediateDispatcher(immediate_dispatcher) =>
-				Some(immediate_dispatcher.clone()),
+			BlockImportDispatcher::ImmediateDispatcher(immediate_dispatcher) => {
+				Some(immediate_dispatcher.clone())
+			},
 			_ => None,
 		}
 	}

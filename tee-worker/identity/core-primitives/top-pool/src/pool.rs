@@ -418,7 +418,7 @@ where
 
 		let ignore_banned = matches!(check, CheckBannedBeforeVerify::No);
 		if let Err(err) = self.validated_pool.check_is_known(&hash, ignore_banned, shard) {
-			return (hash, ValidatedOperation::Invalid(hash, err))
+			return (hash, ValidatedOperation::Invalid(hash, err));
 		}
 
 		//FIXME:
@@ -432,7 +432,7 @@ where
 		};
 
 		let validity = match status {
-			Ok(validity) =>
+			Ok(validity) => {
 				if validity.provides.is_empty() {
 					ValidatedOperation::Invalid(hash, error::Error::NoTagsProvided.into())
 				} else {
@@ -444,11 +444,14 @@ where
 						bytes,
 						validity,
 					)
-				},
-			Err(TransactionValidityError::Invalid(_e)) =>
-				ValidatedOperation::Invalid(hash, error::Error::InvalidTrustedOperation.into()),
-			Err(TransactionValidityError::Unknown(_e)) =>
-				ValidatedOperation::Unknown(hash, error::Error::UnknownTrustedOperation.into()),
+				}
+			},
+			Err(TransactionValidityError::Invalid(_e)) => {
+				ValidatedOperation::Invalid(hash, error::Error::InvalidTrustedOperation.into())
+			},
+			Err(TransactionValidityError::Unknown(_e)) => {
+				ValidatedOperation::Unknown(hash, error::Error::UnknownTrustedOperation.into())
+			},
 		};
 
 		(hash, validity)

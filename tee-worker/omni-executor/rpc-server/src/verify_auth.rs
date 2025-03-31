@@ -1,39 +1,18 @@
 use crate::server::RpcContext;
-use executor_core::native_operation::NativeOperation;
+use executor_core::native_task::NativeTaskTrait;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave,
-	OmniAccountAuthType, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave, OAuth2Data,
+	OAuth2Provider, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
 use tokio::runtime::Handle;
-
-pub type VerificationCode = String;
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum Authentication {
-	Web3(HeimaMultiSignature),
-	Email(VerificationCode),
-	AuthToken(String),
-	OAuth2(OAuth2Data),
-}
-
-impl From<Authentication> for OmniAccountAuthType {
-	fn from(value: Authentication) -> Self {
-		match value {
-			Authentication::Web3(_) => OmniAccountAuthType::Web3,
-			Authentication::Email(_) => OmniAccountAuthType::Email,
-			Authentication::OAuth2(_) => OmniAccountAuthType::OAuth2,
-			Authentication::AuthToken(_) => OmniAccountAuthType::AuthToken,
-		}
-	}
-}
 
 #[derive(Debug)]
 pub enum AuthenticationError {
@@ -42,6 +21,8 @@ pub enum AuthenticationError {
 	EmailInvalidVerificationCode,
 	OAuth2Error(String),
 	AuthTokenError(AuthTokenError),
+	InvalidNonce,
+	AuthNotExist,
 }
 
 impl Display for AuthenticationError {
@@ -62,6 +43,12 @@ impl Display for AuthenticationError {
 			AuthenticationError::AuthTokenError(err) => {
 				write!(f, "Auth token error: {:?}", err)
 			},
+			AuthenticationError::InvalidNonce => {
+				write!(f, "Invalid nonce")
+			},
+			AuthenticationError::AuthNotExist => {
+				write!(f, "Auth not exist")
+			},
 		}
 	}
 }
@@ -73,26 +60,15 @@ pub enum AuthTokenError {
 	InvalidIdentity,
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum OAuth2Provider {
-	Google,
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub struct OAuth2Data {
-	pub provider: OAuth2Provider,
-	pub code: String,
-	pub state: String,
-	pub redirect_uri: String,
-}
-
-pub fn verify_web3_authentication<OP: NativeOperation>(
+pub fn verify_web3_authentication<T: NativeTaskTrait>(
 	signature: &HeimaMultiSignature,
-	operation: &OP,
-	nonce: u32,
+	task: &T,
+	nonce: Option<u32>,
 	mrenclave: MrEnclave,
 ) -> Result<(), AuthenticationError> {
-	let mut payload = operation.encode();
+	let nonce = nonce.ok_or(AuthenticationError::InvalidNonce)?;
+
+	let mut payload = task.encode();
 	payload.append(&mut nonce.encode());
 	payload.append(&mut mrenclave.encode());
 
@@ -102,12 +78,12 @@ pub fn verify_web3_authentication<OP: NativeOperation>(
 
 	let hashed = blake2_256(&payload);
 
-	let prettified_msg_hash = operation.signature_message_prefix() + &hex_encode(&hashed);
+	let prettified_msg_hash = task.signature_message_prefix() + &hex_encode(&hashed);
 	let prettified_msg_hash = prettified_msg_hash.as_bytes();
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(prettified_msg_hash, operation.sender_identity())
-		|| signature.verify(&hashed, operation.sender_identity())
+	match signature.verify(prettified_msg_hash, task.sender())
+		|| signature.verify(&hashed, task.sender())
 	{
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
@@ -120,17 +96,17 @@ pub fn verify_email_authentication<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	sender_identity: &Identity,
+	sender: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
-	let Some(code) = verification_code_storage.get(&sender_identity.hash()) else {
+	let Some(code) = verification_code_storage.get(&sender.hash()) else {
 		return Err(AuthenticationError::EmailVerificationCodeNotFound);
 	};
 	if code != *verification_code {
 		return Err(AuthenticationError::EmailInvalidVerificationCode);
 	}
-	let _ = verification_code_storage.remove(&sender_identity.hash());
+	let _ = verification_code_storage.remove(&sender.hash());
 
 	Ok(())
 }
@@ -142,7 +118,7 @@ pub fn verify_auth_token_authentication<
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
-	sender_identity: &Identity,
+	sender: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
 	let current_block = handle
@@ -156,14 +132,14 @@ pub fn verify_auth_token_authentication<
 		})
 		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
 
-	let validation = match sender_identity {
+	let validation = match sender {
 		Identity::Email(identity_string) => {
 			let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
 				return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidIdentity));
 			};
 			Validation::new(email.to_string(), current_block)
 		},
-		_ => Validation::new(sender_identity.hash().to_string(), current_block),
+		_ => Validation::new(sender.hash().to_string(), current_block),
 	};
 
 	if auth_token.validate(&ctx.jwt_rsa_private_key, validation).is_err() {
@@ -180,11 +156,11 @@ pub fn verify_oauth2_authentication<
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
-	sender_identity: &Identity,
+	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google => verify_google_oauth2(ctx, handle, sender_identity, payload),
+		OAuth2Provider::Google => verify_google_oauth2(ctx, handle, sender, payload),
 	}
 }
 
@@ -195,11 +171,11 @@ fn verify_google_oauth2<
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
 	handle: Handle,
-	sender_identity: &Identity,
+	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
-	let Some(state_verifier) = state_verifier_storage.get(&sender_identity.hash()) else {
+	let Some(state_verifier) = state_verifier_storage.get(&sender.hash()) else {
 		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
 	};
 	if state_verifier != payload.state {
@@ -218,7 +194,7 @@ fn verify_google_oauth2<
 		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
 	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
 
-	match sender_identity.hash() == google_identity.hash() {
+	match sender.hash() == google_identity.hash() {
 		true => Ok(()),
 		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
 	}

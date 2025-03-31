@@ -201,7 +201,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -214,7 +214,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 		Ok(k) => k,
 		Err(x) => {
 			println!("[Enclave] can't serialize rsa_pubkey {:?} {}", rsa_pubkey, x);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn get_rsa_encryption_pubkey(
 	if let Err(e) =
 		write_slice_and_whitespace_pad(pubkey_slice, rsa_pubkey_json.as_bytes().to_vec())
 	{
-		return Error::BufferError(e).into()
+		return Error::BufferError(e).into();
 	};
 
 	sgx_status_t::SGX_SUCCESS
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn get_ecc_signing_pubkey(pubkey: *mut u8, pubkey_size: u3
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -261,7 +261,7 @@ pub unsafe extern "C" fn set_nonce(
 	let id = match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
 		Err(e) => {
 			error!("Failed to decode parentchain_id: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 		Ok(m) => m,
 	};
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn set_nonce(
 		Ok(mut nonce_guard) => *nonce_guard = Nonce(*nonce),
 		Err(e) => {
 			error!("Failed to set {:?} parentchain nonce in enclave: {:?}", id, e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -295,7 +295,7 @@ pub unsafe extern "C" fn set_node_metadata(
 	let id = match ParentchainId::decode_raw(parentchain_id, parentchain_id_size as usize) {
 		Err(e) => {
 			error!("Failed to decode parentchain_id: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 		Ok(m) => m,
 	};
@@ -303,7 +303,7 @@ pub unsafe extern "C" fn set_node_metadata(
 	let metadata = match NodeMetadata::decode_raw(node_metadata, node_metadata_size as usize) {
 		Err(e) => {
 			error!("Failed to decode node metadata: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 		Ok(m) => m,
 	};
@@ -320,7 +320,7 @@ pub unsafe extern "C" fn set_node_metadata(
 		Ok(repo) => repo.set_metadata(metadata),
 		Err(e) => {
 			error!("Could not get {:?} parentchain component: {:?}", id, e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -345,19 +345,19 @@ pub unsafe extern "C" fn init_enclave_sidechain_components(
 		Ok(s) => s,
 		Err(e) => {
 			error!("failed to decode fail mode {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	let fail_at = match u64::decode_raw(fail_at, fail_at_size as usize) {
 		Ok(v) => v,
 		Err(e) => {
 			error!("failed to decode fail at {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 	if let Err(e) = initialization::init_enclave_sidechain_components(fail_mode, fail_at) {
 		error!("Failed to initialize sidechain components: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -379,13 +379,13 @@ pub unsafe extern "C" fn init_direct_invocation_server(
 		Ok(s) => s,
 		Err(e) => {
 			error!("Decoding RPC server address failed. Error: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
 	if let Err(e) = initialization::init_direct_invocation_server(server_addr) {
 		error!("Failed to initialize direct invocation server: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn init_shard(shard: *const u8, shard_size: u32) -> sgx_st
 
 	if let Err(e) = initialization::init_shard(shard_identifier) {
 		error!("Failed to initialize shard ({:?}): {:?}", shard_identifier, e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -439,7 +439,7 @@ pub unsafe extern "C" fn migrate_shard(new_shard: *const u8, shard_size: u32) ->
 
 	if let Err(e) = initialization::migrate_shard(shard_identifier) {
 		error!("Failed to migrate shard ({:?}): {:?}", shard_identifier, e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -449,7 +449,7 @@ pub unsafe extern "C" fn migrate_shard(new_shard: *const u8, shard_size: u32) ->
 pub unsafe extern "C" fn init_in_memory_state() -> sgx_status_t {
 	if let Err(e) = initialization::init_in_memory_state() {
 		error!("Failed to initialize in-memory state: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 	sgx_status_t::SGX_SUCCESS
 }
@@ -458,7 +458,7 @@ pub unsafe extern "C" fn init_in_memory_state() -> sgx_status_t {
 pub unsafe extern "C" fn upload_id_graph() -> sgx_status_t {
 	if let Err(e) = initialization::upload_id_graph() {
 		error!("Failed to upload IDGraph: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -488,7 +488,7 @@ pub unsafe extern "C" fn sync_parentchain(
 		immediate_import == 1,
 	) {
 		error!("Error synching parentchain: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS
@@ -539,7 +539,7 @@ pub unsafe extern "C" fn ignore_parentchain_block_import_validation_until(
 		Ok(r) => r,
 		Err(e) => {
 			error!("Can't get validator accessor: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -583,7 +583,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 					immediate_import,
 				)?;
 			} else {
-				return Err(Error::NoLitentryParentchainAssigned)
+				return Err(Error::NoLitentryParentchainAssigned);
 			};
 		},
 		ParentchainId::TargetA => {
@@ -600,7 +600,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 					immediate_import,
 				)?;
 			} else {
-				return Err(Error::NoTargetAParentchainAssigned)
+				return Err(Error::NoTargetAParentchainAssigned);
 			};
 		},
 		ParentchainId::TargetB => {
@@ -617,7 +617,7 @@ fn dispatch_parentchain_blocks_for_import<WorkerModeProvider: ProvideWorkerMode>
 					immediate_import,
 				)?;
 			} else {
-				return Err(Error::NoTargetBParentchainAssigned)
+				return Err(Error::NoTargetBParentchainAssigned);
 			};
 		},
 	}
@@ -637,7 +637,7 @@ fn validate_events(
 	);
 
 	if events_proofs.len() != blocks_merkle_roots.len() {
-		return Err(Error::ParentChainSync)
+		return Err(Error::ParentChainSync);
 	}
 
 	let events_key = itp_storage::storage_value_key("System", "Events");

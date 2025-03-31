@@ -118,7 +118,7 @@ impl SgxQlQveCollateral {
 		let json = json.trim_matches(char::from(0));
 		let value: serde_json::Value = serde_json::from_str(json).ok()?;
 		if value[data_name].is_null() || value["signature"].is_null() {
-			return None
+			return None;
 		}
 		let data_json = serde_json::to_string(&value[data_name]).ok()?;
 		let signature = serde_json::to_string(&value["signature"]).ok()?;

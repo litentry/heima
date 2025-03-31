@@ -47,21 +47,27 @@ impl NftAddress for Web3NftType {
 	fn get_nft_address(&self, network: Web3Network) -> Option<&'static str> {
 		match (self, network) {
 			// WeirdoGhostGang
-			(Self::WeirdoGhostGang, Web3Network::Ethereum) =>
-				Some("0x9401518f4EBBA857BAA879D9f76E1Cc8b31ed197"),
+			(Self::WeirdoGhostGang, Web3Network::Ethereum) => {
+				Some("0x9401518f4EBBA857BAA879D9f76E1Cc8b31ed197")
+			},
 			// Club3Sbt
-			(Self::Club3Sbt, Web3Network::Bsc) =>
-				Some("0x9f488C0dafb1B3bFeeD3e886e0E6E5f3f4517925"),
-			(Self::Club3Sbt, Web3Network::Polygon) =>
-				Some("0xAc2e4e67cffa5E82bfA1e169e5F9aa405114C982"),
-			(Self::Club3Sbt, Web3Network::Arbitrum) =>
-				Some("0xcccFF19FB8a4a2A206d07842b8F8c8c0A11904C2"),
+			(Self::Club3Sbt, Web3Network::Bsc) => {
+				Some("0x9f488C0dafb1B3bFeeD3e886e0E6E5f3f4517925")
+			},
+			(Self::Club3Sbt, Web3Network::Polygon) => {
+				Some("0xAc2e4e67cffa5E82bfA1e169e5F9aa405114C982")
+			},
+			(Self::Club3Sbt, Web3Network::Arbitrum) => {
+				Some("0xcccFF19FB8a4a2A206d07842b8F8c8c0A11904C2")
+			},
 			// MFan
-			(Self::MFan, Web3Network::Polygon) =>
-				Some("0x9aBc7C604C27622f9CD56bd1628F6321c32bBBf6"),
+			(Self::MFan, Web3Network::Polygon) => {
+				Some("0x9aBc7C604C27622f9CD56bd1628F6321c32bBBf6")
+			},
 			// Mvp
-			(Self::Mvp, Web3Network::Ethereum) =>
-				Some("0xAA813F8691B10Dc62bd616ae90b05A52f0C40C1D"),
+			(Self::Mvp, Web3Network::Ethereum) => {
+				Some("0xAA813F8691B10Dc62bd616ae90b05A52f0C40C1D")
+			},
 			_ => None,
 		}
 	}
