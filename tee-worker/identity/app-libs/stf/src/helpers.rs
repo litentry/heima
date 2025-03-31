@@ -123,8 +123,9 @@ pub fn ensure_enclave_signer_or_self<AccountId: Encode + Decode + PartialEq>(
 	who: Option<AccountId>,
 ) -> bool {
 	match who {
-		Some(ref who) =>
-			signer == &enclave_signer_account::<AccountId>() || ensure_self(signer, who),
+		Some(ref who) => {
+			signer == &enclave_signer_account::<AccountId>() || ensure_self(signer, who)
+		},
 		None => false,
 	}
 }

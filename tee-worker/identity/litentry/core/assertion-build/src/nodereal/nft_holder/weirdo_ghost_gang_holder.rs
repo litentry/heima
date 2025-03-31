@@ -79,13 +79,14 @@ pub fn build(
 	loop_with_abort_strategy::<fn(&_) -> bool, String, DataProviderError>(
 		addresses,
 		|address| match check_has_nft(&mut client, address.as_str()) {
-			Ok(res) =>
+			Ok(res) => {
 				if res {
 					has_nft = true;
 					Ok(LoopControls::Break)
 				} else {
 					Ok(LoopControls::Continue)
-				},
+				}
+			},
 			Err(err) => {
 				errors.push(err);
 				Ok(LoopControls::Continue)

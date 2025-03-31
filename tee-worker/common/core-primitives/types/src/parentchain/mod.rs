@@ -166,36 +166,51 @@ pub enum ParentchainEventProcessingError {
 impl core::fmt::Display for ParentchainEventProcessingError {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = match &self {
-			ParentchainEventProcessingError::FunctionalityDisabled =>
-				"Parentchain Event Processing Error: FunctionalityDisabled",
-			ParentchainEventProcessingError::LinkIdentityFailure =>
-				"Parentchain Event Processing Error: LinkIdentityFailure",
-			ParentchainEventProcessingError::DeactivateIdentityFailure =>
-				"Parentchain Event Processing Error: DeactivateIdentityFailure",
-			ParentchainEventProcessingError::ActivateIdentityFailure =>
-				"Parentchain Event Processing Error: ActivateIdentityFailure",
-			ParentchainEventProcessingError::VCRequestedFailure =>
-				"Parentchain Event Processing Error: VCRequestedFailure",
-			ParentchainEventProcessingError::EnclaveUnauthorizedFailure =>
-				"Parentchain Event Processing Error: EnclaveUnauthorizedFailure",
-			ParentchainEventProcessingError::OpaqueTaskPostedFailure =>
-				"Parentchain Event Processing Error: OpaqueTaskPostedFailure",
-			ParentchainEventProcessingError::AssertionCreatedFailure =>
-				"Parentchain Event Processing Error: AssertionCreatedFailure",
-			ParentchainEventProcessingError::ParentchainBlockProcessedFailure =>
-				"Parentchain Event Processing Error: ParentchainBlockProcessedFailure",
-			ParentchainEventProcessingError::RelayerAddFailure =>
-				"Parentchain Event Processing Error: RelayerAddFailure",
-			ParentchainEventProcessingError::RelayerRemoveFailure =>
-				"Parentchain Event Processing Error: RelayerRemoveFailure",
-			ParentchainEventProcessingError::EnclaveAddFailure =>
-				"Parentchain Event Processing Error: EnclaveAddFailure",
-			ParentchainEventProcessingError::EnclaveRemoveFailure =>
-				"Parentchain Event Processing Error: EnclaveRemoveFailure",
-			ParentchainEventProcessingError::BtcWalletGeneratedFailure =>
-				"Parentchain Event Processing Error: BtcWalletGeneratedFailure",
-			ParentchainEventProcessingError::AccountStoreUpdatedFailure =>
-				"Parentchain Event Processing Error: AccountStoreUpdatedFailure",
+			ParentchainEventProcessingError::FunctionalityDisabled => {
+				"Parentchain Event Processing Error: FunctionalityDisabled"
+			},
+			ParentchainEventProcessingError::LinkIdentityFailure => {
+				"Parentchain Event Processing Error: LinkIdentityFailure"
+			},
+			ParentchainEventProcessingError::DeactivateIdentityFailure => {
+				"Parentchain Event Processing Error: DeactivateIdentityFailure"
+			},
+			ParentchainEventProcessingError::ActivateIdentityFailure => {
+				"Parentchain Event Processing Error: ActivateIdentityFailure"
+			},
+			ParentchainEventProcessingError::VCRequestedFailure => {
+				"Parentchain Event Processing Error: VCRequestedFailure"
+			},
+			ParentchainEventProcessingError::EnclaveUnauthorizedFailure => {
+				"Parentchain Event Processing Error: EnclaveUnauthorizedFailure"
+			},
+			ParentchainEventProcessingError::OpaqueTaskPostedFailure => {
+				"Parentchain Event Processing Error: OpaqueTaskPostedFailure"
+			},
+			ParentchainEventProcessingError::AssertionCreatedFailure => {
+				"Parentchain Event Processing Error: AssertionCreatedFailure"
+			},
+			ParentchainEventProcessingError::ParentchainBlockProcessedFailure => {
+				"Parentchain Event Processing Error: ParentchainBlockProcessedFailure"
+			},
+			ParentchainEventProcessingError::RelayerAddFailure => {
+				"Parentchain Event Processing Error: RelayerAddFailure"
+			},
+			ParentchainEventProcessingError::RelayerRemoveFailure => {
+				"Parentchain Event Processing Error: RelayerRemoveFailure"
+			},
+			ParentchainEventProcessingError::EnclaveAddFailure => {
+				"Parentchain Event Processing Error: EnclaveAddFailure"
+			},
+			ParentchainEventProcessingError::EnclaveRemoveFailure => {
+				"Parentchain Event Processing Error: EnclaveRemoveFailure"
+			},
+			ParentchainEventProcessingError::BtcWalletGeneratedFailure => {
+				"Parentchain Event Processing Error: BtcWalletGeneratedFailure"
+			},
+			ParentchainEventProcessingError::AccountStoreUpdatedFailure => {
+				"Parentchain Event Processing Error: AccountStoreUpdatedFailure"
+			},
 		};
 		write!(f, "{}", message)
 	}
@@ -237,24 +252,27 @@ impl ParentchainCall {
 	}
 	pub fn as_opaque_call_for(&self, parentchain_id: ParentchainId) -> Option<OpaqueCall> {
 		match parentchain_id {
-			ParentchainId::Litentry =>
+			ParentchainId::Litentry => {
 				if let Self::Litentry(call) = self {
 					Some(call.clone())
 				} else {
 					None
-				},
-			ParentchainId::TargetA =>
+				}
+			},
+			ParentchainId::TargetA => {
 				if let Self::TargetA(call) = self {
 					Some(call.clone())
 				} else {
 					None
-				},
-			ParentchainId::TargetB =>
+				}
+			},
+			ParentchainId::TargetB => {
 				if let Self::TargetB(call) = self {
 					Some(call.clone())
 				} else {
 					None
-				},
+				}
+			},
 		}
 	}
 }

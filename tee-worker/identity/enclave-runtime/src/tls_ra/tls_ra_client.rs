@@ -129,7 +129,7 @@ where
 		let read_size = self.tls_stream.read(&mut start_byte)?;
 		// If we're reading but there's no data: EOF.
 		if read_size == 0 {
-			return Ok(None)
+			return Ok(None);
 		}
 		let header = self.read_header(start_byte[0])?;
 		let bytes = self.read_until(header.payload_length as usize)?;
@@ -185,7 +185,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -227,7 +227,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		Ok(s) => s,
 		Err(e) => {
 			error!("{:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn request_state_provisioning(
 		client_account,
 	) {
 		error!("Failed to sync state due to: {:?}", e);
-		return e.into()
+		return e.into();
 	};
 
 	sgx_status_t::SGX_SUCCESS

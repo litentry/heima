@@ -22,14 +22,14 @@ pub fn to_hex(input: Vec<u8>) -> PrecompileResult {
 		Ok(d) => d,
 		Err(e) => {
 			log::debug!("Could not decode bytes {:?}, reason: {:?}", input, e);
-			return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::String(Default::default())));
 		},
 	};
 	let bytes = match decoded.get(0).and_then(|v| v.clone().into_bytes()) {
 		Some(v) => v,
 		None => {
 			log::debug!("Could not convert decoded[0] to bytes");
-			return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::String(Default::default())));
 		},
 	};
 	let hex_encoded = format!("0x{}", hex::encode(&bytes));

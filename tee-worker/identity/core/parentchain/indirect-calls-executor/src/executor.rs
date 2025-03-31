@@ -257,8 +257,9 @@ fn update_parentchain_events_processed_metrics<OCallApi>(
 	events
 		.iter()
 		.filter_map(|ev| match *ev {
-			event if event == hash_of(ParentchainBlockProcessed::EVENT) =>
-				Some(ParentchainBlockProcessed::EVENT),
+			event if event == hash_of(ParentchainBlockProcessed::EVENT) => {
+				Some(ParentchainBlockProcessed::EVENT)
+			},
 			_ => None,
 		})
 		.for_each(|event| {

@@ -197,7 +197,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
 						Err(msg) => {
 							let error_msg: String =
 								format!("Could not retrieve pending calls due to: {}", msg);
-							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+							return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())));
 						},
 					};
 					if let Ok(vec_of_operations) = pending_author.pending_tops(shard) {
@@ -227,7 +227,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
 					Err(msg) => {
 						let error_msg: String =
 							format!("Could not retrieve pending trusted calls due to: {}", msg);
-						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())));
 					},
 				};
 				let account = match AccountId::from_hex(account_hex.as_str()) {
@@ -235,7 +235,7 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G>(
 					Err(msg) => {
 						let error_msg: String =
 							format!("Could not retrieve pending trusted calls due to: {:?}", msg);
-						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
+						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())));
 					},
 				};
 				let trusted_calls = top_pool_author.get_pending_trusted_calls_for(shard, &account);

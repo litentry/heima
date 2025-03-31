@@ -266,7 +266,7 @@ where
 					SERVER_SIGNAL_TOKEN => {
 						trace!("Received server signal event");
 						if self.handle_server_signal(&mut poll, &event, &mut signal_receiver)? {
-							break 'outer_event_loop
+							break 'outer_event_loop;
 						}
 					},
 					_ => {

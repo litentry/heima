@@ -87,7 +87,7 @@ impl PoolRotator {
 		xt: &TrustedOperation<Ex>,
 	) -> bool {
 		if xt.valid_till > current_block {
-			return false
+			return false;
 		}
 
 		self.ban(now, iter::once(xt.hash));
