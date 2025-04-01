@@ -16,6 +16,9 @@ serde_repr = { workspace = true }
 serde_with = { workspace = true }
 sp-core = { workspace = true }
 url = { workspace = true }
+rsa = { workspace = true }
+sha2 = { workspace = true }
+rand = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
