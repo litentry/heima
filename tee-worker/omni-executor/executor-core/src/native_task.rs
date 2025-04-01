@@ -35,7 +35,7 @@ pub enum NativeTask {
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
-	PumpxRequestJwt(Identity),
+	PumpxRequestJwt(Identity, Option<String>, Option<String>, Option<String>),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -48,7 +48,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::RemoveAccounts(sender, ..) => sender,
 			Self::PublicizeAccount(sender, ..) => sender,
 			Self::SetPermissions(sender, ..) => sender,
-			Self::PumpxRequestJwt(sender) => sender,
+			Self::PumpxRequestJwt(sender, ..) => sender,
 		}
 	}
 

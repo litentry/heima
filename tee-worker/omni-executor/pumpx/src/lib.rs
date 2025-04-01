@@ -15,4 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod auth_key_store;
+
+mod pumpx_api;
+pub use pumpx_api::*;
+
 pub mod signer_client;

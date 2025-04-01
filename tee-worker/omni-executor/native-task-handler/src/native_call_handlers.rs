@@ -4,11 +4,10 @@ use crate::{
 };
 use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
 use executor_crypto::{aes256::aes_encrypt_default, jwt};
-use executor_primitives::{Intent, MemberAccount, OmniAccountAuthType, ValidationData};
-use executor_storage::{MemberOmniAccountStorage, Storage};
+use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
+use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage};
 use heima_authentication::auth_token::{
-	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_SESSION_TYPE,
-	AUTH_TOKEN_TRADE_TYPE,
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_ID_TYPE,
 };
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
@@ -74,11 +73,31 @@ pub async fn handle_native_call<
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
-				AUTH_TOKEN_SESSION_TYPE.to_string(),
-				auth_options,
-			);
+
+			let claims = match sender_identity {
+				Identity::Email(ref identity_string) => {
+					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
+						let response = NativeOperationResponse::Err(
+							NativeOperationError::InvalidMemberIdentity,
+						);
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
+						}
+						return;
+					};
+					AuthTokenClaims::new(
+						email.to_string(),
+						AUTH_TOKEN_ID_TYPE.to_string(),
+						auth_options,
+					)
+				},
+				_ => AuthTokenClaims::new(
+					sender_identity.hash().to_string(),
+					AUTH_TOKEN_ID_TYPE.to_string(),
+					auth_options,
+				),
+			};
+
 			let Ok(token) = jwt::create(&claims, &ctx.jwt_rsa_private_key) else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
@@ -199,8 +218,10 @@ pub async fn handle_native_call<
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					if let Err(e) =
-						ctx.ethereum_intent_executor.execute(&omni_account, intent.clone()).await
+					if let Err(e) = ctx
+						.ethereum_intent_executor
+						.execute(omni_account.as_ref(), intent.clone())
+						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
@@ -214,8 +235,10 @@ pub async fn handle_native_call<
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
 				Intent::TransferSolana(_) => {
-					if let Err(e) =
-						ctx.solana_intent_executor.execute(&omni_account, intent.clone()).await
+					if let Err(e) = ctx
+						.solana_intent_executor
+						.execute(omni_account.as_ref(), intent.clone())
+						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
@@ -229,8 +252,10 @@ pub async fn handle_native_call<
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
 				Intent::CrossChainSwap(_) => {
-					if let Err(e) =
-						ctx.cross_chain_intent_executor.execute(&omni_account, intent.clone()).await
+					if let Err(e) = ctx
+						.cross_chain_intent_executor
+						.execute(omni_account.as_ref(), intent.clone())
+						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
 						execution_result = IntentExecutionResult::Failure;
@@ -404,7 +429,29 @@ pub async fn handle_native_call<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeCall::request_pumpx_jwt(sender_identity) => {
+		NativeCall::pumpx_request_jwt(sender_identity, invite_code, google_code, lang) => {
+			let email = match sender_identity {
+				Identity::Email(ref identity_string) => {
+					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
+						let response = NativeOperationResponse::Err(
+							NativeOperationError::InvalidMemberIdentity,
+						);
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
+						}
+						return;
+					};
+					email.to_string()
+				},
+				_ => {
+					let response =
+						NativeOperationResponse::Err(NativeOperationError::UnsupportedIdentityType);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
 			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
 				log::error!("Failed to get last finalized block number");
 				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
@@ -415,25 +462,13 @@ pub async fn handle_native_call<
 			};
 			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
 			let auth_options = AuthOptions { expires_at };
-			let session_claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
-				AUTH_TOKEN_SESSION_TYPE.to_string(),
+			let access_token_claims = AuthTokenClaims::new(
+				email.clone(),
+				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
-			let Ok(session_token) = jwt::create(&session_claims, &ctx.jwt_rsa_private_key) else {
-				let response =
-					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let trade_claims = AuthTokenClaims::new(
-				sender_identity.hash().to_string(),
-				AUTH_TOKEN_TRADE_TYPE.to_string(),
-				auth_options,
-			);
-			let Ok(trade_token) = jwt::create(&trade_claims, &ctx.jwt_rsa_private_key) else {
+			let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
+			else {
 				let response =
 					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
@@ -442,8 +477,37 @@ pub async fn handle_native_call<
 				return;
 			};
 
+			let Ok(user_connect_response) = ctx
+				.pumpx_api
+				.connect_user(&access_token, email.clone(), invite_code, google_code, lang)
+				.await
+			else {
+				log::error!("Failed to connect user");
+				let response = NativeOperationResponse::Err(NativeOperationError::PumpxApiError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let id_token_claims =
+				AuthTokenClaims::new(email, AUTH_TOKEN_ID_TYPE.to_string(), auth_options);
+			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let storage = PumpxAuthTokenIdStorage::new(ctx.storage_db.clone());
+			if storage.insert(sender_identity.hash(), id_token.clone()).is_err() {
+				log::error!("Failed to insert pumpx_auth_token into storage");
+			};
+
 			let response: NativeOperationResponse =
-				CallResponse::PumpxJwt { session_token, trade_token }.into();
+				CallResponse::PumpxJwt { access_token, id_token, user_connect_response }.into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
