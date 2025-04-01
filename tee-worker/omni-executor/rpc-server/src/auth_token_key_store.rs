@@ -49,7 +49,7 @@ impl KeyStore<Vec<u8>> for AuthTokenKeyStore {
 		let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
 			log::error!("Failed to encode RSA key: {:?}", e);
 		})?;
-		log::info!("Auth token (JWT) RSA public_key: {:?}", public_key);
+		log::info!("Auth token (JWT) RSA public_key: {:?}", public_key.as_bytes());
 
 		Ok(sealed)
 	}
