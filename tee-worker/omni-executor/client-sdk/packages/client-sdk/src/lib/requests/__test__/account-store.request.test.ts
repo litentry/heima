@@ -4,7 +4,6 @@ import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady, encodeAddress } from '@polkadot/util-crypto';
 
-import { getChain } from '@heima-network/chaindata';
 import {
   identity,
   ValidationData,
@@ -47,7 +46,7 @@ describe('account-store', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 

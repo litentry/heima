@@ -2,7 +2,6 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
-import { getChain } from '@heima-network/chaindata';
 import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
@@ -19,7 +18,7 @@ describe.skip('transfer-ethereum', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 

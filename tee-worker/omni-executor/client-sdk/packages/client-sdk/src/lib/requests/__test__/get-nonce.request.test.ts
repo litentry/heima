@@ -12,7 +12,7 @@ describe('get-nonce', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider('ws://localhost:9944'),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 
