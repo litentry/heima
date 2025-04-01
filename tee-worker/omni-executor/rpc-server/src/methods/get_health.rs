@@ -33,7 +33,7 @@ mod test {
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
-		let db = StorageDB::open_default("test_storage_db").unwrap();
+		let db = StorageDB::open_default("test_get_health_storage_db").unwrap();
 
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
