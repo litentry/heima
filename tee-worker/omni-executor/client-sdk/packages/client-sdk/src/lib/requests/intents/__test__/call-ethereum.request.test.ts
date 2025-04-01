@@ -2,7 +2,6 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
-import { getChain } from '@heima-network/chaindata';
 import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
@@ -19,7 +18,7 @@ describe.skip('call-ethereum', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 
@@ -34,16 +33,17 @@ describe.skip('call-ethereum', () => {
       type: 'Substrate',
     });
 
-    const { send, payloadToSign = '' } = await callEthereum(api, {
+    const { send, getPayloadToSign = () => '' } = await callEthereum(api, {
       member,
       address: '0x0000000000000000000000000000000000000000',
       input: '0x',
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,
