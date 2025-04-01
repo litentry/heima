@@ -73,10 +73,9 @@ async fn main() -> Result<(), ()> {
 
 			let pumpx_signer_key =
 				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
-			info!(
-				"PumpX auth public key: {:?}",
-				ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap().public()
-			);
+
+			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
+			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
 
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
@@ -93,6 +92,12 @@ async fn main() -> Result<(), ()> {
 			));
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
+
+			let pumpx_signer_url = "";
+			let pumpx_signer_client = Arc::new(pumpx::signer_client::SignerClient::new(
+				pumpx_signer_url.to_string(),
+				pumpx_signer_pair,
+			));
 
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
@@ -113,6 +118,7 @@ async fn main() -> Result<(), ()> {
 				parentchain_rpc_client_factory.clone(),
 				transaction_signer.clone(),
 				rpc_endpoint_registry,
+				pumpx_signer_client.clone(),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(

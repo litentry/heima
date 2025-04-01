@@ -23,6 +23,8 @@ use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
 use intent_token_query::EthereumAddress;
 use intent_token_query::SolanaPubkey;
+use log::error;
+use pumpx::signer_client::SignerClient;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -71,6 +73,7 @@ pub struct CrossChainIntentExecutor<
 	transaction_signer: Arc<ParentchainTxSigner>,
 	account_asset_lock: AccountAssetLocks<AccountWideAssetsLock>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
+	pumpx_signer_client: Arc<SignerClient>,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -84,6 +87,7 @@ impl<
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
 		rpc_endpoint_registry: RpcEndpointRegistry,
+		pumpx_signer_client: Arc<SignerClient>,
 	) -> Result<Self, ()> {
 		let account_asset_lock = AccountAssetLocks::<AccountWideAssetsLock>::empty();
 		Ok(Self {
@@ -91,6 +95,7 @@ impl<
 			transaction_signer,
 			account_asset_lock,
 			rpc_endpoint_registry,
+			pumpx_signer_client,
 			phantom: PhantomData,
 		})
 	}
@@ -115,14 +120,32 @@ impl<
 					ChainAsset::Ethereum(chain_id, token) => {
 						let rpc_url =
 							self.rpc_endpoint_registry.get(&Chain::Ethereum(*chain_id)).ok_or(())?;
-						// query pumpx signer wallet
-						let address = EthereumAddress::default();
-						query_ethereum(rpc_url, address, token).await?
+						let address = self
+							.pumpx_signer_client
+							.request_wallet(
+								pumpx::signer_client::ChainType::Evm,
+								0,
+								*account_id.as_ref(),
+							)
+							.await
+							.unwrap();
+						query_ethereum(rpc_url, EthereumAddress::from_slice(&address), token)
+							.await?
 					},
 					ChainAsset::Solana(token) => {
 						let rpc_url = self.rpc_endpoint_registry.get(&Chain::Solana).ok_or(())?;
-						// query pumpx signer wallet
-						let pubkey = SolanaPubkey::default();
+						let address = self
+							.pumpx_signer_client
+							.request_wallet(
+								pumpx::signer_client::ChainType::Solana,
+								0,
+								*account_id.as_ref(),
+							)
+							.await
+							.unwrap();
+						let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
+							error!("Could not create solana pubkey from wallet address: {:?}", e)
+						})?;
 						query_solana(rpc_url, &pubkey, token).await.map(|v| AmountType::from(v))?
 					},
 				};

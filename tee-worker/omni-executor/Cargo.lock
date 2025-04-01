@@ -2177,6 +2177,7 @@ dependencies = [
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "pumpx",
 ]
 
 [[package]]
