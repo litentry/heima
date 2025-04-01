@@ -128,7 +128,9 @@ impl<
 								*account_id.as_ref(),
 							)
 							.await
-							.unwrap();
+							.map_err(|e| {
+								error!("Could not get wallet from pumpx-signer: {:?}", e)
+							})?;
 						query_ethereum(rpc_url, EthereumAddress::from_slice(&address), token)
 							.await?
 					},
@@ -142,7 +144,9 @@ impl<
 								*account_id.as_ref(),
 							)
 							.await
-							.unwrap();
+							.map_err(|e| {
+								error!("Could not get wallet from pumpx-signer: {:?}", e)
+							})?;
 						let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
 							error!("Could not create solana pubkey from wallet address: {:?}", e)
 						})?;
