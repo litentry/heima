@@ -2,9 +2,7 @@ import { stringToHex, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import type { Index } from '@polkadot/types/interfaces';
 
-import type { Identity, NativeCall, NativeQuery } from '@heima-network/parachain-api';
-
-type Operation = NativeCall | NativeQuery;
+import type { Identity, NativeTask } from '@heima-network/parachain-api';
 
 /**
  * Constructs a message that users need to sign to authorize Enclave's requests.
@@ -19,15 +17,15 @@ type Operation = NativeCall | NativeQuery;
  */
 export function createPayloadToSign(args: {
   who: Identity;
-  operation: Operation;
+  task: NativeTask;
   nonce: Index;
   mrEnclave: Uint8Array;
 }): string {
-  const { who, operation, nonce, mrEnclave } = args;
-  const payload = u8aConcat(operation.toU8a(), nonce.toU8a(), mrEnclave);
+  const { who, task, nonce, mrEnclave } = args;
+  const payload = u8aConcat(task.toU8a(), nonce.toU8a(), mrEnclave);
   const message = blake2AsHex(payload, 256);
 
-  const prefix = getSignatureMessagePrefix(operation);
+  const prefix = getSignatureMessagePrefix(task);
   const msg = prefix + message;
 
   // evm needs hex encoding for proper display
@@ -43,7 +41,7 @@ export function createPayloadToSign(args: {
   return msg;
 }
 
-function getSignatureMessagePrefix(_: Operation): string {
+function getSignatureMessagePrefix(_: NativeTask): string {
   // TODO: update this when adding request_batch_vc variant
   return 'Token: ';
 }

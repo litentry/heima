@@ -45,7 +45,7 @@ pub fn register_submit_native_task<
 				},
 			}
 		})
-		.expect("Failed to register native_submitCallAesRequest method");
+		.expect("Failed to register omni_submitNativeTask method");
 }
 
 fn parse<

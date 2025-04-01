@@ -10,7 +10,7 @@
         "check-types": "tsc --noEmit"
     },
     "dependencies": {
-        "@litentry/chaindata": "^0.2.0",
+        "@heima-network/chaindata": "^0.0.4",
         "@litentry/vc-schema-validator": "^0.0.1",
         "@noble/ed25519": "^1.7.3",
         "@polkadot/api": "^15.8.1",

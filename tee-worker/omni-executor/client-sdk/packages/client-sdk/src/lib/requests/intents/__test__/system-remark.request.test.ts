@@ -2,7 +2,6 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
-import { getChain } from '@heima-network/chaindata';
 import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
@@ -20,7 +19,7 @@ describe.skip('system-remark', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 
@@ -37,14 +36,15 @@ describe.skip('system-remark', () => {
 
     // Step 1: request auth token
     console.log('Step 1: request auth token');
-    const { send, payloadToSign = '' } = await requestAuthToken(api, {
+    const { send, getPayloadToSign = () => '' } = await requestAuthToken(api, {
       member,
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,
@@ -62,7 +62,7 @@ describe.skip('system-remark', () => {
         message: 'Hello, world!',
       });
 
-      const result = await send({ authentication: { type: 'AuthToken', token } });
+      const result = await send({ authData: { type: 'AuthToken', token } });
 
       expect(result.extrinsicHash.length).toBe(66);
       expect(result.blockHash.length).toBe(66);

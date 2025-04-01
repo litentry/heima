@@ -1,6 +1,6 @@
 import { step } from 'mocha-steps';
 import { assert } from 'chai';
-import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
+import { Identity, MemberAccount } from 'parachain-api';
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
@@ -18,7 +18,7 @@ describe('OmniAccount', function () {
     this.timeout(120000);
     let context: IntegrationTestContext;
     let aliceWallet: SubstrateSigner;
-    let aliceIdentity: CorePrimitivesIdentity;
+    let aliceIdentity: Identity;
     let omniAccount: string;
     let currentNonce = 0;
 
@@ -49,7 +49,7 @@ describe('OmniAccount', function () {
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 1, 'account store members count should be 1');
 
-        const memberAccount: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        const memberAccount: MemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount.asPublic.asSubstrate.toHex(),
             aliceIdentity.asSubstrate.toHex(),
@@ -96,13 +96,13 @@ describe('OmniAccount', function () {
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
-        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        const memberAccount1: MemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
             aliceIdentity.asSubstrate.toHex(),
             'account store member 1 is not the expected member'
         );
-        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        const memberAccount2: MemberAccount = accountStore.unwrap()[1];
         assert.isTrue(memberAccount2.isPrivate);
     });
 
@@ -127,13 +127,13 @@ describe('OmniAccount', function () {
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
-        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        const memberAccount1: MemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
             aliceIdentity.asSubstrate.toHex(),
             'account store member 1 is not the expected member'
         );
-        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        const memberAccount2: MemberAccount = accountStore.unwrap()[1];
         assert.isTrue(memberAccount2.isPublic);
         assert.equal(
             memberAccount2.asPublic.asSubstrate.toHex(),
