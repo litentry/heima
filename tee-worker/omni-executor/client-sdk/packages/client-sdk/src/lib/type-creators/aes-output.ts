@@ -12,7 +12,7 @@ import type { AesOutput } from '@heima-network/parachain-api';
  * @example
  * build from object
  * ```ts
- * const identity = createKeyAesOutputType(registry, {
+ * const identity = createAesOutputType(registry, {
  *  ciphertext: '0x...',
  *  nonce: '0x...',
  *  aad: '0x...',
@@ -21,10 +21,10 @@ import type { AesOutput } from '@heima-network/parachain-api';
  *
  * build from hex string
  * ```ts
- * const identity = createKeyAesOutputType(registry, `0x...`);
+ * const identity = createAesOutputType(registry, `0x...`);
  * ```
  */
-export function createKeyAesOutputType(
+export function createAesOutputType(
   registry: Registry,
   data:
     | HexString

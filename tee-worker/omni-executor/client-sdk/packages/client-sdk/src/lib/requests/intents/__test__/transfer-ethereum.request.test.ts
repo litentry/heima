@@ -33,16 +33,17 @@ describe.skip('transfer-ethereum', () => {
       type: 'Substrate',
     });
 
-    const { send, payloadToSign = '' } = await transferEthereum(api, {
+    const { send, getPayloadToSign = () => '' } = await transferEthereum(api, {
       member,
       to: '0x0000000000000000000000000000000000000000',
       amount: '0x01',
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,

@@ -3,10 +3,10 @@ import { HexString } from '@polkadot/util/types';
 
 import type { Intent, Identity } from '@heima-network/parachain-api';
 
-import { AuthenticationData } from '@type-creators/authentication';
-import { createNativeCallType } from '@type-creators/native-call';
+import { OmniAuthData } from '@type-creators/omni-auth';
+import { createNativeTaskType } from '@type-creators/native-task';
 
-import { aesCall } from '@requests/aes-call.request';
+import { aesTask } from '@requests/aes-task.request';
 
 /**
  * Sends a common intent request to the Heima Parachain.
@@ -18,10 +18,10 @@ import { aesCall } from '@requests/aes-call.request';
  * @param {U8aLike} data.input - The contract input data.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
  * (if applicable) and a send function.
- * @returns {string} payloadToSign - The payload to sign if the identity is a Web3 identity.
+ * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.
  * @returns {Promise<Object>} send.args - The arguments required to send the request.
- * @returns {AuthenticationData} send.args.authentication - The authentication data.
+ * @returns {OmniAuthData} send.args.authData - The authentication data.
  * @returns {HexString} send.return.blockHash - Block hash of the transaction
  * @returns {HexString} send.return.extrinsicHash - Extrinsic hash of the transaction
  * @returns {HexString} send.return.status - Status of the transaction
@@ -33,8 +33,8 @@ export async function intent(
     intent: Intent;
   },
 ): Promise<{
-  payloadToSign?: string;
-  send: (args: { authentication: AuthenticationData }) => Promise<{
+  getPayloadToSign?: () => Promise<string>;
+  send: (args: { authData: OmniAuthData }) => Promise<{
     blockHash: HexString;
     extrinsicHash: HexString;
     status: HexString;
@@ -42,10 +42,10 @@ export async function intent(
 }> {
   const { member, intent } = data;
 
-  const { operation } = createNativeCallType(api.registry, {
-    method: 'request_intent',
+  const { task } = createNativeTaskType(api.registry, {
+    method: 'RequestIntent',
     params: { member, intent },
   });
 
-  return aesCall(api, { member, operation });
+  return aesTask(api, { member, task });
 }

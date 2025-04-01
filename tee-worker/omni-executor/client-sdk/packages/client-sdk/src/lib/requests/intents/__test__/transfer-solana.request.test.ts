@@ -33,16 +33,17 @@ describe.skip('transfer-solana', () => {
       type: 'Substrate',
     });
 
-    const { send, payloadToSign = '' } = await transferSolana(api, {
+    const { send, getPayloadToSign = () => '' } = await transferSolana(api, {
       member,
       to: '3uohKMHs1AUJj1X263C63BATPeyP81gMdGpxuajhRUHd',
       amount: BigInt(100),
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,

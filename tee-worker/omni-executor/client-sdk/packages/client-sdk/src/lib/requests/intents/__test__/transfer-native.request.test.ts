@@ -36,14 +36,15 @@ describe.skip('transfer-native', () => {
 
     // Step 1: request auth token
     console.log('Step 1: request auth token');
-    const { send, payloadToSign = '' } = await requestAuthToken(api, {
+    const { send, getPayloadToSign = () => '' } = await requestAuthToken(api, {
       member,
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,
@@ -62,7 +63,7 @@ describe.skip('transfer-native', () => {
         amount: BigInt(100),
       });
 
-      const result = await send({ authentication: { type: 'AuthToken', token } });
+      const result = await send({ authData: { type: 'AuthToken', token } });
 
       expect(result.extrinsicHash.length).toBe(66);
       expect(result.blockHash.length).toBe(66);
