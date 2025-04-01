@@ -1,6 +1,6 @@
 import { assert, compactStripLength, hexToU8a, u8aToString } from '@polkadot/util';
 
-import { JsonRpcRequest } from '@lib/utils/types';
+import { JsonRpcRequest } from '@utils/types';
 
 import { enclave } from '@lib/enclave';
 

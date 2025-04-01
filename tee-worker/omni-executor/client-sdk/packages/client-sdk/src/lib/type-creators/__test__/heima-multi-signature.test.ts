@@ -1,13 +1,14 @@
 import { TypeRegistry } from '@polkadot/types';
 import { base64Decode, cryptoWaitReady, randomAsHex } from '@polkadot/util-crypto';
 
-import { identity } from '@heima-network/parachain-api';
+import { identity, omniExecutor } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
-import { createMultiSignature } from '@type-creators/multi-signature';
+import { createHeimaMultiSignature } from '@type-creators/heima-multi-signature';
 
 const types = {
   ...identity.types, // Identity is defined here
+  ...omniExecutor.types, // HeimaMultiSignature is defined here
 };
 
 let registry: TypeRegistry;
@@ -30,7 +31,7 @@ test('Substrate: it works', () => {
   // signature isn't validated
   const signature = randomAsHex(64);
 
-  const multiSignature = createMultiSignature(registry, {
+  const multiSignature = createHeimaMultiSignature(registry, {
     who: identity,
     signature: signature,
   });
@@ -51,7 +52,7 @@ test('it uses Ethereum for EVM', () => {
   // signature isn't validated
   const signature = randomAsHex(65);
 
-  const multiSignature = createMultiSignature(registry, {
+  const multiSignature = createHeimaMultiSignature(registry, {
     who: identity,
     signature: signature,
   });
@@ -71,7 +72,7 @@ test('it decodes Bitcoin signatures', () => {
 
   const base64Signature = 'G16tPZuJIk4iZT9LB9L3EDOJMJ/yMCzKuowJDNar4op/c8MUfC2MAULTsadtQ3eiW3Q0yh1P0VWCNA7lf7F8Xro=';
 
-  const multiSignature = createMultiSignature(registry, {
+  const multiSignature = createHeimaMultiSignature(registry, {
     who: identity,
     signature: base64Signature,
   });

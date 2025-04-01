@@ -3,7 +3,7 @@ import { HexString } from '@polkadot/util/types';
 
 import type { Intent, IntentTransferNative, Identity } from '@heima-network/parachain-api';
 
-import { AuthenticationData } from '@type-creators/authentication';
+import { OmniAuthData } from '@type-creators/omni-auth';
 
 import { intent } from './intent.request';
 
@@ -17,10 +17,10 @@ import { intent } from './intent.request';
  * @param {bigint} data.amount - The amount to send.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign
  * (if applicable) and a send function.
- * @returns {string} payloadToSign - The payload to sign if the identity is a Web3 identity.
+ * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.
  * @returns {Promise<Object>} send.args - The arguments required to send the request.
- * @returns {AuthenticationData} send.args.authentication - The authentication data.
+ * @returns {OmniAuthData} send.args.authData - The authentication data.
  * @returns {HexString} send.return.blockHash - Block hash of the transaction
  * @returns {HexString} send.return.extrinsicHash - Extrinsic hash of the transaction
  * @returns {HexString} send.return.status - Status of the transaction
@@ -34,8 +34,8 @@ export async function transferNative(
     amount: bigint;
   },
 ): Promise<{
-  payloadToSign?: string;
-  send: (args: { authentication: AuthenticationData }) => Promise<{
+  getPayloadToSign?: () => Promise<string>;
+  send: (args: { authData: OmniAuthData }) => Promise<{
     blockHash: HexString;
     extrinsicHash: HexString;
     status: HexString;
