@@ -5,18 +5,18 @@ import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { identity, Identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
-import { createNativeCallType } from '@type-creators/native-call';
+import { createNativeTaskType } from '@type-creators/native-task';
 
 const types = {
   ...identity.types, // Identity is defined here
-  ...omniExecutor.types, // NativeCall is defined here
+  ...omniExecutor.types, // NativeTask is defined here
   ...sidechain.types, // AesOutput is defined here
 };
 
 const registry = new TypeRegistry();
 registry.register(types);
 
-describe('native call', () => {
+describe('native task', () => {
   let member: Identity;
 
   beforeAll(async () => {
@@ -29,29 +29,29 @@ describe('native call', () => {
     });
   });
 
-  it('request_auth_token', async () => {
-    const { operation } = createNativeCallType(registry, {
-      method: 'request_auth_token',
+  it('RequestAuthToken', async () => {
+    const { task } = createNativeTaskType(registry, {
+      method: 'RequestAuthToken',
       params: {
         member,
       },
     });
 
-    expect(operation).toBeDefined();
-    expect(operation.isRequestAuthToken).toBeTruthy();
-    expect(operation.asRequestAuthToken).toEqual(member); // signer
+    expect(task).toBeDefined();
+    expect(task.isRequestAuthToken).toBeTruthy();
+    expect(task.asRequestAuthToken).toEqual(member); // signer
   });
 
-  it('create_account_store', async () => {
-    const { operation } = createNativeCallType(registry, {
-      method: 'create_account_store',
+  it('CreateAccountStore', async () => {
+    const { task } = createNativeTaskType(registry, {
+      method: 'CreateAccountStore',
       params: {
         member,
       },
     });
 
-    expect(operation).toBeDefined();
-    expect(operation.isCreateAccountStore).toBeTruthy();
-    expect(operation.asCreateAccountStore).toEqual(member); // signer
+    expect(task).toBeDefined();
+    expect(task.isCreateAccountStore).toBeTruthy();
+    expect(task.asCreateAccountStore).toEqual(member); // signer
   });
 });

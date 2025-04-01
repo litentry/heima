@@ -4,7 +4,7 @@ import { bufferToU8a, hexToU8a, isString, stringToU8a, u8aToHex } from '@polkado
 import { KeyringPair } from '@polkadot/keyring/types';
 import { blake2AsU8a } from '@polkadot/util-crypto';
 import { ApiPromise } from '@polkadot/api';
-import { CorePrimitivesIdentity } from 'parachain-api';
+import { Identity } from 'parachain-api';
 import { ethers } from 'ethers';
 import { isHexString } from 'ethers/lib/utils';
 import { ECPairInterface } from 'ecpair';
@@ -21,7 +21,7 @@ export interface Signer {
     sign(message: HexString | string | Uint8Array): Promise<Uint8Array>;
     type(): KeypairType;
     getAddressInSubstrateFormat(): Uint8Array;
-    getIdentity(api: ApiPromise): Promise<CorePrimitivesIdentity>;
+    getIdentity(api: ApiPromise): Promise<Identity>;
 }
 
 export class SubstrateSigner implements Signer {
@@ -47,7 +47,7 @@ export class SubstrateSigner implements Signer {
         return this.getAddressRaw();
     }
 
-    getIdentity(api: ApiPromise): Promise<CorePrimitivesIdentity> {
+    getIdentity(api: ApiPromise): Promise<Identity> {
         return createIdentityType(api, u8aToHex(this.getAddressRaw()), 'Substrate');
     }
 }
@@ -81,7 +81,7 @@ export class EthersSigner implements Signer {
         return blake2AsU8a(merged, 256);
     }
 
-    getIdentity(api: ApiPromise): Promise<CorePrimitivesIdentity> {
+    getIdentity(api: ApiPromise): Promise<Identity> {
         return createIdentityType(api, u8aToHex(this.getAddressRaw()), 'Evm');
     }
 }
@@ -117,7 +117,7 @@ export class BitcoinSigner implements Signer {
         return blake2AsU8a(this.getAddressRaw(), 256);
     }
 
-    getIdentity(api: ApiPromise): Promise<CorePrimitivesIdentity> {
+    getIdentity(api: ApiPromise): Promise<Identity> {
         return createIdentityType(api, u8aToHex(this.getAddressRaw()), 'Bitcoin');
     }
 }
@@ -156,7 +156,7 @@ export class SolanaSigner implements Signer {
         return this.getAddressRaw();
     }
 
-    getIdentity(api: ApiPromise): Promise<CorePrimitivesIdentity> {
+    getIdentity(api: ApiPromise): Promise<Identity> {
         return createIdentityType(api, u8aToHex(this.getAddressRaw()), 'Solana');
     }
 }
