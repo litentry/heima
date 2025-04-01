@@ -71,6 +71,16 @@ impl<
 			},
 		};
 		let nonce = self.nonce.fetch_add(1, Ordering::SeqCst);
+		if let Some(details) = call.validation_details() {
+			log::info!(
+				"Signing call {}::{} with nonce {}",
+				details.pallet_name,
+				details.call_name,
+				nonce
+			);
+		} else {
+			log::info!("Signing call with nonce {}", nonce);
+		}
 		let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
 		let signed_call = tx::create_signed(&call, &state, &self.signer, params).unwrap();
 
