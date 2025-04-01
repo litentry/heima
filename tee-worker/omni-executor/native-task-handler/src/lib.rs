@@ -608,7 +608,7 @@ async fn handle_native_task<
 
 			let storage = PumpxAuthTokenIdStorage::new(ctx.storage_db.clone());
 			if storage.insert(sender.hash(), id_token.clone()).is_err() {
-				log::error!("Failed to insert pumpx_auth_token into storage");
+				log::error!("Failed to insert id token into storage");
 			};
 
 			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt {
