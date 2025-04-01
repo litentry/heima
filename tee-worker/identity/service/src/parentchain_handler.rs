@@ -244,7 +244,7 @@ where
 				immediate_import
 			);
 			if block_chunk_to_sync.is_empty() {
-				return Ok(until_synced_header)
+				return Ok(until_synced_header);
 			}
 
 			let skip_invocations = if let Some(creation_block) = maybe_creation_block {

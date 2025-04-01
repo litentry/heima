@@ -43,12 +43,12 @@ impl ListenCommand {
 		loop {
 			if let Some(e) = self.events {
 				if count >= e {
-					return Ok(CliResultOk::None)
+					return Ok(CliResultOk::None);
 				}
 			};
 			if let Some(b) = self.blocks {
 				if blocks >= b {
-					return Ok(CliResultOk::None)
+					return Ok(CliResultOk::None);
 				}
 			};
 
@@ -66,10 +66,11 @@ impl ListenCommand {
 					"Balances" => match event.variant_name() {
 						"Deposit" => continue,
 						"Withdraw" => continue,
-						"Transfer" =>
+						"Transfer" => {
 							if let Ok(Some(ev)) = event.as_event::<BalanceTransfer>() {
 								println!("{:?}", ev);
-							},
+							}
+						},
 						_ => println!("{}::{}", event.pallet_name(), event.variant_name()),
 					},
 					"Teebag" => match event.variant_name() {

@@ -29,14 +29,18 @@ pub trait EVMTokenAddress {
 impl EVMTokenAddress for EVMTokenType {
 	fn get_address(&self, network: Web3Network) -> Option<&'static str> {
 		match (self, network) {
-			(EVMTokenType::Ton, Web3Network::Bsc) =>
-				Some("0x76a797a59ba2c17726896976b7b3747bfd1d220f"),
-			(EVMTokenType::Ton, Web3Network::Ethereum) =>
-				Some("0x582d872a1b094fc48f5de31d3b73f2d9be47def1"),
-			(EVMTokenType::Trx, Web3Network::Bsc) =>
-				Some("0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3"),
-			(EVMTokenType::Trx, Web3Network::Ethereum) =>
-				Some("0x50327c6c5a14dcade707abad2e27eb517df87ab5"),
+			(EVMTokenType::Ton, Web3Network::Bsc) => {
+				Some("0x76a797a59ba2c17726896976b7b3747bfd1d220f")
+			},
+			(EVMTokenType::Ton, Web3Network::Ethereum) => {
+				Some("0x582d872a1b094fc48f5de31d3b73f2d9be47def1")
+			},
+			(EVMTokenType::Trx, Web3Network::Bsc) => {
+				Some("0xCE7de646e7208a4Ef112cb6ed5038FA6cC6b12e3")
+			},
+			(EVMTokenType::Trx, Web3Network::Ethereum) => {
+				Some("0x50327c6c5a14dcade707abad2e27eb517df87ab5")
+			},
 			_ => None,
 		}
 	}

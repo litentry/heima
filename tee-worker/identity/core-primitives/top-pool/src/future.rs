@@ -171,7 +171,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 	/// Returns true if given hash is part of the queue.
 	pub fn contains(&self, hash: &TxHash, shard: ShardIdentifier) -> bool {
 		if let Some(tx_pool_waiting) = self.waiting.get(&shard) {
-			return tx_pool_waiting.contains_key(hash)
+			return tx_pool_waiting.contains_key(hash);
 		}
 		false
 	}
@@ -186,7 +186,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 			return hashes
 				.iter()
 				.map(|h| tx_pool_waiting.get(h).map(|x| x.operation.clone()))
-				.collect()
+				.collect();
 		}
 		vec![]
 	}
@@ -267,7 +267,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 		shard: ShardIdentifier,
 	) -> Option<R> {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
-			return tx_pool.values().fold(None, f)
+			return tx_pool.values().fold(None, f);
 		}
 		None
 	}
@@ -278,7 +278,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 		shard: ShardIdentifier,
 	) -> Box<dyn Iterator<Item = &TrustedOperation<Ex>> + '_> {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
-			return Box::new(tx_pool.values().map(|waiting| &*waiting.operation))
+			return Box::new(tx_pool.values().map(|waiting| &*waiting.operation));
 		}
 		Box::new(core::iter::empty())
 	}
@@ -293,7 +293,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 				.unwrap()
 				.drain()
 				.map(|(_, tx)| tx.operation)
-				.collect()
+				.collect();
 		}
 		vec![]
 	}
@@ -301,7 +301,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 	/// Returns number of operations in the Future queue.
 	pub fn len(&self, shard: ShardIdentifier) -> usize {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
-			return tx_pool.len()
+			return tx_pool.len();
 		}
 		0
 	}
@@ -309,7 +309,7 @@ impl<Ex> FutureTrustedOperations<Ex> {
 	/// Returns sum of encoding lengths of all operations in this queue.
 	pub fn bytes(&self, shard: ShardIdentifier) -> usize {
 		if let Some(tx_pool) = self.waiting.get(&shard) {
-			return tx_pool.values().fold(0, |acc, tx| acc + tx.operation.bytes)
+			return tx_pool.values().fold(0, |acc, tx| acc + tx.operation.bytes);
 		}
 		0
 	}

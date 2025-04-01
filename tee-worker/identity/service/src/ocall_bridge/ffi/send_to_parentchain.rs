@@ -74,7 +74,7 @@ fn send_to_parentchain(
 			let resp_slice = unsafe { slice::from_raw_parts_mut(response, resp_size as usize) };
 			if let Err(e) = write_slice_and_whitespace_pad(resp_slice, r) {
 				error!("Failed to transfer send_to_parentchain response to o-call buffer: {:?}", e);
-				return sgx_status_t::SGX_ERROR_UNEXPECTED
+				return sgx_status_t::SGX_ERROR_UNEXPECTED;
 			}
 			sgx_status_t::SGX_SUCCESS
 		},

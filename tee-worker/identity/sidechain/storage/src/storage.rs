@@ -117,7 +117,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		// The exception is, if the hash is the default hash, which represents block 0. In that case we want to return all blocks.
 		if block_hash != &BlockHash::default() && self.get_block(block_hash)?.is_none() {
 			warn!("Could not find starting block in storage, returning empty vector");
-			return Ok(Vec::new())
+			return Ok(Vec::new());
 		}
 
 		// We get the latest block and then traverse the parents until we find our starting block.
@@ -136,7 +136,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			blocks_to_return.push(current_block);
 
 			if parent_block_hash == BlockHash::default() {
-				break
+				break;
 			}
 
 			current_block =
@@ -264,7 +264,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 		if self.shards.contains(shard) {
 			if !self.verify_block_ancestry(signed_block.block()) {
 				// Do not include block if its not a direct ancestor of the last block in line.
-				return Err(Error::HeaderAncestryMismatch)
+				return Err(Error::HeaderAncestryMismatch);
 			}
 		} else {
 			self.shards.push(*shard);
@@ -282,14 +282,14 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 			if last_block.number != current_block_nr - 1 {
 				error!("[Sidechain DB] Sidechainblock (nr: {:?}) is not a succession of the previous block (nr: {:?}) in shard: {:?}",
 				current_block_nr, last_block.number, *shard);
-				return false
+				return false;
 			}
 		} else {
 			error!(
 				"[Sidechain DB] Shard {:?} does not have a last block. Skipping block (nr: {:?}) inclusion",
 				*shard, current_block_nr
 			);
-			return false
+			return false;
 		}
 		true
 	}

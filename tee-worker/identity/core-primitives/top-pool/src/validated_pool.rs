@@ -182,8 +182,9 @@ where
 		results
 			.into_iter()
 			.map(|res| match res {
-				Ok(ref hash) if removed.contains(hash) =>
-					Err(error::Error::ImmediatelyDropped.into()),
+				Ok(ref hash) if removed.contains(hash) => {
+					Err(error::Error::ImmediatelyDropped.into())
+				},
 				other => other,
 			})
 			.collect()
@@ -206,13 +207,14 @@ where
 						.map_err(|_| error::Error::UnlockError)?
 						.retain_mut(|sink| match sink.try_send(*hash) {
 							Ok(()) => true,
-							Err(e) =>
+							Err(e) => {
 								if e.is_full() {
 									log::warn!(target: "txpool", "[{:?}] Trying to notify an import but the channel is full", hash);
 									true
 								} else {
 									false
-								},
+								}
+							},
 						});
 				}
 
@@ -627,7 +629,7 @@ where
 	) -> Vec<TransactionFor<TOP>> {
 		// early exit in case there is no invalid operations.
 		if hashes.is_empty() {
-			return vec![]
+			return vec![];
 		}
 
 		let invalid = self.pool.write().unwrap().remove_subtree(hashes, shard);

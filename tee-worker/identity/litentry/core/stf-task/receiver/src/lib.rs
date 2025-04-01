@@ -174,7 +174,7 @@ where
 		{
 			// skip the submission if some top with the same hash already exists, return Ok(())
 			warn!("Skip submit_trusted_call because top with the same hash exists");
-			return Ok(())
+			return Ok(());
 		}
 
 		// swap the hash in the rpc connection registry to make sure furthre RPC responses go to
@@ -249,9 +249,10 @@ where
 			let start_time = Instant::now();
 
 			match &req {
-				RequestType::IdentityVerification(req) =>
+				RequestType::IdentityVerification(req) => {
 					IdentityVerificationHandler { req: req.clone(), context: context_pool.clone() }
-						.start(sender_pool),
+						.start(sender_pool)
+				},
 			}
 
 			if let Err(e) =

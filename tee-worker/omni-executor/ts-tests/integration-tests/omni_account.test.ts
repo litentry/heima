@@ -5,12 +5,11 @@ import { createIntegrationTestContext, IntegrationTestContext } from './utils/co
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
 import {
-    createNativeCall,
-    createNativeAuthenticatedOperation,
+    createNativeTask,
+    createNativeTaskWrapper,
     createOmniAccountPermission,
-    createNativeQuery,
 } from './utils/type_creators';
-import { sendPlainRequestFromNativeCall, sendPlainRequestFromNativeQuery } from './utils/requests';
+import { sendRawTaskPlain } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -34,15 +33,15 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        const nativeCall = createNativeCall(context.api, ['create_account_store', 'LitentryIdentity'], aliceIdentity);
-        const nativeCallOperation = await createNativeAuthenticatedOperation(
+        const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'LitentryIdentity'], aliceIdentity);
+        const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
-            nativeCall,
+            nativeTask,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isSome, 'account store not found');
@@ -70,10 +69,10 @@ describe('OmniAccount', function () {
             'substrate',
             bob
         );
-        const nativeCall = createNativeCall(
+        const nativeTask = createNativeTask(
             context.api,
             [
-                'add_account',
+                'AddAccount',
                 '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)',
             ],
             [
@@ -84,14 +83,14 @@ describe('OmniAccount', function () {
                 [createOmniAccountPermission(context.api, 'All')],
             ]
         );
-        const nativeCallOperation = await createNativeAuthenticatedOperation(
+        const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
-            nativeCall,
+            nativeTask,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -110,19 +109,19 @@ describe('OmniAccount', function () {
     step('test publicize_account', async function () {
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
-        const nativeCall = createNativeCall(
+        const nativeTask = createNativeTask(
             context.api,
-            ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
+            ['PublicizeAccount', '(LitentryIdentity, LitentryIdentity)'],
             [aliceIdentity, bobIdentity]
         );
-        const nativeCallOperation = await createNativeAuthenticatedOperation(
+        const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
-            nativeCall,
+            nativeTask,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -160,19 +159,19 @@ describe('OmniAccount', function () {
             createOmniAccountPermission(context.api, 'RequestNativeIntent'),
             createOmniAccountPermission(context.api, 'RequestEthereumIntent'),
         ];
-        const nativeCall = createNativeCall(
+        const nativeTask = createNativeTask(
             context.api,
-            ['set_permissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
+            ['SetPermissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
-        const nativeCallOperation = await createNativeAuthenticatedOperation(
+        const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
-            nativeCall,
+            nativeTask,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         accountPermissions = await context.api.query.omniAccount.memberAccountPermissions(bobIdentity.hash);
@@ -190,38 +189,6 @@ describe('OmniAccount', function () {
         );
     });
 
-    step('test get_account_store', async function () {
-        const nativeQuery = createNativeQuery(context.api, ['get_account_store', '(LitentryIdentity)'], aliceIdentity);
-        const nativeQueryOperation = await createNativeAuthenticatedOperation(
-            context.api,
-            nativeQuery,
-            aliceWallet,
-            context.api.createType('Index', currentNonce),
-            context.mrEnclave
-        );
-        const response = await sendPlainRequestFromNativeQuery(context, nativeQueryOperation);
-        assert.isTrue(response.isOk, 'response should be ok');
-        assert.isTrue(response.asOk.isQueryResponse, 'response should be query response');
-        assert.isTrue(response.asOk.asQueryResponse.isAccountStore, 'response should be account store');
-
-        const accountStore = response.asOk.asQueryResponse.asAccountStore;
-        assert.equal(accountStore.length, 2, 'account store members count should be 2');
-
-        const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
-        const bobIdentity = await bob.getIdentity(context.api);
-
-        assert.equal(
-            accountStore[0].toHex(),
-            aliceIdentity.toHex(),
-            'account store member is not the expected identity (Alice)'
-        );
-        assert.equal(
-            accountStore[1].toHex(),
-            bobIdentity.toHex(),
-            'account store member is not the expected identity (Bob)'
-        );
-    });
-
     step('test remove_account', async function () {
         const bob = context.web3Wallets['substrate']['Bob'] as SubstrateSigner;
         const bobIdentity = await bob.getIdentity(context.api);
@@ -230,19 +197,19 @@ describe('OmniAccount', function () {
         let membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
 
-        const nativeCall = createNativeCall(
+        const nativeTask = createNativeTask(
             context.api,
-            ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+            ['RemoveAccounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
-        const nativeCallOperation = await createNativeAuthenticatedOperation(
+        const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
-            nativeCall,
+            nativeTask,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -264,19 +231,19 @@ describe('OmniAccount', function () {
                 value: transferAmount.toBigInt(),
             }),
         });
-        const nativeCall = createNativeCall(
+        const nativeTask = createNativeTask(
             context.api,
-            ['request_intent', '(LitentryIdentity, Intent)'],
+            ['RequestIntent', '(LitentryIdentity, Intent)'],
             [aliceIdentity, intent]
         );
-        const nativeCallOperation = await createNativeAuthenticatedOperation(
+        const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
-            nativeCall,
+            nativeTask,
             aliceWallet,
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendPlainRequestFromNativeCall(context, nativeCallOperation);
+        await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
 
         const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);

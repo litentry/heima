@@ -185,13 +185,13 @@ pub mod pallet {
 		/// Some call is dispatched as omni-account origin
 		DispatchedAsOmniAccount {
 			who: T::AccountId,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 			result: DispatchResult,
 		},
 		/// Some call is dispatched as signed origin
 		DispatchedAsSigned {
 			who: T::AccountId,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 			result: DispatchResult,
 		},
 		/// Intent is requested
@@ -227,7 +227,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
@@ -251,7 +251,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)

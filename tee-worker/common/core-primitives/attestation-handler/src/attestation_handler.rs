@@ -136,7 +136,7 @@ where
 			Ok(r) => r,
 			Err(e) => {
 				error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-				return Err(e.into())
+				return Err(e.into());
 			},
 		};
 		println!("    [Enclave] Create attestation report successful");
@@ -195,7 +195,7 @@ where
 				"    [Enclave] failed to write RA file ({}), status: {:?}",
 				RA_DUMP_CERT_DER_FILE, err
 			);
-			return Err(EnclaveError::IoError(err))
+			return Err(EnclaveError::IoError(err));
 		}
 		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 		Ok(())
@@ -220,7 +220,7 @@ where
 				"    [Enclave] failed to write RA file ({}), status: {:?}",
 				RA_DUMP_CERT_DER_FILE, err
 			);
-			return Err(EnclaveError::IoError(err))
+			return Err(EnclaveError::IoError(err));
 		}
 		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 		Ok(())
@@ -254,7 +254,7 @@ where
 			Ok(r) => r,
 			Err(e) => {
 				error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
-				return Err(e.into())
+				return Err(e.into());
 			},
 		};
 
@@ -271,7 +271,7 @@ where
 	) -> EnclaveResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
 		if !skip_ra && quoting_enclave_target_info.is_none() && quote_size.is_none() {
 			error!("Enclave Attestation] remote attestation not skipped, but Quoting Enclave (QE) data is not available");
-			return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED))
+			return Err(EnclaveError::Sgx(sgx_status_t::SGX_ERROR_UNEXPECTED));
 		}
 		let chain_signer = self.signing_key_repo.retrieve_key()?;
 		info!("[Enclave Attestation] Ed25519 signer pub key: {:?}", chain_signer.public().0);
@@ -292,7 +292,7 @@ where
 				Ok(quote) => quote,
 				Err(e) => {
 					error!("[Enclave] Error in create_dcap_attestation_report: {:?}", e);
-					return Err(e.into())
+					return Err(e.into());
 				},
 			};
 			qe_quote
@@ -308,7 +308,7 @@ where
 				Ok(r) => r,
 				Err(e) => {
 					error!("[Enclave] gen_ecc_cert failed: {:?}", e);
-					return Err(e.into())
+					return Err(e.into());
 				},
 			};
 
@@ -358,12 +358,14 @@ where
 					len_num = len_str.parse::<u32>().map_err(|e| EnclaveError::Other(e.into()))?;
 					debug!("    [Enclave] Content length = {}", len_num);
 				},
-				"X-IASReport-Signature" =>
+				"X-IASReport-Signature" => {
 					sig = String::from_utf8(h.value.to_vec())
-						.map_err(|e| EnclaveError::Other(e.into()))?,
-				"X-IASReport-Signing-Certificate" =>
+						.map_err(|e| EnclaveError::Other(e.into()))?
+				},
+				"X-IASReport-Signing-Certificate" => {
 					cert = String::from_utf8(h.value.to_vec())
-						.map_err(|e| EnclaveError::Other(e.into()))?,
+						.map_err(|e| EnclaveError::Other(e.into()))?
+				},
 				_ => (),
 			}
 		}
@@ -438,7 +440,7 @@ where
 			debug!("    [Enclave] Base64-encoded SigRL: {:?}", resp_body);
 
 			let resp_str = str::from_utf8(resp_body).map_err(|e| EnclaveError::Other(e.into()))?;
-			return base64::decode(resp_str).map_err(|e| EnclaveError::Other(e.into()))
+			return base64::decode(resp_str).map_err(|e| EnclaveError::Other(e.into()));
 		}
 
 		// len_num == 0
@@ -583,7 +585,7 @@ where
 			},
 			Err(e) => {
 				error!("    [Enclave] Report creation failed. {:?}", e);
-				return Err(e)
+				return Err(e);
 			},
 		};
 
@@ -617,7 +619,7 @@ where
 			Ok(()) => debug!("    [Enclave] rsgx_verify_report success!"),
 			Err(x) => {
 				error!("    [Enclave] rsgx_verify_report failed. {:?}", x);
-				return Err(x)
+				return Err(x);
 			},
 		}
 
@@ -627,7 +629,7 @@ where
 			|| target_info.attributes.xfrm != qe_report.body.attributes.xfrm
 		{
 			error!("    [Enclave] qe_report does not match current target_info!");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		debug!("    [Enclave] qe_report check success");
@@ -655,7 +657,7 @@ where
 
 		if rhs_hash != lhs_hash {
 			error!("    [Enclave] Quote is tampered!");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		let (attn_report, sig, cert) = self.get_report_from_intel(ias_socket, quote_content)?;
@@ -693,7 +695,7 @@ where
 			unsafe { sgx_self_target(&mut app_enclave_target_info as *mut sgx_target_info_t) };
 		if ret_val != sgx_status_t::SGX_SUCCESS {
 			error!("sgx_self_target returned: {:?}", ret_val);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		// Set current time, which is needed to check against the expiration date of the certificate.
@@ -706,7 +708,7 @@ where
 		let ret_val = unsafe { sgx_read_rand(rand_nonce.as_mut_ptr(), rand_nonce.len()) };
 		if ret_val != sgx_status_t::SGX_SUCCESS {
 			error!("sgx_read_rand returned: {:?}", ret_val);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 		debug!("Retrieved random nonce {:?}", rand_nonce);
 		qve_report_info.nonce.rand.copy_from_slice(rand_nonce.as_slice());
@@ -733,7 +735,7 @@ where
 				"Nonce of input value and return value are not matching. Input: {:?}, Output: {:?}",
 				qve_report_info.nonce.rand, qve_report_info_return_value.nonce.rand
 			);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		// Set the threshold of QvE ISV SVN. The ISV SVN of QvE used to verify quote must be greater or equal to this threshold
@@ -763,7 +765,7 @@ where
 
 		if ret_val != sgx_quote3_error_t::SGX_QL_SUCCESS {
 			error!("sgx_tvl_verify_qve_report_and_identity returned: {:?}", ret_val);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		Ok(())
@@ -792,7 +794,7 @@ where
 			},
 			Err(e) => {
 				error!("rsgx_create_report creation failed. {:?}", e);
-				return Err(e)
+				return Err(e);
 			},
 		};
 
@@ -810,7 +812,7 @@ where
 			error!("mr_enclave of quote and app_report are not matching");
 			error!("mr_enclave of quote: {:?}", quote3.report_body.mr_enclave.m);
 			error!("mr_enclave of quote: {:?}", app_report.body.mr_enclave.m);
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 		}
 
 		Ok(quote_vec)
@@ -827,7 +829,7 @@ fn decode_spid(hex_encoded_string: &str) -> SgxResult<sgx_spid_t> {
 			hex.len(),
 			itp_settings::files::SPID_MIN_LENGTH
 		);
-		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED)
+		return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
 	}
 
 	let decoded_vec = hex::decode(hex).map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;

@@ -98,7 +98,7 @@ impl<OCallApi: EnclaveOnChainOCallApi> GetAccountStore for OmniAccountStoreRepos
 				.map_err(|_| Error::OCallApiError("Failed to get storage keys"))?;
 
 			if storage_keys_paged.is_empty() || storage_keys_paged.last().cloned() == start_key {
-				break
+				break;
 			}
 
 			start_key = storage_keys_paged.last().cloned();

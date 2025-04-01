@@ -184,8 +184,9 @@ fn get_token_range_last(token: &ETokenAddress) -> f64 {
 	match token {
 		ETokenAddress::WBTC => *WBTC_TOKEN_BALANCE_RANGE.last().unwrap_or(&1000.0),
 		ETokenAddress::LIT => *LIT_TOKEN_BALANCE_RANGE.last().unwrap_or(&3000.0),
-		ETokenAddress::USDC | ETokenAddress::USDT =>
-			*USDT_C_TOKEN_BALANCE_RANGE.last().unwrap_or(&1200.0),
+		ETokenAddress::USDC | ETokenAddress::USDT => {
+			*USDT_C_TOKEN_BALANCE_RANGE.last().unwrap_or(&1200.0)
+		},
 		ETokenAddress::CRV => *CRV_TOKEN_BALANCE_RANGE.last().unwrap_or(&1800.0),
 		ETokenAddress::MATIC => *MATIC_TOKEN_BALANCE_RANGE.last().unwrap_or(&1800.0),
 		ETokenAddress::DYDX => *DYDX_TOKEN_BALANCE_RANGE.last().unwrap_or(&1200.0),

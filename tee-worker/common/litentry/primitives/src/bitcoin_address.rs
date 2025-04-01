@@ -28,7 +28,7 @@ pub fn p2wpkh_address(pubkey_string: &str) -> String {
 	let pubkey = PublicKey::from_str(pubkey_string).expect("pubkey");
 	let address = Address::p2wpkh(&pubkey, Network::Bitcoin);
 	if let Ok(address) = address {
-		return address.to_string()
+		return address.to_string();
 	}
 	"".to_string()
 }
@@ -37,7 +37,7 @@ pub fn p2sh_address(pubkey_string: &str) -> String {
 	let pubkey = PublicKey::from_str(pubkey_string).expect("pubkey");
 	let address = Address::p2shwpkh(&pubkey, Network::Bitcoin);
 	if let Ok(address) = address {
-		return address.to_string()
+		return address.to_string();
 	}
 	"".to_string()
 }

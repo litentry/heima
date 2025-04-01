@@ -156,10 +156,12 @@ pub(crate) fn query() -> impl Filter<Extract = impl warp::Reply, Error = warp::R
 					};
 					Response::builder().body(serde_json::to_string(&body).unwrap())
 				},
-				"nr_getTokenHoldings" =>
-					Response::builder().body(RES_BODY_OK_GET_TOKEN_HOLDINGS.to_string()),
-				"eth_getTransactionCount" =>
-					Response::builder().body(RES_BODY_OK_GET_TRANSACTION_COUNT.to_string()),
+				"nr_getTokenHoldings" => {
+					Response::builder().body(RES_BODY_OK_GET_TOKEN_HOLDINGS.to_string())
+				},
+				"eth_getTransactionCount" => {
+					Response::builder().body(RES_BODY_OK_GET_TRANSACTION_COUNT.to_string())
+				},
 				_ => Response::builder().status(404).body(String::from("Error query")),
 			}
 		})

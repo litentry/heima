@@ -118,7 +118,7 @@ impl GeniidataClient {
 						})?;
 					all_items.extend(response.data.list);
 					if offset >= response.data.count {
-						break
+						break;
 					}
 					offset += GENIIDATA_QUERY_LIMIT;
 				}

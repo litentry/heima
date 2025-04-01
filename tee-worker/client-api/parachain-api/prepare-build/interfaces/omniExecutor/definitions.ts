@@ -1,47 +1,48 @@
 export default {
     types: {
-        OmniAesRequest: {
-            mrenclave: "MrEnclave",
-            key: "Vec<u8>",
-            payload: "AesOutput",
-        },
-        PlainRequest: {
-            mrenclave: "MrEnclave",
-            payload: "Vec<u8>",
-        },
-        MrEnclave: "H256",
-        NativeCall: {
+        RawTask: {
             _enum: {
-                request_auth_token: "(Identity)",
-                request_intent: "(Identity, Intent)",
-                create_account_store: "(Identity)",
-                add_account: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
-                remove_accounts: "(Identity, Vec<Identity>)",
-                publicize_account: "(Identity, Identity)",
-                set_permissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
+                Plain: "NativeTaskWrapper",
+                Aes: "AesTask",
             },
         },
-        NativeCallAuthenticatedOperation: {
-            operation: "NativeCall",
-            nonce: "Index",
-            authentication: "Authentication",
+        NativeTaskWrapper: {
+            task: "NativeTask",
+            nonce: "Option<Nonce>",
+            auth: "Option<OmniAuth>",
         },
-        NativeQueryAuthenticatedOperation: {
-            operation: "NativeQuery",
-            nonce: "Index",
-            authentication: "Authentication",
-        },
-        Authentication: {
+        MrEnclave: "H256",
+        NativeTask: {
             _enum: {
-                Web3: "(MultiSignature)",
+                RequestAuthToken: "(Identity)",
+                RequestIntent: "(Identity, Intent)",
+                CreateAccountStore: "(Identity)",
+                AddAccount: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
+                RemoveAccounts: "(Identity, Vec<Identity>)",
+                PublicizeAccount: "(Identity, Identity)",
+                SetPermissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
+                __Unused7: "Null",
+                __Unused8: "Null",
+                __Unused9: "Null",
+                __Unused10: "Null",
+                __Unused11: "Null",
+                __Unused12: "Null",
+                __Unused13: "Null",
+                __Unused14: "Null",
+                __Unused15: "Null",
+                __Unused16: "Null",
+                __Unused17: "Null",
+                __Unused18: "Null",
+                __Unused19: "Null",
+                PumpxRequestJwt: "(Identity)",
+            },
+        },
+        OmniAuth: {
+            _enum: {
+                Web3: "(HeimaMultiSignature)",
                 Email: "(Text)",
                 AuthToken: "(Text)",
                 OAuth2: "(OAuth2Data)",
-            },
-        },
-        NativeQuery: {
-            _enum: {
-                get_account_store: "(Identity)",
             },
         },
         OAuth2Data: {
@@ -53,22 +54,11 @@ export default {
         OAuth2Provider: {
             _enum: ["Google"],
         },
-        NativeOperationResponse: "Result<NativeOperationOk, NativeOperationError>",
-        NativeOperationOk: {
-            _enum: {
-                CallResponse: "CallResponse",
-                QueryResponse: "QueryResponse",
-            },
-        },
-        CallResponse: {
+        NativeTaskResponse: "Result<NativeTaskOk, NativeTaskError>",
+        NativeTaskOk: {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
-            },
-        },
-        QueryResponse: {
-            _enum: {
-                AccountStore: "Vec<Identity>",
             },
         },
         XtReport: {
@@ -106,7 +96,7 @@ export default {
                 Invalid: "Null",
             },
         },
-        NativeOperationError: {
+        NativeTaskError: {
             _enum: {
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
@@ -114,6 +104,20 @@ export default {
                 InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
             },
+        },
+        HeimaMultiSignature: {
+            _enum: {
+                Ed25519: "Ed25519Signature",
+                Sr25519: "Sr25519Signature",
+                Ecdsa: "EcdsaSignature",
+                Ethereum: "EthereumSignature",
+                Bitcoin: "BitcoinSignature",
+            },
+        },
+        Nonce: "u32",
+        AesTask: {
+            key: "Vec<u8>",
+            payload: "AesOutput",
         },
     },
 };

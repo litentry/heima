@@ -236,7 +236,7 @@ impl EnclaveAttestationOCallApi for OcallApi {
 	fn get_mrenclave_of_self(&self) -> SgxResult<sgx_measurement_t> {
 		if let Some(mrenclave) = MrEnclave::current()?.maybe_mrenclave {
 			trace!("found cached MRENCLAVE");
-			return Ok(mrenclave)
+			return Ok(mrenclave);
 		};
 		debug!("initializing MY_MRENCLAVE cache");
 		let mrenclave_value = self.get_report_of_self()?.mr_enclave;
@@ -265,7 +265,7 @@ impl<T: EnclaveAttestationOCallApi> GetSgxReport for T {
 			},
 			Err(e) => {
 				error!("    [Enclave] Report creation failed. {:?}", e);
-				return Err(e)
+				return Err(e);
 			},
 		};
 		Ok(rep.body)

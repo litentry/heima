@@ -86,7 +86,7 @@ pub(crate) fn query() -> impl Filter<Extract = impl warp::Reply, Error = warp::R
 	warp::post().and(warp::path::full()).and(warp::body::json()).map(
 		|p: FullPath, body: ReqBody| {
 			if p.as_str() != "/v1/run/system-labels" {
-				return Response::builder().status(400).body(RES_ERRBODY.to_string())
+				return Response::builder().status(400).body(RES_ERRBODY.to_string());
 			}
 			if body.name == "Account total transactions under {amount}" {
 				// Total transaction

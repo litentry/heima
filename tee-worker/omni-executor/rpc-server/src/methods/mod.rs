@@ -2,8 +2,7 @@ mod get_health;
 mod get_oauth2_google_authorization_url;
 mod get_shielding_key;
 mod request_email_verification_code;
-mod submit_aes_request;
-mod submit_plain_request;
+mod submit_native_task;
 
 use crate::server::RpcContext;
 use get_health::register_get_health;
@@ -12,8 +11,7 @@ use get_shielding_key::register_get_shielding_key;
 use jsonrpsee::RpcModule;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use request_email_verification_code::register_request_email_verification_code;
-use submit_aes_request::register_submit_aes_requests;
-use submit_plain_request::register_submit_plain_requests;
+use submit_native_task::register_submit_native_task;
 
 pub fn register_methods<
 	Header: Send + Sync + 'static,
@@ -24,8 +22,7 @@ pub fn register_methods<
 ) {
 	register_get_health(module);
 	register_get_shielding_key(module);
-	register_submit_aes_requests(module);
+	register_submit_native_task(module);
 	register_request_email_verification_code(module);
 	register_get_oauth2_google_authorization_url(module);
-	register_submit_plain_requests(module);
 }

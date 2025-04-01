@@ -128,7 +128,7 @@ fn cleanup_already_deleted() {
 #[test]
 fn cleanup_error() {
 	if should_skip_cleanup_test() {
-		return
+		return;
 	}
 	let _guard = LOCK.lock();
 	let temp_dir = TempDir::new().unwrap();
@@ -177,7 +177,7 @@ fn drop_already_deleted() {
 #[test]
 fn drop_error_ignored() {
 	if should_skip_cleanup_test() {
-		return
+		return;
 	}
 	let _guard = LOCK.lock();
 	let temp_dir = TempDir::new().unwrap();
@@ -196,7 +196,7 @@ fn drop_error_ignored() {
 #[test]
 fn drop_error_panic() {
 	if should_skip_cleanup_test() {
-		return
+		return;
 	}
 	let _guard = LOCK.lock();
 	let temp_dir = TempDir::new().unwrap().panic_on_cleanup_error();

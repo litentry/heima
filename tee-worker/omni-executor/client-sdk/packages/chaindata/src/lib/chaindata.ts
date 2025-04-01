@@ -51,7 +51,7 @@ export const heimaProd: ChainSpec = {
   name: 'Heima Production Network',
   isTestnet: false,
   isDefault: true,
-  rpcs: [{ url: 'wss://litentry-rpc.dwellir.com' }, { url: 'wss://rpc.heima-parachain.heima.network' }],
+  rpcs: [{ url: 'wss://heima-rpc.n.dwellir.com' }, { url: 'wss://rpc.heima-parachain.heima.network' }],
   // TODO update url below
   enclaveRpcs: [{ url: 'wss://enclave-prod.heima.network' }],
 };
