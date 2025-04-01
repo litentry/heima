@@ -36,15 +36,17 @@ identity_test: &identity_test
   - "tee-worker/identity/ts-tests/**"
 
 omni_executor_src: &omni_executor_src
-  - "tee-worker/omni-executor/Cargo.toml"
-  - "tee-worker/omni-executor/Cargo.lock"
-  - "tee-worker/omni-executor/**/*.rs"
-  - "tee-worker/omni-executor/rust-toolchain.toml"
-  - "tee-worker/omni-executor/**/*.scale"
+  - 'tee-worker/omni-executor/Cargo.toml'
+  - 'tee-worker/omni-executor/Cargo.lock'
+  - 'tee-worker/omni-executor/**/*.rs'
+  - 'tee-worker/omni-executor/rust-toolchain.toml'
+  - 'tee-worker/omni-executor/**/*.scale'
 
 omni_executor_test: &omni_executor_test
-  - "parachain/docker/**"
-  - "tee-worker/omni-executor/docker/*.yml"
+  - 'parachain/docker/**'
+  - 'tee-worker/omni-executor/docker/*.yml'
+  - 'tee-worker/omni-executor/client-sdk/**'
+  - 'tee-worker/omni-executor/ts-tests/**'
 
 evm_contracts_src:
   - "evm-contracts/bsc-accounting-contract/**"

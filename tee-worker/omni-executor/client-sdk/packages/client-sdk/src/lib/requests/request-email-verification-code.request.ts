@@ -1,6 +1,6 @@
 import { assert } from '@polkadot/util';
 
-import { JsonRpcRequest } from '@lib/utils/types';
+import { JsonRpcRequest } from '@utils/types';
 
 import { enclave } from '@lib/enclave';
 

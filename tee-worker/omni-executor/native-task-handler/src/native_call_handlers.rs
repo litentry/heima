@@ -1,17 +1,14 @@
-mod aes256_key_store;
-mod types;
-
-use executor_core::{
-	intent_executor::IntentExecutor,
-	native_task::{NativeTask, NativeTaskWrapper},
+use crate::{
+	types::{CallResponse, NativeOperationError},
+	NativeOperationResponse, ResponseSender, TaskHandlerContext,
 };
-use executor_crypto::{
-	aes256::{aes_encrypt_default, Aes256Key},
-	jwt,
-};
+use executor_core::{intent_executor::IntentExecutor, native_operation::NativeCall};
+use executor_crypto::{aes256::aes_encrypt_default, jwt};
 use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
-use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage, StorageDB};
-use heima_authentication::auth_token::*;
+use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage};
+use heima_authentication::auth_token::{
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION, AUTH_TOKEN_ID_TYPE,
+};
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
@@ -20,132 +17,12 @@ use parentchain_api_interface::runtime_types::{
 	paseo_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
-	metadata::{Metadata, SubxtMetadataProvider},
-	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory, ToSubxtType, XtStatus,
+	AccountId32, SubstrateRpcClient, SubstrateRpcClientFactory, ToSubxtType, XtStatus,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Decode, Encode};
-use pumpx::PumpxApi;
-use std::{marker::PhantomData, sync::Arc};
-use tokio::sync::{mpsc, oneshot};
-use types::{NativeTaskError, NativeTaskOk};
+use std::sync::Arc;
 
-pub use aes256_key_store::Aes256KeyStore;
-
-pub type ResponseSender = oneshot::Sender<Vec<u8>>;
-pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
-pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
-
-type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
-
-pub type ParentchainTxSigner = TransactionSigner<
-	SubstrateKeyStore,
-	SubxtClient<CustomConfig>,
-	SubxtClientFactory<CustomConfig>,
-	CustomConfig,
-	Metadata,
-	SubxtMetadataProvider<CustomConfig>,
->;
-
-pub struct TaskHandlerContext<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	EthereumIntentExecutor: IntentExecutor,
-	SolanaIntentExecutor: IntentExecutor,
-	CrossChainIntentExecutor: IntentExecutor,
-> {
-	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-	pub storage_db: Arc<StorageDB>,
-	pub jwt_rsa_private_key: Vec<u8>,
-	pub aes256_key: Aes256Key,
-	pub transaction_signer: Arc<ParentchainTxSigner>,
-	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
-	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
-	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-	pub pumpx_api: Arc<PumpxApi>,
-	phantom_header: PhantomData<Header>,
-	phantom_rpc_client: PhantomData<RpcClient>,
-}
-
-impl<
-		Header,
-		RpcClient: SubstrateRpcClient<Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-		EthereumIntentExecutor: IntentExecutor,
-		SolanaIntentExecutor: IntentExecutor,
-		CrossChainIntentExecutor: IntentExecutor,
-	>
-	TaskHandlerContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>
-{
-	#[allow(clippy::too_many_arguments)]
-	pub fn new(
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-		transaction_signer: Arc<ParentchainTxSigner>,
-		storage_db: Arc<StorageDB>,
-		jwt_rsa_private_key: Vec<u8>,
-		aes256_key: Aes256Key,
-		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
-		solana_intent_executor: Arc<SolanaIntentExecutor>,
-		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-		pumpx_api: Arc<PumpxApi>,
-	) -> Self {
-		Self {
-			parentchain_rpc_client_factory,
-			transaction_signer,
-			storage_db,
-			jwt_rsa_private_key,
-			aes256_key,
-			ethereum_intent_executor,
-			solana_intent_executor,
-			cross_chain_intent_executor,
-			pumpx_api,
-			phantom_header: PhantomData,
-			phantom_rpc_client: PhantomData,
-		}
-	}
-}
-
-pub async fn run_native_task_handler<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	buffer: usize,
-	ctx: Arc<
-		TaskHandlerContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
-	>,
-) -> NativeTaskSender {
-	let (sender, mut receiver) = mpsc::channel::<NativeTaskChannelType>(buffer);
-
-	tokio::spawn(async move {
-		while let Some((wrapper, sender)) = receiver.recv().await {
-			handle_native_task(ctx.clone(), wrapper, sender).await;
-		}
-	});
-
-	sender
-}
-
-async fn handle_native_task<
+pub async fn handle_native_call<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -163,25 +40,25 @@ async fn handle_native_task<
 			CrossChainIntentExecutor,
 		>,
 	>,
-	wrapper: NativeTaskWrapper<NativeTask>,
+	call: NativeCall,
+	auth_type: OmniAccountAuthType,
 	response_sender: ResponseSender,
 ) {
 	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
 		log::error!("Failed to create rpc client");
-		let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+		let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 		if response_sender.send(response.encode()).is_err() {
 			log::error!("Failed to send response");
 		}
 		return;
 	};
 
-	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
-
-	let (response_sender, tx) = match wrapper.task {
-		NativeTask::RequestAuthToken(sender) => {
+	let (response_sender, tx) = match call {
+		NativeCall::request_auth_token(sender_identity) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
-				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
+			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -189,18 +66,20 @@ async fn handle_native_task<
 			};
 			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
 				log::error!("Failed to get last finalized block number");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
 			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
-			let claims = match sender {
+
+			let claims = match sender_identity {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
-						let response =
-							NativeTaskResponse::Err(NativeTaskError::InvalidMemberIdentity);
+						let response = NativeOperationResponse::Err(
+							NativeOperationError::InvalidMemberIdentity,
+						);
 						if response_sender.send(response.encode()).is_err() {
 							log::error!("Failed to send response");
 						}
@@ -213,13 +92,15 @@ async fn handle_native_task<
 					)
 				},
 				_ => AuthTokenClaims::new(
-					sender.hash().to_string(),
+					sender_identity.hash().to_string(),
 					AUTH_TOKEN_ID_TYPE.to_string(),
 					auth_options,
 				),
 			};
+
 			let Ok(token) = jwt::create(&claims, &ctx.jwt_rsa_private_key) else {
-				let response = NativeTaskResponse::Err(NativeTaskError::AuthTokenCreationFailed);
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -237,7 +118,8 @@ async fn handle_native_task<
 				Ok(n) => n,
 				Err(e) => {
 					log::error!("Failed to get account nonce: {:?}", e);
-					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					let response =
+						NativeOperationResponse::Err(NativeOperationError::InternalError);
 					if response_sender.send(response.encode()).is_err() {
 						log::error!("Failed to send response");
 					}
@@ -249,36 +131,38 @@ async fn handle_native_task<
 
 			if rpc_client.submit_tx(&tx).await.is_err() {
 				log::error!("Failed to submit tx");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			}
 
-			let response = NativeTaskResponse::Ok(NativeTaskOk::AuthToken(token));
+			let response: NativeOperationResponse = CallResponse::AuthToken(token).into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
 			return;
 		},
-		NativeTask::RequestIntent(sender, intent) => {
+		NativeCall::request_intent(sender_identity, intent) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
-				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
+			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
 
-			let call = OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
+			let request_intent_call =
+				OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.clone().map(|t| t.to_subxt_type()),
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(request_intent_call),
+					auth_type.to_subxt_type(),
 				);
 
 			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
@@ -286,7 +170,8 @@ async fn handle_native_task<
 				Ok(n) => n,
 				Err(e) => {
 					log::error!("Failed to get account nonce: {:?}", e);
-					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					let response =
+						NativeOperationResponse::Err(NativeOperationError::InternalError);
 					if response_sender.send(response.encode()).is_err() {
 						log::error!("Failed to send response");
 					}
@@ -296,8 +181,8 @@ async fn handle_native_task<
 
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await;
 			if rpc_client.submit_tx(&tx).await.is_err() {
-				log::error!("Failed to submit RequestIntent tx");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				log::error!("Failed to submit request_intent tx");
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -313,9 +198,9 @@ async fn handle_native_task<
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
-							sender.hash().to_subxt_type(),
+							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::System(remark_call),
-							auth_type.map(|t| t.to_subxt_type()),
+							auth_type.to_subxt_type(),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
@@ -326,9 +211,9 @@ async fn handle_native_task<
 					};
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
-							sender.hash().to_subxt_type(),
+							sender_identity.hash().to_subxt_type(),
 							RuntimeCall::Balances(transfer_call),
-							auth_type.map(|t| t.to_subxt_type()),
+							auth_type.to_subxt_type(),
 						);
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
@@ -387,18 +272,25 @@ async fn handle_native_task<
 
 			(response_sender, tx)
 		},
-		NativeTask::CreateAccountStore(sender) => {
-			let sender_bytes = sender.encode();
+		NativeCall::create_account_store(sender_identity) => {
+			let sender_identity_bytes = sender_identity.encode();
 			let create_account_store_call = parentchain_api_interface::tx()
 				.omni_account()
-				.create_account_store(Decode::decode(&mut &sender_bytes[..]).unwrap());
+				.create_account_store(Decode::decode(&mut &sender_identity_bytes[..]).unwrap());
 			let tx = ctx.transaction_signer.sign(create_account_store_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::AddAccount(sender, identity, validation_data, public_account, permissions) => {
+		NativeCall::add_account(
+			sender_identity,
+			identity,
+			validation_data,
+			public_account,
+			permissions,
+		) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
-				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
+			let Some(omni_account) = omni_account_storage.get(&sender_identity.hash()) else {
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::UnauthorizedSender);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -406,18 +298,18 @@ async fn handle_native_task<
 			};
 			let Ok(nonce) = rpc_client.get_account_nonce(&omni_account).await else {
 				log::error!("Failed to get account nonce");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
-			let verification_message = get_verification_message(&sender, &identity, nonce);
+			let verification_message = get_verification_message(&sender_identity, &identity, nonce);
 
 			let validation_result = match validation_data {
 				ValidationData::Web2(web2_validation_data) => {
 					if !identity.is_web2() {
-						Err(NativeTaskError::InvalidMemberIdentity)
+						Err(NativeOperationError::InvalidMemberIdentity)
 					} else {
 						tokio::task::spawn_blocking({
 							let identity = identity.clone();
@@ -434,16 +326,17 @@ async fn handle_native_task<
 						.await
 						.map_err(|e| {
 							log::error!("Failed to verify identity: {:?}", e);
-							NativeTaskError::InternalError
+							NativeOperationError::InternalError
 						})
 						.and_then(|result| {
-							result.map_err(|_| NativeTaskError::ValidationDataVerificationFailed)
+							result
+								.map_err(|_| NativeOperationError::ValidationDataVerificationFailed)
 						})
 					}
 				},
 				ValidationData::Web3(web3_validation_data) => {
 					if !identity.is_web3() {
-						Err(NativeTaskError::InvalidMemberIdentity)
+						Err(NativeOperationError::InvalidMemberIdentity)
 					} else {
 						tokio::task::spawn_blocking({
 							let identity = identity.clone();
@@ -458,16 +351,17 @@ async fn handle_native_task<
 						.await
 						.map_err(|e| {
 							log::error!("Failed to verify identity: {:?}", e);
-							NativeTaskError::InternalError
+							NativeOperationError::InternalError
 						})
 						.and_then(|result| {
-							result.map_err(|_| NativeTaskError::ValidationDataVerificationFailed)
+							result
+								.map_err(|_| NativeOperationError::ValidationDataVerificationFailed)
 						})
 					}
 				},
 			};
 			if let Err(e) = validation_result {
-				let response = NativeTaskResponse::Err(e);
+				let response = NativeOperationResponse::Err(e);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -480,21 +374,21 @@ async fn handle_native_task<
 					identity.hash(),
 				),
 			};
-			let call = OmniAccountCall::add_account {
+			let add_account_call = OmniAccountCall::add_account {
 				member_account: member_account.to_subxt_type(),
 				permissions: permissions.map(|p| p.to_subxt_type()),
 			};
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(add_account_call),
+					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::RemoveAccounts(sender, identities) => {
-			let call = OmniAccountCall::remove_accounts {
+		NativeCall::remove_accounts(sender_identity, identities) => {
+			let remove_accounts = OmniAccountCall::remove_accounts {
 				member_account_hashes: identities
 					.iter()
 					.map(|i| i.hash().to_subxt_type())
@@ -502,45 +396,46 @@ async fn handle_native_task<
 			};
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(remove_accounts),
+					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::PublicizeAccount(sender, identity) => {
-			let call =
+		NativeCall::publicize_account(sender_identity, identity) => {
+			let publicize_account_call =
 				OmniAccountCall::publicize_account { member_account: identity.to_subxt_type() };
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(publicize_account_call),
+					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::SetPermissions(sender, identity, permissions) => {
-			let call = OmniAccountCall::set_permissions {
+		NativeCall::set_permissions(sender_identity, identity, permissions) => {
+			let set_permissions_call = OmniAccountCall::set_permissions {
 				member_account_hash: identity.hash().to_subxt_type(),
 				permissions: permissions.to_subxt_type(),
 			};
 			let dispatch_as_omni_account_call =
 				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
+					sender_identity.hash().to_subxt_type(),
+					RuntimeCall::OmniAccount(set_permissions_call),
+					auth_type.to_subxt_type(),
 				);
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, lang) => {
-			let email = match sender {
+		NativeCall::pumpx_request_jwt(sender_identity, invite_code, google_code, lang) => {
+			let email = match sender_identity {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
-						let response =
-							NativeTaskResponse::Err(NativeTaskError::InvalidMemberIdentity);
+						let response = NativeOperationResponse::Err(
+							NativeOperationError::InvalidMemberIdentity,
+						);
 						if response_sender.send(response.encode()).is_err() {
 							log::error!("Failed to send response");
 						}
@@ -550,7 +445,7 @@ async fn handle_native_task<
 				},
 				_ => {
 					let response =
-						NativeTaskResponse::Err(NativeTaskError::UnsupportedIdentityType);
+						NativeOperationResponse::Err(NativeOperationError::UnsupportedIdentityType);
 					if response_sender.send(response.encode()).is_err() {
 						log::error!("Failed to send response");
 					}
@@ -559,7 +454,7 @@ async fn handle_native_task<
 			};
 			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
 				log::error!("Failed to get last finalized block number");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -567,39 +462,39 @@ async fn handle_native_task<
 			};
 			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
 			let auth_options = AuthOptions { expires_at };
-
 			let access_token_claims = AuthTokenClaims::new(
-				sender.hash().to_string(),
+				email.clone(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
 			let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
 			else {
-				let response = NativeTaskResponse::Err(NativeTaskError::AuthTokenCreationFailed);
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
+
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
 				.connect_user(&access_token, email.clone(), invite_code, google_code, lang)
 				.await
 			else {
 				log::error!("Failed to connect user");
-				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError);
+				let response = NativeOperationResponse::Err(NativeOperationError::PumpxApiError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
-			let id_token_claims = AuthTokenClaims::new(
-				sender.hash().to_string(),
-				AUTH_TOKEN_ID_TYPE.to_string(),
-				auth_options,
-			);
+
+			let id_token_claims =
+				AuthTokenClaims::new(email, AUTH_TOKEN_ID_TYPE.to_string(), auth_options);
 			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
-				let response = NativeTaskResponse::Err(NativeTaskError::AuthTokenCreationFailed);
+				let response =
+					NativeOperationResponse::Err(NativeOperationError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
@@ -607,15 +502,12 @@ async fn handle_native_task<
 			};
 
 			let storage = PumpxAuthTokenIdStorage::new(ctx.storage_db.clone());
-			if storage.insert(sender.to_omni_account(), id_token.clone()).is_err() {
-				log::error!("Failed to insert id token into storage");
+			if storage.insert(sender_identity.hash(), id_token.clone()).is_err() {
+				log::error!("Failed to insert pumpx_auth_token into storage");
 			};
 
-			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt {
-				access_token,
-				id_token,
-				user_connect_response,
-			});
+			let response: NativeOperationResponse =
+				CallResponse::PumpxJwt { access_token, id_token, user_connect_response }.into();
 
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
@@ -627,18 +519,19 @@ async fn handle_native_task<
 		Ok(report) => report,
 		Err(e) => {
 			log::error!("Failed to submit and watch tx: {:?}", e);
-			let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+			let response = NativeOperationResponse::Err(NativeOperationError::InternalError);
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
 			return;
 		},
 	};
-	let response = NativeTaskResponse::Ok(NativeTaskOk::ExtrinsicReport {
+	let response: NativeOperationResponse = CallResponse::ExtrinsicReport {
 		extrinsic_hash: report.extrinsic_hash,
 		block_hash: report.block_hash,
 		status: report.status,
-	});
+	}
+	.into();
 
 	if response_sender.send(response.encode()).is_err() {
 		log::error!("Failed to send response");

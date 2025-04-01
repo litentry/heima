@@ -5,7 +5,7 @@ import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
     OmniAuth,
-    CorePrimitivesIdentity,
+    Identity,
     HeimaMultiSignature,
     NativeTask,
     OmniAccountPermission,
@@ -17,12 +17,12 @@ import { Signer } from './signer';
 export async function createIdentityType(
     api: ApiPromise,
     address: HexString | string,
-    type: CorePrimitivesIdentity['type']
-): Promise<CorePrimitivesIdentity> {
+    type: Identity['type']
+): Promise<Identity> {
     const identity = {
         [type]: address,
     };
-    return api.createType('CorePrimitivesIdentity', identity);
+    return api.createType('Identity', identity);
 }
 
 export async function createHeimaMultiSignature(

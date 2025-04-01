@@ -1,6 +1,6 @@
 import type { Registry } from '@polkadot/types-codec/types';
 
-import type { Identity, MultiSignature } from '@heima-network/parachain-api';
+import type { Identity, HeimaMultiSignature } from '@heima-network/parachain-api';
 
 import { decodeSignature } from '@utils/decode-signature';
 
@@ -9,18 +9,18 @@ import { decodeSignature } from '@utils/decode-signature';
  *
  * Accepted signature encoding: hex-encoded string, base64-encoded string (Bitcoin only), base58-encoded string (Solana only).
  */
-export function createMultiSignature(
+export function createHeimaMultiSignature(
   registry: Registry,
   data: {
     who: Identity;
     signature: string;
   },
-): MultiSignature {
+): HeimaMultiSignature {
   const { who, signature } = data;
 
   // Pick the crypto type. EthereumPrettified is a special case for EVM.
   // fallback to Sr25519 for all Substrate accounts.
-  const cryptoType: MultiSignature['type'] = who.isBitcoin
+  const cryptoType: HeimaMultiSignature['type'] = who.isBitcoin
     ? 'Bitcoin'
     : who.isEvm
       ? 'Ethereum' // Work with prettified signature for EVM only
@@ -28,7 +28,7 @@ export function createMultiSignature(
         ? 'Ed25519'
         : 'Sr25519';
 
-  return registry.createType<MultiSignature>('MultiSignature', {
+  return registry.createType<HeimaMultiSignature>('HeimaMultiSignature', {
     [cryptoType]: decodeSignature(signature, who),
   });
 }

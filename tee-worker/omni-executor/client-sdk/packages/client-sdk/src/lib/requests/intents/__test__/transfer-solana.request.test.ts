@@ -2,7 +2,6 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
-import { getChain } from '@heima-network/chaindata';
 import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
@@ -19,7 +18,7 @@ describe.skip('transfer-solana', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 
@@ -34,16 +33,17 @@ describe.skip('transfer-solana', () => {
       type: 'Substrate',
     });
 
-    const { send, payloadToSign = '' } = await transferSolana(api, {
+    const { send, getPayloadToSign = () => '' } = await transferSolana(api, {
       member,
       to: '3uohKMHs1AUJj1X263C63BATPeyP81gMdGpxuajhRUHd',
       amount: BigInt(100),
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,
