@@ -93,9 +93,8 @@ async fn main() -> Result<(), ()> {
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let pumpx_signer_url = "";
 			let pumpx_signer_client = Arc::new(pumpx::signer_client::SignerClient::new(
-				pumpx_signer_url.to_string(),
+				args.pumpx_signer_url.clone(),
 				pumpx_signer_pair,
 			));
 
