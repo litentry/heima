@@ -1,6 +1,7 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
+use pumpx::types::UserConnectResponse;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {
@@ -11,8 +12,12 @@ pub enum NativeTaskOk {
 	},
 	AuthToken(String),
 	PumpxJwt {
-		session_token: String,
-		trade_token: String,
+		/// Used for less sensitive operations
+		access_token: String,
+		/// Used for user's identity verification before making sensitive operations
+		id_token: String,
+
+		user_connect_response: UserConnectResponse,
 	},
 }
 
@@ -23,4 +28,6 @@ pub enum NativeTaskError {
 	InternalError,
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
+	UnsupportedIdentityType,
+	PumpxApiError,
 }
