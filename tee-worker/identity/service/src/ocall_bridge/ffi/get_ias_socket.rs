@@ -39,9 +39,9 @@ fn get_ias_socket(ret_fd: *mut c_int, ra_api: Arc<dyn RemoteAttestationBridge>) 
 		},
 		Err(e) => {
 			error!("[-]  Failed to get IAS socket: {:?}", e);
-			return e.into()
+			return e.into();
 		},
-	}
+	};
 }
 
 #[cfg(test)]

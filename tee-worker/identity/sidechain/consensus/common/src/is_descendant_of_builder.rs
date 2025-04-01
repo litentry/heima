@@ -36,14 +36,14 @@ where
 		move |base, head| {
 			// If the base is equal to the proposed head, then the head is for sure not a descendant of the base.
 			if base == head {
-				return Ok(false)
+				return Ok(false);
 			}
 
 			let mut head = head;
 			if let Some((current_hash, current_parent_hash)) = current {
 				// If the current hash is equal to the base, then it will not be a descendant of base.
 				if current_hash == base {
-					return Ok(false)
+					return Ok(false);
 				}
 
 				// If the current hash is the head and the parent is the base, then we know that
@@ -52,7 +52,7 @@ where
 				// and `base` in the tree.
 				if current_hash == head {
 					if current_parent_hash == base {
-						return Ok(true)
+						return Ok(true);
 					} else {
 						head = current_parent_hash;
 					}
@@ -86,12 +86,12 @@ where
 
 		if *a == parent_2 {
 			// Then a is the common ancestor of b and it means it is itself the ancestor
-			return Ok(parent_2)
+			return Ok(parent_2);
 		}
 
 		if *b == parent_1 {
 			// Then b is the common ancestor of a and it means it is itself the ancestor
-			return Ok(parent_1)
+			return Ok(parent_1);
 		}
 
 		while blocknum_1 > blocknum_2 {
@@ -102,7 +102,7 @@ where
 				blocknum_1 = new_parent.block_number();
 				parent_1 = Hash::from(new_parent.parent_hash());
 			} else {
-				break
+				break;
 			}
 		}
 
@@ -114,7 +114,7 @@ where
 				blocknum_2 = new_parent.block_number();
 				parent_2 = Hash::from(new_parent.parent_hash());
 			} else {
-				break
+				break;
 			}
 		}
 

@@ -104,7 +104,7 @@ impl<Block: ParentchainBlockTrait, OcallApi: EnclaveOnChainOCallApi>
 	) -> Result<(), Error> {
 		let parent_hash = child.parent_hash();
 		if *parent_hash == ancestor_hash {
-			return Ok(())
+			return Ok(());
 		}
 
 		// Find the header's parent hash that matches our ancestor's hash
@@ -187,7 +187,7 @@ where
 			header.hash(),
 			header.parent_hash()
 			);
-			return Err(Error::HeaderAncestryMismatch)
+			return Err(Error::HeaderAncestryMismatch);
 		}
 
 		self.submit_finalized_headers(header.clone(), vec![], justifications)

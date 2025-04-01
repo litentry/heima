@@ -155,7 +155,7 @@ export class Enclave {
 
     const hexString = await this.send({
       jsonrpc: '2.0',
-      method: 'native_getShieldingKey',
+      method: 'omni_getShieldingKey',
       params: [],
     });
 

@@ -53,7 +53,7 @@ pub fn build<O: EnclaveOnChainOCallApi>(
 		return Err(Error::RequestVCFailed(
 			Assertion::A13(who.clone()),
 			ErrorDetail::UnauthorizedSigner,
-		))
+		));
 	}
 
 	let runtime_version = IssuerRuntimeVersion {

@@ -252,7 +252,7 @@ where
 			parentchain_id,
 		)?;
 		seal.seal(validator.get_state())?;
-		return Ok(validator)
+		return Ok(validator);
 	}
 
 	let validation_state = seal.unseal()?;
@@ -306,7 +306,7 @@ where
 			parentchain_id,
 		)?;
 		seal.seal(validator.get_state())?;
-		return Ok(validator)
+		return Ok(validator);
 	}
 
 	let validation_state = seal.unseal()?;

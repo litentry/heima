@@ -96,7 +96,7 @@ importers:
         version: 1.3.0
       parachain-api:
         specifier: file:../../../client-api/parachain-api
-        version: '@litentry/parachain-api@file:../../client-api/parachain-api(bufferutil@4.0.9)(utf-8-validate@5.0.10)'
+        version: '@heima-network/parachain-api@file:../../client-api/parachain-api(bufferutil@4.0.9)(utf-8-validate@5.0.10)'
       scale-ts:
         specifier: ^0.2.11
         version: 0.2.12
@@ -280,6 +280,9 @@ packages:
   '@ethersproject/wordlists@5.7.0':
     resolution: {integrity: sha512-S2TFNJNfHWVHNE6cNDjbVlZ6MgE17MIxMbMg2zv3wn+3XSJGosL1m9ZVv3GXCf/2ymSsQ+hRI5IzoMJTG6aoVA==}
 
+  '@heima-network/parachain-api@file:../../client-api/parachain-api':
+    resolution: {directory: ../../client-api/parachain-api, type: directory}
+
   '@humanwhocodes/config-array@0.13.0':
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
     engines: {node: '>=10.10.0'}
@@ -305,9 +308,6 @@ packages:
 
   '@litentry/chaindata@0.2.0':
     resolution: {integrity: sha512-WjhPPRAJvSm+K99IAsqdKyNNbm7MU06Gfl7koXdZa+Gm6Uc89nVK448jdP9ODQyW1nJaPq+HYIHgjXnC5a9GGA==}
-
-  '@litentry/parachain-api@file:../../client-api/parachain-api':
-    resolution: {directory: ../../client-api/parachain-api, type: directory}
 
   '@litentry/sidechain-api@file:../../client-api/sidechain-api':
     resolution: {directory: ../../client-api/sidechain-api, type: directory}
@@ -2439,6 +2439,27 @@ snapshots:
       '@ethersproject/properties': 5.7.0
       '@ethersproject/strings': 5.7.0
 
+  '@heima-network/parachain-api@file:../../client-api/parachain-api(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@polkadot/api': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@polkadot/api-augment': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@polkadot/api-base': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@polkadot/api-derive': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@polkadot/keyring': 13.4.3(@polkadot/util-crypto@13.4.3(@polkadot/util@13.4.3))(@polkadot/util@13.4.3)
+      '@polkadot/rpc-core': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      '@polkadot/types': 15.8.1
+      '@polkadot/types-augment': 15.8.1
+      '@polkadot/types-codec': 15.8.1
+      '@polkadot/types-create': 15.8.1
+      '@polkadot/types-known': 15.8.1
+      '@polkadot/types-support': 15.8.1
+      '@polkadot/util': 13.4.3
+      '@polkadot/util-crypto': 13.4.3(@polkadot/util@13.4.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
@@ -2463,27 +2484,6 @@ snapshots:
   '@litentry/chaindata@0.2.0':
     dependencies:
       tslib: 2.8.1
-
-  '@litentry/parachain-api@file:../../client-api/parachain-api(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
-    dependencies:
-      '@polkadot/api': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@polkadot/api-augment': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@polkadot/api-base': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@polkadot/api-derive': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@polkadot/keyring': 13.4.3(@polkadot/util-crypto@13.4.3(@polkadot/util@13.4.3))(@polkadot/util@13.4.3)
-      '@polkadot/rpc-core': 15.8.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      '@polkadot/types': 15.8.1
-      '@polkadot/types-augment': 15.8.1
-      '@polkadot/types-codec': 15.8.1
-      '@polkadot/types-create': 15.8.1
-      '@polkadot/types-known': 15.8.1
-      '@polkadot/types-support': 15.8.1
-      '@polkadot/util': 13.4.3
-      '@polkadot/util-crypto': 13.4.3(@polkadot/util@13.4.3)
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
 
   '@litentry/sidechain-api@file:../../client-api/sidechain-api(bufferutil@4.0.9)(utf-8-validate@5.0.10)':
     dependencies:

@@ -339,7 +339,7 @@ fn wait_for_top_confirmation(
 			let transaction_information = wait_until(&client.receiver, is_sidechain_block);
 			if let Some((hash, _)) = transaction_information {
 				if hash == submitted.unwrap().0 {
-					break transaction_information
+					break transaction_information;
 				}
 			}
 		}

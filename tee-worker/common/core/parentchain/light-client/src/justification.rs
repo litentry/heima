@@ -158,7 +158,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 			}
 
 			if self.commit.target_hash == signed.precommit.target_hash {
-				continue
+				continue;
 			}
 
 			self.fill_visited_hashes(
@@ -175,7 +175,7 @@ impl<Block: BlockT> GrandpaJustification<Block> {
 			return Err(ClientError::BadJustification(
 				"invalid precommit ancestries in grandpa justification with unused headers"
 					.to_string(),
-			))
+			));
 		}
 
 		Ok(())
@@ -219,7 +219,7 @@ where
 				current_hash = *current_header.parent_hash();
 				ancestors.push(current_hash);
 			} else {
-				return Err(GrandpaError::NotDescendent)
+				return Err(GrandpaError::NotDescendent);
 			}
 		}
 		ancestors.pop(); // remove the base

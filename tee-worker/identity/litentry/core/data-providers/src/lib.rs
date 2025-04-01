@@ -724,7 +724,7 @@ pub fn vec_to_string(vec: Vec<u8>) -> Result<String, Error> {
 	let tmp = String::from_utf8(vec.to_vec()).map_err(|e| Error::Utf8Error(e.to_string()))?;
 	let tmp = tmp.trim();
 	if tmp.is_empty() {
-		return Err(Error::Utf8Error("empty string".to_string()))
+		return Err(Error::Utf8Error("empty string".to_string()));
 	}
 	Ok(tmp.to_string())
 }
@@ -796,7 +796,7 @@ where
 				return Err(Error::RetryableError(format!(
 					"Fail to call rest api within {} retries",
 					maximum_retries
-				)))
+				)));
 			}
 
 			match action(self) {
@@ -805,15 +805,16 @@ where
 					let req_err: Error =
 						Error::RequestError(format!("call rest api error: {}", err));
 					match err {
-						HttpError::HttpError(code, _) =>
+						HttpError::HttpError(code, _) => {
 							if code == 429 {
 								// Too Many Requests
 								// exponential back off
 								thread::sleep(base_delay * 2u32.pow(retries as u32));
 								retries += 1;
 							} else {
-								return Err(req_err)
-							},
+								return Err(req_err);
+							}
+						},
 						_ => return Err(req_err),
 					}
 				},
@@ -971,8 +972,9 @@ mod tests {
 	fn should_return_error_when_param_is_not_a_hex_str() {
 		match convert_balance_hex_json_value_to_u128(serde_json::Value::String("qwexyz".into())) {
 			Ok(_) => panic!("Expected an error, but got Ok"),
-			Err(err) =>
-				assert_eq!(err.to_string(), "Request error: Cannot parse hex \"qwexyz\" to u128"),
+			Err(err) => {
+				assert_eq!(err.to_string(), "Request error: Cannot parse hex \"qwexyz\" to u128")
+			},
 		}
 	}
 }

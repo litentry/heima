@@ -74,7 +74,7 @@ pub(crate) fn get_triggered_dispatcher_from_integritee_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
 		} else {
-			return Err(Error::NoLitentryParentchainAssigned)
+			return Err(Error::NoLitentryParentchainAssigned);
 		};
 	Ok(dispatcher)
 }
@@ -87,7 +87,7 @@ pub(crate) fn get_triggered_dispatcher_from_target_a_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
 			get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
 		} else {
-			return Err(Error::NoTargetAParentchainAssigned)
+			return Err(Error::NoTargetAParentchainAssigned);
 		};
 	Ok(dispatcher)
 }
@@ -100,7 +100,7 @@ pub(crate) fn get_triggered_dispatcher_from_target_b_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
 			get_triggered_dispatcher(parachain_handler.import_dispatcher.clone())?
 		} else {
-			return Err(Error::NoTargetBParentchainAssigned)
+			return Err(Error::NoTargetBParentchainAssigned);
 		};
 	Ok(dispatcher)
 }
@@ -122,7 +122,7 @@ pub(crate) fn get_validator_accessor_from_integritee_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.validator_accessor.clone()
 		} else {
-			return Err(Error::NoLitentryParentchainAssigned)
+			return Err(Error::NoLitentryParentchainAssigned);
 		};
 	Ok(validator_accessor)
 }
@@ -135,7 +135,7 @@ pub(crate) fn get_validator_accessor_from_target_a_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.validator_accessor.clone()
 		} else {
-			return Err(Error::NoTargetAParentchainAssigned)
+			return Err(Error::NoTargetAParentchainAssigned);
 		};
 	Ok(validator_accessor)
 }
@@ -148,7 +148,7 @@ pub(crate) fn get_validator_accessor_from_target_b_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.validator_accessor.clone()
 		} else {
-			return Err(Error::NoTargetBParentchainAssigned)
+			return Err(Error::NoTargetBParentchainAssigned);
 		};
 	Ok(validator_accessor)
 }
@@ -161,7 +161,7 @@ pub(crate) fn get_node_metadata_repository_from_integritee_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoLitentryParentchainAssigned)
+			return Err(Error::NoLitentryParentchainAssigned);
 		};
 	Ok(metadata_repository)
 }
@@ -174,7 +174,7 @@ pub(crate) fn get_node_metadata_repository_from_target_a_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoTargetAParentchainAssigned)
+			return Err(Error::NoTargetAParentchainAssigned);
 		};
 	Ok(metadata_repository)
 }
@@ -187,7 +187,7 @@ pub(crate) fn get_node_metadata_repository_from_target_b_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.node_metadata_repository.clone()
 		} else {
-			return Err(Error::NoTargetBParentchainAssigned)
+			return Err(Error::NoTargetBParentchainAssigned);
 		};
 	Ok(metadata_repository)
 }
@@ -200,7 +200,7 @@ pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.extrinsics_factory.clone()
 		} else {
-			return Err(Error::NoLitentryParentchainAssigned)
+			return Err(Error::NoLitentryParentchainAssigned);
 		};
 	Ok(extrinsics_factory)
 }
@@ -213,7 +213,7 @@ pub(crate) fn get_extrinsic_factory_from_target_a_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.extrinsics_factory.clone()
 		} else {
-			return Err(Error::NoTargetAParentchainAssigned)
+			return Err(Error::NoTargetAParentchainAssigned);
 		};
 	Ok(extrinsics_factory)
 }
@@ -226,7 +226,7 @@ pub(crate) fn get_extrinsic_factory_from_target_b_solo_or_parachain(
 		} else if let Ok(parachain_handler) = GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.extrinsics_factory.clone()
 		} else {
-			return Err(Error::NoTargetBParentchainAssigned)
+			return Err(Error::NoTargetBParentchainAssigned);
 		};
 	Ok(extrinsics_factory)
 }
@@ -239,7 +239,7 @@ pub(crate) fn get_stf_executor_from_integritee_solo_or_parachain() -> Result<Arc
 		} else if let Ok(parachain_handler) = GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT.get() {
 			parachain_handler.stf_executor.clone()
 		} else {
-			return Err(Error::NoLitentryParentchainAssigned)
+			return Err(Error::NoLitentryParentchainAssigned);
 		};
 	Ok(stf_executor)
 }

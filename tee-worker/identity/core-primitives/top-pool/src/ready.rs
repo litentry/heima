@@ -136,7 +136,7 @@ impl<Ex> ReadyOperations<Ex> {
 	/// Borrows a map of tags that are provided by operations in this queue.
 	pub fn provided_tags(&self, shard: ShardIdentifier) -> Option<&HashMap<Tag, TxHash>> {
 		if let Some(tag_pool) = &self.provided_tags.get(&shard) {
-			return Some(tag_pool)
+			return Some(tag_pool);
 		}
 		None
 	}
@@ -159,7 +159,7 @@ impl<Ex> ReadyOperations<Ex> {
 				all: ready_map.get_read_only_clone(),
 				best: self.best.get(&shard).unwrap().clone(),
 				awaiting: Default::default(),
-			}
+			};
 		}
 		let tracked_map: TrackedMap<TxHash, ReadyTx<Ex>> = Default::default();
 		BestIterator {
@@ -264,7 +264,7 @@ impl<Ex> ReadyOperations<Ex> {
 		shard: ShardIdentifier,
 	) -> Option<R> {
 		if let Some(ready_map) = self.ready.get(&shard) {
-			return ready_map.read().values().fold(None, f)
+			return ready_map.read().values().fold(None, f);
 		}
 		None
 	}
@@ -272,7 +272,7 @@ impl<Ex> ReadyOperations<Ex> {
 	/// Returns true if given hash is part of the queue.
 	pub fn contains(&self, hash: &TxHash, shard: ShardIdentifier) -> bool {
 		if let Some(ready_map) = self.ready.get(&shard) {
-			return ready_map.read().contains_key(hash)
+			return ready_map.read().contains_key(hash);
 		}
 		false
 	}
@@ -297,7 +297,7 @@ impl<Ex> ReadyOperations<Ex> {
 			return hashes
 				.iter()
 				.map(|hash| ready.get(hash).map(|x| x.operation.operation.clone()))
-				.collect()
+				.collect();
 		}
 		vec![]
 	}
@@ -493,7 +493,7 @@ impl<Ex> ReadyOperations<Ex> {
 
 				// early exit if we are not replacing anything.
 				if replace_hashes.is_empty() {
-					return Ok((vec![], vec![]))
+					return Ok((vec![], vec![]));
 				}
 
 				// now check if collective priority is lower than the replacement operation.
@@ -509,7 +509,7 @@ impl<Ex> ReadyOperations<Ex> {
 
 				// bail - the operation has too low priority to replace the old ones
 				if old_priority >= tx.priority {
-					return Err(error::Error::TooLowPriority(tx.priority))
+					return Err(error::Error::TooLowPriority(tx.priority));
 				}
 
 				// construct a list of unlocked operations
@@ -530,7 +530,7 @@ impl<Ex> ReadyOperations<Ex> {
 			let new_provides = tx.provides.iter().cloned().collect::<HashSet<_>>();
 			let removed = self.remove_subtree_with_tag_filter(to_remove, Some(new_provides), shard);
 
-			return Ok((removed, unlocks))
+			return Ok((removed, unlocks));
 		}
 		Ok((vec![], vec![]))
 	}
@@ -612,7 +612,7 @@ impl<Ex> Iterator for BestIterator<Ex> {
 				}
 			}
 
-			return Some(best.operation)
+			return Some(best.operation);
 		}
 	}
 }

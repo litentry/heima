@@ -57,21 +57,27 @@ pub fn build(
 	data_provider_config: &DataProviderConfig,
 ) -> Result<Credential> {
 	match param {
-		AchainableParams::AmountHolding(param) =>
-			build_amount_holding(req, param, data_provider_config),
-		AchainableParams::AmountToken(param) =>
-			build_amount_token(req, param, data_provider_config),
+		AchainableParams::AmountHolding(param) => {
+			build_amount_holding(req, param, data_provider_config)
+		},
+		AchainableParams::AmountToken(param) => {
+			build_amount_token(req, param, data_provider_config)
+		},
 		AchainableParams::Amount(param) => build_amount(req, param, data_provider_config),
 		AchainableParams::Amounts(param) => build_amounts(req, param, data_provider_config),
 		AchainableParams::Basic(param) => build_basic(req, param, data_provider_config),
-		AchainableParams::BetweenPercents(param) =>
-			build_between_percents(req, param, data_provider_config),
-		AchainableParams::ClassOfYear(param) =>
-			build_class_of_year(req, param, data_provider_config),
-		AchainableParams::DateInterval(param) =>
-			build_date_interval(req, param, data_provider_config),
-		AchainableParams::DatePercent(param) =>
-			build_date_percent(req, param, data_provider_config),
+		AchainableParams::BetweenPercents(param) => {
+			build_between_percents(req, param, data_provider_config)
+		},
+		AchainableParams::ClassOfYear(param) => {
+			build_class_of_year(req, param, data_provider_config)
+		},
+		AchainableParams::DateInterval(param) => {
+			build_date_interval(req, param, data_provider_config)
+		},
+		AchainableParams::DatePercent(param) => {
+			build_date_percent(req, param, data_provider_config)
+		},
 		AchainableParams::Date(param) => build_date(req, param, data_provider_config),
 		AchainableParams::Token(param) => build_token(req, param, data_provider_config),
 		AchainableParams::Mirror(param) => build_on_mirror(req, param, data_provider_config),
@@ -172,7 +178,7 @@ pub fn request_achainable_classofyear(
 
 			// In some cases,the metadata field TDF will return null, so if there is a parsing error, we need to continue requesting the next address
 			if year.parse::<u32>().is_err() {
-				return Ok(LoopControls::Continue)
+				return Ok(LoopControls::Continue);
 			}
 
 			if year < longest_created_year {
@@ -233,7 +239,7 @@ pub fn query_lit_holding_amount(
 			} else if *network == Web3Network::Litentry {
 				(AchainableNameAmountToken::BalanceOverAmount, Web3Network::Litentry, None)
 			} else {
-				return Ok(LoopControls::Continue)
+				return Ok(LoopControls::Continue);
 			};
 
 			let q_param = ParamsBasicTypeWithAmountToken::new(

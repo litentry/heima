@@ -30,7 +30,7 @@ pub fn write_slice_and_whitespace_pad(
 		return Err(BufferError::InsufficientBufferSize {
 			actual: writable.len(),
 			required: data.len(),
-		})
+		});
 	}
 	let (left, right) = writable.split_at_mut(data.len());
 	left.clone_from_slice(&data);
