@@ -1,5 +1,5 @@
 use crate::{storage_key, Storage};
-use executor_primitives::Hash;
+use executor_primitives::AccountId;
 use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::sync::Arc;
@@ -16,9 +16,9 @@ impl PumpxAuthTokenIdStorage {
 	}
 }
 
-impl Storage<Hash, String> for PumpxAuthTokenIdStorage {
-	fn get(&self, identity_hash: &Hash) -> Option<String> {
-		match self.db.get(storage_key(STORAGE_NAME, &identity_hash.encode())) {
+impl Storage<AccountId, String> for PumpxAuthTokenIdStorage {
+	fn get(&self, omni_account: &AccountId) -> Option<String> {
+		match self.db.get(storage_key(STORAGE_NAME, &omni_account.encode())) {
 			Ok(Some(value)) => String::decode(&mut &value[..]).ok(),
 			_ => {
 				log::error!("Error getting pumpx_auth_token from storage");
@@ -27,21 +27,21 @@ impl Storage<Hash, String> for PumpxAuthTokenIdStorage {
 		}
 	}
 
-	fn insert(&self, identity_hash: Hash, token: String) -> Result<(), ()> {
+	fn insert(&self, omni_account: AccountId, token: String) -> Result<(), ()> {
 		self.db
-			.put(storage_key(STORAGE_NAME, &identity_hash.encode()), token.encode())
+			.put(storage_key(STORAGE_NAME, &omni_account.encode()), token.encode())
 			.map_err(|e| {
 				log::error!("Error inserting pumpx_auth_token into storage: {:?}", e);
 			})
 	}
 
-	fn remove(&self, identity_hash: &Hash) -> Result<(), ()> {
-		self.db.delete(storage_key(STORAGE_NAME, &identity_hash.encode())).map_err(|e| {
+	fn remove(&self, omni_account: &AccountId) -> Result<(), ()> {
+		self.db.delete(storage_key(STORAGE_NAME, &omni_account.encode())).map_err(|e| {
 			log::error!("Error removing pumpx_auth_token from storage: {:?}", e);
 		})
 	}
 
-	fn contains_key(&self, identity_hash: &Hash) -> bool {
-		self.db.key_may_exist(storage_key(STORAGE_NAME, &identity_hash.encode()))
+	fn contains_key(&self, omni_account: &AccountId) -> bool {
+		self.db.key_may_exist(storage_key(STORAGE_NAME, &omni_account.encode()))
 	}
 }

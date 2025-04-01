@@ -607,7 +607,7 @@ async fn handle_native_task<
 			};
 
 			let storage = PumpxAuthTokenIdStorage::new(ctx.storage_db.clone());
-			if storage.insert(sender.hash(), id_token.clone()).is_err() {
+			if storage.insert(sender.to_omni_account(), id_token.clone()).is_err() {
 				log::error!("Failed to insert id token into storage");
 			};
 
