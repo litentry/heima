@@ -6,7 +6,7 @@ use executor_core::{
 	native_task::{NativeTask, NativeTaskWrapper},
 };
 use executor_crypto::{
-	aes256::{aes_encrypt_default, Aes256Key},
+	aes256::{aes_decrypt, aes_encrypt_default, Aes256Key},
 	jwt,
 };
 use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
@@ -26,7 +26,7 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Decode, Encode};
-use pumpx::PumpxApi;
+use pumpx::{signer_client::SignerClient, PumpxApi};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use types::{NativeTaskError, NativeTaskOk};
@@ -65,6 +65,7 @@ pub struct TaskHandlerContext<
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<PumpxApi>,
+	pumpx_signer_client: Arc<SignerClient>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -97,6 +98,7 @@ impl<
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<PumpxApi>,
+		pumpx_signer_client: Arc<SignerClient>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -108,6 +110,7 @@ impl<
 			solana_intent_executor,
 			cross_chain_intent_executor,
 			pumpx_api,
+			pumpx_signer_client,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -617,6 +620,45 @@ async fn handle_native_task<
 				user_connect_response,
 			});
 
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
+		},
+		NativeTask::PumpxExportWallet(
+			sender,
+			_maybe_google_code,
+			pumpx_wallet_chain,
+			pumpx_wallet_index,
+			expected_wallet_address,
+		) => {
+			let Ok(mut wallet) = ctx
+				.pumpx_signer_client
+				.export_wallet(
+					pumpx_wallet_chain.into(),
+					pumpx_wallet_index,
+					sender.to_omni_account().into(),
+					ctx.aes256_key.to_vec(),
+					expected_wallet_address,
+				)
+				.await
+			else {
+				log::error!("Failed export wallet from pumpx-signer");
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
+				log::error!("No wallet after decryption");
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let response = NativeTaskResponse::Ok(NativeTaskOk::Binary(decrypted_wallet));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}

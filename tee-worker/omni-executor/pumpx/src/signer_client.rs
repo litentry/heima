@@ -1,3 +1,4 @@
+use executor_core::native_task::PumpxWalletChain;
 use executor_crypto::ecdsa;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::core::params::ArrayParams;
@@ -75,7 +76,7 @@ pub struct ShieldingKey {
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct AesOutput {
+struct AesOutput {
 	#[serde_as(as = "serde_with::hex::Hex")]
 	pub ciphertext: Vec<u8>,
 	#[serde_as(as = "serde_with::hex::Hex")]
@@ -89,6 +90,16 @@ pub enum ChainType {
 	Evm,
 	Solana,
 	Tron,
+}
+
+impl From<PumpxWalletChain> for ChainType {
+	fn from(value: PumpxWalletChain) -> Self {
+		match value {
+			PumpxWalletChain::Evm => ChainType::Evm,
+			PumpxWalletChain::Solana => ChainType::Solana,
+			PumpxWalletChain::Tron => ChainType::Tron,
+		}
+	}
 }
 
 pub struct SignerClient {
@@ -155,7 +166,7 @@ impl SignerClient {
 		omni_account: [u8; 32],
 		aes_key: Vec<u8>,
 		wallet_address: String,
-	) -> Result<AesOutput, ()> {
+	) -> Result<executor_crypto::aes256::AesOutput, ()> {
 		let client = HttpClient::builder()
 			.build(&self.url)
 			.map_err(|e| error!("Could not create client: {:?}", e))?;
@@ -185,7 +196,11 @@ impl SignerClient {
 			.request("dex_exportWallet", signed)
 			.await
 			.map_err(|e| println!("Could not export wallet: {:?}", e))?;
-		Ok(output)
+		Ok(executor_crypto::aes256::AesOutput {
+			aad: output.aad,
+			ciphertext: output.ciphertext,
+			nonce: output.nonce,
+		})
 	}
 
 	async fn get_shielding_key(&self) -> Result<ShieldingKey, ()> {
