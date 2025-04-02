@@ -10,6 +10,8 @@ pub type MarketOrderTxResponse = ApiResponse<TxData>;
 
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfo>;
 
+pub type LimitOrderResponse = ApiResponse<LimitOrder>;
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
@@ -114,6 +116,32 @@ pub struct UserTradeInfo {
 	pub is_auto_slippage: bool,
 	pub slippage: u32,
 	pub slippage_display: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewLimitOrder {
+	pub request_id: u32,
+	pub chain_id: ChainId,
+	pub token_ca: String,
+	pub amount: String,
+	pub swap_type: SwapType,
+	pub double_out: bool,
+	pub token_cap: String,
+	pub price_usd: String,
+	pub trailing_percent: String,
+	pub address: String,
+	pub is_anti_mev: bool,
+	pub is_auto_slippage: bool,
+	pub gas_type: GasType,
+	pub slippage: u32,
+	pub wallet_index: u32,
+}
+
+#[derive(Deserialize, Encode)]
+#[serde(rename_all = "camelCase")]
+pub struct LimitOrder {
+	pub order_id: String,
 }
 
 #[cfg(test)]

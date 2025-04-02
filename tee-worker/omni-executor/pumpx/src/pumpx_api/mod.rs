@@ -2,8 +2,9 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	ConnectUser, MarketOrderTx, MarketOrderTxResponse, MarketOrderUnsignedTxResponse,
-	NewMarketOrder, UserConnectResponse, UserTradeInfoResponse,
+	ConnectUser, LimitOrderResponse, MarketOrderTx, MarketOrderTxResponse,
+	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, UserConnectResponse,
+	UserTradeInfoResponse,
 };
 use url::Url;
 
@@ -90,6 +91,22 @@ impl PumpxApi {
 			.post(&endpoint)
 			.bearer_auth(access_token)
 			.json(&market_order_tx)
+			.send()
+			.await?
+			.json()
+			.await
+	}
+
+	pub async fn create_limit_order(
+		&self,
+		access_token: &str,
+		new_limit_order: NewLimitOrder,
+	) -> Result<LimitOrderResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_limit_order", self.base_url);
+		self.http_client
+			.post(&endpoint)
+			.bearer_auth(access_token)
+			.json(&new_limit_order)
 			.send()
 			.await?
 			.json()
