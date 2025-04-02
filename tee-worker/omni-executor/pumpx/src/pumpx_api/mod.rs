@@ -3,6 +3,7 @@ pub mod types;
 use reqwest::{Client, Error};
 use types::{
 	ConnectUser, MarketOrderTx, MarketOrderUnsignedTxResponse, NewMarketOrder, UserConnectResponse,
+	UserTradeInfoResponse,
 };
 use url::Url;
 
@@ -45,6 +46,20 @@ impl PumpxApi {
 			.header("X-Language", lang.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&connect_user)
+			.send()
+			.await?
+			.json()
+			.await
+	}
+
+	pub async fn get_user_trade_info(
+		&self,
+		access_token: &str,
+	) -> Result<UserTradeInfoResponse, Error> {
+		let endpoint = format!("{}/v3/account/get_user_trade_info", self.base_url);
+		self.http_client
+			.get(&endpoint)
+			.bearer_auth(access_token)
 			.send()
 			.await?
 			.json()

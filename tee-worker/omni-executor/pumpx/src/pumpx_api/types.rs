@@ -8,6 +8,8 @@ pub type MarketOrderUnsignedTxResponse = ApiResponse<MarketOrderUnsignedTx>;
 
 pub type MarketOrderTxResponse = ApiResponse<TxData>;
 
+pub type UserTradeInfoResponse = ApiResponse<UserTradeInfo>;
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
@@ -99,3 +101,17 @@ pub struct MarketOrderTx {
 pub struct TxData {
 	pub tx_hash: String,
 }
+
+#[derive(Deserialize, Encode)]
+#[serde(rename_all = "camelCase")]
+pub struct UserTradeInfo {
+	pub gas_type_base: GasType,
+	pub gas_type_bsc: GasType,
+	pub gas_type_eth: GasType,
+	pub gas_type_omni: GasType,
+	pub is_anti_mev: bool,
+	pub is_auto_slippage: bool,
+	pub slippage: u32,
+	pub slippage_display: String,
+}
+
