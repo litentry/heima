@@ -22,12 +22,10 @@ impl PumpxApi {
 		};
 		let mut default_headers = reqwest::header::HeaderMap::new();
 		default_headers.insert("X-Language", "en".parse().unwrap());
-
 		let http_client = Client::builder()
 			.default_headers(default_headers)
 			.build()
 			.expect("Failed to build HTTP client");
-
 		PumpxApi { http_client, base_url }
 	}
 
@@ -68,11 +66,13 @@ impl PumpxApi {
 
 	pub async fn create_market_order_unsigned_tx(
 		&self,
+		access_token: &str,
 		new_market_order: NewMarketOrder,
 	) -> Result<MarketOrderUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_market_order_unsigned_tx", self.base_url);
 		self.http_client
 			.post(&endpoint)
+			.bearer_auth(access_token)
 			.json(&new_market_order)
 			.send()
 			.await?
@@ -82,11 +82,13 @@ impl PumpxApi {
 
 	pub async fn send_market_order_tx(
 		&self,
+		access_token: &str,
 		market_order_tx: MarketOrderTx,
 	) -> Result<MarketOrderTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_tx", self.base_url);
 		self.http_client
 			.post(&endpoint)
+			.bearer_auth(access_token)
 			.json(&market_order_tx)
 			.send()
 			.await?
