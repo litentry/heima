@@ -134,6 +134,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
 				Arc::new(pumpx_api),
+				pumpx_signer_client.clone(),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
