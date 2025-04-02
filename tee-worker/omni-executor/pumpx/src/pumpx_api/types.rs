@@ -26,7 +26,7 @@ pub struct ConnectUser {
 	pub google_code: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Decode, Encode, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectedUser {
 	pub user_id: String,
@@ -35,7 +35,7 @@ pub struct ConnectedUser {
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct ApiResponse<T: Codec> {
+pub struct ApiResponse<T: Encode> {
 	code: u32,
 	message: String,
 	data: T,
@@ -55,7 +55,7 @@ pub enum SwapType {
 	Sell = 2,
 }
 
-#[derive(Deserialize_repr, Serialize_repr)]
+#[derive(Deserialize_repr, Serialize_repr, Encode)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum GasType {
@@ -81,7 +81,7 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode, Decode)]
+#[derive(Deserialize, Encode)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderUnsignedTx {
 	pub order_id: String,
@@ -96,7 +96,7 @@ pub struct MarketOrderTx {
 	pub chain_id: ChainId,
 }
 
-#[derive(Deserialize, Encode, Decode)]
+#[derive(Deserialize, Encode)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
 	pub tx_hash: String,
@@ -115,3 +115,17 @@ pub struct UserTradeInfo {
 	pub slippage_display: String,
 }
 
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_gas_type_codec() {
+		// Encoding
+		let gas_type = GasType::Medium;
+		let encoded: Vec<u8> = gas_type.encode();
+		assert_eq!(encoded[0], 2u8);
+
+		println!("Encoded gas type: {:?}", encoded[0]);
+	}
+}
