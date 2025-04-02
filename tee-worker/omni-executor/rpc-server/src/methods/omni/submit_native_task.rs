@@ -31,7 +31,7 @@ pub fn register_submit_native_task<
 			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
 				log::error!("Failed to parse: {:?}", e);
 				ErrorCode::InternalError
-			})??;
+			})?;
 			let (response_sender, response_receiver) = oneshot::channel();
 
 			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
@@ -58,60 +58,57 @@ pub fn register_submit_native_task<
 
 type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>), ErrorObject<'a>>;
 
-fn parse<
+async fn parse<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: Params<'static>,
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) -> task::JoinHandle<ParseResult> {
-	task::spawn_blocking(move || {
-		let Ok(hex_request) = params.one::<String>() else {
-			return Err(ErrorCode::ParseError.into());
-		};
-		let Ok(request) = RawTask::<NativeTask>::from_hex(&hex_request) else {
-			return Err(ErrorCode::ServerError(INVALID_RAW_REQUEST_CODE).into());
-		};
+) -> ParseResult {
+	let Ok(hex_request) = params.one::<String>() else {
+		return Err(ErrorCode::ParseError.into());
+	};
+	let Ok(request) = RawTask::<NativeTask>::from_hex(&hex_request) else {
+		return Err(ErrorCode::ServerError(INVALID_RAW_REQUEST_CODE).into());
+	};
 
-		let request_is_encrypted = request.is_encrypted();
+	let request_is_encrypted = request.is_encrypted();
 
-		let (wrapper, maybe_aes_key) = match request {
-			RawTask::Plain(w) => (w, None),
-			RawTask::Aes(mut r) => {
-				let key = r
-					.decrypt_aes_key(Box::new(ctx.shielding_key.clone()))
-					.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;
-				let r = r
-					.decrypt(Box::new(ctx.shielding_key.clone()))
-					.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;
-				(
-					NativeTaskWrapper::<NativeTask>::decode(&mut r.as_slice())
-						.map_err(|_| ErrorCode::ServerError(DECODE_REQUEST_FAILED_CODE))?,
-					Some(key),
-				)
-			},
-		};
+	let (wrapper, maybe_aes_key) = match request {
+		RawTask::Plain(w) => (w, None),
+		RawTask::Aes(mut r) => {
+			let key = r
+				.decrypt_aes_key(Box::new(ctx.shielding_key.clone()))
+				.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;
+			let r = r
+				.decrypt(Box::new(ctx.shielding_key.clone()))
+				.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;
+			(
+				NativeTaskWrapper::<NativeTask>::decode(&mut r.as_slice())
+					.map_err(|_| ErrorCode::ServerError(DECODE_REQUEST_FAILED_CODE))?,
+				Some(key),
+			)
+		},
+	};
 
-		if wrapper.task.require_encrypt() && !request_is_encrypted {
-			return Err(ErrorCode::ServerError(REQUIRE_ENCRYPTED_REQUEST_CODE).into());
-		}
+	if wrapper.task.require_encrypt() && !request_is_encrypted {
+		return Err(ErrorCode::ServerError(REQUIRE_ENCRYPTED_REQUEST_CODE).into());
+	}
 
-		if wrapper.task.require_auth() && verify_auth(ctx, Handle::current(), &wrapper).is_err() {
-			return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
-		}
+	if wrapper.task.require_auth() && verify_auth(ctx, &wrapper).await.is_err() {
+		return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+	}
 
-		Ok((wrapper, maybe_aes_key))
-	})
+	Ok((wrapper, maybe_aes_key))
 }
 
-pub fn verify_auth<
+pub async fn verify_auth<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
 	wrapper: &NativeTaskWrapper<NativeTask>,
 ) -> Result<(), AuthenticationError> {
 	match wrapper.auth {
@@ -123,10 +120,10 @@ pub fn verify_auth<
 			verify_email_authentication(ctx, wrapper.task.sender(), verification_code)
 		},
 		Some(OmniAuth::OAuth2(ref oauth2_data)) => {
-			verify_oauth2_authentication(ctx, handle, wrapper.task.sender(), oauth2_data)
+			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
 		},
 		Some(OmniAuth::AuthToken(ref auth_token)) => {
-			verify_auth_token_authentication(ctx, handle, wrapper.task.sender(), auth_token)
+			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token).await
 		},
 	}
 }

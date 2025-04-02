@@ -1,21 +1,16 @@
 use crate::server::RpcContext;
 use jsonrpsee::RpcModule;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use tokio::{runtime::Handle, sync::oneshot, task};
 
-mod pumpx;
-use pumpx::*;
+mod request_jwt;
+use request_jwt::*;
 
-mod omni;
-use omni::*;
-
-pub fn register_methods<
+pub fn register_pumpx<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
 ) {
-	register_omni(module);
-	register_pumpx(module);
+	register_request_jwt(module);
 }

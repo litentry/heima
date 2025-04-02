@@ -1,4 +1,4 @@
-use crate::server::RpcContext;
+use crate::{server::RpcContext, Encode};
 use executor_core::native_task::NativeTaskTrait;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
@@ -10,9 +10,7 @@ use heima_authentication::auth_token::{AuthTokenValidator, Validation};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
-use tokio::runtime::Handle;
 
 #[derive(Debug)]
 pub enum AuthenticationError {
@@ -111,25 +109,23 @@ pub fn verify_email_authentication<
 	Ok(())
 }
 
-pub fn verify_auth_token_authentication<
+pub async fn verify_auth_token_authentication<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
 	sender: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
-	let current_block = handle
-		.block_on(async {
-			let client = ctx.parentchain_rpc_client_factory.new_client().await.map_err(|e| {
-				log::error!("Could not create client: {:?}", e);
-			})?;
-			client.get_last_finalized_block_num().await.map_err(|e| {
-				log::error!("Could not get last finalized block number: {:?}", e);
-			})
-		})
+	let client = ctx
+		.parentchain_rpc_client_factory
+		.new_client()
+		.await
+		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
+	let current_block = client
+		.get_last_finalized_block_num()
+		.await
 		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
 
 	let validation = match sender {
@@ -149,28 +145,26 @@ pub fn verify_auth_token_authentication<
 	Ok(())
 }
 
-pub fn verify_oauth2_authentication<
+pub async fn verify_oauth2_authentication<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google => verify_google_oauth2(ctx, handle, sender, payload),
+		OAuth2Provider::Google => verify_google_oauth2(ctx, sender, payload).await,
 	}
 }
 
-fn verify_google_oauth2<
+async fn verify_google_oauth2<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 >(
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
@@ -185,11 +179,9 @@ fn verify_google_oauth2<
 		GoogleOAuth2Client::new(ctx.google_client_id.clone(), ctx.google_client_secret.clone());
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
-	let token = handle
-		.block_on(async { google_client.exchange_code_for_token(code, redirect_uri).await })
-		.map_err(|_| {
-			AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
-		})?;
+	let token = google_client.exchange_code_for_token(code, redirect_uri).await.map_err(|_| {
+		AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
+	})?;
 	let id_token = decode_id_token(&token)
 		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
 	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
