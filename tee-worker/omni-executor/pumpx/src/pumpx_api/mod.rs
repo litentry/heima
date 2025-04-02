@@ -2,7 +2,9 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	ConnectUser, MarketOrderTx, MarketOrderUnsignedTxResponse, NewMarketOrder, UserConnectResponse,
+	ConnectUser, LimitOrderResponse, MarketOrderTx, MarketOrderTxResponse,
+	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, UserConnectResponse,
+	UserTradeInfoResponse,
 };
 use url::Url;
 
@@ -19,14 +21,18 @@ impl PumpxApi {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
 		};
-		let http_client = Client::builder().build().expect("Failed to build HTTP client");
-
+		let mut default_headers = reqwest::header::HeaderMap::new();
+		default_headers.insert("X-Language", "en".parse().unwrap());
+		let http_client = Client::builder()
+			.default_headers(default_headers)
+			.build()
+			.expect("Failed to build HTTP client");
 		PumpxApi { http_client, base_url }
 	}
 
 	pub async fn connect_user(
 		&self,
-		session_token: &str,
+		access_token: &str,
 		email: String,
 		invite_code: Option<String>,
 		google_code: Option<String>,
@@ -37,8 +43,22 @@ impl PumpxApi {
 		self.http_client
 			.post(&endpoint)
 			.header("X-Language", lang.unwrap_or("en".to_string()))
-			.bearer_auth(session_token)
+			.bearer_auth(access_token)
 			.json(&connect_user)
+			.send()
+			.await?
+			.json()
+			.await
+	}
+
+	pub async fn get_user_trade_info(
+		&self,
+		access_token: &str,
+	) -> Result<UserTradeInfoResponse, Error> {
+		let endpoint = format!("{}/v3/account/get_user_trade_info", self.base_url);
+		self.http_client
+			.get(&endpoint)
+			.bearer_auth(access_token)
 			.send()
 			.await?
 			.json()
@@ -47,11 +67,13 @@ impl PumpxApi {
 
 	pub async fn create_market_order_unsigned_tx(
 		&self,
+		access_token: &str,
 		new_market_order: NewMarketOrder,
 	) -> Result<MarketOrderUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_market_order_unsigned_tx", self.base_url);
 		self.http_client
 			.post(&endpoint)
+			.bearer_auth(access_token)
 			.json(&new_market_order)
 			.send()
 			.await?
@@ -61,12 +83,30 @@ impl PumpxApi {
 
 	pub async fn send_market_order_tx(
 		&self,
+		access_token: &str,
 		market_order_tx: MarketOrderTx,
-	) -> Result<MarketOrderUnsignedTxResponse, Error> {
+	) -> Result<MarketOrderTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_tx", self.base_url);
 		self.http_client
 			.post(&endpoint)
+			.bearer_auth(access_token)
 			.json(&market_order_tx)
+			.send()
+			.await?
+			.json()
+			.await
+	}
+
+	pub async fn create_limit_order(
+		&self,
+		access_token: &str,
+		new_limit_order: NewLimitOrder,
+	) -> Result<LimitOrderResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_limit_order", self.base_url);
+		self.http_client
+			.post(&endpoint)
+			.bearer_auth(access_token)
+			.json(&new_limit_order)
 			.send()
 			.await?
 			.json()
