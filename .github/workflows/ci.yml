@@ -957,6 +957,8 @@ jobs:
         if: needs.set-condition.outputs.run_omni_executor_test == 'true'
         timeout-minutes: 40
         run: |
+          # Create .env file that needs by the docker-compose.yml
+          touch ../.env
           docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Collect docker logs if test fails

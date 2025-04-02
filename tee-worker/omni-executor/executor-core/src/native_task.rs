@@ -24,6 +24,17 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxWalletChain {
+	Evm,
+	Solana,
+	Tron,
+}
+
+type MaybeGoogleCode = Option<String>;
+type PumxWalletIndex = u32;
+type ExpectedWalletAddress = String;
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
 	RequestIntent(Identity, Intent),
@@ -36,6 +47,14 @@ pub enum NativeTask {
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
 	PumpxRequestJwt(Identity, Option<String>, Option<String>, Option<String>),
+	#[codec(index = 21)]
+	PumpxExportWallet(
+		Identity,
+		MaybeGoogleCode,
+		PumpxWalletChain,
+		PumxWalletIndex,
+		ExpectedWalletAddress,
+	),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -49,6 +68,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::PublicizeAccount(sender, ..) => sender,
 			Self::SetPermissions(sender, ..) => sender,
 			Self::PumpxRequestJwt(sender, ..) => sender,
+			Self::PumpxExportWallet(sender, ..) => sender,
 		}
 	}
 
@@ -58,8 +78,6 @@ impl NativeTaskTrait for NativeTask {
 	}
 
 	fn require_encrypt(&self) -> bool {
-		// encryption is not mandatory for any of these tasks
-		// TODO: export_wallet will require encryption
-		false
+		matches!(self, Self::PumpxExportWallet(..))
 	}
 }

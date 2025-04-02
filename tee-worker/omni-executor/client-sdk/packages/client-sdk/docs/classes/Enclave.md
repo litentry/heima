@@ -176,7 +176,7 @@ Sends a JSON-RPC request over the WebSocket connection
 
 ##### payload
 
-`JsonRpcRequest`
+[`JsonRpcRequest`](../type-aliases/JsonRpcRequest.md)
 
 The JSON-RPC request to send
 
