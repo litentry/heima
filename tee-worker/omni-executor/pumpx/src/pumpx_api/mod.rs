@@ -32,7 +32,7 @@ impl PumpxApi {
 
 	pub async fn connect_user(
 		&self,
-		session_token: &str,
+		access_token: &str,
 		email: String,
 		invite_code: Option<String>,
 		google_code: Option<String>,
@@ -43,7 +43,7 @@ impl PumpxApi {
 		self.http_client
 			.post(&endpoint)
 			.header("X-Language", lang.unwrap_or("en".to_string()))
-			.bearer_auth(session_token)
+			.bearer_auth(access_token)
 			.json(&connect_user)
 			.send()
 			.await?
