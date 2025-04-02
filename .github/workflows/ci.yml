@@ -600,11 +600,11 @@ jobs:
 
       - name: Build contracts
         run: |
-          cd evm-contracts/bsc-accounting-contract && forge build
+          cd tee-worker/omni-executor/accounting-contract/bsc  && forge build
 
       - name: Test contracts
         run: |
-          cd evm-contracts/bsc-accounting-contract && forge test
+          cd tee-worker/omni-executor/accounting-contract/bsc && forge test
 
   parachain-ts-test:
     runs-on: ubuntu-22.04
