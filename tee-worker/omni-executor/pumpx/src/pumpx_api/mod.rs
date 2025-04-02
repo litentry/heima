@@ -19,7 +19,13 @@ impl PumpxApi {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
 		};
-		let http_client = Client::builder().build().expect("Failed to build HTTP client");
+		let mut default_headers = reqwest::header::HeaderMap::new();
+		default_headers.insert("X-Language", "en".parse().unwrap());
+
+		let http_client = Client::builder()
+			.default_headers(default_headers)
+			.build()
+			.expect("Failed to build HTTP client");
 
 		PumpxApi { http_client, base_url }
 	}
