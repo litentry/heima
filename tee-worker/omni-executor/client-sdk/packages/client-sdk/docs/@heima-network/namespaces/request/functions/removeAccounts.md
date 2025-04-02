@@ -6,7 +6,7 @@
 
 # Function: removeAccounts()
 
-> **removeAccounts**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **removeAccounts**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
 Defined in: [requests/remove-accounts.request.ts:27](https://github.com/litentry/heima/blob/dev/requests/remove-accounts.request.ts#L27)
 
@@ -38,6 +38,6 @@ The member accounts for removing from the OmniAccount. Use the `createCorePrimit
 
 ## Returns
 
-`Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+`Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
 - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.

@@ -6,11 +6,11 @@
 
 # Function: requestAuthToken()
 
-> **requestAuthToken**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `token`: `string`; \}\>; \}\>
+> **requestAuthToken**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `token`: `string`; \}\>; \}\>
 
 Defined in: [requests/request-auth-token.request.ts:32](https://github.com/litentry/heima/blob/dev/requests/request-auth-token.request.ts#L32)
 
-Requests an authentication token from the Enclave.
+Requests an auth token from the Enclave.
 
 ## Parameters
 
@@ -32,6 +32,6 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 
 ## Returns
 
-`Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `token`: `string`; \}\>; \}\>
+`Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `token`: `string`; \}\>; \}\>
 
 A promise that resolves to an object containing the payload to sign (if applicable) and a send function.

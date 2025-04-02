@@ -6,7 +6,7 @@
 
 # Function: callEthereum()
 
-> **callEthereum**(`api`, `data`): `Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **callEthereum**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
 Defined in: [requests/intents/call-ethereum.request.ts:28](https://github.com/litentry/heima/blob/dev/requests/intents/call-ethereum.request.ts#L28)
 
@@ -44,7 +44,7 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 
 ## Returns
 
-`Promise`\<\{ `payloadToSign`: `string`; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+`Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
 - A promise that resolves to an object containing the payload to signature
 (if applicable) and a send function.
