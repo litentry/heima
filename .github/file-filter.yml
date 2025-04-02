@@ -49,4 +49,4 @@ omni_executor_test: &omni_executor_test
   - 'tee-worker/omni-executor/ts-tests/**'
 
 evm_contracts_src:
-  - "evm-contracts/bsc-accounting-contract/**"
+  - "tee-worker/omni-executor/accounting-contract/bsc/**"
