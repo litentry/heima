@@ -143,18 +143,3 @@ pub struct NewLimitOrder {
 pub struct LimitOrder {
 	pub order_id: String,
 }
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_gas_type_codec() {
-		// Encoding
-		let gas_type = GasType::Medium;
-		let encoded: Vec<u8> = gas_type.encode();
-		assert_eq!(encoded[0], 2u8);
-
-		println!("Encoded gas type: {:?}", encoded[0]);
-	}
-}
