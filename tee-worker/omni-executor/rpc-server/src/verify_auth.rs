@@ -1,9 +1,9 @@
 use crate::{server::RpcContext, Encode};
-use executor_core::native_task::NativeTaskTrait;
+use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave, OAuth2Data,
-	OAuth2Provider, VerificationCode, Web2IdentityType,
+	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
@@ -48,6 +48,31 @@ impl Display for AuthenticationError {
 				write!(f, "Auth not exist")
 			},
 		}
+	}
+}
+
+pub async fn verify_auth<
+	Header,
+	RpcClient: SubstrateRpcClient<Header>,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+>(
+	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+	wrapper: &NativeTaskWrapper<NativeTask>,
+) -> Result<(), AuthenticationError> {
+	match wrapper.auth {
+		None => Err(AuthenticationError::AuthNotExist),
+		Some(OmniAuth::Web3(ref signature)) => {
+			verify_web3_authentication(signature, &wrapper.task, wrapper.nonce, ctx.mrenclave)
+		},
+		Some(OmniAuth::Email(ref verification_code)) => {
+			verify_email_authentication(ctx, wrapper.task.sender(), verification_code)
+		},
+		Some(OmniAuth::OAuth2(ref oauth2_data)) => {
+			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
+		},
+		Some(OmniAuth::AuthToken(ref auth_token)) => {
+			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token).await
+		},
 	}
 }
 

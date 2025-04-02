@@ -1,15 +1,13 @@
 use crate::{
 	error_code::*,
+	hex_encode, oneshot,
 	server::RpcContext,
 	task::{DecryptableTask, RawTask},
 	verify_auth::*,
+	FromHexPrefixed,
 };
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
-use executor_primitives::{
-	utils::hex::{hex_encode, FromHexPrefixed},
-	OmniAuth,
-};
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject, Params},
 	RpcModule,
@@ -17,7 +15,6 @@ use jsonrpsee::{
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
-use tokio::{runtime::Handle, sync::oneshot, task};
 
 pub fn register_submit_native_task<
 	Header: Send + Sync + 'static,
@@ -101,29 +98,4 @@ async fn parse<
 	}
 
 	Ok((wrapper, maybe_aes_key))
-}
-
-pub async fn verify_auth<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	wrapper: &NativeTaskWrapper<NativeTask>,
-) -> Result<(), AuthenticationError> {
-	match wrapper.auth {
-		None => Err(AuthenticationError::AuthNotExist),
-		Some(OmniAuth::Web3(ref signature)) => {
-			verify_web3_authentication(signature, &wrapper.task, wrapper.nonce, ctx.mrenclave)
-		},
-		Some(OmniAuth::Email(ref verification_code)) => {
-			verify_email_authentication(ctx, wrapper.task.sender(), verification_code)
-		},
-		Some(OmniAuth::OAuth2(ref oauth2_data)) => {
-			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
-		},
-		Some(OmniAuth::AuthToken(ref auth_token)) => {
-			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token).await
-		},
-	}
 }
