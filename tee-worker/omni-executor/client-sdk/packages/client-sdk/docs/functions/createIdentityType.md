@@ -10,7 +10,7 @@
 
 Defined in: [type-creators/identity.ts:31](https://github.com/litentry/heima/blob/dev/type-creators/identity.ts#L31)
 
-Creates a Identity chain type.
+Creates a Identity type.
 
 Notice that addresses and handles are not fully validated. This struct shouldn't be relied on for validation.
 

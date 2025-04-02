@@ -39,16 +39,31 @@ impl PumpxApi {
 		lang: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
-		let connect_user = ConnectUser { email, invite_code, google_code };
-		self.http_client
+		let connect_user = ConnectUser { email: email.clone(), invite_code, google_code };
+
+		let response = self
+			.http_client
 			.post(&endpoint)
 			.header("X-Language", lang.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&connect_user)
 			.send()
-			.await?
-			.json()
 			.await
+			.map_err(|e| {
+				log::error!("Failed to send user connect request: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("User connect request failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse user connect response: {:?}", e);
+			e
+		})
 	}
 
 	pub async fn get_user_trade_info(
@@ -71,14 +86,28 @@ impl PumpxApi {
 		new_market_order: NewMarketOrder,
 	) -> Result<MarketOrderUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_market_order_unsigned_tx", self.base_url);
-		self.http_client
+		let response = self
+			.http_client
 			.post(&endpoint)
 			.bearer_auth(access_token)
 			.json(&new_market_order)
 			.send()
-			.await?
-			.json()
 			.await
+			.map_err(|e| {
+				log::error!("Failed to send market order creation request: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Market order creation failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse market order creation response: {:?}", e);
+			e
+		})
 	}
 
 	pub async fn send_market_order_tx(
@@ -87,14 +116,28 @@ impl PumpxApi {
 		market_order_tx: MarketOrderTx,
 	) -> Result<MarketOrderTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_tx", self.base_url);
-		self.http_client
+		let response = self
+			.http_client
 			.post(&endpoint)
 			.bearer_auth(access_token)
 			.json(&market_order_tx)
 			.send()
-			.await?
-			.json()
 			.await
+			.map_err(|e| {
+				log::error!("Failed to send market order transaction: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Market order transaction failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse market order transaction response: {:?}", e);
+			e
+		})
 	}
 
 	pub async fn create_limit_order(
