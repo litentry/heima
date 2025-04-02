@@ -2,8 +2,8 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	ConnectUser, MarketOrderTx, MarketOrderUnsignedTxResponse, NewMarketOrder, UserConnectResponse,
-	UserTradeInfoResponse,
+	ConnectUser, MarketOrderTx, MarketOrderTxResponse, MarketOrderUnsignedTxResponse,
+	NewMarketOrder, UserConnectResponse, UserTradeInfoResponse,
 };
 use url::Url;
 
@@ -83,7 +83,7 @@ impl PumpxApi {
 	pub async fn send_market_order_tx(
 		&self,
 		market_order_tx: MarketOrderTx,
-	) -> Result<MarketOrderUnsignedTxResponse, Error> {
+	) -> Result<MarketOrderTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_tx", self.base_url);
 		self.http_client
 			.post(&endpoint)
