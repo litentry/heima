@@ -5,6 +5,7 @@ use crate::{
 	verify_auth::*,
 };
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
+use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
 use executor_primitives::{
 	utils::hex::{hex_encode, FromHexPrefixed},
 	OmniAuth,
@@ -14,7 +15,7 @@ use jsonrpsee::{
 	RpcModule,
 };
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use parity_scale_codec::Decode;
+use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
@@ -27,7 +28,7 @@ pub fn register_submit_native_task<
 ) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
-			let wrapper = parse(params, ctx.clone()).await.map_err(|e| {
+			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
 				log::error!("Failed to parse: {:?}", e);
 				ErrorCode::InternalError
 			})??;
@@ -38,7 +39,14 @@ pub fn register_submit_native_task<
 				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
-				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
+				Ok(response) => {
+					let response = if let Some(aes_key) = maybe_aes_key {
+						aes_encrypt_default(&aes_key, &response).encode()
+					} else {
+						response
+					};
+					Ok::<String, ErrorObject>(hex_encode(response.as_slice()))
+				},
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())
@@ -48,6 +56,8 @@ pub fn register_submit_native_task<
 		.expect("Failed to register omni_submitNativeTask method");
 }
 
+type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>), ErrorObject<'a>>;
+
 fn parse<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
@@ -55,7 +65,7 @@ fn parse<
 >(
 	params: Params<'static>,
 	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) -> task::JoinHandle<Result<NativeTaskWrapper<NativeTask>, ErrorObject<'_>>> {
+) -> task::JoinHandle<ParseResult> {
 	task::spawn_blocking(move || {
 		let Ok(hex_request) = params.one::<String>() else {
 			return Err(ErrorCode::ParseError.into());
@@ -66,14 +76,20 @@ fn parse<
 
 		let request_is_encrypted = request.is_encrypted();
 
-		let wrapper = match request {
-			RawTask::Plain(w) => w,
+		let (wrapper, maybe_aes_key) = match request {
+			RawTask::Plain(w) => (w, None),
 			RawTask::Aes(mut r) => {
+				let key = r
+					.decrypt_aes_key(Box::new(ctx.shielding_key.clone()))
+					.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;
 				let r = r
 					.decrypt(Box::new(ctx.shielding_key.clone()))
 					.map_err(|_| ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE))?;
-				NativeTaskWrapper::<NativeTask>::decode(&mut r.as_slice())
-					.map_err(|_| ErrorCode::ServerError(DECODE_REQUEST_FAILED_CODE))?
+				(
+					NativeTaskWrapper::<NativeTask>::decode(&mut r.as_slice())
+						.map_err(|_| ErrorCode::ServerError(DECODE_REQUEST_FAILED_CODE))?,
+					Some(key),
+				)
 			},
 		};
 
@@ -85,7 +101,7 @@ fn parse<
 			return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 		}
 
-		Ok(wrapper)
+		Ok((wrapper, maybe_aes_key))
 	})
 }
 
