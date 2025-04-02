@@ -67,6 +67,7 @@ pub enum GasType {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewMarketOrder {
+	pub request_id: u32,
 	pub chain_id: ChainId,
 	pub token_ca: String,
 	pub swap_type: SwapType,
@@ -74,8 +75,8 @@ pub struct NewMarketOrder {
 	pub double_out: bool,
 	pub is_one_click: bool,
 	pub address: String,
-	pub is_anti_mev: i32,
-	pub is_auto_slippage: i32,
+	pub is_anti_mev: bool,
+	pub is_auto_slippage: bool,
 	pub gas_type: GasType,
 	pub slippage: u32,
 	pub wallet_index: u32,
