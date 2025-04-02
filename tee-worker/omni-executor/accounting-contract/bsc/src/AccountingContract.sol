@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules
 contract AccountingContract is AccessControlDefaultAdminRules, ReentrancyGuard {
     constructor(address initialAdmin, address initialWorker) AccessControlDefaultAdminRules(0, initialAdmin) {
         require(initialWorker != address(0), "Worker can't be zero address");
-        require(initialAdmin != address(0), "Owner can't be zero address");
         worker = initialWorker;
         _grantRole(WORKER_ROLE, initialWorker);
     }
