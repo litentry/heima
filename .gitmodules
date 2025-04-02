@@ -1,9 +1,3 @@
-[submodule "evm-contracts/bsc-accounting-contract/lib/openzeppelin-contracts"]
-	path = evm-contracts/bsc-accounting-contract/lib/openzeppelin-contracts
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "evm-contracts/bsc-accounting-contract/lib/forge-std"]
-	path = evm-contracts/bsc-accounting-contract/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
 [submodule "tee-worker/omni-executor/accounting-contract/bsc/lib/openzeppelin-contracts"]
 	path = tee-worker/omni-executor/accounting-contract/bsc/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
