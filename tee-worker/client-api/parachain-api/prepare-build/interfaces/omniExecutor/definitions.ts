@@ -17,7 +17,7 @@ export default {
                 RequestAuthToken: "(Identity)",
                 RequestIntent: "(Identity, Intent)",
                 CreateAccountStore: "(Identity)",
-                AddAccount: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
+                AddAccount: "(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>)",
                 RemoveAccounts: "(Identity, Vec<Identity>)",
                 PublicizeAccount: "(Identity, Identity)",
                 SetPermissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
@@ -59,6 +59,7 @@ export default {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
+                PumpxJwt: "PumpxJwt",
             },
         },
         XtReport: {
@@ -95,6 +96,20 @@ export default {
                 // Transaction is no longer valid in the current state.
                 Invalid: "Null",
             },
+        },
+        PumpxJwt: {
+            access_token: "Text",
+            id_token: "Text",
+            user_connect_response: "PumpxUserConnectResponse",
+        },
+        PumpxUserConnectResponse: {
+            code: "u32",
+            message: "Text",
+            data: "PumpxConnectedUser",
+        },
+        PumpxConnectedUser: {
+            userId: "Text",
+            googleAuthCheck: "bool",
         },
         NativeTaskError: {
             _enum: {
