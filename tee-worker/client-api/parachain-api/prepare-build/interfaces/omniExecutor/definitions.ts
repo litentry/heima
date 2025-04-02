@@ -118,6 +118,8 @@ export default {
                 InternalError: "Null",
                 InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
+                UnsupportedIdentityType: "Null",
+                PumpxApiError: "Null",
             },
         },
         HeimaMultiSignature: {
