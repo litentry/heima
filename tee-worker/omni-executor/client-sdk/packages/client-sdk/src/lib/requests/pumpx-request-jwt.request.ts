@@ -20,6 +20,9 @@ import { enclave } from '@lib/enclave';
  * @param {ApiPromise} api - The Heima Parachain API instance from Polkadot.js.
  * @param {Object} data - The data object containing the following properties:
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
+ * @param {string} [data.inviteCode] - Optional invite code for PumpX registration.
+ * @param {string} [data.googleCode] - Optional Google authentication code.
+ * @param {string} [data.lang] - Optional language preference for PumpX.
  * @returns {Promise<Object>} A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.

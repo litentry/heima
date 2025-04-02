@@ -19,6 +19,7 @@ requests
 - [removeAccounts](functions/removeAccounts.md)
 - [requestAuthToken](functions/requestAuthToken.md)
 - [requestEmailVerificationCode](functions/requestEmailVerificationCode.md)
+- [requestPumpxJwt](functions/requestPumpxJwt.md)
 - [setPermissions](functions/setPermissions.md)
 - [systemRemark](functions/systemRemark.md)
 - [transferEthereum](functions/transferEthereum.md)
