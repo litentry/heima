@@ -13,6 +13,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "accounting-contract-client"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "ethereum-rpc",
+ "log",
+ "mockall",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
