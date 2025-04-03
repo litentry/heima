@@ -12,8 +12,22 @@ Gramine is required for running inside TEE, please refer to [installation option
 
 ## Running whole setup locally
 
-Build omni-executor docker image first `make build-docker`.
-Start local environment using `make start-local` command.
+1. (Optional) Configure environment variables:
 
+   ```bash
+   cp .env.example .env
+   # Edit .env file to configure required environment variables
+   ```
+
+2. Build omni-executor docker image:
+
+   ```bash
+   make docker-build
+   ```
+
+3. Start local omni-executor:
+   ```bash
+   make start-local
+   ```
 
 First service run will generate substrate account, it needs to set as omni executor in `omniAccount` pallet. 

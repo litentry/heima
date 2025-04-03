@@ -2,13 +2,13 @@
 
 ***
 
-[@heima-network/client-sdk](../README.md) / createKeyAesOutputType
+[@heima-network/client-sdk](../README.md) / createAesOutputType
 
-# Function: createKeyAesOutputType()
+# Function: createAesOutputType()
 
-> **createKeyAesOutputType**(`registry`, `data`): `AesOutput`
+> **createAesOutputType**(`registry`, `data`): `AesOutput`
 
-Defined in: [type-creators/key-aes-output.ts:27](https://github.com/litentry/heima/blob/dev/type-creators/key-aes-output.ts#L27)
+Defined in: [type-creators/aes-output.ts:27](https://github.com/litentry/heima/blob/dev/type-creators/aes-output.ts#L27)
 
 Creates a KeyAesOutput sidechain type.
 
@@ -32,7 +32,7 @@ Heads-up: ensure data.ciphertext is in hex format. Using Uint may cause a bytes 
 
 build from object
 ```ts
-const identity = createKeyAesOutputType(registry, {
+const identity = createAesOutputType(registry, {
  ciphertext: '0x...',
  nonce: '0x...',
  aad: '0x...',
@@ -41,5 +41,5 @@ const identity = createKeyAesOutputType(registry, {
 
 build from hex string
 ```ts
-const identity = createKeyAesOutputType(registry, `0x...`);
+const identity = createAesOutputType(registry, `0x...`);
 ```

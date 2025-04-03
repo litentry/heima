@@ -65,6 +65,11 @@ on:
         description: run-multi-worker-test
         required: true
         default: false
+      rebuild-evm-contracts:
+        type: boolean
+        description: rebuild-evm-contracts
+        required: true
+        default: false
       push-docker:
         type: boolean
         description: push-docker
@@ -95,6 +100,7 @@ jobs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
+      rebuild_evm_contracts: ${{ steps.env.outputs.rebuild_evm_contracts }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
@@ -118,6 +124,7 @@ jobs:
           rebuild_parachain=false
           rebuild_identity=false
           rebuild_omni_executor=false
+          rebuild_evm_contracts=false
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
@@ -130,6 +137,9 @@ jobs:
           fi
           if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
             rebuild_omni_executor=true
+          fi
+          if [ "${{ github.event.inputs.rebuild-evm-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_contracts_src }}" = "true" ]; then
+            rebuild_evm_contracts=true
           fi
           if [ "${{ github.event.inputs.push-docker }}" = "true" ]; then
             push_docker=true
@@ -145,9 +155,11 @@ jobs:
           if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
             run_omni_executor_test=true
           fi
+
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
           echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_evm_contracts=$rebuild_evm_contracts" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
           echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
@@ -570,6 +582,30 @@ jobs:
           path: litentry-omni.tar.gz
           if-no-files-found: error
 
+  evm-contracts-build-test:
+    runs-on: ubuntu-22.04
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_evm_contracts == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build contracts
+        run: |
+          cd tee-worker/omni-executor/accounting-contract/bsc  && forge build
+
+      - name: Test contracts
+        run: |
+          cd tee-worker/omni-executor/accounting-contract/bsc && forge test
+
   parachain-ts-test:
     runs-on: ubuntu-22.04
     needs:
@@ -921,6 +957,8 @@ jobs:
         if: needs.set-condition.outputs.run_omni_executor_test == 'true'
         timeout-minutes: 40
         run: |
+          # Create .env file that needs by the docker-compose.yml
+          touch ../.env
           docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Collect docker logs if test fails

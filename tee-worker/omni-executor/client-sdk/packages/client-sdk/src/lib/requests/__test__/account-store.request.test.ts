@@ -36,8 +36,7 @@ const types = {
   ...sidechain.types, // AesOutput is defined here
 };
 
-// TODO: make this test working
-describe.skip('account-store', () => {
+describe('account-store', () => {
   let api: ApiPromise;
   let member: Identity;
   let memberSigner: KeyringPair;
