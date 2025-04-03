@@ -2,7 +2,7 @@ import type { ApiPromise } from '@polkadot/api';
 import { hexToU8a } from '@polkadot/util';
 import { HexString } from '@polkadot/util/types';
 
-import type { Identity, NativeTask, NativeTaskResponse } from '@heima-network/parachain-api';
+import type { AesOutput, Identity, NativeTask, NativeTaskResponse } from '@heima-network/parachain-api';
 
 import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
 import { OmniAuthData } from '@type-creators/omni-auth';
@@ -13,6 +13,7 @@ import { isWeb3 } from '@utils/identity';
 import type { JsonRpcRequest } from '@utils/types';
 
 import { enclave } from '@lib/enclave';
+import { decrypt } from '@lib/utils';
 
 /**
  * Sends an AES task to Enclave.
@@ -56,7 +57,7 @@ export async function aesTask(
     status: HexString;
   }> => {
     // prepare and encrypt task
-    const rawTask = await createRawTaskType(api, {
+    const { rawTask, encryptionKey } = await createRawTaskType(api, {
       task,
       nonce,
       authData: args.authData,
@@ -70,8 +71,10 @@ export async function aesTask(
     };
 
     const data = await enclave.send(request);
+    const aesOutput = api.createType<AesOutput>('AesOutput', data)
+    const { cleartext } = await decrypt({ ciphertext: aesOutput.ciphertext, nonce: aesOutput.nonce }, encryptionKey);
 
-    const response = api.createType<NativeTaskResponse>('NativeTaskResponse', data);
+    const response = api.createType<NativeTaskResponse>('NativeTaskResponse', cleartext);
 
     if (response.isErr) {
       throw new Error(response.asErr.toString());
