@@ -9,7 +9,6 @@ use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStor
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
 use tokio::runtime::Handle;
@@ -56,7 +55,6 @@ impl Display for AuthenticationError {
 #[derive(Debug)]
 pub enum AuthTokenError {
 	InvalidToken,
-	BlockNumberError,
 	InvalidIdentity,
 }
 
@@ -90,12 +88,8 @@ pub fn verify_web3_authentication<T: NativeTaskTrait>(
 	}
 }
 
-pub fn verify_email_authentication<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub fn verify_email_authentication(
+	ctx: Arc<RpcContext>,
 	sender: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
@@ -111,13 +105,8 @@ pub fn verify_email_authentication<
 	Ok(())
 }
 
-pub fn verify_auth_token_authentication<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-	handle: Handle,
+pub fn verify_auth_token_authentication(
+	ctx: Arc<RpcContext>,
 	sender: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
@@ -138,12 +127,8 @@ pub fn verify_auth_token_authentication<
 	Ok(())
 }
 
-pub fn verify_oauth2_authentication<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub fn verify_oauth2_authentication(
+	ctx: Arc<RpcContext>,
 	handle: Handle,
 	sender: &Identity,
 	payload: &OAuth2Data,
@@ -153,12 +138,8 @@ pub fn verify_oauth2_authentication<
 	}
 }
 
-fn verify_google_oauth2<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+fn verify_google_oauth2(
+	ctx: Arc<RpcContext>,
 	handle: Handle,
 	sender: &Identity,
 	payload: &OAuth2Data,

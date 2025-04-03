@@ -9,17 +9,10 @@ use get_health::register_get_health;
 use get_oauth2_google_authorization_url::register_get_oauth2_google_authorization_url;
 use get_shielding_key::register_get_shielding_key;
 use jsonrpsee::RpcModule;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use request_email_verification_code::register_request_email_verification_code;
 use submit_native_task::register_submit_native_task;
 
-pub fn register_methods<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_methods(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
 	register_get_shielding_key(module);
 	register_submit_native_task(module);

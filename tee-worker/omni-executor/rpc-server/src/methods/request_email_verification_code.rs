@@ -8,15 +8,8 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
-pub fn register_request_email_verification_code<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
 			let Ok(email) = params.one::<String>() else {

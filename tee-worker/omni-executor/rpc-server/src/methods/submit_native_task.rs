@@ -14,18 +14,11 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject, Params},
 	RpcModule,
 };
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 use tokio::{runtime::Handle, sync::oneshot, task};
 
-pub fn register_submit_native_task<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_submit_native_task(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
 			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
@@ -58,14 +51,7 @@ pub fn register_submit_native_task<
 
 type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>), ErrorObject<'a>>;
 
-fn parse<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	params: Params<'static>,
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) -> task::JoinHandle<ParseResult> {
+fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> task::JoinHandle<ParseResult> {
 	task::spawn_blocking(move || {
 		let Ok(hex_request) = params.one::<String>() else {
 			return Err(ErrorCode::ParseError.into());
@@ -105,12 +91,8 @@ fn parse<
 	})
 }
 
-pub fn verify_auth<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub fn verify_auth(
+	ctx: Arc<RpcContext>,
 	handle: Handle,
 	wrapper: &NativeTaskWrapper<NativeTask>,
 ) -> Result<(), AuthenticationError> {
@@ -126,7 +108,7 @@ pub fn verify_auth<
 			verify_oauth2_authentication(ctx, handle, wrapper.task.sender(), oauth2_data)
 		},
 		Some(OmniAuth::AuthToken(ref auth_token)) => {
-			verify_auth_token_authentication(ctx, handle, wrapper.task.sender(), auth_token)
+			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token)
 		},
 	}
 }
