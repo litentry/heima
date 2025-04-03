@@ -7,7 +7,6 @@ use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
 
@@ -40,13 +39,7 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 	}
 }
 
-pub fn register_export_wallet<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
 			let params = params.parse::<ExportWalletParams>()?;

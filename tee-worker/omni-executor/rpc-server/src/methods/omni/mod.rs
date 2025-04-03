@@ -1,6 +1,5 @@
 use crate::server::RpcContext;
 use jsonrpsee::RpcModule;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 mod get_health;
 use get_health::*;
@@ -17,13 +16,7 @@ use request_email_verification_code::*;
 mod submit_native_task;
 use submit_native_task::*;
 
-pub fn register_omni<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
 	register_get_shielding_key(module);
 	register_submit_native_task(module);
