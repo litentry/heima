@@ -12,6 +12,7 @@ pub struct RequestJwtParams {
 	pub user_email: String,
 	pub invite_code: Option<String>,
 	pub google_code: MaybeGoogleCode,
+	pub language: Option<String>,
 	pub email_code: String,
 }
 
@@ -22,7 +23,7 @@ impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
 				p.invite_code,
 				p.google_code,
-				Some("en".to_string()),
+				p.language,
 			),
 			nonce: None,
 			auth: Some(OmniAuth::Email(p.email_code)),

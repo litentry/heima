@@ -537,7 +537,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, lang) => {
+		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, language) => {
 			let email = match sender {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -580,7 +580,7 @@ async fn handle_native_task<
 			};
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
-				.connect_user(&access_token, email.clone(), invite_code, google_code, lang)
+				.connect_user(&access_token, email.clone(), invite_code, google_code, language)
 				.await
 			else {
 				log::error!("Failed to connect user");
