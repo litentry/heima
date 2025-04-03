@@ -9,12 +9,74 @@ import { createAesOutputType } from './aes-output';
 import { createOmniAuth, OmniAuthData } from './omni-auth';
 
 /**
- * Creates a RawTask struct type for the `NativeTask`.
- *
- * A shielding key is generated and used to encrypt the `NativeTask` and communicated
- * to the enclave to protect the data for transportation.
- *
- * The shielding key is encrypted using the Enclave's shielding key and attached in the Task.
+ * Creates a raw task type for unencrypted NativeTask.
+ * 
+ * @param api - Polkadot API instance
+ * @param data - Task configuration
+ * @param data.task - Native task to be wrapped
+ * @param data.nonce - Optional nonce value
+ * @param data.authData - Optional authentication data
+ * @param data.plain - Flag to return unencrypted raw task
+ * @returns Promise resolving to RawTask
+ */
+export async function createRawTaskType(
+  api: ApiPromise,
+  data: {
+    task: NativeTask;
+    nonce?: Index;
+    authData?: OmniAuthData;
+    plain: true;
+  },
+): Promise<RawTask>;
+
+/**
+ * Creates an encrypted raw task type.
+ * 
+ * @param api - Polkadot API instance
+ * @param data - Task configuration
+ * @param data.task - Native task to be wrapped
+ * @param data.nonce - Optional nonce value
+ * @param data.authData - Optional authentication data
+ * @param data.plain - Flag to return encrypted raw task (default)
+ * @returns Promise resolving to object containing encrypted RawTask and encryption key
+ */
+export async function createRawTaskType(
+  api: ApiPromise,
+  data: {
+    task: NativeTask;
+    nonce?: Index;
+    authData?: OmniAuthData;
+    plain?: false;
+  },
+): Promise<{ rawTask: RawTask, encryptionKey: CryptoKey }>;
+
+/**
+ * Creates a RawTask wrapper for NativeTask with optional encryption.
+ * 
+ * When plain=true:
+ * - Returns unencrypted RawTask directly
+ * 
+ * When plain=false or omitted:
+ * 1. Generates ephemeral shielding key
+ * 2. Encrypts the task using client shielding key
+ * 3. Encrypts the shielding key using Enclave's public key
+ * 4. Packages as AES task
+ * 
+ * @param api - Polkadot API instance
+ * @param data - Task configuration
+ * @param data.task - Native task to be wrapped
+ * @param data.nonce - Optional nonce value
+ * @param data.authData - Optional authentication data
+ * @param data.plain - Whether to skip encryption, defaults to false
+ * @returns Either RawTask or object with encrypted RawTask and encryption key
+ * 
+ * @example
+ * // Get unencrypted raw task
+ * const rawTask = await createRawTaskType(api, { task, plain: true });
+ * 
+ * @example
+ * // Get encrypted raw task with key
+ * const { rawTask, encryptionKey } = await createRawTaskType(api, { task });
  */
 export async function createRawTaskType(
   api: ApiPromise,
@@ -24,7 +86,7 @@ export async function createRawTaskType(
     authData?: OmniAuthData;
     plain?: boolean;
   },
-): Promise<RawTask> {
+): Promise<RawTask | { rawTask: RawTask, encryptionKey: CryptoKey }> {
   const { authData, task, nonce, plain = false } = data;
 
   const auth = authData ? createOmniAuth(api.registry, authData) : undefined;
@@ -69,7 +131,10 @@ export async function createRawTaskType(
     payload: encryptedPayload,
   });
 
-  return api.createType<RawTask>('RawTask', {
-    Aes: aesTask,
-  });
+  return {
+    rawTask: api.createType<RawTask>('RawTask', {
+      Aes: aesTask,
+    }),
+    encryptionKey,
+  };
 }
