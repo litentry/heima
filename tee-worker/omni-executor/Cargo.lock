@@ -6913,6 +6913,7 @@ dependencies = [
  "oauth-providers",
  "parentchain-rpc-client",
  "parity-scale-codec",
+ "pumpx",
  "rand 0.8.5",
  "rsa",
  "serde",
