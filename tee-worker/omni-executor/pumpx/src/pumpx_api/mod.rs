@@ -36,7 +36,7 @@ impl PumpxApi {
 		email: String,
 		invite_code: Option<String>,
 		google_code: Option<String>,
-		lang: Option<String>,
+		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
 		let connect_user = ConnectUser { email: email.clone(), invite_code, google_code };
@@ -44,7 +44,7 @@ impl PumpxApi {
 		let response = self
 			.http_client
 			.post(&endpoint)
-			.header("X-Language", lang.unwrap_or("en".to_string()))
+			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&connect_user)
 			.send()
