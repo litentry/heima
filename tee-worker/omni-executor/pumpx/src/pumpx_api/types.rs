@@ -42,7 +42,7 @@ pub struct ConnectedUser {
 pub struct ApiResponse<T: Encode> {
 	code: u32,
 	message: String,
-	data: T,
+	pub data: T,
 }
 
 impl<T: Codec> ApiResponse<T> {

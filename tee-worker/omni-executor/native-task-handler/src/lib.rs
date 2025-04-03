@@ -537,7 +537,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, language) => {
+		NativeTask::PumpxRequestJwt(sender, invite_code, maybe_google_code, language) => {
 			let email = match sender {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -578,9 +578,35 @@ async fn handle_native_task<
 				}
 				return;
 			};
+
+			if let Some(ref google_code) = maybe_google_code {
+				let verify_result =
+					ctx.pumpx_api.verify_google_code(&access_token, google_code.to_string()).await;
+				let verify_success = match verify_result {
+					Ok(response) => response.data.result,
+					Err(_) => {
+						log::error!("Google code verification request failed");
+						false
+					},
+				};
+				if !verify_success {
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				}
+			}
+
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
-				.connect_user(&access_token, email.clone(), invite_code, google_code, language)
+				.connect_user(
+					&access_token,
+					email.clone(),
+					invite_code,
+					maybe_google_code,
+					language,
+				)
 				.await
 			else {
 				log::error!("Failed to connect user");
