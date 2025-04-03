@@ -10,7 +10,9 @@ use executor_crypto::{
 	aes256::{aes_decrypt, aes_encrypt_default, Aes256Key},
 	jwt,
 };
-use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
+use executor_primitives::{
+	utils::hex::ToHexPrefixed, Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData,
+};
 use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
@@ -38,7 +40,7 @@ pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
 pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
-type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
+pub type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
 
 pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
@@ -564,7 +566,7 @@ async fn handle_native_task<
 			let auth_options = AuthOptions { expires_at };
 
 			let access_token_claims = AuthTokenClaims::new(
-				email.clone(),
+				sender.to_omni_account().to_hex(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
@@ -588,8 +590,11 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let id_token_claims =
-				AuthTokenClaims::new(email, AUTH_TOKEN_ID_TYPE.to_string(), auth_options);
+			let id_token_claims = AuthTokenClaims::new(
+				sender.to_omni_account().to_hex(),
+				AUTH_TOKEN_ID_TYPE.to_string(),
+				auth_options,
+			);
 			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {

@@ -2,11 +2,12 @@ use crate::{server::RpcContext, Encode};
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave, OAuth2Data,
-	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature,
+	utils::hex::{hex_encode, ToHexPrefixed},
+	Identity, MrEnclave, OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
-use heima_authentication::auth_token::{AuthTokenValidator, Validation};
+use heima_authentication::auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use std::{fmt::Display, sync::Arc};
@@ -71,12 +72,6 @@ pub async fn verify_auth(
 	}
 }
 
-#[derive(Debug)]
-pub enum AuthTokenError {
-	InvalidToken,
-	InvalidIdentity,
-}
-
 pub fn verify_web3_authentication<T: NativeTaskTrait>(
 	signature: &HeimaMultiSignature,
 	task: &T,
@@ -129,21 +124,11 @@ pub fn verify_auth_token_authentication(
 	sender: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
-	let validation = match sender {
-		Identity::Email(identity_string) => {
-			let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
-				return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidIdentity));
-			};
-			Validation::new(email.to_string())
-		},
-		_ => Validation::new(sender.hash().to_string()),
-	};
-
-	if auth_token.validate(&ctx.jwt_rsa_private_key, validation).is_err() {
-		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));
-	}
-
-	Ok(())
+	// TODO: once we start using the AccountStore, we should get the omni account from storage
+	let validation = Validation::new(sender.to_omni_account().to_hex());
+	auth_token
+		.validate(&ctx.jwt_rsa_private_key, validation)
+		.map_err(AuthenticationError::AuthTokenError)
 }
 
 pub async fn verify_oauth2_authentication(

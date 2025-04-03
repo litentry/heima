@@ -90,6 +90,7 @@ impl AuthTokenValidator for &str {
 mod tests {
 	use super::*;
 	use chrono::{Days, Utc};
+	use executor_primitives::{utils::hex::ToHexPrefixed, Identity, Web2IdentityType};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 
 	#[test]
@@ -104,14 +105,17 @@ mod tests {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 
+		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
+		let omni_account = email_identity.to_omni_account();
+
 		let claims = AuthTokenClaims::new(
-			"test@test.com".to_string(),
+			omni_account.to_hex(),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new("test@test.com".to_string());
+		let validation = Validation::new(omni_account.to_hex());
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Ok(()));
@@ -124,14 +128,17 @@ mod tests {
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
 
+		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
+		let omni_account = email_identity.to_omni_account();
+
 		let claims = AuthTokenClaims::new(
-			"test@test.com".to_string(),
+			omni_account.to_hex(),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new("test@test.com".to_string());
+		let validation = Validation::new(omni_account.to_hex());
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::ExpiredSignature)));
@@ -149,8 +156,11 @@ mod tests {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 
+		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
+		let omni_account = email_identity.to_omni_account();
+
 		let claims = AuthTokenClaims::new(
-			"test@test.com".to_string(),
+			omni_account.to_hex(),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at },
 		);
