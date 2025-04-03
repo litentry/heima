@@ -34,29 +34,37 @@ describe('pumpx-request-jwt', () => {
     });
 
     // This test is just an example. It requires receiving email verification codes, which cannot be done by running this unit test.
-    it.skip('web2 identity (email) authentication', async () => {
-        const email = 'test@test.com';
+    describe.skip('web2 identity (email) authentication', () => {
+        // Update the email address to your own email address
+        const email = 'xxx@xxx.com';
 
-        // Request email verification code for next account store creation
-        await requestEmailVerificationCode({ email });
-        // Get the email verification code from the email inbox
-        const verificationCode = 'emailVerificationCodeYouReceivedInEmail';
-
-        const member = createIdentityType(api.registry, {
-            addressOrHandle: email,
-            type: 'Email',
+        // Step 1
+        it('request email verification code', async () => {
+            await requestEmailVerificationCode({ email });
         });
 
-        const { send } = await requestPumpxJwt(api, { 
-            member,
-            // inviteCode: 'inviteCode',
-            // googleCode: 'googleCode',
-            // lang: 'en',
+        // Step 2
+        it('request pumpx jwt', async () => {
+            // Update the email verification code from the email inbox that requested in step 1
+            const verificationCode = 'emailVerificationCodeYouReceivedInEmail';
+
+            const member = createIdentityType(api.registry, {
+                addressOrHandle: email,
+                type: 'Email',
+            });
+
+            const { send } = await requestPumpxJwt(api, {
+                member,
+                // inviteCode: 'inviteCode',
+                // googleCode: 'googleCode',
+                // lang: 'en',
+            });
+
+            const { jwt } = await send({ authData: { type: 'Email', verificationCode } });
+
+            expect(jwt).toBeDefined();
+            expect(jwt.access_token).toBeDefined();
+            console.log(JSON.stringify(jwt.toJSON(), null, 2));
         });
-
-        const { jwt } = await send({ authData: { type: 'Email', verificationCode } });
-
-        expect(jwt).toBeDefined();
-        expect(jwt.access_token).toBeDefined();
     });
 });
