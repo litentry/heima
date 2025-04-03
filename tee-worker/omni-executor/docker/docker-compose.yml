@@ -8,8 +8,10 @@ services:
       target: executor-worker
     volumes:
       - ../local/keystore:/local/keystore
+    env_file:
+      - ../.env
     environment:
-      - RUST_LOG=debug
+      - RUST_LOG=${RUST_LOG:-debug}
     depends_on:
       ethereum-node:
         condition: service_started

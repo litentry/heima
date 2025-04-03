@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "accounting-contract-client",
     "binance-api",
     "ethereum-rpc",
     "executor-crypto",
@@ -57,6 +58,7 @@ scale-info = "2.11.6"
 secp256k1 = "=0.29.1"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0"
+serde_repr = "0.1.20"
 serde_with = { version = "3.11", features = ["hex"] }
 sha2 = "0.10.8"
 solana-client = "2.1.5"
@@ -71,6 +73,7 @@ tokio = "1.43.0"
 url = "2.5.4"
 
 # Local dependencies
+accounting-contract-client = { path = "accounting-contract-client" }
 binance-api = { path = "binance-api" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }

@@ -17,7 +17,7 @@ export default {
                 RequestAuthToken: "(Identity)",
                 RequestIntent: "(Identity, Intent)",
                 CreateAccountStore: "(Identity)",
-                AddAccount: "(Identity, Identity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
+                AddAccount: "(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>)",
                 RemoveAccounts: "(Identity, Vec<Identity>)",
                 PublicizeAccount: "(Identity, Identity)",
                 SetPermissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
@@ -34,7 +34,7 @@ export default {
                 __Unused17: "Null",
                 __Unused18: "Null",
                 __Unused19: "Null",
-                PumpxRequestJwt: "(Identity)",
+                PumpxRequestJwt: "(Identity, Option<String>, Option<String>, Option<String>)",
             },
         },
         OmniAuth: {
@@ -59,6 +59,7 @@ export default {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
+                PumpxJwt: "PumpxJwt",
             },
         },
         XtReport: {
@@ -96,6 +97,20 @@ export default {
                 Invalid: "Null",
             },
         },
+        PumpxJwt: {
+            access_token: "Text",
+            id_token: "Text",
+            user_connect_response: "PumpxUserConnectResponse",
+        },
+        PumpxUserConnectResponse: {
+            code: "u32",
+            message: "Text",
+            data: "PumpxConnectedUser",
+        },
+        PumpxConnectedUser: {
+            userId: "Text",
+            googleAuthCheck: "bool",
+        },
         NativeTaskError: {
             _enum: {
                 UnauthorizedSender: "Null",
@@ -103,6 +118,8 @@ export default {
                 InternalError: "Null",
                 InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
+                UnsupportedIdentityType: "Null",
+                PumpxApiError: "Null",
             },
         },
         HeimaMultiSignature: {

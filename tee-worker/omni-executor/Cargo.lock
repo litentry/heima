@@ -3042,6 +3042,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "regex",
+ "serde",
  "tokio",
 ]
 
@@ -5400,6 +5401,7 @@ dependencies = [
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
+ "pumpx",
  "rand 0.8.5",
  "subxt",
  "tokio",
@@ -6398,10 +6400,18 @@ dependencies = [
  "executor-crypto",
  "hex",
  "jsonrpsee",
+ "log",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "reqwest 0.12.8",
+ "rsa",
  "serde",
  "serde_json",
+ "serde_repr",
  "serde_with",
+ "sha2 0.10.8",
  "sp-core 35.0.0",
+ "url",
 ]
 
 [[package]]
@@ -6893,6 +6903,8 @@ dependencies = [
  "rsa",
  "serde",
  "serde_json",
+ "serde_with",
+ "sha2 0.10.8",
  "tokio",
 ]
 
@@ -7661,6 +7673,17 @@ dependencies = [
  "memchr",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serde_repr"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "175ee3e80ae9982737ca543e96133087cbd9a485eecc3bc4de9c1a37b47ea59c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]

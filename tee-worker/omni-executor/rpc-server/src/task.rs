@@ -17,12 +17,12 @@
 // This file contains task related definition that will be used in
 // `omni_submitNativeTask`
 
+use crate::{Decode, Encode};
 use executor_core::native_task::{NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key, AesOutput},
 	traits::Decrypt,
 };
-use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
 // RawTask is the data structure that should be passed into `omni_submitNativeTask`

@@ -4,7 +4,6 @@ import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 import { cryptoWaitReady, encodeAddress } from '@polkadot/util-crypto';
 
-import { getChain } from '@heima-network/chaindata';
 import {
   identity,
   ValidationData,
@@ -18,7 +17,6 @@ import {
 import { createIdentityType } from '@type-creators/identity';
 import { addAccount } from '@requests/add-account.request';
 import { createAccountStore } from '@requests/create-account-store.request';
-import { getAccountStore } from '@requests/get-account-store.request';
 import { getAccountNonce } from '@requests/get-nonce.request';
 import { publicizeAccount } from '@requests/publicize-account.request';
 import { removeAccounts } from '@requests/remove-accounts.request';
@@ -47,7 +45,7 @@ describe('account-store', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 
@@ -71,11 +69,12 @@ describe('account-store', () => {
     // Step 1: create account store
     console.log('Step 1: create account store');
     await (async () => {
-      const { send, payloadToSign = '' } = await createAccountStore(api, { member });
+      const { send, getPayloadToSign = () => '' } = await createAccountStore(api, { member });
+      const payloadToSign = await getPayloadToSign();
       const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
       await send({
-        authentication: {
+        authData: {
           type: 'Web3',
           signer: member,
           signature: signatureHex,
@@ -120,15 +119,16 @@ describe('account-store', () => {
         },
       });
 
-      const { send, payloadToSign = '' } = await addAccount(api, {
+      const { send, getPayloadToSign = () => '' } = await addAccount(api, {
         member,
         memberToAdd,
         validation,
         isPublic: false,
       });
+      const payloadToSign = await getPayloadToSign();
 
       await send({
-        authentication: {
+        authData: {
           type: 'Web3',
           signer: member,
           signature: u8aToHex(memberSigner.sign(payloadToSign)),
@@ -150,24 +150,6 @@ describe('account-store', () => {
       );
       expect(accountStore[1].isPrivate).toBeTruthy(); // Charlie
 
-      // Check account store from getAccountStore request
-      const { send, payloadToSign = '' } = await getAccountStore(api, { member });
-      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
-      const accountStoreFromRequest = await send({
-        authentication: {
-          type: 'Web3',
-          signer: member,
-          signature: signatureHex,
-        },
-      });
-      expect(accountStoreFromRequest).toHaveLength(2);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
-      expect(encodeAddress(accountStoreFromRequest[1].asSubstrate.toU8a())).toBe(
-        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
-      );
-
       // Check permissions
       const permissions = await api.query.omniAccount.memberAccountPermissions(toHash(memberToAdd));
       expect(permissions.toJSON()).toEqual(['All']);
@@ -176,7 +158,7 @@ describe('account-store', () => {
     // Step 3: set permissions
     console.log('Step 3: set permissions');
     await (async () => {
-      const { send, payloadToSign = '' } = await setPermissions(api, {
+      const { send, getPayloadToSign = () => '' } = await setPermissions(api, {
         member,
         memberToSetPermissions: memberToAdd,
         permissions: [
@@ -184,9 +166,10 @@ describe('account-store', () => {
           api.createType<OmniAccountPermission>('OmniAccountPermission', 'AccountManagement'),
         ],
       });
+      const payloadToSign = await getPayloadToSign();
 
       await send({
-        authentication: {
+        authData: {
           type: 'Web3',
           signer: member,
           signature: u8aToHex(memberSigner.sign(payloadToSign)),
@@ -205,10 +188,11 @@ describe('account-store', () => {
     // Step 4: publicize account
     console.log('Step 4: publicize account');
     await (async () => {
-      const { send, payloadToSign = '' } = await publicizeAccount(api, { member, memberToPublicize: memberToAdd });
+      const { send, getPayloadToSign = () => '' } = await publicizeAccount(api, { member, memberToPublicize: memberToAdd });
+      const payloadToSign = await getPayloadToSign();
 
       const result = await send({
-        authentication: {
+        authData: {
           type: 'Web3',
           signer: member,
           signature: u8aToHex(memberSigner.sign(payloadToSign)),
@@ -235,35 +219,18 @@ describe('account-store', () => {
       expect(encodeAddress(accountStore[1].asPublic.asSubstrate.toU8a())).toBe(
         '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
       );
-
-      // Check account store from getAccountStore request
-      const { send, payloadToSign = '' } = await getAccountStore(api, { member });
-      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
-      const accountStoreFromRequest = await send({
-        authentication: {
-          type: 'Web3',
-          signer: member,
-          signature: signatureHex,
-        },
-      });
-      expect(accountStoreFromRequest).toHaveLength(2);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
-      expect(encodeAddress(accountStoreFromRequest[1].asSubstrate.toU8a())).toBe(
-        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
-      );
     })();
 
     // Step 5: remove accounts
     console.log('Step 5: remove accounts');
     await (async () => {
-      const { send, payloadToSign = '' } = await removeAccounts(api, { member, membersToRemove: [memberToAdd] });
+      const { send, getPayloadToSign = () => '' } = await removeAccounts(api, { member, membersToRemove: [memberToAdd] });
 
+      const payloadToSign = await getPayloadToSign();
       const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
       await send({
-        authentication: {
+        authData: {
           type: 'Web3',
           signer: member,
           signature: signatureHex,
@@ -283,22 +250,6 @@ describe('account-store', () => {
       expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
-
-      // Check account store from getAccountStore request
-      const { send, payloadToSign = '' } = await getAccountStore(api, { member });
-      const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
-      const accountStoreFromRequest = await send({
-        authentication: {
-          type: 'Web3',
-          signer: member,
-          signature: signatureHex,
-        },
-      });
-      expect(accountStoreFromRequest).toHaveLength(1);
-      expect(accountStoreFromRequest[0].isSubstrate).toBe(true);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
     })();
   });
 
@@ -306,11 +257,13 @@ describe('account-store', () => {
     // Step 1: create account store
     console.log('Step 1: create account store');
     await (async () => {
-      const { send, payloadToSign = '' } = await createAccountStore(api, { member });
+      const { send, getPayloadToSign = () => '' } = await createAccountStore(api, { member });
+
+      const payloadToSign = await getPayloadToSign();
       const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
       await send({
-        authentication: {
+        authData: {
           type: 'Web3',
           signer: member,
           signature: signatureHex,
@@ -336,14 +289,15 @@ describe('account-store', () => {
 
     // Step 2: request auth token
     console.log('Step 2: request auth token');
-    const { send, payloadToSign = '' } = await requestAuthToken(api, {
+    const { send, getPayloadToSign = () => '' } = await requestAuthToken(api, {
       member,
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,
@@ -381,7 +335,7 @@ describe('account-store', () => {
         isPublic: false,
       });
 
-      await send({ authentication: { type: 'AuthToken', token } });
+      await send({ authData: { type: 'AuthToken', token } });
     })();
 
     // wait 10 seconds
@@ -397,17 +351,6 @@ describe('account-store', () => {
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
       expect(accountStore[1].isPrivate).toBeTruthy(); // Charlie
-
-      // Check account store from getAccountStore request
-      const { send } = await getAccountStore(api, { member });
-      const accountStoreFromRequest = await send({ authentication: { type: 'AuthToken', token } });
-      expect(accountStoreFromRequest).toHaveLength(2);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
-      expect(encodeAddress(accountStoreFromRequest[1].asSubstrate.toU8a())).toBe(
-        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
-      );
 
       // Check permissions
       const permissions = await api.query.omniAccount.memberAccountPermissions(toHash(memberToAdd));
@@ -426,7 +369,7 @@ describe('account-store', () => {
         ],
       });
 
-      await send({ authentication: { type: 'AuthToken', token } });
+      await send({ authData: { type: 'AuthToken', token } });
     })();
 
     // wait 10 seconds
@@ -442,7 +385,7 @@ describe('account-store', () => {
     await (async () => {
       const { send } = await publicizeAccount(api, { member, memberToPublicize: memberToAdd });
 
-      const result = await send({ authentication: { type: 'AuthToken', token } });
+      const result = await send({ authData: { type: 'AuthToken', token } });
 
       expect(result.extrinsicHash.length).toBe(66);
       expect(result.blockHash.length).toBe(66);
@@ -464,24 +407,13 @@ describe('account-store', () => {
       expect(encodeAddress(accountStore[1].asPublic.asSubstrate.toU8a())).toBe(
         '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
       );
-
-      // Check account store from getAccountStore request
-      const { send } = await getAccountStore(api, { member });
-      const accountStoreFromRequest = await send({ authentication: { type: 'AuthToken', token } });
-      expect(accountStoreFromRequest).toHaveLength(2);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
-      expect(encodeAddress(accountStoreFromRequest[1].asSubstrate.toU8a())).toBe(
-        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
-      );
     })();
 
     // Step 6: remove accounts
     console.log('Step 6: remove accounts');
     await (async () => {
       const { send } = await removeAccounts(api, { member, membersToRemove: [memberToAdd] });
-      await send({ authentication: { type: 'AuthToken', token } });
+      await send({ authData: { type: 'AuthToken', token } });
     })();
 
     // wait 10 seconds
@@ -496,15 +428,6 @@ describe('account-store', () => {
       expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
-
-      // Check account store from getAccountStore request
-      const { send } = await getAccountStore(api, { member });
-      const accountStoreFromRequest = await send({ authentication: { type: 'AuthToken', token } });
-      expect(accountStoreFromRequest).toHaveLength(1);
-      expect(accountStoreFromRequest[0].isSubstrate).toBe(true);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
     })();
 
     // Step 7: transfer native
@@ -516,7 +439,7 @@ describe('account-store', () => {
         amount: BigInt(100),
       });
 
-      const result = await send({ authentication: { type: 'AuthToken', token } });
+      const result = await send({ authData: { type: 'AuthToken', token } });
 
       expect(result.extrinsicHash.length).toBe(66);
       expect(result.blockHash.length).toBe(66);
@@ -542,7 +465,7 @@ describe('account-store', () => {
 
       const { send } = await createAccountStore(api, { member });
 
-      await send({ authentication: { type: 'Email', verificationCode } });
+      await send({ authData: { type: 'Email', verificationCode } });
     })();
     const omniAccount = toHash(member);
     const accountStore = await getAndWaitForAccountStoreCreation(api, omniAccount);
@@ -570,7 +493,7 @@ describe('account-store', () => {
 
     const { send } = await requestAuthToken(api, { member });
 
-    const result = await send({ authentication: { type: 'Email', verificationCode } });
+    const result = await send({ authData: { type: 'Email', verificationCode } });
 
     const token = result.token;
     expect(token.length).toBeGreaterThan(0);
@@ -603,7 +526,7 @@ describe('account-store', () => {
         isPublic: false,
       });
 
-      await send({ authentication: { type: 'AuthToken', token } });
+      await send({ authData: { type: 'AuthToken', token } });
     })();
 
     // wait 10 seconds
@@ -619,17 +542,6 @@ describe('account-store', () => {
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
       expect(accountStore[1].isPrivate).toBeTruthy(); // Charlie
-
-      // Check account store from getAccountStore request
-      const { send } = await getAccountStore(api, { member });
-      const accountStoreFromRequest = await send({ authentication: { type: 'AuthToken', token } });
-      expect(accountStoreFromRequest).toHaveLength(2);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
-      expect(encodeAddress(accountStoreFromRequest[1].asSubstrate.toU8a())).toBe(
-        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
-      );
 
       // Check permissions
       const permissions = await api.query.omniAccount.memberAccountPermissions(toHash(memberToAdd));
@@ -648,7 +560,7 @@ describe('account-store', () => {
         ],
       });
 
-      await send({ authentication: { type: 'AuthToken', token } });
+      await send({ authData: { type: 'AuthToken', token } });
     })();
 
     // wait 10 seconds
@@ -664,7 +576,7 @@ describe('account-store', () => {
     await (async () => {
       const { send } = await publicizeAccount(api, { member, memberToPublicize: memberToAdd });
 
-      const result = await send({ authentication: { type: 'AuthToken', token } });
+      const result = await send({ authData: { type: 'AuthToken', token } });
 
       expect(result.extrinsicHash.length).toBe(66);
       expect(result.blockHash.length).toBe(66);
@@ -686,24 +598,13 @@ describe('account-store', () => {
       expect(encodeAddress(accountStore[1].asPublic.asSubstrate.toU8a())).toBe(
         '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
       );
-
-      // Check account store from getAccountStore request
-      const { send } = await getAccountStore(api, { member });
-      const accountStoreFromRequest = await send({ authentication: { type: 'AuthToken', token } });
-      expect(accountStoreFromRequest).toHaveLength(2);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
-      expect(encodeAddress(accountStoreFromRequest[1].asSubstrate.toU8a())).toBe(
-        '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y', // Charlie
-      );
     })();
 
     // Step 6: remove accounts
     console.log('Step 6: remove accounts');
     await (async () => {
       const { send } = await removeAccounts(api, { member, membersToRemove: [memberToAdd] });
-      await send({ authentication: { type: 'AuthToken', token } });
+      await send({ authData: { type: 'AuthToken', token } });
     })();
 
     // wait 10 seconds
@@ -718,15 +619,6 @@ describe('account-store', () => {
       expect(encodeAddress(accountStore[0].asPublic.asSubstrate.toU8a())).toBe(
         '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
       );
-
-      // Check account store from getAccountStore request
-      const { send } = await getAccountStore(api, { member });
-      const accountStoreFromRequest = await send({ authentication: { type: 'AuthToken', token } });
-      expect(accountStoreFromRequest).toHaveLength(1);
-      expect(accountStoreFromRequest[0].isSubstrate).toBe(true);
-      expect(encodeAddress(accountStoreFromRequest[0].asSubstrate.toU8a())).toBe(
-        '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty', // Bob
-      );
     })();
 
     // Step 7: transfer native
@@ -738,7 +630,7 @@ describe('account-store', () => {
         amount: BigInt(100),
       });
 
-      const result = await send({ authentication: { type: 'AuthToken', token } });
+      const result = await send({ authData: { type: 'AuthToken', token } });
 
       expect(result.extrinsicHash.length).toBe(66);
       expect(result.blockHash.length).toBe(66);

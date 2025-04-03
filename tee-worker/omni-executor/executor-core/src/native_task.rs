@@ -2,6 +2,7 @@ use executor_primitives::{
 	Identity, Intent, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
+use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
 pub trait NativeTaskTrait: Codec {
@@ -23,6 +24,17 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 	pub auth: Option<OmniAuth>,
 }
 
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PumpxWalletChain {
+	Evm,
+	Solana,
+	Tron,
+}
+
+pub type MaybeGoogleCode = Option<String>;
+pub type PumxWalletIndex = u32;
+pub type ExpectedWalletAddress = String;
+
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
@@ -35,7 +47,15 @@ pub enum NativeTask {
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
-	PumpxRequestJwt(Identity),
+	PumpxRequestJwt(Identity, Option<String>, MaybeGoogleCode, Option<String>),
+	#[codec(index = 21)]
+	PumpxExportWallet(
+		Identity,
+		MaybeGoogleCode,
+		PumpxWalletChain,
+		PumxWalletIndex,
+		ExpectedWalletAddress,
+	),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -48,7 +68,8 @@ impl NativeTaskTrait for NativeTask {
 			Self::RemoveAccounts(sender, ..) => sender,
 			Self::PublicizeAccount(sender, ..) => sender,
 			Self::SetPermissions(sender, ..) => sender,
-			Self::PumpxRequestJwt(sender) => sender,
+			Self::PumpxRequestJwt(sender, ..) => sender,
+			Self::PumpxExportWallet(sender, ..) => sender,
 		}
 	}
 
@@ -58,8 +79,6 @@ impl NativeTaskTrait for NativeTask {
 	}
 
 	fn require_encrypt(&self) -> bool {
-		// encryption is not mandatory for any of these tasks
-		// TODO: export_wallet will require encryption
-		false
+		matches!(self, Self::PumpxExportWallet(..))
 	}
 }

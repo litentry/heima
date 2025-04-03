@@ -76,6 +76,11 @@ build-docker:
 
 .PHONY: start-local
 start-local:
+	# Create .env file if it doesn't exist
+	@if [ ! -f "$(OMNI_DIR)/.env" ]; then \
+		touch $(OMNI_DIR)/.env; \
+		chown "$$SUDO_USER":"$$(id -gn $$SUDO_USER)" $(OMNI_DIR)/.env; \
+	fi
 	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml up
 
 .PHONY: stop-local
