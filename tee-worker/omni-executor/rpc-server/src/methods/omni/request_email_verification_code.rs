@@ -1,4 +1,4 @@
-use crate::{server::RpcContext, Deserialize, Serialize};
+use crate::{server::RpcContext, Deserialize};
 use executor_primitives::{Identity, Web2IdentityType};
 use executor_storage::{Storage, VerificationCodeStorage};
 use heima_identity_verification::web2::email::{
@@ -10,7 +10,7 @@ use jsonrpsee::{
 };
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct RequestEmailVerificationCodeParams {
 	pub user_email: String,
 }

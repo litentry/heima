@@ -1,6 +1,6 @@
 use crate::{
 	error_code::*, hex_encode, oneshot, server::RpcContext, verify_auth::verify_auth, Deserialize,
-	ErrorCode, Serialize,
+	ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
@@ -8,7 +8,7 @@ use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct RequestJwtParams {
 	pub user_email: String,
 	pub invite_code: Option<String>,

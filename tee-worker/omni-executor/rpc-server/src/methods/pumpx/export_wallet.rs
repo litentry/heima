@@ -1,6 +1,6 @@
 use crate::{
 	error_code::*, hex_encode, oneshot, serde_as, server::RpcContext, verify_auth::verify_auth,
-	Deserialize, Encode, ErrorCode, Serialize,
+	Deserialize, Encode, ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
@@ -12,7 +12,7 @@ use rsa::Oaep;
 use sha2::Sha256;
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
 	pub user_email: String,
 	#[serde_as(as = "serde_with::hex::Hex")]
@@ -62,11 +62,7 @@ pub fn register_export_wallet<
 					)
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				ErrorObject::owned::<()>(
-					DECRYPT_REQUEST_FAILED_CODE,
-					"Shielded value decryption failed",
-					None,
-				)
+				ErrorObject::owned::<()>(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed", None)
 			})?;
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
