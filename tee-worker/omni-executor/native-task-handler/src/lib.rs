@@ -32,9 +32,9 @@ use parity_scale_codec::{Decode, Encode};
 use pumpx::{signer_client::SignerClient, PumpxApi};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
-use types::{NativeTaskError, NativeTaskOk};
 
 pub use aes256_key_store::Aes256KeyStore;
+pub use types::{NativeTaskError, NativeTaskOk};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
