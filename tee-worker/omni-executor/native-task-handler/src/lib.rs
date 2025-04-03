@@ -564,7 +564,7 @@ async fn handle_native_task<
 			let auth_options = AuthOptions { expires_at };
 
 			let access_token_claims = AuthTokenClaims::new(
-				sender.hash().to_string(),
+				email.clone(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
@@ -588,11 +588,8 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let id_token_claims = AuthTokenClaims::new(
-				sender.hash().to_string(),
-				AUTH_TOKEN_ID_TYPE.to_string(),
-				auth_options,
-			);
+			let id_token_claims =
+				AuthTokenClaims::new(email, AUTH_TOKEN_ID_TYPE.to_string(), auth_options);
 			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::AuthTokenCreationFailed);
 				if response_sender.send(response.encode()).is_err() {
