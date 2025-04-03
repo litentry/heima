@@ -34,7 +34,7 @@ use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 
 pub use aes256_key_store::Aes256KeyStore;
-pub use types::{NativeTaskError, NativeTaskOk};
+pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
@@ -590,7 +590,9 @@ async fn handle_native_task<
 					},
 				};
 				if !verify_success {
-					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError);
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::GoogleCodeVerificationFailed,
+					));
 					if response_sender.send(response.encode()).is_err() {
 						log::error!("Failed to send response");
 					}
@@ -610,7 +612,9 @@ async fn handle_native_task<
 				.await
 			else {
 				log::error!("Failed to connect user");
-				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError);
+				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+					PumpxApiError::UserConnectionFailed,
+				));
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
