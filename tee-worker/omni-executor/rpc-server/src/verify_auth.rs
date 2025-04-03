@@ -1,17 +1,15 @@
-use crate::server::RpcContext;
-use executor_core::native_task::NativeTaskTrait;
+use crate::{server::RpcContext, Encode};
+use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave, OAuth2Data,
-	OAuth2Provider, VerificationCode, Web2IdentityType,
+	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::auth_token::{AuthTokenValidator, Validation};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
-use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
-use tokio::runtime::Handle;
 
 #[derive(Debug)]
 pub enum AuthenticationError {
@@ -49,6 +47,27 @@ impl Display for AuthenticationError {
 				write!(f, "Auth not exist")
 			},
 		}
+	}
+}
+
+pub async fn verify_auth(
+	ctx: Arc<RpcContext>,
+	wrapper: &NativeTaskWrapper<NativeTask>,
+) -> Result<(), AuthenticationError> {
+	match wrapper.auth {
+		None => Err(AuthenticationError::AuthNotExist),
+		Some(OmniAuth::Web3(ref signature)) => {
+			verify_web3_authentication(signature, &wrapper.task, wrapper.nonce, ctx.mrenclave)
+		},
+		Some(OmniAuth::Email(ref verification_code)) => {
+			verify_email_authentication(ctx, wrapper.task.sender(), verification_code)
+		},
+		Some(OmniAuth::OAuth2(ref oauth2_data)) => {
+			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
+		},
+		Some(OmniAuth::AuthToken(ref auth_token)) => {
+			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token)
+		},
 	}
 }
 
@@ -127,20 +146,18 @@ pub fn verify_auth_token_authentication(
 	Ok(())
 }
 
-pub fn verify_oauth2_authentication(
+pub async fn verify_oauth2_authentication(
 	ctx: Arc<RpcContext>,
-	handle: Handle,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google => verify_google_oauth2(ctx, handle, sender, payload),
+		OAuth2Provider::Google => verify_google_oauth2(ctx, sender, payload).await,
 	}
 }
 
-fn verify_google_oauth2(
+async fn verify_google_oauth2(
 	ctx: Arc<RpcContext>,
-	handle: Handle,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
@@ -155,11 +172,9 @@ fn verify_google_oauth2(
 		GoogleOAuth2Client::new(ctx.google_client_id.clone(), ctx.google_client_secret.clone());
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
-	let token = handle
-		.block_on(async { google_client.exchange_code_for_token(code, redirect_uri).await })
-		.map_err(|_| {
-			AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
-		})?;
+	let token = google_client.exchange_code_for_token(code, redirect_uri).await.map_err(|_| {
+		AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
+	})?;
 	let id_token = decode_id_token(&token)
 		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
 	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
