@@ -1,6 +1,7 @@
 mod aes256_key_store;
 mod types;
 
+use chrono::{Days, Utc};
 use executor_core::{
 	intent_executor::IntentExecutor,
 	native_task::{NativeTask, NativeTaskWrapper},
@@ -190,15 +191,11 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
-				log::error!("Failed to get last finalized block number");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
+			let expires_at = Utc::now()
+				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+				.expect("Failed to calculate expiration")
+				.timestamp();
+			let auth_options = AuthOptions { expires_at };
 			let claims = match sender {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -560,15 +557,10 @@ async fn handle_native_task<
 					return;
 				},
 			};
-			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
-				log::error!("Failed to get last finalized block number");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
+			let expires_at = Utc::now()
+				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+				.expect("Failed to calculate expiration")
+				.timestamp();
 			let auth_options = AuthOptions { expires_at };
 
 			let access_token_claims = AuthTokenClaims::new(

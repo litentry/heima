@@ -121,25 +121,14 @@ pub fn verify_auth_token_authentication<
 	sender: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
-	let current_block = handle
-		.block_on(async {
-			let client = ctx.parentchain_rpc_client_factory.new_client().await.map_err(|e| {
-				log::error!("Could not create client: {:?}", e);
-			})?;
-			client.get_last_finalized_block_num().await.map_err(|e| {
-				log::error!("Could not get last finalized block number: {:?}", e);
-			})
-		})
-		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
-
 	let validation = match sender {
 		Identity::Email(identity_string) => {
 			let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
 				return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidIdentity));
 			};
-			Validation::new(email.to_string(), current_block)
+			Validation::new(email.to_string())
 		},
-		_ => Validation::new(sender.hash().to_string(), current_block),
+		_ => Validation::new(sender.hash().to_string()),
 	};
 
 	if auth_token.validate(&ctx.jwt_rsa_private_key, validation).is_err() {
