@@ -1,0 +1,13 @@
+[package]
+name = "intent-core"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+executor-primitives = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+
+[lints]
+workspace = true

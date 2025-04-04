@@ -4612,6 +4612,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "intent-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "executor-primitives",
+ "tokio",
+]
+
+[[package]]
 name = "intent-token-query"
 version = "0.1.0"
 dependencies = [
