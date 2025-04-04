@@ -3,7 +3,7 @@ use executor_primitives::AccountId;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 
-pub type IntentId = u128;
+type IntentId = heima_primitives::IntentId;
 
 #[async_trait]
 pub trait IntentIdStore {

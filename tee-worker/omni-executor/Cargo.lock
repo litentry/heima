@@ -4616,6 +4616,7 @@ name = "intent-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "core-primitives",
  "executor-primitives",
  "tokio",
 ]

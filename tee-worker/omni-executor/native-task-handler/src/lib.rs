@@ -311,7 +311,7 @@ async fn handle_native_task<
 			let mut execution_result = IntentExecutionResult::Success;
 
 			let tx = match intent {
-				Intent::SystemRemark(remark) => {
+				Intent::SystemRemark(_, remark) => {
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_signed(

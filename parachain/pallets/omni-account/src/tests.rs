@@ -599,7 +599,7 @@ fn request_intent_works() {
 		));
 
 		let intent =
-			Intent::CallEthereum(CallEthereum { address: H160::zero(), input: BoundedVec::new() });
+			Intent::CallEthereum(CallEthereum { intent_id: 0, address: H160::zero(), input: BoundedVec::new() });
 
 		let call = request_intent_call(intent.clone());
 		assert_ok!(OmniAccount::dispatch_as_omni_account(

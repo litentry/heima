@@ -212,7 +212,7 @@ impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 				{
 					matches!(
 						intent,
-						pallet_omni_account::Intent::SystemRemark(_)
+						pallet_omni_account::Intent::SystemRemark(_, _)
 							| pallet_omni_account::Intent::TransferNative(_)
 					)
 				} else {
