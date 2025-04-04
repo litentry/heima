@@ -584,7 +584,10 @@ async fn handle_native_task<
 				.insert((sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
 			{
-				log::error!("Failed to insert access jwt token into storage");
+				log::error!(
+					"Failed to insert pumpx_{}_jwt_token into storage",
+					AUTH_TOKEN_ACCESS_TYPE
+				);
 			};
 
 			let Ok(user_connect_response) = ctx
@@ -624,7 +627,7 @@ async fn handle_native_task<
 				.insert((sender.to_omni_account(), AUTH_TOKEN_ID_TYPE), id_token.clone())
 				.is_err()
 			{
-				log::error!("Failed to insert id jwt token into storage");
+				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
 			};
 
 			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt {
@@ -656,7 +659,7 @@ async fn handle_native_task<
 				)
 				.await
 			else {
-				log::error!("Failed export wallet from pumpx-signer");
+				log::error!("Failed to export wallet from pumpx-signer");
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");

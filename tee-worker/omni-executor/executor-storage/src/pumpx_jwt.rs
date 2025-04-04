@@ -23,7 +23,7 @@ impl Storage<PumpxJwtStorageKey, String> for PumpxJwtStorage {
 		match self.db.get(storage_key(STORAGE_NAME, &key.encode())) {
 			Ok(Some(value)) => String::decode(&mut &value[..]).ok(),
 			_ => {
-				log::error!("Error getting pumpx_auth_token from storage");
+				log::error!("Error getting pumpx_{}_jwt_token from storage", key.1);
 				None
 			},
 		}
@@ -33,13 +33,13 @@ impl Storage<PumpxJwtStorageKey, String> for PumpxJwtStorage {
 		self.db
 			.put(storage_key(STORAGE_NAME, &key.encode()), token.encode())
 			.map_err(|e| {
-				log::error!("Error inserting pumpx_auth_token into storage: {:?}", e);
+				log::error!("Error inserting pumpx_{}_jwt_token into storage: {:?}", key.1, e);
 			})
 	}
 
 	fn remove(&self, key: &PumpxJwtStorageKey) -> Result<(), ()> {
 		self.db.delete(storage_key(STORAGE_NAME, &key.encode())).map_err(|e| {
-			log::error!("Error removing pumpx_auth_token from storage: {:?}", e);
+			log::error!("Error removing pumpx_{}_jwt_token from storage: {:?}", key.1, e);
 		})
 	}
 
