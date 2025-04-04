@@ -2,14 +2,14 @@ use crate::{server::RpcContext, Encode};
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Identity, MrEnclave, OAuth2Data,
-	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature,
+	utils::hex::{hex_encode, ToHexPrefixed},
+	Identity, MrEnclave, OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
-use heima_authentication::auth_token::{AuthTokenValidator, Validation};
+use heima_authentication::auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(Debug)]
@@ -51,12 +51,8 @@ impl Display for AuthenticationError {
 	}
 }
 
-pub async fn verify_auth<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub async fn verify_auth(
+	ctx: Arc<RpcContext>,
 	wrapper: &NativeTaskWrapper<NativeTask>,
 ) -> Result<(), AuthenticationError> {
 	match wrapper.auth {
@@ -71,16 +67,9 @@ pub async fn verify_auth<
 			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
 		},
 		Some(OmniAuth::AuthToken(ref auth_token)) => {
-			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token).await
+			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token)
 		},
 	}
-}
-
-#[derive(Debug)]
-pub enum AuthTokenError {
-	InvalidToken,
-	BlockNumberError,
-	InvalidIdentity,
 }
 
 pub fn verify_web3_authentication<T: NativeTaskTrait>(
@@ -113,12 +102,8 @@ pub fn verify_web3_authentication<T: NativeTaskTrait>(
 	}
 }
 
-pub fn verify_email_authentication<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub fn verify_email_authentication(
+	ctx: Arc<RpcContext>,
 	sender: &Identity,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
@@ -134,48 +119,20 @@ pub fn verify_email_authentication<
 	Ok(())
 }
 
-pub async fn verify_auth_token_authentication<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub fn verify_auth_token_authentication(
+	ctx: Arc<RpcContext>,
 	sender: &Identity,
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
-	let client = ctx
-		.parentchain_rpc_client_factory
-		.new_client()
-		.await
-		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
-	let current_block = client
-		.get_last_finalized_block_num()
-		.await
-		.map_err(|_| AuthenticationError::AuthTokenError(AuthTokenError::BlockNumberError))?;
-
-	let validation = match sender {
-		Identity::Email(identity_string) => {
-			let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
-				return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidIdentity));
-			};
-			Validation::new(email.to_string(), current_block)
-		},
-		_ => Validation::new(sender.hash().to_string(), current_block),
-	};
-
-	if auth_token.validate(&ctx.jwt_rsa_private_key, validation).is_err() {
-		return Err(AuthenticationError::AuthTokenError(AuthTokenError::InvalidToken));
-	}
-
-	Ok(())
+	// TODO: once we start using the AccountStore, we should get the omni account from storage
+	let validation = Validation::new(sender.to_omni_account().to_hex());
+	auth_token
+		.validate(&ctx.jwt_rsa_private_key, validation)
+		.map_err(AuthenticationError::AuthTokenError)
 }
 
-pub async fn verify_oauth2_authentication<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+pub async fn verify_oauth2_authentication(
+	ctx: Arc<RpcContext>,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
@@ -184,12 +141,8 @@ pub async fn verify_oauth2_authentication<
 	}
 }
 
-async fn verify_google_oauth2<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
->(
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
+async fn verify_google_oauth2(
+	ctx: Arc<RpcContext>,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {

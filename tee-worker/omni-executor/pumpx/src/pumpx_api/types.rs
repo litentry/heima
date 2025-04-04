@@ -28,14 +28,14 @@ pub struct ConnectUser {
 	pub google_code: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectedUser {
 	pub user_id: String,
 	pub google_auth_check: bool,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiResponse<T: Encode> {
 	code: u32,

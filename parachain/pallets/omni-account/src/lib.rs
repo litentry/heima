@@ -234,7 +234,7 @@ pub mod pallet {
 		/// An auth token is requested
 		AuthTokenRequested {
 			who: T::AccountId,
-			expires_at: BlockNumberFor<T>,
+			expires_at: i64,
 		},
 	}
 
@@ -515,7 +515,7 @@ pub mod pallet {
 		pub fn auth_token_requested(
 			origin: OriginFor<T>,
 			who: T::AccountId,
-			expires_at: BlockNumberFor<T>,
+			expires_at: i64,
 		) -> DispatchResult {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			Self::deposit_event(Event::AuthTokenRequested { who, expires_at });

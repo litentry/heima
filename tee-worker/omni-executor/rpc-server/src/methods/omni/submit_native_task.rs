@@ -12,17 +12,10 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject, Params},
 	RpcModule,
 };
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 
-pub fn register_submit_native_task<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_submit_native_task(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
 			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
@@ -55,14 +48,7 @@ pub fn register_submit_native_task<
 
 type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>), ErrorObject<'a>>;
 
-async fn parse<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	params: Params<'static>,
-	ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) -> ParseResult {
+async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult {
 	let Ok(hex_request) = params.one::<String>() else {
 		return Err(ErrorCode::ParseError.into());
 	};

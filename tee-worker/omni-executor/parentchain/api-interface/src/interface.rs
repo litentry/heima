@@ -1306,10 +1306,10 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							233u8, 27u8, 14u8, 109u8, 202u8, 53u8, 56u8, 35u8, 29u8, 65u8, 15u8,
-							25u8, 241u8, 86u8, 3u8, 192u8, 120u8, 211u8, 154u8, 220u8, 240u8,
-							187u8, 145u8, 164u8, 135u8, 186u8, 58u8, 50u8, 176u8, 49u8, 204u8,
-							82u8,
+							247u8, 191u8, 238u8, 40u8, 233u8, 90u8, 119u8, 2u8, 70u8, 127u8, 30u8,
+							243u8, 35u8, 226u8, 14u8, 134u8, 239u8, 161u8, 98u8, 234u8, 170u8,
+							240u8, 131u8, 183u8, 30u8, 229u8, 196u8, 116u8, 75u8, 106u8, 75u8,
+							66u8,
 						],
 					)
 				}
@@ -1327,9 +1327,9 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							67u8, 36u8, 143u8, 127u8, 152u8, 149u8, 20u8, 17u8, 66u8, 255u8, 178u8,
-							72u8, 55u8, 117u8, 84u8, 211u8, 156u8, 113u8, 164u8, 3u8, 94u8, 204u8,
-							26u8, 138u8, 101u8, 61u8, 132u8, 245u8, 56u8, 219u8, 224u8, 233u8,
+							169u8, 137u8, 44u8, 8u8, 176u8, 135u8, 127u8, 46u8, 140u8, 228u8,
+							254u8, 103u8, 249u8, 212u8, 255u8, 14u8, 0u8, 122u8, 204u8, 11u8, 30u8,
+							190u8, 17u8, 85u8, 59u8, 180u8, 168u8, 61u8, 97u8, 66u8, 221u8, 92u8,
 						],
 					)
 				}
@@ -3070,9 +3070,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				112u8, 62u8, 69u8, 57u8, 34u8, 80u8, 133u8, 254u8, 55u8, 156u8, 76u8, 192u8, 94u8,
-				216u8, 28u8, 228u8, 139u8, 185u8, 74u8, 139u8, 78u8, 245u8, 129u8, 89u8, 31u8,
-				205u8, 227u8, 24u8, 195u8, 201u8, 155u8, 155u8,
+				137u8, 65u8, 199u8, 243u8, 144u8, 218u8, 255u8, 194u8, 220u8, 99u8, 79u8, 204u8,
+				7u8, 148u8, 94u8, 19u8, 212u8, 159u8, 71u8, 168u8, 96u8, 248u8, 139u8, 215u8,
+				251u8, 243u8, 241u8, 136u8, 111u8, 238u8, 218u8, 30u8,
 			]
 	}
 	pub mod system {
@@ -4225,9 +4225,9 @@ pub mod api {
 						"Events",
 						(),
 						[
-							145u8, 220u8, 88u8, 107u8, 75u8, 119u8, 15u8, 26u8, 232u8, 129u8,
-							220u8, 40u8, 247u8, 159u8, 19u8, 239u8, 180u8, 14u8, 88u8, 64u8, 204u8,
-							57u8, 73u8, 60u8, 35u8, 184u8, 152u8, 143u8, 42u8, 79u8, 189u8, 189u8,
+							239u8, 63u8, 251u8, 11u8, 86u8, 203u8, 79u8, 82u8, 4u8, 49u8, 102u8,
+							116u8, 89u8, 31u8, 250u8, 187u8, 83u8, 25u8, 18u8, 82u8, 254u8, 55u8,
+							70u8, 187u8, 125u8, 181u8, 116u8, 104u8, 118u8, 82u8, 51u8, 182u8,
 						],
 					)
 				}
@@ -6478,7 +6478,7 @@ pub mod api {
 				pub mod auth_token_requested {
 					use super::runtime_types;
 					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-					pub type ExpiresAt = ::core::primitive::u32;
+					pub type ExpiresAt = ::core::primitive::i64;
 				}
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for AuthTokenRequested {
 					const PALLET: &'static str = "OmniAccount";
@@ -6534,9 +6534,10 @@ pub mod api {
 							auth_type,
 						},
 						[
-							92u8, 101u8, 153u8, 48u8, 200u8, 89u8, 22u8, 2u8, 197u8, 201u8, 34u8,
-							102u8, 117u8, 9u8, 51u8, 10u8, 29u8, 40u8, 190u8, 53u8, 39u8, 221u8,
-							116u8, 196u8, 205u8, 143u8, 178u8, 195u8, 254u8, 152u8, 5u8, 26u8,
+							162u8, 30u8, 195u8, 20u8, 204u8, 118u8, 147u8, 130u8, 54u8, 76u8, 65u8,
+							180u8, 163u8, 206u8, 67u8, 35u8, 151u8, 160u8, 244u8, 246u8, 193u8,
+							124u8, 248u8, 196u8, 105u8, 223u8, 29u8, 235u8, 121u8, 230u8, 233u8,
+							120u8,
 						],
 					)
 				}
@@ -6556,9 +6557,10 @@ pub mod api {
 							auth_type,
 						},
 						[
-							13u8, 149u8, 239u8, 50u8, 149u8, 197u8, 60u8, 34u8, 66u8, 101u8, 193u8,
-							94u8, 100u8, 251u8, 14u8, 139u8, 175u8, 46u8, 116u8, 111u8, 4u8, 130u8,
-							108u8, 69u8, 95u8, 202u8, 38u8, 144u8, 244u8, 231u8, 146u8, 220u8,
+							111u8, 58u8, 84u8, 128u8, 46u8, 169u8, 159u8, 191u8, 254u8, 190u8,
+							244u8, 114u8, 197u8, 139u8, 21u8, 71u8, 105u8, 51u8, 238u8, 113u8,
+							49u8, 233u8, 149u8, 74u8, 41u8, 101u8, 234u8, 160u8, 41u8, 227u8,
+							185u8, 181u8,
 						],
 					)
 				}
@@ -6713,10 +6715,10 @@ pub mod api {
 						"auth_token_requested",
 						types::AuthTokenRequested { who, expires_at },
 						[
-							86u8, 8u8, 155u8, 175u8, 185u8, 11u8, 23u8, 58u8, 47u8, 215u8, 177u8,
-							22u8, 223u8, 15u8, 107u8, 49u8, 159u8, 167u8, 221u8, 170u8, 224u8,
-							189u8, 107u8, 220u8, 216u8, 29u8, 128u8, 177u8, 169u8, 178u8, 14u8,
-							85u8,
+							216u8, 16u8, 198u8, 205u8, 197u8, 71u8, 213u8, 167u8, 3u8, 108u8,
+							142u8, 110u8, 251u8, 84u8, 62u8, 49u8, 91u8, 154u8, 147u8, 167u8,
+							227u8, 65u8, 202u8, 105u8, 148u8, 135u8, 73u8, 147u8, 84u8, 147u8,
+							208u8, 242u8,
 						],
 					)
 				}
@@ -7054,7 +7056,7 @@ pub mod api {
 			pub mod auth_token_requested {
 				use super::runtime_types;
 				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type ExpiresAt = ::core::primitive::u32;
+				pub type ExpiresAt = ::core::primitive::i64;
 			}
 			impl ::subxt::ext::subxt_core::events::StaticEvent for AuthTokenRequested {
 				const PALLET: &'static str = "OmniAccount";
@@ -8093,9 +8095,10 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							76u8, 10u8, 0u8, 150u8, 240u8, 139u8, 154u8, 79u8, 98u8, 49u8, 11u8,
-							90u8, 155u8, 68u8, 220u8, 209u8, 247u8, 167u8, 167u8, 172u8, 188u8,
-							8u8, 164u8, 124u8, 135u8, 157u8, 82u8, 57u8, 52u8, 137u8, 86u8, 73u8,
+							177u8, 31u8, 192u8, 60u8, 225u8, 33u8, 155u8, 177u8, 177u8, 133u8,
+							195u8, 248u8, 141u8, 172u8, 219u8, 18u8, 147u8, 108u8, 212u8, 58u8,
+							96u8, 41u8, 126u8, 179u8, 190u8, 127u8, 69u8, 120u8, 248u8, 175u8,
+							227u8, 241u8,
 						],
 					)
 				}
@@ -17937,7 +17940,7 @@ pub mod api {
 					#[codec(index = 10)]
 					auth_token_requested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						expires_at: ::core::primitive::u32,
+						expires_at: ::core::primitive::i64,
 					},
 					#[codec(index = 11)]
 					emit_intent_event {
@@ -18100,7 +18103,7 @@ pub mod api {
 					#[doc = "An auth token is requested"]
 					AuthTokenRequested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						expires_at: ::core::primitive::u32,
+						expires_at: ::core::primitive::i64,
 					},
 				}
 				#[derive(
