@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "accounting-contract-client",
     "binance-api",
     "ethereum-rpc",
     "executor-crypto",
@@ -36,6 +37,7 @@ async-trait = "0.1.82"
 base64 = "0.22.1"
 bitcoin = "0.32.5"
 clap = "4.5.17"
+chrono = "0.4.40"
 env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
@@ -72,6 +74,7 @@ tokio = "1.43.0"
 url = "2.5.4"
 
 # Local dependencies
+accounting-contract-client = { path = "accounting-contract-client" }
 binance-api = { path = "binance-api" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }

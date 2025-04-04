@@ -1,6 +1,7 @@
 mod aes256_key_store;
 mod types;
 
+use chrono::{Days, Utc};
 use executor_core::{
 	intent_executor::IntentExecutor,
 	native_task::{NativeTask, NativeTaskWrapper},
@@ -9,7 +10,9 @@ use executor_crypto::{
 	aes256::{aes_decrypt, aes_encrypt_default, Aes256Key},
 	jwt,
 };
-use executor_primitives::{Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData};
+use executor_primitives::{
+	utils::hex::ToHexPrefixed, Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData,
+};
 use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
@@ -29,15 +32,15 @@ use parity_scale_codec::{Decode, Encode};
 use pumpx::{signer_client::SignerClient, PumpxApi};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
-use types::{NativeTaskError, NativeTaskOk};
 
 pub use aes256_key_store::Aes256KeyStore;
+pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
 pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
-type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
+pub type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
 
 pub type ParentchainTxSigner = TransactionSigner<
 	SubstrateKeyStore,
@@ -190,15 +193,11 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
-				log::error!("Failed to get last finalized block number");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let auth_options = AuthOptions { expires_at: current_block + AUTH_TOKEN_EXPIRATION };
+			let expires_at = Utc::now()
+				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+				.expect("Failed to calculate expiration")
+				.timestamp();
+			let auth_options = AuthOptions { expires_at };
 			let claims = match sender {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -538,7 +537,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, lang) => {
+		NativeTask::PumpxRequestJwt(sender, invite_code, maybe_google_code, language) => {
 			let email = match sender {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -560,19 +559,14 @@ async fn handle_native_task<
 					return;
 				},
 			};
-			let Ok(current_block) = rpc_client.get_last_finalized_block_num().await else {
-				log::error!("Failed to get last finalized block number");
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
-			let expires_at = current_block + AUTH_TOKEN_EXPIRATION;
+			let expires_at = Utc::now()
+				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+				.expect("Failed to calculate expiration")
+				.timestamp();
 			let auth_options = AuthOptions { expires_at };
 
 			let access_token_claims = AuthTokenClaims::new(
-				sender.hash().to_string(),
+				sender.to_omni_account().to_hex(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
@@ -584,20 +578,29 @@ async fn handle_native_task<
 				}
 				return;
 			};
+
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
-				.connect_user(&access_token, email.clone(), invite_code, google_code, lang)
+				.connect_user(
+					&access_token,
+					email.clone(),
+					invite_code,
+					maybe_google_code,
+					language,
+				)
 				.await
 			else {
 				log::error!("Failed to connect user");
-				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError);
+				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+					PumpxApiError::UserConnectionFailed,
+				));
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
 				return;
 			};
 			let id_token_claims = AuthTokenClaims::new(
-				sender.hash().to_string(),
+				sender.to_omni_account().to_hex(),
 				AUTH_TOKEN_ID_TYPE.to_string(),
 				auth_options,
 			);

@@ -6,15 +6,8 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
-pub fn register_get_oauth2_google_authorization_url<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_get_oauth2_google_authorization_url(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method(
 			"omni_getOAuth2GoogleAuthorizationUrl",
