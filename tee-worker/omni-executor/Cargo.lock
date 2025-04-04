@@ -3070,6 +3070,7 @@ dependencies = [
  "rsa",
  "secp256k1 0.29.1",
  "serde",
+ "serde_with",
  "sp-core 35.0.0",
 ]
 
