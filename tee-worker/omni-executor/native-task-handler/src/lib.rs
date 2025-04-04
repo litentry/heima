@@ -13,7 +13,7 @@ use executor_crypto::{
 use executor_primitives::{
 	utils::hex::ToHexPrefixed, Identity, Intent, MemberAccount, OmniAccountAuthType, ValidationData,
 };
-use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage, StorageDB};
+use executor_storage::{MemberOmniAccountStorage, PumpxJwtStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
@@ -579,6 +579,17 @@ async fn handle_native_task<
 				return;
 			};
 
+			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			if storage
+				.insert((sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+				.is_err()
+			{
+				log::error!(
+					"Failed to insert pumpx_{}_jwt_token into storage",
+					AUTH_TOKEN_ACCESS_TYPE
+				);
+			};
+
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
 				.connect_user(
@@ -612,9 +623,11 @@ async fn handle_native_task<
 				return;
 			};
 
-			let storage = PumpxAuthTokenIdStorage::new(ctx.storage_db.clone());
-			if storage.insert(sender.to_omni_account(), id_token.clone()).is_err() {
-				log::error!("Failed to insert id token into storage");
+			if storage
+				.insert((sender.to_omni_account(), AUTH_TOKEN_ID_TYPE), id_token.clone())
+				.is_err()
+			{
+				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
 			};
 
 			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt {
@@ -646,7 +659,7 @@ async fn handle_native_task<
 				)
 				.await
 			else {
-				log::error!("Failed export wallet from pumpx-signer");
+				log::error!("Failed to export wallet from pumpx-signer");
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
