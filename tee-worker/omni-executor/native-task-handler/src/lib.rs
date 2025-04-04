@@ -579,29 +579,6 @@ async fn handle_native_task<
 				return;
 			};
 
-			if let Some(ref google_code) = maybe_google_code {
-				let verify_result = ctx
-					.pumpx_api
-					.verify_google_code(&access_token, google_code.to_string(), language.clone())
-					.await;
-				let verify_success = match verify_result {
-					Ok(response) => response.data.result,
-					Err(_) => {
-						log::error!("Google code verification request failed");
-						false
-					},
-				};
-				if !verify_success {
-					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
-						PumpxApiError::GoogleCodeVerificationFailed,
-					));
-					if response_sender.send(response.encode()).is_err() {
-						log::error!("Failed to send response");
-					}
-					return;
-				}
-			}
-
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
 				.connect_user(
