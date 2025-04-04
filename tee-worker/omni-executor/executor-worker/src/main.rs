@@ -153,7 +153,7 @@ async fn main() -> Result<(), ()> {
 			.expect("Could not serialize shielding public key");
 
 			let mrenclave = perform_attestation(
-				parentchain_rpc_client_factory.clone(),
+				parentchain_rpc_client_factory,
 				parentchain_signer,
 				tx_signer.clone(),
 				worker_url.as_str(),
@@ -166,7 +166,6 @@ async fn main() -> Result<(), ()> {
 
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
-				parentchain_rpc_client_factory,
 				shielding_key,
 				Arc::new(native_task_sender),
 				storage_db.clone(),
