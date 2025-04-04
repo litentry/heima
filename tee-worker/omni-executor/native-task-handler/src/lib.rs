@@ -580,8 +580,10 @@ async fn handle_native_task<
 			};
 
 			if let Some(ref google_code) = maybe_google_code {
-				let verify_result =
-					ctx.pumpx_api.verify_google_code(&access_token, google_code.to_string()).await;
+				let verify_result = ctx
+					.pumpx_api
+					.verify_google_code(&access_token, google_code.to_string(), language.clone())
+					.await;
 				let verify_success = match verify_result {
 					Ok(response) => response.data.result,
 					Err(_) => {

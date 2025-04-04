@@ -70,11 +70,13 @@ impl PumpxApi {
 		&self,
 		access_token: &str,
 		google_code: String,
+		language: Option<String>,
 	) -> Result<VerifyGoogleCodeResponse, Error> {
 		let endpoint = format!("{}/v3/account/verify_google_code", self.base_url);
 		let response = self
 			.http_client
 			.post(&endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&GoogleCode { google_code })
 			.send()
