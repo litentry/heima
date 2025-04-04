@@ -147,7 +147,6 @@ pub struct LimitOrder {
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GoogleCode {
 	pub google_code: String,
 }
