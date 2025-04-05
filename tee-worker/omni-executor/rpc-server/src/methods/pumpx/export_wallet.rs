@@ -1,9 +1,9 @@
 use crate::{
 	error_code::*, oneshot, serde_as, server::RpcContext, verify_auth::verify_auth, Decode,
-	Deserialize, ErrorCode,
+	Deserialize, ErrorCode, Serialize,
 };
 use executor_core::native_task::*;
-use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
+use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, AesOutput};
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -22,6 +22,11 @@ pub struct ExportWalletParams {
 	pub wallet_index: PumxWalletIndex,
 	pub wallet_address: ExpectedWalletAddress,
 	pub email_code: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct ExportWalletResponse {
+	pub encrypted_wallet: AesOutput,
 }
 
 impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
@@ -80,7 +85,8 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
 						Ok(NativeTaskOk::PumpxExportWallet(wallet)) => {
-							Ok(aes_encrypt_default(&aes_key, &wallet))
+							let encrypted_wallet = aes_encrypt_default(&aes_key, &wallet);
+							Ok(ExportWalletResponse { encrypted_wallet })
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
