@@ -643,17 +643,53 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxExportWallet(
 			sender,
-			_maybe_google_code,
+			maybe_google_code,
 			pumpx_wallet_chain,
 			pumpx_wallet_index,
 			expected_wallet_address,
 		) => {
+			if let Some(ref google_code) = maybe_google_code {
+				let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+				let Some(access_token) =
+					storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+				else {
+					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				};
+
+				let verify_result = ctx
+					.pumpx_api
+					.verify_google_code(&access_token, google_code.to_string(), None)
+					.await;
+				let verify_success = match verify_result {
+					Ok(response) => response.data.result,
+					Err(_) => {
+						log::error!("Google code verification request failed");
+						false
+					},
+				};
+				if !verify_success {
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::GoogleCodeVerificationFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				}
+			}
+
 			let Ok(mut wallet) = ctx
 				.pumpx_signer_client
 				.export_wallet(
 					pumpx_wallet_chain.into(),
 					pumpx_wallet_index,
 					sender.to_omni_account().into(),
+					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
+					//       we don't have to do double encryption/decryption
 					ctx.aes256_key.to_vec(),
 					expected_wallet_address,
 				)
@@ -674,7 +710,8 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let response = NativeTaskResponse::Ok(NativeTaskOk::Binary(decrypted_wallet));
+			let response =
+				NativeTaskResponse::Ok(NativeTaskOk::PumpxExportWallet(decrypted_wallet));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
