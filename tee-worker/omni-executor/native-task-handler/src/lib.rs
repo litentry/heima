@@ -630,7 +630,7 @@ async fn handle_native_task<
 				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
 			};
 
-			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt {
+			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxRequestJwt {
 				access_token,
 				id_token,
 				user_connect_response,

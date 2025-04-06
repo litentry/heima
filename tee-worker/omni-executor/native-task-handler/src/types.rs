@@ -11,7 +11,7 @@ pub enum NativeTaskOk {
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken(String),
-	PumpxJwt {
+	PumpxRequestJwt {
 		/// Used for less sensitive operations
 		access_token: String,
 		/// Used for user's identity verification before making sensitive operations
