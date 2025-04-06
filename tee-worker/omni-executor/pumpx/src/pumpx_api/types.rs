@@ -14,6 +14,11 @@ pub type LimitOrderResponse = ApiResponse<LimitOrder>;
 
 pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
+pub type AddWalletResponse = ApiResponse<EmptyResponse>;
+
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
+pub struct EmptyResponse {}
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]

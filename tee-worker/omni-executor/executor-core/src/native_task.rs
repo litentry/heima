@@ -56,6 +56,8 @@ pub enum NativeTask {
 		PumxWalletIndex,
 		ExpectedWalletAddress,
 	),
+	#[codec(index = 22)]
+	PumpxAddWallet(Identity),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -70,6 +72,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::SetPermissions(sender, ..) => sender,
 			Self::PumpxRequestJwt(sender, ..) => sender,
 			Self::PumpxExportWallet(sender, ..) => sender,
+			Self::PumpxAddWallet(sender, ..) => sender,
 		}
 	}
 
@@ -79,6 +82,6 @@ impl NativeTaskTrait for NativeTask {
 	}
 
 	fn require_encrypt(&self) -> bool {
-		matches!(self, Self::PumpxExportWallet(..))
+		matches!(self, Self::PumpxExportWallet(..) | Self::PumpxAddWallet(..))
 	}
 }

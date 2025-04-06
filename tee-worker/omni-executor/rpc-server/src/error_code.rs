@@ -18,6 +18,7 @@ const UNSUPPORTED_IDENTITY_TYPE_CODE: i32 = -32010;
 const PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE: i32 = -32011;
 const PUMPX_API_USER_CONNECTION_FAILED_CODE: i32 = -32012;
 const PUMPX_API_ERROR_CODE: i32 = -32013;
+const PUMPX_API_ADD_WALLET_FAILED_CODE: i32 = -32014;
 
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
@@ -34,6 +35,7 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			},
 			PumpxApiError::UserConnectionFailed => PUMPX_API_USER_CONNECTION_FAILED_CODE,
 			PumpxApiError::UnknownError => PUMPX_API_ERROR_CODE,
+			PumpxApiError::AddWalletFailed => PUMPX_API_ADD_WALLET_FAILED_CODE,
 		},
 		NativeTaskError::InternalError => {
 			log::error!("Internal error: {:?}", error);

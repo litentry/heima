@@ -20,6 +20,7 @@ pub enum NativeTaskOk {
 		user_connect_response: UserConnectResponse,
 	},
 	PumpxExportWallet(Vec<u8>),
+	PumpxAddWallet,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -38,4 +39,5 @@ pub enum PumpxApiError {
 	GoogleCodeVerificationFailed,
 	UserConnectionFailed,
 	UnknownError,
+	AddWalletFailed,
 }

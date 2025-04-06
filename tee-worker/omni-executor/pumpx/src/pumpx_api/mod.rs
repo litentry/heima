@@ -2,9 +2,9 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	ConnectUser, GoogleCode, LimitOrderResponse, MarketOrderTx, MarketOrderTxResponse,
-	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, UserConnectResponse,
-	UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	AddWalletResponse, ConnectUser, GoogleCode, LimitOrderResponse, MarketOrderTx,
+	MarketOrderTxResponse, MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder,
+	UserConnectResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -30,7 +30,7 @@ impl PumpxApi {
 		PumpxApi { http_client, base_url }
 	}
 
-	pub async fn connect_user(
+	pub async fn user_connect(
 		&self,
 		access_token: &str,
 		email: String,
@@ -39,14 +39,14 @@ impl PumpxApi {
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
-		let connect_user = ConnectUser { email: email.clone(), invite_code, google_code };
+		let user_connect = ConnectUser { email: email.clone(), invite_code, google_code };
 
 		let response = self
 			.http_client
 			.post(&endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
-			.json(&connect_user)
+			.json(&user_connect)
 			.send()
 			.await
 			.map_err(|e| {
@@ -92,6 +92,34 @@ impl PumpxApi {
 		})?;
 		response.json().await.map_err(|e| {
 			log::error!("Failed to parse Google code verification response: {:?}", e);
+			e
+		})
+	}
+
+	pub async fn add_wallet(
+		&self,
+		access_token: &str,
+		language: Option<String>,
+	) -> Result<AddWalletResponse, Error> {
+		let endpoint = format!("{}/v3/account/add_wallet", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send add_wallet request: {:?}", e);
+				e
+			})?;
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("add_wallet request failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse add_wallet response: {:?}", e);
 			e
 		})
 	}
