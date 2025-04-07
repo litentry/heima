@@ -93,7 +93,7 @@ pub struct PumpxConfig {
     pub swap_type: u32, // 1：buy 2：sell
     pub chain_id: u32,  // to align with pumpx: sol:10000 eth:1 bsc:56 base:8453
     pub token_ca: BoundedVec<u8, IntentStringLen>,
-    pub doulbe_out: bool,
+    pub double_out: bool,
     pub is_one_click: bool,
     pub is_anti_mev: bool,
     pub is_auto_slippage: bool,

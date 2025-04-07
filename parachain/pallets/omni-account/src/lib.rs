@@ -219,6 +219,8 @@ pub mod pallet {
 		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
 		/// An auth token is requested
 		AuthTokenRequested { who: T::AccountId, expires_at: i64 },
+		/// Intent is requested by some user
+		IntentRequested { who: T::AccountId, intent: Intent },
 		/// Intent is accepted - we record the Intent detail (once)
 		IntentAccepted { who: T::AccountId, intent_id: IntentId, intent: Intent },
 		/// Intent is in-process
@@ -437,15 +439,14 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// to allow any user to submit intent directly onto chain
+		// this extrinsic is currently **unused**, meaning it will do nothing except emitting events
 		#[pallet::call_index(6)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
-		pub fn request_intent(
-			origin: OriginFor<T>,
-			intent_id: IntentId,
-			intent: Intent,
-		) -> DispatchResult {
+		pub fn request_intent(origin: OriginFor<T>, intent: Intent) -> DispatchResult {
 			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
-			Self::do_accept_intent(who, intent_id, intent)
+			Self::deposit_event(Event::IntentRequested { who, intent });
+			Ok(())
 		}
 
 		/// temporary extrinsic to upload the existing IDGraph from the worker onto chain

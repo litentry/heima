@@ -1158,7 +1158,6 @@ impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 			},
 			Self::RequestNativeIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
-					intent_id: _,
 					intent,
 				}) = call
 				{
@@ -1173,7 +1172,6 @@ impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 			},
 			Self::RequestEthereumIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
-					intent_id: _,
 					intent,
 				}) = call
 				{
@@ -1188,7 +1186,6 @@ impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 			},
 			Self::RequestSolanaIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
-					intent_id: _,
 					intent,
 				}) = call
 				{
