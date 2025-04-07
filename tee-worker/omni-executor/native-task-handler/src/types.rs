@@ -1,7 +1,7 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::types::UserConnectResponse;
+use pumpx::types::{SendTransferTxResponse, UserConnectResponse};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {
@@ -21,6 +21,7 @@ pub enum NativeTaskOk {
 	},
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet,
+	PumpxTransferWithdraw(SendTransferTxResponse),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -32,6 +33,7 @@ pub enum NativeTaskError {
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,
 	PumpxApiError(PumpxApiError),
+	PumpxSignerError(PumpxSignerError),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -40,4 +42,11 @@ pub enum PumpxApiError {
 	UserConnectionFailed,
 	UnknownError,
 	AddWalletFailed,
+	CreateTransferUnsignedTxFailed,
+	SendTransferTxFailed,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxSignerError {
+	RequestSignatureFailed,
 }

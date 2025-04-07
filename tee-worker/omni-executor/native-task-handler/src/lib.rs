@@ -29,12 +29,15 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Decode, Encode};
-use pumpx::{signer_client::SignerClient, PumpxApi};
+use pumpx::{
+	signer_client::{ChainType, SignerClient},
+	PumpxApi,
+};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 
 pub use aes256_key_store::Aes256KeyStore;
-pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError};
+pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
@@ -744,6 +747,156 @@ async fn handle_native_task<
 			};
 
 			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxAddWallet);
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
+		},
+		NativeTask::PumpxTransferWidthdraw(
+			sender,
+			request_id,
+			chain_id,
+			wallet_index,
+			recipient_address,
+			token_ca,
+			amount,
+			maybe_google_code,
+			language,
+		) => {
+			// 1. Verify google code (if provided).
+			if let Some(ref google_code) = maybe_google_code {
+				let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+				let Some(access_token) =
+					storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+				else {
+					log::error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
+					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				};
+
+				let verify_result = ctx
+					.pumpx_api
+					.verify_google_code(&access_token, google_code.to_string(), language.clone())
+					.await;
+
+				let verify_success = match verify_result {
+					Ok(res) => res.data.result,
+					Err(_) => {
+						log::error!("Google code verification request failed");
+						false
+					},
+				};
+
+				if !verify_success {
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::GoogleCodeVerificationFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				}
+			}
+
+			// 2. Verify we have a valid Pumpx "access" token for the user
+			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let Some(access_token) =
+				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			// 3. Create an unsigned tx with Pumpx backend
+			let create_transfer_res = match ctx
+				.pumpx_api
+				.create_transfer_unsigned_tx(
+					&access_token,
+					request_id,
+					chain_id,
+					wallet_index,
+					&recipient_address,
+					&token_ca,
+					&amount,
+					language.clone(),
+				)
+				.await
+			{
+				Ok(res) => res,
+				Err(e) => {
+					log::error!("Failed to create_transfer_unsigned_tx: {:?}", e);
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::CreateTransferUnsignedTxFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
+
+			let transfer_id = create_transfer_res.data.transfer_id;
+			let tx_data = create_transfer_res.data.tx_data;
+
+			let Some(chain_type) = ChainType::from_pumpx_chain_id(chain_id) else {
+				log::error!("Failed to map pumpx chain_id {}", chain_id);
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			// 4. Use the pumpx_signer_client to sign the tx_data
+			let sign_result = match ctx
+				.pumpx_signer_client
+				.request_signature(
+					chain_type,
+					wallet_index,
+					sender.to_omni_account().into(),
+					tx_data,
+				)
+				.await
+			{
+				Ok(signature) => signature,
+				Err(e) => {
+					log::error!("Failed to sign transfer tx: {:?}", e);
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxSignerError(
+						PumpxSignerError::RequestSignatureFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
+
+			// 5. Send the signed tx to the Pumpx backend
+			let send_res = match ctx
+				.pumpx_api
+				.send_transfer_tx(&access_token, transfer_id, chain_id, sign_result, language)
+				.await
+			{
+				Ok(res) => res,
+				Err(e) => {
+					log::error!("Failed to send_transfer_tx: {:?}", e);
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::SendTransferTxFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
+			};
+
+			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxTransferWithdraw(send_res));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}

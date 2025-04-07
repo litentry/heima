@@ -58,6 +58,18 @@ pub enum NativeTask {
 	),
 	#[codec(index = 22)]
 	PumpxAddWallet(Identity),
+	#[codec(index = 23)]
+	PumpxTransferWidthdraw(
+		Identity,
+		u64,             // request_id
+		u32,             // chain_id
+		u32,             // wallet_index
+		String,          // recipient_address
+		String,          // token_ca
+		String,          // amount
+		MaybeGoogleCode, // google_code
+		Option<String>,  // language
+	),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -73,6 +85,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::PumpxRequestJwt(sender, ..) => sender,
 			Self::PumpxExportWallet(sender, ..) => sender,
 			Self::PumpxAddWallet(sender, ..) => sender,
+			Self::PumpxTransferWidthdraw(sender, ..) => sender,
 		}
 	}
 

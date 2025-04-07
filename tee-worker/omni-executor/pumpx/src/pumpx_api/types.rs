@@ -16,6 +16,42 @@ pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
 pub type AddWalletResponse = ApiResponse<EmptyResponse>;
 
+pub type CreateTransferUnsignedTxResponse = ApiResponse<TransferUnsignedTxData>;
+
+pub type SendTransferTxResponse = ApiResponse<TransferTxData>;
+
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferUnsignedTxData {
+	pub tx_data: Option<Vec<String>>,
+	pub transfer_id: u64,
+}
+
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferTxData {
+	pub tx_hash: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferUnsignedTx {
+	pub request_id: u64,
+	pub chain_id: u32,
+	pub wallet_index: u32,
+	pub recipient_address: String,
+	pub token_ca: String,
+	pub amount: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferTx {
+	pub chain_id: u32,
+	pub tx_data: Vec<String>,
+	pub transfer_id: u64,
+}
+
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
 pub struct EmptyResponse {}
 
