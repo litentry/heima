@@ -174,3 +174,10 @@ pub struct CrossOrderInfo {
 	pub amount: String,
 	pub usd: String,
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CrossOrderFailData {
+	pub request_id: u32,
+	pub fail_reason: String,
+}
