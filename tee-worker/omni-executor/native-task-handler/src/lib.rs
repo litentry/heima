@@ -16,7 +16,7 @@ use executor_primitives::{
 use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
-use intent_core::{IntentIdStore, StorageDbIntentIdStore};
+use intent_core::IntentIdStore;
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
@@ -70,6 +70,7 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<PumpxApi>,
 	pumpx_signer_client: Arc<SignerClient>,
+	intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -103,6 +104,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<PumpxApi>,
 		pumpx_signer_client: Arc<SignerClient>,
+		intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -115,6 +117,7 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
+			intent_id_store,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -183,8 +186,6 @@ async fn handle_native_task<
 	};
 
 	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
-
-	let intent_id_store = StorageDbIntentIdStore::new(ctx.storage_db.clone());
 
 	let (response_sender, tx) = match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
@@ -270,9 +271,9 @@ async fn handle_native_task<
 		},
 		NativeTask::RequestIntent(sender, intent) => {
 			if *intent.intent_id()
-				!= intent_id_store.get(&sender.to_omni_account()).await.unwrap().unwrap() + 1
+				!= ctx.intent_id_store.get(&sender.to_omni_account()).await.unwrap() + 1
 			{
-				intent_id_store
+				ctx.intent_id_store
 					.update(sender.to_omni_account(), *intent.intent_id())
 					.await
 					.unwrap()

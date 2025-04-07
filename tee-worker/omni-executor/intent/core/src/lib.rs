@@ -26,8 +26,8 @@ use tokio::sync::RwLock;
 type IntentId = heima_primitives::IntentId;
 
 #[async_trait]
-pub trait IntentIdStore {
-	async fn get(&self, account_id: &AccountId) -> Result<Option<IntentId>, ()>;
+pub trait IntentIdStore: Send + Sync {
+	async fn get(&self, account_id: &AccountId) -> Result<IntentId, ()>;
 	async fn update(&self, account_id: AccountId, id: IntentId) -> Result<(), ()>;
 }
 
@@ -49,8 +49,8 @@ impl Default for InMemoryIntentIdStore {
 
 #[async_trait]
 impl IntentIdStore for InMemoryIntentIdStore {
-	async fn get(&self, account_id: &AccountId) -> Result<Option<IntentId>, ()> {
-		Ok(self.inner.read().await.get(account_id).copied())
+	async fn get(&self, account_id: &AccountId) -> Result<IntentId, ()> {
+		Ok(*self.inner.read().await.get(account_id).unwrap_or(&1))
 	}
 
 	async fn update(&self, account_id: AccountId, id: IntentId) -> Result<(), ()> {
@@ -75,12 +75,12 @@ impl StorageDbIntentIdStore {
 
 #[async_trait]
 impl IntentIdStore for StorageDbIntentIdStore {
-	async fn get(&self, account_id: &AccountId) -> Result<Option<IntentId>, ()> {
+	async fn get(&self, account_id: &AccountId) -> Result<IntentId, ()> {
 		match self.db.get(storage_key(STORAGE_NAME, &account_id.encode())) {
-			Ok(Some(value)) => IntentId::decode(&mut &value[..]).map(Some).map_err(|e| {
+			Ok(Some(value)) => IntentId::decode(&mut &value[..]).map_err(|e| {
 				log::error!("Could not deode intent id: {:?}", e);
 			}),
-			Ok(None) => Ok(Some(1)),
+			Ok(None) => Ok(1),
 			_ => {
 				log::error!("Error getting intent id from storage for account {:?}", account_id);
 				Err(())
