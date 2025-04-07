@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
@@ -22,14 +22,14 @@ use crate::{EthereumToken, SolanaToken};
 
 // TODO: maybe using xcm Location is better
 //       but we'd need enums for all foreign types, or use GeneralIndex
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum ChainType {
     Heima,         // this chain
     Ethereum(u32), // with chain id
     Solana,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash, MaxEncodedLen)]
 pub enum ChainAsset {
     Ethereum(u32, EthereumToken), // with chain id
     Solana(SolanaToken),

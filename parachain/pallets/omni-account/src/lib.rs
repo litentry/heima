@@ -165,6 +165,24 @@ pub mod pallet {
 		OnEmpty = DefaultPermissions<T>,
 	>;
 
+	// For now we keep all intents online for easy query, it's concerning if it would bloat the data space
+	#[pallet::storage]
+	#[pallet::getter(fn intents)]
+	pub type Intents<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		T::AccountId,
+		Twox64Concat,
+		IntentId,
+		Intent,
+		OptionQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn accepted_intent_ids)]
+	pub type AcceptedIntentIds<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, IntentId, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -242,6 +260,8 @@ pub mod pallet {
 		PermissionsLenLimitReached,
 		AccountStoreAlreadyExists,
 		AccountStoreHasOneMember,
+		IntentIdTooSmall,
+		IntentAlreadyExists,
 	}
 
 	#[pallet::call]
@@ -411,8 +431,19 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// temporary extrinsic to upload the existing IDGraph from the worker onto chain
 		#[pallet::call_index(6)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn request_intent(
+			origin: OriginFor<T>,
+			intent_id: IntentId,
+			intent: Intent,
+		) -> DispatchResult {
+			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
+			Self::do_accept_intent(who, intent_id, intent)
+		}
+
+		/// temporary extrinsic to upload the existing IDGraph from the worker onto chain
+		#[pallet::call_index(7)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn update_account_store_by_one(
 			origin: OriginFor<T>,
@@ -449,7 +480,7 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::call_index(7)]
+		#[pallet::call_index(8)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn set_permissions(
 			origin: OriginFor<T>,
@@ -464,7 +495,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(8)]
+		#[pallet::call_index(9)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn auth_token_requested(
 			origin: OriginFor<T>,
@@ -476,7 +507,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(9)]
+		#[pallet::call_index(10)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn intent_accepted(
 			origin: OriginFor<T>,
@@ -485,11 +516,11 @@ pub mod pallet {
 			intent: Intent,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			Self::deposit_event(Event::IntentAccepted { who, intent_id, intent });
+			let _ = Self::do_accept_intent(who, intent_id, intent)?;
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::call_index(10)]
+		#[pallet::call_index(11)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn intent_in_process_updated(
 			origin: OriginFor<T>,
@@ -502,7 +533,7 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::call_index(11)]
+		#[pallet::call_index(12)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn intent_executed(
 			origin: OriginFor<T>,
@@ -629,6 +660,20 @@ pub mod pallet {
 				_ => return Ok(()),
 			}
 
+			Ok(())
+		}
+
+		fn do_accept_intent(
+			who: T::AccountId,
+			intent_id: IntentId,
+			intent: Intent,
+		) -> DispatchResult {
+			ensure!(intent_id > Self::accepted_intent_ids(&who), Error::<T>::IntentIdTooSmall);
+			ensure!(!Intents::<T>::contains_key(&who, intent_id), Error::<T>::IntentAlreadyExists);
+			// the continuity should have been checked in the worker already
+			AcceptedIntentIds::<T>::insert(&who, intent_id);
+			Intents::<T>::insert(&who, intent_id, intent.clone());
+			Self::deposit_event(Event::IntentAccepted { who, intent_id, intent });
 			Ok(())
 		}
 	}
