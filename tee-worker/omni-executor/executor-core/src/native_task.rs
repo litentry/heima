@@ -82,6 +82,6 @@ impl NativeTaskTrait for NativeTask {
 	}
 
 	fn require_encrypt(&self) -> bool {
-		matches!(self, Self::PumpxExportWallet(..) | Self::PumpxAddWallet(..))
+		matches!(self, Self::PumpxExportWallet(..))
 	}
 }
