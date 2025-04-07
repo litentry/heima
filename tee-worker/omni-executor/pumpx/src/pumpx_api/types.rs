@@ -12,6 +12,8 @@ pub type UserTradeInfoResponse = ApiResponse<UserTradeInfo>;
 
 pub type LimitOrderResponse = ApiResponse<LimitOrder>;
 
+pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
@@ -40,7 +42,7 @@ pub struct ConnectedUser {
 pub struct ApiResponse<T: Encode> {
 	code: u32,
 	message: String,
-	data: T,
+	pub data: T,
 }
 
 impl<T: Codec> ApiResponse<T> {
@@ -142,4 +144,14 @@ pub struct NewLimitOrder {
 #[serde(rename_all = "camelCase")]
 pub struct LimitOrder {
 	pub order_id: String,
+}
+
+#[derive(Serialize)]
+pub struct GoogleCode {
+	pub google_code: String,
+}
+
+#[derive(Deserialize, Encode)]
+pub struct DataResult {
+	pub result: bool,
 }

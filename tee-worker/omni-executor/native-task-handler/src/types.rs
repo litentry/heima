@@ -30,5 +30,12 @@ pub enum NativeTaskError {
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,
-	PumpxApiError,
+	PumpxApiError(PumpxApiError),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxApiError {
+	GoogleCodeVerificationFailed,
+	UserConnectionFailed,
+	UnknownError,
 }
