@@ -521,7 +521,7 @@ pub mod pallet {
 			intent: Intent,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			let _ = Self::do_accept_intent(who, intent_id, intent)?;
+			Self::do_accept_intent(who, intent_id, intent)?;
 			Ok(Pays::No.into())
 		}
 
