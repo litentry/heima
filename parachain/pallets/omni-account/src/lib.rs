@@ -183,6 +183,11 @@ pub mod pallet {
 	pub type AcceptedIntentIds<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, IntentId, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn completed_intent_ids)]
+	pub type CompletedIntentIds<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, IntentId, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -214,14 +219,14 @@ pub mod pallet {
 		AuthTokenRequested { who: T::AccountId, expires_at: i64 },
 		/// Intent is accepted - we record the Intent detail (once)
 		IntentAccepted { who: T::AccountId, intent_id: IntentId, intent: Intent },
-		/// Intent is executed
+		/// Intent is in-process
 		IntentInProcessUpdated {
 			who: T::AccountId,
 			intent_id: IntentId,
 			detail: IntentInProcessDetail,
 		},
-		/// Intent is executed / finished
-		IntentExecuted { who: T::AccountId, intent_id: IntentId, detail: IntentExecutedDetail },
+		/// Intent is completed
+		IntentCompleted { who: T::AccountId, intent_id: IntentId, detail: IntentCompletedDetail },
 	}
 
 	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
@@ -230,8 +235,8 @@ pub mod pallet {
 	}
 
 	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
-	pub enum IntentExecutedDetail {
-		Swap(SwapExecutedDetail),
+	pub enum IntentCompletedDetail {
+		Swap(SwapCompletedDetail),
 	}
 
 	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
@@ -242,7 +247,7 @@ pub mod pallet {
 	}
 
 	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
-	pub enum SwapExecutedDetail {
+	pub enum SwapCompletedDetail {
 		// TODO
 		Success,
 		Failure,
@@ -535,14 +540,16 @@ pub mod pallet {
 
 		#[pallet::call_index(12)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
-		pub fn intent_executed(
+		pub fn intent_completed(
 			origin: OriginFor<T>,
 			who: T::AccountId,
 			intent_id: IntentId,
-			detail: IntentExecutedDetail,
+			detail: IntentCompletedDetail,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			Self::deposit_event(Event::IntentExecuted { who, intent_id, detail });
+			ensure!(intent_id > Self::completed_intent_ids(&who), Error::<T>::IntentIdTooSmall);
+			CompletedIntentIds::<T>::insert(&who, intent_id);
+			Self::deposit_event(Event::IntentCompleted { who, intent_id, detail });
 			Ok(Pays::No.into())
 		}
 	}
