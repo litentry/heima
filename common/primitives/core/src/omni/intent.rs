@@ -65,7 +65,6 @@ pub enum HeimaMultiAddress {
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct SwapOrder {
-    pub intent_id: IntentId,
     pub from_asset: ChainAsset,
     pub from_amount: u64,
     pub to_asset: ChainAsset,

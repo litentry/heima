@@ -194,29 +194,15 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// An account store is created
-		AccountStoreCreated {
-			who: T::AccountId,
-		},
+		AccountStoreCreated { who: T::AccountId },
 		/// Some member account is added
-		AccountAdded {
-			who: T::AccountId,
-			member_account_hash: H256,
-		},
+		AccountAdded { who: T::AccountId, member_account_hash: H256 },
 		/// Some member accounts are removed
-		AccountRemoved {
-			who: T::AccountId,
-			member_account_hashes: Vec<H256>,
-		},
+		AccountRemoved { who: T::AccountId, member_account_hashes: Vec<H256> },
 		/// Some member account is made public
-		AccountMadePublic {
-			who: T::AccountId,
-			member_account_hash: H256,
-		},
+		AccountMadePublic { who: T::AccountId, member_account_hash: H256 },
 		/// An account store is updated
-		AccountStoreUpdated {
-			who: T::AccountId,
-			account_store: MemberAccounts<T>,
-		},
+		AccountStoreUpdated { who: T::AccountId, account_store: MemberAccounts<T> },
 		/// Some call is dispatched as omni-account origin
 		DispatchedAsOmniAccount {
 			who: T::AccountId,
@@ -229,15 +215,8 @@ pub mod pallet {
 			auth_type: Option<OmniAccountAuthType>,
 			result: DispatchResult,
 		},
-		/// Intent is requested
-		IntentRequested { who: T::AccountId, intent: Intent },
-		/// Intent is executed
-		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
 		/// Member permission set
-		AccountPermissionsSet {
-			who: T::AccountId,
-			member_account_hash: H256,
-		},
+		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
 		/// An auth token is requested
 		AuthTokenRequested { who: T::AccountId, expires_at: i64 },
 		/// Intent is requested by some user
