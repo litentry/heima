@@ -16,6 +16,7 @@ const INVALID_MEMBER_IDENTITY_CODE: i32 = -32008;
 const VALIDATION_DATA_VERIFICATION_FAILED_CODE: i32 = -32009;
 const UNSUPPORTED_IDENTITY_TYPE_CODE: i32 = -32010;
 const PUMPX_API_ERROR_CODE: i32 = -32011;
+const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32012;
 
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
@@ -26,5 +27,6 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 		NativeTaskError::ValidationDataVerificationFailed => UNSUPPORTED_IDENTITY_TYPE_CODE,
 		NativeTaskError::UnsupportedIdentityType => PUMPX_API_ERROR_CODE,
 		NativeTaskError::PumpxApiError => PUMPX_API_ERROR_CODE,
+		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
 	}
 }

@@ -9,6 +9,10 @@ async-trait = { workspace = true }
 executor-primitives = { workspace = true }
 heima-primitives = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
+rocksdb = "0.23.0"
+executor-storage = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+log = { workspace = true }
 
 [lints]
 workspace = true

@@ -4618,6 +4618,10 @@ dependencies = [
  "async-trait",
  "core-primitives",
  "executor-primitives",
+ "executor-storage",
+ "log",
+ "parity-scale-codec",
+ "rocksdb",
  "tokio",
 ]
 
@@ -5427,6 +5431,7 @@ dependencies = [
  "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
+ "intent-core",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",

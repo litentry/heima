@@ -16,6 +16,7 @@ use executor_primitives::{
 use executor_storage::{MemberOmniAccountStorage, PumpxAuthTokenIdStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
+use intent_core::{IntentIdStore, StorageDbIntentIdStore};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
@@ -183,6 +184,8 @@ async fn handle_native_task<
 
 	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
 
+	let intent_id_store = StorageDbIntentIdStore::new(ctx.storage_db.clone());
+
 	let (response_sender, tx) = match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
@@ -266,6 +269,20 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::RequestIntent(sender, intent) => {
+			if *intent.intent_id()
+				!= intent_id_store.get(&sender.to_omni_account()).await.unwrap().unwrap() + 1
+			{
+				intent_id_store
+					.update(sender.to_omni_account(), *intent.intent_id())
+					.await
+					.unwrap()
+			} else {
+				let response = NativeTaskResponse::Err(NativeTaskError::IntentNonceMismatch);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Intent id different than expected");
+				}
+				return;
+			}
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);

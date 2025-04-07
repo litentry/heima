@@ -153,7 +153,6 @@ impl<
 						query_solana(rpc_url, &pubkey, token).await.map(|v| AmountType::from(v))?
 					},
 				};
-
 				self.account_asset_lock.check_and_insert(
 					account_id.clone(),
 					swap_order.from_asset.clone(),
@@ -200,7 +199,6 @@ impl<
 				//    - Call accounting contract (e.g Swap SOL to TRUMP)
 				//    - Call Binance convert via binance account (e.g Swap USDC to SOL)
 				// 4. Send locked balance to binance account (refill)
-
 				self.account_asset_lock.release(
 					account_id.clone(),
 					swap_order.from_asset.clone(),

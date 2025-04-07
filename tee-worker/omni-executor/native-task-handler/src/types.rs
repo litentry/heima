@@ -31,4 +31,5 @@ pub enum NativeTaskError {
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,
 	PumpxApiError,
+	IntentNonceMismatch,
 }
