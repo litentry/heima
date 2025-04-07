@@ -1,4 +1,3 @@
-use executor_core::native_task::PumpxWalletChain;
 use executor_crypto::ecdsa;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::core::params::ArrayParams;
@@ -92,12 +91,13 @@ pub enum ChainType {
 	Tron,
 }
 
-impl From<PumpxWalletChain> for ChainType {
-	fn from(value: PumpxWalletChain) -> Self {
-		match value {
-			PumpxWalletChain::Evm => ChainType::Evm,
-			PumpxWalletChain::Solana => ChainType::Solana,
-			PumpxWalletChain::Tron => ChainType::Tron,
+impl ChainType {
+	// pumpx chain_id: sol:10000 eth:1 bsc:56 base:8453
+	pub fn from_pumpx_chain_id(id: u32) -> Option<Self> {
+		match id {
+			10000 => Some(Self::Solana),
+			1 | 56 | 8453 => Some(Self::Evm),
+			_ => None,
 		}
 	}
 }
