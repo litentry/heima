@@ -1,7 +1,7 @@
 {
   "name": "@heima-network/client-sdk",
   "description": "This package provides helpers for dApps to interact with the Heima Protocol.",
-  "version": "1.0.0-next.1",
+  "version": "1.0.0-next.5",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "module": "./dist/index.js",
@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@heima-network/chaindata": "*",
-    "@heima-network/parachain-api": "0.9.24-next.2",
+    "@heima-network/parachain-api": "0.9.24-next.4",
     "@polkadot/api": "^15.0.2",
     "@polkadot/types": "^15.0.2",
     "@polkadot/types-codec": "^15.0.2",

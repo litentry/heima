@@ -1,6 +1,6 @@
 // we should use -32000 to -32099 for implementation defined error codes,
 // see https://www.jsonrpc.org/specification#error_object
-use native_task_handler::NativeTaskError;
+use native_task_handler::{NativeTaskError, PumpxApiError};
 
 pub const INVALID_RAW_REQUEST_CODE: i32 = -32000;
 pub const DECRYPT_REQUEST_FAILED_CODE: i32 = -32001;
@@ -15,18 +15,33 @@ const AUTH_TOKEN_CREATION_FAILED_CODE: i32 = -32007;
 const INVALID_MEMBER_IDENTITY_CODE: i32 = -32008;
 const VALIDATION_DATA_VERIFICATION_FAILED_CODE: i32 = -32009;
 const UNSUPPORTED_IDENTITY_TYPE_CODE: i32 = -32010;
-const PUMPX_API_ERROR_CODE: i32 = -32011;
-const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32012;
+const PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE: i32 = -32011;
+const PUMPX_API_USER_CONNECTION_FAILED_CODE: i32 = -32012;
+const PUMPX_API_ERROR_CODE: i32 = -32013;
+const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32014;
+
 
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
 		NativeTaskError::UnauthorizedSender => UNAUTHORIZED_SENDER_CODE,
 		NativeTaskError::AuthTokenCreationFailed => AUTH_TOKEN_CREATION_FAILED_CODE,
-		NativeTaskError::InternalError => INVALID_MEMBER_IDENTITY_CODE,
-		NativeTaskError::InvalidMemberIdentity => VALIDATION_DATA_VERIFICATION_FAILED_CODE,
-		NativeTaskError::ValidationDataVerificationFailed => UNSUPPORTED_IDENTITY_TYPE_CODE,
-		NativeTaskError::UnsupportedIdentityType => PUMPX_API_ERROR_CODE,
-		NativeTaskError::PumpxApiError => PUMPX_API_ERROR_CODE,
+		NativeTaskError::InvalidMemberIdentity => INVALID_MEMBER_IDENTITY_CODE,
+		NativeTaskError::ValidationDataVerificationFailed => {
+			VALIDATION_DATA_VERIFICATION_FAILED_CODE
+		},
+		NativeTaskError::UnsupportedIdentityType => UNSUPPORTED_IDENTITY_TYPE_CODE,
+		NativeTaskError::PumpxApiError(api_error) => match api_error {
+			PumpxApiError::GoogleCodeVerificationFailed => {
+				PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE
+			},
+			PumpxApiError::UserConnectionFailed => PUMPX_API_USER_CONNECTION_FAILED_CODE,
+			PumpxApiError::UnknownError => PUMPX_API_ERROR_CODE,
+		},
+		NativeTaskError::InternalError => {
+			log::error!("Internal error: {:?}", error);
+			// This should not happen, we return the generic interal error code already from the api
+			-32099
+		},
 		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
 	}
 }
