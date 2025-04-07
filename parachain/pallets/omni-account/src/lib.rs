@@ -55,13 +55,9 @@ pub enum RawOrigin<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::*;
+	use core_primitives::{ChainAsset, IntentId};
 
-	#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, TypeInfo)]
-	pub enum IntentExecutionResult {
-		Success,
-		Failure,
-	}
+	use super::*;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -194,14 +190,44 @@ pub mod pallet {
 			auth_type: Option<OmniAccountAuthType>,
 			result: DispatchResult,
 		},
-		/// Intent is requested
-		IntentRequested { who: T::AccountId, intent: Intent },
-		/// Intent is executed
-		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
 		/// Member permission set
 		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
 		/// An auth token is requested
 		AuthTokenRequested { who: T::AccountId, expires_at: i64 },
+		/// Intent is accepted - we record the Intent detail (once)
+		IntentAccepted { who: T::AccountId, intent_id: IntentId, intent: Intent },
+		/// Intent is executed
+		IntentInProcessUpdated {
+			who: T::AccountId,
+			intent_id: IntentId,
+			detail: IntentInProcessDetail,
+		},
+		/// Intent is executed / finished
+		IntentExecuted { who: T::AccountId, intent_id: IntentId, detail: IntentExecutedDetail },
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum IntentInProcessDetail {
+		Swap(SwapInProcessDetail),
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum IntentExecutedDetail {
+		Swap(SwapExecutedDetail),
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum SwapInProcessDetail {
+		SourceChainBalanceDeducted { asset: ChainAsset, amount: u64 },
+		DestChainBalanceAdded { asset: ChainAsset, amount: u64 },
+		SingleChainSwapSubmitted { tx_hash: Vec<u8> },
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum SwapExecutedDetail {
+		// TODO
+		Success,
+		Failure,
 	}
 
 	#[pallet::error]
@@ -385,16 +411,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(6)]
-		#[pallet::weight((195_000_000, DispatchClass::Normal))]
-		pub fn request_intent(origin: OriginFor<T>, intent: Intent) -> DispatchResult {
-			let who = T::OmniAccountOrigin::ensure_origin(origin)?;
-			Self::deposit_event(Event::IntentRequested { who, intent });
-			Ok(())
-		}
-
 		/// temporary extrinsic to upload the existing IDGraph from the worker onto chain
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn update_account_store_by_one(
 			origin: OriginFor<T>,
@@ -431,20 +449,7 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-		#[pallet::call_index(8)]
-		#[pallet::weight((195_000_000, DispatchClass::Normal,  Pays::No))]
-		pub fn intent_executed(
-			origin: OriginFor<T>,
-			who: T::AccountId,
-			intent: Intent,
-			result: IntentExecutionResult,
-		) -> DispatchResult {
-			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
-			Self::deposit_event(Event::IntentExecuted { who, intent, result });
-			Ok(())
-		}
-
-		#[pallet::call_index(9)]
+		#[pallet::call_index(7)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn set_permissions(
 			origin: OriginFor<T>,
@@ -459,7 +464,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(10)]
+		#[pallet::call_index(8)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn auth_token_requested(
 			origin: OriginFor<T>,
@@ -469,6 +474,45 @@ pub mod pallet {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			Self::deposit_event(Event::AuthTokenRequested { who, expires_at });
 			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn intent_accepted(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent_id: IntentId,
+			intent: Intent,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::IntentAccepted { who, intent_id, intent });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn intent_in_process_updated(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent_id: IntentId,
+			detail: IntentInProcessDetail,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::IntentInProcessUpdated { who, intent_id, detail });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn intent_executed(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent_id: IntentId,
+			detail: IntentExecutedDetail,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::IntentExecuted { who, intent_id, detail });
+			Ok(Pays::No.into())
 		}
 	}
 
