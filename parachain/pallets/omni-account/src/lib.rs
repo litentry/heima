@@ -240,7 +240,10 @@ pub mod pallet {
 
 	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
 	pub enum IntentCompletedDetail {
-		Swap(SwapCompletedDetail),
+		// TODO - we might want to add more details except for just OK/NOK
+		//        and maybe also per-intent case
+		Success,
+		Failure,
 	}
 
 	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
@@ -248,13 +251,6 @@ pub mod pallet {
 		SourceChainBalanceDeducted { asset: ChainAsset, amount: u64 },
 		DestChainBalanceAdded { asset: ChainAsset, amount: u64 },
 		SingleChainSwapSubmitted { tx_hash: Vec<u8> },
-	}
-
-	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
-	pub enum SwapCompletedDetail {
-		// TODO
-		Success,
-		Failure,
 	}
 
 	#[pallet::error]
