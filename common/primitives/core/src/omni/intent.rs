@@ -4,23 +4,30 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::{traits::ConstU32, BoundedVec};
 
-pub const CALL_ETHEREUM_INPUT_LEN: u32 = 10 * 1024;
-pub const MAX_REMARK_LEN: u32 = u32::max_value();
+pub type CallEthereumInputLen = ConstU32<{ 10 * 1024 }>;
+pub type RemarkLen = ConstU32<{ u32::max_value() }>;
+pub type IntentStringLen = ConstU32<128>;
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
+pub type IntentId = u32;
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum Intent {
     #[codec(index = 0)]
-    CrossChainSwap(SwapOrder),
-    #[codec(index = 1)]
     TransferEthereum(TransferEthereum),
-    #[codec(index = 2)]
+    #[codec(index = 1)]
     CallEthereum(CallEthereum),
+    #[codec(index = 2)]
+    SystemRemark(BoundedVec<u8, RemarkLen>),
     #[codec(index = 3)]
-    SystemRemark(BoundedVec<u8, ConstU32<MAX_REMARK_LEN>>),
-    #[codec(index = 4)]
     TransferNative(TransferNative),
-    #[codec(index = 5)]
+    #[codec(index = 4)]
     TransferSolana(TransferSolana),
+    #[codec(index = 5)]
+    Swap(
+        SwapOrder,
+        Option<CrossChainSwapProvider>,
+        SingleChainSwapProvider,
+    ),
 }
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
@@ -28,8 +35,6 @@ pub struct TransferEthereum {
     pub to: H160,
     pub value: [u8; 32],
 }
-
-pub type CallEthereumInputLen = ConstU32<CALL_ETHEREUM_INPUT_LEN>;
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct CallEthereum {
@@ -58,10 +63,53 @@ pub enum HeimaMultiAddress {
     Address33(Address33),
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct SwapOrder {
     pub from_asset: ChainAsset,
     pub from_amount: u64,
     pub to_asset: ChainAsset,
     pub to_address: Option<HeimaMultiAddress>,
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub enum CrossChainSwapProvider {
+    Binance(BinanceConfig),
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub struct BinanceConfig {
+    // placeholder
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub enum SingleChainSwapProvider {
+    Pumpx(PumpxConfig),
+}
+
+// basically copied from pumpx API
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub struct PumpxConfig {
+    pub order_type: PumpxOrderType,
+    pub swap_type: u32, // 1：buy 2：sell
+    pub chain_id: u32,  // to align with pumpx: sol:10000 eth:1 bsc:56 base:8453
+    pub token_ca: BoundedVec<u8, IntentStringLen>,
+    pub double_out: bool,
+    pub is_one_click: bool,
+    pub is_anti_mev: bool,
+    pub is_auto_slippage: bool,
+    pub gas_type: u32, // 1: slow, 2: medium, 3: fast
+    pub slippage: u32,
+    pub wallet_index: u32,
+
+    // below is only relevant to limit order, thus `Option<>`
+    pub token_cap: Option<BoundedVec<u8, IntentStringLen>>,
+    pub price_usd: Option<BoundedVec<u8, IntentStringLen>>,
+    pub trailing_percent: Option<u32>,
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+
+pub enum PumpxOrderType {
+    Market,
+    Limit,
 }
