@@ -21,7 +21,7 @@ use submit_native_task::*;
 
 pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
-	register_get_intent_id(module);
+	register_get_next_intent_id(module);
 	register_get_shielding_key(module);
 	register_submit_native_task(module);
 	register_request_email_verification_code(module);

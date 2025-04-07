@@ -23,9 +23,9 @@ use jsonrpsee::{types::ErrorObject, RpcModule};
 use log::error;
 use parentchain_rpc_client::AccountId32;
 
-pub fn register_get_intent_id(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_getIntentId", |params, ctx, _| async move {
+		.register_async_method("omni_getNextIntentId", |params, ctx, _| async move {
 			//ss58 encoded account_id
 			match params.parse::<String>() {
 				Ok(omni_account) => {
@@ -40,7 +40,7 @@ pub fn register_get_intent_id(module: &mut RpcModule<RpcContext>) {
 								<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
 							},
 						)?;
-					Ok::<u128, ErrorObject>(intent_id)
+					Ok::<u128, ErrorObject>(intent_id + 1)
 				},
 				Err(_) => Err(ErrorCode::ParseError.into()),
 			}
