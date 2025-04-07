@@ -2,7 +2,6 @@ use executor_primitives::{
 	Identity, Intent, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
-use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
 pub trait NativeTaskTrait: Codec {
@@ -24,16 +23,9 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 	pub auth: Option<OmniAuth>,
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PumpxWalletChain {
-	Evm,
-	Solana,
-	Tron,
-}
-
 pub type MaybeGoogleCode = Option<String>;
 pub type PumxWalletIndex = u32;
-pub type ExpectedWalletAddress = String;
+pub type PumpxChainId = u32;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
@@ -49,13 +41,7 @@ pub enum NativeTask {
 	#[codec(index = 20)]
 	PumpxRequestJwt(Identity, Option<String>, MaybeGoogleCode, Option<String>),
 	#[codec(index = 21)]
-	PumpxExportWallet(
-		Identity,
-		MaybeGoogleCode,
-		PumpxWalletChain,
-		PumxWalletIndex,
-		ExpectedWalletAddress,
-	),
+	PumpxExportWallet(Identity, MaybeGoogleCode, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]
 	PumpxAddWallet(Identity),
 	#[codec(index = 23)]

@@ -647,7 +647,7 @@ async fn handle_native_task<
 		NativeTask::PumpxExportWallet(
 			sender,
 			maybe_google_code,
-			pumpx_wallet_chain,
+			pumpx_chain_id,
 			pumpx_wallet_index,
 			expected_wallet_address,
 		) => {
@@ -686,10 +686,19 @@ async fn handle_native_task<
 				}
 			}
 
+			let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
+				log::error!("Failed to map pumpx chain_id {}", pumpx_chain_id);
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
 			let Ok(mut wallet) = ctx
 				.pumpx_signer_client
 				.export_wallet(
-					pumpx_wallet_chain.into(),
+					chain,
 					pumpx_wallet_index,
 					sender.to_omni_account().into(),
 					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
