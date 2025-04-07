@@ -19,7 +19,7 @@ use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentExecutionResult},
+	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
 	paseo_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
@@ -311,7 +311,7 @@ async fn handle_native_task<
 			// Increment nonce for the next transaction
 			nonce += 1;
 
-			let mut execution_result = IntentExecutionResult::Success;
+			let mut execution_result = IntentCompletedDetail::Success;
 
 			let tx = match intent {
 				Intent::SystemRemark(remark) => {
@@ -344,12 +344,12 @@ async fn handle_native_task<
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
@@ -361,29 +361,29 @@ async fn handle_native_task<
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
-				Intent::CrossChainSwap(_) => {
+				Intent::Swap(..) => {
 					if let Err(e) = ctx
 						.cross_chain_intent_executor
 						.execute(omni_account.as_ref(), intent.clone())
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
