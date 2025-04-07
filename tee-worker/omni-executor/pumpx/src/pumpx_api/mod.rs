@@ -2,9 +2,9 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	ConnectUser, GoogleCode, LimitOrderResponse, MarketOrderTx, MarketOrderTxResponse,
-	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, UserConnectResponse,
-	UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	ConnectUser, CreateCrossOrderData, GoogleCode, MarketOrderTx, MarketOrderTxResponse,
+	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, OrderInfoResponse,
+	UserConnectResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -174,7 +174,7 @@ impl PumpxApi {
 		&self,
 		access_token: &str,
 		new_limit_order: NewLimitOrder,
-	) -> Result<LimitOrderResponse, Error> {
+	) -> Result<OrderInfoResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_limit_order", self.base_url);
 		self.http_client
 			.post(&endpoint)
@@ -184,5 +184,31 @@ impl PumpxApi {
 			.await?
 			.json()
 			.await
+	}
+
+	pub async fn create_cross_order(
+		&self,
+		access_token: &str,
+		data: CreateCrossOrderData,
+	) -> Result<OrderInfoResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_cross_order", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.bearer_auth(access_token)
+			.json(&data)
+			.send()
+			.await?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Cross order creation failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse cross order creation response: {:?}", e);
+			e
+		})
 	}
 }

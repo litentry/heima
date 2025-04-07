@@ -10,7 +10,7 @@ pub type MarketOrderTxResponse = ApiResponse<TxData>;
 
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfo>;
 
-pub type LimitOrderResponse = ApiResponse<LimitOrder>;
+pub type OrderInfoResponse = ApiResponse<OrderInfo>;
 
 pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
@@ -142,7 +142,7 @@ pub struct NewLimitOrder {
 
 #[derive(Deserialize, Encode)]
 #[serde(rename_all = "camelCase")]
-pub struct LimitOrder {
+pub struct OrderInfo {
 	pub order_id: String,
 }
 
@@ -154,4 +154,23 @@ pub struct GoogleCode {
 #[derive(Deserialize, Encode)]
 pub struct DataResult {
 	pub result: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCrossOrderData {
+	pub request_id: u32,
+	pub chain_id: ChainId,
+	pub info: CrossOrderInfo,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CrossOrderInfo {
+	pub chain_id: ChainId,
+	pub wallet_index: u32,
+	pub address: String,
+	pub token_ca: String,
+	pub amount: String,
+	pub usd: String,
 }
