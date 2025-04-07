@@ -7,6 +7,8 @@ use ring::{
 	},
 	error::Unspecified,
 };
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use std::vec::Vec;
 
 // we use 256-bit AES-GCM as request enc/dec key
@@ -19,10 +21,14 @@ pub type Aes256KeyNonce = [u8; NONCE_LEN];
 // metadata that is required for decryption
 //
 // by default a postfix tag is used => last 16 bytes of ciphertext is MAC tag
-#[derive(Debug, Default, Clone, Eq, PartialEq, Encode, Decode)]
+#[serde_as]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Encode, Decode, Serialize, Deserialize)]
 pub struct AesOutput {
+	#[serde_as(as = "serde_with::hex::Hex")]
 	pub ciphertext: Vec<u8>,
+	#[serde_as(as = "serde_with::hex::Hex")]
 	pub aad: Vec<u8>,
+	#[serde_as(as = "serde_with::hex::Hex")]
 	pub nonce: Aes256KeyNonce, // IV
 }
 

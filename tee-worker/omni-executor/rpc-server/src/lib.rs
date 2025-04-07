@@ -13,6 +13,6 @@ pub use shielding_key::ShieldingKey;
 use executor_primitives::utils::hex::{hex_encode, FromHexPrefixed};
 use jsonrpsee::types::ErrorCode;
 use parity_scale_codec::{Decode, Encode};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use tokio::sync::oneshot;
