@@ -1306,10 +1306,10 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							54u8, 34u8, 197u8, 23u8, 233u8, 246u8, 199u8, 93u8, 144u8, 7u8, 238u8,
-							200u8, 176u8, 28u8, 55u8, 105u8, 197u8, 222u8, 102u8, 117u8, 219u8,
-							210u8, 221u8, 242u8, 106u8, 98u8, 18u8, 98u8, 176u8, 227u8, 140u8,
-							83u8,
+							207u8, 128u8, 241u8, 222u8, 119u8, 222u8, 121u8, 128u8, 104u8, 25u8,
+							239u8, 176u8, 230u8, 152u8, 131u8, 142u8, 64u8, 181u8, 113u8, 98u8,
+							210u8, 116u8, 2u8, 39u8, 180u8, 107u8, 169u8, 205u8, 249u8, 110u8,
+							236u8, 165u8,
 						],
 					)
 				}
@@ -1327,9 +1327,10 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							106u8, 104u8, 217u8, 53u8, 59u8, 183u8, 201u8, 27u8, 170u8, 138u8,
-							252u8, 125u8, 94u8, 6u8, 151u8, 188u8, 27u8, 100u8, 167u8, 101u8, 67u8,
-							90u8, 251u8, 45u8, 184u8, 46u8, 96u8, 80u8, 34u8, 66u8, 195u8, 114u8,
+							246u8, 194u8, 81u8, 82u8, 28u8, 151u8, 59u8, 2u8, 71u8, 28u8, 42u8,
+							122u8, 178u8, 213u8, 216u8, 139u8, 164u8, 87u8, 205u8, 214u8, 131u8,
+							136u8, 10u8, 59u8, 142u8, 131u8, 27u8, 139u8, 227u8, 15u8, 255u8,
+							101u8,
 						],
 					)
 				}
@@ -3070,9 +3071,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				242u8, 61u8, 118u8, 225u8, 14u8, 246u8, 221u8, 104u8, 18u8, 196u8, 0u8, 225u8,
-				118u8, 215u8, 87u8, 85u8, 79u8, 97u8, 180u8, 206u8, 185u8, 67u8, 79u8, 208u8,
-				228u8, 188u8, 185u8, 16u8, 248u8, 43u8, 173u8, 109u8,
+				223u8, 38u8, 174u8, 143u8, 155u8, 30u8, 238u8, 115u8, 45u8, 53u8, 253u8, 180u8,
+				159u8, 243u8, 208u8, 193u8, 248u8, 43u8, 90u8, 155u8, 161u8, 227u8, 111u8, 191u8,
+				176u8, 64u8, 156u8, 78u8, 92u8, 244u8, 193u8, 254u8,
 			]
 	}
 	pub mod system {
@@ -4225,9 +4226,10 @@ pub mod api {
 						"Events",
 						(),
 						[
-							172u8, 169u8, 173u8, 19u8, 68u8, 84u8, 70u8, 192u8, 62u8, 157u8, 215u8,
-							183u8, 108u8, 14u8, 245u8, 192u8, 65u8, 144u8, 111u8, 28u8, 211u8,
-							215u8, 32u8, 35u8, 95u8, 68u8, 210u8, 41u8, 154u8, 177u8, 13u8, 54u8,
+							211u8, 246u8, 50u8, 181u8, 169u8, 18u8, 195u8, 32u8, 68u8, 119u8, 67u8,
+							247u8, 216u8, 101u8, 32u8, 191u8, 205u8, 76u8, 96u8, 233u8, 114u8,
+							163u8, 226u8, 144u8, 167u8, 15u8, 175u8, 76u8, 59u8, 221u8, 148u8,
+							181u8,
 						],
 					)
 				}
@@ -6410,37 +6412,6 @@ pub mod api {
 				#[encode_as_type(
 					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 				)]
-				pub struct IntentExecuted {
-					pub who: intent_executed::Who,
-					pub intent: intent_executed::Intent,
-					pub result: intent_executed::Result,
-				}
-				pub mod intent_executed {
-					use super::runtime_types;
-					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-					pub type Intent = runtime_types::core_primitives::omni::intent::Intent;
-					pub type Result =
-						runtime_types::pallet_omni_account::pallet::IntentExecutionResult;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for IntentExecuted {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "intent_executed";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
 				pub struct SetPermissions {
 					pub member_account_hash: set_permissions::MemberAccountHash,
 					pub permissions: set_permissions::Permissions,
@@ -6484,6 +6455,98 @@ pub mod api {
 					const PALLET: &'static str = "OmniAccount";
 					const CALL: &'static str = "auth_token_requested";
 				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct IntentAccepted {
+					pub who: intent_accepted::Who,
+					pub intent_id: intent_accepted::IntentId,
+					pub intent: intent_accepted::Intent,
+				}
+				pub mod intent_accepted {
+					use super::runtime_types;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type IntentId = ::core::primitive::u32;
+					pub type Intent = runtime_types::core_primitives::omni::intent::Intent;
+				}
+				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for IntentAccepted {
+					const PALLET: &'static str = "OmniAccount";
+					const CALL: &'static str = "intent_accepted";
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct IntentInProcessUpdated {
+					pub who: intent_in_process_updated::Who,
+					pub intent_id: intent_in_process_updated::IntentId,
+					pub detail: intent_in_process_updated::Detail,
+				}
+				pub mod intent_in_process_updated {
+					use super::runtime_types;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type IntentId = ::core::primitive::u32;
+					pub type Detail =
+						runtime_types::pallet_omni_account::pallet::IntentInProcessDetail;
+				}
+				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for IntentInProcessUpdated {
+					const PALLET: &'static str = "OmniAccount";
+					const CALL: &'static str = "intent_in_process_updated";
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub struct IntentCompleted {
+					pub who: intent_completed::Who,
+					pub intent_id: intent_completed::IntentId,
+					pub detail: intent_completed::Detail,
+				}
+				pub mod intent_completed {
+					use super::runtime_types;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type IntentId = ::core::primitive::u32;
+					pub type Detail =
+						runtime_types::pallet_omni_account::pallet::IntentCompletedDetail;
+				}
+				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for IntentCompleted {
+					const PALLET: &'static str = "OmniAccount";
+					const CALL: &'static str = "intent_completed";
+				}
 			}
 			pub struct TransactionApi;
 			impl TransactionApi {
@@ -6504,10 +6567,10 @@ pub mod api {
 							auth_type,
 						},
 						[
-							233u8, 183u8, 106u8, 55u8, 54u8, 241u8, 244u8, 102u8, 230u8, 163u8,
-							234u8, 199u8, 131u8, 84u8, 176u8, 129u8, 36u8, 67u8, 244u8, 1u8, 96u8,
-							188u8, 70u8, 63u8, 212u8, 157u8, 233u8, 253u8, 170u8, 227u8, 123u8,
-							122u8,
+							181u8, 243u8, 181u8, 170u8, 142u8, 128u8, 7u8, 126u8, 191u8, 145u8,
+							15u8, 196u8, 230u8, 111u8, 119u8, 60u8, 122u8, 204u8, 254u8, 50u8,
+							101u8, 206u8, 9u8, 24u8, 105u8, 99u8, 39u8, 115u8, 99u8, 242u8, 217u8,
+							45u8,
 						],
 					)
 				}
@@ -6527,9 +6590,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							58u8, 108u8, 107u8, 4u8, 167u8, 44u8, 220u8, 204u8, 15u8, 115u8, 171u8,
-							12u8, 27u8, 66u8, 172u8, 127u8, 219u8, 63u8, 212u8, 122u8, 218u8, 50u8,
-							121u8, 177u8, 91u8, 242u8, 20u8, 202u8, 144u8, 174u8, 37u8, 214u8,
+							168u8, 221u8, 185u8, 115u8, 191u8, 59u8, 119u8, 148u8, 59u8, 58u8,
+							222u8, 160u8, 68u8, 22u8, 68u8, 22u8, 95u8, 115u8, 0u8, 93u8, 92u8,
+							206u8, 219u8, 91u8, 155u8, 222u8, 187u8, 84u8, 97u8, 207u8, 58u8, 26u8,
 						],
 					)
 				}
@@ -6612,9 +6675,9 @@ pub mod api {
 						"request_intent",
 						types::RequestIntent { intent },
 						[
-							23u8, 159u8, 38u8, 147u8, 223u8, 87u8, 45u8, 95u8, 167u8, 136u8, 148u8,
-							142u8, 190u8, 226u8, 146u8, 147u8, 240u8, 35u8, 5u8, 2u8, 86u8, 208u8,
-							62u8, 22u8, 13u8, 97u8, 122u8, 112u8, 178u8, 163u8, 68u8, 22u8,
+							83u8, 30u8, 33u8, 129u8, 232u8, 76u8, 29u8, 37u8, 47u8, 201u8, 71u8,
+							33u8, 44u8, 233u8, 78u8, 99u8, 253u8, 203u8, 121u8, 123u8, 60u8, 207u8,
+							85u8, 177u8, 222u8, 241u8, 76u8, 182u8, 133u8, 35u8, 176u8, 69u8,
 						],
 					)
 				}
@@ -6634,25 +6697,6 @@ pub mod api {
 							79u8, 87u8, 191u8, 146u8, 228u8, 87u8, 95u8, 147u8, 252u8, 128u8,
 							190u8, 12u8, 35u8, 13u8, 12u8, 160u8, 199u8, 239u8, 43u8, 126u8, 157u8,
 							41u8, 90u8, 225u8, 151u8, 207u8, 18u8, 59u8, 231u8, 35u8, 38u8, 63u8,
-						],
-					)
-				}
-				pub fn intent_executed(
-					&self,
-					who: types::intent_executed::Who,
-					intent: types::intent_executed::Intent,
-					result: types::intent_executed::Result,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::IntentExecuted>
-				{
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"intent_executed",
-						types::IntentExecuted { who, intent, result },
-						[
-							114u8, 96u8, 142u8, 50u8, 83u8, 183u8, 28u8, 143u8, 146u8, 173u8,
-							111u8, 224u8, 228u8, 214u8, 186u8, 190u8, 0u8, 254u8, 87u8, 38u8,
-							197u8, 27u8, 77u8, 139u8, 79u8, 255u8, 4u8, 184u8, 104u8, 99u8, 172u8,
-							82u8,
 						],
 					)
 				}
@@ -6688,6 +6732,63 @@ pub mod api {
 							142u8, 110u8, 251u8, 84u8, 62u8, 49u8, 91u8, 154u8, 147u8, 167u8,
 							227u8, 65u8, 202u8, 105u8, 148u8, 135u8, 73u8, 147u8, 84u8, 147u8,
 							208u8, 242u8,
+						],
+					)
+				}
+				pub fn intent_accepted(
+					&self,
+					who: types::intent_accepted::Who,
+					intent_id: types::intent_accepted::IntentId,
+					intent: types::intent_accepted::Intent,
+				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::IntentAccepted>
+				{
+					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
+						"OmniAccount",
+						"intent_accepted",
+						types::IntentAccepted { who, intent_id, intent },
+						[
+							163u8, 166u8, 13u8, 228u8, 131u8, 170u8, 251u8, 224u8, 77u8, 137u8,
+							62u8, 119u8, 27u8, 182u8, 46u8, 96u8, 15u8, 111u8, 32u8, 155u8, 245u8,
+							54u8, 121u8, 11u8, 126u8, 170u8, 25u8, 12u8, 66u8, 250u8, 147u8, 190u8,
+						],
+					)
+				}
+				pub fn intent_in_process_updated(
+					&self,
+					who: types::intent_in_process_updated::Who,
+					intent_id: types::intent_in_process_updated::IntentId,
+					detail: types::intent_in_process_updated::Detail,
+				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<
+					types::IntentInProcessUpdated,
+				> {
+					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
+						"OmniAccount",
+						"intent_in_process_updated",
+						types::IntentInProcessUpdated { who, intent_id, detail },
+						[
+							111u8, 92u8, 178u8, 227u8, 139u8, 163u8, 107u8, 95u8, 24u8, 203u8,
+							41u8, 70u8, 214u8, 86u8, 70u8, 70u8, 138u8, 112u8, 149u8, 231u8, 119u8,
+							213u8, 227u8, 207u8, 175u8, 93u8, 220u8, 130u8, 181u8, 196u8, 125u8,
+							129u8,
+						],
+					)
+				}
+				pub fn intent_completed(
+					&self,
+					who: types::intent_completed::Who,
+					intent_id: types::intent_completed::IntentId,
+					detail: types::intent_completed::Detail,
+				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::IntentCompleted>
+				{
+					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
+						"OmniAccount",
+						"intent_completed",
+						types::IntentCompleted { who, intent_id, detail },
+						[
+							228u8, 13u8, 65u8, 229u8, 20u8, 234u8, 153u8, 115u8, 172u8, 122u8,
+							121u8, 62u8, 220u8, 189u8, 217u8, 244u8, 140u8, 138u8, 220u8, 206u8,
+							83u8, 13u8, 18u8, 230u8, 124u8, 18u8, 241u8, 87u8, 230u8, 78u8, 48u8,
+							131u8,
 						],
 					)
 				}
@@ -6895,58 +6996,6 @@ pub mod api {
 			#[codec(dumb_trait_bound)]
 			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "Intent is requested"]
-			pub struct IntentRequested {
-				pub who: intent_requested::Who,
-				pub intent: intent_requested::Intent,
-			}
-			pub mod intent_requested {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type Intent = runtime_types::core_primitives::omni::intent::Intent;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentRequested {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "IntentRequested";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "Intent is executed"]
-			pub struct IntentExecuted {
-				pub who: intent_executed::Who,
-				pub intent: intent_executed::Intent,
-				pub result: intent_executed::Result,
-			}
-			pub mod intent_executed {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type Intent = runtime_types::core_primitives::omni::intent::Intent;
-				pub type Result = runtime_types::pallet_omni_account::pallet::IntentExecutionResult;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentExecuted {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "IntentExecuted";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
 			#[doc = "Member permission set"]
 			pub struct AccountPermissionsSet {
 				pub who: account_permissions_set::Who,
@@ -6986,6 +7035,112 @@ pub mod api {
 				const PALLET: &'static str = "OmniAccount";
 				const EVENT: &'static str = "AuthTokenRequested";
 			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			#[doc = "Intent is requested by some user"]
+			pub struct IntentRequested {
+				pub who: intent_requested::Who,
+				pub intent: intent_requested::Intent,
+			}
+			pub mod intent_requested {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type Intent = runtime_types::core_primitives::omni::intent::Intent;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentRequested {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "IntentRequested";
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			#[doc = "Intent is accepted - we record the Intent detail (once)"]
+			pub struct IntentAccepted {
+				pub who: intent_accepted::Who,
+				pub intent_id: intent_accepted::IntentId,
+				pub intent: intent_accepted::Intent,
+			}
+			pub mod intent_accepted {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type IntentId = ::core::primitive::u32;
+				pub type Intent = runtime_types::core_primitives::omni::intent::Intent;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentAccepted {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "IntentAccepted";
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			#[doc = "Intent is in-process"]
+			pub struct IntentInProcessUpdated {
+				pub who: intent_in_process_updated::Who,
+				pub intent_id: intent_in_process_updated::IntentId,
+				pub detail: intent_in_process_updated::Detail,
+			}
+			pub mod intent_in_process_updated {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type IntentId = ::core::primitive::u32;
+				pub type Detail = runtime_types::pallet_omni_account::pallet::IntentInProcessDetail;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentInProcessUpdated {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "IntentInProcessUpdated";
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			#[doc = "Intent is completed"]
+			pub struct IntentCompleted {
+				pub who: intent_completed::Who,
+				pub intent_id: intent_completed::IntentId,
+				pub detail: intent_completed::Detail,
+			}
+			pub mod intent_completed {
+				use super::runtime_types;
+				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
+				pub type IntentId = ::core::primitive::u32;
+				pub type Detail = runtime_types::pallet_omni_account::pallet::IntentCompletedDetail;
+			}
+			impl ::subxt::ext::subxt_core::events::StaticEvent for IntentCompleted {
+				const PALLET: &'static str = "OmniAccount";
+				const EVENT: &'static str = "IntentCompleted";
+			}
 		}
 		pub mod storage {
 			use super::runtime_types;
@@ -7011,6 +7166,22 @@ pub mod api {
 							runtime_types::paseo_runtime::OmniAccountPermission,
 						>;
 					pub type Param0 = ::subxt::ext::subxt_core::utils::H256;
+				}
+				pub mod intents {
+					use super::runtime_types;
+					pub type Intents = runtime_types::core_primitives::omni::intent::Intent;
+					pub type Param0 = ::subxt::ext::subxt_core::utils::AccountId32;
+					pub type Param1 = ::core::primitive::u32;
+				}
+				pub mod accepted_intent_ids {
+					use super::runtime_types;
+					pub type AcceptedIntentIds = ::core::primitive::u32;
+					pub type Param0 = ::subxt::ext::subxt_core::utils::AccountId32;
+				}
+				pub mod completed_intent_ids {
+					use super::runtime_types;
+					pub type CompletedIntentIds = ::core::primitive::u32;
+					pub type Param0 = ::subxt::ext::subxt_core::utils::AccountId32;
 				}
 			}
 			pub struct StorageApi;
@@ -7157,6 +7328,186 @@ pub mod api {
 							38u8, 215u8, 42u8, 28u8, 12u8, 138u8, 4u8, 60u8, 11u8, 241u8, 199u8,
 							246u8, 170u8, 227u8, 151u8, 37u8, 166u8, 111u8, 240u8, 19u8, 156u8,
 							50u8,
+						],
+					)
+				}
+				pub fn intents_iter(
+					&self,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					(),
+					types::intents::Intents,
+					(),
+					(),
+					::subxt::ext::subxt_core::utils::Yes,
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"Intents",
+						(),
+						[
+							117u8, 106u8, 214u8, 215u8, 92u8, 71u8, 38u8, 24u8, 94u8, 118u8, 37u8,
+							62u8, 46u8, 230u8, 112u8, 132u8, 44u8, 61u8, 130u8, 180u8, 113u8,
+							195u8, 210u8, 60u8, 157u8, 155u8, 45u8, 151u8, 57u8, 255u8, 168u8,
+							64u8,
+						],
+					)
+				}
+				pub fn intents_iter1(
+					&self,
+					_0: impl ::core::borrow::Borrow<types::intents::Param0>,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
+						types::intents::Param0,
+					>,
+					types::intents::Intents,
+					(),
+					(),
+					::subxt::ext::subxt_core::utils::Yes,
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"Intents",
+						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
+							_0.borrow(),
+						),
+						[
+							117u8, 106u8, 214u8, 215u8, 92u8, 71u8, 38u8, 24u8, 94u8, 118u8, 37u8,
+							62u8, 46u8, 230u8, 112u8, 132u8, 44u8, 61u8, 130u8, 180u8, 113u8,
+							195u8, 210u8, 60u8, 157u8, 155u8, 45u8, 151u8, 57u8, 255u8, 168u8,
+							64u8,
+						],
+					)
+				}
+				pub fn intents(
+					&self,
+					_0: impl ::core::borrow::Borrow<types::intents::Param0>,
+					_1: impl ::core::borrow::Borrow<types::intents::Param1>,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					(
+						::subxt::ext::subxt_core::storage::address::StaticStorageKey<
+							types::intents::Param0,
+						>,
+						::subxt::ext::subxt_core::storage::address::StaticStorageKey<
+							types::intents::Param1,
+						>,
+					),
+					types::intents::Intents,
+					::subxt::ext::subxt_core::utils::Yes,
+					(),
+					(),
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"Intents",
+						(
+							::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
+								_0.borrow(),
+							),
+							::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
+								_1.borrow(),
+							),
+						),
+						[
+							117u8, 106u8, 214u8, 215u8, 92u8, 71u8, 38u8, 24u8, 94u8, 118u8, 37u8,
+							62u8, 46u8, 230u8, 112u8, 132u8, 44u8, 61u8, 130u8, 180u8, 113u8,
+							195u8, 210u8, 60u8, 157u8, 155u8, 45u8, 151u8, 57u8, 255u8, 168u8,
+							64u8,
+						],
+					)
+				}
+				#[doc = " The hightest intent_id that has been accepted for a given AccountId"]
+				pub fn accepted_intent_ids_iter(
+					&self,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					(),
+					types::accepted_intent_ids::AcceptedIntentIds,
+					(),
+					::subxt::ext::subxt_core::utils::Yes,
+					::subxt::ext::subxt_core::utils::Yes,
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"AcceptedIntentIds",
+						(),
+						[
+							232u8, 178u8, 61u8, 48u8, 164u8, 21u8, 58u8, 213u8, 181u8, 62u8, 219u8,
+							56u8, 249u8, 19u8, 16u8, 225u8, 193u8, 138u8, 31u8, 203u8, 171u8,
+							232u8, 250u8, 118u8, 16u8, 65u8, 28u8, 142u8, 115u8, 244u8, 96u8, 99u8,
+						],
+					)
+				}
+				#[doc = " The hightest intent_id that has been accepted for a given AccountId"]
+				pub fn accepted_intent_ids(
+					&self,
+					_0: impl ::core::borrow::Borrow<types::accepted_intent_ids::Param0>,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
+						types::accepted_intent_ids::Param0,
+					>,
+					types::accepted_intent_ids::AcceptedIntentIds,
+					::subxt::ext::subxt_core::utils::Yes,
+					::subxt::ext::subxt_core::utils::Yes,
+					(),
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"AcceptedIntentIds",
+						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
+							_0.borrow(),
+						),
+						[
+							232u8, 178u8, 61u8, 48u8, 164u8, 21u8, 58u8, 213u8, 181u8, 62u8, 219u8,
+							56u8, 249u8, 19u8, 16u8, 225u8, 193u8, 138u8, 31u8, 203u8, 171u8,
+							232u8, 250u8, 118u8, 16u8, 65u8, 28u8, 142u8, 115u8, 244u8, 96u8, 99u8,
+						],
+					)
+				}
+				#[doc = " The hightest intent_id that has been completed for a given AccountId"]
+				pub fn completed_intent_ids_iter(
+					&self,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					(),
+					types::completed_intent_ids::CompletedIntentIds,
+					(),
+					::subxt::ext::subxt_core::utils::Yes,
+					::subxt::ext::subxt_core::utils::Yes,
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"CompletedIntentIds",
+						(),
+						[
+							147u8, 171u8, 232u8, 244u8, 135u8, 224u8, 186u8, 16u8, 101u8, 57u8,
+							0u8, 25u8, 56u8, 187u8, 208u8, 37u8, 109u8, 58u8, 27u8, 162u8, 235u8,
+							174u8, 183u8, 54u8, 151u8, 71u8, 115u8, 174u8, 231u8, 218u8, 21u8,
+							31u8,
+						],
+					)
+				}
+				#[doc = " The hightest intent_id that has been completed for a given AccountId"]
+				pub fn completed_intent_ids(
+					&self,
+					_0: impl ::core::borrow::Borrow<types::completed_intent_ids::Param0>,
+				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
+					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
+						types::completed_intent_ids::Param0,
+					>,
+					types::completed_intent_ids::CompletedIntentIds,
+					::subxt::ext::subxt_core::utils::Yes,
+					::subxt::ext::subxt_core::utils::Yes,
+					(),
+				> {
+					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
+						"OmniAccount",
+						"CompletedIntentIds",
+						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
+							_0.borrow(),
+						),
+						[
+							147u8, 171u8, 232u8, 244u8, 135u8, 224u8, 186u8, 16u8, 101u8, 57u8,
+							0u8, 25u8, 56u8, 187u8, 208u8, 37u8, 109u8, 58u8, 27u8, 162u8, 235u8,
+							174u8, 183u8, 54u8, 151u8, 71u8, 115u8, 174u8, 231u8, 218u8, 21u8,
+							31u8,
 						],
 					)
 				}
@@ -8019,10 +8370,9 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							126u8, 242u8, 165u8, 160u8, 115u8, 93u8, 203u8, 215u8, 242u8, 34u8,
-							79u8, 238u8, 102u8, 188u8, 182u8, 14u8, 102u8, 137u8, 250u8, 84u8,
-							62u8, 136u8, 183u8, 65u8, 148u8, 44u8, 173u8, 90u8, 168u8, 115u8, 60u8,
-							53u8,
+							105u8, 195u8, 74u8, 128u8, 131u8, 42u8, 116u8, 52u8, 201u8, 153u8, 4u8,
+							212u8, 53u8, 52u8, 79u8, 183u8, 62u8, 143u8, 77u8, 42u8, 129u8, 18u8,
+							113u8, 114u8, 206u8, 56u8, 196u8, 251u8, 209u8, 0u8, 234u8, 189u8,
 						],
 					)
 				}
@@ -9889,11 +10239,46 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
+					pub struct BinanceConfig;
+					#[derive(
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+						Debug,
+					)]
+					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+					#[codec(dumb_trait_bound)]
+					#[decode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+					)]
+					#[encode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+					)]
 					pub struct CallEthereum {
 						pub address: ::subxt::ext::subxt_core::utils::H160,
 						pub input: runtime_types::bounded_collections::bounded_vec::BoundedVec<
 							::core::primitive::u8,
 						>,
+					}
+					#[derive(
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+						Debug,
+					)]
+					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+					#[codec(dumb_trait_bound)]
+					#[decode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+					)]
+					#[encode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+					)]
+					pub enum CrossChainSwapProvider {
+						#[codec(index = 0)]
+						Binance(runtime_types::core_primitives::omni::intent::BinanceConfig),
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -9934,28 +10319,88 @@ pub mod api {
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
 					pub enum Intent {
-						#[codec(index = 0)]
-						CrossChainSwap(runtime_types::core_primitives::omni::intent::SwapOrder),
-						#[codec(index = 1)]
-						TransferEthereum(
-							runtime_types::core_primitives::omni::intent::TransferEthereum,
-						),
-						#[codec(index = 2)]
-						CallEthereum(runtime_types::core_primitives::omni::intent::CallEthereum),
-						#[codec(index = 3)]
-						SystemRemark(
+						# [codec (index = 0)] TransferEthereum (runtime_types :: core_primitives :: omni :: intent :: TransferEthereum ,) , # [codec (index = 1)] CallEthereum (runtime_types :: core_primitives :: omni :: intent :: CallEthereum ,) , # [codec (index = 2)] SystemRemark (runtime_types :: bounded_collections :: bounded_vec :: BoundedVec < :: core :: primitive :: u8 > ,) , # [codec (index = 3)] TransferNative (runtime_types :: core_primitives :: omni :: intent :: TransferNative ,) , # [codec (index = 4)] TransferSolana (runtime_types :: core_primitives :: omni :: intent :: TransferSolana ,) , # [codec (index = 5)] Swap (runtime_types :: core_primitives :: omni :: intent :: SwapOrder , :: core :: option :: Option < runtime_types :: core_primitives :: omni :: intent :: CrossChainSwapProvider > , runtime_types :: core_primitives :: omni :: intent :: SingleChainSwapProvider ,) , }
+					#[derive(
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+						Debug,
+					)]
+					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+					#[codec(dumb_trait_bound)]
+					#[decode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+					)]
+					#[encode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+					)]
+					pub struct PumpxConfig {
+						pub order_type:
+							runtime_types::core_primitives::omni::intent::PumpxOrderType,
+						pub swap_type: ::core::primitive::u32,
+						pub chain_id: ::core::primitive::u32,
+						pub token_ca: runtime_types::bounded_collections::bounded_vec::BoundedVec<
+							::core::primitive::u8,
+						>,
+						pub double_out: ::core::primitive::bool,
+						pub is_one_click: ::core::primitive::bool,
+						pub is_anti_mev: ::core::primitive::bool,
+						pub is_auto_slippage: ::core::primitive::bool,
+						pub gas_type: ::core::primitive::u32,
+						pub slippage: ::core::primitive::u32,
+						pub wallet_index: ::core::primitive::u32,
+						pub token_cap: ::core::option::Option<
 							runtime_types::bounded_collections::bounded_vec::BoundedVec<
 								::core::primitive::u8,
 							>,
-						),
-						#[codec(index = 4)]
-						TransferNative(
-							runtime_types::core_primitives::omni::intent::TransferNative,
-						),
-						#[codec(index = 5)]
-						TransferSolana(
-							runtime_types::core_primitives::omni::intent::TransferSolana,
-						),
+						>,
+						pub price_usd: ::core::option::Option<
+							runtime_types::bounded_collections::bounded_vec::BoundedVec<
+								::core::primitive::u8,
+							>,
+						>,
+						pub trailing_percent: ::core::option::Option<::core::primitive::u32>,
+					}
+					#[derive(
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+						Debug,
+					)]
+					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+					#[codec(dumb_trait_bound)]
+					#[decode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+					)]
+					#[encode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+					)]
+					pub enum PumpxOrderType {
+						#[codec(index = 0)]
+						Market,
+						#[codec(index = 1)]
+						Limit,
+					}
+					#[derive(
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+						Debug,
+					)]
+					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+					#[codec(dumb_trait_bound)]
+					#[decode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+					)]
+					#[encode_as_type(
+						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+					)]
+					pub enum SingleChainSwapProvider {
+						#[codec(index = 0)]
+						Pumpx(runtime_types::core_primitives::omni::intent::PumpxConfig),
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -17849,22 +18294,34 @@ pub mod api {
 							runtime_types::core_primitives::omni::account::MemberAccount,
 					},
 					#[codec(index = 8)]
-					intent_executed {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						intent: runtime_types::core_primitives::omni::intent::Intent,
-						result: runtime_types::pallet_omni_account::pallet::IntentExecutionResult,
-					},
-					#[codec(index = 9)]
 					set_permissions {
 						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
 						permissions: ::subxt::ext::subxt_core::alloc::vec::Vec<
 							runtime_types::paseo_runtime::OmniAccountPermission,
 						>,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 9)]
 					auth_token_requested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						expires_at: ::core::primitive::i64,
+					},
+					#[codec(index = 10)]
+					intent_accepted {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent_id: ::core::primitive::u32,
+						intent: runtime_types::core_primitives::omni::intent::Intent,
+					},
+					#[codec(index = 11)]
+					intent_in_process_updated {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent_id: ::core::primitive::u32,
+						detail: runtime_types::pallet_omni_account::pallet::IntentInProcessDetail,
+					},
+					#[codec(index = 12)]
+					intent_completed {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent_id: ::core::primitive::u32,
+						detail: runtime_types::pallet_omni_account::pallet::IntentCompletedDetail,
 					},
 				}
 				#[derive(
@@ -17904,6 +18361,8 @@ pub mod api {
 					AccountStoreAlreadyExists,
 					#[codec(index = 9)]
 					AccountStoreHasOneMember,
+					#[codec(index = 10)]
+					IntentAlreadyExists,
 				}
 				#[derive(
 					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -17974,29 +18433,43 @@ pub mod api {
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
 					#[codec(index = 7)]
-					#[doc = "Intent is requested"]
-					IntentRequested {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						intent: runtime_types::core_primitives::omni::intent::Intent,
-					},
-					#[codec(index = 8)]
-					#[doc = "Intent is executed"]
-					IntentExecuted {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						intent: runtime_types::core_primitives::omni::intent::Intent,
-						result: runtime_types::pallet_omni_account::pallet::IntentExecutionResult,
-					},
-					#[codec(index = 9)]
 					#[doc = "Member permission set"]
 					AccountPermissionsSet {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 8)]
 					#[doc = "An auth token is requested"]
 					AuthTokenRequested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						expires_at: ::core::primitive::i64,
+					},
+					#[codec(index = 9)]
+					#[doc = "Intent is requested by some user"]
+					IntentRequested {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent: runtime_types::core_primitives::omni::intent::Intent,
+					},
+					#[codec(index = 10)]
+					#[doc = "Intent is accepted - we record the Intent detail (once)"]
+					IntentAccepted {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent_id: ::core::primitive::u32,
+						intent: runtime_types::core_primitives::omni::intent::Intent,
+					},
+					#[codec(index = 11)]
+					#[doc = "Intent is in-process"]
+					IntentInProcessUpdated {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent_id: ::core::primitive::u32,
+						detail: runtime_types::pallet_omni_account::pallet::IntentInProcessDetail,
+					},
+					#[codec(index = 12)]
+					#[doc = "Intent is completed"]
+					IntentCompleted {
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
+						intent_id: ::core::primitive::u32,
+						detail: runtime_types::pallet_omni_account::pallet::IntentCompletedDetail,
 					},
 				}
 				#[derive(
@@ -18014,11 +18487,61 @@ pub mod api {
 				#[encode_as_type(
 					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 				)]
-				pub enum IntentExecutionResult {
+				pub enum IntentCompletedDetail {
 					#[codec(index = 0)]
 					Success,
 					#[codec(index = 1)]
 					Failure,
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub enum IntentInProcessDetail {
+					#[codec(index = 0)]
+					Swap(runtime_types::pallet_omni_account::pallet::SwapInProcessDetail),
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				pub enum SwapInProcessDetail {
+					#[codec(index = 0)]
+					SourceChainBalanceDeducted {
+						asset: runtime_types::core_primitives::omni::chain::ChainAsset,
+						amount: ::core::primitive::u64,
+					},
+					#[codec(index = 1)]
+					DestChainBalanceAdded {
+						asset: runtime_types::core_primitives::omni::chain::ChainAsset,
+						amount: ::core::primitive::u64,
+					},
+					#[codec(index = 2)]
+					SingleChainSwapSubmitted {
+						tx_hash: ::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
+					},
 				}
 			}
 			#[derive(
