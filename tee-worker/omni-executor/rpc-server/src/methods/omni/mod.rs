@@ -4,8 +4,8 @@ use jsonrpsee::RpcModule;
 mod get_health;
 use get_health::*;
 
-mod get_intent_id;
-use get_intent_id::*;
+mod get_next_intent_id;
+use get_next_intent_id::*;
 
 mod get_oauth2_google_authorization_url;
 use get_oauth2_google_authorization_url::*;
