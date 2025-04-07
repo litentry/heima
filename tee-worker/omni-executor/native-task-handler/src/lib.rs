@@ -273,8 +273,24 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::RequestIntent(sender, intent_id, intent) => {
-			if intent_id != ctx.intent_id_store.get(&sender.to_omni_account()).await.unwrap() + 1 {
-				ctx.intent_id_store.update(sender.to_omni_account(), intent_id).await.unwrap()
+			let Ok(stored_intent_id) = ctx.intent_id_store.get(&sender.to_omni_account()).await
+			else {
+				log::error!("Failed to read intent from store");
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			if intent_id != stored_intent_id + 1 {
+				if ctx.intent_id_store.update(sender.to_omni_account(), intent_id).await.is_err() {
+					log::error!("Failed to save intent id");
+					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				}
 			} else {
 				let response = NativeTaskResponse::Err(NativeTaskError::IntentNonceMismatch);
 				if response_sender.send(response.encode()).is_err() {
@@ -362,7 +378,7 @@ async fn handle_native_task<
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							0, // TODO
+							intent_id,
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
@@ -379,7 +395,7 @@ async fn handle_native_task<
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							0, // TODO
+							intent_id,
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
