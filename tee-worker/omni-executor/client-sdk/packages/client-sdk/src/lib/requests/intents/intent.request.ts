@@ -7,6 +7,7 @@ import { OmniAuthData } from '@type-creators/omni-auth';
 import { createNativeTaskType } from '@type-creators/native-task';
 
 import { aesTask } from '@requests/aes-task.request';
+import { enclave, Enclave } from '@lib/enclave';
 
 /**
  * Sends a common intent request to the Heima Parachain.
@@ -16,6 +17,7 @@ import { aesTask } from '@requests/aes-task.request';
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
  * @param {Intent} data.intent - The intent to be sent.
  * @param {U8aLike} data.input - The contract input data.
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to signature
  * (if applicable) and a send function.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
@@ -32,6 +34,7 @@ export async function intent(
     member: Identity;
     intent: Intent;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<{
   getPayloadToSign?: () => Promise<string>;
   send: (args: { authData: OmniAuthData }) => Promise<{
@@ -47,5 +50,5 @@ export async function intent(
     params: { member, intent },
   });
 
-  return aesTask(api, { member, task });
+  return aesTask(api, { member, task }, enclaveInstance);
 }

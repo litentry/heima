@@ -3,7 +3,7 @@ import type { ApiPromise } from '@polkadot/api';
 import { compactAddLength, u8aToHex } from '@polkadot/util';
 
 import type { AesOutput, AesTask, NativeTask, NativeTaskWrapper, RawTask } from '@heima-network/parachain-api';
-import { enclave } from '@lib/enclave';
+import { enclave, Enclave } from '@lib/enclave';
 import { encrypt, generateNonce12, generate, exportKey } from '@utils/shielding-key';
 import { createAesOutputType } from './aes-output';
 import { createOmniAuth, OmniAuthData } from './omni-auth';
@@ -17,6 +17,7 @@ import { createOmniAuth, OmniAuthData } from './omni-auth';
  * @param data.nonce - Optional nonce value
  * @param data.authData - Optional authentication data
  * @param data.plain - Flag to return unencrypted raw task
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns Promise resolving to RawTask
  */
 export async function createRawTaskType(
@@ -27,6 +28,7 @@ export async function createRawTaskType(
     authData?: OmniAuthData;
     plain: true;
   },
+  enclaveInstance?: Enclave,
 ): Promise<RawTask>;
 
 /**
@@ -38,6 +40,7 @@ export async function createRawTaskType(
  * @param data.nonce - Optional nonce value
  * @param data.authData - Optional authentication data
  * @param data.plain - Flag to return encrypted raw task (default)
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns Promise resolving to object containing encrypted RawTask and encryption key
  */
 export async function createRawTaskType(
@@ -48,6 +51,7 @@ export async function createRawTaskType(
     authData?: OmniAuthData;
     plain?: false;
   },
+  enclaveInstance?: Enclave,
 ): Promise<{ rawTask: RawTask, encryptionKey: CryptoKey }>;
 
 /**
@@ -68,6 +72,7 @@ export async function createRawTaskType(
  * @param data.nonce - Optional nonce value
  * @param data.authData - Optional authentication data
  * @param data.plain - Whether to skip encryption, defaults to false
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns Either RawTask or object with encrypted RawTask and encryption key
  * 
  * @example
@@ -86,6 +91,7 @@ export async function createRawTaskType(
     authData?: OmniAuthData;
     plain?: boolean;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<RawTask | { rawTask: RawTask, encryptionKey: CryptoKey }> {
   const { authData, task, nonce, plain = false } = data;
 
@@ -124,7 +130,7 @@ export async function createRawTaskType(
   });
 
   // Encrypt the client shielding key using the enclave public key
-  const { ciphertext: encryptedKey } = await enclave.encrypt({ cleartext: encryptionKeyU8 });
+  const { ciphertext: encryptedKey } = await enclaveInstance.encrypt({ cleartext: encryptionKeyU8 });
 
   const aesTask = api.createType<AesTask>('AesTask', {
     key: compactAddLength(encryptedKey),
