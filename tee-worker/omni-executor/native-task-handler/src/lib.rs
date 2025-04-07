@@ -653,6 +653,7 @@ async fn handle_native_task<
 				let Some(access_token) =
 					storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 				else {
+					log::error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
 					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 					if response_sender.send(response.encode()).is_err() {
 						log::error!("Failed to send response");
