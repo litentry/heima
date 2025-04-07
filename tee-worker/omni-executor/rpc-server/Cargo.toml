@@ -28,6 +28,7 @@ heima-primitives = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
+pumpx = { workspace = true }
 
 [lints]
 workspace = true

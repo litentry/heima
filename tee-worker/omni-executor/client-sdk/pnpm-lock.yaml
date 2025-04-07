@@ -121,8 +121,8 @@ importers:
         specifier: '*'
         version: link:../chaindata
       '@heima-network/parachain-api':
-        specifier: 0.9.24-next.2
-        version: 0.9.24-next.2(@swc/core@1.11.16)(typescript@5.4.5)
+        specifier: 0.9.24-next.4
+        version: 0.9.24-next.4(@swc/core@1.11.16)(typescript@5.4.5)
       '@polkadot/api':
         specifier: ^15.0.2
         version: 15.9.1
@@ -1815,8 +1815,8 @@ packages:
       '@shikijs/vscode-textmate': 10.0.2
     dev: true
 
-  /@heima-network/parachain-api@0.9.24-next.2(@swc/core@1.11.16)(typescript@5.4.5):
-    resolution: {integrity: sha512-UGPH9C2dPIbSJPrdtfYvUBMeMAs2tMIoOVpHi8IS404/soPD68uwvEbXvz0iC9ygSPieZS7LPnlJJ1UXY4clJw==}
+  /@heima-network/parachain-api@0.9.24-next.4(@swc/core@1.11.16)(typescript@5.4.5):
+    resolution: {integrity: sha512-3q5UNMcYyBuvqt4FL+dZ8q1ccn/J6mFLvHAC/lHw7c+Qx4vuYiUOhESCuS6S8wLnRIRYDPo+AvDiukjm+OoKwQ==}
     dependencies:
       '@polkadot/api': 15.9.1
       '@polkadot/api-augment': 15.9.1
@@ -2196,14 +2196,6 @@ packages:
       fastq: 1.19.1
     dev: true
 
-  /@nrwl/devkit@19.8.4(nx@19.8.4):
-    resolution: {integrity: sha512-OoIqDjj2mWzLs3aSF6w5OiC2xywYi/jBxHc7t7Lyi56Vc4dQq8vJMELa9WtG6qH0k05fF7N+jAoKlfvLgbbEFA==}
-    dependencies:
-      '@nx/devkit': 19.8.4(nx@19.8.4)
-    transitivePeerDependencies:
-      - nx
-    dev: true
-
   /@nrwl/devkit@19.8.4(nx@20.7.0):
     resolution: {integrity: sha512-OoIqDjj2mWzLs3aSF6w5OiC2xywYi/jBxHc7t7Lyi56Vc4dQq8vJMELa9WtG6qH0k05fF7N+jAoKlfvLgbbEFA==}
     dependencies:
@@ -2256,7 +2248,7 @@ packages:
     peerDependencies:
       nx: '>= 17 <= 20'
     dependencies:
-      '@nrwl/devkit': 19.8.4(nx@19.8.4)
+      '@nrwl/devkit': 19.8.4(nx@20.7.0)
       ejs: 3.1.10
       enquirer: 2.3.6
       ignore: 5.3.2
