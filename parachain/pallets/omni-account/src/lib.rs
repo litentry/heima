@@ -178,11 +178,13 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	/// The hightest intent_id that has been accepted for a given AccountId
 	#[pallet::storage]
 	#[pallet::getter(fn accepted_intent_ids)]
 	pub type AcceptedIntentIds<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, IntentId, ValueQuery>;
 
+	/// The hightest intent_id that has been completed for a given AccountId
 	#[pallet::storage]
 	#[pallet::getter(fn completed_intent_ids)]
 	pub type CompletedIntentIds<T: Config> =
@@ -265,7 +267,6 @@ pub mod pallet {
 		PermissionsLenLimitReached,
 		AccountStoreAlreadyExists,
 		AccountStoreHasOneMember,
-		IntentIdTooSmall,
 		IntentAlreadyExists,
 	}
 
@@ -547,8 +548,9 @@ pub mod pallet {
 			detail: IntentCompletedDetail,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			ensure!(intent_id > Self::completed_intent_ids(&who), Error::<T>::IntentIdTooSmall);
-			CompletedIntentIds::<T>::insert(&who, intent_id);
+			if intent_id > Self::completed_intent_ids(&who) {
+				CompletedIntentIds::<T>::insert(&who, intent_id);
+			}
 			Self::deposit_event(Event::IntentCompleted { who, intent_id, detail });
 			Ok(Pays::No.into())
 		}
@@ -675,10 +677,10 @@ pub mod pallet {
 			intent_id: IntentId,
 			intent: Intent,
 		) -> DispatchResult {
-			ensure!(intent_id > Self::accepted_intent_ids(&who), Error::<T>::IntentIdTooSmall);
 			ensure!(!Intents::<T>::contains_key(&who, intent_id), Error::<T>::IntentAlreadyExists);
-			// the continuity should have been checked in the worker already
-			AcceptedIntentIds::<T>::insert(&who, intent_id);
+			if intent_id > Self::accepted_intent_ids(&who) {
+				AcceptedIntentIds::<T>::insert(&who, intent_id);
+			}
 			Intents::<T>::insert(&who, intent_id, intent.clone());
 			Self::deposit_event(Event::IntentAccepted { who, intent_id, intent });
 			Ok(())
