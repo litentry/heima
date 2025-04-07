@@ -20,7 +20,7 @@ use intent_core::IntentIdStore;
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentExecutionResult},
+	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
 	paseo_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
@@ -269,14 +269,9 @@ async fn handle_native_task<
 			}
 			return;
 		},
-		NativeTask::RequestIntent(sender, intent) => {
-			if *intent.intent_id()
-				!= ctx.intent_id_store.get(&sender.to_omni_account()).await.unwrap() + 1
-			{
-				ctx.intent_id_store
-					.update(sender.to_omni_account(), *intent.intent_id())
-					.await
-					.unwrap()
+		NativeTask::RequestIntent(sender, intent_id, intent) => {
+			if intent_id != ctx.intent_id_store.get(&sender.to_omni_account()).await.unwrap() + 1 {
+				ctx.intent_id_store.update(sender.to_omni_account(), intent_id).await.unwrap()
 			} else {
 				let response = NativeTaskResponse::Err(NativeTaskError::IntentNonceMismatch);
 				if response_sender.send(response.encode()).is_err() {
@@ -326,10 +321,10 @@ async fn handle_native_task<
 			// Increment nonce for the next transaction
 			nonce += 1;
 
-			let mut execution_result = IntentExecutionResult::Success;
+			let mut execution_result = IntentCompletedDetail::Success;
 
 			let tx = match intent {
-				Intent::SystemRemark(_, remark) => {
+				Intent::SystemRemark(remark) => {
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
 					let dispatch_as_omni_account_call =
 						parentchain_api_interface::tx().omni_account().dispatch_as_signed(
@@ -353,46 +348,52 @@ async fn handle_native_task<
 					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					if let Err(e) =
-						ctx.ethereum_intent_executor.execute(&omni_account, intent.clone()).await
+					if let Err(e) = ctx
+						.ethereum_intent_executor
+						.execute(&omni_account, intent_id, intent.clone())
+						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
 				Intent::TransferSolana(_) => {
-					if let Err(e) =
-						ctx.solana_intent_executor.execute(&omni_account, intent.clone()).await
+					if let Err(e) = ctx
+						.solana_intent_executor
+						.execute(&omni_account, intent_id, intent.clone())
+						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
-				Intent::CrossChainSwap(_) => {
-					if let Err(e) =
-						ctx.cross_chain_intent_executor.execute(&omni_account, intent.clone()).await
+				Intent::Swap(..) => {
+					if let Err(e) = ctx
+						.cross_chain_intent_executor
+						.execute(&omni_account, intent_id, intent.clone())
+						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await

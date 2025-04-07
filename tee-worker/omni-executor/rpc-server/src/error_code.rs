@@ -20,7 +20,6 @@ const PUMPX_API_USER_CONNECTION_FAILED_CODE: i32 = -32012;
 const PUMPX_API_ERROR_CODE: i32 = -32013;
 const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32014;
 
-
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
 		NativeTaskError::UnauthorizedSender => UNAUTHORIZED_SENDER_CODE,

@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
+use executor_primitives::IntentId;
 use intent_asset_lock::AmountType;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
@@ -30,9 +31,6 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use executor_primitives::AccountId;
-use parentchain_api_interface::runtime_types::pallet_omni_account::pallet::CrossChainSwapProcessingEvent;
-use parentchain_api_interface::runtime_types::pallet_omni_account::pallet::IntentEvent;
-use parentchain_api_interface::runtime_types::pallet_omni_account::pallet::IntentProcessingEvent;
 use parentchain_rpc_client::metadata::Metadata;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::CustomConfig;
@@ -108,9 +106,14 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync,
 	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory>
 {
-	async fn execute(&self, account_id: &AccountId, intent: Intent) -> Result<(), ()> {
+	async fn execute(
+		&self,
+		account_id: &AccountId,
+		intent_id: IntentId,
+		intent: Intent,
+	) -> Result<(), ()> {
 		match intent {
-			Intent::CrossChainSwap(ref swap_order) => {
+			Intent::Swap(ref swap_order, ref _ccsp, ref _scsp) => {
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
 				else {
 					log::error!("Failed to create rpc client");
@@ -172,14 +175,9 @@ impl<
 				// intent requested is submited before so nonce needs to be updated
 				nonce += 1;
 
-				let intent_accepted_event_emit_call =
-					parentchain_api_interface::tx().omni_account().emit_intent_event(
-						account_id.to_subxt_type(),
-						intent.to_subxt_type(),
-						IntentEvent::Processing(IntentProcessingEvent::CrossChainSwap(
-							CrossChainSwapProcessingEvent::Accepted,
-						)),
-					);
+				let intent_accepted_event_emit_call = parentchain_api_interface::tx()
+					.omni_account()
+					.intent_accepted(account_id.to_subxt_type(), intent_id, intent.to_subxt_type());
 
 				let tx = self
 					.transaction_signer

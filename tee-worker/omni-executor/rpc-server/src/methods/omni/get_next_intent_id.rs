@@ -40,7 +40,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 								<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
 							},
 						)?;
-					Ok::<u128, ErrorObject>(intent_id + 1)
+					Ok::<u32, ErrorObject>(intent_id + 1)
 				},
 				Err(_) => Err(ErrorCode::ParseError.into()),
 			}

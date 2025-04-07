@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::Intent;
+use executor_primitives::IntentId;
 use log::{error, info};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -43,7 +44,12 @@ impl SolanaIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for SolanaIntentExecutor {
-	async fn execute(&self, _account_id: &AccountId, intent: Intent) -> Result<(), ()> {
+	async fn execute(
+		&self,
+		_account_id: &AccountId,
+		_intent_id: IntentId,
+		intent: Intent,
+	) -> Result<(), ()> {
 		info!("Executing intent: {:?}", intent);
 		// TODO: get key from key store
 		let signer_key_pair = Keypair::read_from_file("dev-key.json")
