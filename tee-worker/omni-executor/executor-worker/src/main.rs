@@ -188,7 +188,7 @@ async fn listen_to_parentchain(
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 
 	let mut parentchain_listener = parentchain_listener::create_listener(
-		"litentry_rococo",
+		"heima",
 		Handle::current(),
 		&args.parentchain_url,
 		sub_stop_receiver,
@@ -198,7 +198,7 @@ async fn listen_to_parentchain(
 	.await?;
 
 	Ok(thread::Builder::new()
-		.name("litentry_rococo_sync".to_string())
+		.name("heima_sync".to_string())
 		.spawn(move || parentchain_listener.sync(args.start_block))
 		.unwrap())
 }
