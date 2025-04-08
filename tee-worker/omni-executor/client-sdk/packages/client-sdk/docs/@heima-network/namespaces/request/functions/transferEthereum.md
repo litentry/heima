@@ -6,9 +6,9 @@
 
 # Function: transferEthereum()
 
-> **transferEthereum**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **transferEthereum**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/transfer-ethereum.request.ts:29](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-ethereum.request.ts#L29)
+Defined in: [requests/intents/transfer-ethereum.request.ts:31](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-ethereum.request.ts#L31)
 
 Intent Request: Transfers ETH to another account on Ethereum.
 
@@ -41,6 +41,12 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 `string`
 
 The Ethereum address destination.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

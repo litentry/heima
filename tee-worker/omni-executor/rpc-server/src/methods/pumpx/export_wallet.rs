@@ -18,9 +18,9 @@ pub struct ExportWalletParams {
 	#[serde_as(as = "serde_with::hex::Hex")]
 	pub key: Vec<u8>, // RSA-encrypted AES key to encrypt the wallet private key
 	pub google_code: MaybeGoogleCode,
-	pub wallet_chain: PumpxWalletChain,
+	pub chain_id: PumpxChainId,
 	pub wallet_index: PumxWalletIndex,
-	pub wallet_address: ExpectedWalletAddress,
+	pub wallet_address: String,
 	pub email_code: String,
 }
 
@@ -35,7 +35,7 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 			task: NativeTask::PumpxExportWallet(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
 				p.google_code,
-				p.wallet_chain,
+				p.chain_id,
 				p.wallet_index,
 				p.wallet_address,
 			),
