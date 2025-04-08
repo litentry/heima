@@ -266,7 +266,7 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			if intent_id != stored_intent_id + 1 {
+			if intent_id == stored_intent_id + 1 {
 				if ctx.intent_id_store.update(sender.to_omni_account(), intent_id).await.is_err() {
 					log::error!("Failed to save intent id");
 					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
