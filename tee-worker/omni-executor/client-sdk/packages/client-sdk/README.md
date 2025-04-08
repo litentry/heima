@@ -10,8 +10,22 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 
 1. Install from NPM
 
-    ```
+    ```bash
     npm install @heima-network/parachain-api @heima-network/sidechain-api @heima-network/client-sdk
+    ```
+   
+   If you are using this sdk in react-native, you need to install the following packages:
+
+    ```bash
+    npm install react-native-quick-crypto
+    ```
+
+    Then using below clode to install it in your `index.js` file:
+
+    ```js
+    import { install } from 'react-native-quick-crypto';
+
+    install();
     ```
 
 2. Set the right environment
@@ -23,8 +37,33 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
     - `heima-local`: will point to a local enclave `ws://localhost:2100`
     - `heima-dev` (default): will point to `tee-dev`'s Enclave.
     - `heima-prod`: will point to `tee-prod`'s Enclave.
+    - `ws://<your-enclave>` or `wss://<your-enclave>`: will point to a custom Enclave.
 
     `NX_*` prefixed env variables (NX projects) will work too.
+
+    For non-nodejs environments (browser or React Native), you can use the Babel plugin to inject environment variables:
+
+    1) Install the Babel plugin:
+
+        ```bash
+        npm install -D babel-plugin-transform-inline-environment-variables
+        ```
+
+    2) Configure `babel.config.js`:
+
+        ```js
+        module.exports = {
+            plugins: [
+                [
+                'transform-inline-environment-variables',
+                {
+                    include: ['HEIMA_NETWORK'],
+                },
+                ],
+            ],
+        };
+        ```
+    Then after you set `HEIMA_NETWORK=some-value` in your env, all `process.env.HEIMA_NETWORK` will be statically replaced with `some-value` during build.
 
 ### Versions
 
@@ -44,13 +83,13 @@ These are the steps for publishing the package locally for development purposes.
 
 1. Install dependencies
 
-    ```
+    ```bash
     pnpm install
     ```
 
 2. Spin up an local NPM registry
 
-    ```
+    ```bash
     pnpm nx local-registry
     ```
 
@@ -62,7 +101,7 @@ These are the steps for publishing the package locally for development purposes.
 
 4. Run test and lint checks
 
-    ```
+    ```bash
     pnpm nx run client-sdk:lint
 
     pnpm nx run client-sdk:test
@@ -76,13 +115,13 @@ These are the steps for publishing the package locally for development purposes.
 
 2. Update the latest documentation
 
-    ```
+    ```bash
     pnpm nx run client-sdk:generate-doc
     ```
 
 3. Build the project
 
-    ```
+    ```bash
     pnpm nx run client-sdk:build
     ```
 

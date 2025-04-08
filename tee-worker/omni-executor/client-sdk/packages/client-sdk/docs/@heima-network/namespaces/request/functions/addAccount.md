@@ -6,9 +6,9 @@
 
 # Function: addAccount()
 
-> **addAccount**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **addAccount**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/add-account.request.ts:30](https://github.com/litentry/heima/blob/dev/requests/add-account.request.ts#L30)
+Defined in: [requests/add-account.request.ts:32](https://github.com/litentry/heima/blob/dev/requests/add-account.request.ts#L32)
 
 Adds an account to the Heima Parachain.
 
@@ -53,6 +53,12 @@ The permissions for the account.
 `ValidationData`
 
 The ownership proof. Use the `createValidationDataType` helper to create this structure.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

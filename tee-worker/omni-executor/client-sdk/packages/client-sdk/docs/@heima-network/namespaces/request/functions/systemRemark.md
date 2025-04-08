@@ -6,9 +6,9 @@
 
 # Function: systemRemark()
 
-> **systemRemark**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **systemRemark**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/system-remark.request.ts:28](https://github.com/litentry/heima/blob/dev/requests/intents/system-remark.request.ts#L28)
+Defined in: [requests/intents/system-remark.request.ts:30](https://github.com/litentry/heima/blob/dev/requests/intents/system-remark.request.ts#L30)
 
 Intent Request: Sends a system remark to the Heima Parachain.
 
@@ -35,6 +35,12 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 `string`
 
 The message to be sent.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 
