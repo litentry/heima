@@ -28,7 +28,7 @@ use parentchain_rpc_client::{
 	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
 	SubxtClientFactory, ToSubxtType, XtStatus,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
 use pumpx::{
 	signer_client::{ChainType, SignerClient},
@@ -46,8 +46,7 @@ pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
 pub type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
 
-pub type ParentchainTxSigner = TransactionSigner<
-	SubstrateKeyStore,
+pub type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
 	CustomConfig,
@@ -238,23 +237,7 @@ async fn handle_native_task<
 				.omni_account()
 				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
 
-			// Without increase nonce, all requests after request_auth_token will failure with below error.
-			// Could not submit tx: Rpc(ClientError(Call(ErrorObject { code: ServerError(1014), message: "Priority is too low: (2564 vs 2564)",
-			// data: Some(RawValue("The transaction has too low priority to replace another transaction already in the pool.")) })))
-			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
-			let nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
-				Ok(n) => n,
-				Err(e) => {
-					log::error!("Failed to get account nonce: {:?}", e);
-					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-					if response_sender.send(response.encode()).is_err() {
-						log::error!("Failed to send response");
-					}
-					return;
-				},
-			};
-			// Increment nonce for the next transaction
-			let tx = ctx.transaction_signer.sign(auth_token_requested_call, Some(nonce + 1)).await;
+			let tx = ctx.transaction_signer.sign(auth_token_requested_call).await;
 
 			if rpc_client.submit_tx(&tx).await.is_err() {
 				log::error!("Failed to submit tx");
@@ -262,6 +245,7 @@ async fn handle_native_task<
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
+				ctx.transaction_signer.update_nonce().await;
 				return;
 			}
 
@@ -319,30 +303,16 @@ async fn handle_native_task<
 					auth_type.clone().map(|t| t.to_subxt_type()),
 				);
 
-			let signer_account_id = ctx.transaction_signer.get_signer_account_id();
-			let mut nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
-				Ok(n) => n,
-				Err(e) => {
-					log::error!("Failed to get account nonce: {:?}", e);
-					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-					if response_sender.send(response.encode()).is_err() {
-						log::error!("Failed to send response");
-					}
-					return;
-				},
-			};
-
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await;
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			if rpc_client.submit_tx(&tx).await.is_err() {
 				log::error!("Failed to submit RequestIntent tx");
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
 					log::error!("Failed to send response");
 				}
+				ctx.transaction_signer.update_nonce().await;
 				return;
 			}
-			// Increment nonce for the next transaction
-			nonce += 1;
 
 			let mut execution_result = IntentCompletedDetail::Success;
 
@@ -355,7 +325,7 @@ async fn handle_native_task<
 							RuntimeCall::System(remark_call),
 							auth_type.map(|t| t.to_subxt_type()),
 						);
-					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
+					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
 				Intent::TransferNative(transfer) => {
 					let transfer_call = BalancesCall::transfer_allow_death {
@@ -368,7 +338,7 @@ async fn handle_native_task<
 							RuntimeCall::Balances(transfer_call),
 							auth_type.map(|t| t.to_subxt_type()),
 						);
-					ctx.transaction_signer.sign(dispatch_as_omni_account_call, Some(nonce)).await
+					ctx.transaction_signer.sign(dispatch_as_omni_account_call).await
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
 					if let Err(e) = ctx
@@ -385,7 +355,7 @@ async fn handle_native_task<
 							intent_id,
 							execution_result,
 						);
-					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
+					ctx.transaction_signer.sign(intent_executed_call).await
 				},
 				Intent::TransferSolana(_) => {
 					if let Err(e) = ctx
@@ -402,7 +372,7 @@ async fn handle_native_task<
 							intent_id,
 							execution_result,
 						);
-					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
+					ctx.transaction_signer.sign(intent_executed_call).await
 				},
 				Intent::Swap(..) => {
 					if let Err(e) = ctx
@@ -419,7 +389,7 @@ async fn handle_native_task<
 							0, // TODO
 							execution_result,
 						);
-					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
+					ctx.transaction_signer.sign(intent_executed_call).await
 				},
 			};
 
@@ -430,7 +400,7 @@ async fn handle_native_task<
 			let create_account_store_call = parentchain_api_interface::tx()
 				.omni_account()
 				.create_account_store(Decode::decode(&mut &sender_bytes[..]).unwrap());
-			let tx = ctx.transaction_signer.sign(create_account_store_call, None).await;
+			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
 			(response_sender, tx)
 		},
 		NativeTask::AddAccount(sender, identity, validation_data, public_account, permissions) => {
@@ -528,7 +498,7 @@ async fn handle_native_task<
 					RuntimeCall::OmniAccount(call),
 					auth_type.map(|t| t.to_subxt_type()),
 				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
 		NativeTask::RemoveAccounts(sender, identities) => {
@@ -544,7 +514,7 @@ async fn handle_native_task<
 					RuntimeCall::OmniAccount(call),
 					auth_type.map(|t| t.to_subxt_type()),
 				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
 		NativeTask::PublicizeAccount(sender, identity) => {
@@ -556,7 +526,7 @@ async fn handle_native_task<
 					RuntimeCall::OmniAccount(call),
 					auth_type.map(|t| t.to_subxt_type()),
 				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
 		NativeTask::SetPermissions(sender, identity, permissions) => {
@@ -570,7 +540,7 @@ async fn handle_native_task<
 					RuntimeCall::OmniAccount(call),
 					auth_type.map(|t| t.to_subxt_type()),
 				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call, None).await;
+			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
 		NativeTask::PumpxRequestJwt(sender, invite_code, maybe_google_code, language) => {
@@ -772,6 +742,7 @@ async fn handle_native_task<
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
+			ctx.transaction_signer.update_nonce().await;
 			return;
 		},
 	};

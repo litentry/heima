@@ -19,6 +19,7 @@ cross-chain-intent-executor = { workspace = true }
 ethereum-intent-executor = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 intent-core = { workspace = true }
 native-task-handler = { workspace = true }
