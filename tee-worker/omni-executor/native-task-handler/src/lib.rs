@@ -268,7 +268,7 @@ async fn handle_native_task<
 			}
 			return;
 		},
-		NativeTask::RequestIntent(sender, intent) => {
+		NativeTask::RequestIntent(sender, _intent_id, intent) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
