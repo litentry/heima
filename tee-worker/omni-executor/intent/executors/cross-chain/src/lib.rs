@@ -39,8 +39,7 @@ use parentchain_rpc_client::SubstrateRpcClientFactory;
 use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_rpc_client::ToSubxtType;
-use parentchain_signer::key_store::SubstrateKeyStore;
-use parentchain_signer::TransactionSigner;
+use parentchain_signer::TxSigner;
 
 use intent_asset_lock::account_wide::AccountWideAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
@@ -53,8 +52,7 @@ pub enum Chain {
 
 pub type RpcEndpointRegistry = HashMap<Chain, String>;
 
-pub type ParentchainTxSigner = TransactionSigner<
-	SubstrateKeyStore,
+pub type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
 	CustomConfig,
@@ -163,26 +161,11 @@ impl<
 					available_amount,
 				)?;
 
-				let signer_account_id = self.transaction_signer.get_signer_account_id();
-				let mut nonce = match rpc_client.get_account_nonce(&signer_account_id).await {
-					Ok(n) => n,
-					Err(e) => {
-						log::error!("Failed to get account nonce: {:?}", e);
-						return Err(());
-					},
-				};
-
-				// intent requested is submited before so nonce needs to be updated
-				nonce += 1;
-
 				let intent_accepted_event_emit_call = parentchain_api_interface::tx()
 					.omni_account()
 					.intent_accepted(account_id.to_subxt_type(), intent_id, intent.to_subxt_type());
 
-				let tx = self
-					.transaction_signer
-					.sign(intent_accepted_event_emit_call, Some(nonce))
-					.await;
+				let tx = self.transaction_signer.sign(intent_accepted_event_emit_call).await;
 
 				match rpc_client.submit_tx(&tx).await {
 					Ok(report) => report,
