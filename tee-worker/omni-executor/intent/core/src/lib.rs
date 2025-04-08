@@ -80,7 +80,7 @@ impl IntentIdStore for StorageDbIntentIdStore {
 			Ok(Some(value)) => IntentId::decode(&mut &value[..]).map_err(|e| {
 				log::error!("Could not deode intent id: {:?}", e);
 			}),
-			Ok(None) => Ok(1),
+			Ok(None) => Ok(0),
 			_ => {
 				log::error!("Error getting intent id from storage for account {:?}", account_id);
 				Err(())

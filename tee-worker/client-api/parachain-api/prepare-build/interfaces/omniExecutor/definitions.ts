@@ -15,7 +15,7 @@ export default {
         NativeTask: {
             _enum: {
                 RequestAuthToken: "(Identity)",
-                RequestIntent: "(Identity, Intent)",
+                RequestIntent: "(Identity, u32, Intent)",
                 CreateAccountStore: "(Identity)",
                 AddAccount: "(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>)",
                 RemoveAccounts: "(Identity, Vec<Identity>)",
