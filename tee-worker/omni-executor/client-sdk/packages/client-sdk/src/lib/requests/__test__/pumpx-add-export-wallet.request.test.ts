@@ -1,7 +1,8 @@
-import { requestEmailVerificationCode } from '@requests/request-email-verification-code.request';
-import { enclave, Enclave } from '@lib/enclave';
+import { enclave } from '@lib/enclave';
 import { PumpxRpcMethod } from '@lib/utils/rpc-method';
 import { JsonRpcRequest } from '@utils/types';
+
+// This test is just an example. It requires receiving email verification codes, which cannot be done by running this unit test.
 describe.skip('add-export-wallet', () => {
   // step 1
   it('request email verification code', async () => {
