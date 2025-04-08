@@ -5,6 +5,7 @@ import { HexString } from '@polkadot/util/types';
 import type { Intent, Identity } from '@heima-network/parachain-api';
 
 import { OmniAuthData } from '@type-creators/omni-auth';
+import { enclave, Enclave } from '@lib/enclave';
 
 import { intent } from './intent.request';
 
@@ -15,6 +16,7 @@ import { intent } from './intent.request';
  * @param {Object} data - The data object containing the following properties:
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
  * @param {string} data.message - The message to be sent.
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign
  * (if applicable) and a send function.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
@@ -31,6 +33,7 @@ export async function systemRemark(
     member: Identity;
     message: string;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<{
   getPayloadToSign?: () => Promise<string>;
   send: (args: { authData: OmniAuthData }) => Promise<{
@@ -44,5 +47,5 @@ export async function systemRemark(
     intent: api.createType<Intent>('Intent', {
       SystemRemark: stringToHex(data.message),
     }),
-  });
+  }, enclaveInstance);
 }
