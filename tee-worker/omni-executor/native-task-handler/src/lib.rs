@@ -19,7 +19,7 @@ use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentExecutionResult},
+	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
 	paseo_runtime::RuntimeCall,
 };
 use parentchain_rpc_client::{
@@ -29,7 +29,10 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
 use parity_scale_codec::{Decode, Encode};
-use pumpx::{signer_client::SignerClient, PumpxApi};
+use pumpx::{
+	signer_client::{ChainType, SignerClient},
+	PumpxApi,
+};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 
@@ -308,7 +311,7 @@ async fn handle_native_task<
 			// Increment nonce for the next transaction
 			nonce += 1;
 
-			let mut execution_result = IntentExecutionResult::Success;
+			let mut execution_result = IntentCompletedDetail::Success;
 
 			let tx = match intent {
 				Intent::SystemRemark(remark) => {
@@ -341,12 +344,12 @@ async fn handle_native_task<
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
@@ -358,29 +361,29 @@ async fn handle_native_task<
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
 				},
-				Intent::CrossChainSwap(_) => {
+				Intent::Swap(..) => {
 					if let Err(e) = ctx
 						.cross_chain_intent_executor
 						.execute(omni_account.as_ref(), intent.clone())
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentExecutionResult::Failure;
+						execution_result = IntentCompletedDetail::Failure;
 					}
 					let intent_executed_call =
-						parentchain_api_interface::tx().omni_account().intent_executed(
+						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							intent.to_subxt_type(),
+							0, // TODO
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call, Some(nonce)).await
@@ -643,17 +646,63 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxExportWallet(
 			sender,
-			_maybe_google_code,
-			pumpx_wallet_chain,
+			maybe_google_code,
+			pumpx_chain_id,
 			pumpx_wallet_index,
 			expected_wallet_address,
 		) => {
+			if let Some(ref google_code) = maybe_google_code {
+				let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+				let Some(access_token) =
+					storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+				else {
+					log::error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
+					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				};
+
+				let verify_result = ctx
+					.pumpx_api
+					.verify_google_code(&access_token, google_code.to_string(), None)
+					.await;
+				let verify_success = match verify_result {
+					Ok(response) => response.data.result,
+					Err(_) => {
+						log::error!("Google code verification request failed");
+						false
+					},
+				};
+				if !verify_success {
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::GoogleCodeVerificationFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				}
+			}
+
+			let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
+				log::error!("Failed to map pumpx chain_id {}", pumpx_chain_id);
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
 			let Ok(mut wallet) = ctx
 				.pumpx_signer_client
 				.export_wallet(
-					pumpx_wallet_chain.into(),
+					chain,
 					pumpx_wallet_index,
 					sender.to_omni_account().into(),
+					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
+					//       we don't have to do double encryption/decryption
 					ctx.aes256_key.to_vec(),
 					expected_wallet_address,
 				)
@@ -674,7 +723,8 @@ async fn handle_native_task<
 				}
 				return;
 			};
-			let response = NativeTaskResponse::Ok(NativeTaskOk::Binary(decrypted_wallet));
+			let response =
+				NativeTaskResponse::Ok(NativeTaskOk::PumpxExportWallet(decrypted_wallet));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}

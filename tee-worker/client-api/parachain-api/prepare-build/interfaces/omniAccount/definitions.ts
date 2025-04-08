@@ -6,12 +6,12 @@ export default {
     types: {
         Intent: {
             _enum: {
-                CrossChainSwap: "SwapOrder",
                 TransferEthereum: "IntentTransferEthereum",
                 CallEthereum: "IntentCallEthereum",
                 SystemRemark: "Bytes",
                 TransferNative: "IntentTransferNative",
                 TransferSolana: "IntentTransferSolana",
+                // TODO: add `Swap`
             },
         },
         SwapOrder: {
