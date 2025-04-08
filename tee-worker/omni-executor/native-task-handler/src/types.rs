@@ -34,6 +34,7 @@ pub enum NativeTaskError {
 	UnsupportedIdentityType,
 	PumpxApiError(PumpxApiError),
 	PumpxSignerError(PumpxSignerError),
+	IntentNonceMismatch,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

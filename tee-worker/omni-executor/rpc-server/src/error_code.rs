@@ -25,6 +25,8 @@ const PUMPX_API_SEND_TRANSFER_TX_FAILED_CODE: i32 = -32036;
 
 const PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE: i32 = -32050;
 
+const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32060;
+
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
 		NativeTaskError::UnauthorizedSender => UNAUTHORIZED_SENDER_CODE,
@@ -54,5 +56,6 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			// This should not happen, we return the generic interal error code already from the api
 			-32099
 		},
+		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
 	}
 }

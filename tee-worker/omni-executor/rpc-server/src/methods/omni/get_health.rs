@@ -1,3 +1,19 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::server::RpcContext;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 
@@ -11,6 +27,7 @@ pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use executor_storage::StorageDB;
+	use intent_core::InMemoryIntentIdStore;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -30,6 +47,7 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
+		let intent_id_store = InMemoryIntentIdStore::default();
 
 		start_server(
 			port,
@@ -38,6 +56,7 @@ mod test {
 			Arc::new(db),
 			[0u8; 32],
 			jwt_private_key.as_bytes().to_vec(),
+			Arc::new(Box::new(intent_id_store)),
 		)
 		.await
 		.unwrap();
