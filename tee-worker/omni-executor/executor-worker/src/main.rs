@@ -135,7 +135,7 @@ async fn main() -> Result<(), ()> {
 
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
-				transaction_signer.clone(),
+				tx_signer.clone(),
 				rpc_endpoint_registry,
 				pumpx_signer_client.clone(),
 			)?;
