@@ -25,6 +25,7 @@ pub type SendTransferTxResponse = ApiResponse<TransferTxData>;
 pub struct TransferUnsignedTxData {
 	pub tx_data: Option<Vec<String>>,
 	pub transfer_id: u64,
+	pub chain_id: u64,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]

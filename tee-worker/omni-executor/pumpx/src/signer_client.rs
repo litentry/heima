@@ -84,7 +84,7 @@ struct AesOutput {
 	pub nonce: Aes256KeyNonce,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ChainType {
 	Evm,
 	Solana,
