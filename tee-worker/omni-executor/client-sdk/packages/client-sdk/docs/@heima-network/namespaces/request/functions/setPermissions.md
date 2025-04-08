@@ -6,9 +6,9 @@
 
 # Function: setPermissions()
 
-> **setPermissions**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **setPermissions**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/set-permissions.request.ts:28](https://github.com/litentry/heima/blob/dev/requests/set-permissions.request.ts#L28)
+Defined in: [requests/set-permissions.request.ts:30](https://github.com/litentry/heima/blob/dev/requests/set-permissions.request.ts#L30)
 
 Set the permissions for a specified account within the Heima Parachain.
 
@@ -41,6 +41,12 @@ The account to be updated. Use the `createCorePrimitivesIdentityType` helper to 
 `OmniAccountPermission`[]
 
 The permissions to be assigned to the account.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 
