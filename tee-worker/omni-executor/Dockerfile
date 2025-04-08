@@ -70,25 +70,25 @@ LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
 ENV BUILD_DIR=$HOME/tee-worker/omni-executor
-ENV EXECUT_DIR=/usr/local/bin
-WORKDIR $EXECUT_DIR
+ENV BIN_DIR=/usr/local/bin
+WORKDIR $BIN_DIR
 
 RUN apt update && apt install -y ca-certificates && apt clean
 
-COPY --from=sgx-builder $BUILD_DIR/omni-executor-worker $EXECUT_DIR/omni-executor-worker
-COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $EXECUT_DIR/omni-executor.manifest
-COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $EXECUT_DIR/omni-executor.manifest.sgx
-COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $EXECUT_DIR/omni-executor.sig
+COPY --from=sgx-builder $BUILD_DIR/omni-executor-worker $BIN_DIR/omni-executor-worker
+COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
+COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx
+COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
 
 RUN groupadd -g 1000 appgroup && \
     useradd -r -u 1000 -g appgroup appuser && \
     mkdir -p /dev/attestation && \
     chown -R appuser:appgroup /dev/attestation
 
-RUN chmod +x $EXECUT_DIR/omni-executor-worker
+RUN chmod +x $BIN_DIR/omni-executor-worker
 RUN chown appuser:appgroup *
-RUN ldd $EXECUT_DIR/omni-executor-worker && $EXECUT_DIR/omni-executor-worker --version
-RUN ls -al $EXECUT_DIR
+RUN ldd $BIN_DIR/omni-executor-worker && $BIN_DIR/omni-executor-worker --version
+RUN ls -al $BIN_DIR
 
 USER appuser
-CMD ["$EXECUT_DIR/omni-executor-worker"]
+CMD ["$BIN_DIR/omni-executor-worker"]
