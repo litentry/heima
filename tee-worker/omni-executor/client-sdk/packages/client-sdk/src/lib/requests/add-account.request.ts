@@ -7,6 +7,7 @@ import { OmniAuthData } from '@type-creators/omni-auth';
 import { createNativeTaskType } from '@type-creators/native-task';
 
 import { aesTask } from './aes-task.request';
+import { enclave, Enclave } from '@lib/enclave';
 
 /**
  * Adds an account to the Heima Parachain.
@@ -18,6 +19,7 @@ import { aesTask } from './aes-task.request';
  * @param {ValidationData} data.validation - The ownership proof. Use the `createValidationDataType` helper to create this structure.
  * @param {boolean} data.isPublic - Whether the account is public.
  * @param {Array<OmniAccountPermission>} data.permissions - The permissions for the account.
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.
@@ -36,6 +38,7 @@ export async function addAccount(
     isPublic: boolean;
     permissions?: Array<OmniAccountPermission>;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<{
   getPayloadToSign?: () => Promise<string>;
   send: (args: { authData: OmniAuthData }) => Promise<{
@@ -57,5 +60,5 @@ export async function addAccount(
     },
   });
 
-  return aesTask(api, { member, task });
+  return aesTask(api, { member, task }, enclaveInstance);
 }

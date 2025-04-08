@@ -6,9 +6,9 @@
 
 # Function: transferNative()
 
-> **transferNative**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **transferNative**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/transfer-native.request.ts:28](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-native.request.ts#L28)
+Defined in: [requests/intents/transfer-native.request.ts:30](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-native.request.ts#L30)
 
 Intent Request: Transfers native tokens to another account on the  Parachain.
 
@@ -41,6 +41,12 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 `string`
 
 The account destination in hex or ss58 formatted address.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

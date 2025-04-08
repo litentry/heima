@@ -6,9 +6,9 @@
 
 # Function: transferSolana()
 
-> **transferSolana**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **transferSolana**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/transfer-solana.request.ts:29](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-solana.request.ts#L29)
+Defined in: [requests/intents/transfer-solana.request.ts:31](https://github.com/litentry/heima/blob/dev/requests/intents/transfer-solana.request.ts#L31)
 
 Intent Request: Transfers SOL to another account on Solana.
 
@@ -41,6 +41,12 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 `string`
 
 The Solana address destination.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

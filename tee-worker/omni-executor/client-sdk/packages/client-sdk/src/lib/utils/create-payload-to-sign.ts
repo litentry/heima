@@ -5,12 +5,12 @@ import type { Index } from '@polkadot/types/interfaces';
 import type { Identity, NativeTask } from '@heima-network/parachain-api';
 
 /**
- * Constructs a message that users need to sign to authorize Enclave's requests.
+ * Constructs a message that users need to sign to authorize Enclave's tasks.
  * The message is created by concatenating the operation, nonce and mrEnclave,
  * then hashing it with blake2 and adding a prefix.
  *
  * @param args.who - The identity of the signer
- * @param args.operation - The operation to be authorized
+ * @param args.task - The task to be authorized
  * @param args.nonce - Transaction nonce to prevent replay attacks
  * @param args.mrEnclave - The mrEnclave value
  * @returns A formatted message string ready for signing
