@@ -268,6 +268,7 @@ impl PumpxApi {
 		})
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	pub async fn create_transfer_unsigned_tx(
 		&self,
 		access_token: &str,
