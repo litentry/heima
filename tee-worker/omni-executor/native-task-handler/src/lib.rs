@@ -294,7 +294,11 @@ async fn handle_native_task<
 			} else {
 				let response = NativeTaskResponse::Err(NativeTaskError::IntentNonceMismatch);
 				if response_sender.send(response.encode()).is_err() {
-					log::error!("Intent id different than expected");
+					log::error!(
+						"Intent id different than expected, expected: {:?}, got: {:?}",
+						stored_intent_id + 1,
+						intent_id
+					);
 				}
 				return;
 			}

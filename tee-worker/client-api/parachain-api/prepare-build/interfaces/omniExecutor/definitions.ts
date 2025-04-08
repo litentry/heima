@@ -120,6 +120,7 @@ export default {
                 ValidationDataVerificationFailed: "Null",
                 UnsupportedIdentityType: "Null",
                 PumpxApiError: "Null",
+                IntentNonceMismatch: "Null",
             },
         },
         HeimaMultiSignature: {
