@@ -1,14 +1,7 @@
 use crate::server::RpcContext;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
-pub fn register_get_health<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
-	module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory>>,
-) {
+pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_method("omni_getHealth", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))
 		.expect("Failed to register getHealth method");
@@ -22,7 +15,6 @@ mod test {
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTaskChannelType;
-	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::sync::Arc;
 	use tokio::sync::mpsc;
@@ -32,7 +24,6 @@ mod test {
 		let port = 2000;
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
-		let client_factory = SubxtClientFactory::<CustomConfig>::new("ws://localhost:9944");
 		let db = StorageDB::open_default("test_get_health_storage_db").unwrap();
 
 		let mut rng = rand::thread_rng();
@@ -42,7 +33,6 @@ mod test {
 
 		start_server(
 			port,
-			Arc::new(client_factory),
 			shielding_key.clone(),
 			Arc::new(sender),
 			Arc::new(db),

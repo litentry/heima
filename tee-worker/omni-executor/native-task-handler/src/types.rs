@@ -19,7 +19,7 @@ pub enum NativeTaskOk {
 
 		user_connect_response: UserConnectResponse,
 	},
-	Binary(Vec<u8>),
+	PumpxExportWallet(Vec<u8>),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -30,5 +30,12 @@ pub enum NativeTaskError {
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,
-	PumpxApiError,
+	PumpxApiError(PumpxApiError),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxApiError {
+	GoogleCodeVerificationFailed,
+	UserConnectionFailed,
+	UnknownError,
 }

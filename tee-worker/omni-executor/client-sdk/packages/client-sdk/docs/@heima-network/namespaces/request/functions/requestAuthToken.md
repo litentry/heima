@@ -6,9 +6,9 @@
 
 # Function: requestAuthToken()
 
-> **requestAuthToken**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `token`: `string`; \}\>; \}\>
+> **requestAuthToken**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `token`: `string`; \}\>; \}\>
 
-Defined in: [requests/request-auth-token.request.ts:32](https://github.com/litentry/heima/blob/dev/requests/request-auth-token.request.ts#L32)
+Defined in: [requests/request-auth-token.request.ts:34](https://github.com/litentry/heima/blob/dev/requests/request-auth-token.request.ts#L34)
 
 Requests an auth token from the Enclave.
 
@@ -29,6 +29,12 @@ The data object containing the following properties:
 `Identity`
 
 The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

@@ -6,9 +6,9 @@
 
 # Function: requestPumpxJwt()
 
-> **requestPumpxJwt**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `jwt`: `PumpxJwt`; \}\>; \}\>
+> **requestPumpxJwt**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `jwt`: `PumpxJwt`; \}\>; \}\>
 
-Defined in: [requests/pumpx-request-jwt.request.ts:33](https://github.com/litentry/heima/blob/dev/requests/pumpx-request-jwt.request.ts#L33)
+Defined in: [requests/pumpx-request-jwt.request.ts:35](https://github.com/litentry/heima/blob/dev/requests/pumpx-request-jwt.request.ts#L35)
 
 Requests a pumpx JWT from the Enclave.
 
@@ -47,6 +47,12 @@ Optional language preference for PumpX.
 `Identity`
 
 The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

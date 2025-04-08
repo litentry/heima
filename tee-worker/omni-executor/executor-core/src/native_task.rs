@@ -23,16 +23,9 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 	pub auth: Option<OmniAuth>,
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum PumpxWalletChain {
-	Evm,
-	Solana,
-	Tron,
-}
-
-type MaybeGoogleCode = Option<String>;
-type PumxWalletIndex = u32;
-type ExpectedWalletAddress = String;
+pub type MaybeGoogleCode = Option<String>;
+pub type PumxWalletIndex = u32;
+pub type PumpxChainId = u32;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
@@ -46,15 +39,9 @@ pub enum NativeTask {
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
-	PumpxRequestJwt(Identity, Option<String>, Option<String>, Option<String>),
+	PumpxRequestJwt(Identity, Option<String>, MaybeGoogleCode, Option<String>),
 	#[codec(index = 21)]
-	PumpxExportWallet(
-		Identity,
-		MaybeGoogleCode,
-		PumpxWalletChain,
-		PumxWalletIndex,
-		ExpectedWalletAddress,
-	),
+	PumpxExportWallet(Identity, MaybeGoogleCode, PumpxChainId, PumxWalletIndex, String),
 }
 
 impl NativeTaskTrait for NativeTask {

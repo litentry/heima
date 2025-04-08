@@ -10,7 +10,9 @@ pub type MarketOrderTxResponse = ApiResponse<TxData>;
 
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfo>;
 
-pub type LimitOrderResponse = ApiResponse<LimitOrder>;
+pub type OrderInfoResponse = ApiResponse<OrderInfo>;
+
+pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
@@ -28,19 +30,19 @@ pub struct ConnectUser {
 	pub google_code: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectedUser {
 	pub user_id: String,
 	pub google_auth_check: bool,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiResponse<T: Encode> {
 	code: u32,
 	message: String,
-	data: T,
+	pub data: T,
 }
 
 impl<T: Codec> ApiResponse<T> {
@@ -140,6 +142,42 @@ pub struct NewLimitOrder {
 
 #[derive(Deserialize, Encode)]
 #[serde(rename_all = "camelCase")]
-pub struct LimitOrder {
+pub struct OrderInfo {
 	pub order_id: String,
+}
+
+#[derive(Serialize)]
+pub struct GoogleCode {
+	pub google_code: String,
+}
+
+#[derive(Deserialize, Encode)]
+pub struct DataResult {
+	pub result: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCrossOrderData {
+	pub request_id: u32,
+	pub chain_id: ChainId,
+	pub info: CrossOrderInfo,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CrossOrderInfo {
+	pub chain_id: ChainId,
+	pub wallet_index: u32,
+	pub address: String,
+	pub token_ca: String,
+	pub amount: String,
+	pub usd: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CrossOrderFailData {
+	pub request_id: u32,
+	pub fail_reason: String,
 }

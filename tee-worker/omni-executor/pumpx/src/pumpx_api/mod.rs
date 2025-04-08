@@ -2,9 +2,9 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	ConnectUser, LimitOrderResponse, MarketOrderTx, MarketOrderTxResponse,
-	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, UserConnectResponse,
-	UserTradeInfoResponse,
+	ConnectUser, CreateCrossOrderData, CrossOrderFailData, GoogleCode, MarketOrderTx,
+	MarketOrderTxResponse, MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder,
+	OrderInfoResponse, UserConnectResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -36,7 +36,7 @@ impl PumpxApi {
 		email: String,
 		invite_code: Option<String>,
 		google_code: Option<String>,
-		lang: Option<String>,
+		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
 		let connect_user = ConnectUser { email: email.clone(), invite_code, google_code };
@@ -44,7 +44,7 @@ impl PumpxApi {
 		let response = self
 			.http_client
 			.post(&endpoint)
-			.header("X-Language", lang.unwrap_or("en".to_string()))
+			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&connect_user)
 			.send()
@@ -62,6 +62,36 @@ impl PumpxApi {
 
 		response.json().await.map_err(|e| {
 			log::error!("Failed to parse user connect response: {:?}", e);
+			e
+		})
+	}
+
+	pub async fn verify_google_code(
+		&self,
+		access_token: &str,
+		google_code: String,
+		language: Option<String>,
+	) -> Result<VerifyGoogleCodeResponse, Error> {
+		let endpoint = format!("{}/v3/account/verify_google_code", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.json(&GoogleCode { google_code })
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send Google code verification request: {:?}", e);
+				e
+			})?;
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Google code verification failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse Google code verification response: {:?}", e);
 			e
 		})
 	}
@@ -144,7 +174,7 @@ impl PumpxApi {
 		&self,
 		access_token: &str,
 		new_limit_order: NewLimitOrder,
-	) -> Result<LimitOrderResponse, Error> {
+	) -> Result<OrderInfoResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_limit_order", self.base_url);
 		self.http_client
 			.post(&endpoint)
@@ -154,5 +184,57 @@ impl PumpxApi {
 			.await?
 			.json()
 			.await
+	}
+
+	pub async fn create_cross_order(
+		&self,
+		access_token: &str,
+		data: CreateCrossOrderData,
+	) -> Result<OrderInfoResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_cross_order", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.bearer_auth(access_token)
+			.json(&data)
+			.send()
+			.await?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Cross order creation failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse cross order creation response: {:?}", e);
+			e
+		})
+	}
+
+	pub async fn cross_order_failed(
+		&self,
+		access_token: &str,
+		data: CrossOrderFailData,
+	) -> Result<OrderInfoResponse, Error> {
+		let endpoint = format!("{}/v3/trade/cross_fail", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.bearer_auth(access_token)
+			.json(&data)
+			.send()
+			.await?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Cross order failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse cross order failed response: {:?}", e);
+			e
+		})
 	}
 }
