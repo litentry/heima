@@ -7,6 +7,7 @@ import { OmniAuthData } from '@type-creators/omni-auth';
 import { createNativeTaskType } from '@type-creators/native-task';
 
 import { aesTask } from './aes-task.request';
+import { enclave, Enclave } from '@lib/enclave';
 
 /**
  * Publicizes a member account in the AccountStore on the Heima Parachain.
@@ -15,6 +16,7 @@ import { aesTask } from './aes-task.request';
  * @param {Object} data - The data object containing the following properties:
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
  * @param {Identity} data.memberToPublicize - The member account for publicizing. Use the `createIdentityType` helper to create this structure.
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns {Promise<Object>} A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.
@@ -30,6 +32,7 @@ export async function publicizeAccount(
     member: Identity;
     memberToPublicize: Identity;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<{
   getPayloadToSign?: () => Promise<string>;
   send: (args: { authData: OmniAuthData }) => Promise<{
@@ -48,5 +51,5 @@ export async function publicizeAccount(
     },
   });
 
-  return aesTask(api, { member, task });
+  return aesTask(api, { member, task }, enclaveInstance);
 }

@@ -6,9 +6,9 @@
 
 # Function: removeAccounts()
 
-> **removeAccounts**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **removeAccounts**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/remove-accounts.request.ts:27](https://github.com/litentry/heima/blob/dev/requests/remove-accounts.request.ts#L27)
+Defined in: [requests/remove-accounts.request.ts:29](https://github.com/litentry/heima/blob/dev/requests/remove-accounts.request.ts#L29)
 
 Removes accounts from the Heima Parachain.
 
@@ -35,6 +35,12 @@ The member account of the OmniAccount. Use the `createIdentityType` helper to cr
 `Identity`[]
 
 The member accounts for removing from the OmniAccount. Use the `createCorePrimitivesIdentityType` helper to create this structure.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

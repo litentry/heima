@@ -31,7 +31,7 @@ impl CrossChainIntentExecutor {
 impl IntentExecutor for CrossChainIntentExecutor {
 	async fn execute(&self, _account_id: &AccountId, intent: Intent) -> Result<(), ()> {
 		match intent {
-			Intent::CrossChainSwap(_swap_order) => {
+			Intent::Swap(_swap_order, _ccsp, _scsp) => {
 				// TODO:
 				// 1. Check if user has enough balance on the source chain
 				// 2. Lock the balance on the source chain

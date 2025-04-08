@@ -5,6 +5,7 @@ import type { Identity, OmniAccountPermission } from '@heima-network/parachain-a
 
 import { OmniAuthData } from '@type-creators/omni-auth';
 import { createNativeTaskType } from '@type-creators/native-task';
+import { enclave, Enclave } from '@lib/enclave';
 
 import { aesTask } from './aes-task.request';
 
@@ -16,6 +17,7 @@ import { aesTask } from './aes-task.request';
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
  * @param {Identity} data.memberToSetPermissions - The account to be updated. Use the `createCorePrimitivesIdentityType` helper to create this structure.
  * @param {Array<OmniAccountPermission>} data.permissions - The permissions to be assigned to the account.
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign (if applicable) and a function to send the request.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.
@@ -32,6 +34,7 @@ export async function setPermissions(
     memberToSetPermissions: Identity;
     permissions: Array<OmniAccountPermission>;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<{
   getPayloadToSign?: () => Promise<string>;
   send: (args: { authData: OmniAuthData }) => Promise<{
@@ -51,5 +54,5 @@ export async function setPermissions(
     },
   });
 
-  return aesTask(api, { member, task });
+  return aesTask(api, { member, task }, enclaveInstance);
 }

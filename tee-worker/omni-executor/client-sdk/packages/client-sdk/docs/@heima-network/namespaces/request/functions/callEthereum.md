@@ -6,9 +6,9 @@
 
 # Function: callEthereum()
 
-> **callEthereum**(`api`, `data`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
+> **callEthereum**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `blockHash`: `` `0x${string}` ``; `extrinsicHash`: `` `0x${string}` ``; `status`: `` `0x${string}` ``; \}\>; \}\>
 
-Defined in: [requests/intents/call-ethereum.request.ts:28](https://github.com/litentry/heima/blob/dev/requests/intents/call-ethereum.request.ts#L28)
+Defined in: [requests/intents/call-ethereum.request.ts:30](https://github.com/litentry/heima/blob/dev/requests/intents/call-ethereum.request.ts#L30)
 
 Intent Request: Call an Ethereum contract.
 
@@ -41,6 +41,12 @@ The contract input data.
 `Identity`
 
 The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
+
+### enclaveInstance
+
+[`Enclave`](../../../../classes/Enclave.md) = `enclave`
+
+The enclave instance use to interact with Enclave.
 
 ## Returns
 

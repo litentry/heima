@@ -12,7 +12,7 @@ import { createPayloadToSign } from '@utils/create-payload-to-sign';
 import { isWeb3 } from '@utils/identity';
 import type { JsonRpcRequest } from '@utils/types';
 
-import { enclave } from '@lib/enclave';
+import { enclave, Enclave } from '@lib/enclave';
 import { decrypt } from '@lib/utils';
 
 /**
@@ -22,6 +22,7 @@ import { decrypt } from '@lib/utils';
  * @param {Object} data - The data object containing the following properties:
  * @param {Identity} data.member - The member account of the OmniAccount. Use the `createIdentityType` helper to create this structure.
  * @param {NativeTask} data.task - The specific task to be sent to the server.
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns {Promise<Object>} - A promise that resolves to an object containing the payload to sign (if applicable) and a send function.
  * @returns {Function} getPayloadToSign - A function to get the payload that needs to be signed (only for Web3 identities)
  * @returns {Function} send - A function to send the request to the Enclave.
@@ -37,6 +38,7 @@ export async function aesTask(
     member: Identity;
     task: NativeTask;
   },
+  enclaveInstance: Enclave = enclave,
 ): Promise<{
   getPayloadToSign?: () => Promise<string>;
   send: (args: { authData: OmniAuthData }) => Promise<{
@@ -61,7 +63,7 @@ export async function aesTask(
       task,
       nonce,
       authData: args.authData,
-    });
+    }, enclaveInstance);
 
     // send the request to the Enclave
     const request: JsonRpcRequest = {
@@ -70,7 +72,7 @@ export async function aesTask(
       params: [rawTask.toHex()],
     };
 
-    const data = await enclave.send(request);
+    const data = await enclaveInstance.send(request);
     const aesOutput = api.createType<AesOutput>('AesOutput', data)
     const { cleartext } = await decrypt({ ciphertext: aesOutput.ciphertext, nonce: aesOutput.nonce }, encryptionKey);
 
@@ -96,7 +98,7 @@ export async function aesTask(
 
   if (isWeb3(member)) {
     const getPayloadToSign = async () => {
-      const mrEnclave = await enclave.getMrEnclave(api);
+      const mrEnclave = await enclaveInstance.getMrEnclave(api);
       return createPayloadToSign({
         who: member,
         task,
