@@ -17,13 +17,15 @@
 use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
-use cross_chain_intent_executor::CrossChainIntentExecutor;
+use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use intent_core::IntentIdStore;
+use intent_core::StorageDbIntentIdStore;
 use log::{error, info};
 use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
@@ -77,6 +79,7 @@ async fn main() -> Result<(), ()> {
 
 			let pumpx_signer_key =
 				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
+
 			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
 			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
 
@@ -111,18 +114,37 @@ async fn main() -> Result<(), ()> {
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
 			let pumpx_signer_client = Arc::new(pumpx::signer_client::SignerClient::new(
-				//todo get from cli after merge
-				"".to_string(),
+				args.pumpx_signer_url.clone(),
 				pumpx_signer_pair,
 			));
 
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
 			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
-			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
+
+			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
+			rpc_endpoint_registry.insert(Chain::Solana, args.solana_url.clone());
+
+			if let Some(ref bsc_url) = args.bsc_url {
+				rpc_endpoint_registry.insert(Chain::Ethereum(56), bsc_url.to_owned());
+			}
+
+			if let Some(ref bsc_testnet_url) = args.bsc_testnet_url {
+				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
+			}
+
+			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
+				parentchain_rpc_client_factory.clone(),
+				tx_signer.clone(),
+				rpc_endpoint_registry,
+				pumpx_signer_client.clone(),
+			)?;
 
 			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
 			let pumpx_api = PumpxApi::new(pumpx_api_base_url);
+
+			let intent_id_store: Arc<Box<dyn IntentIdStore>> =
+				Arc::new(Box::new(StorageDbIntentIdStore::new(storage_db.clone())));
 
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
@@ -135,6 +157,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(cross_chain_intent_executor),
 				Arc::new(pumpx_api),
 				pumpx_signer_client.clone(),
+				intent_id_store.clone(),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
@@ -171,6 +194,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				mrenclave,
 				jwt_rsa_private_key,
+				intent_id_store,
 			)
 			.await
 			.map_err(|e| {

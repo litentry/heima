@@ -16,6 +16,7 @@ use executor_primitives::{
 use executor_storage::{MemberOmniAccountStorage, PumpxJwtStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
+use intent_core::IntentIdStore;
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
@@ -71,6 +72,7 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<PumpxApi>,
 	pumpx_signer_client: Arc<SignerClient>,
+	intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -104,6 +106,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<PumpxApi>,
 		pumpx_signer_client: Arc<SignerClient>,
+		intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -116,6 +119,7 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
+			intent_id_store,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -252,7 +256,36 @@ async fn handle_native_task<
 			}
 			return;
 		},
-		NativeTask::RequestIntent(sender, intent) => {
+		NativeTask::RequestIntent(sender, intent_id, intent) => {
+			let Ok(stored_intent_id) = ctx.intent_id_store.get(&sender.to_omni_account()).await
+			else {
+				log::error!("Failed to read intent from store");
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			if intent_id == stored_intent_id + 1 {
+				if ctx.intent_id_store.update(sender.to_omni_account(), intent_id).await.is_err() {
+					log::error!("Failed to save intent id");
+					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				}
+			} else {
+				let response = NativeTaskResponse::Err(NativeTaskError::IntentNonceMismatch);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!(
+						"Intent id different than expected, expected: {:?}, got: {:?}",
+						stored_intent_id + 1,
+						intent_id
+					);
+				}
+				return;
+			}
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
 				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
@@ -310,7 +343,7 @@ async fn handle_native_task<
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
 					if let Err(e) = ctx
 						.ethereum_intent_executor
-						.execute(omni_account.as_ref(), intent.clone())
+						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
@@ -319,7 +352,7 @@ async fn handle_native_task<
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							0, // TODO
+							intent_id,
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call).await
@@ -327,7 +360,7 @@ async fn handle_native_task<
 				Intent::TransferSolana(_) => {
 					if let Err(e) = ctx
 						.solana_intent_executor
-						.execute(omni_account.as_ref(), intent.clone())
+						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
@@ -336,7 +369,7 @@ async fn handle_native_task<
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							0, // TODO
+							intent_id,
 							execution_result,
 						);
 					ctx.transaction_signer.sign(intent_executed_call).await
@@ -344,7 +377,7 @@ async fn handle_native_task<
 				Intent::Swap(..) => {
 					if let Err(e) = ctx
 						.cross_chain_intent_executor
-						.execute(omni_account.as_ref(), intent.clone())
+						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);

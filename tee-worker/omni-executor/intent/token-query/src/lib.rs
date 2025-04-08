@@ -31,7 +31,10 @@ use executor_primitives::{EthereumToken, SolanaToken};
 
 sol!("artifacts/IERC20.sol");
 
-pub async fn query_solana(rpc_url: &str, key: &Pubkey, token: SolanaToken) -> Result<u64, ()> {
+pub type SolanaPubkey = solana_sdk::pubkey::Pubkey;
+pub type EthereumAddress = alloy::primitives::Address;
+
+pub async fn query_solana(rpc_url: &str, key: &Pubkey, token: &SolanaToken) -> Result<u64, ()> {
 	let client = RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::finalized());
 
 	match token {
@@ -80,7 +83,7 @@ pub async fn query_solana(rpc_url: &str, key: &Pubkey, token: SolanaToken) -> Re
 pub async fn query_ethereum(
 	rpc_url: &str,
 	account: Address,
-	token: EthereumToken,
+	token: &EthereumToken,
 ) -> Result<U256, ()> {
 	let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
 
@@ -113,7 +116,7 @@ pub mod tests {
 		let balance = query_ethereum(
 			rpc_url,
 			account,
-			crate::EthereumToken::ERC20(
+			&crate::EthereumToken::ERC20(
 				hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707").try_into().unwrap(),
 			),
 		)
@@ -138,7 +141,7 @@ pub mod tests {
 		let key = Pubkey::from_str("J9DZj7dzbBYEVfaaBwQ7kBzGkKVTZssBPiatKyfxE3ZL").unwrap();
 		let mint_key = Pubkey::from_str("HHSfQJEhWkXQZbxuNzmtCwZGNYwAX2VNezdXuVYJbrgE").unwrap();
 		let balance =
-			query_solana(rpc_url, &key, crate::SolanaToken::SPL(mint_key.to_bytes().into()))
+			query_solana(rpc_url, &key, &crate::SolanaToken::SPL(mint_key.to_bytes().into()))
 				.await
 				.unwrap();
 
