@@ -20,6 +20,7 @@ pub enum NativeTaskOk {
 		user_connect_response: UserConnectResponse,
 	},
 	PumpxExportWallet(Vec<u8>),
+	PumpxSignLimitOrder(Vec<Vec<u8>>),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
