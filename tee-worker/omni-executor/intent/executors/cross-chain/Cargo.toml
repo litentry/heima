@@ -6,11 +6,14 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
+hex = { workspace = true }
 log = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
+executor-storage = { workspace = true }
+heima-authentication = { workspace = true }
 intent-asset-lock = { workspace = true }
 intent-token-query = { workspace = true }
 parentchain-api-interface = { workspace = true }
