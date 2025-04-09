@@ -5534,13 +5534,11 @@ dependencies = [
 name = "native-task-handler"
 version = "0.1.0"
 dependencies = [
- "bs58",
  "chrono",
  "executor-core",
  "executor-crypto",
  "executor-primitives",
  "executor-storage",
- "futures",
  "heima-authentication",
  "heima-identity-verification",
  "hex",

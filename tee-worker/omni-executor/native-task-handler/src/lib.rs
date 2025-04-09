@@ -879,112 +879,49 @@ async fn handle_native_task<
 				return;
 			};
 
-			// 4. Use the pumpx_signer_client to sign each tx_data entry in parallel
-			let mut sign_futures = Vec::new();
+			// 4. Use the pumpx_signer_client to sign all tx_data entries at once
+			let mut messages_to_sign = Vec::new();
 			for tx in tx_data {
-				// Convert the transaction string to Vec<u8> based on chain_type
-				let tx_bytes = match chain_type {
-					ChainType::Solana => {
-						// Solana transactions are base58-encoded
-						match bs58::decode(&tx).into_vec() {
-							Ok(bytes) => bytes,
-							Err(e) => {
-								log::error!("Failed to decode Solana tx_data (base58): {:?}", e);
-								let response =
-									NativeTaskResponse::Err(NativeTaskError::InternalError);
-								if response_sender.send(response.encode()).is_err() {
-									log::error!("Failed to send response");
-								}
-								return;
-							},
+				// All transactions are hex-encoded, may start with "0x"
+				let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
+				let tx_bytes = match hex::decode(tx_cleaned) {
+					Ok(bytes) => bytes,
+					Err(e) => {
+						log::error!("Failed to decode tx_data (hex): {:?}", e);
+						let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
 						}
-					},
-					ChainType::Evm => {
-						// EVM transactions are hex-encoded, may start with "0x"
-						let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-						match hex::decode(tx_cleaned) {
-							Ok(bytes) => bytes,
-							Err(e) => {
-								log::error!("Failed to decode EVM tx_data (hex): {:?}", e);
-								let response =
-									NativeTaskResponse::Err(NativeTaskError::InternalError);
-								if response_sender.send(response.encode()).is_err() {
-									log::error!("Failed to send response");
-								}
-								return;
-							},
-						}
-					},
-					ChainType::Tron => {
-						// Assuming Tron transactions are also hex-encoded (adjust if different)
-						let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-						match hex::decode(tx_cleaned) {
-							Ok(bytes) => bytes,
-							Err(e) => {
-								log::error!("Failed to decode Tron tx_data (hex): {:?}", e);
-								let response =
-									NativeTaskResponse::Err(NativeTaskError::InternalError);
-								if response_sender.send(response.encode()).is_err() {
-									log::error!("Failed to send response");
-								}
-								return;
-							},
-						}
+						return;
 					},
 				};
+				messages_to_sign.push(tx_bytes);
+			}
 
-				let signer_client = ctx.pumpx_signer_client.clone();
-				let chain_type_clone = chain_type.clone();
-				let omni_account = sender.to_omni_account().into();
-				sign_futures.push(tokio::spawn(async move {
-					let signature_result = signer_client
-						.request_signature(chain_type_clone, wallet_index, omni_account, tx_bytes)
-						.await;
-					match signature_result {
-						Ok(signature) => Ok(hex::encode(signature)),
-						Err(e) => Err(e),
+			let signatures = match ctx
+				.pumpx_signer_client
+				.request_signatures(
+					chain_type,
+					wallet_index,
+					sender.to_omni_account().into(),
+					messages_to_sign,
+				)
+				.await
+			{
+				Ok(sigs) => sigs,
+				Err(e) => {
+					log::error!("Failed to sign transfer tx: {:?}", e);
+					let response = NativeTaskResponse::Err(NativeTaskError::PumpxSignerError(
+						PumpxSignerError::RequestSignatureFailed,
+					));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
 					}
-				}));
-			}
+					return;
+				},
+			};
 
-			// Wait for all signing tasks to complete
-			let signed_results = futures::future::join_all(sign_futures).await;
-
-			// Process the results
-			let mut signed_tx_data = Vec::new();
-			for result in signed_results {
-				// Handle tokio::spawn errors (e.g., task panicked or was cancelled)
-				let sign_result = match result {
-					Ok(inner_result) => inner_result,
-					Err(e) => {
-						log::error!("Signing task failed: {:?}", e);
-						let response = NativeTaskResponse::Err(NativeTaskError::PumpxSignerError(
-							PumpxSignerError::RequestSignatureFailed,
-						));
-						if response_sender.send(response.encode()).is_err() {
-							log::error!("Failed to send response");
-						}
-						return;
-					},
-				};
-
-				// Handle request_signature errors
-				let signed_tx = match sign_result {
-					Ok(signed) => signed,
-					Err(e) => {
-						log::error!("Failed to sign transfer tx: {:?}", e);
-						let response = NativeTaskResponse::Err(NativeTaskError::PumpxSignerError(
-							PumpxSignerError::RequestSignatureFailed,
-						));
-						if response_sender.send(response.encode()).is_err() {
-							log::error!("Failed to send response");
-						}
-						return;
-					},
-				};
-
-				signed_tx_data.push(signed_tx);
-			}
+			let signed_tx_data: Vec<String> = signatures.into_iter().map(hex::encode).collect();
 
 			// 5. Send the signed tx to the Pumpx backend
 			let send_res = match ctx
