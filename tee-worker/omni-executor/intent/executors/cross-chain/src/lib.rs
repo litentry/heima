@@ -36,6 +36,7 @@ use pumpx::types::CreateCrossOrderData;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
 use pumpx::types::MarketOrderTx;
+use pumpx::types::NewLimitOrder;
 use pumpx::types::NewMarketOrder;
 use pumpx::types::SwapType;
 use pumpx::PumpxApi;
@@ -240,14 +241,13 @@ impl<
 							log::error!("Failed to create cross order");
 						})?;
 
+					let user_trade_info =
+						self.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
+							log::error!("Failed to get user trade info");
+						})?;
+
 					match pumpx_config.order_type {
 						PumpxOrderType::Market => {
-							let user_trade_info =
-								self.pumpx_api.get_user_trade_info(&access_token).await.map_err(
-									|_| {
-										log::error!("Failed to get user trade info");
-									},
-								)?;
 							let new_market_order = NewMarketOrder {
 								request_id: intent_id,
 								chain_id: chain_id.clone(),
@@ -341,7 +341,7 @@ impl<
 							let market_order_tx = MarketOrderTx {
 								order_id: market_order_unsigned_tx.data.order_id,
 								tx_data: market_order_unsigned_tx.data.tx_data,
-								chain_id,
+								chain_id: chain_id.clone(),
 							};
 							let _market_order_tx_res = self
 								.pumpx_api
@@ -354,7 +354,76 @@ impl<
 							// TODO: figure out how to send this to the frontend
 						},
 						PumpxOrderType::Limit => {
-							todo!()
+							let token_cap = match pumpx_config.token_cap {
+								Some(ref token_cap) => Some(
+									std::str::from_utf8(token_cap)
+										.map_err(|_| {
+											log::error!("Failed to parse token_cap");
+										})
+										.map(|v| v.to_string())?,
+								),
+								None => None,
+							};
+							let price_usd = match pumpx_config.price_usd {
+								Some(ref price_usd) => Some(
+									std::str::from_utf8(price_usd)
+										.map_err(|_| {
+											log::error!("Failed to parse price_usd");
+										})
+										.map(|v| v.to_string())?,
+								),
+								None => None,
+							};
+
+							let new_limit_order = NewLimitOrder {
+								request_id: intent_id,
+								chain_id: chain_id.clone(),
+								token_ca,
+								amount: swap_order.from_amount.to_string(),
+								swap_type: match pumpx_config.swap_type {
+									1 => SwapType::Buy,
+									2 => SwapType::Sell,
+									_ => {
+										log::error!(
+											"Unsupported swap type: {}",
+											pumpx_config.swap_type
+										);
+										return Err(());
+									},
+								},
+								double_out: pumpx_config.double_out,
+								token_cap,
+								price_usd,
+								trailing_percent: pumpx_config
+									.trailing_percent
+									.map(|v| v.to_string()),
+								address: "todo: what's this??".to_string(),
+								is_anti_mev: user_trade_info.data.is_anti_mev,
+								is_auto_slippage: user_trade_info.data.is_auto_slippage,
+								gas_type: match pumpx_config.gas_type {
+									1 => GasType::Slow,
+									2 => GasType::Medium,
+									3 => GasType::Fast,
+									_ => {
+										log::error!(
+											"Unsupported gas type: {}",
+											pumpx_config.gas_type
+										);
+										return Err(());
+									},
+								},
+								slippage: user_trade_info.data.slippage,
+								wallet_index: pumpx_config.wallet_index,
+							};
+							let _limit_order_response = self
+								.pumpx_api
+								.create_limit_order(&access_token, new_limit_order)
+								.await
+								.map_err(|_| {
+									log::error!("Failed to create limit order");
+								})?;
+
+							// return to FE
 						},
 					}
 				} else {
