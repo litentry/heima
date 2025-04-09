@@ -27,6 +27,7 @@ mod test {
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTaskChannelType;
+	use pumpx::PumpxApi;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::sync::Arc;
 	use tokio::sync::mpsc;
@@ -42,11 +43,13 @@ mod test {
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let intent_id_store = InMemoryIntentIdStore::default();
+		let pumpx_api = PumpxApi::new(None);
 
 		start_server(
 			port,
 			shielding_key.clone(),
 			Arc::new(sender),
+			Arc::new(pumpx_api),
 			Arc::new(db),
 			[0u8; 32],
 			jwt_private_key.as_bytes().to_vec(),

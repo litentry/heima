@@ -141,7 +141,7 @@ async fn main() -> Result<(), ()> {
 			)?;
 
 			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
-			let pumpx_api = PumpxApi::new(pumpx_api_base_url);
+			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
 
 			let intent_id_store: Arc<Box<dyn IntentIdStore>> =
 				Arc::new(Box::new(StorageDbIntentIdStore::new(storage_db.clone())));
@@ -155,7 +155,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
-				Arc::new(pumpx_api),
+				pumpx_api.clone(),
 				pumpx_signer_client.clone(),
 				intent_id_store.clone(),
 			);
@@ -191,6 +191,7 @@ async fn main() -> Result<(), ()> {
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
 				Arc::new(native_task_sender),
+				pumpx_api,
 				storage_db.clone(),
 				mrenclave,
 				jwt_rsa_private_key,

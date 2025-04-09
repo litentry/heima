@@ -5,6 +5,7 @@ use heima_identity_verification::web2::email::Mailer;
 use intent_core::IntentIdStore;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
+use pumpx::PumpxApi;
 use std::{env, net::SocketAddr, sync::Arc};
 
 pub(crate) struct RpcContext {
@@ -16,6 +17,7 @@ pub(crate) struct RpcContext {
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
+	pub pumpx_api: Arc<PumpxApi>,
 	pub intent_id_store: Arc<Box<dyn IntentIdStore>>,
 }
 
@@ -30,6 +32,7 @@ impl RpcContext {
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
+		pumpx_api: Arc<PumpxApi>,
 		intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	) -> Self {
 		Self {
@@ -41,15 +44,18 @@ impl RpcContext {
 			jwt_rsa_private_key,
 			google_client_id,
 			google_client_secret,
+			pumpx_api,
 			intent_id_store,
 		}
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn start_server(
 	port: u16,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,
+	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
 	mrenclave: [u8; 32],
 	jwt_rsa_private_key: Vec<u8>,
@@ -81,6 +87,7 @@ pub async fn start_server(
 		jwt_rsa_private_key,
 		google_client_id,
 		google_client_secret,
+		pumpx_api,
 		intent_id_store,
 	);
 	let mut module = RpcModule::new(ctx);

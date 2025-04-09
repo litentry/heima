@@ -31,6 +31,7 @@ pub enum ChainType {
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash, MaxEncodedLen)]
 pub enum ChainAsset {
+    // TODO: Revisit renaming Ethereum to Evm
     Ethereum(u32, EthereumToken), // with chain id
     Solana(SolanaToken),
 }
