@@ -1,7 +1,7 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::types::{SendTransferTxResponse, UserConnectResponse};
+use pumpx::types::{AddWalletResponse, SendTransferTxResponse, UserConnectResponse};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {
@@ -20,7 +20,7 @@ pub enum NativeTaskOk {
 		user_connect_response: UserConnectResponse,
 	},
 	PumpxExportWallet(Vec<u8>),
-	PumpxAddWallet,
+	PumpxAddWallet(AddWalletResponse),
 	PumpxTransferWithdraw(SendTransferTxResponse),
 }
 

@@ -7,11 +7,18 @@ use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use pumpx::types::AddWalletResponse;
+use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct AddWalletParams {
 	pub user_email: String,
 	pub auth_token: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct RPCAddWalletResponse {
+	pub add_wallet_response: AddWalletResponse,
 }
 
 impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
@@ -50,7 +57,9 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
-						Ok(NativeTaskOk::PumpxAddWallet) => Ok(()),
+						Ok(NativeTaskOk::PumpxAddWallet(res)) => {
+							Ok(RPCAddWalletResponse { add_wallet_response: res })
+						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
 							Err(internal_error)
