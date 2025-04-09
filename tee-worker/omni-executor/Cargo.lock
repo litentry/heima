@@ -2236,7 +2236,13 @@ dependencies = [
  "async-trait",
  "executor-core",
  "executor-primitives",
+ "intent-asset-lock",
+ "intent-token-query",
  "log",
+ "parentchain-api-interface",
+ "parentchain-rpc-client",
+ "parentchain-signer",
+ "pumpx",
 ]
 
 [[package]]
@@ -3174,6 +3180,7 @@ dependencies = [
  "executor-primitives",
  "executor-storage",
  "hex",
+ "intent-core",
  "log",
  "native-task-handler",
  "parentchain-attestation",
@@ -4667,7 +4674,22 @@ version = "0.1.0"
 dependencies = [
  "core-primitives",
  "executor-core",
+ "executor-primitives",
  "ruint",
+]
+
+[[package]]
+name = "intent-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "core-primitives",
+ "executor-primitives",
+ "executor-storage",
+ "log",
+ "parity-scale-codec",
+ "rocksdb",
+ "tokio",
 ]
 
 [[package]]
@@ -5519,6 +5541,7 @@ dependencies = [
  "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
+ "intent-core",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
@@ -7091,6 +7114,7 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
+ "base58",
  "core-primitives",
  "executor-core",
  "executor-crypto",
@@ -7099,7 +7123,9 @@ dependencies = [
  "heima-authentication",
  "heima-identity-verification",
  "hex",
+ "intent-core",
  "jsonrpsee",
+ "litentry-hex-utils",
  "log",
  "native-task-handler",
  "oauth-providers",

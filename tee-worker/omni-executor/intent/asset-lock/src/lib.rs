@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use executor_core::intent_executor::AccountId;
+use executor_primitives::AccountId;
 use heima_primitives::ChainAsset;
 use ruint::Uint;
 use std::{collections::HashMap, sync::RwLock};
@@ -24,6 +24,8 @@ pub type AmountType = Uint<256, 4>;
 
 #[allow(dead_code)]
 pub mod account_wide;
+#[allow(dead_code)]
+pub mod always_unlocked;
 #[allow(dead_code)]
 pub mod precise;
 

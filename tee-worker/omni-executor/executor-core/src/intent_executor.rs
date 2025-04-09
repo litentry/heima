@@ -17,14 +17,19 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
+use executor_primitives::AccountId;
 use executor_primitives::Intent;
-
-pub type AccountId = [u8; 32];
+use executor_primitives::IntentId;
 
 /// Used to perform intent on destination chain
 #[async_trait]
 pub trait IntentExecutor: Send {
-	async fn execute(&self, account_id: &AccountId, intent: Intent) -> Result<(), ()>;
+	async fn execute(
+		&self,
+		account_id: &AccountId,
+		intent_id: IntentId,
+		intent: Intent,
+	) -> Result<(), ()>;
 }
 
 pub struct MockedIntentExecutor {
@@ -40,7 +45,12 @@ impl MockedIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for MockedIntentExecutor {
-	async fn execute(&self, _account_id: &AccountId, _intent: Intent) -> Result<(), ()> {
+	async fn execute(
+		&self,
+		_account_id: &AccountId,
+		_intent_id: IntentId,
+		_intent: Intent,
+	) -> Result<(), ()> {
 		self.sender.send(()).map_err(|_| ())
 	}
 }

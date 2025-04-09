@@ -21,6 +21,7 @@ executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
+intent-core = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-attestation = { workspace = true }
 parentchain-listener = { workspace = true }

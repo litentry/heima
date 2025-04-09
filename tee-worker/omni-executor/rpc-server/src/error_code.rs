@@ -19,6 +19,7 @@ const PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE: i32 = -32011;
 const PUMPX_API_USER_CONNECTION_FAILED_CODE: i32 = -32012;
 const PUMPX_API_ERROR_CODE: i32 = -32013;
 const PUMPX_API_ADD_WALLET_FAILED_CODE: i32 = -32014;
+const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32015;
 
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
@@ -42,5 +43,6 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			// This should not happen, we return the generic interal error code already from the api
 			-32099
 		},
+		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
 	}
 }

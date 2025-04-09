@@ -1,5 +1,5 @@
 use executor_primitives::{
-	Identity, Intent, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
+	Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::vec::Vec;
@@ -30,7 +30,7 @@ pub type PumpxChainId = u32;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
-	RequestIntent(Identity, Intent),
+	RequestIntent(Identity, IntentId, Intent),
 	CreateAccountStore(Identity),
 	AddAccount(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	RemoveAccounts(Identity, Vec<Identity>),
