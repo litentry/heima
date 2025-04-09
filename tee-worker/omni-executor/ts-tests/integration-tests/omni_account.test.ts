@@ -231,10 +231,12 @@ describe('OmniAccount', function () {
                 value: transferAmount.toBigInt(),
             }),
         });
+        const intentId = context.api.createType('u32', 1n);
+
         const nativeTask = createNativeTask(
             context.api,
-            ['RequestIntent', '(LitentryIdentity, Intent)'],
-            [aliceIdentity, intent]
+            ['RequestIntent', '(LitentryIdentity, u32, Intent)'],
+            [aliceIdentity, intentId, intent]
         );
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,

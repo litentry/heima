@@ -2,6 +2,7 @@ use crate::{methods::register_methods, ShieldingKey};
 use executor_primitives::MrEnclave;
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
+use intent_core::IntentIdStore;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use std::{env, net::SocketAddr, sync::Arc};
@@ -15,6 +16,7 @@ pub(crate) struct RpcContext {
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
+	pub intent_id_store: Arc<Box<dyn IntentIdStore>>,
 }
 
 impl RpcContext {
@@ -28,6 +30,7 @@ impl RpcContext {
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
+		intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -38,6 +41,7 @@ impl RpcContext {
 			jwt_rsa_private_key,
 			google_client_id,
 			google_client_secret,
+			intent_id_store,
 		}
 	}
 }
@@ -49,6 +53,7 @@ pub async fn start_server(
 	storage_db: Arc<StorageDB>,
 	mrenclave: [u8; 32],
 	jwt_rsa_private_key: Vec<u8>,
+	intent_id_store: Arc<Box<dyn IntentIdStore>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
@@ -76,6 +81,7 @@ pub async fn start_server(
 		jwt_rsa_private_key,
 		google_client_id,
 		google_client_secret,
+		intent_id_store,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);
