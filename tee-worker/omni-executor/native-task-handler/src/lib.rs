@@ -775,20 +775,20 @@ async fn handle_native_task<
 			maybe_google_code,
 			language,
 		) => {
-			// 1. Verify google code (if provided).
-			if let Some(ref google_code) = maybe_google_code {
-				let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-				let Some(access_token) =
-					storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
-				else {
-					log::error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-					let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-					if response_sender.send(response.encode()).is_err() {
-						log::error!("Failed to send response");
-					}
-					return;
-				};
+			// 1. Verify we have a valid Pumpx "access" token for the user
+			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let Some(access_token) =
+				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
 
+			// 2. Verify google code (if provided).
+			if let Some(ref google_code) = maybe_google_code {
 				let verify_result = ctx
 					.pumpx_api
 					.verify_google_code(&access_token, google_code.to_string(), language.clone())
@@ -812,18 +812,6 @@ async fn handle_native_task<
 					return;
 				}
 			}
-
-			// 2. Verify we have a valid Pumpx "access" token for the user
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Some(access_token) =
-				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
-				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
 
 			// 3. Create an unsigned tx with Pumpx backend
 			let create_transfer_res = match ctx
@@ -924,12 +912,18 @@ async fn handle_native_task<
 			let signed_tx_data: Vec<String> = signatures.into_iter().map(hex::encode).collect();
 
 			// 5. Send the signed tx to the Pumpx backend
-			let send_res = match ctx
+			let _send_res = match ctx
 				.pumpx_api
 				.send_transfer_tx(&access_token, transfer_id, chain_id, signed_tx_data, language)
 				.await
 			{
-				Ok(res) => res,
+				Ok(res) => {
+					let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxTransferWithdraw(res));
+					if response_sender.send(response.encode()).is_err() {
+						log::error!("Failed to send response");
+					}
+					return;
+				},
 				Err(e) => {
 					log::error!("Failed to send_transfer_tx: {:?}", e);
 					let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
@@ -941,12 +935,6 @@ async fn handle_native_task<
 					return;
 				},
 			};
-
-			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxTransferWithdraw(send_res));
-			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
-			}
-			return;
 		},
 	};
 	let report = match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
