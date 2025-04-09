@@ -19,10 +19,8 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
-use executor_primitives::PumpxConfig;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
-use executor_primitives::SwapOrder;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
@@ -32,7 +30,6 @@ use intent_token_query::query_solana;
 use intent_token_query::EthereumAddress;
 use intent_token_query::SolanaPubkey;
 use log::error;
-use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
 use pumpx::types::ChainId;
 use pumpx::types::CreateCrossOrderData;
@@ -76,7 +73,7 @@ pub type ParentchainTxSigner = TxSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
-// TODO: let's rename this to multichain executor?
+// TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
