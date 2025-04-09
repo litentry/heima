@@ -19,6 +19,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
+use executor_storage::StorageDB;
 use intent_asset_lock::AmountType;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
@@ -26,6 +27,7 @@ use intent_token_query::EthereumAddress;
 use intent_token_query::SolanaPubkey;
 use log::error;
 use pumpx::signer_client::SignerClient;
+use pumpx::PumpxApi;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -70,6 +72,8 @@ pub struct CrossChainIntentExecutor<
 	account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<SignerClient>,
+	pumpx_api: Arc<PumpxApi>,
+	storage_db: Arc<StorageDB>,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -84,6 +88,8 @@ impl<
 		transaction_signer: Arc<ParentchainTxSigner>,
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<SignerClient>,
+		pumpx_api: Arc<PumpxApi>,
+		storage_db: Arc<StorageDB>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -93,6 +99,8 @@ impl<
 			account_asset_lock,
 			rpc_endpoint_registry,
 			pumpx_signer_client,
+			pumpx_api,
+			storage_db,
 			phantom: PhantomData,
 		})
 	}

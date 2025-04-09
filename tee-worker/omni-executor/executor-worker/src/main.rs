@@ -133,15 +133,17 @@ async fn main() -> Result<(), ()> {
 				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
 			}
 
+			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
+			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
 				rpc_endpoint_registry,
 				pumpx_signer_client.clone(),
+				pumpx_api.clone(),
+				storage_db.clone(),
 			)?;
-
-			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
-			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
 
 			let intent_id_store: Arc<Box<dyn IntentIdStore>> =
 				Arc::new(Box::new(StorageDbIntentIdStore::new(storage_db.clone())));
