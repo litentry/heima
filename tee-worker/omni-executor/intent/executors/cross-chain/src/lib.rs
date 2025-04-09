@@ -85,6 +85,7 @@ impl<
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<SignerClient>,
 	) -> Result<Self, ()> {
+		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
 		Ok(Self {
 			parentchain_rpc_client_factory,
