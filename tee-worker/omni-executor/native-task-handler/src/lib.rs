@@ -746,7 +746,7 @@ async fn handle_native_task<
 			};
 
 			// Call Pumpx API to add wallet
-			let Ok(_add_wallet_response) = ctx.pumpx_api.add_wallet(&access_token, None).await
+			let Ok(add_wallet_response) = ctx.pumpx_api.add_wallet(&access_token, None).await
 			else {
 				log::error!("Failed to add wallet through Pumpx API");
 				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
@@ -758,7 +758,8 @@ async fn handle_native_task<
 				return;
 			};
 
-			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxAddWallet);
+			let response =
+				NativeTaskResponse::Ok(NativeTaskOk::PumpxAddWallet(add_wallet_response));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
