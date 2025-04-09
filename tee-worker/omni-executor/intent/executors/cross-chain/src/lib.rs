@@ -76,6 +76,7 @@ pub type ParentchainTxSigner = TxSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
+// TODO: let's rename this to multichain executor?
 pub struct CrossChainIntentExecutor<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
@@ -222,28 +223,26 @@ impl<
 					})
 					.map(|v| v.to_string())?;
 
-				let cross_order_data = CreateCrossOrderData {
-					request_id: intent_id,
-					chain_id: chain_id.clone(),
-					info: CrossOrderInfo {
-						chain_id: chain_id.clone(), // TODO: is this the same chain_id as the one above?
-						wallet_index: pumpx_config.wallet_index,
-						address: "todo: what's this??".to_string(),
-						amount: "what amount to use?".to_string(),
-						usd: usd_worth,
-						token_ca: token_ca.clone(),
-					},
-				};
-				// TODO: should this be called regardless of the kind of swap? (cross-chain |
-				// single-chain)
-				self.pumpx_api
-					.create_cross_order(&access_token, cross_order_data)
-					.await
-					.map_err(|_| {
-						log::error!("Failed to create cross order");
-					})?;
-
 				if swap_order.from_asset.is_same_chain(&swap_order.to_asset) {
+					let cross_order_data = CreateCrossOrderData {
+						request_id: intent_id,
+						chain_id: chain_id.clone(),
+						info: CrossOrderInfo {
+							chain_id: chain_id.clone(), // TODO: is this the same chain_id as the one above?
+							wallet_index: pumpx_config.wallet_index,
+							address: "todo: what's this??".to_string(),
+							amount: "what amount to use?".to_string(),
+							usd: usd_worth,
+							token_ca: token_ca.clone(),
+						},
+					};
+					self.pumpx_api
+						.create_cross_order(&access_token, cross_order_data)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to create cross order");
+						})?;
+
 					match pumpx_config.order_type {
 						PumpxOrderType::Market => {
 							// - call `/v3/account/get_user_trade_info` to get user config, mainly `gasType`, `isAntiMev`, `isAutoSlippage`, `slippage` - for gasType we need to select the right one based on the chain
