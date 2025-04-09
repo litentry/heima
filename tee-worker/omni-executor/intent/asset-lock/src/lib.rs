@@ -25,6 +25,8 @@ pub type AmountType = Uint<256, 4>;
 #[allow(dead_code)]
 pub mod account_wide;
 #[allow(dead_code)]
+pub mod always_unlocked;
+#[allow(dead_code)]
 pub mod precise;
 
 pub struct AccountAssetLocks<AL: AssetsLock> {
