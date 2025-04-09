@@ -1,6 +1,6 @@
 use crate::{
-	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode,
+	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth_token_authentication,
+	Decode, Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::{BoundedVec, OmniAuth};
@@ -95,6 +95,15 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("pumpx_submitSwapOrder", |params, ctx, _| async move {
 			let params =
 				params.parse::<SubmitSwapOrderParams>().map_err(|_| ErrorCode::ParseError)?;
+			let user_identity =
+				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
+			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token)
+				.is_err()
+			{
+				log::error!("Failed to verify auth token");
+				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE));
+			}
+
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				log::error!("Failed to get from chain asset");
 				ErrorCode::InvalidParams
@@ -110,8 +119,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				to_address: None,
 			};
 
-			let user_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
 			let Some(access_token) =
 				storage.get(&(user_identity.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
@@ -181,9 +188,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE));
-			}
 
 			let (response_sender, response_receiver) = oneshot::channel();
 
