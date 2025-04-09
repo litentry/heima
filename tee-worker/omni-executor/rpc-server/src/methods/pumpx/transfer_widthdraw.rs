@@ -24,7 +24,7 @@ pub struct TransferWithdrawParams {
 
 #[derive(Serialize, Clone)]
 pub struct TransferWithdrawResponse {
-	pub tx_hash: Option<String>,
+	pub tx_hash: Option<Vec<String>>,
 }
 
 impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {

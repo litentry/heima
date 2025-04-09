@@ -31,7 +31,7 @@ pub struct TransferUnsignedTxData {
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferTxData {
-	pub tx_hash: Option<String>,
+	pub tx_hash: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
