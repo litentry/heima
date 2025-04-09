@@ -228,7 +228,7 @@ impl<
 						request_id: intent_id,
 						chain_id: chain_id.clone(),
 						info: CrossOrderInfo {
-							chain_id: chain_id.clone(), // TODO: is this the same chain_id as the one above?
+							chain_id: chain_id.clone(),
 							wallet_index: pumpx_config.wallet_index,
 							address: "todo: what's this??".to_string(),
 							amount: swap_order.from_amount.to_string(),
