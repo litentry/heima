@@ -231,7 +231,7 @@ impl<
 							chain_id: chain_id.clone(), // TODO: is this the same chain_id as the one above?
 							wallet_index: pumpx_config.wallet_index,
 							address: "todo: what's this??".to_string(),
-							amount: "what amount to use?".to_string(),
+							amount: swap_order.from_amount.to_string(),
 							usd: usd_worth,
 							token_ca: token_ca.clone(),
 						},
