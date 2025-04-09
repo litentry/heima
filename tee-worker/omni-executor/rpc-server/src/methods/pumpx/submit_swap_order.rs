@@ -113,6 +113,14 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				log::error!("Failed to get to chain asset");
 				ErrorCode::InvalidParams
 			})?;
+
+			if params.order_type == PumpxOrderType::Limit
+				&& !from_chain_asset.is_same_chain(&to_chain_asset)
+			{
+				log::error!("Limit order must be on the same chain");
+				return Err(ErrorCode::InvalidParams);
+			}
+
 			let swap_order = SwapOrder {
 				from_asset: from_chain_asset,
 				to_asset: to_chain_asset,
