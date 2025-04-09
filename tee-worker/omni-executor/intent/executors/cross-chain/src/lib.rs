@@ -41,7 +41,7 @@ use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_rpc_client::ToSubxtType;
 use parentchain_signer::TxSigner;
 
-use intent_asset_lock::account_wide::AccountWideAssetsLock;
+use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 
 #[derive(PartialEq, Hash, Eq)]
@@ -67,7 +67,7 @@ pub struct CrossChainIntentExecutor<
 > {
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	transaction_signer: Arc<ParentchainTxSigner>,
-	account_asset_lock: AccountAssetLocks<AccountWideAssetsLock>,
+	account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<SignerClient>,
 	phantom: PhantomData<(Header, RpcClient)>,
@@ -85,7 +85,8 @@ impl<
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<SignerClient>,
 	) -> Result<Self, ()> {
-		let account_asset_lock = AccountAssetLocks::<AccountWideAssetsLock>::empty();
+		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
+		let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
 		Ok(Self {
 			parentchain_rpc_client_factory,
 			transaction_signer,
