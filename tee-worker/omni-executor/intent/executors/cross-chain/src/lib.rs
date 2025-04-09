@@ -133,7 +133,7 @@ impl<
 		intent: Intent,
 	) -> Result<(), ()> {
 		match intent {
-			Intent::Swap(ref swap_order, ref ccsp, ref scsp) => {
+			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
 				else {
 					log::error!("Failed to create rpc client");
