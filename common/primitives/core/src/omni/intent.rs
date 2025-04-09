@@ -106,6 +106,7 @@ pub struct PumpxConfig {
     // below is only relevant to limit order, thus `Option<>`
     pub token_cap: Option<BoundedVec<u8, IntentStringLen>>,
     pub price_usd: Option<BoundedVec<u8, IntentStringLen>>,
+    pub usd_worth: BoundedVec<u8, IntentStringLen>,
     pub trailing_percent: Option<u32>,
 }
 

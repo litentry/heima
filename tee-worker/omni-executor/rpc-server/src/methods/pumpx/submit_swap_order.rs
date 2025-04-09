@@ -36,6 +36,7 @@ pub struct SubmitSwapOrderParams {
 	pub is_one_click: bool,
 	pub token_cap: Option<String>,
 	pub price_usd: Option<String>,
+	pub usd_worth: String,
 	pub trailing_percent: Option<u32>,
 	pub wallet_index: u32,
 	pub auth_token: String,
@@ -158,6 +159,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						.map_err(|_| ErrorCode::InvalidParams)
 				})
 				.transpose()?;
+			let usd_worth = BoundedVec::try_from(params.usd_worth.as_bytes().to_vec())
+				.map_err(|_| ErrorCode::InvalidParams)?;
+
 			let pumpx_config = PumpxConfig {
 				order_type: params.order_type,
 				swap_type: params.swap_type.to_number() as u32,
@@ -172,6 +176,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				wallet_index: params.wallet_index,
 				token_cap,
 				price_usd,
+				usd_worth,
 				trailing_percent: params.trailing_percent,
 			};
 			let scs_provider = SingleChainSwapProvider::Pumpx(pumpx_config);
