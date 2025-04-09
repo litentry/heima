@@ -245,15 +245,12 @@ impl<
 
 					match pumpx_config.order_type {
 						PumpxOrderType::Market => {
-							// - call `/v3/account/get_user_trade_info` to get user config, mainly `gasType`, `isAntiMev`, `isAutoSlippage`, `slippage` - for gasType we need to select the right one based on the chain
 							let user_trade_info =
 								self.pumpx_api.get_user_trade_info(&access_token).await.map_err(
 									|_| {
 										log::error!("Failed to get user trade info");
 									},
 								)?;
-
-							// - call `/v3/trade/create_market_order_unsigned_tx` , for parameters that are not returned from `get_user_trade_info` , they should be passed in via RPC already
 							let new_market_order = NewMarketOrder {
 								request_id: intent_id,
 								chain_id: chain_id.clone(),
@@ -349,8 +346,7 @@ impl<
 								tx_data: market_order_unsigned_tx.data.tx_data,
 								chain_id,
 							};
-							// - call `/v3/trade/send_order_tx` to submit it
-							let market_order_tx_res = self
+							let _market_order_tx_res = self
 								.pumpx_api
 								.send_market_order_tx(&access_token, market_order_tx)
 								.await
