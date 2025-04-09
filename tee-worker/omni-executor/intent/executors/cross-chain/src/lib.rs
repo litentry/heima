@@ -19,14 +19,28 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
+use executor_primitives::PumpxConfig;
+use executor_primitives::PumpxOrderType;
+use executor_primitives::SingleChainSwapProvider;
+use executor_primitives::SwapOrder;
 use executor_storage::StorageDB;
+use executor_storage::{PumpxJwtStorage, Storage};
+use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use intent_asset_lock::AmountType;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
 use intent_token_query::EthereumAddress;
 use intent_token_query::SolanaPubkey;
 use log::error;
+use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
+use pumpx::types::ChainId;
+use pumpx::types::CreateCrossOrderData;
+use pumpx::types::CrossOrderInfo;
+use pumpx::types::GasType;
+use pumpx::types::MarketOrderTx;
+use pumpx::types::NewMarketOrder;
+use pumpx::types::SwapType;
 use pumpx::PumpxApi;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -120,7 +134,7 @@ impl<
 		intent: Intent,
 	) -> Result<(), ()> {
 		match intent {
-			Intent::Swap(ref swap_order, ref _ccsp, ref _scsp) => {
+			Intent::Swap(ref swap_order, ref ccsp, ref scsp) => {
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
 				else {
 					log::error!("Failed to create rpc client");
@@ -183,6 +197,179 @@ impl<
 						return Err(());
 					},
 				};
+
+				// TODO: update this when we have more providers
+				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
+
+				let storage = PumpxJwtStorage::new(self.storage_db.clone());
+				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
+				else {
+					log::error!("Failed to get access token from storage");
+					return Err(());
+				};
+				let chain_id = match swap_order.to_asset {
+					ChainAsset::Ethereum(..) => ChainId::EVM,
+					ChainAsset::Solana(_) => ChainId::Solana,
+				};
+				let usd_worth = std::str::from_utf8(&pumpx_config.usd_worth)
+					.map_err(|_| {
+						log::error!("Failed to parse usd_worth");
+					})
+					.map(|v| v.to_string())?;
+				let token_ca = std::str::from_utf8(&pumpx_config.token_ca)
+					.map_err(|_| {
+						log::error!("Failed to parse token_ca");
+					})
+					.map(|v| v.to_string())?;
+
+				let cross_order_data = CreateCrossOrderData {
+					request_id: intent_id,
+					chain_id: chain_id.clone(),
+					info: CrossOrderInfo {
+						chain_id: chain_id.clone(), // TODO: is this the same chain_id as the one above?
+						wallet_index: pumpx_config.wallet_index,
+						address: "todo: what's this??".to_string(),
+						amount: "what amount to use?".to_string(),
+						usd: usd_worth,
+						token_ca: token_ca.clone(),
+					},
+				};
+				// TODO: should this be called regardless of the kind of swap? (cross-chain |
+				// single-chain)
+				self.pumpx_api
+					.create_cross_order(&access_token, cross_order_data)
+					.await
+					.map_err(|_| {
+						log::error!("Failed to create cross order");
+					})?;
+
+				if swap_order.from_asset.is_same_chain(&swap_order.to_asset) {
+					match pumpx_config.order_type {
+						PumpxOrderType::Market => {
+							// - call `/v3/account/get_user_trade_info` to get user config, mainly `gasType`, `isAntiMev`, `isAutoSlippage`, `slippage` - for gasType we need to select the right one based on the chain
+							let user_trade_info =
+								self.pumpx_api.get_user_trade_info(&access_token).await.map_err(
+									|_| {
+										log::error!("Failed to get user trade info");
+									},
+								)?;
+
+							// - call `/v3/trade/create_market_order_unsigned_tx` , for parameters that are not returned from `get_user_trade_info` , they should be passed in via RPC already
+							let new_market_order = NewMarketOrder {
+								request_id: intent_id,
+								chain_id: chain_id.clone(),
+								token_ca,
+								swap_type: match pumpx_config.swap_type {
+									1 => SwapType::Buy,
+									2 => SwapType::Sell,
+									_ => {
+										log::error!(
+											"Unsupported swap type: {}",
+											pumpx_config.swap_type
+										);
+										return Err(());
+									},
+								},
+								amount_in: swap_order.from_amount.to_string(),
+								double_out: pumpx_config.double_out,
+								is_one_click: pumpx_config.is_one_click,
+								address: "todo: what's this??".to_string(),
+								is_anti_mev: user_trade_info.data.is_anti_mev,
+								is_auto_slippage: user_trade_info.data.is_auto_slippage,
+								gas_type: match pumpx_config.gas_type {
+									1 => GasType::Slow,
+									2 => GasType::Medium,
+									3 => GasType::Fast,
+									_ => {
+										log::error!(
+											"Unsupported gas type: {}",
+											pumpx_config.gas_type
+										);
+										return Err(());
+									},
+								},
+								slippage: user_trade_info.data.slippage,
+								wallet_index: pumpx_config.wallet_index,
+							};
+							let market_order_unsigned_tx = self
+								.pumpx_api
+								.create_market_order_unsigned_tx(&access_token, new_market_order)
+								.await
+								.map_err(|_| {
+									log::error!("Failed to create market order unsigned tx");
+								})?;
+
+							// - ask pumpx-tee-signer to sign the returned payload (I assume it’s `txData`)
+							// TODO: do we need to sign the tx here?
+							//
+							// let tx_data = market_order_unsigned_tx.data.tx_data;
+							// let mut messages_to_sign = Vec::new();
+							// for tx in tx_data {
+							// 	let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
+							// 	let tx_bytes = match hex::decode(tx_cleaned) {
+							// 		Ok(bytes) => bytes,
+							// 		Err(e) => {
+							// 			log::error!("Failed to decode hex string: {:?}", e);
+							// 			return Err(());
+							// 		},
+							// 	};
+							// 	messages_to_sign.push(tx_bytes);
+							// }
+							//
+							// let Some(chain_type) =
+							// 	ChainType::from_pumpx_chain_id(chain_id.to_number() as u32)
+							// else {
+							// 	log::error!("Unsupported chain id: {:?}", chain_id);
+							// 	return Err(());
+							// };
+							//
+							// let signatures = match self
+							// 	.pumpx_signer_client
+							// 	.request_signatures(
+							// 		chain_type,
+							// 		pumpx_config.wallet_index,
+							// 		*account_id.as_ref(),
+							// 		messages_to_sign,
+							// 	)
+							// 	.await
+							// {
+							// 	Ok(sigs) => sigs,
+							// 	Err(e) => {
+							// 		log::error!(
+							// 			"Failed to get signatures from pumpx-signer: {:?}",
+							// 			e
+							// 		);
+							// 		return Err(());
+							// 	},
+							// };
+							// let signed_tx_data: Vec<String> =
+							// 	signatures.into_iter().map(hex::encode).collect();
+
+							let market_order_tx = MarketOrderTx {
+								order_id: market_order_unsigned_tx.data.order_id,
+								tx_data: market_order_unsigned_tx.data.tx_data,
+								chain_id,
+							};
+							// - call `/v3/trade/send_order_tx` to submit it
+							let market_order_tx_res = self
+								.pumpx_api
+								.send_market_order_tx(&access_token, market_order_tx)
+								.await
+								.map_err(|_| {
+									log::error!("Failed to send market order tx");
+								})?;
+							// - return the result to F/E
+							// TODO: figure out how to send this to the frontend
+						},
+						PumpxOrderType::Limit => {
+							todo!()
+						},
+					}
+				} else {
+					//TODO: execute cross-chain swap
+					// to binance swap, If it fails, notify the backend via /v3/trade/cross_fail
+					todo!()
+				}
 
 				// TODO:
 				// 3. Swap assets:
