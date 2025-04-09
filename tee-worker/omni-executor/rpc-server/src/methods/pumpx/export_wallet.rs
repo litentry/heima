@@ -111,5 +111,5 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				},
 			}
 		})
-		.expect("Failed to register pumpx_requestJwt method");
+		.expect("Failed to register pumpx_exportWallet method");
 }

@@ -598,7 +598,7 @@ async fn handle_native_task<
 
 			let Ok(user_connect_response) = ctx
 				.pumpx_api
-				.connect_user(
+				.user_connect(
 					&access_token,
 					email.clone(),
 					invite_code,
@@ -636,7 +636,7 @@ async fn handle_native_task<
 				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
 			};
 
-			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxJwt {
+			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxRequestJwt {
 				access_token,
 				id_token,
 				user_connect_response,
@@ -728,6 +728,38 @@ async fn handle_native_task<
 			};
 			let response =
 				NativeTaskResponse::Ok(NativeTaskOk::PumpxExportWallet(decrypted_wallet));
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
+		},
+		NativeTask::PumpxAddWallet(sender) => {
+			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let Some(access_token) =
+				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			// Call Pumpx API to add wallet
+			let Ok(add_wallet_response) = ctx.pumpx_api.add_wallet(&access_token, None).await
+			else {
+				log::error!("Failed to add wallet through Pumpx API");
+				let response = NativeTaskResponse::Err(NativeTaskError::PumpxApiError(
+					PumpxApiError::AddWalletFailed,
+				));
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+
+			let response =
+				NativeTaskResponse::Ok(NativeTaskOk::PumpxAddWallet(add_wallet_response));
 			if response_sender.send(response.encode()).is_err() {
 				log::error!("Failed to send response");
 			}
