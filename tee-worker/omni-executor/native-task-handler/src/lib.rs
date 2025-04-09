@@ -912,7 +912,7 @@ async fn handle_native_task<
 			let signed_tx_data: Vec<String> = signatures.into_iter().map(hex::encode).collect();
 
 			// 5. Send the signed tx to the Pumpx backend
-			let _send_res = match ctx
+			match ctx
 				.pumpx_api
 				.send_transfer_tx(&access_token, transfer_id, chain_id, signed_tx_data, language)
 				.await
