@@ -11,6 +11,7 @@ members = [
     "heima/authentication",
     "heima/identity-verification",
     "intent/asset-lock",
+    "intent/core",
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
@@ -89,6 +90,7 @@ heima-hex-utils = { package = "litentry-hex-utils", path = "../../common/utils/h
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 intent-asset-lock = { path = "intent/asset-lock" }
+intent-core = { path = "intent/core" }
 intent-token-query = { path = "intent/token-query" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }

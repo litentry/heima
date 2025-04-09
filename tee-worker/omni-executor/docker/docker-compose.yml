@@ -18,7 +18,7 @@ services:
       heima-node:
         condition: service_healthy
         restart: true
-    command: ["executor-worker", "run", "ws://heima-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "ws://omni-executor:2100"]
+    command: ["executor-worker", "run", "ws://heima-node:9944", "http://ethereum-node:8545", "https://api.devnet.solana.com", "bsc-url", "bsc-testnet-url", "pumpx-signer-url", "ws://omni-executor:2100"]
     privileged: true
     restart: unless-stopped
     networks:
