@@ -35,3 +35,13 @@ pub enum ChainAsset {
     Ethereum(u32, EthereumToken), // with chain id
     Solana(SolanaToken),
 }
+
+impl ChainAsset {
+    pub fn is_same_chain(&self, other: &Self) -> bool {
+        match (self, other) {
+            (ChainAsset::Ethereum(id1, _), ChainAsset::Ethereum(id2, _)) => id1 == id2,
+            (ChainAsset::Solana(_), ChainAsset::Solana(_)) => true,
+            _ => false,
+        }
+    }
+}

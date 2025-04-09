@@ -14,12 +14,21 @@ pub type OrderInfoResponse = ApiResponse<OrderInfo>;
 
 pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
-#[derive(Deserialize_repr, Serialize_repr)]
+#[derive(Deserialize_repr, Serialize_repr, Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum ChainId {
 	EVM = 1,
 	Solana = 2,
+}
+
+impl ChainId {
+	pub fn to_number(&self) -> u8 {
+		match self {
+			ChainId::EVM => 1,
+			ChainId::Solana => 2,
+		}
+	}
 }
 
 #[derive(Deserialize, Serialize)]
