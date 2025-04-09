@@ -1,6 +1,5 @@
 use crate::{
-	error_code::*, hex_encode, oneshot, server::RpcContext, verify_auth::verify_auth, Deserialize,
-	ErrorCode,
+	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
@@ -46,7 +45,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 			}
 
 			match response_receiver.await {
-				Ok(response) => Ok::<String, ErrorObject>(hex_encode(response.as_slice())),
+				Ok(_response) => Ok::<(), ErrorObject>(()),
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())

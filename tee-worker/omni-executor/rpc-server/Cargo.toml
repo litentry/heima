@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+base58 = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
@@ -23,6 +24,7 @@ executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
+heima-hex-utils = { workspace = true }
 heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
 intent-core = { workspace = true }
