@@ -1,5 +1,5 @@
 use executor_primitives::{
-	Identity, Intent, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
+	Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::vec::Vec;
@@ -30,7 +30,7 @@ pub type PumpxChainId = u32;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
-	RequestIntent(Identity, Intent),
+	RequestIntent(Identity, IntentId, Intent),
 	CreateAccountStore(Identity),
 	AddAccount(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	RemoveAccounts(Identity, Vec<Identity>),
@@ -42,6 +42,8 @@ pub enum NativeTask {
 	PumpxRequestJwt(Identity, Option<String>, MaybeGoogleCode, Option<String>),
 	#[codec(index = 21)]
 	PumpxExportWallet(Identity, MaybeGoogleCode, PumpxChainId, PumxWalletIndex, String),
+	#[codec(index = 22)]
+	PumpxAddWallet(Identity),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -56,6 +58,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::SetPermissions(sender, ..) => sender,
 			Self::PumpxRequestJwt(sender, ..) => sender,
 			Self::PumpxExportWallet(sender, ..) => sender,
+			Self::PumpxAddWallet(sender, ..) => sender,
 		}
 	}
 

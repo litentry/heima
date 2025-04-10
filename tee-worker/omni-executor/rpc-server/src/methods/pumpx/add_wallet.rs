@@ -7,47 +7,40 @@ use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
-use pumpx::types::UserConnectResponse;
+use pumpx::types::AddWalletResponse;
 use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
-pub struct RequestJwtParams {
+pub struct AddWalletParams {
 	pub user_email: String,
-	pub invite_code: Option<String>,
-	pub google_code: MaybeGoogleCode,
-	pub language: Option<String>,
-	pub email_code: String,
+	pub auth_token: String,
 }
 
 #[derive(Serialize, Clone)]
-pub struct RequestJwtResponse {
-	pub access_token: String,
-	pub id_token: String,
-	pub user_connect_response: UserConnectResponse,
+pub struct RPCAddWalletResponse {
+	pub add_wallet_response: AddWalletResponse,
 }
 
-impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: RequestJwtParams) -> Self {
+impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
+	fn from(p: AddWalletParams) -> Self {
 		Self {
-			task: NativeTask::PumpxRequestJwt(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
-				p.invite_code,
-				p.google_code,
-				p.language,
-			),
+			task: NativeTask::PumpxAddWallet(Identity::from_web2_account(
+				p.user_email.as_str(),
+				Web2IdentityType::Email,
+			)),
 			nonce: None,
-			auth: Some(OmniAuth::Email(p.email_code)),
+			auth: Some(OmniAuth::AuthToken(p.auth_token)),
 		}
 	}
 }
 
-pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
+pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("pumpx_requestJwt", |params, ctx, _| async move {
+		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-			let params = params.parse::<RequestJwtParams>().map_err(|_| ErrorCode::ParseError)?;
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+			let params = params.parse::<AddWalletParams>()?;
 
+			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			}
@@ -56,7 +49,7 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 
 			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
 				log::error!("Failed to send request to native call executor");
-				return Err(internal_error);
+				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
 				Ok(response) => {
@@ -64,12 +57,8 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
-						Ok(NativeTaskOk::PumpxRequestJwt {
-							access_token,
-							id_token,
-							user_connect_response,
-						}) => {
-							Ok(RequestJwtResponse { access_token, id_token, user_connect_response })
+						Ok(NativeTaskOk::PumpxAddWallet(res)) => {
+							Ok(RPCAddWalletResponse { add_wallet_response: res })
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
@@ -94,5 +83,5 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 				},
 			}
 		})
-		.expect("Failed to register pumpx_requestJwt method");
+		.expect("Failed to register pumpx_addWallet method");
 }
