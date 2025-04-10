@@ -916,7 +916,8 @@ async fn handle_native_task<
 				},
 			};
 
-			let signed_tx_data: Vec<String> = signatures.into_iter().map(hex::encode).collect();
+			let signed_tx_data: Vec<String> =
+				signatures.into_iter().map(|sig| sig.to_hex()).collect();
 
 			// 5. Send the signed tx to the Pumpx backend
 			match ctx

@@ -78,7 +78,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 			else {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			};
-			if token.sub != "access" {
+			if token.typ != "access" {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			}
 

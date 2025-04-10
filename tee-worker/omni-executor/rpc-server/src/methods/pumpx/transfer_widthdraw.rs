@@ -7,6 +7,7 @@ use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use pumpx::types::SendTransferTxResponse;
 use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
@@ -24,7 +25,7 @@ pub struct TransferWithdrawParams {
 
 #[derive(Serialize, Clone)]
 pub struct TransferWithdrawResponse {
-	pub tx_hash: Option<Vec<String>>,
+	pub backend_response: SendTransferTxResponse,
 }
 
 impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
@@ -72,7 +73,7 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
 						Ok(NativeTaskOk::PumpxTransferWithdraw(send_tx_response)) => {
-							Ok(TransferWithdrawResponse { tx_hash: send_tx_response.data.tx_hash })
+							Ok(TransferWithdrawResponse { backend_response: send_tx_response })
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
