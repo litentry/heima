@@ -28,14 +28,16 @@ mod test {
 	use pumpx::PumpxApi;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::sync::Arc;
+	use tempfile::tempdir;
 	use tokio::sync::mpsc;
 
 	#[tokio::test]
 	pub async fn get_shielding_key_works() {
+		let tmp_dir = tempdir().unwrap();
 		let port: u16 = 2005;
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
-		let db = StorageDB::open_default("test_get_shielding_key_storage_db").unwrap();
+		let db = StorageDB::open_default(tmp_dir.path()).unwrap();
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
