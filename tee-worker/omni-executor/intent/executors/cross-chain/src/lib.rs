@@ -357,8 +357,10 @@ impl<
 									return Err(());
 								},
 							};
-							let signed_tx_data: Vec<String> =
-								signatures.into_iter().map(hex::encode).collect();
+							let signed_tx_data: Vec<String> = signatures
+								.into_iter()
+								.map(|signature| signature.to_hex())
+								.collect();
 
 							let market_order_tx = MarketOrderTx {
 								order_id: market_order_unsigned_tx.data.order_id,
