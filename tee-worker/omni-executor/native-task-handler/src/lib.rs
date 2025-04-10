@@ -735,8 +735,7 @@ async fn handle_native_task<
 			};
 
 			// Call Pumpx API to add wallet
-			let Ok(backend_response) = ctx.pumpx_api.add_wallet(&access_token, None).await
-			else {
+			let Ok(backend_response) = ctx.pumpx_api.add_wallet(&access_token, None).await else {
 				send_error(
 					"Failed to add wallet through Pumpx API".to_string(),
 					response_sender,
@@ -750,7 +749,6 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxTransferWidthdraw(
 			sender,
-			request_id,
 			chain_id,
 			wallet_index,
 			recipient_address,
@@ -804,7 +802,6 @@ async fn handle_native_task<
 				.pumpx_api
 				.create_transfer_unsigned_tx(
 					&access_token,
-					request_id,
 					chain_id,
 					wallet_index,
 					&recipient_address,

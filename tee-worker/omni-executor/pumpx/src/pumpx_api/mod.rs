@@ -272,7 +272,6 @@ impl PumpxApi {
 	pub async fn create_transfer_unsigned_tx(
 		&self,
 		access_token: &str,
-		request_id: u64,
 		chain_id: u32,
 		wallet_index: u32,
 		recipient_address: &str,
@@ -282,7 +281,6 @@ impl PumpxApi {
 	) -> Result<CreateTransferUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_transfer_unsigned_tx", self.base_url);
 		let unsigned_tx = TransferUnsignedTx {
-			request_id,
 			chain_id,
 			wallet_index,
 			recipient_address: recipient_address.to_string(),

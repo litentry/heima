@@ -37,7 +37,6 @@ pub struct TransferTxData {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferUnsignedTx {
-	pub request_id: u64,
 	pub chain_id: u32,
 	pub wallet_index: u32,
 	pub recipient_address: String,

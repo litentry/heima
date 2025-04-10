@@ -1,17 +1,17 @@
 use crate::{
 	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode, Serialize,
+	ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
 	pub user_email: String,
-	pub request_id: u64,
 	pub chain_id: u32,
 	pub wallet_index: PumxWalletIndex,
 	pub recipient_address: String,
@@ -32,7 +32,6 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 		Self {
 			task: NativeTask::PumpxTransferWidthdraw(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
-				p.request_id,
 				p.chain_id,
 				p.wallet_index,
 				p.recipient_address,
