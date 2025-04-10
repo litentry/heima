@@ -1,6 +1,6 @@
 use crate::{
 	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode, Serialize,
+	ErrorCode,
 };
 use ethers::types::Bytes;
 use executor_core::native_task::*;
@@ -21,11 +21,6 @@ pub struct ExportWalletParams {
 	pub wallet_index: PumxWalletIndex,
 	pub wallet_address: String,
 	pub email_code: String,
-}
-
-#[derive(Serialize, Clone)]
-pub struct ExportWalletResponse {
-	pub encrypted_wallet: SerdeAesOutput,
 }
 
 impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
@@ -86,7 +81,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 						Ok(NativeTaskOk::PumpxExportWallet(wallet)) => {
 							let encrypted_wallet: SerdeAesOutput =
 								aes_encrypt_default(&aes_key, &wallet).into();
-							Ok(ExportWalletResponse { encrypted_wallet })
+							Ok(encrypted_wallet)
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
