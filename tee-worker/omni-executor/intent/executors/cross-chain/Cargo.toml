@@ -8,6 +8,7 @@ edition.workspace = true
 async-trait = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
+parity-scale-codec = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }

@@ -2245,6 +2245,7 @@ dependencies = [
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "parity-scale-codec",
  "pumpx",
 ]
 
