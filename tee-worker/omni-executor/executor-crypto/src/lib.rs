@@ -16,7 +16,7 @@ pub mod rsa {
 		pub e: Vec<u8>,
 	}
 
-	#[derive(Serialize, Deserialize)]
+	#[derive(Clone, Serialize, Deserialize)]
 	pub struct SerdeRsa3072PubKey {
 		pub n: Bytes,
 		pub e: Bytes,

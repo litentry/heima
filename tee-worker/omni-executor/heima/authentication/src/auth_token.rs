@@ -25,8 +25,8 @@ pub struct AuthOptions {
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct AuthTokenClaims {
-	sub: String,
-	typ: String,
+	pub sub: String,
+	pub typ: String,
 	pub exp: i64,
 }
 

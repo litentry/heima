@@ -6,7 +6,7 @@
 
 # Function: requestPumpxJwt()
 
-> **requestPumpxJwt**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `jwt`: `PumpxJwt`; \}\>; \}\>
+> **requestPumpxJwt**(`api`, `data`, `enclaveInstance`): `Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `jwt`: `PumpxRequestJwt`; \}\>; \}\>
 
 Defined in: [requests/pumpx-request-jwt.request.ts:35](https://github.com/litentry/heima/blob/dev/requests/pumpx-request-jwt.request.ts#L35)
 
@@ -56,6 +56,6 @@ The enclave instance use to interact with Enclave.
 
 ## Returns
 
-`Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `jwt`: `PumpxJwt`; \}\>; \}\>
+`Promise`\<\{ `getPayloadToSign`: () => `Promise`\<`string`\>; `send`: (`args`) => `Promise`\<\{ `jwt`: `PumpxRequestJwt`; \}\>; \}\>
 
 A promise that resolves to an object containing the payload to sign (if applicable) and a send function.

@@ -59,7 +59,7 @@ export default {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
-                PumpxJwt: "PumpxJwt",
+                PumpxRequestJwt: "PumpxRequestJwt",
             },
         },
         XtReport: {
@@ -97,10 +97,10 @@ export default {
                 Invalid: "Null",
             },
         },
-        PumpxJwt: {
+        PumpxRequestJwt: {
             access_token: "Text",
             id_token: "Text",
-            user_connect_response: "PumpxUserConnectResponse",
+            backend_response: "PumpxUserConnectResponse",
         },
         PumpxUserConnectResponse: {
             code: "u32",
