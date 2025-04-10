@@ -23,6 +23,7 @@ pub enum NativeTaskOk {
 	PumpxAddWallet(AddWalletResponse),
 	PumpxSignLimitOrder(Vec<Vec<u8>>),
 	PumpxTransferWithdraw(SendTransferTxResponse),
+	PumpxNotifyLimitOrderResult,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

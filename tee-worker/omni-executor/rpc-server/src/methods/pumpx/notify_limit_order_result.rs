@@ -3,33 +3,22 @@ use crate::{
 	ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
-use heima_primitives::{Identity, Web2IdentityType};
+use executor_crypto::jwt;
+use executor_primitives::{utils::hex::FromHexPrefixed, OmniAuth};
+use heima_authentication::auth_token::AuthTokenClaims;
+use heima_primitives::{Address32, Identity, IntentId};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use rsa::pkcs1::DecodeRsaPrivateKey;
+use rsa::pkcs1::EncodeRsaPublicKey;
+use rsa::RsaPrivateKey;
 
 #[derive(Debug, Deserialize)]
 pub struct NotifyLimitOrderResultParams {
-	pub user_email: String,
 	pub intent_id: u32,
 	pub result: String,
 	pub message: Option<String>,
 	pub auth_token: String,
-}
-
-impl From<NotifyLimitOrderResultParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: NotifyLimitOrderResultParams) -> Self {
-		Self {
-			task: NativeTask::PumpxNotifyLimitOrderResult(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
-				p.intent_id,
-				p.result,
-				p.message,
-			),
-			nonce: None,
-			auth: Some(OmniAuth::AuthToken(p.auth_token)),
-		}
-	}
 }
 
 pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
@@ -38,7 +27,37 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<NotifyLimitOrderResultParams>()?;
 
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+			let private_key = RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key)
+				.map_err(|_| internal_error.clone())?;
+			let public_key =
+				private_key.to_public_key().to_pkcs1_der().map_err(|_| internal_error.clone())?;
+
+			let Ok(token) =
+				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes())
+			else {
+				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+			};
+			if token.typ != "access" {
+				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+			}
+
+			let omni_account = token.sub;
+			let Ok(address) = Address32::from_hex(&omni_account) else {
+				log::error!("Not a valid address");
+				return Err(internal_error);
+			};
+
+			let wrapper = NativeTaskWrapper {
+				task: NativeTask::PumpxNotifyLimitOrderResult(
+					Identity::Substrate(address),
+					params.intent_id,
+					params.result,
+					params.message,
+				),
+				nonce: None,
+				auth: Some(OmniAuth::AuthToken(params.auth_token)),
+			};
+
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			}
@@ -56,11 +75,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
-						Ok(NativeTaskOk::ExtrinsicReport {
-							extrinsic_hash: _,
-							block_hash: _,
-							status: _,
-						}) => Ok(()),
+						Ok(NativeTaskOk::PumpxNotifyLimitOrderResult) => Ok(()),
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
 							Err(internal_error)

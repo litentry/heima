@@ -23,9 +23,11 @@ use rsa::pkcs1::EncodeRsaPublicKey;
 use crate::error_code::get_native_task_error_code;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::server::RpcContext;
+use crate::verify_auth::verify_auth;
 use crate::ErrorCode;
 use ethers::types::Bytes;
 use executor_core::native_task::NativeTask;
+use executor_core::native_task::NativeTaskTrait;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
 use executor_core::native_task::PumxWalletIndex;
@@ -88,7 +90,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				return Err(internal_error);
 			};
 
-			let task_wrapper = NativeTaskWrapper {
+			let wrapper = NativeTaskWrapper {
 				task: NativeTask::PumpxSignLimitOrder(
 					Identity::Substrate(address),
 					params.chain_id,
@@ -99,9 +101,13 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
 
+			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
+				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+			}
+
 			let (response_sender, response_receiver) = oneshot::channel();
 
-			if ctx.native_task_sender.send((task_wrapper, response_sender)).await.is_err() {
+			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
 				log::error!("Failed to send request to native call executor");
 				return Err(internal_error);
 			}

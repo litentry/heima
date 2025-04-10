@@ -980,7 +980,18 @@ async fn handle_native_task<
 
 			let tx = ctx.transaction_signer.sign(intent_executed_call).await;
 
-			(response_sender, tx)
+			if rpc_client.submit_tx(&tx).await.is_err() {
+				send_error(
+					"Failed to submit tx".to_string(),
+					response_sender,
+					NativeTaskError::InternalError,
+				);
+				ctx.transaction_signer.update_nonce().await;
+				return;
+			}
+
+			send_ok(response_sender, NativeTaskOk::PumpxNotifyLimitOrderResult);
+			return;
 		},
 	};
 
