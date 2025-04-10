@@ -11,6 +11,7 @@ members = [
     "heima/authentication",
     "heima/identity-verification",
     "intent/asset-lock",
+    "intent/core",
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
@@ -34,10 +35,11 @@ edition = "2021"
 [workspace.dependencies]
 alloy = "0.12.5"
 async-trait = "0.1.82"
+base58 = "0.2.0"
 base64 = "0.22.1"
 bitcoin = "0.32.5"
-clap = "4.5.17"
 chrono = "0.4.40"
+clap = "4.5.17"
 env_logger = "0.11.5"
 frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
@@ -84,9 +86,11 @@ executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
 executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
+heima-hex-utils = { package = "litentry-hex-utils", path = "../../common/utils/hex", default-features = false, features = ["std"] }
 heima-identity-verification = { path = "heima/identity-verification" }
 heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 intent-asset-lock = { path = "intent/asset-lock" }
+intent-core = { path = "intent/core" }
 intent-token-query = { path = "intent/token-query" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }

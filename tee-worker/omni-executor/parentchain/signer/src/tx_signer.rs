@@ -1,22 +1,21 @@
-use executor_core::key_store::KeyStore;
 use executor_primitives::AccountId;
-use log::error;
 use parentchain_rpc_client::{
 	metadata::{MetadataProvider, SubxtMetadataProvider},
 	RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, ToPrimitiveType,
 };
 use parity_scale_codec::Decode;
-use std::marker::PhantomData;
 use std::sync::Arc;
+use std::{
+	marker::PhantomData,
+	sync::atomic::{AtomicU64, Ordering},
+};
 use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder};
 use subxt_core::tx::payload::Payload;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_core::{tx, Config, Metadata};
 use subxt_signer::sr25519::Keypair;
-use subxt_signer::sr25519::SecretKeyBytes;
 
-pub struct TransactionSigner<
-	KeyStoreT,
+pub struct TxSigner<
 	RpcClient: SubstrateRpcClient<ChainConfig::Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient>,
 	ChainConfig: Config,
@@ -25,12 +24,12 @@ pub struct TransactionSigner<
 > {
 	metadata_provider: Arc<MetadataProviderT>,
 	rpc_client_factory: Arc<RpcClientFactory>,
-	key_store: Arc<KeyStoreT>,
+	signer: Keypair,
+	nonce: AtomicU64,
 	phantom_data: PhantomData<(RpcClient, ChainConfig, MetadataT)>,
 }
 
 impl<
-		KeyStoreT: KeyStore<SecretKeyBytes>,
 		RpcClient: SubstrateRpcClient<ChainConfig::Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<ChainConfig::Header, RpcClient>,
 		ChainConfig: Config<
@@ -41,39 +40,24 @@ impl<
 			Header = RpcClientHeader,
 		>,
 	>
-	TransactionSigner<
-		KeyStoreT,
-		RpcClient,
-		RpcClientFactory,
-		ChainConfig,
-		Metadata,
-		SubxtMetadataProvider<ChainConfig>,
-	>
+	TxSigner<RpcClient, RpcClientFactory, ChainConfig, Metadata, SubxtMetadataProvider<ChainConfig>>
 {
 	pub fn new(
 		metadata_provider: Arc<SubxtMetadataProvider<ChainConfig>>,
 		rpc_client_factory: Arc<RpcClientFactory>,
-		key_store: Arc<KeyStoreT>,
+		signer: Keypair,
+		nonce: u64,
 	) -> Self {
-		Self { metadata_provider, rpc_client_factory, key_store, phantom_data: PhantomData }
+		log::info!("Initializing TxSigner nonce with {}", nonce);
+		let nonce = AtomicU64::new(nonce);
+		Self { metadata_provider, rpc_client_factory, signer, nonce, phantom_data: PhantomData }
 	}
 
-	pub async fn sign<Call: Payload>(&self, call: Call, next_nonce: Option<u64>) -> Vec<u8> {
-		let signer = self.get_signer();
+	pub async fn sign<Call: Payload>(&self, call: Call) -> Vec<u8> {
 		let mut client = self.rpc_client_factory.new_client().await.unwrap();
+
 		let runtime_version = client.runtime_version().await.unwrap();
-
 		let genesis_hash = client.get_genesis_hash().await.unwrap();
-
-		let account_id = signer.public_key().to_account_id().to_primitive_type();
-
-		let nonce: u64;
-
-		if let Some(n) = next_nonce {
-			nonce = n;
-		} else {
-			nonce = client.get_account_nonce(&account_id).await.unwrap();
-		}
 
 		// we should get latest metadata
 		let metadata = self.metadata_provider.get(None).await;
@@ -86,28 +70,36 @@ impl<
 				transaction_version: runtime_version.transaction_version,
 			},
 		};
+		let nonce = self.nonce.fetch_add(1, Ordering::SeqCst);
+		if let Some(details) = call.validation_details() {
+			log::info!(
+				"Signing call {}::{} with nonce {}",
+				details.pallet_name,
+				details.call_name,
+				nonce
+			);
+		} else {
+			log::info!("Signing call with nonce {}", nonce);
+		}
 		let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
-		let signed_call = tx::create_signed(&call, &state, &signer, params).unwrap();
+		let signed_call = tx::create_signed(&call, &state, &self.signer, params).unwrap();
 
 		signed_call.encoded().to_vec()
 	}
 
-	pub fn get_signer_account_id(&self) -> AccountId {
-		self.get_signer().public_key().to_account_id().to_primitive_type()
+	fn get_signer_account_id(&self) -> AccountId {
+		self.signer.public_key().to_account_id().to_primitive_type()
 	}
 
-	fn get_signer(&self) -> Keypair {
-		let secret_key_bytes = self
-			.key_store
-			.read()
-			.map_err(|e| {
-				error!("Could not unseal key: {:?}", e);
-			})
-			.unwrap();
-		Keypair::from_secret_key(secret_key_bytes)
-			.map_err(|e| {
-				error!("Could not create secret key: {:?}", e);
-			})
-			.unwrap()
+	pub async fn update_nonce(&self) {
+		let mut client =
+			self.rpc_client_factory.new_client().await.expect("Failed to create rpc client");
+		let account_id = self.get_signer_account_id();
+		let nonce = client
+			.get_account_nonce(&account_id)
+			.await
+			.expect("Failed to get account nonce");
+		log::info!("Updating nonce to {}", nonce);
+		self.nonce.store(nonce, Ordering::SeqCst);
 	}
 }

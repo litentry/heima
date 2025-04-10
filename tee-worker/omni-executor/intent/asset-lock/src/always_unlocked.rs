@@ -14,24 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
+// Manages whether any asset is locked for particular account or not.
 
-use crate::{EthereumToken, SolanaToken};
+use crate::{AmountType, AssetsLock};
 
-// TODO: maybe using xcm Location is better
-//       but we'd need enums for all foreign types, or use GeneralIndex
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub enum ChainType {
-    Heima,         // this chain
-    Ethereum(u32), // with chain id
-    Solana,
-}
+pub struct AlwaysUnlockedAssetsLock {}
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo, Hash, MaxEncodedLen)]
-pub enum ChainAsset {
-    // TODO: Revisit renaming Ethereum to Evm
-    Ethereum(u32, EthereumToken), // with chain id
-    Solana(SolanaToken),
+impl AssetsLock for AlwaysUnlockedAssetsLock {
+	fn with_lock(
+		_asset_id: crate::AssetId,
+		_amount_to_lock: AmountType,
+		_available_amount: AmountType,
+	) -> Result<Self, ()> {
+		Ok(Self {})
+	}
+
+	fn lock(
+		&mut self,
+		_asset_id: crate::AssetId,
+		_amount_to_lock: AmountType,
+		_available_amount: AmountType,
+	) -> Result<(), ()> {
+		Ok(())
+	}
+
+	fn release(
+		&mut self,
+		_asset_id: crate::AssetId,
+		_amount_to_release: AmountType,
+	) -> Result<(), ()> {
+		Ok(())
+	}
 }

@@ -191,6 +191,18 @@ impl<'a> TryFrom<&'a [u8]> for Address32 {
     }
 }
 
+impl TryFrom<&str> for Address32 {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value
+            .from_base58()
+            .map_err(|_| ())?
+            .as_slice()
+            .try_into()
+            .map_err(|_| ())
+    }
+}
+
 impl From<Address32> for AccountId32 {
     fn from(value: Address32) -> Self {
         let raw: [u8; 32] = *value.as_ref();

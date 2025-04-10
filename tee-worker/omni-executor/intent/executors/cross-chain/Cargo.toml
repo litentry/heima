@@ -11,6 +11,12 @@ log = { workspace = true }
 # Local dependencies
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
+intent-asset-lock = { workspace = true }
+intent-token-query = { workspace = true }
+parentchain-api-interface = { workspace = true }
+parentchain-rpc-client = { workspace = true }
+parentchain-signer = { workspace = true }
+pumpx = { workspace = true }
 
 [lints]
 workspace = true
