@@ -3,6 +3,7 @@ mod error;
 mod spot_trading_api;
 mod traits;
 mod types;
+mod wallet_api;
 
 use convert_api::ConvertApi;
 use error::Error;
@@ -16,6 +17,7 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 use url::Url;
+use wallet_api::WalletApi;
 
 const MAX_RECV_WINDOW: u32 = 60000;
 
@@ -45,6 +47,11 @@ impl BinanceApi {
 	/// Create a new SpotTradingApi instance
 	pub fn spot_trading(&self) -> SpotTradingApi {
 		SpotTradingApi::new(self)
+	}
+
+	/// Create a new WalletApi instance
+	pub fn wallet(&self) -> WalletApi {
+		WalletApi::new(self)
 	}
 
 	/// Create HMAC SHA256 signature for request parameters
