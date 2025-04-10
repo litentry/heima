@@ -6175,6 +6175,7 @@ dependencies = [
  "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
+ "hex",
  "intent-core",
  "log",
  "parentchain-api-interface",
@@ -7918,6 +7919,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sha2 0.10.8",
+ "tempfile",
  "tokio",
 ]
 

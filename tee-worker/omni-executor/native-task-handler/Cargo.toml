@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 chrono = { workspace = true }
+hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
