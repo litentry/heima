@@ -100,7 +100,7 @@ export default {
         PumpxJwt: {
             access_token: "Text",
             id_token: "Text",
-            user_connect_response: "PumpxUserConnectResponse",
+            backend_response: "PumpxUserConnectResponse",
         },
         PumpxUserConnectResponse: {
             code: "u32",
