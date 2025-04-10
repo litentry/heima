@@ -7,4 +7,6 @@ export * from './types';
 export * from './u8aToBase64Url';
 export * from './verify-signature';
 export * from './identity';
+export * from './rpc-method';
+
 
