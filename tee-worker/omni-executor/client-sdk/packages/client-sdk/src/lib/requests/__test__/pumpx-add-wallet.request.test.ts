@@ -1,5 +1,5 @@
 import { enclave } from '@lib/enclave';
-import { PumpxRpcMethod } from '@lib/utils/rpc-method';
+import { PumpxRpcMethod, OmniRpcMethod } from '@lib/utils/rpc-method';
 import { JsonRpcRequest } from '@utils/types';
 
 // This test is just an example. It requires receiving email verification codes, which cannot be done by running this unit test.
@@ -8,7 +8,7 @@ describe.skip('add-export-wallet', () => {
   it('request email verification code', async () => {
     const rpcRequest = {
       jsonrpc: '2.0',
-      method: 'omni_requestEmailVerificationCode',
+      method: OmniRpcMethod.RequestEmailVerificationCode,
       params: {
         user_email: 'test@google.com',
       },
