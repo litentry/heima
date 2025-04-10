@@ -3,12 +3,10 @@ use crate::{
 	ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::Hash;
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
-use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct NotifyLimitOrderResultParams {
@@ -17,12 +15,6 @@ pub struct NotifyLimitOrderResultParams {
 	pub result: String,
 	pub message: Option<String>,
 	pub auth_token: String,
-}
-
-#[derive(Serialize, Clone)]
-pub struct RPCNotifyLimitOrderResultResponse {
-	extrinsic_hash: Hash,
-	block_hash: Option<Hash>,
 }
 
 impl From<NotifyLimitOrderResultParams> for NativeTaskWrapper<NativeTask> {
@@ -65,10 +57,10 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
 						Ok(NativeTaskOk::ExtrinsicReport {
-							extrinsic_hash,
-							block_hash,
+							extrinsic_hash: _,
+							block_hash: _,
 							status: _,
-						}) => Ok(RPCNotifyLimitOrderResultResponse { extrinsic_hash, block_hash }),
+						}) => Ok(()),
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
 							Err(internal_error)
