@@ -13,8 +13,9 @@ use heima_primitives::{
 	Web2IdentityType,
 };
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskResponse;
-use pumpx::types::SwapType;
+use native_task_handler::{NativeTaskOk, NativeTaskResponse};
+use pumpx::types::{MarketOrderTxResponse, OrderInfoResponse, SwapType};
+use serde::Serialize;
 
 // TODO: move this to a central place
 const SOLANA_CHAIN_ID: u32 = 10000;
@@ -89,6 +90,13 @@ impl SubmitSwapOrderParams {
 			},
 		}
 	}
+}
+
+// TODO: refactor this response to make it more generic and also support binance swaps responses
+#[derive(Serialize)]
+pub struct PumpxSubmitSwapOrderResponse {
+	limit_order_response: Option<OrderInfoResponse>,
+	market_order_response: Option<MarketOrderTxResponse>,
 }
 
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
@@ -210,12 +218,41 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			}
 			match response_receiver.await {
 				Ok(response) => {
-					let _native_task_response: NativeTaskResponse =
+					let native_task_response: NativeTaskResponse =
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| ErrorCode::InternalError)?;
 
-					// TODO: handle the response
-					Ok(())
+					match native_task_response {
+						Ok(NativeTaskOk::IntentSwapResponse(swap_response)) => {
+							if pumpx_config.order_type == PumpxOrderType::Market {
+								let market_order_response: MarketOrderTxResponse =
+									Decode::decode(&mut swap_response.as_slice())
+										.map_err(|_| ErrorCode::InternalError)?;
+								let response = PumpxSubmitSwapOrderResponse {
+									limit_order_response: None,
+									market_order_response: Some(market_order_response),
+								};
+								Ok(response)
+							} else {
+								let limit_order_response: OrderInfoResponse =
+									Decode::decode(&mut swap_response.as_slice())
+										.map_err(|_| ErrorCode::InternalError)?;
+								let response = PumpxSubmitSwapOrderResponse {
+									limit_order_response: Some(limit_order_response),
+									market_order_response: None,
+								};
+								Ok(response)
+							}
+						},
+						Err(native_task_err) => {
+							log::error!("Failed to execute native task: {:?}", native_task_err);
+							return Err(ErrorCode::InternalError);
+						},
+						_ => {
+							log::error!("Unexpected response type");
+							return Err(ErrorCode::InternalError);
+						},
+					}
 				},
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);

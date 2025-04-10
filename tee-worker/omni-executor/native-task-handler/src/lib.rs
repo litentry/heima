@@ -375,13 +375,23 @@ async fn handle_native_task<
 					ctx.transaction_signer.sign(intent_executed_call).await
 				},
 				Intent::Swap(..) => {
-					if let Err(e) = ctx
+					let (execution_result, response) = match ctx
 						.cross_chain_intent_executor
 						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
-						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentCompletedDetail::Failure;
+						Ok(response) => (IntentCompletedDetail::Success, response),
+						Err(e) => {
+							log::error!("Error executing intent: {:?}", e);
+							(IntentCompletedDetail::Failure, None)
+						},
+					};
+					if let Some(response) = response {
+						let response =
+							NativeTaskResponse::Ok(NativeTaskOk::IntentSwapResponse(response));
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
+						}
 					}
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
@@ -389,7 +399,12 @@ async fn handle_native_task<
 							0, // TODO
 							execution_result,
 						);
-					ctx.transaction_signer.sign(intent_executed_call).await
+					let tx = ctx.transaction_signer.sign(intent_executed_call).await;
+					if rpc_client.submit_tx(&tx).await.is_err() {
+						log::error!("Failed to submit RequestIntent tx");
+						ctx.transaction_signer.update_nonce().await;
+					}
+					return;
 				},
 			};
 

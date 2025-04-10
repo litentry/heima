@@ -19,6 +19,7 @@ pub enum NativeTaskOk {
 
 		user_connect_response: UserConnectResponse,
 	},
+	IntentSwapResponse(Vec<u8>),
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet(AddWalletResponse),
 }

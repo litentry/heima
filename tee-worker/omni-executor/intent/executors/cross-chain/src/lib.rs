@@ -30,6 +30,7 @@ use intent_token_query::query_solana;
 use intent_token_query::EthereumAddress;
 use intent_token_query::SolanaPubkey;
 use log::error;
+use parity_scale_codec::Encode;
 use pumpx::signer_client::SignerClient;
 use pumpx::types::ChainId;
 use pumpx::types::CreateCrossOrderData;
@@ -131,7 +132,7 @@ impl<
 		account_id: &AccountId,
 		intent_id: IntentId,
 		intent: Intent,
-	) -> Result<(), ()> {
+	) -> Result<Option<Vec<u8>>, ()> {
 		match intent {
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
@@ -221,6 +222,8 @@ impl<
 					})
 					.map(|v| v.to_string())?;
 
+				let mut pumpx_order_response: Option<Vec<u8>> = None;
+
 				if swap_order.from_asset.is_same_chain(&swap_order.to_asset) {
 					let cross_order_data = CreateCrossOrderData {
 						request_id: intent_id,
@@ -246,7 +249,7 @@ impl<
 							log::error!("Failed to get user trade info");
 						})?;
 
-					match pumpx_config.order_type {
+					let order_response = match pumpx_config.order_type {
 						PumpxOrderType::Market => {
 							let new_market_order = NewMarketOrder {
 								request_id: intent_id,
@@ -343,15 +346,14 @@ impl<
 								tx_data: market_order_unsigned_tx.data.tx_data,
 								chain_id: chain_id.clone(),
 							};
-							let _market_order_tx_res = self
+							let market_order_tx_res = self
 								.pumpx_api
 								.send_market_order_tx(&access_token, market_order_tx)
 								.await
 								.map_err(|_| {
 									log::error!("Failed to send market order tx");
 								})?;
-							// - return the result to F/E
-							// TODO: figure out how to send this to the frontend
+							market_order_tx_res.encode()
 						},
 						PumpxOrderType::Limit => {
 							let token_cap = match pumpx_config.token_cap {
@@ -415,7 +417,7 @@ impl<
 								slippage: user_trade_info.data.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
-							let _limit_order_response = self
+							let limit_order_response = self
 								.pumpx_api
 								.create_limit_order(&access_token, new_limit_order)
 								.await
@@ -423,26 +425,29 @@ impl<
 									log::error!("Failed to create limit order");
 								})?;
 
-							// return to FE
+							limit_order_response.encode()
 						},
-					}
+					};
+					pumpx_order_response = Some(order_response);
 				} else {
 					//TODO: execute cross-chain swap
 					// to binance swap, If it fails, notify the backend via /v3/trade/cross_fail
+					// TODO:
+					// 3. Swap assets:
+					//    - Call accounting contract (e.g Swap SOL to TRUMP)
+					//    - Call Binance convert via binance account (e.g Swap USDC to SOL)
+					// 4. Send locked balance to binance account (refill)
+
 					todo!()
 				}
 
-				// TODO:
-				// 3. Swap assets:
-				//    - Call accounting contract (e.g Swap SOL to TRUMP)
-				//    - Call Binance convert via binance account (e.g Swap USDC to SOL)
-				// 4. Send locked balance to binance account (refill)
 				self.account_asset_lock.release(
 					account_id.clone(),
 					swap_order.from_asset.clone(),
 					AmountType::from(swap_order.from_amount),
 				)?;
-				todo!("CrossChainSwap is not implemented yet");
+
+				return Ok(pumpx_order_response);
 			},
 			_ => {
 				log::error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);

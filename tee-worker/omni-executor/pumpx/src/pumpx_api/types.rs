@@ -53,7 +53,7 @@ pub struct ConnectedUser {
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ApiResponse<T: Encode> {
+pub struct ApiResponse<T: Codec> {
 	code: u32,
 	message: String,
 	pub data: T,
@@ -134,7 +134,7 @@ pub struct MarketOrderTx {
 	pub chain_id: ChainId,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Serialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
 	pub tx_hash: String,
@@ -174,7 +174,7 @@ pub struct NewLimitOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Serialize, Encode)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInfo {
 	pub order_id: String,
