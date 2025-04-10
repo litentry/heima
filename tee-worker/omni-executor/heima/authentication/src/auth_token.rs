@@ -38,16 +38,20 @@ impl AuthTokenClaims {
 
 pub struct Validation {
 	pub sub: String,
+	pub typ: String,
 }
 
 impl Validation {
-	pub fn new(sub: String) -> Self {
-		Self { sub }
+	pub fn new(sub: String, typ: String) -> Self {
+		Self { sub, typ }
 	}
 
 	pub fn validate(&self, claims: &AuthTokenClaims) -> Result<(), Error> {
 		if self.sub != claims.sub {
 			return Err(Error::JwtError(jwt::ErrorKind::InvalidSubject));
+		}
+		if self.typ != claims.typ {
+			return Err(Error::JwtError(jwt::ErrorKind::InvalidToken));
 		}
 
 		Ok(())
@@ -110,12 +114,12 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
-			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new(omni_account.to_hex());
+		let validation = Validation::new(omni_account.to_hex(), AUTH_TOKEN_ID_TYPE.to_string());
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Ok(()));
@@ -133,12 +137,12 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
-			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new(omni_account.to_hex());
+		let validation = Validation::new(omni_account.to_hex(), AUTH_TOKEN_ID_TYPE.to_string());
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::ExpiredSignature)));
@@ -161,14 +165,42 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
-			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new("invalid-sub".to_string());
+		let validation = Validation::new("invalid-sub".to_string(), AUTH_TOKEN_ID_TYPE.to_string());
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidSubject)));
+	}
+
+	#[test]
+	fn test_auth_token_invalid_type() {
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
+
+		let expires_at = Utc::now()
+			.checked_add_days(Days::new(1))
+			.expect("Failed to calculate expiration")
+			.timestamp();
+
+		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
+		let omni_account = email_identity.to_omni_account();
+
+		let claims = AuthTokenClaims::new(
+			omni_account.to_hex(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
+			AuthOptions { expires_at },
+		);
+		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
+
+		let validation = Validation::new(omni_account.to_hex(), AUTH_TOKEN_ACCESS_TYPE.to_string());
+		let result = token.validate(private_key.as_bytes(), validation);
+
+		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidToken)));
 	}
 }

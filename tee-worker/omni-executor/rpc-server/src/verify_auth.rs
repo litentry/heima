@@ -7,7 +7,9 @@ use executor_primitives::{
 	Identity, MrEnclave, OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
-use heima_authentication::auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation};
+use heima_authentication::auth_token::{
+	AuthTokenValidator, Error as AuthTokenError, Validation, AUTH_TOKEN_ID_TYPE,
+};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use std::{fmt::Display, sync::Arc};
@@ -125,7 +127,8 @@ pub fn verify_auth_token_authentication(
 	auth_token: &str,
 ) -> Result<(), AuthenticationError> {
 	// TODO: once we start using the AccountStore, we should get the omni account from storage
-	let validation = Validation::new(sender.to_omni_account().to_hex());
+	let validation =
+		Validation::new(sender.to_omni_account().to_hex(), AUTH_TOKEN_ID_TYPE.to_string());
 	auth_token
 		.validate(&ctx.jwt_rsa_private_key, validation)
 		.map_err(AuthenticationError::AuthTokenError)
