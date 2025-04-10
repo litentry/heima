@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Update NativeTaskOk::PumpxJwt to NativeTaskOk::PumpxRequestJwt
+
 ## [0.9.24-next.4] - 2025-04-02
 
 ### Changed
