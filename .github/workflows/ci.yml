@@ -331,20 +331,27 @@ jobs:
       - set-condition
       - sequentialise
     if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
-    container: "litentry/litentry-tee-dev:latest"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
 
       - name: Install dependencies
         run: |
           sudo apt-get update && \
           sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
 
-      - name: Clippy
+      - name: Install rust toolchain
         working-directory: ./tee-worker/omni-executor
-        run: cargo clippy --release -- -D warnings
+        run: rustup show
 
-      - name: Tests
+      - name: Cargo clippy
+        working-directory: ./tee-worker/omni-executor
+        run: cargo clippy -- -D warnings
+
+      - name: Cargo test
         working-directory: ./tee-worker/omni-executor
         run: cargo test
 

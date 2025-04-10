@@ -11,6 +11,7 @@
 ## Enumerations
 
 - [ConnectionState](enumerations/ConnectionState.md)
+- [PumpxRpcMethod](enumerations/PumpxRpcMethod.md)
 
 ## Classes
 

@@ -17,10 +17,11 @@ pub enum NativeTaskOk {
 		/// Used for user's identity verification before making sensitive operations
 		id_token: String,
 
-		user_connect_response: UserConnectResponse,
+		backend_response: UserConnectResponse,
 	},
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet(AddWalletResponse),
+	PumpxSignLimitOrder(Vec<Vec<u8>>),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

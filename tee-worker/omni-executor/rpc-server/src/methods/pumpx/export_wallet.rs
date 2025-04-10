@@ -1,9 +1,10 @@
 use crate::{
-	error_code::*, oneshot, serde_as, server::RpcContext, verify_auth::verify_auth, Decode,
-	Deserialize, ErrorCode, Serialize,
+	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
+	ErrorCode,
 };
+use ethers::types::Bytes;
 use executor_core::native_task::*;
-use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, AesOutput};
+use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -11,22 +12,15 @@ use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
 use rsa::Oaep;
 use sha2::Sha256;
 
-#[serde_as]
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
 	pub user_email: String,
-	#[serde_as(as = "serde_with::hex::Hex")]
-	pub key: Vec<u8>, // RSA-encrypted AES key to encrypt the wallet private key
+	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: MaybeGoogleCode,
 	pub chain_id: PumpxChainId,
 	pub wallet_index: PumxWalletIndex,
 	pub wallet_address: String,
 	pub email_code: String,
-}
-
-#[derive(Serialize, Clone)]
-pub struct ExportWalletResponse {
-	pub encrypted_wallet: AesOutput,
 }
 
 impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
@@ -85,8 +79,9 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
 						Ok(NativeTaskOk::PumpxExportWallet(wallet)) => {
-							let encrypted_wallet = aes_encrypt_default(&aes_key, &wallet);
-							Ok(ExportWalletResponse { encrypted_wallet })
+							let encrypted_wallet: SerdeAesOutput =
+								aes_encrypt_default(&aes_key, &wallet).into();
+							Ok(encrypted_wallet)
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
