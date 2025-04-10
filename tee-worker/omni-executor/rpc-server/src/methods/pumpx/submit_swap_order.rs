@@ -96,8 +96,13 @@ impl SubmitSwapOrderParams {
 // TODO: refactor this response to make it more generic and also support binance swaps responses
 #[derive(Serialize, Clone)]
 pub struct PumpxSubmitSwapOrderResponse {
-	limit_order_response: Option<OrderInfoResponse>,
-	market_order_response: Option<MarketOrderTxResponse>,
+	backend_response: BackendResponse,
+}
+
+#[derive(Serialize, Clone)]
+struct BackendResponse {
+	pub limit_order_response: Option<OrderInfoResponse>,
+	pub market_order_response: Option<MarketOrderTxResponse>,
 }
 
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
@@ -236,8 +241,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 									Decode::decode(&mut swap_response.as_slice())
 										.map_err(|_| ErrorCode::InternalError)?;
 								let response = PumpxSubmitSwapOrderResponse {
-									limit_order_response: None,
-									market_order_response: Some(market_order_response),
+									backend_response: BackendResponse {
+										limit_order_response: None,
+										market_order_response: Some(market_order_response),
+									},
 								};
 								Ok(response)
 							} else {
@@ -245,8 +252,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 									Decode::decode(&mut swap_response.as_slice())
 										.map_err(|_| ErrorCode::InternalError)?;
 								let response = PumpxSubmitSwapOrderResponse {
-									limit_order_response: Some(limit_order_response),
-									market_order_response: None,
+									backend_response: BackendResponse {
+										limit_order_response: Some(limit_order_response),
+										market_order_response: None,
+									},
 								};
 								Ok(response)
 							}
