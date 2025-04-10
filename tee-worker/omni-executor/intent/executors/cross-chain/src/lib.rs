@@ -16,6 +16,7 @@
 
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
+use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
@@ -209,12 +210,6 @@ impl<
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
 
-				let storage = PumpxJwtStorage::new(self.storage_db.clone());
-				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
-				else {
-					log::error!("Failed to get access token from storage");
-					return Err(());
-				};
 				let chain_id = match swap_order.to_asset {
 					ChainAsset::Ethereum(..) => ChainId::EVM,
 					ChainAsset::Solana(_) => ChainId::Solana,
@@ -229,29 +224,35 @@ impl<
 						log::error!("Failed to parse token_ca");
 					})
 					.map(|v| v.to_string())?;
+				let cross_order_data = CreateCrossOrderData {
+					request_id: intent_id,
+					chain_id: chain_id.clone(),
+					info: CrossOrderInfo {
+						chain_id: chain_id.clone(),
+						wallet_index: pumpx_config.wallet_index,
+						address: account_id.to_hex(),
+						amount: from_amount_string.clone(),
+						usd: usd_worth,
+						token_ca: token_ca.clone(),
+					},
+				};
+				let storage = PumpxJwtStorage::new(self.storage_db.clone());
+				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
+				else {
+					log::error!("Failed to get access token from storage");
+					return Err(());
+				};
 
-				let mut pumpx_order_response: Option<Vec<u8>> = None;
+				self.pumpx_api
+					.create_cross_order(&access_token, cross_order_data)
+					.await
+					.map_err(|_| {
+						log::error!("Failed to create cross order");
+					})?;
+
+				let pumpx_order_response: Option<Vec<u8>>;
 
 				if swap_order.from_asset.is_same_chain(&swap_order.to_asset) {
-					let cross_order_data = CreateCrossOrderData {
-						request_id: intent_id,
-						chain_id: chain_id.clone(),
-						info: CrossOrderInfo {
-							chain_id: chain_id.clone(),
-							wallet_index: pumpx_config.wallet_index,
-							address: "todo: what's this??".to_string(),
-							amount: from_amount_string.clone(),
-							usd: usd_worth,
-							token_ca: token_ca.clone(),
-						},
-					};
-					self.pumpx_api
-						.create_cross_order(&access_token, cross_order_data)
-						.await
-						.map_err(|_| {
-							log::error!("Failed to create cross order");
-						})?;
-
 					let user_trade_info =
 						self.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
 							log::error!("Failed to get user trade info");
