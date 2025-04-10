@@ -6171,6 +6171,7 @@ dependencies = [
  "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
+ "hex",
  "intent-core",
  "log",
  "parentchain-api-interface",
