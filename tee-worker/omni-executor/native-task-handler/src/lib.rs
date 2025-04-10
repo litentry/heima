@@ -150,7 +150,8 @@ pub async fn run_native_task_handler<
 
 	tokio::spawn(async move {
 		while let Some((wrapper, sender)) = receiver.recv().await {
-			handle_native_task(ctx.clone(), wrapper, sender).await;
+			let ctx_cloned = ctx.clone();
+			tokio::spawn(async move { handle_native_task(ctx_cloned, wrapper, sender).await });
 		}
 	});
 
