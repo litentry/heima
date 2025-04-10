@@ -193,12 +193,12 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
-			AUTH_TOKEN_ID_TYPE.to_string(),
+			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new(omni_account.to_hex(), AUTH_TOKEN_ACCESS_TYPE.to_string());
+		let validation = Validation::new(omni_account.to_hex(), AUTH_TOKEN_ID_TYPE.to_string());
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidToken)));
