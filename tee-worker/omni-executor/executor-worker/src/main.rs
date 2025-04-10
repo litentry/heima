@@ -17,19 +17,24 @@
 use crate::cli::Cli;
 use clap::Parser;
 use cli::*;
-use cross_chain_intent_executor::CrossChainIntentExecutor;
+use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
+use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use intent_core::IntentIdStore;
+use intent_core::StorageDbIntentIdStore;
 use log::{error, info};
 use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
-use parentchain_signer::key_store::SubstrateKeyStore;
-use parentchain_signer::{get_signer, TransactionSigner};
+use parentchain_rpc_client::{
+	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory,
+	ToPrimitiveType,
+};
+use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
 use solana_intent_executor::SolanaIntentExecutor;
@@ -74,6 +79,7 @@ async fn main() -> Result<(), ()> {
 
 			let pumpx_signer_key =
 				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
+
 			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
 			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
 
@@ -82,49 +88,81 @@ async fn main() -> Result<(), ()> {
 
 			let client_factory = SubxtClientFactory::<CustomConfig>::new(&args.parentchain_url);
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
+			let parentchain_rpc_client_factory = Arc::new(client_factory);
+
 			let substrate_key_store =
 				Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path.clone()));
-			let parentchain_rpc_client_factory = Arc::new(client_factory);
-			let transaction_signer = Arc::new(TransactionSigner::new(
+			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
+			let signer_account_id: AccountId =
+				parentchain_signer.public_key().to_account_id().to_primitive_type();
+			let mut parentchain_rpc_client = parentchain_rpc_client_factory
+				.new_client()
+				.await
+				.expect("Could not create RPC client");
+			let signer_account_nonce = parentchain_rpc_client
+				.get_account_nonce(&signer_account_id)
+				.await
+				.expect("Could not get signer account nonce");
+
+			let tx_signer = Arc::new(TxSigner::new(
 				metadata_provider,
 				parentchain_rpc_client_factory.clone(),
-				substrate_key_store.clone(),
+				parentchain_signer.clone(),
+				signer_account_nonce,
 			));
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
 			let pumpx_signer_client = Arc::new(pumpx::signer_client::SignerClient::new(
-				//todo get from cli after merge
-				"".to_string(),
+				args.pumpx_signer_url.clone(),
 				pumpx_signer_pair,
 			));
 
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
 			let solana_intent_executor = SolanaIntentExecutor::new(&args.solana_url)?;
-			let cross_chain_intent_executor = CrossChainIntentExecutor::new()?;
+
+			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
+			rpc_endpoint_registry.insert(Chain::Solana, args.solana_url.clone());
+
+			if let Some(ref bsc_url) = args.bsc_url {
+				rpc_endpoint_registry.insert(Chain::Ethereum(56), bsc_url.to_owned());
+			}
+
+			if let Some(ref bsc_testnet_url) = args.bsc_testnet_url {
+				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
+			}
+
+			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
+				parentchain_rpc_client_factory.clone(),
+				tx_signer.clone(),
+				rpc_endpoint_registry,
+				pumpx_signer_client.clone(),
+			)?;
 
 			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
-			let pumpx_api = PumpxApi::new(pumpx_api_base_url);
+			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
+
+			let intent_id_store: Arc<Box<dyn IntentIdStore>> =
+				Arc::new(Box::new(StorageDbIntentIdStore::new(storage_db.clone())));
 
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
-				transaction_signer.clone(),
+				tx_signer.clone(),
 				storage_db.clone(),
 				jwt_rsa_private_key.clone(),
 				aes256_key,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
-				Arc::new(pumpx_api),
+				pumpx_api.clone(),
 				pumpx_signer_client.clone(),
+				intent_id_store.clone(),
 			);
 			// TODO: make buffer size configurable
 			let buffer = 1024;
 			let native_task_sender =
 				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
-
-			let signer = get_signer(substrate_key_store.clone());
 
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
@@ -139,8 +177,8 @@ async fn main() -> Result<(), ()> {
 
 			let mrenclave = perform_attestation(
 				parentchain_rpc_client_factory,
-				signer,
-				transaction_signer.clone(),
+				parentchain_signer,
+				tx_signer.clone(),
 				worker_url.as_str(),
 				shielding_pubkey_vec,
 			)
@@ -153,9 +191,11 @@ async fn main() -> Result<(), ()> {
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
 				Arc::new(native_task_sender),
+				pumpx_api,
 				storage_db.clone(),
 				mrenclave,
 				jwt_rsa_private_key,
+				intent_id_store,
 			)
 			.await
 			.map_err(|e| {
@@ -188,7 +228,7 @@ async fn listen_to_parentchain(
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
 
 	let mut parentchain_listener = parentchain_listener::create_listener(
-		"litentry_rococo",
+		"heima",
 		Handle::current(),
 		&args.parentchain_url,
 		sub_stop_receiver,
@@ -198,7 +238,7 @@ async fn listen_to_parentchain(
 	.await?;
 
 	Ok(thread::Builder::new()
-		.name("litentry_rococo_sync".to_string())
+		.name("heima_sync".to_string())
 		.spawn(move || parentchain_listener.sync(args.start_block))
 		.unwrap())
 }

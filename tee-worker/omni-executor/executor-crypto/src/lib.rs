@@ -7,11 +7,15 @@ pub mod rsa {
 	pub use rsa::*;
 
 	use serde::{Deserialize, Serialize};
+	use serde_with::serde_as;
 	use std::vec::Vec;
 
-	#[derive(Serialize, Deserialize)]
+	#[serde_as]
+	#[derive(Serialize, Deserialize, Debug)]
 	pub struct Rsa3072PubKey {
+		#[serde_as(as = "serde_with::hex::Hex")]
 		pub n: Vec<u8>,
+		#[serde_as(as = "serde_with::hex::Hex")]
 		pub e: Vec<u8>,
 	}
 }

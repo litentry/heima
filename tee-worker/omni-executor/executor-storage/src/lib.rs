@@ -34,7 +34,7 @@ pub trait Storage<K, V> {
 	fn contains_key(&self, key: &K) -> bool;
 }
 
-fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
+pub fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
 	twox_128(storage_name.as_bytes())
 		.iter()
 		.chain(blake2_128(key).iter().chain(key.iter())) // blake2_128_concat

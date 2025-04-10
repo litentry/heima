@@ -19,6 +19,7 @@ executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
+intent-core = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
