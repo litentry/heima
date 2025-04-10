@@ -82,7 +82,7 @@ impl SwapType {
 	}
 }
 
-#[derive(Deserialize_repr, Serialize_repr, Encode)]
+#[derive(Deserialize_repr, Serialize_repr, Encode, Decode)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum GasType {
@@ -119,7 +119,7 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderUnsignedTx {
 	pub order_id: String,
@@ -134,13 +134,13 @@ pub struct MarketOrderTx {
 	pub chain_id: ChainId,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode)]
+#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
 	pub tx_hash: String,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct UserTradeInfo {
 	pub gas_type_base: GasType,
@@ -174,7 +174,7 @@ pub struct NewLimitOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Serialize, Encode)]
+#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInfo {
 	pub order_id: String,
@@ -185,7 +185,7 @@ pub struct GoogleCode {
 	pub google_code: String,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Encode, Decode)]
 pub struct DataResult {
 	pub result: bool,
 }
