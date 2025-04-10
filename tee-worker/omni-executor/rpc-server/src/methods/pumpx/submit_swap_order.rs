@@ -94,7 +94,7 @@ impl SubmitSwapOrderParams {
 }
 
 // TODO: refactor this response to make it more generic and also support binance swaps responses
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct PumpxSubmitSwapOrderResponse {
 	limit_order_response: Option<OrderInfoResponse>,
 	market_order_response: Option<MarketOrderTxResponse>,
@@ -186,7 +186,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				.map_err(|_| ErrorCode::InvalidParams)?;
 
 			let pumpx_config = PumpxConfig {
-				order_type: params.order_type,
+				order_type: params.order_type.clone(),
 				swap_type: params.swap_type.to_number() as u32,
 				chain_id: params.to_chain_id,
 				token_ca,
@@ -212,7 +212,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
 			let wrapper = NativeTaskWrapper {
-				task: NativeTask::RequestIntent(user_identity, intent_id, intent),
+				task: NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
@@ -231,7 +231,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 					match native_task_response {
 						Ok(NativeTaskOk::IntentSwapResponse(swap_response)) => {
-							if pumpx_config.order_type == PumpxOrderType::Market {
+							if params.order_type == PumpxOrderType::Market {
 								let market_order_response: MarketOrderTxResponse =
 									Decode::decode(&mut swap_response.as_slice())
 										.map_err(|_| ErrorCode::InternalError)?;
@@ -253,11 +253,11 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						},
 						Err(native_task_err) => {
 							log::error!("Failed to execute native task: {:?}", native_task_err);
-							return Err(ErrorCode::InternalError);
+							Err(ErrorCode::InternalError)
 						},
 						_ => {
 							log::error!("Unexpected response type");
-							return Err(ErrorCode::InternalError);
+							Err(ErrorCode::InternalError)
 						},
 					}
 				},
