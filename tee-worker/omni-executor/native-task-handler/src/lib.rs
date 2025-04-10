@@ -286,14 +286,6 @@ async fn handle_native_task<
 				}
 				return;
 			}
-			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
-				let response = NativeTaskResponse::Err(NativeTaskError::UnauthorizedSender);
-				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
-				}
-				return;
-			};
 
 			let call = OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
 			let dispatch_as_omni_account_call =
