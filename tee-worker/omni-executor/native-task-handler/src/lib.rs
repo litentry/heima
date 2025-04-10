@@ -396,7 +396,7 @@ async fn handle_native_task<
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							0, // TODO
+							intent_id,
 							execution_result,
 						);
 					let tx = ctx.transaction_signer.sign(intent_executed_call).await;

@@ -26,6 +26,7 @@ const BASE_CHAIN_ID: u32 = 8453;
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
 	pub user_email: String,
+	pub intent_id: u32,
 	pub order_type: PumpxOrderType,
 	pub swap_type: SwapType,
 	pub from_chain_id: u32,
@@ -205,7 +206,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
 			let wrapper = NativeTaskWrapper {
-				task: NativeTask::RequestIntent(user_identity, 0, intent),
+				task: NativeTask::RequestIntent(user_identity, intent_id, intent),
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
