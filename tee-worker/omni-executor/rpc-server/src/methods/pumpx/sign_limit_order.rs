@@ -24,6 +24,7 @@ use crate::error_code::get_native_task_error_code;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::server::RpcContext;
 use crate::ErrorCode;
+use ethers::types::Bytes;
 use executor_core::native_task::NativeTask;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
@@ -39,29 +40,24 @@ use parity_scale_codec::Decode;
 use rsa::RsaPrivateKey;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_with::serde_as;
 use tokio::sync::oneshot;
 
-#[serde_as]
 #[derive(Debug, Deserialize)]
 pub struct SignLimitOrderParams {
 	pub intent_id: IntentId,
 	pub order_id: u32,
 	pub chain_id: PumpxChainId,
 	pub wallet_index: PumxWalletIndex,
-	#[serde_as(as = "Vec<serde_with::hex::Hex>")]
-	pub unsigned_tx: Vec<Vec<u8>>,
+	pub unsigned_tx: Vec<Bytes>,
 	pub auth_token: String,
 }
 
-#[serde_as]
 #[derive(Serialize, Clone)]
 pub struct SignLimitOrderResponse {
 	pub intent_id: IntentId,
 	pub order_id: u32,
 	pub chain_id: PumpxChainId,
-	#[serde_as(as = "Vec<serde_with::hex::Hex>")]
-	pub signed_tx: Vec<Vec<u8>>,
+	pub signed_tx: Vec<Bytes>,
 }
 
 pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
@@ -91,7 +87,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 					Identity::Substrate(Address32::from_hex(&omni_account).unwrap()),
 					params.chain_id,
 					params.wallet_index,
-					params.unsigned_tx,
+					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
 				),
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
@@ -115,7 +111,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 								intent_id: params.intent_id,
 								order_id: params.order_id,
 								chain_id: params.chain_id,
-								signed_tx: signed_txs,
+								signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
 							})
 						},
 						Err(NativeTaskError::InternalError) => {
