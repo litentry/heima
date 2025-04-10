@@ -195,7 +195,7 @@ pub struct DataResult {
 pub struct CreateCrossOrderData {
 	pub request_id: u32,
 	pub chain_id: ChainId,
-	pub info: CrossOrderInfo,
+	pub info: Vec<CrossOrderInfo>,
 }
 
 #[derive(Serialize)]

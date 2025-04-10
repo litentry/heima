@@ -240,14 +240,14 @@ impl<
 				let cross_order_data = CreateCrossOrderData {
 					request_id: intent_id,
 					chain_id: chain_id.clone(),
-					info: CrossOrderInfo {
+					info: vec![CrossOrderInfo {
 						chain_id: chain_id.clone(),
 						wallet_index: pumpx_config.wallet_index,
 						address: wallet_address.to_hex(),
 						amount: from_amount_string.clone(),
 						usd: usd_worth,
 						token_ca: token_ca.clone(),
-					},
+					}],
 				};
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
 				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
