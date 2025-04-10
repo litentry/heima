@@ -29,7 +29,7 @@ pub trait IntentExecutor: Send {
 		account_id: &AccountId,
 		intent_id: IntentId,
 		intent: Intent,
-	) -> Result<(), ()>;
+	) -> Result<Option<Vec<u8>>, ()>;
 }
 
 pub struct MockedIntentExecutor {
@@ -50,7 +50,7 @@ impl IntentExecutor for MockedIntentExecutor {
 		_account_id: &AccountId,
 		_intent_id: IntentId,
 		_intent: Intent,
-	) -> Result<(), ()> {
-		self.sender.send(()).map_err(|_| ())
+	) -> Result<Option<Vec<u8>>, ()> {
+		self.sender.send(()).map(|_| None).map_err(|_| ())
 	}
 }
