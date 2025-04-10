@@ -57,6 +57,8 @@ pub enum NativeTask {
 		MaybeGoogleCode, // google_code
 		Option<String>,  // language
 	),
+	#[codec(index = 25)]
+	PumpxNotifyLimitOrderResult(Identity, u32, String, Option<String>),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -74,6 +76,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::PumpxAddWallet(sender, ..) => sender,
 			Self::PumpxSignLimitOrder(sender, ..) => sender,
 			Self::PumpxTransferWidthdraw(sender, ..) => sender,
+			Self::PumpxNotifyLimitOrderResult(sender, ..) => sender,
 		}
 	}
 
