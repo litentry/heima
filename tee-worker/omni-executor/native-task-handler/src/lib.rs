@@ -285,15 +285,6 @@ async fn handle_native_task<
 				);
 				return;
 			}
-			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
-				send_error(
-					"No omni account found".to_string(),
-					response_sender,
-					NativeTaskError::UnauthorizedSender,
-				);
-				return;
-			};
 
 			let call = OmniAccountCall::request_intent { intent: intent.to_subxt_type() };
 			let dispatch_as_omni_account_call =
@@ -315,6 +306,7 @@ async fn handle_native_task<
 			}
 
 			let mut execution_result = IntentCompletedDetail::Success;
+			let omni_account = sender.to_omni_account();
 
 			let tx = match intent {
 				Intent::SystemRemark(remark) => {
@@ -375,21 +367,36 @@ async fn handle_native_task<
 					ctx.transaction_signer.sign(intent_executed_call).await
 				},
 				Intent::Swap(..) => {
-					if let Err(e) = ctx
+					let (execution_result, response) = match ctx
 						.cross_chain_intent_executor
 						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
-						log::error!("Error executing intent: {:?}", e);
-						execution_result = IntentCompletedDetail::Failure;
+						Ok(response) => (IntentCompletedDetail::Success, response),
+						Err(e) => {
+							log::error!("Error executing intent: {:?}", e);
+							(IntentCompletedDetail::Failure, None)
+						},
+					};
+					if let Some(response) = response {
+						let response =
+							NativeTaskResponse::Ok(NativeTaskOk::IntentSwapResponse(response));
+						if response_sender.send(response.encode()).is_err() {
+							log::error!("Failed to send response");
+						}
 					}
 					let intent_executed_call =
 						parentchain_api_interface::tx().omni_account().intent_completed(
 							omni_account.to_subxt_type(),
-							0, // TODO
+							intent_id,
 							execution_result,
 						);
-					ctx.transaction_signer.sign(intent_executed_call).await
+					let tx = ctx.transaction_signer.sign(intent_executed_call).await;
+					if rpc_client.submit_tx(&tx).await.is_err() {
+						log::error!("Failed to submit RequestIntent tx");
+						ctx.transaction_signer.update_nonce().await;
+					}
+					return;
 				},
 			};
 

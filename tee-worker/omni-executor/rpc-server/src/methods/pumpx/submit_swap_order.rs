@@ -13,8 +13,9 @@ use heima_primitives::{
 	SolanaToken, SwapOrder, Web2IdentityType,
 };
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskResponse;
-use pumpx::types::SwapType;
+use native_task_handler::{NativeTaskOk, NativeTaskResponse};
+use pumpx::types::{MarketOrderTxResponse, OrderInfoResponse, SwapType};
+use serde::Serialize;
 
 // TODO: move this to a central place
 const SOLANA_CHAIN_ID: u32 = 10000;
@@ -25,17 +26,19 @@ const BASE_CHAIN_ID: u32 = 8453;
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
 	pub user_email: String,
+	pub intent_id: u32,
 	pub order_type: PumpxOrderType,
 	pub swap_type: SwapType,
 	pub from_chain_id: u32,
 	pub from_token_ca: Option<String>,
-	pub from_amount: u64,
+	pub from_amount: String,
 	pub to_chain_id: u32,
 	pub to_token_ca: Option<String>,
 	pub double_out: bool,
 	pub is_one_click: bool,
 	pub token_cap: Option<String>,
 	pub price_usd: Option<String>,
+	pub usd_worth: String,
 	pub trailing_percent: Option<u32>,
 	pub wallet_index: u32,
 	pub auth_token: String,
@@ -90,6 +93,18 @@ impl SubmitSwapOrderParams {
 	}
 }
 
+// TODO: refactor this response to make it more generic and also support binance swaps responses
+#[derive(Serialize, Clone)]
+pub struct PumpxSubmitSwapOrderResponse {
+	backend_response: BackendResponse,
+}
+
+#[derive(Serialize, Clone)]
+struct BackendResponse {
+	pub limit_order_response: Option<OrderInfoResponse>,
+	pub market_order_response: Option<MarketOrderTxResponse>,
+}
+
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_submitSwapOrder", |params, ctx, _| async move {
@@ -112,10 +127,24 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				log::error!("Failed to get to chain asset");
 				ErrorCode::InvalidParams
 			})?;
+
+			if params.order_type == PumpxOrderType::Limit
+				&& !from_chain_asset.is_same_chain(&to_chain_asset)
+			{
+				log::error!("Limit order must be on the same chain");
+				return Err(ErrorCode::InvalidParams);
+			}
+
+			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
+				.map_err(|_| {
+					log::error!("Failed to convert from_amount to BoundedVec");
+					ErrorCode::InvalidParams
+				})?;
+
 			let swap_order = SwapOrder {
 				from_asset: from_chain_asset,
 				to_asset: to_chain_asset,
-				from_amount: params.from_amount,
+				from_amount,
 				to_address: None,
 			};
 
@@ -158,8 +187,11 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						.map_err(|_| ErrorCode::InvalidParams)
 				})
 				.transpose()?;
+			let usd_worth = BoundedVec::try_from(params.usd_worth.as_bytes().to_vec())
+				.map_err(|_| ErrorCode::InvalidParams)?;
+
 			let pumpx_config = PumpxConfig {
-				order_type: params.order_type,
+				order_type: params.order_type.clone(),
 				swap_type: params.swap_type.to_number() as u32,
 				chain_id: params.to_chain_id,
 				token_ca,
@@ -172,6 +204,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				wallet_index: params.wallet_index,
 				token_cap,
 				price_usd,
+				usd_worth,
 				trailing_percent: params.trailing_percent,
 			};
 			let scs_provider = SingleChainSwapProvider::Pumpx(pumpx_config);
@@ -184,7 +217,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
 			let wrapper = NativeTaskWrapper {
-				task: NativeTask::RequestIntent(user_identity, 0, intent),
+				task: NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
@@ -197,12 +230,45 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			}
 			match response_receiver.await {
 				Ok(response) => {
-					let _native_task_response: NativeTaskResponse =
+					let native_task_response: NativeTaskResponse =
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| ErrorCode::InternalError)?;
 
-					// TODO: handle the response
-					Ok(())
+					match native_task_response {
+						Ok(NativeTaskOk::IntentSwapResponse(swap_response)) => {
+							if params.order_type == PumpxOrderType::Market {
+								let market_order_response: MarketOrderTxResponse =
+									Decode::decode(&mut swap_response.as_slice())
+										.map_err(|_| ErrorCode::InternalError)?;
+								let response = PumpxSubmitSwapOrderResponse {
+									backend_response: BackendResponse {
+										limit_order_response: None,
+										market_order_response: Some(market_order_response),
+									},
+								};
+								Ok(response)
+							} else {
+								let limit_order_response: OrderInfoResponse =
+									Decode::decode(&mut swap_response.as_slice())
+										.map_err(|_| ErrorCode::InternalError)?;
+								let response = PumpxSubmitSwapOrderResponse {
+									backend_response: BackendResponse {
+										limit_order_response: Some(limit_order_response),
+										market_order_response: None,
+									},
+								};
+								Ok(response)
+							}
+						},
+						Err(native_task_err) => {
+							log::error!("Failed to execute native task: {:?}", native_task_err);
+							Err(ErrorCode::InternalError)
+						},
+						_ => {
+							log::error!("Unexpected response type");
+							Err(ErrorCode::InternalError)
+						},
+					}
 				},
 				Err(e) => {
 					log::error!("Failed to receive response from native call handler: {:?}", e);

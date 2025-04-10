@@ -52,7 +52,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 		_account_id: &AccountId,
 		_intent_id: IntentId,
 		intent: Intent,
-	) -> Result<(), ()> {
+	) -> Result<Option<Vec<u8>>, ()> {
 		info!("Executing intent: {:?}", intent);
 
 		let omni_account_signer = get_omni_account_signer();
@@ -88,7 +88,7 @@ impl IntentExecutor for EthereumIntentExecutor {
 				return Err(());
 			},
 		}
-		Ok(())
+		Ok(None)
 	}
 }
 

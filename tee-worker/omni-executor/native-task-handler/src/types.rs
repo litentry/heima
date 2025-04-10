@@ -19,6 +19,7 @@ pub enum NativeTaskOk {
 
 		backend_response: UserConnectResponse,
 	},
+	IntentSwapResponse(Vec<u8>),
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet(AddWalletResponse),
 	PumpxSignLimitOrder(Vec<Vec<u8>>),

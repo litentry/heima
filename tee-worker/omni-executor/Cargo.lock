@@ -2366,12 +2366,16 @@ dependencies = [
  "async-trait",
  "executor-core",
  "executor-primitives",
+ "executor-storage",
+ "heima-authentication",
+ "hex",
  "intent-asset-lock",
  "intent-token-query",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
+ "parity-scale-codec",
  "pumpx",
 ]
 
