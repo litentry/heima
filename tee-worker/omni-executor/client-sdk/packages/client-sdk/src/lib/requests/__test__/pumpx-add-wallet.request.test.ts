@@ -20,7 +20,7 @@ describe.skip('add-export-wallet', () => {
   it('request email verification code', async () => {
     const rpcRequest: JsonRpcRequest = {
       jsonrpc: '2.0',
-      method: 'pumpx_requestJwt',
+      method: PumpxRpcMethod.RequestJwt,
       params: {
         user_email: 'test@google.com',
         invite_code: '', // Optional
