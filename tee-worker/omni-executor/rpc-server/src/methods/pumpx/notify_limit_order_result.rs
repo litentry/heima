@@ -6,7 +6,7 @@ use executor_core::native_task::*;
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::FromHexPrefixed, OmniAuth};
 use heima_authentication::auth_token::AuthTokenClaims;
-use heima_primitives::{Address32, Identity, IntentId};
+use heima_primitives::{Address32, Identity};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
 use rsa::pkcs1::DecodeRsaPrivateKey;
