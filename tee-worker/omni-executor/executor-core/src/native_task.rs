@@ -51,7 +51,7 @@ pub enum NativeTask {
 		u32,             // chain_id
 		u32,             // wallet_index
 		String,          // recipient_address
-		String,          // token_ca
+		String,          // token_contract_address
 		String,          // amount
 		MaybeGoogleCode, // google_code
 		Option<String>,  // language
