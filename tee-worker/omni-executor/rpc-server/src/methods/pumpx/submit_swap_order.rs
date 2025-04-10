@@ -31,7 +31,7 @@ pub struct SubmitSwapOrderParams {
 	pub swap_type: SwapType,
 	pub from_chain_id: u32,
 	pub from_token_ca: Option<String>,
-	pub from_amount: u64,
+	pub from_amount: String,
 	pub to_chain_id: u32,
 	pub to_token_ca: Option<String>,
 	pub double_out: bool,
@@ -130,10 +130,16 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				return Err(ErrorCode::InvalidParams);
 			}
 
+			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
+				.map_err(|_| {
+					log::error!("Failed to convert from_amount to BoundedVec");
+					ErrorCode::InvalidParams
+				})?;
+
 			let swap_order = SwapOrder {
 				from_asset: from_chain_asset,
 				to_asset: to_chain_asset,
-				from_amount: params.from_amount,
+				from_amount,
 				to_address: None,
 			};
 

@@ -177,12 +177,18 @@ impl<
 						query_solana(rpc_url, &pubkey, token).await.map(|v| AmountType::from(v))?
 					},
 				};
-				self.account_asset_lock.check_and_insert(
-					account_id.clone(),
-					swap_order.from_asset.clone(),
-					AmountType::from(swap_order.from_amount),
-					available_amount,
-				)?;
+				let from_amount_string = std::str::from_utf8(&swap_order.from_amount)
+					.map_err(|_| {
+						log::error!("Failed to parse from_amount_string");
+					})
+					.map(|v| v.to_string())?;
+
+				// self.account_asset_lock.check_and_insert(
+				// 	account_id.clone(),
+				// 	swap_order.from_asset.clone(),
+				// 	AmountType::from(from_amount),
+				// 	available_amount,
+				// )?;
 
 				let intent_accepted_event_emit_call = parentchain_api_interface::tx()
 					.omni_account()
@@ -232,7 +238,7 @@ impl<
 							chain_id: chain_id.clone(),
 							wallet_index: pumpx_config.wallet_index,
 							address: "todo: what's this??".to_string(),
-							amount: swap_order.from_amount.to_string(),
+							amount: from_amount_string.clone(),
 							usd: usd_worth,
 							token_ca: token_ca.clone(),
 						},
@@ -266,7 +272,7 @@ impl<
 										return Err(());
 									},
 								},
-								amount_in: swap_order.from_amount.to_string(),
+								amount_in: from_amount_string.clone(),
 								double_out: pumpx_config.double_out,
 								is_one_click: pumpx_config.is_one_click,
 								address: "todo: what's this??".to_string(),
@@ -381,7 +387,7 @@ impl<
 								request_id: intent_id,
 								chain_id: chain_id.clone(),
 								token_ca,
-								amount: swap_order.from_amount.to_string(),
+								amount: from_amount_string.clone(),
 								swap_type: match pumpx_config.swap_type {
 									1 => SwapType::Buy,
 									2 => SwapType::Sell,
@@ -441,11 +447,13 @@ impl<
 					todo!()
 				}
 
-				self.account_asset_lock.release(
-					account_id.clone(),
-					swap_order.from_asset.clone(),
-					AmountType::from(swap_order.from_amount),
-				)?;
+				// self.account_asset_lock.release(
+				// 	account_id.clone(),
+				// 	swap_order.from_asset.clone(),
+				// 	AmountType::from_str_radix(&from_amount_string, 10).map_err(|_| {
+				// 		log::error!("Failed to parse from_amount_string");
+				// 	})?,
+				// )?;
 
 				return Ok(pumpx_order_response);
 			},

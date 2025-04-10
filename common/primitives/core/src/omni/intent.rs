@@ -9,6 +9,7 @@ pub use sp_runtime::BoundedVec;
 pub type CallEthereumInputLen = ConstU32<{ 10 * 1024 }>;
 pub type RemarkLen = ConstU32<{ u32::max_value() }>;
 pub type IntentStringLen = ConstU32<128>;
+pub type AmountLen = ConstU32<32>;
 
 pub type IntentId = u32;
 
@@ -68,7 +69,7 @@ pub enum HeimaMultiAddress {
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct SwapOrder {
     pub from_asset: ChainAsset,
-    pub from_amount: u64,
+    pub from_amount: BoundedVec<u8, AmountLen>,
     pub to_asset: ChainAsset,
     pub to_address: Option<HeimaMultiAddress>,
 }
