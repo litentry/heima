@@ -24,7 +24,7 @@ pub struct TransferWithdrawParams {
 
 #[derive(Serialize, Clone)]
 pub struct TransferWithdrawResponse {
-	pub tx_hash: Option<Vec<String>>,
+	pub backend_response: Option<Vec<String>>,
 }
 
 impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
@@ -72,7 +72,7 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
 						Ok(NativeTaskOk::PumpxTransferWithdraw(send_tx_response)) => {
-							Ok(TransferWithdrawResponse { tx_hash: send_tx_response.data.tx_hash })
+							Ok(TransferWithdrawResponse { backend_response: send_tx_response.data.tx_hash })
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
