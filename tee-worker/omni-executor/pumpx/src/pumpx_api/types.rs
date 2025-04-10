@@ -14,6 +14,11 @@ pub type OrderInfoResponse = ApiResponse<OrderInfo>;
 
 pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
+pub type AddWalletResponse = ApiResponse<EmptyResponse>;
+
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
+pub struct EmptyResponse {}
+
 #[derive(Deserialize_repr, Serialize_repr)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
@@ -51,12 +56,21 @@ impl<T: Codec> ApiResponse<T> {
 	}
 }
 
-#[derive(Deserialize_repr, Serialize_repr)]
+#[derive(Deserialize_repr, Serialize_repr, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum SwapType {
 	Buy = 1,
 	Sell = 2,
+}
+
+impl SwapType {
+	pub fn to_number(&self) -> u8 {
+		match self {
+			SwapType::Buy => 1,
+			SwapType::Sell => 2,
+		}
+	}
 }
 
 #[derive(Deserialize_repr, Serialize_repr, Encode)]
@@ -66,6 +80,16 @@ pub enum GasType {
 	Slow = 1,
 	Medium = 2,
 	Fast = 3,
+}
+
+impl GasType {
+	pub fn to_number(&self) -> u8 {
+		match self {
+			GasType::Slow => 1,
+			GasType::Medium => 2,
+			GasType::Fast => 3,
+		}
+	}
 }
 
 #[derive(Serialize)]
@@ -113,6 +137,7 @@ pub struct UserTradeInfo {
 	pub gas_type_base: GasType,
 	pub gas_type_bsc: GasType,
 	pub gas_type_eth: GasType,
+	pub gas_type_sol: GasType,
 	pub gas_type_omni: GasType,
 	pub is_anti_mev: bool,
 	pub is_auto_slippage: bool,

@@ -64,7 +64,7 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
-						Ok(NativeTaskOk::PumpxJwt {
+						Ok(NativeTaskOk::PumpxRequestJwt {
 							access_token,
 							id_token,
 							user_connect_response,

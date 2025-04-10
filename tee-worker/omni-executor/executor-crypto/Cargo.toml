@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+ethers = { workspace = true }
 jsonwebtoken = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }

@@ -43,6 +43,8 @@ pub enum NativeTask {
 	#[codec(index = 21)]
 	PumpxExportWallet(Identity, MaybeGoogleCode, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]
+	PumpxAddWallet(Identity),
+	#[codec(index = 23)]
 	PumpxSignLimitOrder(Identity, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
 }
 
@@ -58,6 +60,7 @@ impl NativeTaskTrait for NativeTask {
 			Self::SetPermissions(sender, ..) => sender,
 			Self::PumpxRequestJwt(sender, ..) => sender,
 			Self::PumpxExportWallet(sender, ..) => sender,
+			Self::PumpxAddWallet(sender, ..) => sender,
 			Self::PumpxSignLimitOrder(sender, ..) => sender,
 		}
 	}

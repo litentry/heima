@@ -1,71 +1,46 @@
 use crate::{
 	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode, Serialize,
+	ErrorCode,
 };
-use ethers::types::Bytes;
 use executor_core::native_task::*;
-use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
-use rsa::Oaep;
-use sha2::Sha256;
+use pumpx::types::AddWalletResponse;
+use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
-pub struct ExportWalletParams {
+pub struct AddWalletParams {
 	pub user_email: String,
-	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
-	pub google_code: MaybeGoogleCode,
-	pub chain_id: PumpxChainId,
-	pub wallet_index: PumxWalletIndex,
-	pub wallet_address: String,
-	pub email_code: String,
+	pub auth_token: String,
 }
 
 #[derive(Serialize, Clone)]
-pub struct ExportWalletResponse {
-	pub encrypted_wallet: SerdeAesOutput,
+pub struct RPCAddWalletResponse {
+	pub add_wallet_response: AddWalletResponse,
 }
 
-impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: ExportWalletParams) -> Self {
+impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
+	fn from(p: AddWalletParams) -> Self {
 		Self {
-			task: NativeTask::PumpxExportWallet(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
-				p.google_code,
-				p.chain_id,
-				p.wallet_index,
-				p.wallet_address,
-			),
+			task: NativeTask::PumpxAddWallet(Identity::from_web2_account(
+				p.user_email.as_str(),
+				Web2IdentityType::Email,
+			)),
 			nonce: None,
-			auth: Some(OmniAuth::Email(p.email_code)),
+			auth: Some(OmniAuth::AuthToken(p.auth_token)),
 		}
 	}
 }
 
-pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
+pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
+		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-			let params = params.parse::<ExportWalletParams>()?;
-			let aes_key = ctx
-				.shielding_key
-				.private_key()
-				.decrypt(Oaep::new::<Sha256>(), &params.key)
-				.map_err(|_| {
-					ErrorObject::owned::<()>(
-						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed",
-						None,
-					)
-				})?;
-			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				ErrorObject::owned::<()>(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed", None)
-			})?;
+			let params = params.parse::<AddWalletParams>()?;
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
-
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			}
@@ -74,19 +49,16 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 
 			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
 				log::error!("Failed to send request to native call executor");
-				return Err(internal_error);
+				return Err(ErrorCode::InternalError.into());
 			}
-
 			match response_receiver.await {
 				Ok(response) => {
 					let native_task_response: NativeTaskResponse =
 						Decode::decode(&mut response.as_slice())
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
-						Ok(NativeTaskOk::PumpxExportWallet(wallet)) => {
-							let encrypted_wallet: SerdeAesOutput =
-								aes_encrypt_default(&aes_key, &wallet).into();
-							Ok(ExportWalletResponse { encrypted_wallet })
+						Ok(NativeTaskOk::PumpxAddWallet(res)) => {
+							Ok(RPCAddWalletResponse { add_wallet_response: res })
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
@@ -111,5 +83,5 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				},
 			}
 		})
-		.expect("Failed to register pumpx_exportWallet method");
+		.expect("Failed to register pumpx_addWallet method");
 }

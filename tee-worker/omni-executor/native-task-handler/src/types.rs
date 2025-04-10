@@ -1,7 +1,7 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::types::UserConnectResponse;
+use pumpx::types::{AddWalletResponse, UserConnectResponse};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {
@@ -11,7 +11,7 @@ pub enum NativeTaskOk {
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken(String),
-	PumpxJwt {
+	PumpxRequestJwt {
 		/// Used for less sensitive operations
 		access_token: String,
 		/// Used for user's identity verification before making sensitive operations
@@ -20,6 +20,7 @@ pub enum NativeTaskOk {
 		user_connect_response: UserConnectResponse,
 	},
 	PumpxExportWallet(Vec<u8>),
+	PumpxAddWallet(AddWalletResponse),
 	PumpxSignLimitOrder(Vec<Vec<u8>>),
 }
 
@@ -40,4 +41,5 @@ pub enum PumpxApiError {
 	GoogleCodeVerificationFailed,
 	UserConnectionFailed,
 	UnknownError,
+	AddWalletFailed,
 }
