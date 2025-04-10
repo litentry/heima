@@ -46,6 +46,7 @@ pub enum PumpxApiError {
 	AddWalletFailed,
 	CreateTransferUnsignedTxFailed,
 	SendTransferTxFailed,
+	InvalidInput,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

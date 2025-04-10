@@ -938,6 +938,49 @@ async fn handle_native_task<
 				},
 			};
 		},
+		NativeTask::PumpxNotifyLimitOrderResult(sender, intent_id, result, message) => {
+			// 1. Validate the result field
+			if result != "ok" && result != "nok" {
+				send_error(
+					format!("Invalid result value: {}. Must be 'ok' or 'nok'", result),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::InvalidInput),
+				);
+				return;
+			}
+
+			// 2. Get the omni account
+			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
+			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
+				send_error(
+					"No omni account found".to_string(),
+					response_sender,
+					NativeTaskError::UnauthorizedSender,
+				);
+				return;
+			};
+
+			// 3. Determine execution result
+			let execution_result = match result.as_str() {
+				"ok" => IntentCompletedDetail::Success,
+				"nok" => IntentCompletedDetail::Failure,
+				_ => unreachable!(), // Already validated above
+			};
+
+			// 4. Log the message if provided
+			if let Some(msg) = message {
+				log::info!("Limit order result message for intent_id {}: {}", intent_id, msg);
+			}
+
+			// 5. Create an intent_completed call
+			let intent_executed_call = parentchain_api_interface::tx()
+				.omni_account()
+				.intent_completed(omni_account.to_subxt_type(), intent_id, execution_result);
+
+			let tx = ctx.transaction_signer.sign(intent_executed_call).await;
+
+			(response_sender, tx)
+		},
 	};
 
 	match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
