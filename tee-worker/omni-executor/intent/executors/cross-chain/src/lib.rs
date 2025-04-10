@@ -225,13 +225,25 @@ impl<
 						log::error!("Failed to parse token_ca");
 					})
 					.map(|v| v.to_string())?;
+				let Some(chain_type) = ChainType::from_pumpx_chain_id(chain_id.to_number() as u32)
+				else {
+					log::error!("Unsupported chain id: {:?}", chain_id);
+					return Err(());
+				};
+
+				let wallet_address = self
+					.pumpx_signer_client
+					.request_wallet(chain_type, pumpx_config.wallet_index, *account_id.as_ref())
+					.await
+					.map_err(|e| log::error!("Could not get wallet from pumpx-signer: {:?}", e))?;
+
 				let cross_order_data = CreateCrossOrderData {
 					request_id: intent_id,
 					chain_id: chain_id.clone(),
 					info: CrossOrderInfo {
 						chain_id: chain_id.clone(),
 						wallet_index: pumpx_config.wallet_index,
-						address: account_id.to_hex(),
+						address: wallet_address.to_hex(),
 						amount: from_amount_string.clone(),
 						usd: usd_worth,
 						token_ca: token_ca.clone(),
