@@ -763,6 +763,34 @@ async fn handle_native_task<
 			}
 			return;
 		},
+		NativeTask::PumpxSignLimitOrder(sender, chain_id, wallet_index, unsigned_tx) => {
+			let omni_account = sender.to_omni_account();
+			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
+				log::error!("Failed to map pumpx chain_id {}", chain_id);
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let Ok(signed_txs) = ctx
+				.pumpx_signer_client
+				.request_signatures(chain, wallet_index, omni_account.into(), unsigned_tx)
+				.await
+			else {
+				log::error!("Failed to request signatures from pumpx-signer");
+				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
+				if response_sender.send(response.encode()).is_err() {
+					log::error!("Failed to send response");
+				}
+				return;
+			};
+			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxSignLimitOrder(signed_txs));
+			if response_sender.send(response.encode()).is_err() {
+				log::error!("Failed to send response");
+			}
+			return;
+		},
 	};
 	let report = match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
 		Ok(report) => report,

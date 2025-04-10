@@ -21,6 +21,7 @@ pub enum NativeTaskOk {
 	},
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet(AddWalletResponse),
+	PumpxSignLimitOrder(Vec<Vec<u8>>),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
