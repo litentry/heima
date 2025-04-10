@@ -291,7 +291,7 @@ impl<
 								amount_in: from_amount_string.clone(),
 								double_out: pumpx_config.double_out,
 								is_one_click: pumpx_config.is_one_click,
-								address: "todo: what's this??".to_string(),
+								address: wallet_address.to_hex(),
 								is_anti_mev: user_trade_info.data.is_anti_mev,
 								is_auto_slippage: user_trade_info.data.is_auto_slippage,
 								gas_type: match pumpx_config.gas_type {
@@ -420,7 +420,7 @@ impl<
 								trailing_percent: pumpx_config
 									.trailing_percent
 									.map(|v| v.to_string()),
-								address: "todo: what's this??".to_string(),
+								address: wallet_address.to_hex(),
 								is_anti_mev: user_trade_info.data.is_anti_mev,
 								is_auto_slippage: user_trade_info.data.is_auto_slippage,
 								gas_type: match pumpx_config.gas_type {
