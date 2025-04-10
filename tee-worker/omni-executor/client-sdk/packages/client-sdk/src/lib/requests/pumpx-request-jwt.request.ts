@@ -1,7 +1,7 @@
 import type { ApiPromise } from '@polkadot/api';
 import { hexToU8a } from '@polkadot/util';
 
-import type { AesOutput, Identity, NativeTaskResponse, PumpxJwt } from '@heima-network/parachain-api';
+import type { AesOutput, Identity, NativeTaskResponse, PumpxRequestJwt } from '@heima-network/parachain-api';
 
 import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
 import { OmniAuthData } from '@type-creators/omni-auth';
@@ -30,7 +30,7 @@ import { decrypt } from '@lib/utils';
  * @returns {Function} send - A function to send the request to the Enclave.
  * @returns {Promise<Object>} send.args - The arguments required to send the request.
  * @returns {OmniAuthData} send.args.authData - The authentication data.
- * @returns {PumpxJwt} send.return.jwt - The generated Pumpx JWT.
+ * @returns {PumpxRequestJwt} send.return.jwt - The generated Pumpx JWT.
  */
 export async function requestPumpxJwt(
     api: ApiPromise,
@@ -44,7 +44,7 @@ export async function requestPumpxJwt(
 ): Promise<{
     getPayloadToSign?: () => Promise<string>;
     send: (args: { authData: OmniAuthData }) => Promise<{
-        jwt: PumpxJwt;
+        jwt: PumpxRequestJwt;
     }>;
 }> {
     const { member, inviteCode, googleCode, lang } = data;
@@ -64,7 +64,7 @@ export async function requestPumpxJwt(
     const send = async (args: {
         authData: OmniAuthData;
     }): Promise<{
-        jwt: PumpxJwt;
+        jwt: PumpxRequestJwt;
     }> => {
         // prepare and encrypt task
         const { rawTask, encryptionKey } = await createRawTaskType(api, {
@@ -91,11 +91,11 @@ export async function requestPumpxJwt(
         }
 
         const okResponse = response.asOk;
-        if (!okResponse.isPumpxJwt) {
+        if (!okResponse.isPumpxRequestJwt) {
             throw new Error('Unexpected response type');
         }
 
-        const jwt = okResponse.asPumpxJwt;
+        const jwt = okResponse.asPumpxRequestJwt;
 
         return { jwt };
     };
