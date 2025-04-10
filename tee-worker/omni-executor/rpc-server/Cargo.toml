@@ -34,6 +34,9 @@ oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 pumpx = { workspace = true }
 
+[dev-dependencies]
+tempfile = { workspace = true }
+
 [lints]
 workspace = true
 
