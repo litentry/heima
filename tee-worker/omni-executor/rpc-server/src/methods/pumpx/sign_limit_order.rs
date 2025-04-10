@@ -35,6 +35,7 @@ use heima_authentication::auth_token::AuthTokenClaims;
 use heima_primitives::Identity;
 use jsonrpsee::types::ErrorObject;
 use jsonrpsee::RpcModule;
+use log::error;
 use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
 use parity_scale_codec::Decode;
 use rsa::RsaPrivateKey;
@@ -82,9 +83,14 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 			}
 
 			let omni_account = token.sub;
+			let Ok(address) = Address32::from_hex(&omni_account) else {
+				error!("Not a valid address");
+				return Err(internal_error);
+			};
+
 			let task_wrapper = NativeTaskWrapper {
 				task: NativeTask::PumpxSignLimitOrder(
-					Identity::Substrate(Address32::from_hex(&omni_account).unwrap()),
+					Identity::Substrate(address),
 					params.chain_id,
 					params.wallet_index,
 					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
