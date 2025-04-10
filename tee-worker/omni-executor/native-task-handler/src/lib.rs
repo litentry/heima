@@ -307,6 +307,7 @@ async fn handle_native_task<
 			}
 
 			let mut execution_result = IntentCompletedDetail::Success;
+			let omni_account = sender.to_omni_account();
 
 			let tx = match intent {
 				Intent::SystemRemark(remark) => {
