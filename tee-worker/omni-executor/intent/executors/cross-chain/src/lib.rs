@@ -32,6 +32,7 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
+use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
 use pumpx::types::ChainId;
 use pumpx::types::CreateCrossOrderData;
@@ -304,55 +305,52 @@ impl<
 									log::error!("Failed to create market order unsigned tx");
 								})?;
 
-							// - ask pumpx-tee-signer to sign the returned payload (I assume it’s `txData`)
-							// TODO: do we need to sign the tx here?
-							//
-							// let tx_data = market_order_unsigned_tx.data.tx_data;
-							// let mut messages_to_sign = Vec::new();
-							// for tx in tx_data {
-							// 	let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-							// 	let tx_bytes = match hex::decode(tx_cleaned) {
-							// 		Ok(bytes) => bytes,
-							// 		Err(e) => {
-							// 			log::error!("Failed to decode hex string: {:?}", e);
-							// 			return Err(());
-							// 		},
-							// 	};
-							// 	messages_to_sign.push(tx_bytes);
-							// }
-							//
-							// let Some(chain_type) =
-							// 	ChainType::from_pumpx_chain_id(chain_id.to_number() as u32)
-							// else {
-							// 	log::error!("Unsupported chain id: {:?}", chain_id);
-							// 	return Err(());
-							// };
-							//
-							// let signatures = match self
-							// 	.pumpx_signer_client
-							// 	.request_signatures(
-							// 		chain_type,
-							// 		pumpx_config.wallet_index,
-							// 		*account_id.as_ref(),
-							// 		messages_to_sign,
-							// 	)
-							// 	.await
-							// {
-							// 	Ok(sigs) => sigs,
-							// 	Err(e) => {
-							// 		log::error!(
-							// 			"Failed to get signatures from pumpx-signer: {:?}",
-							// 			e
-							// 		);
-							// 		return Err(());
-							// 	},
-							// };
-							// let signed_tx_data: Vec<String> =
-							// 	signatures.into_iter().map(hex::encode).collect();
+							let tx_data = market_order_unsigned_tx.data.tx_data;
+							let mut messages_to_sign = Vec::new();
+							for tx in tx_data {
+								let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
+								let tx_bytes = match hex::decode(tx_cleaned) {
+									Ok(bytes) => bytes,
+									Err(e) => {
+										log::error!("Failed to decode hex string: {:?}", e);
+										return Err(());
+									},
+								};
+								messages_to_sign.push(tx_bytes);
+							}
+
+							let Some(chain_type) =
+								ChainType::from_pumpx_chain_id(chain_id.to_number() as u32)
+							else {
+								log::error!("Unsupported chain id: {:?}", chain_id);
+								return Err(());
+							};
+
+							let signatures = match self
+								.pumpx_signer_client
+								.request_signatures(
+									chain_type,
+									pumpx_config.wallet_index,
+									*account_id.as_ref(),
+									messages_to_sign,
+								)
+								.await
+							{
+								Ok(sigs) => sigs,
+								Err(e) => {
+									log::error!(
+										"Failed to get signatures from pumpx-signer: {:?}",
+										e
+									);
+									return Err(());
+								},
+							};
+							let signed_tx_data: Vec<String> =
+								signatures.into_iter().map(hex::encode).collect();
 
 							let market_order_tx = MarketOrderTx {
 								order_id: market_order_unsigned_tx.data.order_id,
-								tx_data: market_order_unsigned_tx.data.tx_data,
+								tx_data: signed_tx_data,
 								chain_id: chain_id.clone(),
 							};
 							let market_order_tx_res = self
