@@ -3,14 +3,14 @@ use crate::{
 	Decode, Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::{BoundedVec, OmniAuth};
+use executor_primitives::OmniAuth;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
-	Address20, Address32, BinanceConfig, ChainAsset, CrossChainSwapProvider, EthereumToken,
-	Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider, SolanaToken, SwapOrder,
-	Web2IdentityType,
+	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
+	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
+	SolanaToken, SwapOrder, Web2IdentityType,
 };
 use jsonrpsee::RpcModule;
 use native_task_handler::{NativeTaskOk, NativeTaskResponse};

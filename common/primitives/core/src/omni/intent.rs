@@ -1,10 +1,9 @@
-use crate::{AccountId, Address20, Address32, Address33, Balance, ChainAsset};
+use crate::{AccountId, Address20, Address32, Address33, Balance, BoundedVec, ChainAsset};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::Deserialize;
 use sp_core::H160;
 use sp_runtime::traits::ConstU32;
-pub use sp_runtime::BoundedVec;
 
 pub type CallEthereumInputLen = ConstU32<{ 10 * 1024 }>;
 pub type RemarkLen = ConstU32<{ u32::max_value() }>;

@@ -18,7 +18,7 @@ pub struct AddWalletParams {
 
 #[derive(Serialize, Clone)]
 pub struct RPCAddWalletResponse {
-	pub add_wallet_response: AddWalletResponse,
+	pub backend_response: AddWalletResponse,
 }
 
 impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
@@ -58,7 +58,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 							.map_err(|_| internal_error.clone())?;
 					match native_task_response {
 						Ok(NativeTaskOk::PumpxAddWallet(res)) => {
-							Ok(RPCAddWalletResponse { add_wallet_response: res })
+							Ok(RPCAddWalletResponse { backend_response: res })
 						},
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
