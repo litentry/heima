@@ -19,6 +19,9 @@ use submit_swap_order::*;
 mod get_next_intent_id;
 use get_next_intent_id::*;
 
+mod sign_limit_order;
+use sign_limit_order::*;
+
 pub fn register_pumpx(module: &mut RpcModule<RpcContext>) {
 	register_request_jwt(module);
 	register_export_wallet(module);
@@ -26,4 +29,5 @@ pub fn register_pumpx(module: &mut RpcModule<RpcContext>) {
 	register_transfer_withdraw(module);
 	register_submit_swap_order(module);
 	register_get_next_intent_id(module);
+	register_sign_limit_order_params(module);
 }
