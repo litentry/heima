@@ -13,7 +13,7 @@ use serde::Serialize;
 #[derive(Debug, Deserialize)]
 pub struct AddWalletParams {
 	pub user_email: String,
-	pub auth_token: String,
+	pub access_token: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -29,7 +29,7 @@ impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 				Web2IdentityType::Email,
 			)),
 			nonce: None,
-			auth: Some(OmniAuth::AuthToken(p.auth_token)),
+			auth: Some(OmniAuth::AuthToken(p.access_token)),
 		}
 	}
 }
