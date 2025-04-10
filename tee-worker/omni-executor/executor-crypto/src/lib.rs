@@ -6,17 +6,26 @@ pub mod traits;
 pub mod rsa {
 	pub use rsa::*;
 
+	use ethers::types::Bytes;
 	use serde::{Deserialize, Serialize};
-	use serde_with::serde_as;
 	use std::vec::Vec;
 
-	#[serde_as]
-	#[derive(Serialize, Deserialize, Debug)]
+	#[derive(Debug, Serialize, Deserialize)]
 	pub struct Rsa3072PubKey {
-		#[serde_as(as = "serde_with::hex::Hex")]
 		pub n: Vec<u8>,
-		#[serde_as(as = "serde_with::hex::Hex")]
 		pub e: Vec<u8>,
+	}
+
+	#[derive(Serialize, Deserialize)]
+	pub struct SerdeRsa3072PubKey {
+		pub n: Bytes,
+		pub e: Bytes,
+	}
+
+	impl From<Rsa3072PubKey> for SerdeRsa3072PubKey {
+		fn from(k: Rsa3072PubKey) -> Self {
+			Self { n: k.n.into(), e: k.e.into() }
+		}
 	}
 }
 
