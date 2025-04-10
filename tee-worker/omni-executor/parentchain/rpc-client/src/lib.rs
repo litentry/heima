@@ -24,7 +24,7 @@ pub use subxt_core::utils::AccountId32;
 
 use async_trait::async_trait;
 use executor_primitives::{AccountId, BlockEvent, BlockNumber, EventId, Hash};
-use log::{error, info};
+use log::{debug, error};
 use parity_scale_codec::{Decode, Encode};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
@@ -156,7 +156,7 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 		Ok(latest_block.number())
 	}
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
-		info!("Getting block {} events", block_num);
+		debug!("Getting block {} events", block_num);
 		match self.legacy.chain_get_block_hash(Some(block_num.into())).await.map_err(|e| {
 			error!("Error getting block {} hash: {:?}", block_num, e);
 		})? {

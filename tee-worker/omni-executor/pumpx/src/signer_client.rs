@@ -39,6 +39,15 @@ pub struct SignWalletPayload {
 	pub msg: Vec<u8>,
 }
 
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MultiSignWalletPayload {
+	#[serde(flatten)]
+	pub wallet: Wallet,
+	#[serde_as(as = "Vec<serde_with::hex::Hex>")]
+	pub msgs: Vec<Vec<u8>>,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GetWalletPayload {
 	#[serde(flatten)]
@@ -157,6 +166,39 @@ impl SignerClient {
 			.await
 			.map_err(|e| println!("Could not sign wallet: {:?}", e))?;
 		hex::decode(hex_encoded).map_err(|e| error!("Could not decode signature: {:?}", e))
+	}
+
+	pub async fn request_signatures(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+		messages_to_sign: Vec<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()> {
+		let client = HttpClient::builder()
+			.build(&self.url)
+			.map_err(|e| error!("Could not create client: {:?}", e))?;
+		let wallet = Wallet { chain_type, index, omni_account };
+		let multi_sign_wallet = MultiSignWalletPayload { wallet, msgs: messages_to_sign };
+		let serialized_multi_sign_wallet = serde_json::to_vec(&multi_sign_wallet)
+			.map_err(|e| error!("Could not serialize dex_multiSignWallet request: {:?}", e))?;
+		let signature =
+			self.request_signer.sign_prehashed(&keccak_256(&serialized_multi_sign_wallet)).0;
+		let signed: SignedParams<MultiSignWalletPayload> =
+			SignedParams { payload: multi_sign_wallet, signature };
+		let hex_encoded: Vec<String> = client
+			.request("dex_multiSignWallet", signed)
+			.await
+			.map_err(|e| println!("Could not multi sign wallet: {:?}", e))?;
+
+		let mut decoded_signatures = vec![];
+
+		for encoded in hex_encoded {
+			decoded_signatures.push(
+				hex::decode(encoded).map_err(|e| error!("Could not decode signature: {:?}", e))?,
+			);
+		}
+		Ok(decoded_signatures)
 	}
 
 	pub async fn export_wallet(

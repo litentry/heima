@@ -1,15 +1,15 @@
 pub mod key_store;
-mod signer;
-pub use signer::TransactionSigner;
+mod tx_signer;
+pub use tx_signer::TxSigner;
 
 use executor_core::key_store::KeyStore;
-use key_store::SubstrateKeyStore;
 use log::{error, info};
 use std::sync::Arc;
 use subxt_core::utils::AccountId32;
 use subxt_signer::sr25519::Keypair;
+use subxt_signer::sr25519::SecretKeyBytes;
 
-pub fn get_signer(substrate_key_store: Arc<SubstrateKeyStore>) -> Keypair {
+pub fn get_signer(substrate_key_store: Arc<impl KeyStore<SecretKeyBytes>>) -> Keypair {
 	let secret_key_bytes = substrate_key_store
 		.read()
 		.map_err(|e| {

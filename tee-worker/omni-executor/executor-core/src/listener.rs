@@ -137,7 +137,7 @@ impl<
 			let mut sync_error = false;
 
 			if last_finalized_block >= block_number_to_sync {
-				log::info!("Syncing block: {}", block_number_to_sync);
+				log::debug!("Syncing block: {}", block_number_to_sync);
 				match self.handle.block_on(self.fetcher.get_block_events(block_number_to_sync)) {
 					Ok(events) => {
 						for event in events {
@@ -152,7 +152,7 @@ impl<
 									continue;
 								}
 							}
-							log::info!("Handling event: {:?}", event_id);
+							log::debug!("Handling event: {:?}", event_id);
 							if let Err(e) = self.handle.block_on(self.event_handler.handle(event)) {
 								log::error!("Could not handle event: {:?}", e);
 								match e {
@@ -180,7 +180,7 @@ impl<
 						self.checkpoint_repository
 							.save(CheckpointT::from(block_number_to_sync))
 							.expect("Could not save checkpoint");
-						log::info!("Finished syncing block: {}", block_number_to_sync);
+						log::debug!("Finished syncing block: {}", block_number_to_sync);
 						block_number_to_sync += 1;
 					},
 					Err(e) => {

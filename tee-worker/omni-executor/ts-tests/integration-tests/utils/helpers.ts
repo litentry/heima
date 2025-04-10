@@ -9,7 +9,7 @@ export function decodeRpcBytesAsString(value: HexString): string {
 export async function fundAccount(api: ApiPromise, account: string, amount: bigint) {
     console.log(`Funding account ${account} with ${amount}`);
     const keyring = new Keyring({ type: 'sr25519' });
-    const alice = keyring.addFromUri('//Alice');
+    const alice = keyring.addFromUri('//Eve');
     const transfer = api.tx.balances.transferAllowDeath(account, amount);
 
     return new Promise<void>((resolve, reject) => {
