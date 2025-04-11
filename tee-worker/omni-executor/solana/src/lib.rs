@@ -1,4 +1,4 @@
-use std::str::FromStr;
+mod signer;
 
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -6,8 +6,7 @@ use solana_sdk::{
 	system_instruction, transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
-
-pub mod signer;
+use std::str::FromStr;
 
 pub struct SolanaClient<Signer: SignerTrait> {
 	rpc_client: RpcClient,
