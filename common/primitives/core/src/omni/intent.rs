@@ -111,6 +111,7 @@ pub struct PumpxConfig {
 }
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PumpxOrderType {
     Market,
     Limit,
