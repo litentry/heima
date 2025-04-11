@@ -642,6 +642,7 @@ impl<
 					};
 
 					let mut trade_success = false;
+                    let mut to_amount = 0;
 					loop {
 						let trade_order = self
 							.binance_api
@@ -656,6 +657,7 @@ impl<
 							BinanceOrderStatus::FILLED => {
 								log::info!("Binance order filled");
 								trade_success = true;
+                                to_amount = 0; // TODO: figure out the amount received
 								break;
 							},
 							BinanceOrderStatus::CANCELED => {
@@ -694,6 +696,18 @@ impl<
 						return Err(());
 					}
 					// 4. Call accounting contract on BSC
+					let user_nonce = self
+						.accounting_contract_client
+						.get_nonce("TODO:what address is this? OmniAccount?".parse().unwrap())
+						.await
+						.map_err(|_| {
+							log::error!("Failed to get nonce");
+						})?;
+                    self.accounting_contract_client.execute_pay_out_request(
+                        todo!(), //beneficiary,
+                        user_nonce,
+                        to_amount,
+                    )
 
 					// 5. when it’s done, call pumpx API to submit the native trade (here it should be market order only.
 
