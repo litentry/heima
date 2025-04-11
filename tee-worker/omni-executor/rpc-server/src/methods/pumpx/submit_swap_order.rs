@@ -2,6 +2,7 @@ use crate::{
 	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth_token_authentication,
 	Decode, Deserialize, ErrorCode,
 };
+use ethers::utils::keccak256;
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use executor_storage::{PumpxJwtStorage, Storage};
@@ -9,8 +10,8 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
 	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
-	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
-	SolanaToken, SwapOrder, Web2IdentityType,
+	EthereumToken, HeimaMultiAddress, Identity, Intent, PumpxConfig, PumpxOrderType,
+	SingleChainSwapProvider, SolanaToken, SwapOrder, Web2IdentityType,
 };
 use jsonrpsee::RpcModule;
 use native_task_handler::{NativeTaskOk, NativeTaskResponse};
@@ -136,13 +137,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					ErrorCode::InvalidParams
 				})?;
 
-			let swap_order = SwapOrder {
-				from_asset: from_chain_asset,
-				to_asset: to_chain_asset,
-				from_amount,
-				to_address: None,
-			};
-
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
 			let Some(access_token) =
 				storage.get(&(user_identity.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
@@ -150,6 +144,38 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				log::error!("Failed to get access token from storage");
 				return Err(ErrorCode::InternalError);
 			};
+
+			//todo KZ: get user bsc address
+			let to_address = match to_chain_asset {
+				ChainAsset::Ethereum(_, _) => {
+					//todo: remove unwrap;
+
+					let wallet = ctx
+						.pumpx_signer
+						.request_wallet(
+							pumpx::signer_client::ChainType::Evm,
+							params.wallet_index,
+							user_identity.to_omni_account().into(),
+						)
+						.await
+						.unwrap();
+
+					let address: [u8; 20] = keccak256(wallet)[12..32].try_into().unwrap();
+					HeimaMultiAddress::Address20(Address20::from(address))
+					// get ethereum addresss
+				},
+				ChainAsset::Solana(_) => {
+					unimplemented!("Only Ethereum supported");
+				},
+			};
+
+			let swap_order = SwapOrder {
+				from_asset: from_chain_asset,
+				to_asset: to_chain_asset,
+				from_amount,
+				to_address: Some(to_address),
+			};
+
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
 					log::error!("Failed to get user trade info");

@@ -15,7 +15,10 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use accounting_contract_client::AccountingContractClient;
-use alloy::{primitives::U256, rpc::types::TransactionRequest};
+use alloy::{
+	primitives::{Address, U256},
+	rpc::types::TransactionRequest,
+};
 use async_trait::async_trait;
 use base58::ToBase58;
 use binance_api::{
@@ -27,13 +30,13 @@ use binance_api::{
 };
 use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::ChainAsset;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_primitives::SolanaToken;
+use executor_primitives::{utils::hex::ToHexPrefixed, HeimaMultiAddress};
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
@@ -51,7 +54,6 @@ use tokio::{
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
-use pumpx::signer_client::SignerClient;
 use pumpx::types::ChainId;
 use pumpx::types::CreateCrossOrderData;
 use pumpx::types::CrossOrderInfo;
@@ -76,6 +78,7 @@ use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_rpc_client::ToSubxtType;
 use parentchain_signer::TxSigner;
+use pumpx::signer_client::SignerClient;
 
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
@@ -111,7 +114,7 @@ pub struct CrossChainIntentExecutor<
 	transaction_signer: Arc<ParentchainTxSigner>,
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
-	pumpx_signer_client: Arc<SignerClient>,
+	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceApi>,
@@ -132,7 +135,7 @@ impl<
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
 		_rpc_endpoint_registry: RpcEndpointRegistry,
-		pumpx_signer_client: Arc<SignerClient>,
+		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<PumpxApi>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceApi>,
@@ -468,6 +471,25 @@ impl<
 					};
 					pumpx_order_response = Some(order_response);
 				} else {
+					// todo: should we allow for bsc testnet aswell ?
+
+					if !matches!(
+						swap_order.to_asset,
+						ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)
+					) {
+						log::error!("Only BSC payout supported");
+					}
+
+					let payout_address = match swap_order.to_address {
+						Some(HeimaMultiAddress::Address20(address)) => {
+							Address::from_slice(address.as_ref())
+						},
+						_ => {
+							log::error!("Invalid payout address type");
+							return Err(());
+						},
+					};
+
 					// 1. Notify the backend
 					// TODO: update params (the endpoint params have changed)
 					let cross_order_data = CreateCrossOrderData {
@@ -696,20 +718,15 @@ impl<
 						return Err(());
 					}
 					// 4. Call accounting contract on BSC
-					let user_nonce = self
-						.accounting_contract_client
-						.get_nonce("TODO:what address is this? OmniAccount?".parse().unwrap())
-						.await
-						.map_err(|_| {
-							log::error!("Failed to get nonce");
-						})?;
+					let user_nonce =
+						self.accounting_contract_client.get_nonce(payout_address).await.map_err(
+							|_| {
+								log::error!("Failed to get nonce");
+							},
+						)?;
+
 					self.accounting_contract_client
-						// TODO: fill this out
-						.execute_pay_out_request(
-							"TODO: beneficiary".parse().unwrap(),
-							user_nonce,
-							U256::from(to_amount),
-						)
+						.execute_pay_out_request(payout_address, user_nonce, U256::from(to_amount))
 						.await
 						.map_err(|_| {
 							log::error!("Failed to execute pay out request");

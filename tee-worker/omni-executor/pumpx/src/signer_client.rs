@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use executor_crypto::ecdsa;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::core::params::ArrayParams;
@@ -115,17 +116,67 @@ impl ChainType {
 	}
 }
 
-pub struct SignerClient {
+#[async_trait]
+pub trait SignerClient: Send + Sync {
+	async fn request_wallet(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+	) -> Result<Vec<u8>, ()>;
+
+	async fn request_signature(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+		message_to_sign: Vec<u8>,
+	) -> Result<Vec<u8>, ()>;
+
+	async fn request_signatures(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+		messages_to_sign: Vec<Vec<u8>>,
+	) -> Result<Vec<Vec<u8>>, ()>;
+
+	async fn export_wallet(
+		&self,
+		chain_type: ChainType,
+		index: u32,
+		omni_account: [u8; 32],
+		aes_key: Vec<u8>,
+		wallet_address: String,
+	) -> Result<executor_crypto::aes256::AesOutput, ()>;
+}
+
+pub struct PumpxSignerClient {
 	url: String,
 	request_signer: ecdsa::Pair,
 }
 
-impl SignerClient {
+impl PumpxSignerClient {
 	pub fn new(url: String, request_signer: ecdsa::Pair) -> Self {
 		Self { url, request_signer }
 	}
 
-	pub async fn request_wallet(
+	async fn get_shielding_key(&self) -> Result<ShieldingKey, ()> {
+		let client = HttpClient::builder()
+			.build(&self.url)
+			.map_err(|e| error!("Could not create client: {:?}", e))?;
+
+		let shielding_key: ShieldingKey = client
+			.request("dex_getShieldingKey", ArrayParams::default())
+			.await
+			.map_err(|e| error!("Could not get shielding key from signer: {:?}", e))?;
+		Ok(shielding_key)
+	}
+}
+
+#[async_trait]
+impl SignerClient for PumpxSignerClient {
+	async fn request_wallet(
 		&self,
 		chain_type: ChainType,
 		index: u32,
@@ -148,7 +199,7 @@ impl SignerClient {
 		hex::decode(hex_encoded).map_err(|e| error!("Could not decode wallet: {:?}", e))
 	}
 
-	pub async fn request_signature(
+	async fn request_signature(
 		&self,
 		chain_type: ChainType,
 		index: u32,
@@ -172,7 +223,7 @@ impl SignerClient {
 		hex::decode(hex_encoded).map_err(|e| error!("Could not decode signature: {:?}", e))
 	}
 
-	pub async fn request_signatures(
+	async fn request_signatures(
 		&self,
 		chain_type: ChainType,
 		index: u32,
@@ -205,7 +256,7 @@ impl SignerClient {
 		Ok(decoded_signatures)
 	}
 
-	pub async fn export_wallet(
+	async fn export_wallet(
 		&self,
 		chain_type: ChainType,
 		index: u32,
@@ -248,18 +299,6 @@ impl SignerClient {
 			nonce: output.nonce,
 		})
 	}
-
-	async fn get_shielding_key(&self) -> Result<ShieldingKey, ()> {
-		let client = HttpClient::builder()
-			.build(&self.url)
-			.map_err(|e| error!("Could not create client: {:?}", e))?;
-
-		let shielding_key: ShieldingKey = client
-			.request("dex_getShieldingKey", ArrayParams::default())
-			.await
-			.map_err(|e| error!("Could not get shielding key from signer: {:?}", e))?;
-		Ok(shielding_key)
-	}
 }
 
 impl<P: Serialize> ToRpcParams for SignedParams<P> {
@@ -274,7 +313,8 @@ pub mod tests {
 	use jsonrpsee::tokio;
 	use sp_core::{ecdsa, Pair};
 
-	use crate::signer_client::{ChainType, SignerClient};
+	use crate::signer_client::SignerClient;
+	use crate::signer_client::{ChainType, PumpxSignerClient};
 
 	#[ignore = "manual"]
 	#[tokio::test]
@@ -286,7 +326,7 @@ pub mod tests {
 				.try_into()
 				.unwrap(),
 		);
-		let client = SignerClient::new("http://localhost:2000".to_string(), pair);
+		let client = PumpxSignerClient::new("http://localhost:2000".to_string(), pair);
 
 		let wallet = client.request_wallet(ChainType::Evm, 0, [0u8; 32]).await;
 		println!("Got wallet: {:?}", wallet);
@@ -302,7 +342,7 @@ pub mod tests {
 				.try_into()
 				.unwrap(),
 		);
-		let client = SignerClient::new("http://localhost:2000".to_string(), pair);
+		let client = PumpxSignerClient::new("http://localhost:2000".to_string(), pair);
 		let signature =
 			client.request_signature(ChainType::Evm, 0, [0u8; 32], [0u8; 32].to_vec()).await;
 		println!("Got signature: {:?}", signature);
@@ -318,7 +358,7 @@ pub mod tests {
 				.try_into()
 				.unwrap(),
 		);
-		let client = SignerClient::new("http://localhost:2000".to_string(), pair);
+		let client = PumpxSignerClient::new("http://localhost:2000".to_string(), pair);
 		let shielding_key = client.get_shielding_key().await.unwrap();
 		println!("Got shielding key: {:?}", shielding_key);
 	}
@@ -333,7 +373,7 @@ pub mod tests {
 				.try_into()
 				.unwrap(),
 		);
-		let client = SignerClient::new("http://localhost:2000".to_string(), pair);
+		let client = PumpxSignerClient::new("http://localhost:2000".to_string(), pair);
 
 		let omni_account =
 			hex::decode("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")

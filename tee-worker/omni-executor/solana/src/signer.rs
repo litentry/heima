@@ -1,4 +1,5 @@
-use pumpx::signer_client::{ChainType, SignerClient};
+use pumpx::signer_client::ChainType;
+use pumpx::signer_client::SignerClient;
 use solana_sdk::{
 	pubkey::Pubkey,
 	signature::Signature,
@@ -8,7 +9,7 @@ use std::sync::Arc;
 use tokio::runtime::Handle;
 
 pub struct RemoteSigner {
-	signer_client: Arc<SignerClient>,
+	signer_client: Arc<Box<dyn SignerClient>>,
 	wallet_index: u32,
 	omni_account: [u8; 32],
 	handle: Handle,
@@ -16,7 +17,7 @@ pub struct RemoteSigner {
 
 impl RemoteSigner {
 	pub fn new(
-		signer_client: Arc<SignerClient>,
+		signer_client: Arc<Box<dyn SignerClient>>,
 		wallet_index: u32,
 		omni_account: [u8; 32],
 		handle: Handle,

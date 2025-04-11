@@ -25,6 +25,8 @@ mod test {
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use native_task_handler::NativeTaskChannelType;
+	use pumpx::signer_client::SignerClient;
+	use pumpx::signer_client_mocks::MockSignerClient;
 	use pumpx::PumpxApi;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::sync::Arc;
@@ -44,6 +46,7 @@ mod test {
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let intent_id_store = InMemoryIntentIdStore::default();
 		let pumpx_api = PumpxApi::new(None);
+		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
 		start_server(
 			port,
@@ -54,6 +57,7 @@ mod test {
 			[0u8; 32],
 			jwt_private_key.as_bytes().to_vec(),
 			Arc::new(Box::new(intent_id_store)),
+			signer_client,
 		)
 		.await
 		.unwrap();

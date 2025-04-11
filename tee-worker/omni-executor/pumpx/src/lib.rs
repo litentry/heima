@@ -18,5 +18,8 @@ pub mod auth_key_store;
 pub mod constants;
 pub mod signer_client;
 
+#[cfg(feature = "mocks")]
+pub mod signer_client_mocks;
+
 mod pumpx_api;
 pub use pumpx_api::*;

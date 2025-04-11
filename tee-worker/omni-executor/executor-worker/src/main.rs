@@ -40,6 +40,7 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
+use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana::SolanaClient;
@@ -118,10 +119,11 @@ async fn main() -> Result<(), ()> {
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let pumpx_signer_client = Arc::new(pumpx::signer_client::SignerClient::new(
-				args.pumpx_signer_url.clone(),
-				pumpx_signer_pair,
-			));
+			let pumpx_signer_client: Arc<Box<dyn SignerClient>> =
+				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
+					args.pumpx_signer_url.clone(),
+					pumpx_signer_pair,
+				)));
 
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
@@ -224,6 +226,7 @@ async fn main() -> Result<(), ()> {
 				mrenclave,
 				jwt_rsa_private_key,
 				intent_id_store,
+				pumpx_signer_client.clone(),
 			)
 			.await
 			.map_err(|e| {

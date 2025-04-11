@@ -30,10 +30,8 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::{
-	signer_client::{ChainType, SignerClient},
-	PumpxApi,
-};
+use pumpx::signer_client::SignerClient;
+use pumpx::{signer_client::ChainType, PumpxApi};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot, Semaphore};
 
@@ -73,7 +71,7 @@ pub struct TaskHandlerContext<
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<PumpxApi>,
-	pumpx_signer_client: Arc<SignerClient>,
+	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -107,7 +105,7 @@ impl<
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<PumpxApi>,
-		pumpx_signer_client: Arc<SignerClient>,
+		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	) -> Self {
 		Self {

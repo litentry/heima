@@ -7416,11 +7416,13 @@ dependencies = [
 name = "pumpx"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "executor-core",
  "executor-crypto",
  "hex",
  "jsonrpsee",
  "log",
+ "mockall",
  "parity-scale-codec",
  "rand 0.8.5",
  "reqwest 0.12.15",
