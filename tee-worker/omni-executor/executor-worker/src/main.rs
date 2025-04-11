@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::cli::Cli;
+use binance_api::BinanceApi;
 use clap::Parser;
 use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
@@ -69,7 +70,6 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			let _binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
 			let auth_token_key_store =
 				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
@@ -136,6 +136,15 @@ async fn main() -> Result<(), ()> {
 			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
 			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
 
+			let binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
+			let binance_api_secret = env::var("OE_BINANCE_API_SECRET").unwrap_or("".to_string());
+			let binance_api_base_url = env::var("OE_BINANCE_API_BASE_URL").ok();
+			let binance_api = Arc::new(BinanceApi::new(
+				binance_api_key,
+				binance_api_secret,
+				binance_api_base_url,
+			));
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -143,6 +152,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
 				storage_db.clone(),
+				binance_api,
 			)?;
 
 			let intent_id_store: Arc<Box<dyn IntentIdStore>> =

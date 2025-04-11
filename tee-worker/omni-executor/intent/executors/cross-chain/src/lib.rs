@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
+use binance_api::BinanceApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::ChainAsset;
@@ -90,6 +91,7 @@ pub struct CrossChainIntentExecutor<
 	pumpx_signer_client: Arc<SignerClient>,
 	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
+	binance_api: Arc<BinanceApi>,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -106,6 +108,7 @@ impl<
 		pumpx_signer_client: Arc<SignerClient>,
 		pumpx_api: Arc<PumpxApi>,
 		storage_db: Arc<StorageDB>,
+		binance_api: Arc<BinanceApi>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -117,6 +120,7 @@ impl<
 			pumpx_signer_client,
 			pumpx_api,
 			storage_db,
+			binance_api,
 			phantom: PhantomData,
 		})
 	}
