@@ -35,7 +35,7 @@ use pumpx::{
 	PumpxApi,
 };
 use std::{marker::PhantomData, sync::Arc};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, Semaphore};
 
 pub use aes256_key_store::Aes256KeyStore;
 pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
@@ -45,6 +45,8 @@ pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender)
 pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
 pub type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
+
+pub const MAX_CONCURRENT_TASKS: usize = 512; // TODO: make it configurable (if we go for semaphore)
 
 pub type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
@@ -146,12 +148,19 @@ pub async fn run_native_task_handler<
 		>,
 	>,
 ) -> NativeTaskSender {
+	// TODO: maybe not using a handler at all is better/simpler, jsonrpsee handles the method async already
+	let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_TASKS));
 	let (sender, mut receiver) = mpsc::channel::<NativeTaskChannelType>(buffer);
 
 	tokio::spawn(async move {
 		while let Some((wrapper, sender)) = receiver.recv().await {
-			let ctx_cloned = ctx.clone();
-			tokio::spawn(async move { handle_native_task(ctx_cloned, wrapper, sender).await });
+			if let Ok(permit) = semaphore.clone().acquire_owned().await {
+				let ctx_cloned = ctx.clone();
+				tokio::spawn(async move {
+					let _permit = permit; // dropped when task finishes
+					handle_native_task(ctx_cloned, wrapper, sender).await
+				});
+			}
 		}
 	});
 
