@@ -243,31 +243,12 @@ impl<
 					.await
 					.map_err(|e| log::error!("Could not get wallet from pumpx-signer: {:?}", e))?;
 
-				let cross_order_data = CreateCrossOrderData {
-					request_id: intent_id,
-					chain_id: chain_id.clone(),
-					info: vec![CrossOrderInfo {
-						chain_id: chain_id.clone(),
-						wallet_index: pumpx_config.wallet_index,
-						address: wallet_address.to_hex(),
-						amount: from_amount_string.clone(),
-						usd: usd_worth,
-						token_ca: token_ca.clone(),
-					}],
-				};
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
 				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 				else {
 					log::error!("Failed to get access token from storage");
 					return Err(());
 				};
-
-				self.pumpx_api
-					.create_cross_order(&access_token, cross_order_data)
-					.await
-					.map_err(|_| {
-						log::error!("Failed to create cross order");
-					})?;
 
 				let pumpx_order_response: Option<Vec<u8>>;
 
@@ -457,9 +438,28 @@ impl<
 					};
 					pumpx_order_response = Some(order_response);
 				} else {
-					//TODO: execute cross-chain swap
+					// 1. Notify the backend
+					// TODO: update params (the endpoint params have changed)
+					let cross_order_data = CreateCrossOrderData {
+						request_id: intent_id,
+						chain_id: chain_id.clone(),
+						info: vec![CrossOrderInfo {
+							chain_id: chain_id.clone(),
+							wallet_index: pumpx_config.wallet_index,
+							address: wallet_address.to_hex(),
+							amount: from_amount_string.clone(),
+							usd: usd_worth,
+							token_ca: token_ca.clone(),
+						}],
+					};
+					self.pumpx_api
+						.create_cross_order(&access_token, cross_order_data)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to create cross order");
+						})?;
 
-					// 1. transfer from_asset to binance deposit address
+					// 2. transfer from_asset to binance deposit address
 					let coins_info =
 						self.binance_api.wallet().get_all_coins_info().await.map_err(|_| {
 							log::error!("Failed to get all coins info");
@@ -511,11 +511,11 @@ impl<
 
 					// TODO: transfer from_asset (from wallet_address) to binance deposit address
 
-					// 2. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
+					// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
 
-					// 3. Call accounting contract on BSC
+					// 4. Call accounting contract on BSC
 
-					// 4. when it’s done, call pumpx API to submit the native trade (here it should be market order only.
+					// 5. when it’s done, call pumpx API to submit the native trade (here it should be market order only.
 
 					todo!()
 				}
