@@ -3636,6 +3636,7 @@ name = "executor-core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "executor-crypto",
  "executor-primitives",
  "heima-authentication",
  "log",

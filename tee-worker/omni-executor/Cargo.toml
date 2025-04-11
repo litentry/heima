@@ -77,9 +77,9 @@ spl-associated-token-account = "6.0.0"
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
+tempfile = "3.19.1"
 tokio = "1.43.0"
 url = "2.5.4"
-tempfile = "3.19.1"
 
 # Local dependencies
 accounting-contract-client = { path = "accounting-contract-client" }

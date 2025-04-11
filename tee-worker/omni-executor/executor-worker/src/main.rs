@@ -21,6 +21,7 @@ use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::key_store::KeyStore;
+use executor_core::shielding_key_store::ShieldingKeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
@@ -39,7 +40,7 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use pumpx::PumpxApi;
-use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
+use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana::SolanaClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
@@ -184,7 +185,9 @@ async fn main() -> Result<(), ()> {
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
 
-			let shielding_key = ShieldingKey::new();
+			let shielding_key_store = ShieldingKeyStore::new(args.shielding_key_store_path.clone());
+
+			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
 			let shielding_pubkey = shielding_key.public_key();
 			let shielding_pubkey_vec = serde_json::to_vec(&Rsa3072PubKey {
 				n: shielding_pubkey.n().to_bytes_le(),
