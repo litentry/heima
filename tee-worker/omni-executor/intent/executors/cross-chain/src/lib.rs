@@ -34,7 +34,6 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use parity_scale_codec::Encode;
 use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
-use pumpx::types::ChainId;
 use pumpx::types::CreateCrossOrderData;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
@@ -212,8 +211,8 @@ impl<
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
 
 				let chain_id = match swap_order.to_asset {
-					ChainAsset::Ethereum(..) => ChainId::EVM,
-					ChainAsset::Solana(_) => ChainId::Solana,
+					ChainAsset::Ethereum(..) => 1,
+					ChainAsset::Solana(_) => 100000,
 				};
 				let usd_worth = std::str::from_utf8(&pumpx_config.usd_worth)
 					.map_err(|_| {
@@ -225,8 +224,7 @@ impl<
 						log::error!("Failed to parse token_ca");
 					})
 					.map(|v| v.to_string())?;
-				let Some(chain_type) = ChainType::from_pumpx_chain_id(chain_id.to_number() as u32)
-				else {
+				let Some(chain_type) = ChainType::from_pumpx_chain_id(chain_id) else {
 					log::error!("Unsupported chain id: {:?}", chain_id);
 					return Err(());
 				};
@@ -312,9 +310,7 @@ impl<
 								messages_to_sign.push(tx_bytes);
 							}
 
-							let Some(chain_type) =
-								ChainType::from_pumpx_chain_id(chain_id.to_number() as u32)
-							else {
+							let Some(chain_type) = ChainType::from_pumpx_chain_id(chain_id) else {
 								log::error!("Unsupported chain id: {:?}", chain_id);
 								return Err(());
 							};
@@ -350,7 +346,7 @@ impl<
 							};
 							let market_order_tx_res = self
 								.pumpx_api
-								.send_market_order_tx(&access_token, market_order_tx)
+								.send_order_tx(&access_token, market_order_tx)
 								.await
 								.map_err(|_| {
 									log::error!("Failed to send market order tx");
@@ -436,13 +432,23 @@ impl<
 					let cross_order_data = CreateCrossOrderData {
 						request_id: intent_id,
 						chain_id: chain_id.clone(),
-						info: vec![CrossOrderInfo {
+						token_ca: token_ca.clone(),
+						swap_type: match pumpx_config.swap_type {
+							1 => SwapType::Buy,
+							2 => SwapType::Sell,
+							_ => {
+								log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+								return Err(());
+							},
+						},
+						is_one_click: pumpx_config.is_one_click,
+						cross_info: vec![CrossOrderInfo {
 							chain_id: chain_id.clone(),
 							wallet_index: pumpx_config.wallet_index,
 							address: wallet_address.to_hex(),
 							amount: from_amount_string.clone(),
 							usd: usd_worth,
-							token_ca: token_ca.clone(),
+							token_ca,
 						}],
 					};
 					self.pumpx_api
