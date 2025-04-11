@@ -25,6 +25,7 @@ members = [
     "parentchain/signer",
     "pumpx",
     "rpc-server",
+    "solana",
 ]
 
 resolver = "2"
@@ -71,6 +72,7 @@ solana-sdk = "2.1.5"
 sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
 spl-token = "7.0.0"
+spl-associated-token-account = "6.0.0"
 subxt = "0.38.0"
 subxt-core = "0.38.0"
 subxt-signer = { version = "0.38.0", features = ["subxt"] }
@@ -105,6 +107,7 @@ parentchain-signer = { path = "parentchain/signer" }
 pumpx = { path = "pumpx" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "intent/executors/solana" }
+solana = { path = "solana" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
