@@ -12,6 +12,7 @@ parity-scale-codec = { workspace = true }
 
 # Local dependencies
 binance-api = { workspace = true }
+base58 = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }

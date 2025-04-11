@@ -15,9 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
+use base58::ToBase58;
 use binance_api::BinanceApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
+use executor_primitives::Address32;
 use executor_primitives::ChainAsset;
 use executor_primitives::EthereumToken;
 use executor_primitives::Intent;
@@ -79,6 +81,10 @@ pub type ParentchainTxSigner = TxSigner<
 	Metadata,
 	SubxtMetadataProvider<CustomConfig>,
 >;
+
+// TODO: temporary solution
+const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<
@@ -468,14 +474,26 @@ impl<
 						self.binance_api.wallet().get_all_coins_info().await.map_err(|_| {
 							log::error!("Failed to get all coins info");
 						})?;
-					// get binance names
+					// Get binance names
+					// TODO: create an util function to convert ChainAsset to binance names
+					// and create constants for SOL, USDC, USDT, etc
 					let (from_network_name, coin_name) = match swap_order.from_asset {
 						ChainAsset::Solana(ref token) => {
 							let asset = match token {
 								SolanaToken::Native => "SOL",
-								SolanaToken::SPL(_mint_address) => {
-									// TODO: map spl token to binance token
-									"USDC"
+								SolanaToken::SPL(mint_address) => {
+									let mint_address_string = mint_address.as_ref().to_base58();
+									match mint_address_string.as_str() {
+										SOLANA_USDC_MINT_ADDRESS => "USDC",
+										SOLANA_USDT_MINT_ADDRESS => "USDT",
+										_ => {
+											log::error!(
+												"Unsupported SPL token: {:?}",
+												mint_address
+											);
+											return Err(());
+										},
+									}
 								},
 							};
 							("SOL".to_string(), asset.to_string())
