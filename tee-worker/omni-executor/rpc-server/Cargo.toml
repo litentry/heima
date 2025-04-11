@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 base58 = { workspace = true }
+ethers = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
@@ -32,6 +33,9 @@ native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 pumpx = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
 
 [lints]
 workspace = true

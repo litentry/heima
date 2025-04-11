@@ -23,7 +23,7 @@ pub struct RequestJwtParams {
 pub struct RequestJwtResponse {
 	pub access_token: String,
 	pub id_token: String,
-	pub user_connect_response: UserConnectResponse,
+	pub backend_response: UserConnectResponse,
 }
 
 impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
@@ -67,10 +67,8 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 						Ok(NativeTaskOk::PumpxRequestJwt {
 							access_token,
 							id_token,
-							user_connect_response,
-						}) => {
-							Ok(RequestJwtResponse { access_token, id_token, user_connect_response })
-						},
+							backend_response,
+						}) => Ok(RequestJwtResponse { access_token, id_token, backend_response }),
 						Err(NativeTaskError::InternalError) => {
 							log::error!("Internal error in native task");
 							Err(internal_error)

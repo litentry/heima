@@ -22,6 +22,9 @@ pub const AES_KEY_LEN: usize = 32;
 pub type Aes256Key = [u8; AES_KEY_LEN];
 pub type Aes256KeyNonce = [u8; NONCE_LEN];
 
+// TODO: https://linear.app/litentry/issue/P-1451/use-consistent-0x-prefix-for-hex-string
+//       the change needs to be in sync with signer
+
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignedParams<P> {
@@ -93,7 +96,7 @@ struct AesOutput {
 	pub nonce: Aes256KeyNonce,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ChainType {
 	Evm,
 	Solana,

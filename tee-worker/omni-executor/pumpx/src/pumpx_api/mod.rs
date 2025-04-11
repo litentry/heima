@@ -2,10 +2,11 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	AddWalletResponse, ConnectUser, CreateCrossOrderData, CrossOrderFailData, GoogleCode,
-	MarketOrderTx, MarketOrderTxResponse, MarketOrderUnsignedTxResponse, NewLimitOrder,
-	NewMarketOrder, OrderInfoResponse, UserConnectResponse, UserTradeInfoResponse,
-	VerifyGoogleCodeResponse,
+	AddWalletResponse, ConnectUser, CreateCrossOrderData, CreateTransferUnsignedTxResponse,
+	CrossOrderFailData, GoogleCode, MarketOrderTx, MarketOrderTxResponse,
+	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, OrderInfoResponse,
+	SendTransferTxResponse, TransferTx, TransferUnsignedTx, UserConnectResponse,
+	UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -263,6 +264,91 @@ impl PumpxApi {
 
 		response.json().await.map_err(|e| {
 			log::error!("Failed to parse cross order failed response: {:?}", e);
+			e
+		})
+	}
+
+	#[allow(clippy::too_many_arguments)]
+	pub async fn create_transfer_unsigned_tx(
+		&self,
+		access_token: &str,
+		chain_id: u32,
+		wallet_index: u32,
+		recipient_address: &str,
+		token_ca: &str,
+		amount: &str,
+		language: Option<String>,
+	) -> Result<CreateTransferUnsignedTxResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_transfer_unsigned_tx", self.base_url);
+		let unsigned_tx = TransferUnsignedTx {
+			chain_id,
+			wallet_index,
+			recipient_address: recipient_address.to_string(),
+			token_ca: token_ca.to_string(),
+			amount: amount.to_string(),
+		};
+
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.json(&unsigned_tx)
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send create_transfer_unsigned_tx request: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!(
+				"create_transfer_unsigned_tx request failed with status: {}, error: {:?}",
+				status,
+				e
+			);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse create_transfer_unsigned_tx response: {:?}", e);
+			e
+		})
+	}
+
+	pub async fn send_transfer_tx(
+		&self,
+		access_token: &str,
+		transfer_id: u64,
+		chain_id: u32,
+		tx_data: Vec<String>,
+		language: Option<String>,
+	) -> Result<SendTransferTxResponse, Error> {
+		let endpoint = format!("{}/v3/trade/send_transfer_tx", self.base_url);
+		let signed_tx = TransferTx { chain_id, tx_data, transfer_id };
+
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.json(&signed_tx)
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send send_transfer_tx request: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("send_transfer_tx request failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse send_transfer_tx response: {:?}", e);
 			e
 		})
 	}

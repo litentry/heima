@@ -44,6 +44,21 @@ pub enum NativeTask {
 	PumpxExportWallet(Identity, MaybeGoogleCode, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]
 	PumpxAddWallet(Identity),
+	#[codec(index = 23)]
+	PumpxSignLimitOrder(Identity, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
+	#[codec(index = 24)]
+	PumpxTransferWidthdraw(
+		Identity,
+		u32,             // chain_id
+		u32,             // wallet_index
+		String,          // recipient_address
+		String,          // token_contract_address
+		String,          // amount
+		MaybeGoogleCode, // google_code
+		Option<String>,  // language
+	),
+	#[codec(index = 25)]
+	PumpxNotifyLimitOrderResult(Identity, u32, String, Option<String>),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -59,6 +74,9 @@ impl NativeTaskTrait for NativeTask {
 			Self::PumpxRequestJwt(sender, ..) => sender,
 			Self::PumpxExportWallet(sender, ..) => sender,
 			Self::PumpxAddWallet(sender, ..) => sender,
+			Self::PumpxSignLimitOrder(sender, ..) => sender,
+			Self::PumpxTransferWidthdraw(sender, ..) => sender,
+			Self::PumpxNotifyLimitOrderResult(sender, ..) => sender,
 		}
 	}
 
