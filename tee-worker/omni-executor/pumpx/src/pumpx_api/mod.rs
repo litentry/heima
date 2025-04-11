@@ -37,7 +37,7 @@ impl PumpxApi {
 		access_token: &str,
 		email: String,
 		invite_code: Option<String>,
-		google_code: Option<String>,
+		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);

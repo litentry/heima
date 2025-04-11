@@ -14,7 +14,7 @@ use serde::Serialize;
 pub struct RequestJwtParams {
 	pub user_email: String,
 	pub invite_code: Option<String>,
-	pub google_code: MaybeGoogleCode,
+	pub google_code: String,
 	pub language: Option<String>,
 	pub email_code: String,
 }
