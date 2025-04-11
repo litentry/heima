@@ -24,6 +24,7 @@ pub enum NativeTaskOk {
 	PumpxAddWallet(AddWalletResponse),
 	PumpxSignLimitOrder(Vec<Vec<u8>>),
 	PumpxTransferWithdraw(SendTransferTxResponse),
+	PumpxNotifyLimitOrderResult,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -47,6 +48,7 @@ pub enum PumpxApiError {
 	AddWalletFailed,
 	CreateTransferUnsignedTxFailed,
 	SendTransferTxFailed,
+	InvalidInput,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

@@ -946,6 +946,48 @@ async fn handle_native_task<
 				},
 			};
 		},
+		NativeTask::PumpxNotifyLimitOrderResult(sender, intent_id, result, message) => {
+			if result != "ok" && result != "nok" {
+				send_error(
+					format!("Invalid result value: {}. Must be 'ok' or 'nok'", result),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::InvalidInput),
+				);
+				return;
+			}
+
+			let execution_result = match result.as_str() {
+				"ok" => IntentCompletedDetail::Success,
+				"nok" => IntentCompletedDetail::Failure,
+				_ => unreachable!(), // Already validated above
+			};
+
+			if let Some(msg) = message {
+				log::info!("Limit order result message for intent_id {}: {}", intent_id, msg);
+			}
+
+			let intent_executed_call =
+				parentchain_api_interface::tx().omni_account().intent_completed(
+					sender.to_omni_account().to_subxt_type(),
+					intent_id,
+					execution_result,
+				);
+
+			let tx = ctx.transaction_signer.sign(intent_executed_call).await;
+
+			if rpc_client.submit_tx(&tx).await.is_err() {
+				send_error(
+					"Failed to submit tx".to_string(),
+					response_sender,
+					NativeTaskError::InternalError,
+				);
+				ctx.transaction_signer.update_nonce().await;
+				return;
+			}
+
+			send_ok(response_sender, NativeTaskOk::PumpxNotifyLimitOrderResult);
+			return;
+		},
 	};
 
 	match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
