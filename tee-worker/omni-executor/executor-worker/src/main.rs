@@ -28,7 +28,9 @@ use executor_storage::{init_storage, StorageDB};
 use intent_core::IntentIdStore;
 use intent_core::StorageDbIntentIdStore;
 use log::{error, info};
-use native_task_handler::{run_native_task_handler, Aes256KeyStore, TaskHandlerContext};
+use native_task_handler::{
+	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
+};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
@@ -163,9 +165,8 @@ async fn main() -> Result<(), ()> {
 				intent_id_store.clone(),
 			);
 			// TODO: make buffer size configurable
-			let buffer = 1024;
 			let native_task_sender =
-				run_native_task_handler(buffer, Arc::new(task_handler_context)).await;
+				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");

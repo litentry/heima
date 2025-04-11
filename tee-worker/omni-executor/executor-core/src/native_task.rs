@@ -39,9 +39,9 @@ pub enum NativeTask {
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
-	PumpxRequestJwt(Identity, Option<String>, MaybeGoogleCode, Option<String>),
+	PumpxRequestJwt(Identity, Option<String>, String, Option<String>),
 	#[codec(index = 21)]
-	PumpxExportWallet(Identity, MaybeGoogleCode, PumpxChainId, PumxWalletIndex, String),
+	PumpxExportWallet(Identity, String, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]
 	PumpxAddWallet(Identity),
 	#[codec(index = 23)]
@@ -49,13 +49,13 @@ pub enum NativeTask {
 	#[codec(index = 24)]
 	PumpxTransferWidthdraw(
 		Identity,
-		u32,             // chain_id
-		u32,             // wallet_index
-		String,          // recipient_address
-		String,          // token_contract_address
-		String,          // amount
-		MaybeGoogleCode, // google_code
-		Option<String>,  // language
+		u32,            // chain_id
+		u32,            // wallet_index
+		String,         // recipient_address
+		String,         // token_contract_address
+		String,         // amount
+		String,         // google_code
+		Option<String>, // language
 	),
 	#[codec(index = 25)]
 	PumpxNotifyLimitOrderResult(Identity, u32, String, Option<String>),
