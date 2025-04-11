@@ -15,6 +15,8 @@ use serde_with::serde_as;
 use sha2::Sha256;
 use sp_core::keccak_256;
 
+use crate::constants::*;
+
 pub const NONCE_LEN: usize = 96 / 8;
 
 // we use 256-bit AES-GCM key
@@ -104,11 +106,10 @@ pub enum ChainType {
 }
 
 impl ChainType {
-	// pumpx chain_id: sol:10000 eth:1 bsc:56 base:8453
 	pub fn from_pumpx_chain_id(id: u32) -> Option<Self> {
 		match id {
-			10000 => Some(Self::Solana),
-			1 | 56 | 8453 => Some(Self::Evm),
+			SOLANA_CHAIN_ID => Some(Self::Solana),
+			ETHEREUM_CHAIN_ID | BSC_CHAIN_ID | BASE_CHAIN_ID => Some(Self::Evm),
 			_ => None,
 		}
 	}

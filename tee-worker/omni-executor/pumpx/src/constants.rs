@@ -14,9 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod auth_key_store;
-pub mod constants;
-pub mod signer_client;
-
-mod pumpx_api;
-pub use pumpx_api::*;
+pub const SOLANA_CHAIN_ID: u32 = 100000;
+pub const ETHEREUM_CHAIN_ID: u32 = 1;
+pub const BSC_CHAIN_ID: u32 = 56;
+pub const BASE_CHAIN_ID: u32 = 8453;
