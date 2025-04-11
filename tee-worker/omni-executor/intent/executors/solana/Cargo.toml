@@ -10,9 +10,11 @@ executor-core = { workspace = true }
 log = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
+tokio = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }
+pumpx = { workspace = true }
 
 [lints]
 workspace = true

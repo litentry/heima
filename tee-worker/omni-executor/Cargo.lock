@@ -9436,8 +9436,10 @@ dependencies = [
  "executor-core",
  "executor-primitives",
  "log",
+ "pumpx",
  "solana-client",
  "solana-sdk",
+ "tokio",
 ]
 
 [[package]]
