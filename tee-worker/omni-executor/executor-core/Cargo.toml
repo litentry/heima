@@ -13,8 +13,8 @@ serde = { workspace = true }
 tokio = { workspace = true, features = ["sync", "rt"] }
 
 # Local dependencies
-executor-primitives = { workspace = true }
 executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
 heima-authentication = { workspace = true }
 
 [lints]
