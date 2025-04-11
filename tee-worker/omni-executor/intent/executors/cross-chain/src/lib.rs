@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use accounting_contract_client::AccountingContractClient;
-use alloy::rpc::types::TransactionRequest;
+use alloy::{primitives::U256, rpc::types::TransactionRequest};
 use async_trait::async_trait;
 use base58::ToBase58;
 use binance_api::{
@@ -642,7 +642,7 @@ impl<
 					};
 
 					let mut trade_success = false;
-                    let mut to_amount = 0;
+					let mut to_amount = 0;
 					loop {
 						let trade_order = self
 							.binance_api
@@ -657,7 +657,7 @@ impl<
 							BinanceOrderStatus::FILLED => {
 								log::info!("Binance order filled");
 								trade_success = true;
-                                to_amount = 0; // TODO: figure out the amount received
+								to_amount = 0; // TODO: figure out the amount received
 								break;
 							},
 							BinanceOrderStatus::CANCELED => {
@@ -703,11 +703,17 @@ impl<
 						.map_err(|_| {
 							log::error!("Failed to get nonce");
 						})?;
-                    self.accounting_contract_client.execute_pay_out_request(
-                        todo!(), //beneficiary,
-                        user_nonce,
-                        to_amount,
-                    )
+					self.accounting_contract_client
+						// TODO: fill this out
+						.execute_pay_out_request(
+							"TODO: beneficiary".parse().unwrap(),
+							user_nonce,
+							U256::from(to_amount),
+						)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to execute pay out request");
+						})?;
 
 					// 5. when it’s done, call pumpx API to submit the native trade (here it should be market order only.
 
