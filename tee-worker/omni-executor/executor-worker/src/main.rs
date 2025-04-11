@@ -40,6 +40,7 @@ use parentchain_rpc_client::{
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore, ShieldingKey};
+use solana::SolanaClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
@@ -147,6 +148,8 @@ async fn main() -> Result<(), ()> {
 				binance_api_base_url,
 			));
 
+			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -155,6 +158,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_api.clone(),
 				storage_db.clone(),
 				binance_api,
+				solana_client,
 			)?;
 
 			let intent_id_store: Arc<Box<dyn IntentIdStore>> =

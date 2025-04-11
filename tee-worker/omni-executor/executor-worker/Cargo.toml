@@ -31,6 +31,7 @@ parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 rpc-server = { workspace = true }
 solana-intent-executor = { workspace = true }
+solana = { workspace = true }
 
 [lints]
 workspace = true

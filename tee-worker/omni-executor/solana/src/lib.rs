@@ -1,4 +1,4 @@
-mod signer;
+pub mod signer;
 
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
@@ -8,19 +8,23 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 
-pub struct SolanaClient<Signer: SignerTrait> {
+pub struct SolanaClient {
 	rpc_client: RpcClient,
-	signer: Signer,
 }
 
-impl<Signer: SignerTrait> SolanaClient<Signer> {
-	pub fn new(rpc_url: &str, signer: Signer) -> Result<Self, ()> {
+impl SolanaClient {
+	pub fn new(rpc_url: &str) -> Self {
 		let client =
 			RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
-		Ok(Self { rpc_client: client, signer })
+		Self { rpc_client: client }
 	}
 
-	pub async fn transfer_sol(&self, to: [u8; 32], value: u64) -> Result<(), ()> {
+	pub async fn transfer_sol<Signer: SignerTrait>(
+		&self,
+		to: [u8; 32],
+		value: u64,
+		signer: &Signer,
+	) -> Result<(), ()> {
 		let block_hash = self
 			.rpc_client
 			.get_latest_blockhash()
@@ -28,11 +32,11 @@ impl<Signer: SignerTrait> SolanaClient<Signer> {
 			.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
 		let to_pubkey = Pubkey::new_from_array(to);
 		let transfer_instruction =
-			system_instruction::transfer(&self.signer.pubkey(), &to_pubkey, value);
+			system_instruction::transfer(&signer.pubkey(), &to_pubkey, value);
 		let tx = Transaction::new_signed_with_payer(
 			&[transfer_instruction],
-			Some(&self.signer.pubkey()),
-			&[&self.signer],
+			Some(&signer.pubkey()),
+			&[signer],
 			block_hash,
 		);
 		self.rpc_client
@@ -42,11 +46,12 @@ impl<Signer: SignerTrait> SolanaClient<Signer> {
 		Ok(())
 	}
 
-	pub async fn transfer_spl(
+	pub async fn transfer_spl<Signer: SignerTrait>(
 		&self,
 		to: [u8; 32],
 		value: u64,
 		mint_address: &str,
+		signer: &Signer,
 	) -> Result<(), ()> {
 		let block_hash = self
 			.rpc_client
@@ -58,15 +63,15 @@ impl<Signer: SignerTrait> SolanaClient<Signer> {
 			.map_err(|e| log::error!("Could not parse mint address: {:?}", e))?;
 		let to_pubkey = Pubkey::new_from_array(to);
 
-		let source_pubkey = get_associated_token_address(&self.signer.pubkey(), &mint_pubkey);
+		let source_pubkey = get_associated_token_address(&signer.pubkey(), &mint_pubkey);
 		let destination_pubkey = get_associated_token_address(&to_pubkey, &mint_pubkey);
 
 		let transfer_instruction = spl_token::instruction::transfer(
 			&spl_token::id(),
 			&source_pubkey,
 			&destination_pubkey,
-			&self.signer.pubkey(),
-			&[&self.signer.pubkey()],
+			&signer.pubkey(),
+			&[&signer.pubkey()],
 			value,
 		)
 		.map_err(|e| {
@@ -74,8 +79,8 @@ impl<Signer: SignerTrait> SolanaClient<Signer> {
 		})?;
 		let tx = Transaction::new_signed_with_payer(
 			&[transfer_instruction],
-			Some(&self.signer.pubkey()),
-			&[&self.signer],
+			Some(&signer.pubkey()),
+			&[signer],
 			block_hash,
 		);
 		self.rpc_client

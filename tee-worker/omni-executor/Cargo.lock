@@ -3685,6 +3685,7 @@ dependencies = [
  "rpc-server",
  "scale-encode 0.10.0",
  "serde_json",
+ "solana",
  "solana-intent-executor",
  "tokio",
  "url",

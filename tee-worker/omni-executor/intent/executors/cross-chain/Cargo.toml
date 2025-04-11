@@ -22,6 +22,7 @@ parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
+solana = { workspace = true }
 
 [lints]
 workspace = true

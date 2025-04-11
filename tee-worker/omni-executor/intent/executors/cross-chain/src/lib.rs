@@ -94,6 +94,7 @@ pub struct CrossChainIntentExecutor<
 	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceApi>,
+	solana_client: Arc<SolanaClient>,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -103,6 +104,7 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory>
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
@@ -111,6 +113,7 @@ impl<
 		pumpx_api: Arc<PumpxApi>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceApi>,
+		solana_client: Arc<SolanaClient>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -123,6 +126,7 @@ impl<
 			pumpx_api,
 			storage_db,
 			binance_api,
+			solana_client,
 			phantom: PhantomData,
 		})
 	}
