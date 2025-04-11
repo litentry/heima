@@ -21,7 +21,7 @@ impl SolanaClient {
 
 	pub async fn transfer_sol<Signer: SignerTrait>(
 		&self,
-		to: [u8; 32],
+		to: &str,
 		value: u64,
 		signer: &Signer,
 	) -> Result<(), ()> {
@@ -30,7 +30,8 @@ impl SolanaClient {
 			.get_latest_blockhash()
 			.await
 			.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
-		let to_pubkey = Pubkey::new_from_array(to);
+		let to_pubkey =
+			Pubkey::from_str(to).map_err(|e| log::error!("Could not parse to address: {:?}", e))?;
 		let transfer_instruction =
 			system_instruction::transfer(&signer.pubkey(), &to_pubkey, value);
 		let tx = Transaction::new_signed_with_payer(
@@ -39,16 +40,21 @@ impl SolanaClient {
 			&[signer],
 			block_hash,
 		);
-		self.rpc_client
+		let tx_signature = self
+			.rpc_client
 			.send_and_confirm_transaction(&tx)
 			.await
 			.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
+
+		log::debug!("Successfully transferred {} tokens from sender {}", value, signer.pubkey());
+		log::debug!("Transaction signature: {:?}", tx_signature);
+
 		Ok(())
 	}
 
 	pub async fn transfer_spl<Signer: SignerTrait>(
 		&self,
-		to: [u8; 32],
+		to: &str,
 		value: u64,
 		mint_address: &str,
 		signer: &Signer,
@@ -61,7 +67,8 @@ impl SolanaClient {
 
 		let mint_pubkey = Pubkey::from_str(mint_address)
 			.map_err(|e| log::error!("Could not parse mint address: {:?}", e))?;
-		let to_pubkey = Pubkey::new_from_array(to);
+		let to_pubkey =
+			Pubkey::from_str(to).map_err(|e| log::error!("Could not parse to address: {:?}", e))?;
 
 		let source_pubkey = get_associated_token_address(&signer.pubkey(), &mint_pubkey);
 		let destination_pubkey = get_associated_token_address(&to_pubkey, &mint_pubkey);
@@ -83,10 +90,14 @@ impl SolanaClient {
 			&[signer],
 			block_hash,
 		);
-		self.rpc_client
+		let tx_signature = self
+			.rpc_client
 			.send_and_confirm_transaction(&tx)
 			.await
 			.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
+
+		log::debug!("Successfully transferred {} tokens from sender {}", value, signer.pubkey());
+		log::debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(())
 	}

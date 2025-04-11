@@ -19,9 +19,7 @@ use base58::ToBase58;
 use binance_api::BinanceApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
-use executor_primitives::Address32;
 use executor_primitives::ChainAsset;
-use executor_primitives::EthereumToken;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
@@ -30,6 +28,10 @@ use executor_primitives::SolanaToken;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use rust_decimal::prelude::*;
+use rust_decimal::Decimal;
+use solana::{signer::RemoteSigner, SolanaClient};
+use tokio::runtime::Handle;
 // use intent_asset_lock::AmountType;
 // use intent_token_query::query_ethereum;
 // use intent_token_query::query_solana;
@@ -474,40 +476,45 @@ impl<
 						self.binance_api.wallet().get_all_coins_info().await.map_err(|_| {
 							log::error!("Failed to get all coins info");
 						})?;
-					// Get binance names
 					// TODO: create an util function to convert ChainAsset to binance names
 					// and create constants for SOL, USDC, USDT, etc
-					let (from_network_name, coin_name) = match swap_order.from_asset {
-						ChainAsset::Solana(ref token) => {
-							let asset = match token {
-								SolanaToken::Native => "SOL",
-								SolanaToken::SPL(mint_address) => {
-									let mint_address_string = mint_address.as_ref().to_base58();
-									match mint_address_string.as_str() {
-										SOLANA_USDC_MINT_ADDRESS => "USDC",
-										SOLANA_USDT_MINT_ADDRESS => "USDT",
-										_ => {
-											log::error!(
-												"Unsupported SPL token: {:?}",
-												mint_address
-											);
-											return Err(());
-										},
-									}
-								},
-							};
-							("SOL".to_string(), asset.to_string())
-						},
-						ChainAsset::Ethereum(..) => {
-							log::error!("Unsupported from_asset: {:?}", swap_order.from_asset);
-							return Err(());
-						},
-					};
-					let Some(binance_coin_info) = coins_info.iter().find(|c| c.coin == coin_name)
+					let (from_network_name, binance_coin_name, token_address) =
+						match swap_order.from_asset {
+							ChainAsset::Solana(ref token) => {
+								let (asset, token_address) = match token {
+									SolanaToken::Native => ("SOL", ""),
+									SolanaToken::SPL(mint_address) => {
+										let mint_address_string = mint_address.as_ref().to_base58();
+										match mint_address_string.as_str() {
+											SOLANA_USDC_MINT_ADDRESS => {
+												("USDC", SOLANA_USDT_MINT_ADDRESS)
+											},
+											SOLANA_USDT_MINT_ADDRESS => {
+												("USDT", SOLANA_USDC_MINT_ADDRESS)
+											},
+											_ => {
+												log::error!(
+													"Unsupported SPL token: {:?}",
+													mint_address
+												);
+												return Err(());
+											},
+										}
+									},
+								};
+								("SOL".to_string(), asset.to_string(), token_address.to_string())
+							},
+							ChainAsset::Ethereum(..) => {
+								log::error!("Unsupported from_asset: {:?}", swap_order.from_asset);
+								return Err(());
+							},
+						};
+					let Some(binance_coin_info) =
+						coins_info.iter().find(|c| c.coin == binance_coin_name)
 					else {
 						log::error!(
 							"Failed to find binance network list for asset: {:?}",
-							coin_name
+							binance_coin_name
 						);
 						return Err(());
 					};
@@ -518,20 +525,67 @@ impl<
 					else {
 						log::error!(
 							"Failed to find binance network list for asset: {:?}",
-							coin_name
+							binance_coin_name
 						);
 						return Err(());
 					};
 					let deposit_address = self
 						.binance_api
 						.wallet()
-						.get_deposit_address(&coin_name, &binance_network_info.network)
+						.get_deposit_address(&binance_coin_name, &binance_network_info.network)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to get deposit address");
 						})?;
+					let from_amount_decimal =
+						Decimal::from_str(&from_amount_string).map_err(|_| {
+							log::error!("Failed to parse from_amount_string");
+						})?;
+					let asset_decimal_multiplier = match binance_coin_name.as_str() {
+						"USDC" => Decimal::from(1_000_000),    // 10^6
+						"USDT" => Decimal::from(1_000_000),    // 10^6
+						"SOL" => Decimal::from(1_000_000_000), // 10^9  TODO: double check this
+						_ => {
+							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							return Err(());
+						},
+					};
+					let amount_to_transfer_decimal = from_amount_decimal * asset_decimal_multiplier;
+					let Some(amount_to_transfer) = amount_to_transfer_decimal.to_u64() else {
+						log::error!("Failed to convert amount to transfer to u64");
+						return Err(());
+					};
 
-					// TODO: transfer from_asset (from wallet_address) to binance deposit address
+					let remote_signer = RemoteSigner::new(
+						self.pumpx_signer_client.clone(),
+						pumpx_config.wallet_index,
+						*account_id.as_ref(),
+						Handle::current(),
+					);
+
+					// TODO: change this when adding support for more tokens/chains
+					if binance_coin_name == "SOL" {
+						// Native transfer
+						self.solana_client
+							.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to transfer SOL");
+							})?;
+					} else {
+						// SPL transfer
+						self.solana_client
+							.transfer_spl(
+								&deposit_address,
+								amount_to_transfer,
+								&token_address,
+								&remote_signer,
+							)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to transfer SOL");
+							})?;
+					}
 
 					// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
 

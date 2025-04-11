@@ -4,10 +4,11 @@ use solana_sdk::{
 	signature::Signature,
 	signer::{Signer, SignerError},
 };
+use std::sync::Arc;
 use tokio::runtime::Handle;
 
 pub struct RemoteSigner {
-	signer_client: SignerClient,
+	signer_client: Arc<SignerClient>,
 	wallet_index: u32,
 	omni_account: [u8; 32],
 	handle: Handle,
@@ -15,7 +16,7 @@ pub struct RemoteSigner {
 
 impl RemoteSigner {
 	pub fn new(
-		signer_client: SignerClient,
+		signer_client: Arc<SignerClient>,
 		wallet_index: u32,
 		omni_account: [u8; 32],
 		handle: Handle,

@@ -9,6 +9,8 @@ async-trait = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
+rust_decimal = { workspace = true }
+tokio = { workspace = true }
 
 # Local dependencies
 binance-api = { workspace = true }
