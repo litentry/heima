@@ -15,9 +15,11 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 url = { workspace = true }
 
 # Local dependencies
+accounting-contract-client = { workspace = true }
 binance-api = { workspace = true }
 cross-chain-intent-executor = { workspace = true }
 ethereum-intent-executor = { workspace = true }
+ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }

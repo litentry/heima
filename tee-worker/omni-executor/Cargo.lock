@@ -2396,9 +2396,12 @@ dependencies = [
 name = "cross-chain-intent-executor"
 version = "0.1.0"
 dependencies = [
+ "accounting-contract-client",
+ "alloy",
  "async-trait",
  "base58",
  "binance-api",
+ "ethereum-rpc",
  "executor-core",
  "executor-primitives",
  "executor-storage",
@@ -3701,11 +3704,13 @@ dependencies = [
 name = "executor-worker"
 version = "0.1.0"
 dependencies = [
+ "accounting-contract-client",
  "binance-api",
  "clap",
  "cross-chain-intent-executor",
  "env_logger",
  "ethereum-intent-executor",
+ "ethereum-rpc",
  "executor-core",
  "executor-crypto",
  "executor-primitives",

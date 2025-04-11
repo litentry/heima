@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use accounting_contract_client::AccountingContractClient;
+use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
 use base58::ToBase58;
 use binance_api::{
@@ -23,6 +25,7 @@ use binance_api::{
 	},
 	BinanceApi,
 };
+use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::ChainAsset;
@@ -102,6 +105,7 @@ pub struct CrossChainIntentExecutor<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
 > {
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	transaction_signer: Arc<ParentchainTxSigner>,
@@ -112,6 +116,7 @@ pub struct CrossChainIntentExecutor<
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceApi>,
 	solana_client: Arc<SolanaClient>,
+	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -119,7 +124,8 @@ impl<
 		Header,
 		RpcClient: SubstrateRpcClient<Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory>
+		Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
+	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -131,6 +137,7 @@ impl<
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceApi>,
 		solana_client: Arc<SolanaClient>,
+		accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -144,6 +151,7 @@ impl<
 			storage_db,
 			binance_api,
 			solana_client,
+			accounting_contract_client,
 			phantom: PhantomData,
 		})
 	}
@@ -154,7 +162,8 @@ impl<
 		Header: Send + Sync,
 		RpcClient: SubstrateRpcClient<Header> + Send + Sync,
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync,
-	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory>
+		Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync,
+	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
 {
 	async fn execute(
 		&self,

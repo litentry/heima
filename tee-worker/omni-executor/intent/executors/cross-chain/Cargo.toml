@@ -13,11 +13,14 @@ rust_decimal = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
+accounting-contract-client = { workspace = true }
+alloy = { workspace = true }
 base58 = { workspace = true }
 binance-api = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
+ethereum-rpc = { workspace = true }
 heima-authentication = { workspace = true }
 intent-asset-lock = { workspace = true }
 intent-token-query = { workspace = true }

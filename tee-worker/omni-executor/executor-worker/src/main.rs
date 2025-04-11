@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::cli::Cli;
+use accounting_contract_client::AccountingContractClient;
 use binance_api::BinanceApi;
 use clap::Parser;
 use cli::*;
@@ -151,6 +152,12 @@ async fn main() -> Result<(), ()> {
 
 			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
 
+			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new(&args.ethereum_url);
+			let accounting_contract_client = AccountingContractClient::new(
+				ethereum_rpc_provider,
+				"TODO:get contract address".parse().unwrap(),
+			);
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -160,6 +167,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				binance_api,
 				solana_client,
+				Arc::new(accounting_contract_client),
 			)?;
 
 			let intent_id_store: Arc<Box<dyn IntentIdStore>> =
