@@ -30,8 +30,8 @@ parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 rpc-server = { workspace = true }
-solana-intent-executor = { workspace = true }
 solana = { workspace = true }
+solana-intent-executor = { workspace = true }
 
 [lints]
 workspace = true

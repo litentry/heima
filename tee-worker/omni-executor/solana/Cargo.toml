@@ -8,8 +8,8 @@ edition.workspace = true
 log = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
-spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }
+spl-token = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
