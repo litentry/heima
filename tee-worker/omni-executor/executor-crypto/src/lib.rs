@@ -1,6 +1,7 @@
 pub mod aes256;
 pub mod jwt;
 pub mod secp256k1;
+pub mod shielding_key;
 pub mod traits;
 
 pub mod rsa {
