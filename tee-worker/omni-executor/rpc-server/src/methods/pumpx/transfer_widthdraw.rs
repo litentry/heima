@@ -19,7 +19,7 @@ pub struct TransferWithdrawParams {
 	pub token_ca: String,
 	pub amount: String,
 	pub email_code: String,
-	pub google_code: MaybeGoogleCode,
+	pub google_code: String,
 	pub lang: Option<String>,
 }
 

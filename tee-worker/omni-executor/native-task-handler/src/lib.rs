@@ -548,7 +548,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, maybe_google_code, language) => {
+		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, language) => {
 			let email = match sender {
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
@@ -604,13 +604,7 @@ async fn handle_native_task<
 
 			let Ok(backend_response) = ctx
 				.pumpx_api
-				.user_connect(
-					&access_token,
-					email.clone(),
-					invite_code,
-					maybe_google_code,
-					language,
-				)
+				.user_connect(&access_token, email.clone(), invite_code, google_code, language)
 				.await
 			else {
 				send_error(
@@ -649,43 +643,39 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxExportWallet(
 			sender,
-			maybe_google_code,
+			google_code,
 			pumpx_chain_id,
 			pumpx_wallet_index,
 			expected_wallet_address,
 		) => {
-			if let Some(ref google_code) = maybe_google_code {
-				let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-				let Some(access_token) =
-					storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
-				else {
-					send_error(
-						format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
-					return;
-				};
+			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let Some(access_token) =
+				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				send_error(
+					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
+					response_sender,
+					NativeTaskError::InternalError,
+				);
+				return;
+			};
 
-				let verify_result = ctx
-					.pumpx_api
-					.verify_google_code(&access_token, google_code.to_string(), None)
-					.await;
-				let verify_success = match verify_result {
-					Ok(response) => response.data.result,
-					Err(_) => {
-						log::error!("Google code verification request failed");
-						false
-					},
-				};
-				if !verify_success {
-					send_error(
-						"Google code verification failed".to_string(),
-						response_sender,
-						NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
-					);
-					return;
-				}
+			let verify_result =
+				ctx.pumpx_api.verify_google_code(&access_token, google_code, None).await;
+			let verify_success = match verify_result {
+				Ok(response) => response.data.result,
+				Err(_) => {
+					log::error!("Google code verification request failed");
+					false
+				},
+			};
+			if !verify_success {
+				send_error(
+					"Google code verification failed".to_string(),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
+				);
+				return;
 			}
 
 			let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
@@ -789,7 +779,7 @@ async fn handle_native_task<
 			recipient_address,
 			token_ca,
 			amount,
-			maybe_google_code,
+			google_code,
 			language,
 		) => {
 			// 1. Verify we have a valid Pumpx "access" token for the user
@@ -806,30 +796,28 @@ async fn handle_native_task<
 				return;
 			};
 
-			// 2. Verify google code (if provided).
-			if let Some(ref google_code) = maybe_google_code {
-				let verify_result = ctx
-					.pumpx_api
-					.verify_google_code(&access_token, google_code.to_string(), language.clone())
-					.await;
+			// 2. Verify google code in every case
+			let verify_result = ctx
+				.pumpx_api
+				.verify_google_code(&access_token, google_code, language.clone())
+				.await;
 
-				let verify_success = match verify_result {
-					Ok(res) => res.data.result,
-					Err(_) => {
-						log::error!("Google code verification request failed");
-						false
-					},
-				};
+			let verify_success = match verify_result {
+				Ok(res) => res.data.result,
+				Err(_) => {
+					log::error!("Google code verification request failed");
+					false
+				},
+			};
 
-				if !verify_success {
-					send_error(
-						"Failed to verify google code within NativeTask::PumpxTransferWidthdraw"
-							.to_string(),
-						response_sender,
-						NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
-					);
-					return;
-				}
+			if !verify_success {
+				send_error(
+					"Failed to verify google code within NativeTask::PumpxTransferWidthdraw"
+						.to_string(),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
+				);
+				return;
 			}
 
 			// 3. Create an unsigned tx with Pumpx backend
