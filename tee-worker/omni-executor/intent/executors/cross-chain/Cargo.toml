@@ -11,6 +11,7 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true }
 
 # Local dependencies
+binance-api = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
