@@ -9,6 +9,7 @@ async-trait = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true, features = ["client"] }
 log = { workspace = true }
+mockall = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 reqwest = { workspace = true }
@@ -20,7 +21,6 @@ serde_with = { workspace = true }
 sha2 = { workspace = true }
 sp-core = { workspace = true }
 url = { workspace = true }
-mockall = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
