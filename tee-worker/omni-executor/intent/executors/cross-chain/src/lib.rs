@@ -19,10 +19,12 @@ use binance_api::BinanceApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::ChainAsset;
+use executor_primitives::EthereumToken;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
+use executor_primitives::SolanaToken;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
@@ -456,12 +458,64 @@ impl<
 					pumpx_order_response = Some(order_response);
 				} else {
 					//TODO: execute cross-chain swap
-					// to binance swap, If it fails, notify the backend via /v3/trade/cross_fail
-					// TODO:
-					// 3. Swap assets:
-					//    - Call accounting contract (e.g Swap SOL to TRUMP)
-					//    - Call Binance convert via binance account (e.g Swap USDC to SOL)
-					// 4. Send locked balance to binance account (refill)
+
+					// 1. transfer from_asset to binance deposit address
+					let coins_info =
+						self.binance_api.wallet().get_all_coins_info().await.map_err(|_| {
+							log::error!("Failed to get all coins info");
+						})?;
+					// get binance names
+					let (from_network_name, coin_name) = match swap_order.from_asset {
+						ChainAsset::Solana(ref token) => {
+							let asset = match token {
+								SolanaToken::Native => "SOL",
+								SolanaToken::SPL(_mint_address) => {
+									// TODO: map spl token to binance token
+									"USDC"
+								},
+							};
+							("SOL".to_string(), asset.to_string())
+						},
+						ChainAsset::Ethereum(..) => {
+							log::error!("Unsupported from_asset: {:?}", swap_order.from_asset);
+							return Err(());
+						},
+					};
+					let Some(binance_coin_info) = coins_info.iter().find(|c| c.coin == coin_name)
+					else {
+						log::error!(
+							"Failed to find binance network list for asset: {:?}",
+							coin_name
+						);
+						return Err(());
+					};
+					let Some(binance_network_info) = binance_coin_info
+						.network_list
+						.iter()
+						.find(|n| n.network == from_network_name)
+					else {
+						log::error!(
+							"Failed to find binance network list for asset: {:?}",
+							coin_name
+						);
+						return Err(());
+					};
+					let deposit_address = self
+						.binance_api
+						.wallet()
+						.get_deposit_address(&coin_name, &binance_network_info.network)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to get deposit address");
+						})?;
+
+					// TODO: transfer from_asset (from wallet_address) to binance deposit address
+
+					// 2. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
+
+					// 3. Call accounting contract on BSC
+
+					// 4. when it’s done, call pumpx API to submit the native trade (here it should be market order only.
 
 					todo!()
 				}
