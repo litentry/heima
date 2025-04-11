@@ -24,8 +24,8 @@ pub type SendTransferTxResponse = ApiResponse<TransferTxData>;
 #[serde(rename_all = "camelCase")]
 pub struct TransferUnsignedTxData {
 	pub tx_data: Option<Vec<String>>,
-	pub transfer_id: u64,
-	pub chain_id: u64,
+	pub transfer_id: u32,
+	pub chain_id: u32,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
@@ -50,7 +50,7 @@ pub struct TransferUnsignedTx {
 pub struct TransferTx {
 	pub chain_id: u32,
 	pub tx_data: Vec<String>,
-	pub transfer_id: u64,
+	pub transfer_id: u32,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
