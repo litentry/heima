@@ -10,18 +10,23 @@ pub struct RemoteSigner {
 	signer_client: SignerClient,
 	wallet_index: u32,
 	omni_account: [u8; 32],
+	handle: Handle,
 }
 
 impl RemoteSigner {
-	pub fn new(signer_client: SignerClient, wallet_index: u32, omni_account: [u8; 32]) -> Self {
-		Self { signer_client, wallet_index, omni_account }
+	pub fn new(
+		signer_client: SignerClient,
+		wallet_index: u32,
+		omni_account: [u8; 32],
+		handle: Handle,
+	) -> Self {
+		Self { signer_client, wallet_index, omni_account, handle }
 	}
 }
 
 impl Signer for RemoteSigner {
 	fn try_pubkey(&self) -> Result<Pubkey, SignerError> {
-		let handle = Handle::current();
-		let wallet = handle.block_on(async {
+		let wallet = self.handle.block_on(async {
 			self.signer_client
 				.request_wallet(ChainType::Solana, self.wallet_index, self.omni_account)
 				.await
@@ -39,8 +44,7 @@ impl Signer for RemoteSigner {
 	}
 
 	fn try_sign_message(&self, message: &[u8]) -> Result<Signature, SignerError> {
-		let handle = Handle::current();
-		let signed_message = handle.block_on(async {
+		let signed_message = self.handle.block_on(async {
 			self.signer_client
 				.request_signature(
 					ChainType::Solana,
