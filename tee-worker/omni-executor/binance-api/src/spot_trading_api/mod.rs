@@ -1,4 +1,4 @@
-mod types;
+pub mod types;
 
 use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
 use std::collections::HashMap;

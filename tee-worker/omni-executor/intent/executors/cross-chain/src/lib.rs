@@ -16,7 +16,13 @@
 
 use async_trait::async_trait;
 use base58::ToBase58;
-use binance_api::BinanceApi;
+use binance_api::{
+	spot_trading_api::types::{
+		CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
+		OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
+	},
+	BinanceApi,
+};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::ChainAsset;
@@ -31,7 +37,10 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use solana::{signer::RemoteSigner, SolanaClient};
-use tokio::runtime::Handle;
+use tokio::{
+	runtime::Handle,
+	time::{sleep, Duration},
+};
 // use intent_asset_lock::AmountType;
 // use intent_token_query::query_ethereum;
 // use intent_token_query::query_solana;
@@ -39,7 +48,6 @@ use tokio::runtime::Handle;
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
-use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
 use pumpx::types::ChainId;
 use pumpx::types::CreateCrossOrderData;
@@ -50,6 +58,7 @@ use pumpx::types::NewLimitOrder;
 use pumpx::types::NewMarketOrder;
 use pumpx::types::SwapType;
 use pumpx::PumpxApi;
+use pumpx::{signer_client::ChainType, types::CrossOrderFailData};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -583,12 +592,98 @@ impl<
 							)
 							.await
 							.map_err(|_| {
-								log::error!("Failed to transfer SOL");
+								log::error!("Failed to transfer SPL");
 							})?;
 					}
+					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
+						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
+						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
+						"SOL" => ("SOLBNB".to_string(), BinanceOrderSide::SELL),
+						_ => {
+							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							return Err(());
+						},
+					};
 
 					// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
+					let binance_order_params = BinanceCreateOrderParams {
+						symbol: trade_symbol.clone(),
+						side: order_side,
+						order_type: BinanceOrderType::MARKET,
+						..Default::default()
+					};
+					let Ok(binance_order) =
+						self.binance_api.spot_trading().create_order(binance_order_params).await
+					else {
+						log::error!("Failed to create binance order");
+						let data = CrossOrderFailData {
+							request_id: intent_id,
+							// TODO: is this a user facing error? what should we return?
+							fail_reason: "Failed to create binance order".to_string(),
+						};
+						self.pumpx_api.cross_order_failed(&access_token, data).await.map_err(
+							|_| {
+								log::error!("Failed to notify pumpx-signer");
+							},
+						)?;
+						// TODO: Figure out how to transfer back the asset to the omni account
+						// check https://developers.binance.com/docs/wallet/capital/withdraw
 
+						return Err(());
+					};
+
+					let mut trade_success = false;
+					loop {
+						let trade_order = self
+							.binance_api
+							.spot_trading()
+							.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to get binance order");
+							})?;
+
+						match trade_order.status {
+							BinanceOrderStatus::FILLED => {
+								log::info!("Binance order filled");
+								trade_success = true;
+								break;
+							},
+							BinanceOrderStatus::CANCELED => {
+								log::error!("Binance order canceled");
+							},
+							BinanceOrderStatus::REJECTED => {
+								log::error!("Binance order rejected");
+							},
+							BinanceOrderStatus::EXPIRED => {
+								log::error!("Binance order expired");
+							},
+							BinanceOrderStatus::EXPIRED_IN_MATCH => {
+								log::error!("Binance order expired in matching");
+							},
+							_ => {
+								log::debug!("Binance order status: {:?}", trade_order.status);
+							},
+						}
+						sleep(Duration::from_millis(500)).await;
+					}
+					if !trade_success {
+						log::error!("Binance order failed");
+						let data = CrossOrderFailData {
+							request_id: intent_id,
+							// TODO: is this a user facing error? what should we return?
+							fail_reason: "Binance order failed".to_string(),
+						};
+						self.pumpx_api.cross_order_failed(&access_token, data).await.map_err(
+							|_| {
+								log::error!("Failed to notify pumpx-signer");
+							},
+						)?;
+						// TODO: Figure out how to transfer back the asset to the omni account
+						// check https://developers.binance.com/docs/wallet/capital/withdraw
+
+						return Err(());
+					}
 					// 4. Call accounting contract on BSC
 
 					// 5. when it’s done, call pumpx API to submit the native trade (here it should be market order only.

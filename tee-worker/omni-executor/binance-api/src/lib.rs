@@ -1,6 +1,6 @@
 mod convert_api;
 mod error;
-mod spot_trading_api;
+pub mod spot_trading_api;
 mod traits;
 mod types;
 mod wallet_api;
