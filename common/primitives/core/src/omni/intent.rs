@@ -1,14 +1,14 @@
-use crate::{AccountId, Address20, Address32, Address33, Balance, ChainAsset};
+use crate::{AccountId, Address20, Address32, Address33, Balance, BoundedVec, ChainAsset};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::Deserialize;
 use sp_core::H160;
 use sp_runtime::traits::ConstU32;
-pub use sp_runtime::BoundedVec;
 
 pub type CallEthereumInputLen = ConstU32<{ 10 * 1024 }>;
 pub type RemarkLen = ConstU32<{ u32::max_value() }>;
 pub type IntentStringLen = ConstU32<128>;
+pub type AmountLen = ConstU32<32>;
 
 pub type IntentId = u32;
 
@@ -68,7 +68,7 @@ pub enum HeimaMultiAddress {
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct SwapOrder {
     pub from_asset: ChainAsset,
-    pub from_amount: u64,
+    pub from_amount: BoundedVec<u8, AmountLen>,
     pub to_asset: ChainAsset,
     pub to_address: Option<HeimaMultiAddress>,
 }
@@ -106,6 +106,7 @@ pub struct PumpxConfig {
     // below is only relevant to limit order, thus `Option<>`
     pub token_cap: Option<BoundedVec<u8, IntentStringLen>>,
     pub price_usd: Option<BoundedVec<u8, IntentStringLen>>,
+    pub usd_worth: BoundedVec<u8, IntentStringLen>,
     pub trailing_percent: Option<u32>,
 }
 

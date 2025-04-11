@@ -16,15 +16,60 @@ pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
 
 pub type AddWalletResponse = ApiResponse<EmptyResponse>;
 
+pub type CreateTransferUnsignedTxResponse = ApiResponse<TransferUnsignedTxData>;
+
+pub type SendTransferTxResponse = ApiResponse<TransferTxData>;
+
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferUnsignedTxData {
+	pub tx_data: Option<Vec<String>>,
+	pub transfer_id: u64,
+	pub chain_id: u64,
+}
+
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferTxData {
+	pub tx_hash: Option<Vec<String>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferUnsignedTx {
+	pub chain_id: u32,
+	pub wallet_index: u32,
+	pub recipient_address: String,
+	pub token_ca: String,
+	pub amount: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferTx {
+	pub chain_id: u32,
+	pub tx_data: Vec<String>,
+	pub transfer_id: u64,
+}
+
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
 pub struct EmptyResponse {}
 
-#[derive(Deserialize_repr, Serialize_repr)]
+#[derive(Deserialize_repr, Serialize_repr, Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum ChainId {
 	EVM = 1,
 	Solana = 2,
+}
+
+impl ChainId {
+	pub fn to_number(&self) -> u8 {
+		match self {
+			ChainId::EVM => 1,
+			ChainId::Solana => 2,
+		}
+	}
 }
 
 #[derive(Deserialize, Serialize)]
@@ -44,7 +89,7 @@ pub struct ConnectedUser {
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ApiResponse<T: Encode> {
+pub struct ApiResponse<T: Codec> {
 	code: u32,
 	message: String,
 	pub data: T,
@@ -73,7 +118,7 @@ impl SwapType {
 	}
 }
 
-#[derive(Deserialize_repr, Serialize_repr, Encode)]
+#[derive(Deserialize_repr, Serialize_repr, Encode, Decode)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum GasType {
@@ -110,7 +155,7 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderUnsignedTx {
 	pub order_id: String,
@@ -125,13 +170,13 @@ pub struct MarketOrderTx {
 	pub chain_id: ChainId,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
 	pub tx_hash: String,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct UserTradeInfo {
 	pub gas_type_base: GasType,
@@ -154,9 +199,9 @@ pub struct NewLimitOrder {
 	pub amount: String,
 	pub swap_type: SwapType,
 	pub double_out: bool,
-	pub token_cap: String,
-	pub price_usd: String,
-	pub trailing_percent: String,
+	pub token_cap: Option<String>,
+	pub price_usd: Option<String>,
+	pub trailing_percent: Option<String>,
 	pub address: String,
 	pub is_anti_mev: bool,
 	pub is_auto_slippage: bool,
@@ -165,7 +210,7 @@ pub struct NewLimitOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInfo {
 	pub order_id: String,
@@ -176,7 +221,7 @@ pub struct GoogleCode {
 	pub google_code: String,
 }
 
-#[derive(Deserialize, Encode)]
+#[derive(Deserialize, Encode, Decode)]
 pub struct DataResult {
 	pub result: bool,
 }
@@ -186,7 +231,7 @@ pub struct DataResult {
 pub struct CreateCrossOrderData {
 	pub request_id: u32,
 	pub chain_id: ChainId,
-	pub info: CrossOrderInfo,
+	pub info: Vec<CrossOrderInfo>,
 }
 
 #[derive(Serialize)]

@@ -1,5 +1,4 @@
 use crate::{signature::HeimaMultiSignature, OmniAccountAuthType};
-
 use parity_scale_codec::{Decode, Encode};
 
 pub type VerificationCode = String;

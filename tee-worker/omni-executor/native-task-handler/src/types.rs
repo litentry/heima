@@ -1,7 +1,7 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::types::{AddWalletResponse, UserConnectResponse};
+use pumpx::types::{AddWalletResponse, SendTransferTxResponse, UserConnectResponse};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {
@@ -17,10 +17,14 @@ pub enum NativeTaskOk {
 		/// Used for user's identity verification before making sensitive operations
 		id_token: String,
 
-		user_connect_response: UserConnectResponse,
+		backend_response: UserConnectResponse,
 	},
+	IntentSwapResponse(Vec<u8>),
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet(AddWalletResponse),
+	PumpxSignLimitOrder(Vec<Vec<u8>>),
+	PumpxTransferWithdraw(SendTransferTxResponse),
+	PumpxNotifyLimitOrderResult,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -32,6 +36,7 @@ pub enum NativeTaskError {
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,
 	PumpxApiError(PumpxApiError),
+	PumpxSignerError(PumpxSignerError),
 	IntentNonceMismatch,
 }
 
@@ -41,4 +46,12 @@ pub enum PumpxApiError {
 	UserConnectionFailed,
 	UnknownError,
 	AddWalletFailed,
+	CreateTransferUnsignedTxFailed,
+	SendTransferTxFailed,
+	InvalidInput,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxSignerError {
+	RequestSignatureFailed,
 }

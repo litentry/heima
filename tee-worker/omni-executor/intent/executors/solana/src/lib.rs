@@ -49,7 +49,7 @@ impl IntentExecutor for SolanaIntentExecutor {
 		_account_id: &AccountId,
 		_intent_id: IntentId,
 		intent: Intent,
-	) -> Result<(), ()> {
+	) -> Result<Option<Vec<u8>>, ()> {
 		info!("Executing intent: {:?}", intent);
 		// TODO: get key from key store
 		let signer_key_pair = Keypair::read_from_file("dev-key.json")
@@ -83,6 +83,6 @@ impl IntentExecutor for SolanaIntentExecutor {
 			},
 		}
 
-		Ok(())
+		Ok(None)
 	}
 }
