@@ -23,11 +23,9 @@ use rsa::pkcs1::EncodeRsaPublicKey;
 use crate::error_code::get_native_task_error_code;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::server::RpcContext;
-use crate::verify_auth::verify_auth;
 use crate::ErrorCode;
 use ethers::types::Bytes;
 use executor_core::native_task::NativeTask;
-use executor_core::native_task::NativeTaskTrait;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
 use executor_core::native_task::PumxWalletIndex;
@@ -73,10 +71,10 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				.map_err(|_| internal_error.clone())?;
 			let public_key =
 				private_key.to_public_key().to_pkcs1_der().map_err(|_| internal_error.clone())?;
-			// this validates jwt
 
+			// this validates jwt - we skip exp check for this call
 			let Ok(token) =
-				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes())
+				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes(), true)
 			else {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			};
@@ -100,10 +98,6 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
-
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
-			}
 
 			let (response_sender, response_receiver) = oneshot::channel();
 
