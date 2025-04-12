@@ -30,12 +30,12 @@ use binance_api::{
 };
 use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
+use executor_primitives::HeimaMultiAddress;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_primitives::SolanaToken;
-use executor_primitives::{utils::hex::ToHexPrefixed, HeimaMultiAddress};
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
@@ -58,8 +58,7 @@ use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
 use pumpx::types::SwapType;
 use pumpx::types::{
-	CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
-	CreateMarketOrderUnsignedTxBody, CrossFailBody, SendOrderTxBody,
+	CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody, CrossFailBody,
 };
 use pumpx::PumpxApi;
 use pumpx::{hex_encode_evm_address_bytes, signer_client::SignerClient};
@@ -302,7 +301,7 @@ impl<
 					let order_response = match pumpx_config.order_type {
 						PumpxOrderType::Market => {
 							debug!("Doing market order");
-							let new_market_order = CreateMarketOrderTxBody {
+							let body = CreateMarketOrderTxBody {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca.clone(),
@@ -345,10 +344,10 @@ impl<
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
-							debug!("Sending market order: {:?}", new_market_order);
+							debug!("Sending market order: {:?}", body);
 							let res = self
 								.pumpx_api
-								.create_market_order_tx(&access_token, new_market_order)
+								.create_market_order_tx(&access_token, body)
 								.await
 								.map_err(|_| {
 									log::error!("Failed to create market order tx");
@@ -793,7 +792,7 @@ impl<
 					};
 					debug!("Doing market order");
 
-					let new_market_order = CreateMarketOrderUnsignedTxBody {
+					let body = CreateMarketOrderTxBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
 						token_ca: to_token_ca.clone(),
@@ -824,75 +823,16 @@ impl<
 						slippage: pumpx_config.slippage,
 						wallet_index: pumpx_config.wallet_index,
 					};
-					debug!("Sending market order: {:?}", new_market_order);
-					let market_order_unsigned_tx_res = self
-						.pumpx_api
-						.create_market_order_unsigned_tx(&access_token, new_market_order)
-						.await
-						.map_err(|_| {
-							log::error!("Failed to create market order unsigned tx");
-						})?;
-
-					debug!("Received market order response: {:?}", market_order_unsigned_tx_res);
-
-					let tx_data = market_order_unsigned_tx_res.data.tx_data;
-					let mut messages_to_sign = Vec::new();
-					for tx in tx_data {
-						let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-						let tx_bytes = match hex::decode(tx_cleaned) {
-							Ok(bytes) => bytes,
-							Err(e) => {
-								log::error!("Failed to decode hex string: {:?}", e);
-								return Err(());
+					debug!("Sending market order: {:?}", body);
+					let res =
+						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
+							|_| {
+								log::error!("Failed to create market order tx");
 							},
-						};
-						messages_to_sign.push(tx_bytes);
-					}
+						)?;
 
-					debug!(
-						"Requesting signatures from pumpx-signer for following txs: {:?}",
-						messages_to_sign
-					);
-
-					let signatures = match self
-						.pumpx_signer_client
-						.request_signatures(
-							chain_type,
-							pumpx_config.wallet_index,
-							*account_id.as_ref(),
-							messages_to_sign,
-						)
-						.await
-					{
-						Ok(sigs) => sigs,
-						Err(e) => {
-							log::error!("Failed to get signatures from pumpx-signer: {:?}", e);
-							return Err(());
-						},
-					};
-					let signed_tx_data: Vec<String> =
-						signatures.into_iter().map(|signature| signature.to_hex()).collect();
-
-					debug!("Received {:?} signatures from pumpx-signer", signed_tx_data);
-
-					let market_order_tx = SendOrderTxBody {
-						order_id: market_order_unsigned_tx_res.data.order_id,
-						chain_id: market_order_unsigned_tx_res.data.chain_id,
-						tx_data: signed_tx_data,
-					};
-
-					debug!("Sending market order tx: {:?}", market_order_tx);
-					let market_order_tx_res = self
-						.pumpx_api
-						.send_order_tx(&access_token, market_order_tx)
-						.await
-						.map_err(|_| {
-							log::error!("Failed to send market order tx");
-						})?;
-
-					debug!("Received market order tx: {:?}", market_order_tx_res);
-
-					pumpx_order_response = Some(market_order_tx_res.encode())
+					debug!("Received create_market_order_tx response: {:?}", res);
+					pumpx_order_response = Some(res.encode())
 				}
 
 				// self.account_asset_lock.release(
