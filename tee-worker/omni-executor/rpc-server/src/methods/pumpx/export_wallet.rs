@@ -16,7 +16,7 @@ use sha2::Sha256;
 pub struct ExportWalletParams {
 	pub user_email: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
-	pub google_code: MaybeGoogleCode,
+	pub google_code: String,
 	pub chain_id: PumpxChainId,
 	pub wallet_index: PumxWalletIndex,
 	pub wallet_address: String,

@@ -237,31 +237,12 @@ impl<
 					.await
 					.map_err(|e| log::error!("Could not get wallet from pumpx-signer: {:?}", e))?;
 
-				let cross_order_data = CreateCrossOrderData {
-					request_id: intent_id,
-					chain_id: chain_id.clone(),
-					info: vec![CrossOrderInfo {
-						chain_id: chain_id.clone(),
-						wallet_index: pumpx_config.wallet_index,
-						address: wallet_address.to_hex(),
-						amount: from_amount_string.clone(),
-						usd: usd_worth,
-						token_ca: token_ca.clone(),
-					}],
-				};
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
 				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 				else {
 					log::error!("Failed to get access token from storage");
 					return Err(());
 				};
-
-				self.pumpx_api
-					.create_cross_order(&access_token, cross_order_data)
-					.await
-					.map_err(|_| {
-						log::error!("Failed to create cross order");
-					})?;
 
 				let pumpx_order_response: Option<Vec<u8>>;
 
@@ -451,6 +432,26 @@ impl<
 					};
 					pumpx_order_response = Some(order_response);
 				} else {
+					// notify backend about it
+					let cross_order_data = CreateCrossOrderData {
+						request_id: intent_id,
+						chain_id: chain_id.clone(),
+						info: vec![CrossOrderInfo {
+							chain_id: chain_id.clone(),
+							wallet_index: pumpx_config.wallet_index,
+							address: wallet_address.to_hex(),
+							amount: from_amount_string.clone(),
+							usd: usd_worth,
+							token_ca: token_ca.clone(),
+						}],
+					};
+					self.pumpx_api
+						.create_cross_order(&access_token, cross_order_data)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to create cross order");
+						})?;
+
 					//TODO: execute cross-chain swap
 					// to binance swap, If it fails, notify the backend via /v3/trade/cross_fail
 					// TODO:

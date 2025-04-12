@@ -77,7 +77,7 @@ impl ChainId {
 pub struct ConnectUser {
 	pub email: String,
 	pub invite_code: Option<String>,
-	pub google_code: Option<String>,
+	pub google_code: String,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
