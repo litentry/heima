@@ -66,7 +66,7 @@ impl AuthTokenValidator for String {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes())
+		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), false)
 			.map_err(|e| Error::JwtError(e.kind().clone()))
 			.and_then(|claims| validation.validate(&claims))
 	}
@@ -80,7 +80,7 @@ impl AuthTokenValidator for &str {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes())
+		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), false)
 			.map_err(|e| Error::JwtError(e.kind().clone()))
 			.and_then(|claims| validation.validate(&claims))
 	}

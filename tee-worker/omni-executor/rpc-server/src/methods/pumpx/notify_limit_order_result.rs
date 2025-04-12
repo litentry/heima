@@ -1,7 +1,4 @@
-use crate::{
-	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode,
-};
+use crate::{error_code::*, oneshot, server::RpcContext, Decode, Deserialize, ErrorCode};
 use executor_core::native_task::*;
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::FromHexPrefixed, OmniAuth};
@@ -32,8 +29,9 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			let public_key =
 				private_key.to_public_key().to_pkcs1_der().map_err(|_| internal_error.clone())?;
 
+			// this validates jwt - we skip exp check for this call
 			let Ok(token) =
-				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes())
+				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes(), true)
 			else {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
 			};
@@ -57,10 +55,6 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 				nonce: None,
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
-
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
-			}
 
 			let (response_sender, response_receiver) = oneshot::channel();
 
