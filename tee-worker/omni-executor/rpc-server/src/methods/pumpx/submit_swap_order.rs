@@ -165,9 +165,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					return Err(ErrorCode::InvalidParams);
 				},
 			};
-			let token_ca =
-				BoundedVec::try_from(params.to_token_ca.unwrap_or_default().as_bytes().to_vec())
-					.map_err(|_| ErrorCode::InvalidParams)?;
 			let token_cap = params
 				.token_cap
 				.map(|token_ca| {
@@ -185,11 +182,22 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let usd_worth = BoundedVec::try_from(params.usd_worth.as_bytes().to_vec())
 				.map_err(|_| ErrorCode::InvalidParams)?;
 
+			// TODO: optimise these BoundedVec conversion to have better readability
 			let pumpx_config = PumpxConfig {
 				order_type: params.order_type.clone(),
 				swap_type: params.swap_type.to_number() as u32,
-				chain_id: params.to_chain_id,
-				token_ca,
+				from_chain_id: params.from_chain_id,
+				from_token_ca: BoundedVec::try_from(
+					params.from_token_ca.unwrap_or("".to_string()).as_bytes().to_vec(),
+				)
+				.map_err(|_| ErrorCode::InvalidParams)?,
+				to_chain_id: params.to_chain_id,
+				to_token_ca: BoundedVec::try_from(
+					params.to_token_ca.unwrap_or("".to_string()).as_bytes().to_vec(),
+				)
+				.map_err(|_| ErrorCode::InvalidParams)?,
+				from_amount: BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
+					.map_err(|_| ErrorCode::InvalidParams)?,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
 				is_anti_mev: user_trade_info.data.is_anti_mev,
@@ -210,7 +218,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
 			}
 
+			// TODO: `swap_order` isn't actively used - we mainly rely on pumpx_config to call pumpx API
+			//       we construct `swap_order` mainly to upload it onto heima
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
+
 			let wrapper = NativeTaskWrapper {
 				task: NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				nonce: None,

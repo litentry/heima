@@ -49,6 +49,7 @@ pub enum NativeTask {
 	#[codec(index = 24)]
 	PumpxTransferWidthdraw(
 		Identity,
+		Option<u32>,    // request_id
 		u32,            // chain_id
 		u32,            // wallet_index
 		String,         // recipient_address
