@@ -11,6 +11,7 @@
 ## Enumerations
 
 - [ConnectionState](enumerations/ConnectionState.md)
+- [OmniRpcMethod](enumerations/OmniRpcMethod.md)
 - [PumpxRpcMethod](enumerations/PumpxRpcMethod.md)
 
 ## Classes
@@ -47,12 +48,14 @@
 - [createVerificationMessage](functions/createVerificationMessage.md)
 - [decodeSignature](functions/decodeSignature.md)
 - [decrypt](functions/decrypt.md)
+- [decryptWithAes](functions/decryptWithAes.md)
 - [encrypt](functions/encrypt.md)
 - [exportKey](functions/exportKey.md)
 - [generate](functions/generate.md)
 - [generateNonce12](functions/generateNonce12.md)
 - [getAndWaitForAccountStoreCreation](functions/getAndWaitForAccountStoreCreation.md)
 - [getSignatureCryptoType](functions/getSignatureCryptoType.md)
+- [importKey](functions/importKey.md)
 - [isWeb3](functions/isWeb3.md)
 - [toHash](functions/toHash.md)
 - [toPublicKey](functions/toPublicKey.md)

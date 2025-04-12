@@ -59,7 +59,7 @@ const { rawTask, encryptionKey } = await createRawTaskType(api, { task });
 
 ## Call Signature
 
-> **createRawTaskType**(`api`, `data`, `enclaveInstance`?): `Promise`\<`RawTask`\>
+> **createRawTaskType**(`api`, `data`, `enclaveInstance?`): `Promise`\<`RawTask`\>
 
 Defined in: [type-creators/raw-task.ts:23](https://github.com/litentry/heima/blob/dev/type-creators/raw-task.ts#L23)
 
@@ -155,7 +155,7 @@ const { rawTask, encryptionKey } = await createRawTaskType(api, { task });
 
 ## Call Signature
 
-> **createRawTaskType**(`api`, `data`, `enclaveInstance`?): `Promise`\<\{ `encryptionKey`: `CryptoKey`; `rawTask`: `RawTask`; \}\>
+> **createRawTaskType**(`api`, `data`, `enclaveInstance?`): `Promise`\<\{ `encryptionKey`: `CryptoKey`; `rawTask`: `RawTask`; \}\>
 
 Defined in: [type-creators/raw-task.ts:46](https://github.com/litentry/heima/blob/dev/type-creators/raw-task.ts#L46)
 
