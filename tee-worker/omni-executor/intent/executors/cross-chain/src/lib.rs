@@ -80,6 +80,8 @@ use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_rpc_client::ToSubxtType;
 use parentchain_signer::TxSigner;
 
+use log::debug;
+
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
 
@@ -176,6 +178,7 @@ impl<
 	) -> Result<Option<Vec<u8>>, ()> {
 		match intent {
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
+				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
 				else {
 					log::error!("Failed to create rpc client");
@@ -241,6 +244,8 @@ impl<
 					},
 				};
 
+				debug!("Submitted intent accepted parentchain call");
+
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
 
@@ -278,6 +283,7 @@ impl<
 				let pumpx_order_response: Option<Vec<u8>>;
 
 				if pumpx_config.from_chain_id == pumpx_config.to_chain_id {
+					debug!("from and to chain are equal, performing single chain swap");
 					let Some(chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
 					else {
 						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
@@ -294,6 +300,7 @@ impl<
 
 					let order_response = match pumpx_config.order_type {
 						PumpxOrderType::Market => {
+							debug!("Doing market order");
 							let new_market_order = NewMarketOrder {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
@@ -337,6 +344,7 @@ impl<
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
+							debug!("Sending market order: {:?}", new_market_order);
 							let market_order_unsigned_tx_res = self
 								.pumpx_api
 								.create_market_order_unsigned_tx(&access_token, new_market_order)
@@ -344,6 +352,11 @@ impl<
 								.map_err(|_| {
 									log::error!("Failed to create market order unsigned tx");
 								})?;
+
+							debug!(
+								"Received market order response: {:?}",
+								market_order_unsigned_tx_res
+							);
 
 							let tx_data = market_order_unsigned_tx_res.data.tx_data;
 							let mut messages_to_sign = Vec::new();
@@ -358,6 +371,11 @@ impl<
 								};
 								messages_to_sign.push(tx_bytes);
 							}
+
+							debug!(
+								"Requesting signatures from pumpx-signer for following txs: {:?}",
+								messages_to_sign
+							);
 
 							let signatures = match self
 								.pumpx_signer_client
@@ -383,11 +401,16 @@ impl<
 								.map(|signature| signature.to_hex())
 								.collect();
 
+							debug!("Received {:?} signatures from pumpx-signer", signed_tx_data);
+
 							let market_order_tx = MarketOrderTx {
 								order_id: market_order_unsigned_tx_res.data.order_id,
 								chain_id: market_order_unsigned_tx_res.data.chain_id,
 								tx_data: signed_tx_data,
 							};
+
+							debug!("Sending market order tx: {:?}", market_order_tx);
+
 							let market_order_tx_res = self
 								.pumpx_api
 								.send_order_tx(&access_token, market_order_tx)
@@ -395,9 +418,12 @@ impl<
 								.map_err(|_| {
 									log::error!("Failed to send market order tx");
 								})?;
+
+							debug!("Received market order tx: {:?}", market_order_tx_res);
 							market_order_tx_res.encode()
 						},
 						PumpxOrderType::Limit => {
+							debug!("Doing limit order");
 							let token_cap = match pumpx_config.token_cap {
 								Some(ref token_cap) => Some(
 									std::str::from_utf8(token_cap)
@@ -466,6 +492,7 @@ impl<
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
+							debug!("Sending limit order: {:?}", new_limit_order);
 							let limit_order_res = self
 								.pumpx_api
 								.create_limit_order(&access_token, new_limit_order)
@@ -474,11 +501,14 @@ impl<
 									log::error!("Failed to create limit order");
 								})?;
 
+							debug!("Received limit order response: {:?}", limit_order_res);
+
 							limit_order_res.encode()
 						},
 					};
 					pumpx_order_response = Some(order_response);
 				} else {
+					debug!("from and to chain are different, performing cross chain swap");
 					if !matches!(
 						swap_order.to_asset,
 						ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)
@@ -554,12 +584,15 @@ impl<
 							token_ca: from_token_ca,
 						}],
 					};
-					self.pumpx_api
+					debug!("Creating cross order with data: {:?}", cross_order_data);
+					let response = self
+						.pumpx_api
 						.create_cross_order(&access_token, cross_order_data)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to create cross order");
 						})?;
+					debug!("Received response: {:?}", response);
 
 					// 2. transfer from_asset to binance deposit address
 					let coins_info =
@@ -655,6 +688,7 @@ impl<
 					// TODO: change this when adding support for more tokens/chains
 					if binance_coin_name == "SOL" {
 						// Native transfer
+						debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
 						self.solana_client
 							.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
 							.await
@@ -662,6 +696,10 @@ impl<
 								log::error!("Failed to transfer SOL");
 							})?;
 					} else {
+						debug!(
+							"Transfering {:?} {:?} to {:?}",
+							amount_to_transfer, token_address, deposit_address
+						);
 						// SPL transfer
 						self.solana_client
 							.transfer_spl(
@@ -692,6 +730,7 @@ impl<
 						order_type: BinanceOrderType::MARKET,
 						..Default::default()
 					};
+					debug!("Creating binance order with params: {:?}", binance_order_params);
 					let Ok(binance_order) =
 						self.binance_api.spot_trading().create_order(binance_order_params).await
 					else {
@@ -767,6 +806,10 @@ impl<
 
 						return Err(());
 					}
+
+					debug!("Total traded on binance: {:?}", to_amount);
+
+					debug!("Getting {:?} nonce for payout request", payout_address);
 					// 4. Call accounting contract on BSC
 					let user_nonce =
 						self.accounting_contract_client.get_nonce(payout_address).await.map_err(
@@ -775,6 +818,9 @@ impl<
 							},
 						)?;
 
+					debug!("Received {:?} nonce", user_nonce);
+
+					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, to_amount);
 					//todo : make sure we payout correct amount
 					self.accounting_contract_client
 						.execute_pay_out_request(
@@ -811,53 +857,49 @@ impl<
 							return Err(());
 						},
 					};
+					debug!("Doing market order");
 
+					let new_market_order = NewMarketOrder {
+						request_id: intent_id,
+						chain_id: pumpx_config.to_chain_id,
+						token_ca: to_token_ca.clone(),
+						swap_type: match pumpx_config.swap_type {
+							1 => SwapType::Buy,
+							2 => SwapType::Sell,
+							_ => {
+								log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+								return Err(());
+							},
+						},
+						// amount received from binance should be used...
+						amount_in: to_amount.to_string(),
+						double_out: pumpx_config.double_out,
+						is_one_click: pumpx_config.is_one_click,
+						address: wallet_address,
+						is_anti_mev: pumpx_config.is_anti_mev,
+						is_auto_slippage: pumpx_config.is_auto_slippage,
+						gas_type: match pumpx_config.gas_type {
+							1 => GasType::Slow,
+							2 => GasType::Medium,
+							3 => GasType::Fast,
+							_ => {
+								log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+								return Err(());
+							},
+						},
+						slippage: pumpx_config.slippage,
+						wallet_index: pumpx_config.wallet_index,
+					};
+					debug!("Sending market order: {:?}", new_market_order);
 					let market_order_unsigned_tx_res = self
 						.pumpx_api
-						.create_market_order_unsigned_tx(
-							&access_token,
-							NewMarketOrder {
-								request_id: intent_id,
-								chain_id: pumpx_config.to_chain_id,
-								token_ca: to_token_ca.clone(),
-								swap_type: match pumpx_config.swap_type {
-									1 => SwapType::Buy,
-									2 => SwapType::Sell,
-									_ => {
-										log::error!(
-											"Unsupported swap type: {}",
-											pumpx_config.swap_type
-										);
-										return Err(());
-									},
-								},
-								// amount received from binance should be used...
-								amount_in: to_amount.to_string(),
-								double_out: pumpx_config.double_out,
-								is_one_click: pumpx_config.is_one_click,
-								address: wallet_address,
-								is_anti_mev: pumpx_config.is_anti_mev,
-								is_auto_slippage: pumpx_config.is_auto_slippage,
-								gas_type: match pumpx_config.gas_type {
-									1 => GasType::Slow,
-									2 => GasType::Medium,
-									3 => GasType::Fast,
-									_ => {
-										log::error!(
-											"Unsupported gas type: {}",
-											pumpx_config.gas_type
-										);
-										return Err(());
-									},
-								},
-								slippage: pumpx_config.slippage,
-								wallet_index: pumpx_config.wallet_index,
-							},
-						)
+						.create_market_order_unsigned_tx(&access_token, new_market_order)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to create market order unsigned tx");
 						})?;
+
+					debug!("Received market order response: {:?}", market_order_unsigned_tx_res);
 
 					let tx_data = market_order_unsigned_tx_res.data.tx_data;
 					let mut messages_to_sign = Vec::new();
@@ -872,6 +914,11 @@ impl<
 						};
 						messages_to_sign.push(tx_bytes);
 					}
+
+					debug!(
+						"Requesting signatures from pumpx-signer for following txs: {:?}",
+						messages_to_sign
+					);
 
 					let signatures = match self
 						.pumpx_signer_client
@@ -892,11 +939,15 @@ impl<
 					let signed_tx_data: Vec<String> =
 						signatures.into_iter().map(|signature| signature.to_hex()).collect();
 
+					debug!("Received {:?} signatures from pumpx-signer", signed_tx_data);
+
 					let market_order_tx = MarketOrderTx {
 						order_id: market_order_unsigned_tx_res.data.order_id,
 						chain_id: market_order_unsigned_tx_res.data.chain_id,
 						tx_data: signed_tx_data,
 					};
+
+					debug!("Sending market order tx: {:?}", market_order_tx);
 					let market_order_tx_res = self
 						.pumpx_api
 						.send_order_tx(&access_token, market_order_tx)
@@ -904,6 +955,8 @@ impl<
 						.map_err(|_| {
 							log::error!("Failed to send market order tx");
 						})?;
+
+					debug!("Received market order tx: {:?}", market_order_tx_res);
 
 					pumpx_order_response = Some(market_order_tx_res.encode())
 				}

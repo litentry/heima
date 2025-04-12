@@ -102,7 +102,7 @@ impl SwapType {
 	}
 }
 
-#[derive(Deserialize_repr, Serialize_repr, Encode, Decode)]
+#[derive(Deserialize_repr, Serialize_repr, Encode, Decode, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum GasType {
@@ -121,7 +121,7 @@ impl GasType {
 	}
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct NewMarketOrder {
 	pub request_id: u32,
@@ -139,7 +139,7 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode, Decode)]
+#[derive(Deserialize, Encode, Decode, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderUnsignedTx {
 	pub chain_id: u32,
@@ -147,7 +147,7 @@ pub struct MarketOrderUnsignedTx {
 	pub tx_data: Vec<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderTx {
 	pub chain_id: u32,
@@ -155,7 +155,7 @@ pub struct MarketOrderTx {
 	pub tx_data: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
+#[derive(Deserialize, Serialize, Encode, Decode, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
 	pub tx_hash: Option<Vec<String>>,
@@ -175,7 +175,7 @@ pub struct UserTradeInfo {
 	pub slippage_display: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct NewLimitOrder {
 	pub request_id: u32,
@@ -195,7 +195,7 @@ pub struct NewLimitOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
+#[derive(Deserialize, Serialize, Encode, Decode, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInfo {
 	pub order_id: u32,
@@ -211,7 +211,7 @@ pub struct DataResult {
 	pub result: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateCrossOrderData {
 	pub request_id: u32,
@@ -222,7 +222,7 @@ pub struct CreateCrossOrderData {
 	pub cross_info: Vec<CrossOrderInfo>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CrossOrderInfo {
 	pub chain_id: u32,
