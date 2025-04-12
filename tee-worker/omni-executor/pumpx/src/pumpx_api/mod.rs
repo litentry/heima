@@ -2,11 +2,13 @@ pub mod types;
 
 use reqwest::{Client, Error};
 use types::{
-	AddWalletResponse, ConnectUser, CreateCrossOrderData, CreateTransferUnsignedTxResponse,
-	CrossOrderFailData, GoogleCode, MarketOrderTx, MarketOrderTxResponse,
-	MarketOrderUnsignedTxResponse, NewLimitOrder, NewMarketOrder, OrderInfoResponse,
-	SendTransferTxResponse, TransferTx, TransferUnsignedTx, UserConnectResponse,
-	UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
+	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
+	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
+	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody, GoogleCode,
+	OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
+	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
+	VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -41,14 +43,14 @@ impl PumpxApi {
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
-		let user_connect = ConnectUser { email: email.clone(), invite_code, google_code };
+		let body = UserConnectBody { email: email.clone(), invite_code, google_code };
 
 		let response = self
 			.http_client
 			.post(&endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
-			.json(&user_connect)
+			.json(&body)
 			.send()
 			.await
 			.map_err(|e| {
@@ -143,29 +145,33 @@ impl PumpxApi {
 	pub async fn create_market_order_unsigned_tx(
 		&self,
 		access_token: &str,
-		new_market_order: NewMarketOrder,
-	) -> Result<MarketOrderUnsignedTxResponse, Error> {
+		body: CreateMarketOrderUnsignedTxBody,
+	) -> Result<CreateMarketOrderUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_market_order_unsigned_tx", self.base_url);
 		let response = self
 			.http_client
 			.post(&endpoint)
 			.bearer_auth(access_token)
-			.json(&new_market_order)
+			.json(&body)
 			.send()
 			.await
 			.map_err(|e| {
-				log::error!("Failed to send market order creation request: {:?}", e);
+				log::error!("Failed to send create_market_order_unsigned_tx request: {:?}", e);
 				e
 			})?;
 
 		let status = response.status();
 		let response = response.error_for_status().map_err(|e| {
-			log::error!("Market order creation failed with status: {}, error: {:?}", status, e);
+			log::error!(
+				"create_market_order_unsigned_tx failed with status: {}, error: {:?}",
+				status,
+				e
+			);
 			e
 		})?;
 
 		response.json().await.map_err(|e| {
-			log::error!("Failed to parse market order creation response: {:?}", e);
+			log::error!("Failed to parse create_market_order_unsigned_tx response: {:?}", e);
 			e
 		})
 	}
@@ -173,14 +179,14 @@ impl PumpxApi {
 	pub async fn send_order_tx(
 		&self,
 		access_token: &str,
-		market_order_tx: MarketOrderTx,
-	) -> Result<MarketOrderTxResponse, Error> {
+		body: SendOrderTxBody,
+	) -> Result<SendOrderTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_order_tx", self.base_url);
 		let response = self
 			.http_client
 			.post(&endpoint)
 			.bearer_auth(access_token)
-			.json(&market_order_tx)
+			.json(&body)
 			.send()
 			.await
 			.map_err(|e| {
@@ -203,13 +209,13 @@ impl PumpxApi {
 	pub async fn create_limit_order(
 		&self,
 		access_token: &str,
-		new_limit_order: NewLimitOrder,
+		body: CreateLimitOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_limit_order", self.base_url);
 		self.http_client
 			.post(&endpoint)
 			.bearer_auth(access_token)
-			.json(&new_limit_order)
+			.json(&body)
 			.send()
 			.await?
 			.json()
@@ -219,7 +225,7 @@ impl PumpxApi {
 	pub async fn create_cross_order(
 		&self,
 		access_token: &str,
-		data: CreateCrossOrderData,
+		data: CreateCrossOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_cross_order", self.base_url);
 		let response = self
@@ -245,7 +251,7 @@ impl PumpxApi {
 	pub async fn cross_fail(
 		&self,
 		access_token: &str,
-		data: CrossOrderFailData,
+		data: CrossFailBody,
 	) -> Result<OrderInfoResponse, Error> {
 		let endpoint = format!("{}/v3/trade/cross_fail", self.base_url);
 		let response = self
@@ -272,7 +278,7 @@ impl PumpxApi {
 	pub async fn create_transfer_unsigned_tx(
 		&self,
 		access_token: &str,
-		unsigned_tx: TransferUnsignedTx,
+		body: CreateTransferUnsignedTxBody,
 		language: Option<String>,
 	) -> Result<CreateTransferUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_transfer_unsigned_tx", self.base_url);
@@ -281,7 +287,7 @@ impl PumpxApi {
 			.post(&endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
-			.json(&unsigned_tx)
+			.json(&body)
 			.send()
 			.await
 			.map_err(|e| {
@@ -308,7 +314,7 @@ impl PumpxApi {
 	pub async fn send_transfer_tx(
 		&self,
 		access_token: &str,
-		signed_transfer_tx: TransferTx,
+		body: SendTransferTxBody,
 		language: Option<String>,
 	) -> Result<SendTransferTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_transfer_tx", self.base_url);
@@ -317,7 +323,7 @@ impl PumpxApi {
 			.post(&endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
-			.json(&signed_transfer_tx)
+			.json(&body)
 			.send()
 			.await
 			.map_err(|e| {
@@ -333,6 +339,73 @@ impl PumpxApi {
 
 		response.json().await.map_err(|e| {
 			log::error!("Failed to parse send_transfer_tx response: {:?}", e);
+			e
+		})
+	}
+
+	pub async fn create_market_order_tx(
+		&self,
+		access_token: &str,
+		body: CreateMarketOrderTxBody,
+	) -> Result<CreateMarketOrderTxResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_market_order_tx", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.bearer_auth(access_token)
+			.json(&body)
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send create_market_order_tx request: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("create_market_order_tx failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse create_market_order_tx response: {:?}", e);
+			e
+		})
+	}
+
+	#[allow(clippy::too_many_arguments)]
+	pub async fn create_transfer_tx(
+		&self,
+		access_token: &str,
+		body: CreateTransferTxBody,
+		language: Option<String>,
+	) -> Result<CreateTransferTxResponse, Error> {
+		let endpoint = format!("{}/v3/trade/create_transfer_tx", self.base_url);
+		let response = self
+			.http_client
+			.post(&endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.json(&body)
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send create_transfer_tx request: {:?}", e);
+				e
+			})?;
+
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!(
+				"create_transfer_tx request failed with status: {}, error: {:?}",
+				status,
+				e
+			);
+			e
+		})?;
+
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse create_transfer_tx response: {:?}", e);
 			e
 		})
 	}
