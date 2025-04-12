@@ -6,7 +6,7 @@
 
 # Function: requestEmailVerificationCode()
 
-> **requestEmailVerificationCode**(`args`, `enclaveInstance`?): `Promise`\<`void`\>
+> **requestEmailVerificationCode**(`args`, `enclaveInstance?`): `Promise`\<`void`\>
 
 Defined in: [requests/request-email-verification-code.request.ts:16](https://github.com/litentry/heima/blob/dev/requests/request-email-verification-code.request.ts#L16)
 

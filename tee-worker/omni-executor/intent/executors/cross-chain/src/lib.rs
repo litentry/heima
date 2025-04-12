@@ -53,17 +53,17 @@ use tokio::{
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
-use pumpx::types::CreateCrossOrderData;
+use pumpx::signer_client::ChainType;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
-use pumpx::types::MarketOrderTx;
-use pumpx::types::NewLimitOrder;
-use pumpx::types::NewMarketOrder;
 use pumpx::types::SwapType;
+use pumpx::types::{
+	CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
+	CreateMarketOrderUnsignedTxBody, CrossFailBody, SendOrderTxBody,
+};
 use pumpx::PumpxApi;
 use pumpx::{hex_encode_evm_address_bytes, signer_client::SignerClient};
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
-use pumpx::{signer_client::ChainType, types::CrossOrderFailData};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -302,7 +302,7 @@ impl<
 					let order_response = match pumpx_config.order_type {
 						PumpxOrderType::Market => {
 							debug!("Doing market order");
-							let new_market_order = NewMarketOrder {
+							let new_market_order = CreateMarketOrderTxBody {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca.clone(),
@@ -346,82 +346,16 @@ impl<
 								wallet_index: pumpx_config.wallet_index,
 							};
 							debug!("Sending market order: {:?}", new_market_order);
-							let market_order_unsigned_tx_res = self
+							let res = self
 								.pumpx_api
-								.create_market_order_unsigned_tx(&access_token, new_market_order)
+								.create_market_order_tx(&access_token, new_market_order)
 								.await
 								.map_err(|_| {
-									log::error!("Failed to create market order unsigned tx");
+									log::error!("Failed to create market order tx");
 								})?;
 
-							debug!(
-								"Received market order response: {:?}",
-								market_order_unsigned_tx_res
-							);
-
-							let tx_data = market_order_unsigned_tx_res.data.tx_data;
-							let mut messages_to_sign = Vec::new();
-							for tx in tx_data {
-								let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-								let tx_bytes = match hex::decode(tx_cleaned) {
-									Ok(bytes) => bytes,
-									Err(e) => {
-										log::error!("Failed to decode hex string: {:?}", e);
-										return Err(());
-									},
-								};
-								messages_to_sign.push(tx_bytes);
-							}
-
-							debug!(
-								"Requesting signatures from pumpx-signer for following txs: {:?}",
-								messages_to_sign
-							);
-
-							let signatures = match self
-								.pumpx_signer_client
-								.request_signatures(
-									chain_type,
-									pumpx_config.wallet_index,
-									*account_id.as_ref(),
-									messages_to_sign,
-								)
-								.await
-							{
-								Ok(sigs) => sigs,
-								Err(e) => {
-									log::error!(
-										"Failed to get signatures from pumpx-signer: {:?}",
-										e
-									);
-									return Err(());
-								},
-							};
-							let signed_tx_data: Vec<String> = signatures
-								.into_iter()
-								.map(|signature| signature.to_hex())
-								.collect();
-
-							debug!("Received {:?} signatures from pumpx-signer", signed_tx_data);
-
-							let market_order_tx = MarketOrderTx {
-								order_id: market_order_unsigned_tx_res.data.order_id,
-								chain_id: market_order_unsigned_tx_res.data.chain_id,
-								tx_data: signed_tx_data,
-							};
-
-							debug!("Sending market order tx: {:?}", market_order_tx);
-
-							let market_order_tx_res = self
-								.pumpx_api
-								.send_order_tx(&access_token, market_order_tx)
-								.await
-								.map_err(|_| {
-									log::error!("Failed to send market order tx");
-								})?;
-
-							debug!("Received market order tx: {:?}", market_order_tx_res);
-							market_order_tx_res.encode()
+							debug!("Received create_market_order_tx response: {:?}", res);
+							res.encode()
 						},
 						PumpxOrderType::Limit => {
 							debug!("Doing limit order");
@@ -446,7 +380,7 @@ impl<
 								None => None,
 							};
 
-							let new_limit_order = NewLimitOrder {
+							let new_limit_order = CreateLimitOrderBody {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca,
@@ -554,7 +488,7 @@ impl<
 							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let cross_order_data = CreateCrossOrderData {
+					let body = CreateCrossOrderBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
 						token_ca: to_token_ca.clone(),
@@ -585,14 +519,13 @@ impl<
 							token_ca: from_token_ca,
 						}],
 					};
-					debug!("Creating cross order with data: {:?}", cross_order_data);
-					let response = self
-						.pumpx_api
-						.create_cross_order(&access_token, cross_order_data)
-						.await
-						.map_err(|_| {
-							log::error!("Failed to create cross order");
-						})?;
+					debug!("Creating cross order with data: {:?}", body);
+					let response =
+						self.pumpx_api.create_cross_order(&access_token, body).await.map_err(
+							|_| {
+								log::error!("Failed to create cross order");
+							},
+						)?;
 					debug!("Received response: {:?}", response);
 
 					// 2. transfer from_asset to binance deposit address
@@ -736,12 +669,12 @@ impl<
 						self.binance_api.spot_trading().create_order(binance_order_params).await
 					else {
 						log::error!("Failed to create binance order");
-						let data = CrossOrderFailData {
+						let body = CrossFailBody {
 							request_id: intent_id,
 							// TODO: is this a user facing error? what should we return?
 							fail_reason: "Failed to create binance order".to_string(),
 						};
-						self.pumpx_api.cross_fail(&access_token, data).await.map_err(|_| {
+						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
 							log::error!("Failed to notify pumpx-signer");
 						})?;
 						// TODO: Figure out how to transfer back the asset to the omni account
@@ -794,12 +727,12 @@ impl<
 					}
 					if !trade_success {
 						log::error!("Binance order failed");
-						let data = CrossOrderFailData {
+						let body = CrossFailBody {
 							request_id: intent_id,
 							// TODO: is this a user facing error? what should we return?
 							fail_reason: "Binance order failed".to_string(),
 						};
-						self.pumpx_api.cross_fail(&access_token, data).await.map_err(|_| {
+						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
 							log::error!("Failed to notify pumpx-signer");
 						})?;
 						// TODO: Figure out how to transfer back the asset to the omni account
@@ -860,7 +793,7 @@ impl<
 					};
 					debug!("Doing market order");
 
-					let new_market_order = NewMarketOrder {
+					let new_market_order = CreateMarketOrderUnsignedTxBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
 						token_ca: to_token_ca.clone(),
@@ -942,7 +875,7 @@ impl<
 
 					debug!("Received {:?} signatures from pumpx-signer", signed_tx_data);
 
-					let market_order_tx = MarketOrderTx {
+					let market_order_tx = SendOrderTxBody {
 						order_id: market_order_unsigned_tx_res.data.order_id,
 						chain_id: market_order_unsigned_tx_res.data.chain_id,
 						tx_data: signed_tx_data,

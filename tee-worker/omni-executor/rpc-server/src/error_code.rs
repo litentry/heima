@@ -23,6 +23,7 @@ const PUMPX_API_ADD_WALLET_FAILED_CODE: i32 = -32034;
 const PUMPX_API_CREATE_TRANSFER_UNSIGNED_TX_FAILED_CODE: i32 = -32035;
 const PUMPX_API_SEND_TRANSFER_TX_FAILED_CODE: i32 = -32036;
 const PUMPX_API_INVALID_INPUT_FAILED_CODE: i32 = -32037;
+const PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE: i32 = -32038;
 
 const PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE: i32 = -32050;
 
@@ -49,6 +50,7 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			},
 			PumpxApiError::SendTransferTxFailed => PUMPX_API_SEND_TRANSFER_TX_FAILED_CODE,
 			PumpxApiError::InvalidInput => PUMPX_API_INVALID_INPUT_FAILED_CODE,
+			PumpxApiError::CreateTransferTxFailed => PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE,
 		},
 		NativeTaskError::PumpxSignerError(signer_error) => match signer_error {
 			PumpxSignerError::RequestSignatureFailed => PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE,

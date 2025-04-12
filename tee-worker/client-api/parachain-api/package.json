@@ -5,7 +5,7 @@
     "main": "./dist/src/index.cjs",
     "module": "./dist/src/index.js",
     "types": "./dist/src/index.d.ts",
-    "version": "0.9.24-next.5",
+    "version": "0.9.24-next.7",
     "exports": {
         ".": {
             "require": "./dist/src/index.cjs",

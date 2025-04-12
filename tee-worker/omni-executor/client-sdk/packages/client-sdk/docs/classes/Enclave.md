@@ -87,7 +87,7 @@ Optional configuration overrides
 
 > **disconnect**(): `void`
 
-Defined in: [enclave.ts:273](https://github.com/litentry/heima/blob/dev/enclave.ts#L273)
+Defined in: [enclave.ts:270](https://github.com/litentry/heima/blob/dev/enclave.ts#L270)
 
 Closes the WebSocket connection and performs cleanup
 Use this method to properly terminate the client connection
@@ -102,7 +102,7 @@ Use this method to properly terminate the client connection
 
 > **encrypt**(`__namedParameters`): `Promise`\<\{ `ciphertext`: `Uint8Array`; \}\>
 
-Defined in: [enclave.ts:210](https://github.com/litentry/heima/blob/dev/enclave.ts#L210)
+Defined in: [enclave.ts:207](https://github.com/litentry/heima/blob/dev/enclave.ts#L207)
 
 #### Parameters
 
@@ -179,9 +179,9 @@ Promise that resolves with the crypto key, the value will be held in memory for 
 
 ### send()
 
-> **send**(`payload`, `options`?): `Promise`\<`string`\>
+> **send**(`payload`, `options?`): `Promise`\<`string`\>
 
-Defined in: [enclave.ts:230](https://github.com/litentry/heima/blob/dev/enclave.ts#L230)
+Defined in: [enclave.ts:227](https://github.com/litentry/heima/blob/dev/enclave.ts#L227)
 
 Sends a JSON-RPC request over the WebSocket connection
 

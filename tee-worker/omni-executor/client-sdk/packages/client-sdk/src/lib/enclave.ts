@@ -174,23 +174,20 @@ export class Enclave {
       return this.#shieldingKey;
     }
 
-    const hexString = await this.send({
+    const res= await this.send({
       jsonrpc: '2.0',
       method: 'omni_getShieldingKey',
       params: [],
-    });
+    }) as unknown as { n: HexString; e: HexString };
 
-    // Remove the hex prefix and SCALE prefix
-    const [, data] = compactStripLength(hexToU8a(hexString));
-    const pubKey = u8aToString(data);
-    const pubKeyJSON = JSON.parse(pubKey);
-
+    const nHex = res.n.startsWith('0x') ? res.n.substring(2) : res.n;
+    const eHex = res.e.startsWith('0x') ? res.e.substring(2) : res.e;
     const jwkData = {
       alg: 'RSA-OAEP-256',
       kty: 'RSA',
       use: 'enc',
-      n: u8aToBase64Url(new Uint8Array([...pubKeyJSON.n].reverse())),
-      e: u8aToBase64Url(new Uint8Array([...pubKeyJSON.e].reverse())),
+      n: u8aToBase64Url(new Uint8Array([...hexToU8a(nHex).reverse()])),
+      e: u8aToBase64Url(new Uint8Array([...hexToU8a(eHex).reverse()])),
     };
 
     this.#shieldingKey = await globalThis.crypto.subtle.importKey(
