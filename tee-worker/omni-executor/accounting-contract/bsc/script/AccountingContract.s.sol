@@ -49,7 +49,7 @@ contract DepositFunds is Script {
             contractAddress
         );
 
-        accountingContract.depositFunds{value: amount * 10 ** 18}();
+        accountingContract.depositFunds{value: amount * 10 ** 16}();
         vm.stopBroadcast();
     }
 }
@@ -68,7 +68,7 @@ contract WithdrawFunds is Script {
 
         accountingContract.withdrawFunds(
             payable(beneficiary),
-            amount * 10 ** 18
+            amount * 10 ** 16
         );
         vm.stopBroadcast();
     }
@@ -229,7 +229,7 @@ contract ExecutePayment is Script {
         accountingContract.executePayOutRequest(
             publicAddress,
             nonce + 1,
-            amount * 10 ** 18
+            amount * 10 ** 16
         );
 
         vm.stopBroadcast();
