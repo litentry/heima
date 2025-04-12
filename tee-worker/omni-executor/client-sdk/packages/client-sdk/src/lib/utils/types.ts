@@ -3,7 +3,7 @@ export type Maybe<T> = null | undefined | T;
 export type JsonRpcRequest = {
   jsonrpc: string;
   method: string;
-  params: Array<string> | Record<string, string> | any;
+  params: any; // rpc params are not typed as maybe changed
   /**
    * Use sequential numbers starting from 1 for consecutive requests.
    * For one-time request that closes connections right away, using `1` is ok.
