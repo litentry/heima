@@ -170,6 +170,7 @@ impl<
 		Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync,
 	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
 {
+	#[allow(unused_assignments)]
 	async fn execute(
 		&self,
 		account_id: &AccountId,
