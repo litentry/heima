@@ -175,6 +175,40 @@ case $COMMAND in
 
         forge script AccountingContract.s.sol:SetWorker --rpc-url $RPC_URL --broadcast
         ;;
+    set-admin)
+        if [[ -z "$CONTRACT_ADDRESS" || -z "$RPC_URL" || -z "$PRIVATE_KEY" || -z "$ADMIN_PUBLIC_KEY" ]]; then
+            echo "Missing required arguments for setting admin."
+            show_help
+            exit 1
+        fi
+        echo "Setting admin..."
+        echo "Contract Address: $CONTRACT_ADDRESS"
+        echo "RPC URL: $RPC_URL"
+        echo "Admin Public Key: $ADMIN_PUBLIC_KEY"
+
+        export PRIVATE_KEY=$PRIVATE_KEY
+        export CONTRACT_ADDRESS=$CONTRACT_ADDRESS
+        export ADMIN_PUBLIC_KEY=$ADMIN_PUBLIC_KEY
+
+        forge script AccountingContract.s.sol:SetAdmin --rpc-url $RPC_URL --broadcast
+        ;;
+    accept-admin)
+        if [[ -z "$CONTRACT_ADDRESS" || -z "$RPC_URL" || -z "$PRIVATE_KEY" || -z "$ADMIN_PUBLIC_KEY" ]]; then
+            echo "Missing required arguments for setting admin."
+            show_help
+            exit 1
+        fi
+        echo "Accepting admin..."
+        echo "Contract Address: $CONTRACT_ADDRESS"
+        echo "RPC URL: $RPC_URL"
+        echo "Admin Public Key: $ADMIN_PUBLIC_KEY"
+
+        export PRIVATE_KEY=$PRIVATE_KEY
+        export CONTRACT_ADDRESS=$CONTRACT_ADDRESS
+        export ADMIN_PUBLIC_KEY=$ADMIN_PUBLIC_KEY
+
+        forge script AccountingContract.s.sol:AcceptAdmin --rpc-url $RPC_URL --broadcast
+        ;;
     execute-payment)
         if [[ -z "$CONTRACT_ADDRESS" || -z "$RPC_URL" || -z "$PRIVATE_KEY" || -z "$AMOUNT" || -z "$BENEFICIARY_PUBLIC_KEY" ]]; then
             echo "Missing required arguments for executing payment."

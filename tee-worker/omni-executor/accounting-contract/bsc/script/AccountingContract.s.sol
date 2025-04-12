@@ -97,6 +97,52 @@ contract SetWorker is Script {
     }
 }
 
+contract SetAdmin is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address contractAddress = vm.envAddress("CONTRACT_ADDRESS");
+        address adminAddress = vm.envAddress("ADMIN_PUBLIC_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        AccountingContract accountingContract = AccountingContract(
+            contractAddress
+        );
+
+        accountingContract.beginDefaultAdminTransfer(adminAddress);
+
+        console.log(
+            "Is Admin ",
+            adminAddress,
+            " :",
+            accountingContract.isAdmin(adminAddress)
+        );
+        vm.stopBroadcast();
+    }
+}
+
+contract AcceptAdmin is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address contractAddress = vm.envAddress("CONTRACT_ADDRESS");
+        address adminAddress = vm.envAddress("ADMIN_PUBLIC_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        AccountingContract accountingContract = AccountingContract(
+            contractAddress
+        );
+
+        accountingContract.acceptDefaultAdminTransfer();
+
+        console.log(
+            "Is Admin ",
+            adminAddress,
+            " :",
+            accountingContract.isAdmin(adminAddress)
+        );
+        vm.stopBroadcast();
+    }
+}
+
 contract IsAdmin is Script {
     function run() external view {
         address contractAddress = vm.envAddress("CONTRACT_ADDRESS");
