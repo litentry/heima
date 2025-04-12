@@ -7348,10 +7348,13 @@ dependencies = [
 name = "pumpx"
 version = "0.1.0"
 dependencies = [
+ "base58",
  "executor-core",
  "executor-crypto",
+ "executor-primitives",
  "hex",
  "jsonrpsee",
+ "libsecp256k1 0.7.2",
  "log",
  "parity-scale-codec",
  "rand 0.8.5",

@@ -170,12 +170,12 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn send_market_order_tx(
+	pub async fn send_order_tx(
 		&self,
 		access_token: &str,
 		market_order_tx: MarketOrderTx,
 	) -> Result<MarketOrderTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/send_tx", self.base_url);
+		let endpoint = format!("{}/v3/trade/send_order_tx", self.base_url);
 		let response = self
 			.http_client
 			.post(&endpoint)
@@ -242,7 +242,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn cross_order_failed(
+	pub async fn cross_fail(
 		&self,
 		access_token: &str,
 		data: CrossOrderFailData,
@@ -272,22 +272,10 @@ impl PumpxApi {
 	pub async fn create_transfer_unsigned_tx(
 		&self,
 		access_token: &str,
-		chain_id: u32,
-		wallet_index: u32,
-		recipient_address: &str,
-		token_ca: &str,
-		amount: &str,
+		unsigned_tx: TransferUnsignedTx,
 		language: Option<String>,
 	) -> Result<CreateTransferUnsignedTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/create_transfer_unsigned_tx", self.base_url);
-		let unsigned_tx = TransferUnsignedTx {
-			chain_id,
-			wallet_index,
-			recipient_address: recipient_address.to_string(),
-			token_ca: token_ca.to_string(),
-			amount: amount.to_string(),
-		};
-
 		let response = self
 			.http_client
 			.post(&endpoint)
@@ -320,20 +308,16 @@ impl PumpxApi {
 	pub async fn send_transfer_tx(
 		&self,
 		access_token: &str,
-		transfer_id: u64,
-		chain_id: u32,
-		tx_data: Vec<String>,
+		signed_transfer_tx: TransferTx,
 		language: Option<String>,
 	) -> Result<SendTransferTxResponse, Error> {
 		let endpoint = format!("{}/v3/trade/send_transfer_tx", self.base_url);
-		let signed_tx = TransferTx { chain_id, tx_data, transfer_id };
-
 		let response = self
 			.http_client
 			.post(&endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
-			.json(&signed_tx)
+			.json(&signed_transfer_tx)
 			.send()
 			.await
 			.map_err(|e| {

@@ -13,6 +13,7 @@ use serde::Serialize;
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
 	pub user_email: String,
+	pub request_id: Option<u32>,
 	pub chain_id: u32,
 	pub wallet_index: PumxWalletIndex,
 	pub recipient_address: String,
@@ -33,6 +34,7 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 		Self {
 			task: NativeTask::PumpxTransferWidthdraw(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
+				p.request_id,
 				p.chain_id,
 				p.wallet_index,
 				p.recipient_address,
