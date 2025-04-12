@@ -66,6 +66,13 @@ pub struct RunArgs {
 		value_name = "delegation contract address"
 	)]
 	pub delegation_contract_address: String,
+	#[arg(
+		short,
+		long,
+		default_value = "local/keystore/shielding_key.bin",
+		value_name = "Shielding key store file path"
+	)]
+	pub shielding_key_store_path: String,
 }
 
 #[derive(Args)]

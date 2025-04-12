@@ -14,14 +14,9 @@ use heima_primitives::{
 };
 use jsonrpsee::RpcModule;
 use native_task_handler::{NativeTaskOk, NativeTaskResponse};
+use pumpx::constants::*;
 use pumpx::types::{MarketOrderTxResponse, OrderInfoResponse, SwapType};
 use serde::Serialize;
-
-// TODO: move this to a central place
-const SOLANA_CHAIN_ID: u32 = 10000;
-const ETHEREUM_CHAIN_ID: u32 = 1;
-const BSC_CHAIN_ID: u32 = 56;
-const BASE_CHAIN_ID: u32 = 8453;
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
