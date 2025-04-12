@@ -145,7 +145,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				return Err(ErrorCode::InternalError);
 			};
 
-			//todo KZ: get user bsc address
 			let to_address = match to_chain_asset {
 				ChainAsset::Ethereum(_, _) => {
 					//todo: remove unwrap;

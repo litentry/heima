@@ -51,6 +51,10 @@ pub fn pubkey_to_evm_address_bytes(pubkey: &[u8]) -> Result<[u8; 20], ()> {
 	Ok(keccak_256(&uncompressed_pubkey[1..])[12..].try_into().unwrap())
 }
 
+pub fn hex_encode_evm_address_bytes(bytes: &[u8]) -> String {
+	format!("0x{}", hex::encode(bytes)).to_lowercase()
+}
+
 pub fn pubkey_to_evm_address(pubkey: &[u8]) -> Result<String, ()> {
 	let pubkey: [u8; 33] = pubkey.try_into().map_err(|_| {
 		error!("wrong pubkey length: expect 33 bytes");

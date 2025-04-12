@@ -53,7 +53,6 @@ use tokio::{
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
-use pumpx::signer_client::SignerClient;
 use pumpx::types::CreateCrossOrderData;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
@@ -62,6 +61,7 @@ use pumpx::types::NewLimitOrder;
 use pumpx::types::NewMarketOrder;
 use pumpx::types::SwapType;
 use pumpx::PumpxApi;
+use pumpx::{hex_encode_evm_address_bytes, signer_client::SignerClient};
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use pumpx::{signer_client::ChainType, types::CrossOrderFailData};
 use std::collections::HashMap;
@@ -526,7 +526,7 @@ impl<
 					let cross_order_data = CreateCrossOrderData {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
-						token_ca: to_token_ca,
+						token_ca: to_token_ca.clone(),
 						swap_type: match pumpx_config.swap_type {
 							1 => SwapType::Buy,
 							2 => SwapType::Sell,
@@ -777,9 +777,124 @@ impl<
 							log::error!("Failed to execute pay out request");
 						})?;
 
-					// 5. when it’s done, call pumpx API to submit the native trade (here it should be market order only.
+					let Some(chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
+					else {
+						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+						return Err(());
+					};
 
-					todo!()
+					let wallet_address: String = match chain_type {
+						ChainType::Evm => match swap_order.to_address.unwrap() {
+							HeimaMultiAddress::Address20(address) => {
+								hex_encode_evm_address_bytes(address.as_ref())
+							},
+							_ => {
+								log::error!(
+									"Wrong address: {:?}, expected Address20",
+									swap_order.to_address
+								);
+								return Err(());
+							},
+						},
+						_ => {
+							log::error!("Chain type not supported: {:?}", chain_type);
+							return Err(());
+						},
+					};
+
+					let market_order_unsigned_tx_res = self
+						.pumpx_api
+						.create_market_order_unsigned_tx(
+							&access_token,
+							NewMarketOrder {
+								request_id: intent_id,
+								chain_id: pumpx_config.to_chain_id,
+								token_ca: to_token_ca.clone(),
+								swap_type: match pumpx_config.swap_type {
+									1 => SwapType::Buy,
+									2 => SwapType::Sell,
+									_ => {
+										log::error!(
+											"Unsupported swap type: {}",
+											pumpx_config.swap_type
+										);
+										return Err(());
+									},
+								},
+								amount_in: from_amount.clone(),
+								double_out: pumpx_config.double_out,
+								is_one_click: pumpx_config.is_one_click,
+								address: wallet_address,
+								is_anti_mev: pumpx_config.is_anti_mev,
+								is_auto_slippage: pumpx_config.is_auto_slippage,
+								gas_type: match pumpx_config.gas_type {
+									1 => GasType::Slow,
+									2 => GasType::Medium,
+									3 => GasType::Fast,
+									_ => {
+										log::error!(
+											"Unsupported gas type: {}",
+											pumpx_config.gas_type
+										);
+										return Err(());
+									},
+								},
+								slippage: pumpx_config.slippage,
+								wallet_index: pumpx_config.wallet_index,
+							},
+						)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to create market order unsigned tx");
+						})?;
+
+					let tx_data = market_order_unsigned_tx_res.data.tx_data;
+					let mut messages_to_sign = Vec::new();
+					for tx in tx_data {
+						let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
+						let tx_bytes = match hex::decode(tx_cleaned) {
+							Ok(bytes) => bytes,
+							Err(e) => {
+								log::error!("Failed to decode hex string: {:?}", e);
+								return Err(());
+							},
+						};
+						messages_to_sign.push(tx_bytes);
+					}
+
+					let signatures = match self
+						.pumpx_signer_client
+						.request_signatures(
+							chain_type,
+							pumpx_config.wallet_index,
+							*account_id.as_ref(),
+							messages_to_sign,
+						)
+						.await
+					{
+						Ok(sigs) => sigs,
+						Err(e) => {
+							log::error!("Failed to get signatures from pumpx-signer: {:?}", e);
+							return Err(());
+						},
+					};
+					let signed_tx_data: Vec<String> =
+						signatures.into_iter().map(|signature| signature.to_hex()).collect();
+
+					let market_order_tx = MarketOrderTx {
+						order_id: market_order_unsigned_tx_res.data.order_id,
+						chain_id: market_order_unsigned_tx_res.data.chain_id,
+						tx_data: signed_tx_data,
+					};
+					let market_order_tx_res = self
+						.pumpx_api
+						.send_order_tx(&access_token, market_order_tx)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to send market order tx");
+						})?;
+
+					pumpx_order_response = Some(market_order_tx_res.encode())
 				}
 
 				// self.account_asset_lock.release(
