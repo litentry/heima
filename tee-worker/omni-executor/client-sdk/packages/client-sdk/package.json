@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@heima-network/chaindata": "*",
-    "@heima-network/parachain-api": "0.9.24-next.5",
+    "@heima-network/parachain-api": "0.9.24-next.7",
     "@polkadot/api": "^15.0.2",
     "@polkadot/types": "^15.0.2",
     "@polkadot/types-codec": "^15.0.2",

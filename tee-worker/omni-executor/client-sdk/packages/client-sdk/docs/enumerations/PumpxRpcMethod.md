@@ -14,7 +14,7 @@ Defined in: [utils/rpc-method.ts:1](https://github.com/litentry/heima/blob/dev/u
 
 > **AddWallet**: `"pumpx_addWallet"`
 
-Defined in: [utils/rpc-method.ts:5](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L5)
+Defined in: [utils/rpc-method.ts:4](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L4)
 
 ***
 
@@ -22,15 +22,7 @@ Defined in: [utils/rpc-method.ts:5](https://github.com/litentry/heima/blob/dev/u
 
 > **ExportWallet**: `"pumpx_exportWallet"`
 
-Defined in: [utils/rpc-method.ts:4](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L4)
-
-***
-
-### RequestEmailVerificationCode
-
-> **RequestEmailVerificationCode**: `"pumpx_requestEmailVerificationCode"`
-
-Defined in: [utils/rpc-method.ts:2](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L2)
+Defined in: [utils/rpc-method.ts:3](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L3)
 
 ***
 
@@ -38,4 +30,4 @@ Defined in: [utils/rpc-method.ts:2](https://github.com/litentry/heima/blob/dev/u
 
 > **RequestJwt**: `"pumpx_requestJwt"`
 
-Defined in: [utils/rpc-method.ts:3](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L3)
+Defined in: [utils/rpc-method.ts:2](https://github.com/litentry/heima/blob/dev/utils/rpc-method.ts#L2)

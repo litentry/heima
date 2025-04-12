@@ -2,88 +2,26 @@ use parity_scale_codec::{Codec, Decode, Encode};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-pub type UserConnectResponse = ApiResponse<ConnectedUser>;
+// This file contains the type and struct definitions of pumpx-API (backend).
+// For each API, we define the struct of:
+// - (optional) request body: ...Body
+// - response `data` section: ...ResponseData
+//
+// TODO: split this file to individual file per API
 
-pub type MarketOrderUnsignedTxResponse = ApiResponse<MarketOrderUnsignedTx>;
+pub type UserConnectResponse = ApiResponse<UserConnectResponseData>;
+pub type CreateMarketOrderUnsignedTxResponse = ApiResponse<CreateMarketOrderUnsignedTxResponseData>;
+pub type SendOrderTxResponse = ApiResponse<SendOrderTxResponseData>;
+pub type UserTradeInfoResponse = ApiResponse<UserTradeInfoResponseData>;
+pub type OrderInfoResponse = ApiResponse<OrderInfoResponseData>;
+pub type VerifyGoogleCodeResponse = ApiResponse<VerifyGoogleCodeResponseData>;
+pub type AddWalletResponse = ApiResponse<()>;
+pub type CreateTransferUnsignedTxResponse = ApiResponse<CreateTransferUnsignedTxResponseData>;
+pub type SendTransferTxResponse = ApiResponse<SendTransferTxResponseData>;
 
-pub type MarketOrderTxResponse = ApiResponse<TxData>;
-
-pub type UserTradeInfoResponse = ApiResponse<UserTradeInfo>;
-
-pub type OrderInfoResponse = ApiResponse<OrderInfo>;
-
-pub type VerifyGoogleCodeResponse = ApiResponse<DataResult>;
-
-pub type AddWalletResponse = ApiResponse<EmptyResponse>;
-
-pub type CreateTransferUnsignedTxResponse = ApiResponse<TransferUnsignedTxData>;
-
-pub type SendTransferTxResponse = ApiResponse<TransferTxData>;
-
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct TransferUnsignedTxData {
-	pub tx_data: Option<Vec<String>>,
-	pub transfer_id: u32,
-	pub chain_id: u32,
-}
-
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct TransferTxData {
-	pub tx_hash: Option<Vec<String>>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TransferUnsignedTx {
-	pub request_id: Option<u32>,
-	pub chain_id: u32,
-	pub wallet_index: u32,
-	pub recipient_address: String,
-	pub token_ca: String,
-	pub amount: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TransferTx {
-	pub chain_id: u32,
-	pub tx_data: Vec<String>,
-	pub transfer_id: u32,
-}
-
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
-pub struct EmptyResponse {}
-
-#[derive(Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConnectUser {
-	pub email: String,
-	pub invite_code: Option<String>,
-	pub google_code: String,
-}
-
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ConnectedUser {
-	pub user_id: String,
-	pub google_auth_check: bool,
-}
-
-#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ApiResponse<T: Codec> {
-	code: u32,
-	message: String,
-	pub data: T,
-}
-
-impl<T: Codec> ApiResponse<T> {
-	pub fn data(&self) -> &T {
-		&self.data
-	}
-}
+// new API
+pub type CreateMarketOrderTxResponse = ApiResponse<CreateMarketOrderTxResponseData>;
+pub type CreateTransferTxResponse = ApiResponse<CreateTransferTxResponseData>;
 
 #[derive(Deserialize_repr, Serialize_repr, Debug)]
 #[allow(clippy::upper_case_acronyms)]
@@ -102,7 +40,7 @@ impl SwapType {
 	}
 }
 
-#[derive(Deserialize_repr, Serialize_repr, Encode, Decode)]
+#[derive(Deserialize_repr, Serialize_repr, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum GasType {
@@ -121,9 +59,80 @@ impl GasType {
 	}
 }
 
+// the generic (standard) JSON-RPC response
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiResponse<T: Codec> {
+	code: u32,
+	message: String,
+	pub data: T,
+}
+
+impl<T: Codec> ApiResponse<T> {
+	pub fn data(&self) -> &T {
+		&self.data
+	}
+}
+
+// /v3/trade/create_transfer_unsigned_tx
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NewMarketOrder {
+pub struct CreateTransferUnsignedTxBody {
+	pub request_id: Option<u32>,
+	pub chain_id: u32,
+	pub wallet_index: u32,
+	pub recipient_address: String,
+	pub token_ca: String,
+	pub amount: String,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTransferUnsignedTxResponseData {
+	pub tx_data: Option<Vec<String>>,
+	pub transfer_id: u32,
+	pub chain_id: u32,
+}
+
+// /v3/trade/send_transfer_tx
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendTransferTxBody {
+	pub chain_id: u32,
+	pub tx_data: Vec<String>,
+	pub transfer_id: u32,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SendTransferTxResponseData {
+	pub tx_hash: Option<Vec<String>>,
+}
+
+// /v3/account/user_connect
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserConnectBody {
+	pub email: String,
+	pub invite_code: Option<String>,
+	pub google_code: String,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UserConnectResponseData {
+	pub user_id: String,
+	pub google_auth_check: bool,
+}
+
+// /v3/trade/create_market_order_unsigned_tx
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateMarketOrderUnsignedTxBody {
 	pub request_id: u32,
 	pub chain_id: u32,
 	pub token_ca: String,
@@ -139,31 +148,81 @@ pub struct NewMarketOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Encode, Decode)]
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct MarketOrderUnsignedTx {
+pub struct CreateMarketOrderUnsignedTxResponseData {
 	pub chain_id: u32,
 	pub order_id: u32,
 	pub tx_data: Vec<String>,
 }
 
+// /v3/trade/create_market_order_tx
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MarketOrderTx {
+pub struct CreateMarketOrderTxBody {
+	pub request_id: u32,
+	pub chain_id: u32,
+	pub token_ca: String,
+	pub swap_type: SwapType,
+	pub amount_in: String,
+	pub double_out: bool,
+	pub is_one_click: bool,
+	pub address: String,
+	pub is_anti_mev: bool,
+	pub is_auto_slippage: bool,
+	pub gas_type: GasType,
+	pub slippage: u32,
+	pub wallet_index: u32,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateMarketOrderTxResponseData {
+	pub chain_id: u32,
+	pub order_id: u32,
+	pub tx_hash: Vec<String>,
+}
+
+// /v3/trade/create_transfer_tx
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTransferTxBody {
+	pub request_id: Option<u32>,
+	pub chain_id: u32,
+	pub wallet_index: u32,
+	pub recipient_address: String,
+	pub token_ca: String,
+	pub amount: String,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTransferTxResponseData {
+	pub tx_hash: String,
+	pub transfer_id: u32,
+	pub chain_id: u32,
+}
+
+// /v3/trade/send_order_tx
+
+#[derive(Deserialize, Serialize, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
+pub struct SendOrderTxBody {
 	pub chain_id: u32,
 	pub order_id: u32,
 	pub tx_data: Vec<String>,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct TxData {
+pub struct SendOrderTxResponseData {
 	pub tx_hash: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Encode, Decode)]
+// /v3/account/get_user_trade_info
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct UserTradeInfo {
+pub struct UserTradeInfoResponseData {
 	pub gas_type_base: GasType,
 	pub gas_type_bsc: GasType,
 	pub gas_type_eth: GasType,
@@ -175,9 +234,10 @@ pub struct UserTradeInfo {
 	pub slippage_display: String,
 }
 
+// /v3/trade/create_limit_order/
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NewLimitOrder {
+pub struct CreateLimitOrderBody {
 	pub request_id: u32,
 	pub chain_id: u32,
 	pub token_ca: String,
@@ -195,25 +255,31 @@ pub struct NewLimitOrder {
 	pub wallet_index: u32,
 }
 
-#[derive(Deserialize, Serialize, Encode, Decode, Clone)]
+// Used in
+// /v3/trade/create_cross_order
+// /v3/trade/cross_fail
+// /v3/trade/create_limit_order/
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct OrderInfo {
+pub struct OrderInfoResponseData {
 	pub order_id: u32,
 }
 
+// /v3/account/verify_google_code
 #[derive(Serialize)]
 pub struct GoogleCode {
 	pub google_code: String,
 }
 
-#[derive(Deserialize, Encode, Decode)]
-pub struct DataResult {
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct VerifyGoogleCodeResponseData {
 	pub result: bool,
 }
 
+// /v3/trade/create_cross_order
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateCrossOrderData {
+pub struct CreateCrossOrderBody {
 	pub request_id: u32,
 	pub chain_id: u32,
 	pub token_ca: String,
@@ -233,9 +299,10 @@ pub struct CrossOrderInfo {
 	pub usd: String,
 }
 
+// /v3/trade/cross_fail
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CrossOrderFailData {
+pub struct CrossFailBody {
 	pub request_id: u32,
 	pub fail_reason: String,
 }
