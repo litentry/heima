@@ -93,8 +93,11 @@ pub enum SingleChainSwapProvider {
 pub struct PumpxConfig {
     pub order_type: PumpxOrderType,
     pub swap_type: u32, // 1：buy 2：sell
-    pub chain_id: u32,  // to align with pumpx: sol:10000 eth:1 bsc:56 base:8453
-    pub token_ca: BoundedVec<u8, IntentStringLen>,
+    pub from_chain_id: u32,
+    pub from_token_ca: BoundedVec<u8, IntentStringLen>,
+    pub to_chain_id: u32,
+    pub to_token_ca: BoundedVec<u8, IntentStringLen>,
+    pub from_amount: BoundedVec<u8, IntentStringLen>,
     pub double_out: bool,
     pub is_one_click: bool,
     pub is_anti_mev: bool,

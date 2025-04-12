@@ -30,8 +30,11 @@ use parentchain_rpc_client::{
 };
 use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::signer_client::SignerClient;
-use pumpx::{signer_client::ChainType, PumpxApi};
+use pumpx::{
+	signer_client::{ChainType, SignerClient},
+	types::{TransferTx, TransferUnsignedTx},
+	PumpxApi,
+};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot, Semaphore};
 
@@ -782,6 +785,7 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxTransferWidthdraw(
 			sender,
+			request_id,
 			chain_id,
 			wallet_index,
 			recipient_address,
@@ -829,17 +833,17 @@ async fn handle_native_task<
 			}
 
 			// 3. Create an unsigned tx with Pumpx backend
+			let unsigned_tx = TransferUnsignedTx {
+				request_id,
+				chain_id,
+				wallet_index,
+				recipient_address: recipient_address.to_string(),
+				token_ca: token_ca.to_string(),
+				amount: amount.to_string(),
+			};
 			let create_transfer_res = match ctx
 				.pumpx_api
-				.create_transfer_unsigned_tx(
-					&access_token,
-					chain_id,
-					wallet_index,
-					&recipient_address,
-					&token_ca,
-					&amount,
-					language.clone(),
-				)
+				.create_transfer_unsigned_tx(&access_token, unsigned_tx, language.clone())
 				.await
 			{
 				Ok(res) => res,
@@ -923,9 +927,10 @@ async fn handle_native_task<
 				signatures.into_iter().map(|sig| sig.to_hex()).collect();
 
 			// 5. Send the signed tx to the Pumpx backend
+			let signed_transfer_tx = TransferTx { chain_id, tx_data: signed_tx_data, transfer_id };
 			match ctx
 				.pumpx_api
-				.send_transfer_tx(&access_token, transfer_id, chain_id, signed_tx_data, language)
+				.send_transfer_tx(&access_token, signed_transfer_tx, language)
 				.await
 			{
 				Ok(res) => {

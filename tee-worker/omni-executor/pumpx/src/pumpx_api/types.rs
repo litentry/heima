@@ -24,8 +24,8 @@ pub type SendTransferTxResponse = ApiResponse<TransferTxData>;
 #[serde(rename_all = "camelCase")]
 pub struct TransferUnsignedTxData {
 	pub tx_data: Option<Vec<String>>,
-	pub transfer_id: u64,
-	pub chain_id: u64,
+	pub transfer_id: u32,
+	pub chain_id: u32,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
@@ -37,6 +37,7 @@ pub struct TransferTxData {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferUnsignedTx {
+	pub request_id: Option<u32>,
 	pub chain_id: u32,
 	pub wallet_index: u32,
 	pub recipient_address: String,
@@ -49,28 +50,11 @@ pub struct TransferUnsignedTx {
 pub struct TransferTx {
 	pub chain_id: u32,
 	pub tx_data: Vec<String>,
-	pub transfer_id: u64,
+	pub transfer_id: u32,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
 pub struct EmptyResponse {}
-
-#[derive(Deserialize_repr, Serialize_repr, Clone, Debug)]
-#[allow(clippy::upper_case_acronyms)]
-#[repr(u8)]
-pub enum ChainId {
-	EVM = 1,
-	Solana = 2,
-}
-
-impl ChainId {
-	pub fn to_number(&self) -> u8 {
-		match self {
-			ChainId::EVM => 1,
-			ChainId::Solana => 2,
-		}
-	}
-}
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -141,7 +125,7 @@ impl GasType {
 #[serde(rename_all = "camelCase")]
 pub struct NewMarketOrder {
 	pub request_id: u32,
-	pub chain_id: ChainId,
+	pub chain_id: u32,
 	pub token_ca: String,
 	pub swap_type: SwapType,
 	pub amount_in: String,
@@ -158,22 +142,23 @@ pub struct NewMarketOrder {
 #[derive(Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderUnsignedTx {
-	pub order_id: String,
+	pub chain_id: u32,
+	pub order_id: u32,
 	pub tx_data: Vec<String>,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketOrderTx {
-	pub order_id: String,
+	pub chain_id: u32,
+	pub order_id: u32,
 	pub tx_data: Vec<String>,
-	pub chain_id: ChainId,
 }
 
 #[derive(Deserialize, Serialize, Encode, Decode, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TxData {
-	pub tx_hash: String,
+	pub tx_hash: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Encode, Decode)]
@@ -194,7 +179,7 @@ pub struct UserTradeInfo {
 #[serde(rename_all = "camelCase")]
 pub struct NewLimitOrder {
 	pub request_id: u32,
-	pub chain_id: ChainId,
+	pub chain_id: u32,
 	pub token_ca: String,
 	pub amount: String,
 	pub swap_type: SwapType,
@@ -213,7 +198,7 @@ pub struct NewLimitOrder {
 #[derive(Deserialize, Serialize, Encode, Decode, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInfo {
-	pub order_id: String,
+	pub order_id: u32,
 }
 
 #[derive(Serialize)]
@@ -230,14 +215,17 @@ pub struct DataResult {
 #[serde(rename_all = "camelCase")]
 pub struct CreateCrossOrderData {
 	pub request_id: u32,
-	pub chain_id: ChainId,
-	pub info: Vec<CrossOrderInfo>,
+	pub chain_id: u32,
+	pub token_ca: String,
+	pub swap_type: SwapType,
+	pub is_one_click: bool,
+	pub cross_info: Vec<CrossOrderInfo>,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CrossOrderInfo {
-	pub chain_id: ChainId,
+	pub chain_id: u32,
 	pub wallet_index: u32,
 	pub address: String,
 	pub token_ca: String,

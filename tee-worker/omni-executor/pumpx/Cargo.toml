@@ -5,9 +5,11 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+base58 = { workspace = true }
 async-trait = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true, features = ["client"] }
+libsecp256k1 = { workspace = true }
 log = { workspace = true }
 mockall = { workspace = true }
 parity-scale-codec = { workspace = true }
@@ -25,6 +27,7 @@ url = { workspace = true }
 # Local dependencies
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
 
 [lints]
 workspace = true

@@ -2,7 +2,6 @@ use crate::{
 	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth_token_authentication,
 	Decode, Deserialize, ErrorCode,
 };
-use ethers::utils::keccak256;
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use executor_storage::{PumpxJwtStorage, Storage};
@@ -16,6 +15,7 @@ use heima_primitives::{
 use jsonrpsee::RpcModule;
 use native_task_handler::{NativeTaskOk, NativeTaskResponse};
 use pumpx::constants::*;
+use pumpx::pubkey_to_evm_address_bytes;
 use pumpx::types::{MarketOrderTxResponse, OrderInfoResponse, SwapType};
 use serde::Serialize;
 
@@ -149,7 +149,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let to_address = match to_chain_asset {
 				ChainAsset::Ethereum(_, _) => {
 					//todo: remove unwrap;
-
 					let wallet = ctx
 						.pumpx_signer
 						.request_wallet(
@@ -159,9 +158,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						)
 						.await
 						.unwrap();
-
-					let address: [u8; 20] = keccak256(wallet)[12..32].try_into().unwrap();
-					HeimaMultiAddress::Address20(Address20::from(address))
+					HeimaMultiAddress::Address20(Address20::from(
+						pubkey_to_evm_address_bytes(&wallet).unwrap(),
+					))
 					// get ethereum addresss
 				},
 				ChainAsset::Solana(_) => {
@@ -191,9 +190,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					return Err(ErrorCode::InvalidParams);
 				},
 			};
-			let token_ca =
-				BoundedVec::try_from(params.to_token_ca.unwrap_or_default().as_bytes().to_vec())
-					.map_err(|_| ErrorCode::InvalidParams)?;
 			let token_cap = params
 				.token_cap
 				.map(|token_ca| {
@@ -211,11 +207,22 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let usd_worth = BoundedVec::try_from(params.usd_worth.as_bytes().to_vec())
 				.map_err(|_| ErrorCode::InvalidParams)?;
 
+			// TODO: optimise these BoundedVec conversion to have better readability
 			let pumpx_config = PumpxConfig {
 				order_type: params.order_type.clone(),
 				swap_type: params.swap_type.to_number() as u32,
-				chain_id: params.to_chain_id,
-				token_ca,
+				from_chain_id: params.from_chain_id,
+				from_token_ca: BoundedVec::try_from(
+					params.from_token_ca.unwrap_or("".to_string()).as_bytes().to_vec(),
+				)
+				.map_err(|_| ErrorCode::InvalidParams)?,
+				to_chain_id: params.to_chain_id,
+				to_token_ca: BoundedVec::try_from(
+					params.to_token_ca.unwrap_or("".to_string()).as_bytes().to_vec(),
+				)
+				.map_err(|_| ErrorCode::InvalidParams)?,
+				from_amount: BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
+					.map_err(|_| ErrorCode::InvalidParams)?,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
 				is_anti_mev: user_trade_info.data.is_anti_mev,
