@@ -832,117 +832,25 @@ async fn handle_native_task<
 				return;
 			}
 
-			// 3. Create an unsigned tx with Pumpx backend
-			let unsigned_tx = CreateTransferUnsignedTxBody {
+			// 3. Create a transfer tx and send to backend
+			let body = CreateTransferTxBody {
 				request_id,
 				chain_id,
 				wallet_index,
-				recipient_address: recipient_address.to_string(),
-				token_ca: token_ca.to_string(),
-				amount: amount.to_string(),
+				recipient_address,
+				token_ca,
+				amount,
 			};
-			let create_transfer_res = match ctx
-				.pumpx_api
-				.create_transfer_unsigned_tx(&access_token, unsigned_tx, language.clone())
-				.await
-			{
-				Ok(res) => res,
-				Err(e) => {
-					send_error(
-						format!("Failed to create_transfer_unsigned_tx: {:?}", e),
-						response_sender,
-						NativeTaskError::PumpxApiError(
-							PumpxApiError::CreateTransferUnsignedTxFailed,
-						),
-					);
-					return;
-				},
-			};
-
-			let transfer_id = create_transfer_res.data.transfer_id;
-			let tx_data = create_transfer_res.data.tx_data;
-			let tx_data = match tx_data {
-				Some(data) => data,
-				None => {
-					send_error(
-						"No tx_data in create_transfer_unsigned_tx response".to_string(),
-						response_sender,
-						NativeTaskError::PumpxApiError(
-							PumpxApiError::CreateTransferUnsignedTxFailed,
-						),
-					);
-					return;
-				},
-			};
-
-			let Some(chain_type) = ChainType::from_pumpx_chain_id(chain_id) else {
-				send_error(
-					format!("Failed to map pumpx chain_id {}", chain_id),
-					response_sender,
-					NativeTaskError::InternalError,
-				);
-				return;
-			};
-
-			// 4. Use the pumpx_signer_client to sign all tx_data entries at once
-			let mut messages_to_sign = Vec::new();
-			for tx in tx_data {
-				let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-				let tx_bytes = match hex::decode(tx_cleaned) {
-					Ok(bytes) => bytes,
-					Err(e) => {
-						send_error(
-							format!("Failed to decode tx_data (hex): {:?}", e),
-							response_sender,
-							NativeTaskError::InternalError,
-						);
-						return;
-					},
-				};
-				messages_to_sign.push(tx_bytes);
-			}
-
-			let signatures = match ctx
-				.pumpx_signer_client
-				.request_signatures(
-					chain_type,
-					wallet_index,
-					sender.to_omni_account().into(),
-					messages_to_sign,
-				)
-				.await
-			{
-				Ok(sigs) => sigs,
-				Err(e) => {
-					send_error(
-						format!("Failed to sign transfer tx: {:?}", e),
-						response_sender,
-						NativeTaskError::PumpxSignerError(PumpxSignerError::RequestSignatureFailed),
-					);
-					return;
-				},
-			};
-
-			let signed_tx_data: Vec<String> =
-				signatures.into_iter().map(|sig| sig.to_hex()).collect();
-
-			// 5. Send the signed tx to the Pumpx backend
-			let signed_transfer_tx =
-				SendTransferTxBody { chain_id, tx_data: signed_tx_data, transfer_id };
-			match ctx
-				.pumpx_api
-				.send_transfer_tx(&access_token, signed_transfer_tx, language)
-				.await
-			{
+			match ctx.pumpx_api.create_transfer_tx(&access_token, body, language.clone()).await {
 				Ok(res) => {
 					send_ok(response_sender, NativeTaskOk::PumpxTransferWithdraw(res));
 					return;
 				},
 				Err(e) => {
 					send_error(
-						format!("Failed to send_transfer_tx: {:?}", e),
+						format!("Failed to create_transfer_tx: {:?}", e),
 						response_sender,
-						NativeTaskError::PumpxApiError(PumpxApiError::SendTransferTxFailed),
+						NativeTaskError::PumpxApiError(PumpxApiError::CreateTransferTxFailed),
 					);
 					return;
 				},

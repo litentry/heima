@@ -16,7 +16,6 @@
 
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
@@ -38,7 +37,6 @@ use pumpx::types::CreateLimitOrderBody;
 use pumpx::types::CreateMarketOrderTxBody;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
-use pumpx::types::SendOrderTxBody;
 use pumpx::types::SwapType;
 use pumpx::PumpxApi;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
@@ -297,65 +295,15 @@ impl<
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
-							let market_order_unsigned_tx_res = self
+							let res = self
 								.pumpx_api
-								.create_market_order_unsigned_tx(&access_token, new_market_order)
+								.create_market_order_tx(&access_token, new_market_order)
 								.await
 								.map_err(|_| {
-									log::error!("Failed to create market order unsigned tx");
+									log::error!("Failed to create market order tx");
 								})?;
 
-							let tx_data = market_order_unsigned_tx_res.data.tx_data;
-							let mut messages_to_sign = Vec::new();
-							for tx in tx_data {
-								let tx_cleaned = tx.strip_prefix("0x").unwrap_or(&tx);
-								let tx_bytes = match hex::decode(tx_cleaned) {
-									Ok(bytes) => bytes,
-									Err(e) => {
-										log::error!("Failed to decode hex string: {:?}", e);
-										return Err(());
-									},
-								};
-								messages_to_sign.push(tx_bytes);
-							}
-
-							let signatures = match self
-								.pumpx_signer_client
-								.request_signatures(
-									chain_type,
-									pumpx_config.wallet_index,
-									*account_id.as_ref(),
-									messages_to_sign,
-								)
-								.await
-							{
-								Ok(sigs) => sigs,
-								Err(e) => {
-									log::error!(
-										"Failed to get signatures from pumpx-signer: {:?}",
-										e
-									);
-									return Err(());
-								},
-							};
-							let signed_tx_data: Vec<String> = signatures
-								.into_iter()
-								.map(|signature| signature.to_hex())
-								.collect();
-
-							let market_order_tx = SendOrderTxBody {
-								order_id: market_order_unsigned_tx_res.data.order_id,
-								chain_id: market_order_unsigned_tx_res.data.chain_id,
-								tx_data: signed_tx_data,
-							};
-							let market_order_tx_res = self
-								.pumpx_api
-								.send_order_tx(&access_token, market_order_tx)
-								.await
-								.map_err(|_| {
-									log::error!("Failed to send market order tx");
-								})?;
-							market_order_tx_res.encode()
+							res.encode()
 						},
 						PumpxOrderType::Limit => {
 							let token_cap = match pumpx_config.token_cap {

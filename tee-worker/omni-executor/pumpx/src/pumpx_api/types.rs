@@ -10,22 +10,18 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 // TODO: split this file to individual file per API
 
 pub type UserConnectResponse = ApiResponse<UserConnectResponseData>;
-
 pub type CreateMarketOrderUnsignedTxResponse = ApiResponse<CreateMarketOrderUnsignedTxResponseData>;
-
 pub type SendOrderTxResponse = ApiResponse<SendOrderTxResponseData>;
-
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfoResponseData>;
-
 pub type OrderInfoResponse = ApiResponse<OrderInfoResponseData>;
-
 pub type VerifyGoogleCodeResponse = ApiResponse<VerifyGoogleCodeResponseData>;
-
 pub type AddWalletResponse = ApiResponse<()>;
-
 pub type CreateTransferUnsignedTxResponse = ApiResponse<CreateTransferUnsignedTxResponseData>;
-
 pub type SendTransferTxResponse = ApiResponse<SendTransferTxResponseData>;
+
+// new API
+pub type CreateMarketOrderTxResponse = ApiResponse<CreateMarketOrderTxResponseData>;
+pub type CreateTransferTxResponse = ApiResponse<CreateTransferTxResponseData>;
 
 #[derive(Deserialize_repr, Serialize_repr, Debug)]
 #[allow(clippy::upper_case_acronyms)]
@@ -185,6 +181,26 @@ pub struct CreateMarketOrderTxResponseData {
 	pub chain_id: u32,
 	pub order_id: u32,
 	pub tx_hash: Vec<String>,
+}
+
+// /v3/trade/create_transfer_tx
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTransferTxBody {
+	pub request_id: Option<u32>,
+	pub chain_id: u32,
+	pub wallet_index: u32,
+	pub recipient_address: String,
+	pub token_ca: String,
+	pub amount: String,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTransferTxResponseData {
+	pub tx_hash: String,
+	pub transfer_id: u32,
+	pub chain_id: u32,
 }
 
 // /v3/trade/send_order_tx
