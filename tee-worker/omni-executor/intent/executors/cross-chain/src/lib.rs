@@ -523,18 +523,6 @@ impl<
 							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let _to_wallet_address = self
-						.pumpx_signer_client
-						.request_wallet(
-							to_chain_type,
-							pumpx_config.wallet_index,
-							*account_id.as_ref(),
-						)
-						.await
-						.map_err(|e| {
-							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
-						})?;
-
 					let cross_order_data = CreateCrossOrderData {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
