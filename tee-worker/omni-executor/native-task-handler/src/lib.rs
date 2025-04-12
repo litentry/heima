@@ -32,7 +32,7 @@ use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
 use pumpx::{
 	signer_client::{ChainType, SignerClient},
-	types::{TransferTx, TransferUnsignedTx},
+	types::*,
 	PumpxApi,
 };
 use std::{marker::PhantomData, sync::Arc};
@@ -833,7 +833,7 @@ async fn handle_native_task<
 			}
 
 			// 3. Create an unsigned tx with Pumpx backend
-			let unsigned_tx = TransferUnsignedTx {
+			let unsigned_tx = CreateTransferUnsignedTxBody {
 				request_id,
 				chain_id,
 				wallet_index,
@@ -927,7 +927,8 @@ async fn handle_native_task<
 				signatures.into_iter().map(|sig| sig.to_hex()).collect();
 
 			// 5. Send the signed tx to the Pumpx backend
-			let signed_transfer_tx = TransferTx { chain_id, tx_data: signed_tx_data, transfer_id };
+			let signed_transfer_tx =
+				SendTransferTxBody { chain_id, tx_data: signed_tx_data, transfer_id };
 			match ctx
 				.pumpx_api
 				.send_transfer_tx(&access_token, signed_transfer_tx, language)

@@ -15,7 +15,7 @@ use heima_primitives::{
 use jsonrpsee::RpcModule;
 use native_task_handler::{NativeTaskOk, NativeTaskResponse};
 use pumpx::constants::*;
-use pumpx::types::{MarketOrderTxResponse, OrderInfoResponse, SwapType};
+use pumpx::types::{OrderInfoResponse, SendOrderTxResponse, SwapType};
 use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
@@ -97,7 +97,7 @@ pub struct PumpxSubmitSwapOrderResponse {
 #[derive(Serialize, Clone)]
 struct BackendResponse {
 	pub limit_order_response: Option<OrderInfoResponse>,
-	pub market_order_response: Option<MarketOrderTxResponse>,
+	pub market_order_response: Option<SendOrderTxResponse>,
 }
 
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
@@ -243,7 +243,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					match native_task_response {
 						Ok(NativeTaskOk::IntentSwapResponse(swap_response)) => {
 							if params.order_type == PumpxOrderType::Market {
-								let market_order_response: MarketOrderTxResponse =
+								let market_order_response: SendOrderTxResponse =
 									Decode::decode(&mut swap_response.as_slice())
 										.map_err(|_| ErrorCode::InternalError)?;
 								let response = PumpxSubmitSwapOrderResponse {

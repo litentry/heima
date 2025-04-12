@@ -33,12 +33,12 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use parity_scale_codec::Encode;
 use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
-use pumpx::types::CreateCrossOrderData;
+use pumpx::types::CreateCrossOrderBody;
+use pumpx::types::CreateLimitOrderBody;
+use pumpx::types::CreateMarketOrderTxBody;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
-use pumpx::types::MarketOrderTx;
-use pumpx::types::NewLimitOrder;
-use pumpx::types::NewMarketOrder;
+use pumpx::types::SendOrderTxBody;
 use pumpx::types::SwapType;
 use pumpx::PumpxApi;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
@@ -254,7 +254,7 @@ impl<
 
 					let order_response = match pumpx_config.order_type {
 						PumpxOrderType::Market => {
-							let new_market_order = NewMarketOrder {
+							let new_market_order = CreateMarketOrderTxBody {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca.clone(),
@@ -343,7 +343,7 @@ impl<
 								.map(|signature| signature.to_hex())
 								.collect();
 
-							let market_order_tx = MarketOrderTx {
+							let market_order_tx = SendOrderTxBody {
 								order_id: market_order_unsigned_tx_res.data.order_id,
 								chain_id: market_order_unsigned_tx_res.data.chain_id,
 								tx_data: signed_tx_data,
@@ -379,7 +379,7 @@ impl<
 								None => None,
 							};
 
-							let new_limit_order = NewLimitOrder {
+							let new_limit_order = CreateLimitOrderBody {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca,
@@ -478,7 +478,7 @@ impl<
 							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let cross_order_data = CreateCrossOrderData {
+					let cross_order_data = CreateCrossOrderBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
 						token_ca: to_token_ca,
