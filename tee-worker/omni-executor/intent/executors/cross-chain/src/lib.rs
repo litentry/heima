@@ -504,7 +504,7 @@ impl<
 						return Err(());
 					};
 
-					let Some(to_chain_type) =
+					let Some(_to_chain_type) =
 						ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
 					else {
 						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
@@ -725,8 +725,12 @@ impl<
 						match trade_order.status {
 							BinanceOrderStatus::FILLED => {
 								log::info!("Binance order filled");
+								for fill in trade_order.fills.unwrap() {
+									let fill_price: u128 = fill.price.parse().unwrap();
+									let fill_amount: u128 = fill.qty.parse().unwrap();
+									to_amount += fill_price * fill_amount;
+								}
 								trade_success = true;
-								to_amount = 0; // TODO: figure out the amount received
 								break;
 							},
 							BinanceOrderStatus::CANCELED => {
@@ -745,6 +749,7 @@ impl<
 								log::debug!("Binance order status: {:?}", trade_order.status);
 							},
 						}
+						//todo: how long we wait ?
 						sleep(Duration::from_millis(500)).await;
 					}
 					if !trade_success {
@@ -770,8 +775,13 @@ impl<
 							},
 						)?;
 
+					//todo : make sure we payout correct amount
 					self.accounting_contract_client
-						.execute_pay_out_request(payout_address, user_nonce, U256::from(to_amount))
+						.execute_pay_out_request(
+							payout_address,
+							user_nonce,
+							U256::from_str(&to_amount.to_string()).unwrap(),
+						)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to execute pay out request");
@@ -821,7 +831,8 @@ impl<
 										return Err(());
 									},
 								},
-								amount_in: from_amount.clone(),
+								// amount received from binance should be used...
+								amount_in: to_amount.to_string(),
 								double_out: pumpx_config.double_out,
 								is_one_click: pumpx_config.is_one_click,
 								address: wallet_address,
