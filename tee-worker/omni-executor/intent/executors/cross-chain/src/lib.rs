@@ -29,7 +29,7 @@ use binance_api::{
 	BinanceApi,
 };
 use ethereum_rpc::RpcProvider as EthereumRpcProvider;
-use executor_core::intent_executor::IntentExecutor;
+use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
@@ -174,7 +174,7 @@ impl<
 		account_id: &AccountId,
 		intent_id: IntentId,
 		intent: Intent,
-	) -> Result<Option<Vec<u8>>, ()> {
+	) -> Result<IntentExecutionResult, ()> {
 		match intent {
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
@@ -235,15 +235,20 @@ impl<
 
 				let tx = self.transaction_signer.sign(intent_accepted_event_emit_call).await;
 
+				// notify parentchain - for now we continue even with error
 				match rpc_client.submit_tx(&tx).await {
-					Ok(report) => report,
-					Err(e) => {
-						log::error!("Failed to submit and watch tx: {:?}", e);
-						return Err(());
+					Ok(_) => log::debug!(
+						"Submitted intent_accepted parentchain call for intent_id {}",
+						intent_id
+					),
+					Err(_) => {
+						log::error!(
+							"Failed to submit intent_accepted parentchain call for intent_id {}",
+							intent_id
+						);
+						self.transaction_signer.update_nonce().await
 					},
 				};
-
-				debug!("Submitted intent accepted parentchain call");
 
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
@@ -279,7 +284,7 @@ impl<
 					return Err(());
 				};
 
-				let pumpx_order_response: Option<Vec<u8>>;
+				let result: IntentExecutionResult;
 
 				if pumpx_config.from_chain_id == pumpx_config.to_chain_id {
 					debug!("from and to chain are equal, performing single chain swap");
@@ -297,7 +302,8 @@ impl<
 							log::error!("Could not get wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let order_response = match pumpx_config.order_type {
+					let (order_response, should_notify_parentchain) = match pumpx_config.order_type
+					{
 						PumpxOrderType::Market => {
 							debug!("Doing market order");
 							let body = CreateMarketOrderTxBody {
@@ -344,7 +350,7 @@ impl<
 								wallet_index: pumpx_config.wallet_index,
 							};
 							debug!("Sending market order: {:?}", body);
-							let res = self
+							let response = self
 								.pumpx_api
 								.create_market_order_tx(&access_token, body)
 								.await
@@ -352,8 +358,8 @@ impl<
 									log::error!("Failed to create market order tx");
 								})?;
 
-							debug!("Received create_market_order_tx response: {:?}", res);
-							res.encode()
+							debug!("Received create_market_order_tx response: {:?}", response);
+							(response.encode(), true)
 						},
 						PumpxOrderType::Limit => {
 							debug!("Doing limit order");
@@ -426,7 +432,7 @@ impl<
 								wallet_index: pumpx_config.wallet_index,
 							};
 							debug!("Sending limit order: {:?}", new_limit_order);
-							let limit_order_res = self
+							let response = self
 								.pumpx_api
 								.create_limit_order(&access_token, new_limit_order)
 								.await
@@ -434,12 +440,12 @@ impl<
 									log::error!("Failed to create limit order");
 								})?;
 
-							debug!("Received limit order response: {:?}", limit_order_res);
+							debug!("Received limit order response: {:?}", response);
 
-							limit_order_res.encode()
+							(response.encode(), false)
 						},
 					};
-					pumpx_order_response = Some(order_response);
+					result = (Some(order_response), should_notify_parentchain);
 				} else {
 					debug!("from and to chain are different, performing cross chain swap");
 					if !matches!(
@@ -812,15 +818,15 @@ impl<
 						wallet_index: pumpx_config.wallet_index,
 					};
 					debug!("Sending market order: {:?}", body);
-					let res =
+					let response =
 						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
 							|_| {
 								log::error!("Failed to create market order tx");
 							},
 						)?;
 
-					debug!("Received create_market_order_tx response: {:?}", res);
-					pumpx_order_response = Some(res.encode())
+					debug!("Received create_market_order_tx response: {:?}", response);
+					result = (Some(response.encode()), true);
 				}
 
 				// self.account_asset_lock.release(
@@ -831,7 +837,7 @@ impl<
 				// 	})?,
 				// )?;
 
-				return Ok(pumpx_order_response);
+				return Ok(result);
 			},
 			_ => {
 				log::error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);

@@ -21,6 +21,8 @@ use executor_primitives::AccountId;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 
+pub type IntentExecutionResult = (Option<Vec<u8>>, bool);
+
 /// Used to perform intent on destination chain
 #[async_trait]
 pub trait IntentExecutor: Send {
@@ -29,7 +31,7 @@ pub trait IntentExecutor: Send {
 		account_id: &AccountId,
 		intent_id: IntentId,
 		intent: Intent,
-	) -> Result<Option<Vec<u8>>, ()>;
+	) -> Result<IntentExecutionResult, ()>;
 }
 
 pub struct MockedIntentExecutor {
@@ -50,7 +52,7 @@ impl IntentExecutor for MockedIntentExecutor {
 		_account_id: &AccountId,
 		_intent_id: IntentId,
 		_intent: Intent,
-	) -> Result<Option<Vec<u8>>, ()> {
-		self.sender.send(()).map(|_| None).map_err(|_| ())
+	) -> Result<IntentExecutionResult, ()> {
+		self.sender.send(()).map(|_| (None, false)).map_err(|_| ())
 	}
 }
