@@ -683,8 +683,24 @@ impl<
 						return Err(());
 					};
 
+					// Binance trade pair format:
+					// <base-asset><quote-asset>, e.g. BNBUSDT, SOLBNB...
+					//
+					// SELL: sell the "base-asset" to get "quote-asset"
+					// BUY:  buy the "base-asset" with "quote-asset"
+					//
+					// executedQty: quantity of "base-asset"
+					// cummulativeQuoteQty: quantity of "quote-asset"
+					//
+					// so, in SELL orders:
+					// - `executedQty` reflects the amount of the base-asset sold
+					// - `cummulativeQuoteQty` reflects the amount of the quote-asset received
+					//
+					// in BUY orders:
+					// - `executedQty` indicates the amount of the base-asset bought
+					// - `cummulativeQuoteQty`` shows the total amount of the quote-asset spent
 					let mut trade_success = false;
-					let mut binance_amount_received = Decimal::from(0);
+					let mut bnb_received = "".to_string();
 					loop {
 						let trade_order = self
 							.binance_api
@@ -698,19 +714,12 @@ impl<
 						match trade_order.status {
 							BinanceOrderStatus::FILLED => {
 								log::info!("Binance order filled");
-								for fill in trade_order.fills.ok_or_else(|| {
-									log::error!("Filled order without fills");
-								})? {
-									let fill_price =
-										Decimal::from_str_exact(&fill.price).map_err(|_| {
-											log::error!("Could not parse fill price");
-										})?;
-									let fill_amount =
-										Decimal::from_str_exact(&fill.qty).map_err(|_| {
-											log::error!("Could not parse fill qty");
-										})?;
-									binance_amount_received += fill_price * fill_amount;
-								}
+								bnb_received = if matches!(trade_order.side, BinanceOrderSide::BUY)
+								{
+									trade_order.executed_qty
+								} else {
+									trade_order.cummulative_quote_qty
+								};
 								trade_success = true;
 								break;
 							},
@@ -749,10 +758,26 @@ impl<
 						return Err(());
 					}
 
-					debug!("Total traded on binance: {:?}", binance_amount_received);
+					debug!("Total received {} bnb", bnb_received);
 
 					let payout_address: Address = Address::from_slice(&to_wallet_address);
-					let payout_ammount = Decimal::from(10 ^ 8) * binance_amount_received;
+					let payout_amount = match str_to_u256(&bnb_received, 18) {
+						Some(a) => a,
+						None => {
+							log::error!("Fail to convert bnb amount {} to U256", bnb_received);
+							let body = CrossFailBody {
+								request_id: intent_id,
+								fail_reason:
+									"Fail to construct payout request due to U256 conversion error"
+										.to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
+							})?;
+							// TODO: what to do with user asset?
+							return Err(());
+						},
+					};
 
 					debug!("Getting {:?} nonce for payout request", payout_address);
 					// 4. Call accounting contract on BSC
@@ -764,15 +789,10 @@ impl<
 						)?;
 
 					debug!("Received {:?} nonce", user_nonce);
+					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, payout_amount);
 
-					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, binance_amount_received);
-					//todo : make sure we payout correct amount
 					self.accounting_contract_client
-						.execute_pay_out_request(
-							payout_address,
-							user_nonce,
-							U256::from_str(&payout_ammount.to_string()).unwrap(),
-						)
+						.execute_pay_out_request(payout_address, user_nonce, payout_amount)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to execute pay out request");
@@ -793,7 +813,7 @@ impl<
 							},
 						},
 						// amount received from binance should be used...
-						amount_in: binance_amount_received.to_string(),
+						amount_in: bnb_received,
 						double_out: pumpx_config.double_out,
 						is_one_click: pumpx_config.is_one_click,
 						address: pubkey_to_evm_address(&to_wallet_address)?,
@@ -839,4 +859,12 @@ impl<
 			},
 		}
 	}
+}
+
+fn str_to_u256(amount: &str, decimals: u32) -> Option<U256> {
+	let amount = Decimal::from_str(amount).ok()?;
+	let factor = Decimal::from(10u64.pow(decimals));
+	let scaled = amount * factor;
+	let int_str = scaled.trunc().to_string();
+	U256::from_str(&int_str).ok()
 }
