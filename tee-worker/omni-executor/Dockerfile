@@ -80,15 +80,15 @@ COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
 
-RUN groupadd -g 1000 appgroup && \
-    useradd -r -u 1000 -g appgroup appuser && \
+RUN groupadd -g 1000 ubuntu && \
+    useradd -r -u 1000 -g ubuntu ubuntu && \
     mkdir -p /dev/attestation && \
-    chown -R appuser:appgroup /dev/attestation
+    chown -R ubuntu:ubuntu /dev/attestation
 
 RUN chmod +x $BIN_DIR/omni-executor-worker
-RUN chown appuser:appgroup *
+RUN chown ubuntu:ubuntu *
 RUN ldd $BIN_DIR/omni-executor-worker && $BIN_DIR/omni-executor-worker --version
 RUN ls -al $BIN_DIR
 
-USER appuser
+USER ubuntu
 CMD ["$BIN_DIR/omni-executor-worker"]
