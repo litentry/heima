@@ -907,7 +907,6 @@ fn str_to_u256(amount: &str, decimals: u32) -> Option<U256> {
 fn calculate_amount_in(amount: &str, gas: &str) -> Option<String> {
 	let amount = Decimal::from_str(amount).ok()?;
 	let gas = Decimal::from_str(gas).ok()?;
-
 	if amount <= gas {
 		None
 	} else {
