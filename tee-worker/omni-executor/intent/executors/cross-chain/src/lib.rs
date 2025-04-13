@@ -714,11 +714,9 @@ impl<
 						match trade_order.status {
 							BinanceOrderStatus::FILLED => {
 								log::info!("Binance order filled");
-								bnb_received = if matches!(trade_order.side, BinanceOrderSide::BUY)
-								{
-									trade_order.executed_qty
-								} else {
-									trade_order.cummulative_quote_qty
+								bnb_received = match trade_order.side {
+									BinanceOrderSide::BUY => trade_order.executed_qty,
+									BinanceOrderSide::SELL => trade_order.cummulative_quote_qty,
 								};
 								trade_success = true;
 								break;
