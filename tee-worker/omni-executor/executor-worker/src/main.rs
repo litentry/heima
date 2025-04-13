@@ -16,11 +16,14 @@
 
 use crate::cli::Cli;
 use accounting_contract_client::AccountingContractClient;
+use alloy::network::EthereumWallet;
+use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApi;
 use clap::Parser;
 use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
+use executor_core::ecdsa_key_store::EcdsaKeyStore;
 use executor_core::key_store::KeyStore;
 use executor_core::shielding_key_store::ShieldingKeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
@@ -40,6 +43,7 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
+use pumpx::pubkey_to_evm_address;
 use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
@@ -88,6 +92,19 @@ async fn main() -> Result<(), ()> {
 
 			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
 			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
+
+			let accounting_ecdsa_signer_key =
+				EcdsaKeyStore::new(args.accounting_ecdsa_signer_key_store_path.clone());
+
+			let accounting_ecdsa_signer_key =
+				accounting_ecdsa_signer_key.read().expect("Could not read accounting ecsa key");
+			let accounting_ecdsa_signer_key_pair =
+				ecdsa::Pair::from_seed_slice(&accounting_ecdsa_signer_key).unwrap();
+
+			info!(
+				"Accounting ecdsa signer address: {:?}",
+				pubkey_to_evm_address(accounting_ecdsa_signer_key_pair.public().as_ref()).unwrap()
+			);
 
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
@@ -154,7 +171,15 @@ async fn main() -> Result<(), ()> {
 
 			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
 
-			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new(&args.ethereum_url);
+			let accounting_contract_signer =
+				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())
+					.expect("Could not create accounting contract signer");
+			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
+
+			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&args.ethereum_url,
+				accounting_contract_wallet,
+			);
 			let accounting_contract_client = AccountingContractClient::new(
 				ethereum_rpc_provider,
 				//todo: from CLI
