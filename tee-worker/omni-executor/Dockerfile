@@ -40,18 +40,25 @@ CMD ["$BIN_DIR/executor-worker"]
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
 # rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
-FROM rust:1.82-bookworm AS sgx-builder
+FROM gramineproject/gramine:stable-jammy AS sgx-builder
 
-# It's easier to install gramine rather than to install cargo.
-RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ bookworm main" \
-| tee /etc/apt/sources.list.d/gramine.list
+# Update default packages
+RUN apt-get update
 
-RUN curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
-RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
-| tee /etc/apt/sources.list.d/intel-sgx.list
+# Get Ubuntu packages
+RUN apt-get install -y \
+    build-essential \
+    curl \
+    libssl-dev \
+    pkg-config
 
-RUN apt update && apt install -y gramine clang
+# Get Rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Add .cargo/bin to PATH
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+RUN cargo --version
 
 # Build
 ENV HOME=/home/ubuntu
@@ -65,7 +72,7 @@ RUN make
 
 ### Release image (with SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:1.8-jammy AS omni-release
+FROM gramineproject/gramine:stable-jammy AS omni-release
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
