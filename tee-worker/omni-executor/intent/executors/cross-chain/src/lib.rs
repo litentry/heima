@@ -684,7 +684,7 @@ impl<
 					};
 
 					let mut trade_success = false;
-					let mut to_amount = Decimal::from(0);
+					let mut binance_amount_received = Decimal::from(0);
 					loop {
 						let trade_order = self
 							.binance_api
@@ -709,7 +709,7 @@ impl<
 										Decimal::from_str_exact(&fill.qty).map_err(|_| {
 											log::error!("Could not parse fill qty");
 										})?;
-									to_amount += fill_price * fill_amount;
+									binance_amount_received += fill_price * fill_amount;
 								}
 								trade_success = true;
 								break;
@@ -749,9 +749,10 @@ impl<
 						return Err(());
 					}
 
-					debug!("Total traded on binance: {:?}", to_amount);
+					debug!("Total traded on binance: {:?}", binance_amount_received);
 
 					let payout_address: Address = Address::from_slice(&to_wallet_address);
+					let payout_ammount = Decimal::from(10 ^ 8) * binance_amount_received;
 
 					debug!("Getting {:?} nonce for payout request", payout_address);
 					// 4. Call accounting contract on BSC
@@ -764,13 +765,13 @@ impl<
 
 					debug!("Received {:?} nonce", user_nonce);
 
-					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, to_amount);
+					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, binance_amount_received);
 					//todo : make sure we payout correct amount
 					self.accounting_contract_client
 						.execute_pay_out_request(
 							payout_address,
 							user_nonce,
-							U256::from_str(&to_amount.to_string()).unwrap(),
+							U256::from_str(&payout_ammount.to_string()).unwrap(),
 						)
 						.await
 						.map_err(|_| {
@@ -792,7 +793,7 @@ impl<
 							},
 						},
 						// amount received from binance should be used...
-						amount_in: to_amount.to_string(),
+						amount_in: binance_amount_received.to_string(),
 						double_out: pumpx_config.double_out,
 						is_one_click: pumpx_config.is_one_click,
 						address: pubkey_to_evm_address(&to_wallet_address)?,
