@@ -36,6 +36,7 @@ pumpx = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+pumpx = { workspace = true, features = ["mocks"] }
 
 [lints]
 workspace = true

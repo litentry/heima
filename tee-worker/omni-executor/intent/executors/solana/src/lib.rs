@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
-
 use async_trait::async_trait;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;

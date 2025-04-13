@@ -136,13 +136,6 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					ErrorCode::InvalidParams
 				})?;
 
-			let swap_order = SwapOrder {
-				from_asset: from_chain_asset,
-				to_asset: to_chain_asset,
-				from_amount,
-				to_address: None,
-			};
-
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
 			let Some(access_token) =
 				storage.get(&(user_identity.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
@@ -150,6 +143,14 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				log::error!("Failed to get access token from storage");
 				return Err(ErrorCode::InternalError);
 			};
+
+			let swap_order = SwapOrder {
+				from_asset: from_chain_asset,
+				to_asset: to_chain_asset,
+				from_amount,
+				to_address: None,
+			};
+
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
 					log::error!("Failed to get user trade info");
@@ -218,10 +219,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
 			}
 
-			// TODO: `swap_order` isn't actively used - we mainly rely on pumpx_config to call pumpx API
-			//       we construct `swap_order` mainly to upload it onto heima
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
-
 			let wrapper = NativeTaskWrapper {
 				task: NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				nonce: None,

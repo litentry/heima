@@ -14,15 +14,37 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use accounting_contract_client::AccountingContractClient;
+use alloy::{
+	primitives::{Address, U256},
+	rpc::types::TransactionRequest,
+};
 use async_trait::async_trait;
+use base58::ToBase58;
+use binance_api::{
+	spot_trading_api::types::{
+		CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
+		OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
+	},
+	BinanceApi,
+};
+use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
+use executor_primitives::SolanaToken;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use rust_decimal::prelude::*;
+use rust_decimal::Decimal;
+use solana::{signer::RemoteSigner, SolanaClient};
+use tokio::{
+	runtime::Handle,
+	time::{sleep, Duration},
+};
 // use intent_asset_lock::AmountType;
 // use intent_token_query::query_ethereum;
 // use intent_token_query::query_solana;
@@ -32,12 +54,12 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use parity_scale_codec::Encode;
 use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
-use pumpx::types::CreateCrossOrderBody;
-use pumpx::types::CreateLimitOrderBody;
-use pumpx::types::CreateMarketOrderTxBody;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
 use pumpx::types::SwapType;
+use pumpx::types::{
+	CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody, CrossFailBody,
+};
 use pumpx::PumpxApi;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;
@@ -45,6 +67,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use executor_primitives::AccountId;
+use executor_primitives::ChainAsset;
 use parentchain_rpc_client::metadata::Metadata;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::CustomConfig;
@@ -54,6 +77,8 @@ use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_rpc_client::ToSubxtType;
 use parentchain_signer::TxSigner;
+
+use log::debug;
 
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
@@ -74,19 +99,27 @@ pub type ParentchainTxSigner = TxSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
+// TODO: temporary solution
+const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
+
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<
 	Header,
 	RpcClient: SubstrateRpcClient<Header>,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
+	Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
 > {
 	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	transaction_signer: Arc<ParentchainTxSigner>,
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
-	pumpx_signer_client: Arc<SignerClient>,
+	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
+	binance_api: Arc<BinanceApi>,
+	solana_client: Arc<SolanaClient>,
+	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 	phantom: PhantomData<(Header, RpcClient)>,
 }
 
@@ -94,15 +127,20 @@ impl<
 		Header,
 		RpcClient: SubstrateRpcClient<Header>,
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory>
+		Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
+	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		transaction_signer: Arc<ParentchainTxSigner>,
 		_rpc_endpoint_registry: RpcEndpointRegistry,
-		pumpx_signer_client: Arc<SignerClient>,
+		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<PumpxApi>,
 		storage_db: Arc<StorageDB>,
+		binance_api: Arc<BinanceApi>,
+		solana_client: Arc<SolanaClient>,
+		accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -114,6 +152,9 @@ impl<
 			pumpx_signer_client,
 			pumpx_api,
 			storage_db,
+			binance_api,
+			solana_client,
+			accounting_contract_client,
 			phantom: PhantomData,
 		})
 	}
@@ -124,8 +165,10 @@ impl<
 		Header: Send + Sync,
 		RpcClient: SubstrateRpcClient<Header> + Send + Sync,
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync,
-	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory>
+		Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync,
+	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
 {
+	#[allow(unused_assignments)]
 	async fn execute(
 		&self,
 		account_id: &AccountId,
@@ -133,7 +176,8 @@ impl<
 		intent: Intent,
 	) -> Result<Option<Vec<u8>>, ()> {
 		match intent {
-			Intent::Swap(ref _swap_order, ref _ccsp, ref scsp) => {
+			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
+				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
 				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
 				else {
 					log::error!("Failed to create rpc client");
@@ -199,6 +243,8 @@ impl<
 					},
 				};
 
+				debug!("Submitted intent accepted parentchain call");
+
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
 
@@ -236,6 +282,7 @@ impl<
 				let pumpx_order_response: Option<Vec<u8>>;
 
 				if pumpx_config.from_chain_id == pumpx_config.to_chain_id {
+					debug!("from and to chain are equal, performing single chain swap");
 					let Some(chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
 					else {
 						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
@@ -252,7 +299,8 @@ impl<
 
 					let order_response = match pumpx_config.order_type {
 						PumpxOrderType::Market => {
-							let new_market_order = CreateMarketOrderTxBody {
+							debug!("Doing market order");
+							let body = CreateMarketOrderTxBody {
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca.clone(),
@@ -295,17 +343,20 @@ impl<
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
+							debug!("Sending market order: {:?}", body);
 							let res = self
 								.pumpx_api
-								.create_market_order_tx(&access_token, new_market_order)
+								.create_market_order_tx(&access_token, body)
 								.await
 								.map_err(|_| {
 									log::error!("Failed to create market order tx");
 								})?;
 
+							debug!("Received create_market_order_tx response: {:?}", res);
 							res.encode()
 						},
 						PumpxOrderType::Limit => {
+							debug!("Doing limit order");
 							let token_cap = match pumpx_config.token_cap {
 								Some(ref token_cap) => Some(
 									std::str::from_utf8(token_cap)
@@ -374,6 +425,7 @@ impl<
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
+							debug!("Sending limit order: {:?}", new_limit_order);
 							let limit_order_res = self
 								.pumpx_api
 								.create_limit_order(&access_token, new_limit_order)
@@ -382,11 +434,21 @@ impl<
 									log::error!("Failed to create limit order");
 								})?;
 
+							debug!("Received limit order response: {:?}", limit_order_res);
+
 							limit_order_res.encode()
 						},
 					};
 					pumpx_order_response = Some(order_response);
 				} else {
+					debug!("from and to chain are different, performing cross chain swap");
+					if !matches!(
+						swap_order.to_asset,
+						ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)
+					) {
+						log::error!("Only BSC payout supported");
+					}
+
 					// notify backend about it
 					let Some(from_chain_type) =
 						ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
@@ -414,7 +476,7 @@ impl<
 							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let _to_wallet_address = self
+					let to_wallet_address = self
 						.pumpx_signer_client
 						.request_wallet(
 							to_chain_type,
@@ -426,10 +488,10 @@ impl<
 							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let cross_order_data = CreateCrossOrderBody {
+					let body = CreateCrossOrderBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
-						token_ca: to_token_ca,
+						token_ca: to_token_ca.clone(),
 						swap_type: match pumpx_config.swap_type {
 							1 => SwapType::Buy,
 							2 => SwapType::Sell,
@@ -452,27 +514,313 @@ impl<
 									return Err(());
 								},
 							},
-							amount: from_amount,
+							amount: from_amount.clone(),
 							usd: usd_worth,
 							token_ca: from_token_ca,
 						}],
 					};
-					self.pumpx_api
-						.create_cross_order(&access_token, cross_order_data)
+					debug!("Creating cross order with data: {:?}", body);
+					let response =
+						self.pumpx_api.create_cross_order(&access_token, body).await.map_err(
+							|_| {
+								log::error!("Failed to create cross order");
+							},
+						)?;
+					debug!("Received response: {:?}", response);
+
+					// 2. transfer from_asset to binance deposit address
+					let coins_info =
+						self.binance_api.wallet().get_all_coins_info().await.map_err(|_| {
+							log::error!("Failed to get all coins info");
+						})?;
+					// TODO: create an util function to convert ChainAsset to binance names
+					// and create constants for SOL, USDC, USDT, etc
+					let (from_network_name, binance_coin_name, token_address) =
+						match swap_order.from_asset {
+							ChainAsset::Solana(ref token) => {
+								let (asset, token_address) = match token {
+									SolanaToken::Native => ("SOL", ""),
+									SolanaToken::SPL(mint_address) => {
+										let mint_address_string = mint_address.as_ref().to_base58();
+										match mint_address_string.as_str() {
+											SOLANA_USDC_MINT_ADDRESS => {
+												("USDC", SOLANA_USDT_MINT_ADDRESS)
+											},
+											SOLANA_USDT_MINT_ADDRESS => {
+												("USDT", SOLANA_USDC_MINT_ADDRESS)
+											},
+											_ => {
+												log::error!(
+													"Unsupported SPL token: {:?}",
+													mint_address
+												);
+												return Err(());
+											},
+										}
+									},
+								};
+								("SOL".to_string(), asset.to_string(), token_address.to_string())
+							},
+							ChainAsset::Ethereum(..) => {
+								log::error!("Unsupported from_asset: {:?}", swap_order.from_asset);
+								return Err(());
+							},
+						};
+					let Some(binance_coin_info) =
+						coins_info.iter().find(|c| c.coin == binance_coin_name)
+					else {
+						log::error!(
+							"Failed to find binance network list for asset: {:?}",
+							binance_coin_name
+						);
+						return Err(());
+					};
+					let Some(binance_network_info) = binance_coin_info
+						.network_list
+						.iter()
+						.find(|n| n.network == from_network_name)
+					else {
+						log::error!(
+							"Failed to find binance network list for asset: {:?}",
+							binance_coin_name
+						);
+						return Err(());
+					};
+					let deposit_address = self
+						.binance_api
+						.wallet()
+						.get_deposit_address(&binance_coin_name, &binance_network_info.network)
 						.await
 						.map_err(|_| {
-							log::error!("Failed to create cross order");
+							log::error!("Failed to get deposit address");
+						})?;
+					let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
+						log::error!("Failed to parse from_amount_string");
+					})?;
+					let asset_decimal_multiplier = match binance_coin_name.as_str() {
+						"USDC" => Decimal::from(1_000_000),    // 10^6
+						"USDT" => Decimal::from(1_000_000),    // 10^6
+						"SOL" => Decimal::from(1_000_000_000), // 10^9  TODO: double check this
+						_ => {
+							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							return Err(());
+						},
+					};
+					let amount_to_transfer_decimal = from_amount_decimal * asset_decimal_multiplier;
+					let Some(amount_to_transfer) = amount_to_transfer_decimal.to_u64() else {
+						log::error!("Failed to convert amount to transfer to u64");
+						return Err(());
+					};
+
+					let remote_signer = RemoteSigner::new(
+						self.pumpx_signer_client.clone(),
+						pumpx_config.wallet_index,
+						*account_id.as_ref(),
+						Handle::current(),
+					);
+
+					// TODO: change this when adding support for more tokens/chains
+					if binance_coin_name == "SOL" {
+						// Native transfer
+						debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
+						self.solana_client
+							.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to transfer SOL");
+							})?;
+					} else {
+						debug!(
+							"Transfering {:?} {:?} to {:?}",
+							amount_to_transfer, token_address, deposit_address
+						);
+						// SPL transfer
+						self.solana_client
+							.transfer_spl(
+								&deposit_address,
+								amount_to_transfer,
+								&token_address,
+								&remote_signer,
+							)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to transfer SPL");
+							})?;
+					}
+					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
+						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
+						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
+						"SOL" => ("SOLBNB".to_string(), BinanceOrderSide::SELL),
+						_ => {
+							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							return Err(());
+						},
+					};
+
+					// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
+					let binance_order_params = BinanceCreateOrderParams {
+						symbol: trade_symbol.clone(),
+						side: order_side,
+						order_type: BinanceOrderType::MARKET,
+						..Default::default()
+					};
+					debug!("Creating binance order with params: {:?}", binance_order_params);
+					let Ok(binance_order) =
+						self.binance_api.spot_trading().create_order(binance_order_params).await
+					else {
+						log::error!("Failed to create binance order");
+						let body = CrossFailBody {
+							request_id: intent_id,
+							// TODO: is this a user facing error? what should we return?
+							fail_reason: "Failed to create binance order".to_string(),
+						};
+						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+							log::error!("Failed to notify pumpx-signer");
+						})?;
+						// TODO: Figure out how to transfer back the asset to the omni account
+						// check https://developers.binance.com/docs/wallet/capital/withdraw
+
+						return Err(());
+					};
+
+					let mut trade_success = false;
+					let mut binance_amount_received = Decimal::from(0);
+					loop {
+						let trade_order = self
+							.binance_api
+							.spot_trading()
+							.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to get binance order");
+							})?;
+
+						match trade_order.status {
+							BinanceOrderStatus::FILLED => {
+								log::info!("Binance order filled");
+								for fill in trade_order.fills.ok_or_else(|| {
+									log::error!("Filled order without fills");
+								})? {
+									let fill_price =
+										Decimal::from_str_exact(&fill.price).map_err(|_| {
+											log::error!("Could not parse fill price");
+										})?;
+									let fill_amount =
+										Decimal::from_str_exact(&fill.qty).map_err(|_| {
+											log::error!("Could not parse fill qty");
+										})?;
+									binance_amount_received += fill_price * fill_amount;
+								}
+								trade_success = true;
+								break;
+							},
+							BinanceOrderStatus::CANCELED => {
+								log::error!("Binance order canceled");
+							},
+							BinanceOrderStatus::REJECTED => {
+								log::error!("Binance order rejected");
+							},
+							BinanceOrderStatus::EXPIRED => {
+								log::error!("Binance order expired");
+							},
+							BinanceOrderStatus::EXPIRED_IN_MATCH => {
+								log::error!("Binance order expired in matching");
+							},
+							_ => {
+								log::debug!("Binance order status: {:?}", trade_order.status);
+							},
+						}
+						//todo: how long we wait ?
+						sleep(Duration::from_millis(500)).await;
+					}
+					if !trade_success {
+						log::error!("Binance order failed");
+						let body = CrossFailBody {
+							request_id: intent_id,
+							// TODO: is this a user facing error? what should we return?
+							fail_reason: "Binance order failed".to_string(),
+						};
+						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+							log::error!("Failed to notify pumpx-signer");
+						})?;
+						// TODO: Figure out how to transfer back the asset to the omni account
+						// check https://developers.binance.com/docs/wallet/capital/withdraw
+
+						return Err(());
+					}
+
+					debug!("Total traded on binance: {:?}", binance_amount_received);
+
+					let payout_address: Address = Address::from_slice(&to_wallet_address);
+					let payout_ammount = Decimal::from(10 ^ 8) * binance_amount_received;
+
+					debug!("Getting {:?} nonce for payout request", payout_address);
+					// 4. Call accounting contract on BSC
+					let user_nonce =
+						self.accounting_contract_client.get_nonce(payout_address).await.map_err(
+							|_| {
+								log::error!("Failed to get nonce");
+							},
+						)?;
+
+					debug!("Received {:?} nonce", user_nonce);
+
+					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, binance_amount_received);
+					//todo : make sure we payout correct amount
+					self.accounting_contract_client
+						.execute_pay_out_request(
+							payout_address,
+							user_nonce,
+							U256::from_str(&payout_ammount.to_string()).unwrap(),
+						)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to execute pay out request");
 						})?;
 
-					//TODO: execute cross-chain swap
-					// to binance swap, If it fails, notify the backend via /v3/trade/cross_fail
-					// TODO:
-					// 3. Swap assets:
-					//    - Call accounting contract (e.g Swap SOL to TRUMP)
-					//    - Call Binance convert via binance account (e.g Swap USDC to SOL)
-					// 4. Send locked balance to binance account (refill)
+					debug!("Doing market order");
 
-					todo!()
+					let body = CreateMarketOrderTxBody {
+						request_id: intent_id,
+						chain_id: pumpx_config.to_chain_id,
+						token_ca: to_token_ca.clone(),
+						swap_type: match pumpx_config.swap_type {
+							1 => SwapType::Buy,
+							2 => SwapType::Sell,
+							_ => {
+								log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+								return Err(());
+							},
+						},
+						// amount received from binance should be used...
+						amount_in: binance_amount_received.to_string(),
+						double_out: pumpx_config.double_out,
+						is_one_click: pumpx_config.is_one_click,
+						address: pubkey_to_evm_address(&to_wallet_address)?,
+						is_anti_mev: pumpx_config.is_anti_mev,
+						is_auto_slippage: pumpx_config.is_auto_slippage,
+						gas_type: match pumpx_config.gas_type {
+							1 => GasType::Slow,
+							2 => GasType::Medium,
+							3 => GasType::Fast,
+							_ => {
+								log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+								return Err(());
+							},
+						},
+						slippage: pumpx_config.slippage,
+						wallet_index: pumpx_config.wallet_index,
+					};
+					debug!("Sending market order: {:?}", body);
+					let res =
+						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
+							|_| {
+								log::error!("Failed to create market order tx");
+							},
+						)?;
+
+					debug!("Received create_market_order_tx response: {:?}", res);
+					pumpx_order_response = Some(res.encode())
 				}
 
 				// self.account_asset_lock.release(
