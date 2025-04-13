@@ -63,7 +63,6 @@ use pumpx::types::{
 use pumpx::PumpxApi;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use executor_primitives::AccountId;
@@ -71,11 +70,8 @@ use executor_primitives::ChainAsset;
 use parentchain_rpc_client::metadata::Metadata;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::CustomConfig;
-use parentchain_rpc_client::SubstrateRpcClient;
-use parentchain_rpc_client::SubstrateRpcClientFactory;
 use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
-use parentchain_rpc_client::ToSubxtType;
 use parentchain_signer::TxSigner;
 
 use log::debug;
@@ -104,14 +100,8 @@ const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyT
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
-> {
-	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-	transaction_signer: Arc<ParentchainTxSigner>,
+pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
+{
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
@@ -120,20 +110,13 @@ pub struct CrossChainIntentExecutor<
 	binance_api: Arc<BinanceApi>,
 	solana_client: Arc<SolanaClient>,
 	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
-	phantom: PhantomData<(Header, RpcClient)>,
 }
 
-impl<
-		Header,
-		RpcClient: SubstrateRpcClient<Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-		Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
-	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
+impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
+	CrossChainIntentExecutor<Provider>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-		transaction_signer: Arc<ParentchainTxSigner>,
 		_rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<PumpxApi>,
@@ -145,8 +128,6 @@ impl<
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
 		Ok(Self {
-			parentchain_rpc_client_factory,
-			transaction_signer,
 			// account_asset_lock,
 			// rpc_endpoint_registry,
 			pumpx_signer_client,
@@ -155,18 +136,13 @@ impl<
 			binance_api,
 			solana_client,
 			accounting_contract_client,
-			phantom: PhantomData,
 		})
 	}
 }
 
 #[async_trait]
-impl<
-		Header: Send + Sync,
-		RpcClient: SubstrateRpcClient<Header> + Send + Sync,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync,
-		Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync,
-	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
+impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync> IntentExecutor
+	for CrossChainIntentExecutor<Provider>
 {
 	#[allow(unused_assignments)]
 	async fn execute(
@@ -178,11 +154,7 @@ impl<
 		match intent {
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
-				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
-				else {
-					log::error!("Failed to create rpc client");
-					return Err(());
-				};
+
 				// let available_amount = match &swap_order.from_asset {
 				// 	ChainAsset::Ethereum(chain_id, token) => {
 				// 		let rpc_url =
