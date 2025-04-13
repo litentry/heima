@@ -30,7 +30,6 @@ use binance_api::{
 };
 use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::HeimaMultiAddress;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
@@ -54,6 +53,7 @@ use tokio::{
 // use log::error;
 use parity_scale_codec::Encode;
 use pumpx::signer_client::ChainType;
+use pumpx::signer_client::SignerClient;
 use pumpx::types::CrossOrderInfo;
 use pumpx::types::GasType;
 use pumpx::types::SwapType;
@@ -61,7 +61,6 @@ use pumpx::types::{
 	CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody, CrossFailBody,
 };
 use pumpx::PumpxApi;
-use pumpx::{hex_encode_evm_address_bytes, signer_client::SignerClient};
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -450,16 +449,6 @@ impl<
 						log::error!("Only BSC payout supported");
 					}
 
-					let payout_address = match swap_order.to_address {
-						Some(HeimaMultiAddress::Address20(address)) => {
-							Address::from_slice(address.as_ref())
-						},
-						_ => {
-							log::error!("Invalid payout address type");
-							return Err(());
-						},
-					};
-
 					// notify backend about it
 					let Some(from_chain_type) =
 						ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
@@ -468,7 +457,7 @@ impl<
 						return Err(());
 					};
 
-					let Some(_to_chain_type) =
+					let Some(to_chain_type) =
 						ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
 					else {
 						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
@@ -485,6 +474,18 @@ impl<
 						.await
 						.map_err(|e| {
 							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
+						})?;
+
+					let to_wallet_address = self
+						.pumpx_signer_client
+						.request_wallet(
+							to_chain_type,
+							pumpx_config.wallet_index,
+							*account_id.as_ref(),
+						)
+						.await
+						.map_err(|e| {
+							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
 					let body = CreateCrossOrderBody {
@@ -742,6 +743,8 @@ impl<
 
 					debug!("Total traded on binance: {:?}", to_amount);
 
+					let payout_address: Address = Address::from_slice(&to_wallet_address);
+
 					debug!("Getting {:?} nonce for payout request", payout_address);
 					// 4. Call accounting contract on BSC
 					let user_nonce =
@@ -766,30 +769,6 @@ impl<
 							log::error!("Failed to execute pay out request");
 						})?;
 
-					let Some(chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
-					else {
-						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
-						return Err(());
-					};
-
-					let wallet_address: String = match chain_type {
-						ChainType::Evm => match swap_order.to_address.unwrap() {
-							HeimaMultiAddress::Address20(address) => {
-								hex_encode_evm_address_bytes(address.as_ref())
-							},
-							_ => {
-								log::error!(
-									"Wrong address: {:?}, expected Address20",
-									swap_order.to_address
-								);
-								return Err(());
-							},
-						},
-						_ => {
-							log::error!("Chain type not supported: {:?}", chain_type);
-							return Err(());
-						},
-					};
 					debug!("Doing market order");
 
 					let body = CreateMarketOrderTxBody {
@@ -808,7 +787,7 @@ impl<
 						amount_in: to_amount.to_string(),
 						double_out: pumpx_config.double_out,
 						is_one_click: pumpx_config.is_one_click,
-						address: wallet_address,
+						address: pubkey_to_evm_address(&to_wallet_address)?,
 						is_anti_mev: pumpx_config.is_anti_mev,
 						is_auto_slippage: pumpx_config.is_auto_slippage,
 						gas_type: match pumpx_config.gas_type {

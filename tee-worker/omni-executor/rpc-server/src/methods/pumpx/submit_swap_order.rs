@@ -9,13 +9,12 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
 	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
-	EthereumToken, HeimaMultiAddress, Identity, Intent, PumpxConfig, PumpxOrderType,
-	SingleChainSwapProvider, SolanaToken, SwapOrder, Web2IdentityType,
+	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
+	SolanaToken, SwapOrder, Web2IdentityType,
 };
 use jsonrpsee::RpcModule;
 use native_task_handler::{NativeTaskOk, NativeTaskResponse};
 use pumpx::constants::*;
-use pumpx::pubkey_to_evm_address_bytes;
 use pumpx::types::{CreateMarketOrderTxResponse, OrderInfoResponse, SwapType};
 use serde::Serialize;
 
@@ -145,33 +144,11 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				return Err(ErrorCode::InternalError);
 			};
 
-			let to_address = match to_chain_asset {
-				ChainAsset::Ethereum(_, _) => {
-					//todo: remove unwrap;
-					let wallet = ctx
-						.pumpx_signer
-						.request_wallet(
-							pumpx::signer_client::ChainType::Evm,
-							params.wallet_index,
-							user_identity.to_omni_account().into(),
-						)
-						.await
-						.unwrap();
-					HeimaMultiAddress::Address20(Address20::from(
-						pubkey_to_evm_address_bytes(&wallet).unwrap(),
-					))
-					// get ethereum addresss
-				},
-				ChainAsset::Solana(_) => {
-					unimplemented!("Only Ethereum supported");
-				},
-			};
-
 			let swap_order = SwapOrder {
 				from_asset: from_chain_asset,
 				to_asset: to_chain_asset,
 				from_amount,
-				to_address: Some(to_address),
+				to_address: None,
 			};
 
 			let user_trade_info =

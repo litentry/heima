@@ -226,7 +226,6 @@ async fn main() -> Result<(), ()> {
 				mrenclave,
 				jwt_rsa_private_key,
 				intent_id_store,
-				pumpx_signer_client.clone(),
 			)
 			.await
 			.map_err(|e| {

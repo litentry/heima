@@ -5,7 +5,7 @@ use heima_identity_verification::web2::email::Mailer;
 use intent_core::IntentIdStore;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
-use pumpx::{signer_client::SignerClient, PumpxApi};
+use pumpx::PumpxApi;
 use std::{env, net::SocketAddr, sync::Arc};
 
 pub(crate) struct RpcContext {
@@ -19,7 +19,6 @@ pub(crate) struct RpcContext {
 	pub google_client_secret: String,
 	pub pumpx_api: Arc<PumpxApi>,
 	pub intent_id_store: Arc<Box<dyn IntentIdStore>>,
-	pub pumpx_signer: Arc<Box<dyn SignerClient>>,
 }
 
 impl RpcContext {
@@ -35,7 +34,6 @@ impl RpcContext {
 		google_client_secret: String,
 		pumpx_api: Arc<PumpxApi>,
 		intent_id_store: Arc<Box<dyn IntentIdStore>>,
-		pumpx_signer: Arc<Box<dyn SignerClient>>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -48,7 +46,6 @@ impl RpcContext {
 			google_client_secret,
 			pumpx_api,
 			intent_id_store,
-			pumpx_signer,
 		}
 	}
 }
@@ -63,7 +60,6 @@ pub async fn start_server(
 	mrenclave: [u8; 32],
 	jwt_rsa_private_key: Vec<u8>,
 	intent_id_store: Arc<Box<dyn IntentIdStore>>,
-	pumpx_signer: Arc<Box<dyn SignerClient>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
@@ -93,7 +89,6 @@ pub async fn start_server(
 		google_client_secret,
 		pumpx_api,
 		intent_id_store,
-		pumpx_signer,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);
