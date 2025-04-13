@@ -322,14 +322,14 @@ pub struct GetGasInfoResponseData {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GasInfo {
-	chain_id: String,
-	normal: String,
-	fast: String,
-	super_fast: String,
-	normal_usd: String,
-	fast_usd: String,
-	super_fast_usd: String,
-	normal_price: String,
-	fast_price: String,
-	super_fast_price: String,
+	pub chain_id: String,
+	pub normal: String,
+	pub fast: String,
+	pub super_fast: String,
+	pub normal_usd: String,
+	pub fast_usd: String,
+	pub super_fast_usd: String,
+	pub normal_price: String,
+	pub fast_price: String,
+	pub super_fast_price: String,
 }

@@ -796,8 +796,46 @@ impl<
 							log::error!("Failed to execute pay out request");
 						})?;
 
-					debug!("Doing market order");
+					debug!("Quering gas info");
+					let gas_info = self
+						.pumpx_api
+						.get_gas_info(&access_token, pumpx_config.to_chain_id)
+						.await
+						.map_err(|_| {
+							log::error!("Failed to get gas info");
+						})?;
+					let gas_fee = match pumpx_config.gas_type {
+						1 => gas_info.data.gas_info.normal,
+						2 => gas_info.data.gas_info.fast,
+						3 => gas_info.data.gas_info.super_fast,
+						_ => {
+							log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+							return Err(());
+						},
+					};
+					debug!("Gas fee for chain_id {} is {}", pumpx_config.to_chain_id, gas_fee);
 
+					let amount_in = match calculate_amount_in(&bnb_received, &gas_fee) {
+						Some(a) => a,
+						None => {
+							log::error!(
+								"Fail to calculate amount_in from amount {}, gas {}",
+								bnb_received,
+								gas_fee
+							);
+							let body = CrossFailBody {
+								request_id: intent_id,
+								fail_reason: "Fail to calculate amount_in".to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
+							})?;
+							// TODO: what to do with user asset?
+							return Err(());
+						},
+					};
+
+					debug!("Doing market order");
 					let body = CreateMarketOrderTxBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
@@ -810,8 +848,7 @@ impl<
 								return Err(());
 							},
 						},
-						// amount received from binance should be used...
-						amount_in: bnb_received,
+						amount_in,
 						double_out: pumpx_config.double_out,
 						is_one_click: pumpx_config.is_one_click,
 						address: pubkey_to_evm_address(&to_wallet_address)?,
@@ -865,4 +902,15 @@ fn str_to_u256(amount: &str, decimals: u32) -> Option<U256> {
 	let scaled = amount * factor;
 	let int_str = scaled.trunc().to_string();
 	U256::from_str(&int_str).ok()
+}
+
+fn calculate_amount_in(amount: &str, gas: &str) -> Option<String> {
+	let amount = Decimal::from_str(amount).ok()?;
+	let gas = Decimal::from_str(gas).ok()?;
+
+	if amount <= gas {
+		None
+	} else {
+		Some((amount - gas).to_string())
+	}
 }
