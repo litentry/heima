@@ -684,7 +684,7 @@ impl<
 					};
 
 					let mut trade_success = false;
-					let mut to_amount = 0;
+					let mut to_amount = Decimal::from(0);
 					loop {
 						let trade_order = self
 							.binance_api
@@ -698,9 +698,17 @@ impl<
 						match trade_order.status {
 							BinanceOrderStatus::FILLED => {
 								log::info!("Binance order filled");
-								for fill in trade_order.fills.unwrap() {
-									let fill_price: u128 = fill.price.parse().unwrap();
-									let fill_amount: u128 = fill.qty.parse().unwrap();
+								for fill in trade_order.fills.ok_or_else(|| {
+									log::error!("Filled order without fills");
+								})? {
+									let fill_price =
+										Decimal::from_str_exact(&fill.price).map_err(|_| {
+											log::error!("Could not parse fill price");
+										})?;
+									let fill_amount =
+										Decimal::from_str_exact(&fill.qty).map_err(|_| {
+											log::error!("Could not parse fill qty");
+										})?;
 									to_amount += fill_price * fill_amount;
 								}
 								trade_success = true;
