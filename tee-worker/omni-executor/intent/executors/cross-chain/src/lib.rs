@@ -229,27 +229,6 @@ impl<
 				// )?;
 				//
 
-				let intent_accepted_event_emit_call = parentchain_api_interface::tx()
-					.omni_account()
-					.intent_accepted(account_id.to_subxt_type(), intent_id, intent.to_subxt_type());
-
-				let tx = self.transaction_signer.sign(intent_accepted_event_emit_call).await;
-
-				// notify parentchain - for now we continue even with error
-				match rpc_client.submit_tx(&tx).await {
-					Ok(_) => log::debug!(
-						"Submitted intent_accepted parentchain call for intent_id {}",
-						intent_id
-					),
-					Err(_) => {
-						log::error!(
-							"Failed to submit intent_accepted parentchain call for intent_id {}",
-							intent_id
-						);
-						self.transaction_signer.update_nonce().await
-					},
-				};
-
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
 
