@@ -15,6 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::cli::Cli;
+use accounting_contract_client::AccountingContractClient;
+use binance_api::BinanceApi;
 use clap::Parser;
 use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
@@ -38,8 +40,10 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
+use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
+use solana::SolanaClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
@@ -72,7 +76,6 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			let _binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
 			let auth_token_key_store =
 				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
@@ -116,10 +119,11 @@ async fn main() -> Result<(), ()> {
 			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let pumpx_signer_client = Arc::new(pumpx::signer_client::SignerClient::new(
-				args.pumpx_signer_url.clone(),
-				pumpx_signer_pair,
-			));
+			let pumpx_signer_client: Arc<Box<dyn SignerClient>> =
+				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
+					args.pumpx_signer_url.clone(),
+					pumpx_signer_pair,
+				)));
 
 			let ethereum_intent_executor =
 				EthereumIntentExecutor::new(&args.ethereum_url, &args.delegation_contract_address)?;
@@ -139,6 +143,24 @@ async fn main() -> Result<(), ()> {
 			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
 			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
 
+			let binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
+			let binance_api_secret = env::var("OE_BINANCE_API_SECRET").unwrap_or("".to_string());
+			let binance_api_base_url = env::var("OE_BINANCE_API_BASE_URL").ok();
+			let binance_api = Arc::new(BinanceApi::new(
+				binance_api_key,
+				binance_api_secret,
+				binance_api_base_url,
+			));
+
+			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
+
+			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new(&args.ethereum_url);
+			let accounting_contract_client = AccountingContractClient::new(
+				ethereum_rpc_provider,
+				//todo: from CLI
+				"0xb0830ef478a215ed393c20a0c97aa69869a0beea".parse().unwrap(),
+			);
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -146,6 +168,9 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
 				storage_db.clone(),
+				binance_api,
+				solana_client,
+				Arc::new(accounting_contract_client),
 			)?;
 
 			let intent_id_store: Arc<Box<dyn IntentIdStore>> =

@@ -9,8 +9,15 @@ async-trait = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
+rust_decimal = { workspace = true }
+tokio = { workspace = true }
 
 # Local dependencies
+accounting-contract-client = { workspace = true }
+alloy = { workspace = true }
+base58 = { workspace = true }
+binance-api = { workspace = true }
+ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
@@ -21,6 +28,7 @@ parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
+solana = { workspace = true }
 
 [lints]
 workspace = true

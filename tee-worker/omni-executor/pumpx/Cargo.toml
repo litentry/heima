@@ -5,11 +5,13 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+async-trait = { workspace = true }
 base58 = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true, features = ["client"] }
 libsecp256k1 = { workspace = true }
 log = { workspace = true }
+mockall = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 reqwest = { workspace = true }
@@ -29,3 +31,6 @@ executor-primitives = { workspace = true }
 
 [lints]
 workspace = true
+
+[features]
+mocks = []

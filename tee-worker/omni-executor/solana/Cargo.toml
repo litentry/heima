@@ -1,19 +1,18 @@
 [package]
-name = "solana-intent-executor"
+name = "solana"
 version = "0.1.0"
 authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-async-trait = { workspace = true }
-executor-core = { workspace = true }
 log = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
-executor-primitives = { workspace = true }
 pumpx = { workspace = true }
 
 [lints]
