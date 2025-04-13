@@ -55,6 +55,8 @@ RUN apt-get install -y \
 # Get Rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 
+RUN apt-get install clang
+
 # Add .cargo/bin to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
 
