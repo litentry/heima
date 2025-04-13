@@ -233,7 +233,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9240,
+	spec_version: 9241,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1427,8 +1427,8 @@ construct_runtime! {
 		TechnicalCommittee: pallet_collective::<Instance2> = 24,
 		TechnicalCommitteeMembership: pallet_membership::<Instance2> = 25,
 		Bounties: pallet_bounties = 26,
-		Tips: pallet_tips = 27,
-		ParachainIdentity: pallet_identity = 28,
+		ParachainIdentity: pallet_identity = 27,
+		Tips: pallet_tips = 28,
 
 		// Parachain
 		ParachainSystem: cumulus_pallet_parachain_system = 30,
@@ -1463,30 +1463,25 @@ construct_runtime! {
 		Assets: pallet_assets = 56,
 		MessageQueue: pallet_message_queue = 57,
 
+		// Local pallets
 		ChainBridge: pallet_chain_bridge= 60,
 		BridgeTransfer: pallet_bridge_transfer = 61,
 		ExtrinsicFilter: pallet_extrinsic_filter = 63,
-		IdentityManagement: pallet_identity_management = 64,
-		AssetManager: pallet_asset_manager = 65,
-		VCManagement: pallet_vc_management = 66,
-		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 67,
-		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 68,
-		Bitacross: pallet_bitacross = 70,
+		AssetManager: pallet_asset_manager = 64,
+		Teebag: pallet_teebag = 65,
+		AssetsHandler: pallet_assets_handler = 68,
 		EvmAssertions: pallet_evm_assertions = 71,
 
-		// Developer council
 		DeveloperCommittee: pallet_collective::<Instance3> = 73,
 		DeveloperCommitteeMembership: pallet_membership::<Instance3> = 74,
 		ScoreStaking: pallet_score_staking = 75,
 
-		// New Bridge Added
-		AssetsHandler: pallet_assets_handler = 76,
-
+		IdentityManagement: pallet_identity_management = 80,
+		VCManagement: pallet_vc_management = 81,
+		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 82,
+		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 83,
 		OmniAccount: pallet_omni_account = 84,
 		OmniBridge: pallet_omni_bridge = 85,
-
-		// TEE
-		Teebag: pallet_teebag = 93,
 
 		// Frontier
 		EVM: pallet_evm = 120,
@@ -1499,15 +1494,15 @@ construct_runtime! {
 		InvestingPool: pallet_investing_pool = 153,
 		AIUSDConvertor: pallet_aiusd_convertor = 154,
 
-		// New Goverance
+		// OpenGov
 		ConvictionVoting: pallet_conviction_voting = 170,
 		Referenda: pallet_referenda = 171,
 		Origins: governance_v2::pallet_custom_origins::{Origin} = 172,
 		Whitelist: pallet_whitelist::{Pallet, Call, Storage, Event<T>} = 173,
 
 		// TMP
-		// State Trie Migration
 		StateTrieMigration: pallet_state_trie_migration = 251,
+		Bitacross: pallet_bitacross = 252, // TODO: remove this
 		AccountFix: pallet_account_fix = 254,
 		Sudo: pallet_sudo = 255,
 	}
