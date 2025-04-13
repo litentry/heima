@@ -65,8 +65,8 @@ impl GasType {
 #[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiResponse<T: Codec> {
-	code: u32,
-	message: String,
+	pub code: u32,
+	pub message: String,
 	pub data: T,
 }
 
@@ -180,9 +180,9 @@ pub struct CreateMarketOrderTxBody {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMarketOrderTxResponseData {
-	pub chain_id: u32,
-	pub order_id: u32,
-	pub tx_hash: Vec<String>,
+	pub chain_id: Option<u32>,
+	pub order_id: Option<u32>,
+	pub tx_hash: Option<Vec<String>>,
 }
 
 // /v3/trade/create_transfer_tx
@@ -263,7 +263,7 @@ pub struct CreateLimitOrderBody {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderInfoResponseData {
-	pub order_id: u32,
+	pub order_id: Option<u32>,
 }
 
 // /v3/account/verify_google_code
