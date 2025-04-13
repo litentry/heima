@@ -75,7 +75,7 @@ WORKDIR $BIN_DIR
 
 RUN apt update && apt install -y ca-certificates && apt clean
 
-COPY --from=sgx-builder $BUILD_DIR/omni-executor-worker $BIN_DIR/omni-executor-worker
+COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
@@ -85,10 +85,10 @@ RUN groupadd -g 1000 ubuntu && \
     mkdir -p /dev/attestation && \
     chown -R ubuntu:ubuntu /dev/attestation
 
-RUN chmod +x $BIN_DIR/omni-executor-worker
+RUN chmod +x $BIN_DIR/omni-executor
 RUN chown ubuntu:ubuntu *
-RUN ldd $BIN_DIR/omni-executor-worker && $BIN_DIR/omni-executor-worker --version
+RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
 RUN ls -al $BIN_DIR
 
 USER ubuntu
-CMD ["$BIN_DIR/omni-executor-worker"]
+CMD ["$BIN_DIR/omni-executor"]
