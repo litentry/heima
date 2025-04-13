@@ -15,7 +15,7 @@ pub type SendOrderTxResponse = ApiResponse<SendOrderTxResponseData>;
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfoResponseData>;
 pub type OrderInfoResponse = ApiResponse<OrderInfoResponseData>;
 pub type VerifyGoogleCodeResponse = ApiResponse<VerifyGoogleCodeResponseData>;
-pub type AddWalletResponse = ApiResponse<()>;
+pub type AddWalletResponse = ApiResponse<EmptyResponse>;
 pub type CreateTransferUnsignedTxResponse = ApiResponse<CreateTransferUnsignedTxResponseData>;
 pub type SendTransferTxResponse = ApiResponse<SendTransferTxResponseData>;
 
@@ -74,8 +74,10 @@ impl<T: Codec> ApiResponse<T> {
 	}
 }
 
-// /v3/trade/create_transfer_unsigned_tx
+#[derive(Deserialize, Serialize, Encode, Decode, PartialEq, Eq, Debug, Clone, Default)]
+pub struct EmptyResponse {}
 
+// /v3/trade/create_transfer_unsigned_tx
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransferUnsignedTxBody {
@@ -96,7 +98,6 @@ pub struct CreateTransferUnsignedTxResponseData {
 }
 
 // /v3/trade/send_transfer_tx
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SendTransferTxBody {
@@ -112,7 +113,6 @@ pub struct SendTransferTxResponseData {
 }
 
 // /v3/account/user_connect
-
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserConnectBody {
@@ -129,7 +129,6 @@ pub struct UserConnectResponseData {
 }
 
 // /v3/trade/create_market_order_unsigned_tx
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMarketOrderUnsignedTxBody {
@@ -204,7 +203,6 @@ pub struct CreateTransferTxResponseData {
 }
 
 // /v3/trade/send_order_tx
-
 #[derive(Deserialize, Serialize, Encode, Decode)]
 #[serde(rename_all = "camelCase")]
 pub struct SendOrderTxBody {
