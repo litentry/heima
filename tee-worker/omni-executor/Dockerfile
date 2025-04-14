@@ -106,10 +106,13 @@ RUN groupadd -g 1000 ubuntu && \
     mkdir -p /dev/attestation && \
     chown -R ubuntu:ubuntu /dev/attestation /wkdir
 
-RUN chmod +x $BIN_DIR/omni-executor
-RUN chown ubuntu:ubuntu *
-RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
-RUN ls -al $BIN_DIR
+RUN chmod +x $BIN_DIR/omni-executor && \
+    chown ubuntu:ubuntu * && \
+    ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version && \
+    ls -al $BIN_DIR 
 
 USER ubuntu
+
+ENTRYPOINT [ "/usr/bin/gramine-sgx" ]
+
 CMD ["$BIN_DIR/omni-executor"]
