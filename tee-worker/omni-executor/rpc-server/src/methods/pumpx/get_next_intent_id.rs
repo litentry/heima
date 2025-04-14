@@ -14,12 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::server::RpcContext;
 use crate::ErrorCode;
+use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
 use executor_primitives::AccountId;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use log::error;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -30,22 +29,20 @@ pub struct GetNextIntentIdParams {
 pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_getNextIntentId", |params, ctx, _| async move {
-			match params.parse::<GetNextIntentIdParams>() {
-				Ok(params) => {
-					let account = Identity::from_web2_account(
-						params.user_id.as_str(),
-						Web2IdentityType::Pumpx,
-					)
+			let params = params.parse::<GetNextIntentIdParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+			})?;
+
+			let account =
+				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
 					.to_omni_account();
-					let intent_id =
-						ctx.intent_id_store.get(&AccountId::from(account)).await.map_err(|e| {
-							error!("Could not get IntentId from store: {:?}", e);
-							<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
-						})?;
-					Ok::<u32, ErrorObject>(intent_id + 1)
-				},
-				Err(_) => Err(ErrorCode::ParseError.into()),
-			}
+			let intent_id =
+				ctx.intent_id_store.get(&AccountId::from(account)).await.map_err(|e| {
+					log::error!("Could not get IntentId from store: {:?}", e);
+					PumpxRpcError::from_error_code(ErrorCode::InternalError)
+				})?;
+			Ok::<u32, ErrorObject>(intent_id + 1)
 		})
 		.expect("Failed to register getIntentId method");
 }

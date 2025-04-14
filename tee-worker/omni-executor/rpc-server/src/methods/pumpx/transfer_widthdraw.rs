@@ -1,14 +1,16 @@
 use crate::{
-	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode,
+	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
+	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use jsonrpsee::RpcModule;
+use native_task_handler::NativeTaskOk;
 use pumpx::types::CreateTransferTxResponse;
 use serde::Serialize;
+
+use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
@@ -53,8 +55,10 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_transferWithdraw", |params, ctx, _| async move {
-			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-			let params = params.parse::<TransferWithdrawParams>()?;
+			let params = params.parse::<TransferWithdrawParams>().map_err(|_| {
+				log::error!("Failed to parse params");
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+			})?;
 
 			log::debug!("Received pumpx_transferWithdraw, user_id: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}", 
 		params.user_id, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
@@ -82,47 +86,23 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+				log::error!("Failed to verify auth token");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				)));
 			}
 
-			let (response_sender, response_receiver) = oneshot::channel();
-
-			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
-				log::error!("Failed to send request to native call executor");
-				return Err(internal_error);
-			}
-
-			match response_receiver.await {
-				Ok(response) => {
-					let native_task_response: NativeTaskResponse =
-						Decode::decode(&mut response.as_slice())
-							.map_err(|_| internal_error.clone())?;
-					match native_task_response {
-						Ok(NativeTaskOk::PumpxTransferWithdraw(response)) => {
-							Ok(TransferWithdrawResponse { backend_response: response })
-						},
-						Err(NativeTaskError::InternalError) => {
-							log::error!("Internal error in native task");
-							Err(internal_error)
-						},
-						Err(native_task_error) => {
-							log::error!("Native task error: {:?}", native_task_error);
-							Err(ErrorCode::ServerError(get_native_task_error_code(
-								&native_task_error,
-							))
-							.into())
-						},
-						_ => {
-							log::error!("Unexpected response type");
-							Err(internal_error)
-						},
-					}
+			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+				NativeTaskOk::PumpxTransferWithdraw(response) => {
+					check_pumpx_api_response(response.clone(), "Transfer withdraw".into())?;
+					Ok(TransferWithdrawResponse { backend_response: response })
 				},
-				Err(e) => {
-					log::error!("Failed to receive response from native call handler: {:?}", e);
-					Err(internal_error)
+				_ => {
+					log::error!("Unexpected response type");
+					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
-			}
+			})
+			.await
 		})
 		.expect("Failed to register pumpx_transferWithdraw method");
 }

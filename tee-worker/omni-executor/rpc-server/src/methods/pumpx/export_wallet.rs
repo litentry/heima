@@ -1,16 +1,18 @@
 use crate::{
-	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode,
+	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
+	Deserialize, ErrorCode,
 };
 use ethers::types::Bytes;
 use executor_core::native_task::*;
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use jsonrpsee::RpcModule;
+use native_task_handler::NativeTaskOk;
 use rsa::Oaep;
 use sha2::Sha256;
+
+use super::common::handle_pumpx_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
@@ -43,8 +45,10 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
-			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-			let params = params.parse::<ExportWalletParams>()?;
+			let params = params.parse::<ExportWalletParams>().map_err(|_| {
+				log::error!("Failed to parse params");
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+			})?;
 
 			log::debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
 
@@ -53,14 +57,18 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|_| {
-					ErrorObject::owned::<()>(
+					log::error!("Failed to decrypt shielded value");
+					PumpxRpcError::from_code_and_message(
 						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed",
-						None,
+						"Shielded value decryption failed".into(),
 					)
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				ErrorObject::owned::<()>(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed", None)
+				log::error!("Failed to convert AesKey");
+				PumpxRpcError::from_code_and_message(
+					AES_KEY_CONVERT_FAILED_CODE,
+					"AesKey convert failed".into(),
+				)
 			})?;
 
 			// verify user_id and user_email matches
@@ -86,49 +94,23 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				)));
 			}
 
-			let (response_sender, response_receiver) = oneshot::channel();
-
-			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
-				log::error!("Failed to send request to native call executor");
-				return Err(internal_error);
-			}
-
-			match response_receiver.await {
-				Ok(response) => {
-					let native_task_response: NativeTaskResponse =
-						Decode::decode(&mut response.as_slice())
-							.map_err(|_| internal_error.clone())?;
-					match native_task_response {
-						Ok(NativeTaskOk::PumpxExportWallet(wallet)) => {
-							let encrypted_wallet: SerdeAesOutput =
-								aes_encrypt_default(&aes_key, &wallet).into();
-							Ok(encrypted_wallet)
-						},
-						Err(NativeTaskError::InternalError) => {
-							log::error!("Internal error in native task");
-							Err(internal_error)
-						},
-						Err(native_task_error) => {
-							log::error!("Native task error: {:?}", native_task_error);
-							Err(ErrorCode::ServerError(get_native_task_error_code(
-								&native_task_error,
-							))
-							.into())
-						},
-						_ => {
-							log::error!("Unexpected response type");
-							Err(internal_error)
-						},
-					}
+			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+				NativeTaskOk::PumpxExportWallet(wallet) => {
+					let encrypted_wallet: SerdeAesOutput =
+						aes_encrypt_default(&aes_key, &wallet).into();
+					Ok(encrypted_wallet)
 				},
-				Err(e) => {
-					log::error!("Failed to receive response from native call handler: {:?}", e);
-					Err(internal_error)
+				_ => {
+					log::error!("Unexpected response type");
+					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
-			}
+			})
+			.await
 		})
 		.expect("Failed to register pumpx_exportWallet method");
 }

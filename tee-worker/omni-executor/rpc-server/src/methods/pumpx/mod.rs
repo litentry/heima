@@ -1,6 +1,9 @@
 use crate::server::RpcContext;
 use jsonrpsee::RpcModule;
 
+mod common;
+use common::*;
+
 mod request_jwt;
 use request_jwt::*;
 

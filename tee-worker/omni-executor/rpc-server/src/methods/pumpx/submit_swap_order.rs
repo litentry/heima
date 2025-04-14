@@ -1,6 +1,7 @@
+use crate::methods::pumpx::PumpxRpcError;
 use crate::{
-	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth_token_authentication,
-	Decode, Deserialize, ErrorCode,
+	error_code::*, server::RpcContext, verify_auth::verify_auth_token_authentication, Decode,
+	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
@@ -12,12 +13,13 @@ use heima_primitives::{
 	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
 	SolanaToken, SwapOrder, Web2IdentityType,
 };
-use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
-use native_task_handler::{NativeTaskOk, NativeTaskResponse};
+use native_task_handler::NativeTaskOk;
 use pumpx::constants::*;
 use pumpx::types::{CreateMarketOrderTxResponse, OrderInfoResponse, SwapType};
 use serde::Serialize;
+
+use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -101,41 +103,12 @@ struct BackendResponse {
 	pub market_order_response: Option<CreateMarketOrderTxResponse>,
 }
 
-#[derive(Serialize, Debug)]
-pub struct SubmitSwapOrderError {
-	pub code: i32,
-	pub message: String,
-}
-
-impl SubmitSwapOrderError {
-	pub fn from_api_response(code: i32, message: String) -> Self {
-		Self { code, message }
-	}
-
-	pub fn from_error_code(error_code: ErrorCode) -> Self {
-		let (code, message) = match error_code {
-			ErrorCode::ParseError => (-32700, "Parse error"),
-			ErrorCode::InvalidParams => (-32602, "Invalid params"),
-			ErrorCode::InternalError => (-32603, "Internal error"),
-			ErrorCode::ServerError(n) => (n, "Server error"),
-			_ => todo!(),
-		};
-		Self { code, message: message.to_string() }
-	}
-}
-
-impl From<SubmitSwapOrderError> for ErrorObjectOwned {
-	fn from(error: SubmitSwapOrderError) -> Self {
-		ErrorObjectOwned::owned(error.code, error.message, None::<()>)
-	}
-}
-
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_submitSwapOrder", |params, ctx, _| async move {
 			let params = params.parse::<SubmitSwapOrderParams>().map_err(|_| {
 				log::error!("Failed to parse params");
-				SubmitSwapOrderError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
 			log::debug!("Received pumpx_submitSwapOrder, user_id: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}", 
@@ -147,31 +120,31 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				.is_err()
 			{
 				log::error!("Failed to verify auth token");
-				return Err(SubmitSwapOrderError::from_error_code(ErrorCode::ServerError(
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
 			}
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				log::error!("Failed to get from chain asset");
-				SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+				PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 			})?;
 			let to_chain_asset = params.try_get_to_chain_asset().map_err(|_| {
 				log::error!("Failed to get to chain asset");
-				SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+				PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 			})?;
 
 			if params.order_type == PumpxOrderType::Limit
 				&& !from_chain_asset.is_same_chain(&to_chain_asset)
 			{
 				log::error!("Limit order must be on the same chain");
-				return Err(SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams));
+				return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
 			}
 
 			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
 				.map_err(|_| {
 					log::error!("Failed to convert from_amount to BoundedVec");
-					SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
@@ -179,7 +152,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				storage.get(&(user_identity.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				log::error!("Failed to get access token from storage");
-				return Err(SubmitSwapOrderError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
 			let swap_order = SwapOrder {
@@ -193,7 +166,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
 					log::error!("Failed to get user trade info");
-					SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
 			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
@@ -205,7 +178,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				SOLANA_CHAIN_ID => user_trade_info.data.gas_type_base.to_number() as u32,
 				_ => {
 					log::error!("Unsupported chain id: {}", params.to_chain_id);
-					return Err(SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams));
+					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
 				},
 			};
 			let token_cap = params
@@ -213,7 +186,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				.map(|token_ca| {
 					BoundedVec::try_from(token_ca.as_bytes().to_vec()).map_err(|_| {
 						log::error!("Failed to convert token_cap");
-						SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+						PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 					})
 				})
 				.transpose()?;
@@ -222,14 +195,14 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				.map(|price_usd| {
 					BoundedVec::try_from(price_usd.as_bytes().to_vec()).map_err(|_| {
 						log::error!("Failed to convert price_usd");
-						SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+						PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 					})
 				})
 				.transpose()?;
 			let usd_worth =
 				BoundedVec::try_from(params.usd_worth.as_bytes().to_vec()).map_err(|_| {
 					log::error!("Failed to convert usd_worth");
-					SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
 			let pumpx_config = PumpxConfig {
@@ -241,7 +214,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				)
 				.map_err(|_| {
 					log::error!("Failed to convert from_token_ca");
-					SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?,
 				to_chain_id: params.to_chain_id,
 				to_token_ca: BoundedVec::try_from(
@@ -249,12 +222,12 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				)
 				.map_err(|_| {
 					log::error!("Failed to convert to_token_ca");
-					SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?,
 				from_amount: BoundedVec::try_from(params.from_amount.as_bytes().to_vec()).map_err(
 					|_| {
 						log::error!("Failed to convert from_amount");
-						SubmitSwapOrderError::from_error_code(ErrorCode::InvalidParams)
+						PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 					},
 				)?,
 				double_out: params.double_out,
@@ -284,43 +257,18 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
 
-			let (response_sender, response_receiver) = oneshot::channel();
-
-			ctx.native_task_sender.send((wrapper, response_sender)).await.map_err(|_| {
-				log::error!("Failed to send request to native call executor");
-				SubmitSwapOrderError::from_error_code(ErrorCode::InternalError)
-			})?;
-
-			let response = response_receiver.await.map_err(|e| {
-				log::error!("Failed to receive response from native call handler: {:?}", e);
-				SubmitSwapOrderError::from_error_code(ErrorCode::InternalError)
-			})?;
-
-			let native_task_response: NativeTaskResponse = Decode::decode(&mut response.as_slice())
-				.map_err(|_| {
-					log::error!("Failed to decode native task response");
-					SubmitSwapOrderError::from_error_code(ErrorCode::InternalError)
-				})?;
-
-			match native_task_response {
-				Ok(NativeTaskOk::IntentSwapResponse(swap_response)) => {
+			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+				NativeTaskOk::IntentSwapResponse(swap_response) => {
 					if params.order_type == PumpxOrderType::Market {
 						let market_order_response: CreateMarketOrderTxResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|_| {
 								log::error!("Failed to decode market order response");
-								SubmitSwapOrderError::from_error_code(ErrorCode::InternalError)
+								PumpxRpcError::from_error_code(ErrorCode::InternalError)
 							})?;
-						if market_order_response.code != 10000 {
-							log::error!(
-								"Market order failed: code={}, message={}",
-								market_order_response.code,
-								market_order_response.message
-							);
-							return Err(SubmitSwapOrderError::from_api_response(
-								market_order_response.code as i32,
-								market_order_response.message,
-							));
-						}
+						check_pumpx_api_response(
+							market_order_response.clone(),
+							"Market order".into(),
+						)?;
 						let response = PumpxSubmitSwapOrderResponse {
 							backend_response: BackendResponse {
 								limit_order_response: None,
@@ -332,19 +280,12 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						let limit_order_response: OrderInfoResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|_| {
 								log::error!("Failed to decode limit order response");
-								SubmitSwapOrderError::from_error_code(ErrorCode::InternalError)
+								PumpxRpcError::from_error_code(ErrorCode::InternalError)
 							})?;
-						if limit_order_response.code != 10000 {
-							log::error!(
-								"Limit order failed: code={}, message={}",
-								limit_order_response.code,
-								limit_order_response.message
-							);
-							return Err(SubmitSwapOrderError::from_api_response(
-								limit_order_response.code as i32,
-								limit_order_response.message,
-							));
-						}
+						check_pumpx_api_response(
+							limit_order_response.clone(),
+							"Limit order".into(),
+						)?;
 						let response = PumpxSubmitSwapOrderResponse {
 							backend_response: BackendResponse {
 								limit_order_response: Some(limit_order_response),
@@ -354,15 +295,12 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						Ok(response)
 					}
 				},
-				Err(native_task_err) => {
-					log::error!("Failed to execute native task: {:?}", native_task_err);
-					Err(SubmitSwapOrderError::from_error_code(ErrorCode::InternalError))
-				},
 				_ => {
 					log::error!("Unexpected response type");
-					Err(SubmitSwapOrderError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
-			}
+			})
+			.await
 		})
 		.expect("Failed to register pumpx_submitSwapOrder method");
 }
