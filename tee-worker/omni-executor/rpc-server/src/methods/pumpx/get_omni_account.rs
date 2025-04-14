@@ -16,36 +16,31 @@
 
 use crate::server::RpcContext;
 use crate::ErrorCode;
-use executor_primitives::AccountId;
-use heima_primitives::{Identity, Web2IdentityType};
+use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
+use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use log::error;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
-pub struct GetNextIntentIdParams {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct GetOmniAccountParams {
 	pub user_id: String,
 }
 
-pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
+// TODO: the omni-account needs to be read from AccountStore once we enable it
+pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("pumpx_getNextIntentId", |params, ctx, _| async move {
-			match params.parse::<GetNextIntentIdParams>() {
+		.register_async_method("pumpx_getOmniAccount", |params, _, _| async move {
+			match params.parse::<GetOmniAccountParams>() {
 				Ok(params) => {
 					let account = Identity::from_web2_account(
 						params.user_id.as_str(),
 						Web2IdentityType::Pumpx,
 					)
 					.to_omni_account();
-					let intent_id =
-						ctx.intent_id_store.get(&AccountId::from(account)).await.map_err(|e| {
-							error!("Could not get IntentId from store: {:?}", e);
-							<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
-						})?;
-					Ok::<u32, ErrorObject>(intent_id + 1)
+					Ok::<String, ErrorObject>(account.to_hex())
 				},
 				Err(_) => Err(ErrorCode::ParseError.into()),
 			}
 		})
-		.expect("Failed to register getIntentId method");
+		.expect("Failed to register pumpx_getOmniAccount method");
 }

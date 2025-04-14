@@ -14,6 +14,7 @@ use sha2::Sha256;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
+	pub user_id: String,
 	pub user_email: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
@@ -27,14 +28,14 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: ExportWalletParams) -> Self {
 		Self {
 			task: NativeTask::PumpxExportWallet(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
+				Identity::from_web2_account(p.user_id.as_str(), Web2IdentityType::Pumpx),
 				p.google_code,
 				p.chain_id,
 				p.wallet_index,
 				p.wallet_address,
 			),
 			nonce: None,
-			auth: Some(OmniAuth::Email(p.email_code)),
+			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
 		}
 	}
 }
@@ -58,6 +59,24 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
 				ErrorObject::owned::<()>(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed", None)
 			})?;
+
+			// verify user_id and user_email matches
+			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
+				log::error!("Failed to call get_account_user_id");
+				return Err(
+					ErrorCode::ServerError(PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE).into()
+				);
+			};
+
+			if res.data.user_id != params.user_id {
+				log::error!(
+					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
+					params.user_id,
+					params.user_email,
+					res.data.user_id
+				);
+				return Err(ErrorCode::ServerError(USER_EMAIL_ID_MISMATCH_CODE).into());
+			}
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 

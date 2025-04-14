@@ -5,10 +5,11 @@ use types::{
 	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
-	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody, GetGasInfoBody,
-	GetGasInfoResponse, GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse,
-	SendTransferTxBody, SendTransferTxResponse, UserConnectBody, UserConnectResponse,
-	UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
+	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse,
+	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
+	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
+	VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -37,17 +38,18 @@ impl PumpxApi {
 	pub async fn user_connect(
 		&self,
 		access_token: &str,
+		user_id: String,
 		email: String,
 		invite_code: Option<String>,
 		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
-		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
-		let body = UserConnectBody { email: email.clone(), invite_code, google_code };
+		let endpoint = self.base_url.join("v3/account/user_connect").unwrap();
+		let body = UserConnectBody { email, invite_code, google_code, user_id };
 
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&body)
@@ -76,10 +78,10 @@ impl PumpxApi {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<VerifyGoogleCodeResponse, Error> {
-		let endpoint = format!("{}/v3/account/verify_google_code", self.base_url);
+		let endpoint = self.base_url.join("v3/account/verify_google_code").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&GoogleCode { google_code })
@@ -105,10 +107,10 @@ impl PumpxApi {
 		access_token: &str,
 		language: Option<String>,
 	) -> Result<AddWalletResponse, Error> {
-		let endpoint = format!("{}/v3/account/add_wallet", self.base_url);
+		let endpoint = self.base_url.join("v3/account/add_wallet").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.send()
@@ -132,9 +134,9 @@ impl PumpxApi {
 		&self,
 		access_token: &str,
 	) -> Result<UserTradeInfoResponse, Error> {
-		let endpoint = format!("{}/v3/account/get_user_trade_info", self.base_url);
+		let endpoint = self.base_url.join("v3/account/get_user_trade_info").unwrap();
 		self.http_client
-			.get(&endpoint)
+			.get(endpoint)
 			.bearer_auth(access_token)
 			.send()
 			.await?
@@ -147,10 +149,10 @@ impl PumpxApi {
 		access_token: &str,
 		body: CreateMarketOrderUnsignedTxBody,
 	) -> Result<CreateMarketOrderUnsignedTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/create_market_order_unsigned_tx", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/create_market_order_unsigned_tx").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.bearer_auth(access_token)
 			.json(&body)
 			.send()
@@ -181,10 +183,10 @@ impl PumpxApi {
 		access_token: &str,
 		body: SendOrderTxBody,
 	) -> Result<SendOrderTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/send_order_tx", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/send_order_tx").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.bearer_auth(access_token)
 			.json(&body)
 			.send()
@@ -211,9 +213,9 @@ impl PumpxApi {
 		access_token: &str,
 		body: CreateLimitOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
-		let endpoint = format!("{}/v3/trade/create_limit_order", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/create_limit_order").unwrap();
 		self.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.bearer_auth(access_token)
 			.json(&body)
 			.send()
@@ -227,10 +229,10 @@ impl PumpxApi {
 		access_token: &str,
 		data: CreateCrossOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
-		let endpoint = format!("{}/v3/trade/create_cross_order", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/create_cross_order").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.bearer_auth(access_token)
 			.json(&data)
 			.send()
@@ -253,10 +255,10 @@ impl PumpxApi {
 		access_token: &str,
 		data: CrossFailBody,
 	) -> Result<OrderInfoResponse, Error> {
-		let endpoint = format!("{}/v3/trade/cross_fail", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/cross_fail").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.bearer_auth(access_token)
 			.json(&data)
 			.send()
@@ -281,10 +283,10 @@ impl PumpxApi {
 		body: CreateTransferUnsignedTxBody,
 		language: Option<String>,
 	) -> Result<CreateTransferUnsignedTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/create_transfer_unsigned_tx", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/create_transfer_unsigned_tx").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&body)
@@ -317,10 +319,10 @@ impl PumpxApi {
 		body: SendTransferTxBody,
 		language: Option<String>,
 	) -> Result<SendTransferTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/send_transfer_tx", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/send_transfer_tx").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&body)
@@ -348,10 +350,10 @@ impl PumpxApi {
 		access_token: &str,
 		body: CreateMarketOrderTxBody,
 	) -> Result<CreateMarketOrderTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/create_market_order_tx", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/create_market_order_tx").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.bearer_auth(access_token)
 			.json(&body)
 			.send()
@@ -380,10 +382,10 @@ impl PumpxApi {
 		body: CreateTransferTxBody,
 		language: Option<String>,
 	) -> Result<CreateTransferTxResponse, Error> {
-		let endpoint = format!("{}/v3/trade/create_transfer_tx", self.base_url);
+		let endpoint = self.base_url.join("v3/trade/create_transfer_tx").unwrap();
 		let response = self
 			.http_client
-			.post(&endpoint)
+			.post(endpoint)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.json(&body)
@@ -415,15 +417,24 @@ impl PumpxApi {
 		access_token: &str,
 		chain_id: u32,
 	) -> Result<GetGasInfoResponse, Error> {
-		let endpoint = format!("{}/v1/trade/get_gas_info", self.base_url);
-		let body = GetGasInfoBody { chain_id };
+		let endpoint = self.base_url.join("v1/trade/get_gas_info").unwrap();
+		let params = GetGasInfoParams { chain_id };
 		self.http_client
-			.get(&endpoint)
+			.get(endpoint)
 			.bearer_auth(access_token)
-			.json(&body)
+			.query(&params)
 			.send()
 			.await?
 			.json()
 			.await
+	}
+
+	pub async fn get_account_user_id(
+		&self,
+		email: String,
+	) -> Result<GetAccountUserIdResponse, Error> {
+		let endpoint = self.base_url.join("v3/account/get_account_user_id").unwrap();
+		let params = GetAccountUserIdParams { email };
+		self.http_client.get(endpoint).query(&params).send().await?.json().await
 	}
 }
