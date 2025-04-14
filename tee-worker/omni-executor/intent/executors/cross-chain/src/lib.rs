@@ -647,6 +647,64 @@ impl<
 								log::error!("Failed to transfer SPL");
 							})?;
 					}
+
+					debug!("Waiting for deposit to be confirmed on Binance...");
+					let mut deposit_confirmed = false;
+					let start_time = std::time::Instant::now();
+					let timeout = Duration::from_secs(300); // 5 minute timeout
+
+					while !deposit_confirmed && start_time.elapsed() < timeout {
+						let Ok(deposit_history) = self
+							.binance_api
+							.wallet()
+							.get_deposit_history(Some(binance_coin_name.clone()))
+							.await
+						else {
+							log::error!("Failed to get deposit history");
+							continue;
+						};
+
+						// Check if there's a recent successful deposit
+						for deposit in deposit_history {
+							let deposit_amount: u64 = match Decimal::from_str(&deposit.amount) {
+								Ok(deposit_amount) => deposit_amount.to_u64().unwrap_or(0),
+								Err(_) => {
+									log::error!("Failed to parse deposit amount");
+									continue;
+								},
+							};
+							if deposit.status == 1 && // 1 = completed
+							   deposit.coin == binance_coin_name &&
+							   deposit.network == binance_network_info.network &&
+                               deposit_amount == amount_to_transfer
+							{
+								deposit_confirmed = true;
+								debug!(
+									"Deposit confirmed on Binance for {} {}",
+									deposit.amount, binance_coin_name
+								);
+								break;
+							}
+						}
+
+						if !deposit_confirmed {
+							debug!("Deposit not confirmed yet, waiting 5 seconds...");
+							sleep(Duration::from_secs(5)).await;
+						}
+					}
+
+					if !deposit_confirmed {
+						log::error!("Deposit not confirmed within timeout period");
+						let body = CrossFailBody {
+							request_id: intent_id,
+							fail_reason: "Deposit not confirmed on Binance".to_string(),
+						};
+						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+							log::error!("Failed to notify pumpx-signer");
+						})?;
+						return Err(());
+					}
+
 					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
 						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
 						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
