@@ -19,46 +19,14 @@ pub struct RunArgs {
 	pub parentchain_url: String,
 	pub ethereum_url: String,
 	pub solana_url: String,
-	pub bsc_url: Option<String>,
-	pub bsc_testnet_url: Option<String>,
 	pub pumpx_signer_url: String,
 	pub worker_url: String,
+	pub bsc_url: Option<String>,
+	pub bsc_testnet_url: Option<String>,
 	#[arg(long, short = 'b', default_value = "0", help = "Start block to sync from parentchain")]
 	pub start_block: u64,
-	#[arg(
-		short,
-		long,
-		default_value = "local/keystore/substrate_alice.bin",
-		value_name = "keystore file path"
-	)]
-	pub substrate_keystore_path: String,
-	#[arg(
-		short,
-		long,
-		default_value = "local/keystore/aes_256_key.bin",
-		value_name = "Aes256 keystore file path"
-	)]
-	pub aes256_key_store_path: String,
-	#[arg(
-		long,
-		default_value = "local/keystore/auth_token_key.bin",
-		value_name = "Auth token (JWT) keystore file path"
-	)]
-	pub auth_token_key_store_path: String,
-	#[arg(
-		short,
-		long,
-		default_value = "local/keystore/pumpx_auth_key.bin",
-		value_name = "PumpX auth keystore file path"
-	)]
-	pub pumpx_auth_key_store_path: String,
-	#[arg(
-		short,
-		long,
-		default_value = "local/log/parentchain_last_log.bin",
-		value_name = "log file path"
-	)]
-	pub log_path: String,
+	#[arg(short, long, default_value = "local", value_name = "local directory path")]
+	pub local_directory_path: String,
 	#[arg(
 		short,
 		long,
@@ -66,29 +34,10 @@ pub struct RunArgs {
 		value_name = "delegation contract address"
 	)]
 	pub delegation_contract_address: String,
-	#[arg(
-		short,
-		long,
-		default_value = "local/keystore/shielding_key.bin",
-		value_name = "Shielding key store file path"
-	)]
-	pub shielding_key_store_path: String,
-	#[arg(
-		short,
-		long,
-		default_value = "local/untrusted-keystore/accounting_ecdsa_signer_key.bin",
-		value_name = "Accounting contract ecdsa keystore file path"
-	)]
-	pub accounting_ecdsa_signer_key_store_path: String,
 }
 
 #[derive(Args)]
 pub struct GenKeyArgs {
-	#[arg(
-		short,
-		long,
-		default_value = "local/keystore/substrate_alice.bin",
-		value_name = "keystore file path"
-	)]
-	pub substrate_keystore_path: String,
+	#[arg(short, long, default_value = "local", value_name = "local directory path")]
+	pub local_directory_path: String,
 }

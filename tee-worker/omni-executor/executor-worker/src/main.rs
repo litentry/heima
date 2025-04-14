@@ -51,6 +51,7 @@ use solana::SolanaClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
+use std::path::Path;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
@@ -80,12 +81,22 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			let auth_token_key_store =
-				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
+			let auth_token_key_store = AuthTokenKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/auth_token_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
 
-			let pumpx_auth_key_store =
-				pumpx::auth_key_store::AuthKeyStore::new(args.pumpx_auth_key_store_path.clone());
+			let pumpx_auth_key_store = pumpx::auth_key_store::AuthKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/pumpx_auth_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 
 			let pumpx_signer_key =
 				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
@@ -93,8 +104,13 @@ async fn main() -> Result<(), ()> {
 			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
 			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
 
-			let accounting_ecdsa_signer_key =
-				EcdsaKeyStore::new(args.accounting_ecdsa_signer_key_store_path.clone());
+			let accounting_ecdsa_signer_key = EcdsaKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("untrusted-keystore/accounting_ecdsa_signer_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 
 			let accounting_ecdsa_signer_key =
 				accounting_ecdsa_signer_key.read().expect("Could not read accounting ecsa key");
@@ -113,8 +129,13 @@ async fn main() -> Result<(), ()> {
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
 
-			let substrate_key_store =
-				Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path.clone()));
+			let substrate_key_store = Arc::new(SubstrateKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/substrate_alice.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			));
 			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
 			let signer_account_id: AccountId =
 				parentchain_signer.public_key().to_account_id().to_primitive_type();
@@ -133,7 +154,13 @@ async fn main() -> Result<(), ()> {
 				parentchain_signer.clone(),
 				signer_account_nonce,
 			));
-			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
+			let aes256_key_store = Aes256KeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/aes_256_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
 			let pumpx_signer_client: Arc<Box<dyn SignerClient>> =
@@ -219,7 +246,13 @@ async fn main() -> Result<(), ()> {
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
 
-			let shielding_key_store = ShieldingKeyStore::new(args.shielding_key_store_path.clone());
+			let shielding_key_store = ShieldingKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/shielding_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 
 			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
 			let shielding_pubkey = shielding_key.public_key();
@@ -267,7 +300,13 @@ async fn main() -> Result<(), ()> {
 			}
 		},
 		Commands::GenKey(args) => {
-			let key_store = Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path));
+			let key_store = Arc::new(SubstrateKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/substrate_alice.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			));
 			let _ = parentchain_signer::get_signer(key_store);
 		},
 	}
@@ -287,7 +326,11 @@ async fn listen_to_parentchain(
 		&args.parentchain_url,
 		sub_stop_receiver,
 		storage_db,
-		&args.log_path,
+		&Path::new(&args.local_directory_path)
+			.join("log/parentchain_last_log.bin")
+			.into_os_string()
+			.into_string()
+			.unwrap(),
 	)
 	.await?;
 
