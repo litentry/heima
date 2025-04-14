@@ -73,6 +73,13 @@ pub struct RunArgs {
 		value_name = "Shielding key store file path"
 	)]
 	pub shielding_key_store_path: String,
+	#[arg(
+		short,
+		long,
+		default_value = "local/untrusted-keystore/accounting_ecdsa_signer_key.bin",
+		value_name = "Accounting contract ecdsa keystore file path"
+	)]
+	pub accounting_ecdsa_signer_key_store_path: String,
 }
 
 #[derive(Args)]
