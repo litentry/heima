@@ -23,6 +23,7 @@ pub type SendTransferTxResponse = ApiResponse<SendTransferTxResponseData>;
 pub type CreateMarketOrderTxResponse = ApiResponse<CreateMarketOrderTxResponseData>;
 pub type CreateTransferTxResponse = ApiResponse<CreateTransferTxResponseData>;
 pub type GetGasInfoResponse = ApiResponse<GetGasInfoResponseData>;
+pub type GetAccountUserIdResponse = ApiResponse<GetAccountUserIdResponseData>;
 
 #[derive(Deserialize_repr, Serialize_repr, Debug)]
 #[allow(clippy::upper_case_acronyms)]

@@ -6,10 +6,10 @@ use types::{
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
 	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
-	GetAccountUserIdParams, GetAccountUserIdResponseData, GetGasInfoParams, GetGasInfoResponse,
-	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
-	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
-	VerifyGoogleCodeResponse,
+	GetAccountUserIdParams, GetAccountUserIdResponse, GetAccountUserIdResponseData,
+	GetGasInfoParams, GetGasInfoResponse, GoogleCode, OrderInfoResponse, SendOrderTxBody,
+	SendOrderTxResponse, SendTransferTxBody, SendTransferTxResponse, UserConnectBody,
+	UserConnectResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -417,7 +417,7 @@ impl PumpxApi {
 		access_token: &str,
 		chain_id: u32,
 	) -> Result<GetGasInfoResponse, Error> {
-		let endpoint = format!("{}/v1/trade/get_gas_info", self.base_url);
+		let endpoint = format!("{}v1/trade/get_gas_info", self.base_url);
 		let params = GetGasInfoParams { chain_id };
 		self.http_client
 			.get(&endpoint)
@@ -432,8 +432,9 @@ impl PumpxApi {
 	pub async fn get_account_user_id(
 		&self,
 		email: String,
-	) -> Result<GetAccountUserIdResponseData, Error> {
-		let endpoint = format!("{}/v3/account/get_account_user_id", self.base_url);
+	) -> Result<GetAccountUserIdResponse, Error> {
+		// TODO: why no need `/` here?
+		let endpoint = format!("{}v3/account/get_account_user_id", self.base_url);
 		let params = GetAccountUserIdParams { email };
 		self.http_client.get(&endpoint).query(&params).send().await?.json().await
 	}
