@@ -79,10 +79,10 @@ LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
 ENV BUILD_DIR=$HOME/tee-worker/omni-executor
-ENV BIN_DIR=/usr/local/bin
+ENV BIN_DIR=/wkdir
 WORKDIR $BIN_DIR
 
-RUN apt update && apt install -y ca-certificates && apt clean
+RUN apt update && apt install -y ca-certificates && apt clean && mkdir -p /wkdir /wkdir/local
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
@@ -92,12 +92,14 @@ COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
 RUN groupadd -g 1000 ubuntu && \
     useradd -r -u 1000 -g ubuntu ubuntu && \
     mkdir -p /dev/attestation && \
-    chown -R ubuntu:ubuntu /dev/attestation
+    chown -R ubuntu:ubuntu /dev/attestation /wkdir
 
 RUN chmod +x $BIN_DIR/omni-executor
 RUN chown ubuntu:ubuntu *
 RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
 RUN ls -al $BIN_DIR
+
+WORKDIR /wkdir
 
 USER ubuntu
 CMD ["$BIN_DIR/omni-executor"]
