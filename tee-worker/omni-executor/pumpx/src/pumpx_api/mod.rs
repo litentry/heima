@@ -5,10 +5,10 @@ use types::{
 	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
-	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody, GoogleCode,
-	OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
-	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
-	VerifyGoogleCodeResponse,
+	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody, GetGasInfoBody,
+	GetGasInfoResponse, GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse,
+	SendTransferTxBody, SendTransferTxResponse, UserConnectBody, UserConnectResponse,
+	UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -408,5 +408,22 @@ impl PumpxApi {
 			log::error!("Failed to parse create_transfer_tx response: {:?}", e);
 			e
 		})
+	}
+
+	pub async fn get_gas_info(
+		&self,
+		access_token: &str,
+		chain_id: u32,
+	) -> Result<GetGasInfoResponse, Error> {
+		let endpoint = format!("{}/v1/trade/get_gas_info", self.base_url);
+		let body = GetGasInfoBody { chain_id };
+		self.http_client
+			.get(&endpoint)
+			.bearer_auth(access_token)
+			.json(&body)
+			.send()
+			.await?
+			.json()
+			.await
 	}
 }

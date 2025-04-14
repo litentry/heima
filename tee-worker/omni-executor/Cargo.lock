@@ -3644,6 +3644,7 @@ dependencies = [
  "heima-authentication",
  "log",
  "parity-scale-codec",
+ "rand 0.8.5",
  "regex",
  "serde",
  "tokio",
@@ -3705,6 +3706,7 @@ name = "executor-worker"
 version = "0.1.0"
 dependencies = [
  "accounting-contract-client",
+ "alloy",
  "binance-api",
  "clap",
  "cross-chain-intent-executor",

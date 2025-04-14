@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+alloy = { workspace = true, features = ["signer-local"] }
 clap = { workspace = true, features = ["derive"] }
 env_logger = { workspace = true }
 hex = { workspace = true }
