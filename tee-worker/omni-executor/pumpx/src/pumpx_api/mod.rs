@@ -6,7 +6,7 @@ use types::{
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
 	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
-	GetAccountUserIdBody, GetAccountUserIdResponseData, GetGasInfoBody, GetGasInfoResponse,
+	GetAccountUserIdParams, GetAccountUserIdResponseData, GetGasInfoParams, GetGasInfoResponse,
 	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
 	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
 	VerifyGoogleCodeResponse,
@@ -418,11 +418,11 @@ impl PumpxApi {
 		chain_id: u32,
 	) -> Result<GetGasInfoResponse, Error> {
 		let endpoint = format!("{}/v1/trade/get_gas_info", self.base_url);
-		let body = GetGasInfoBody { chain_id };
+		let params = GetGasInfoParams { chain_id };
 		self.http_client
 			.get(&endpoint)
 			.bearer_auth(access_token)
-			.json(&body)
+			.query(&params)
 			.send()
 			.await?
 			.json()
@@ -434,7 +434,7 @@ impl PumpxApi {
 		email: String,
 	) -> Result<GetAccountUserIdResponseData, Error> {
 		let endpoint = format!("{}/v3/account/get_account_user_id", self.base_url);
-		let body = GetAccountUserIdBody { email };
-		self.http_client.get(&endpoint).json(&body).send().await?.json().await
+		let params = GetAccountUserIdParams { email };
+		self.http_client.get(&endpoint).query(&params).send().await?.json().await
 	}
 }

@@ -310,7 +310,7 @@ pub struct CrossFailBody {
 // /v1/trade/get_gas_info
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetGasInfoBody {
+pub struct GetGasInfoParams {
 	pub chain_id: u32,
 }
 
@@ -338,7 +338,7 @@ pub struct GasInfo {
 // /v3/account/get_account_user_id
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetAccountUserIdBody {
+pub struct GetAccountUserIdParams {
 	pub email: String,
 }
 
