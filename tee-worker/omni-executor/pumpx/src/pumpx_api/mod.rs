@@ -6,10 +6,10 @@ use types::{
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
 	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
-	GetAccountUserIdParams, GetAccountUserIdResponse, GetAccountUserIdResponseData,
-	GetGasInfoParams, GetGasInfoResponse, GoogleCode, OrderInfoResponse, SendOrderTxBody,
-	SendOrderTxResponse, SendTransferTxBody, SendTransferTxResponse, UserConnectBody,
-	UserConnectResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse,
+	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
+	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
+	VerifyGoogleCodeResponse,
 };
 use url::Url;
 
