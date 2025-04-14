@@ -131,7 +131,7 @@ async fn main() -> Result<(), ()> {
 
 			let substrate_key_store = Arc::new(SubstrateKeyStore::new(
 				Path::new(&args.local_directory_path)
-					.join("keystore/substrate_alice.bin")
+					.join("keystore/substrate_key.bin")
 					.into_os_string()
 					.into_string()
 					.unwrap(),
@@ -302,7 +302,7 @@ async fn main() -> Result<(), ()> {
 		Commands::GenKey(args) => {
 			let key_store = Arc::new(SubstrateKeyStore::new(
 				Path::new(&args.local_directory_path)
-					.join("keystore/substrate_alice.bin")
+					.join("keystore/substrate_key.bin")
 					.into_os_string()
 					.into_string()
 					.unwrap(),
