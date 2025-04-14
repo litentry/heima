@@ -68,12 +68,12 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				);
 			};
 
-			if res.user_id != params.user_id {
+			if res.data.user_id != params.user_id {
 				log::error!(
 					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
 					params.user_id,
 					params.user_email,
-					res.user_id
+					res.data.user_id
 				);
 				return Err(ErrorCode::ServerError(USER_EMAIL_ID_MISMATCH_CODE).into());
 			}

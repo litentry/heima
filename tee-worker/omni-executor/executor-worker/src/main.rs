@@ -106,7 +106,7 @@ async fn main() -> Result<(), ()> {
 
 			let accounting_ecdsa_signer_key = EcdsaKeyStore::new(
 				Path::new(&args.local_directory_path)
-					.join("untrusted-keystore/accounting_ecdsa_signer_key.bin")
+					.join("keystore/accounting_ecdsa_signer_key.bin")
 					.into_os_string()
 					.into_string()
 					.unwrap(),
