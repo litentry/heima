@@ -23,6 +23,7 @@ pub type SendTransferTxResponse = ApiResponse<SendTransferTxResponseData>;
 pub type CreateMarketOrderTxResponse = ApiResponse<CreateMarketOrderTxResponseData>;
 pub type CreateTransferTxResponse = ApiResponse<CreateTransferTxResponseData>;
 pub type GetGasInfoResponse = ApiResponse<GetGasInfoResponseData>;
+pub type GetAccountUserIdResponse = ApiResponse<GetAccountUserIdResponseData>;
 
 #[derive(Deserialize_repr, Serialize_repr, Debug)]
 #[allow(clippy::upper_case_acronyms)]
@@ -310,7 +311,7 @@ pub struct CrossFailBody {
 // /v1/trade/get_gas_info
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetGasInfoBody {
+pub struct GetGasInfoParams {
 	pub chain_id: u32,
 }
 
@@ -338,7 +339,7 @@ pub struct GasInfo {
 // /v3/account/get_account_user_id
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetAccountUserIdBody {
+pub struct GetAccountUserIdParams {
 	pub email: String,
 }
 
