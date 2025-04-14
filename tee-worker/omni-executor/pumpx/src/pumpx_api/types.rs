@@ -120,6 +120,7 @@ pub struct UserConnectBody {
 	pub email: String,
 	pub invite_code: Option<String>,
 	pub google_code: String,
+	pub user_id: String,
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
@@ -332,4 +333,17 @@ pub struct GasInfo {
 	pub normal_price: String,
 	pub fast_price: String,
 	pub super_fast_price: String,
+}
+
+// /v3/account/get_account_user_id
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetAccountUserIdBody {
+	pub email: String,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GetAccountUserIdResponseData {
+	pub user_id: String,
 }

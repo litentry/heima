@@ -12,7 +12,7 @@ use executor_crypto::{
 };
 use executor_primitives::{
 	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, MemberAccount,
-	OmniAccountAuthType, ValidationData,
+	OmniAccountAuthType, ValidationData, Web2IdentityType,
 };
 use executor_storage::{MemberOmniAccountStorage, PumpxJwtStorage, Storage, StorageDB};
 use heima_authentication::auth_token::*;
@@ -563,36 +563,29 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, language) => {
-			let email = match sender {
-				Identity::Email(ref identity_string) => {
-					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
-						send_error(
-							"Invalid email identity".to_string(),
-							response_sender,
-							NativeTaskError::InvalidMemberIdentity,
-						);
-						return;
-					};
-					email.to_string()
-				},
-				_ => {
-					send_error(
-						"Unsupported identity type".to_string(),
-						response_sender,
-						NativeTaskError::UnsupportedIdentityType,
-					);
-					return;
-				},
-			};
+		NativeTask::PumpxRequestJwt(_sender, email, invite_code, google_code, language) => {
 			let expires_at = Utc::now()
 				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 				.expect("Failed to calculate expiration")
 				.timestamp();
 			let auth_options = AuthOptions { expires_at };
 
+			let Ok(res) = ctx.pumpx_api.get_account_user_id(email.clone()).await else {
+				send_error(
+					"Failed to get_account_user_id".to_string(),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
+				);
+				return;
+			};
+
+			let user_id = res.user_id;
+			log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
+			let omni_account =
+				Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account();
+
 			let access_token_claims = AuthTokenClaims::new(
-				sender.to_omni_account().to_hex(),
+				omni_account.to_hex(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				auth_options.clone(),
 			);
@@ -608,7 +601,7 @@ async fn handle_native_task<
 
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
 			if storage
-				.insert((sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+				.insert((omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
 			{
 				log::error!(
@@ -619,7 +612,14 @@ async fn handle_native_task<
 
 			let Ok(backend_response) = ctx
 				.pumpx_api
-				.user_connect(&access_token, email.clone(), invite_code, google_code, language)
+				.user_connect(
+					&access_token,
+					user_id.clone(),
+					email.clone(),
+					invite_code,
+					google_code,
+					language,
+				)
 				.await
 			else {
 				send_error(
@@ -630,7 +630,7 @@ async fn handle_native_task<
 				return;
 			};
 			let id_token_claims = AuthTokenClaims::new(
-				sender.to_omni_account().to_hex(),
+				omni_account.to_hex(),
 				AUTH_TOKEN_ID_TYPE.to_string(),
 				auth_options,
 			);
@@ -643,10 +643,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			if storage
-				.insert((sender.to_omni_account(), AUTH_TOKEN_ID_TYPE), id_token.clone())
-				.is_err()
-			{
+			if storage.insert((omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
 				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
 			};
 

@@ -6,7 +6,7 @@ pub type VerificationCode = String;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum OmniAuth {
 	Web3(HeimaMultiSignature),
-	Email(VerificationCode),
+	Email(String, VerificationCode),
 	AuthToken(String),
 	OAuth2(OAuth2Data),
 }
@@ -15,7 +15,7 @@ impl From<OmniAuth> for OmniAccountAuthType {
 	fn from(value: OmniAuth) -> Self {
 		match value {
 			OmniAuth::Web3(_) => Self::Web3,
-			OmniAuth::Email(_) => Self::Email,
+			OmniAuth::Email(..) => Self::Email,
 			OmniAuth::OAuth2(_) => Self::OAuth2,
 			OmniAuth::AuthToken(_) => Self::AuthToken,
 		}

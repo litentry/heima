@@ -20,7 +20,7 @@ use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
-	pub user_email: String,
+	pub user_id: String,
 	pub intent_id: u32,
 	pub order_type: PumpxOrderType,
 	pub swap_type: SwapType,
@@ -106,7 +106,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let params =
 				params.parse::<SubmitSwapOrderParams>().map_err(|_| ErrorCode::ParseError)?;
 			let user_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
+				Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
 			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token)
 				.is_err()
 			{

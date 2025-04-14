@@ -53,6 +53,7 @@ pub enum PumpxApiError {
 	CreateTransferUnsignedTxFailed,
 	SendTransferTxFailed,
 	CreateTransferTxFailed,
+	GetAccountUserIdFailed,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

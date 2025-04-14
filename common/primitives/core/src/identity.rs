@@ -577,6 +577,9 @@ impl Identity {
             Web2IdentityType::Google => {
                 Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
             }
+            Web2IdentityType::Pumpx => {
+                Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
+            }
         }
     }
 }
@@ -588,6 +591,7 @@ pub enum Web2IdentityType {
     Github,
     Email,
     Google,
+    Pumpx,
 }
 
 impl From<ed25519::Public> for Identity {
