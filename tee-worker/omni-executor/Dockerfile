@@ -50,6 +50,7 @@ RUN apt-get install -y \
     build-essential \
     curl \
     libssl-dev \
+    clang \
     pkg-config
 
 # Get Rust
@@ -82,7 +83,16 @@ ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 ENV BIN_DIR=/usr/local/bin
 WORKDIR $BIN_DIR
 
-RUN apt update && apt install -y ca-certificates && apt clean
+# Update default packages
+RUN apt-get update
+
+# Get Ubuntu packages
+RUN apt-get install -y \
+    build-essential \
+    curl \
+    libssl-dev \
+    clang \
+    ca-certificates
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
