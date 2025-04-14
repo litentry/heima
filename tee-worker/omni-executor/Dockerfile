@@ -51,12 +51,11 @@ RUN apt-get install -y \
     curl \
     libssl-dev \
     clang \
-    pkg-config
+    pkg-config \
+    ca-certificates
 
 # Get Rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
-
-RUN apt-get install -y clang
 
 # Add .cargo/bin to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
