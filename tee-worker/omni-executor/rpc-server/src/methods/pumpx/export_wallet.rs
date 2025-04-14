@@ -14,6 +14,7 @@ use sha2::Sha256;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
+	pub user_uid: String,
 	pub user_email: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
@@ -27,14 +28,14 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: ExportWalletParams) -> Self {
 		Self {
 			task: NativeTask::PumpxExportWallet(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
+				Identity::from_web2_account(p.user_uid.as_str(), Web2IdentityType::Pumpx),
 				p.google_code,
 				p.chain_id,
 				p.wallet_index,
 				p.wallet_address,
 			),
 			nonce: None,
-			auth: Some(OmniAuth::Email(p.email_code)),
+			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
 		}
 	}
 }

@@ -40,7 +40,7 @@ export default {
         OmniAuth: {
             _enum: {
                 Web3: "(HeimaMultiSignature)",
-                Email: "(Text)",
+                Email: "(Text, Text)",
                 AuthToken: "(Text)",
                 OAuth2: "(OAuth2Data)",
             },

@@ -60,8 +60,8 @@ pub async fn verify_auth(
 		Some(OmniAuth::Web3(ref signature)) => {
 			verify_web3_authentication(signature, &wrapper.task, wrapper.nonce, ctx.mrenclave)
 		},
-		Some(OmniAuth::Email(ref verification_code)) => {
-			verify_email_authentication(ctx, wrapper.task.sender(), verification_code)
+		Some(OmniAuth::Email(ref email, ref verification_code)) => {
+			verify_email_authentication(ctx, email, verification_code)
 		},
 		Some(OmniAuth::OAuth2(ref oauth2_data)) => {
 			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
@@ -104,17 +104,18 @@ pub fn verify_web3_authentication<T: NativeTaskTrait>(
 
 pub fn verify_email_authentication(
 	ctx: Arc<RpcContext>,
-	sender: &Identity,
+	email: &String,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
+	let storage_key = Identity::from_web2_account(email.as_str(), Web2IdentityType::Email).hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
-	let Some(code) = verification_code_storage.get(&sender.hash()) else {
+	let Some(code) = verification_code_storage.get(&storage_key) else {
 		return Err(AuthenticationError::EmailVerificationCodeNotFound);
 	};
 	if code != *verification_code {
 		return Err(AuthenticationError::EmailInvalidVerificationCode);
 	}
-	let _ = verification_code_storage.remove(&sender.hash());
+	let _ = verification_code_storage.remove(&storage_key);
 
 	Ok(())
 }

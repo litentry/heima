@@ -559,28 +559,7 @@ async fn handle_native_task<
 			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
 			(response_sender, tx)
 		},
-		NativeTask::PumpxRequestJwt(sender, invite_code, google_code, language) => {
-			let email = match sender {
-				Identity::Email(ref identity_string) => {
-					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
-						send_error(
-							"Invalid email identity".to_string(),
-							response_sender,
-							NativeTaskError::InvalidMemberIdentity,
-						);
-						return;
-					};
-					email.to_string()
-				},
-				_ => {
-					send_error(
-						"Unsupported identity type".to_string(),
-						response_sender,
-						NativeTaskError::UnsupportedIdentityType,
-					);
-					return;
-				},
-			};
+		NativeTask::PumpxRequestJwt(sender, email, invite_code, google_code, language) => {
 			let expires_at = Utc::now()
 				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 				.expect("Failed to calculate expiration")
