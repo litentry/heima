@@ -15,10 +15,6 @@ loader.env.MALLOC_ARENA_MAX = "1"
 # For easier debugging — not strictly required to run this workload
 loader.env.RUST_BACKTRACE = "full"
 
-sgx.allowed_files = [
-  "file:local/untrusted-keystore"
-]
-
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
