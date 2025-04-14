@@ -49,7 +49,7 @@ contract DepositFunds is Script {
             contractAddress
         );
 
-        accountingContract.depositFunds{value: amount * 10 ** 18}();
+        accountingContract.depositFunds{value: amount * 10 ** 16}();
         vm.stopBroadcast();
     }
 }
@@ -68,7 +68,7 @@ contract WithdrawFunds is Script {
 
         accountingContract.withdrawFunds(
             payable(beneficiary),
-            amount * 10 ** 18
+            amount * 10 ** 16
         );
         vm.stopBroadcast();
     }
@@ -92,6 +92,52 @@ contract SetWorker is Script {
             workerAddress,
             " :",
             accountingContract.isWorker(workerAddress)
+        );
+        vm.stopBroadcast();
+    }
+}
+
+contract SetAdmin is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address contractAddress = vm.envAddress("CONTRACT_ADDRESS");
+        address adminAddress = vm.envAddress("ADMIN_PUBLIC_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        AccountingContract accountingContract = AccountingContract(
+            contractAddress
+        );
+
+        accountingContract.beginDefaultAdminTransfer(adminAddress);
+
+        console.log(
+            "Is Admin ",
+            adminAddress,
+            " :",
+            accountingContract.isAdmin(adminAddress)
+        );
+        vm.stopBroadcast();
+    }
+}
+
+contract AcceptAdmin is Script {
+    function run() external {
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address contractAddress = vm.envAddress("CONTRACT_ADDRESS");
+        address adminAddress = vm.envAddress("ADMIN_PUBLIC_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        AccountingContract accountingContract = AccountingContract(
+            contractAddress
+        );
+
+        accountingContract.acceptDefaultAdminTransfer();
+
+        console.log(
+            "Is Admin ",
+            adminAddress,
+            " :",
+            accountingContract.isAdmin(adminAddress)
         );
         vm.stopBroadcast();
     }
@@ -183,7 +229,7 @@ contract ExecutePayment is Script {
         accountingContract.executePayOutRequest(
             publicAddress,
             nonce + 1,
-            amount * 10 ** 18
+            amount * 10 ** 16
         );
 
         vm.stopBroadcast();

@@ -16,11 +16,14 @@
 
 use crate::cli::Cli;
 use accounting_contract_client::AccountingContractClient;
+use alloy::network::EthereumWallet;
+use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApi;
 use clap::Parser;
 use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
+use executor_core::ecdsa_key_store::EcdsaKeyStore;
 use executor_core::key_store::KeyStore;
 use executor_core::shielding_key_store::ShieldingKeyStore;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
@@ -40,6 +43,7 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
+use pumpx::pubkey_to_evm_address;
 use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
@@ -47,6 +51,7 @@ use solana::SolanaClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
+use std::path::Path;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
@@ -76,18 +81,46 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			let auth_token_key_store =
-				AuthTokenKeyStore::new(args.auth_token_key_store_path.clone());
+			let auth_token_key_store = AuthTokenKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/auth_token_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
 
-			let pumpx_auth_key_store =
-				pumpx::auth_key_store::AuthKeyStore::new(args.pumpx_auth_key_store_path.clone());
+			let pumpx_auth_key_store = pumpx::auth_key_store::AuthKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/pumpx_auth_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 
 			let pumpx_signer_key =
 				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
 
 			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
 			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
+
+			let accounting_ecdsa_signer_key = EcdsaKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("untrusted-keystore/accounting_ecdsa_signer_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
+
+			let accounting_ecdsa_signer_key =
+				accounting_ecdsa_signer_key.read().expect("Could not read accounting ecsa key");
+			let accounting_ecdsa_signer_key_pair =
+				ecdsa::Pair::from_seed_slice(&accounting_ecdsa_signer_key).unwrap();
+
+			info!(
+				"Accounting ecdsa signer address: {:?}",
+				pubkey_to_evm_address(accounting_ecdsa_signer_key_pair.public().as_ref()).unwrap()
+			);
 
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
@@ -96,8 +129,13 @@ async fn main() -> Result<(), ()> {
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
 
-			let substrate_key_store =
-				Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path.clone()));
+			let substrate_key_store = Arc::new(SubstrateKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/substrate_alice.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			));
 			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
 			let signer_account_id: AccountId =
 				parentchain_signer.public_key().to_account_id().to_primitive_type();
@@ -116,7 +154,13 @@ async fn main() -> Result<(), ()> {
 				parentchain_signer.clone(),
 				signer_account_nonce,
 			));
-			let aes256_key_store = Aes256KeyStore::new(args.aes256_key_store_path.clone());
+			let aes256_key_store = Aes256KeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/aes_256_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
 			let pumpx_signer_client: Arc<Box<dyn SignerClient>> =
@@ -154,7 +198,15 @@ async fn main() -> Result<(), ()> {
 
 			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
 
-			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new(&args.ethereum_url);
+			let accounting_contract_signer =
+				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())
+					.expect("Could not create accounting contract signer");
+			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
+
+			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&args.ethereum_url,
+				accounting_contract_wallet,
+			);
 			let accounting_contract_client = AccountingContractClient::new(
 				ethereum_rpc_provider,
 				//todo: from CLI
@@ -196,7 +248,13 @@ async fn main() -> Result<(), ()> {
 			log::info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
 
-			let shielding_key_store = ShieldingKeyStore::new(args.shielding_key_store_path.clone());
+			let shielding_key_store = ShieldingKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/shielding_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
 
 			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
 			let shielding_pubkey = shielding_key.public_key();
@@ -244,7 +302,13 @@ async fn main() -> Result<(), ()> {
 			}
 		},
 		Commands::GenKey(args) => {
-			let key_store = Arc::new(SubstrateKeyStore::new(args.substrate_keystore_path));
+			let key_store = Arc::new(SubstrateKeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/substrate_alice.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			));
 			let _ = parentchain_signer::get_signer(key_store);
 		},
 	}
@@ -264,7 +328,11 @@ async fn listen_to_parentchain(
 		&args.parentchain_url,
 		sub_stop_receiver,
 		storage_db,
-		&args.log_path,
+		&Path::new(&args.local_directory_path)
+			.join("log/parentchain_last_log.bin")
+			.into_os_string()
+			.into_string()
+			.unwrap(),
 	)
 	.await?;
 

@@ -15,6 +15,10 @@ loader.env.MALLOC_ARENA_MAX = "1"
 # For easier debugging — not strictly required to run this workload
 loader.env.RUST_BACKTRACE = "full"
 
+sgx.allowed_files = [
+  "file:local/unsafe-keystore"
+]
+
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
@@ -53,6 +57,19 @@ sgx.remote_attestation = "dcap"
 
 # for easy demo setup
 loader.insecure__use_cmdline_argv = true
-loader.insecure__use_host_env = true
 
-fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"
+# allowed env variables
+loader.env.RUST_LOG = { passthrough = true }
+loader.env.OE_PUMPX_API_BASE_URL = { passthrough = true }
+loader.env.OE_BINANCE_API_KEY = { passthrough = true }
+loader.env.OE_BINANCE_API_SECRET = { passthrough = true }
+loader.env.OE_BINANCE_API_BASE_URL = { passthrough = true }
+loader.env.OE_RPC_SERVER_MAX_CONNECTIONS = { passthrough = true }
+loader.env.OE_SENDGRID_API_KEY = { passthrough = true }
+loader.env.OE_SENDGRID_FROM_EMAIL = { passthrough = true }
+loader.env.OE_SENDGRID_FROM_NAME = { passthrough = true }
+loader.env.OE_GOOGLE_CLIENT_ID = { passthrough = true }
+loader.env.OE_GOOGLE_CLIENT_SECRET = { passthrough = true }
+
+# This key is a workaround because gramine-direct doesn't provide _sgx_mrsigner key
+{{'' if env.get('SGX', '0') == '1' else 'fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"'}}
