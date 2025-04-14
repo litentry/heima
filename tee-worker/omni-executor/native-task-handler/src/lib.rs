@@ -579,7 +579,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			let user_id = res.user_id;
+			let user_id = res.data.user_id;
 			log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
 			let omni_account =
 				Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account();
