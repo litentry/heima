@@ -24,6 +24,10 @@ pub enum NativeTaskOk {
 	PumpxSignLimitOrder(Vec<Vec<u8>>),
 	PumpxTransferWithdraw(CreateTransferTxResponse),
 	PumpxNotifyLimitOrderResult,
+	RequestIntentResult {
+		intent_id: u32,
+		success: bool,
+	},
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

@@ -319,6 +319,10 @@ async fn handle_native_task<
 						auth_type,
 					)
 					.await;
+					send_ok(
+						response_sender,
+						NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					);
 					(IntentCompletedDetail::Success, true)
 				},
 				Intent::TransferNative(transfer) => {
@@ -334,6 +338,10 @@ async fn handle_native_task<
 						auth_type,
 					)
 					.await;
+					send_ok(
+						response_sender,
+						NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					);
 					(IntentCompletedDetail::Success, true)
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
@@ -343,8 +351,16 @@ async fn handle_native_task<
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
+						send_ok(
+							response_sender,
+							NativeTaskOk::RequestIntentResult { intent_id, success: false },
+						);
 						(IntentCompletedDetail::Failure, true)
 					} else {
+						send_ok(
+							response_sender,
+							NativeTaskOk::RequestIntentResult { intent_id, success: true },
+						);
 						(IntentCompletedDetail::Success, true)
 					}
 				},
@@ -355,8 +371,16 @@ async fn handle_native_task<
 						.await
 					{
 						log::error!("Error executing intent: {:?}", e);
+						send_ok(
+							response_sender,
+							NativeTaskOk::RequestIntentResult { intent_id, success: false },
+						);
 						(IntentCompletedDetail::Failure, true)
 					} else {
+						send_ok(
+							response_sender,
+							NativeTaskOk::RequestIntentResult { intent_id, success: true },
+						);
 						(IntentCompletedDetail::Success, true)
 					}
 				},
@@ -375,11 +399,7 @@ async fn handle_native_task<
 						},
 					};
 					if let Some(response) = response {
-						let response =
-							NativeTaskResponse::Ok(NativeTaskOk::IntentSwapResponse(response));
-						if response_sender.send(response.encode()).is_err() {
-							log::error!("Failed to send response");
-						}
+						send_ok(response_sender, NativeTaskOk::IntentSwapResponse(response));
 					}
 					(execution_result, should_notify_parentchain)
 				},
