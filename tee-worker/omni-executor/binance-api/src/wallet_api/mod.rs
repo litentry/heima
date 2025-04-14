@@ -1,6 +1,6 @@
 mod types;
 
-use types::{CoinInfo, Deposit, DepositAddress};
+use types::{CoinInfo, Deposit, DepositAddress, WithdrawOrder};
 
 use crate::{error::Error, BinanceApi, Method};
 use std::collections::HashMap;
@@ -46,6 +46,27 @@ impl<'a> WalletApi<'a> {
 		}
 		self.base_api
 			.make_signed_request(&endpoint, Method::GET, Some(params), None)
+			.await
+	}
+
+	/// Submit a withdraw request.
+	pub async fn withdraw(
+		&self,
+		coin: &str,
+		address: &str,
+		amount: String, // Decimal amount
+		network: Option<&str>,
+	) -> Result<WithdrawOrder, Error> {
+		let endpoint = format!("{}/capital/withdraw/apply", WALLET_API);
+		let mut params = HashMap::new();
+		params.insert("coin".to_string(), coin.to_string());
+		params.insert("address".to_string(), address.to_string());
+		params.insert("amount".to_string(), amount);
+		if let Some(network) = network {
+			params.insert("network".to_string(), network.to_string());
+		}
+		self.base_api
+			.make_signed_request(&endpoint, Method::POST, Some(params), None)
 			.await
 	}
 }

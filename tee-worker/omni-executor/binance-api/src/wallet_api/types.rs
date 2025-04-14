@@ -80,3 +80,8 @@ pub struct Deposit {
 	pub wallet_type: u8,
 	pub source_address: Option<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct WithdrawOrder {
+	pub id: String,
+}
