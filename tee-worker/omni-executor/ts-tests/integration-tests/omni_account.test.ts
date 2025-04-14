@@ -4,11 +4,7 @@ import { Identity, MemberAccount } from 'parachain-api';
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
-import {
-    createNativeTask,
-    createNativeTaskWrapper,
-    createOmniAccountPermission,
-} from './utils/type_creators';
+import { createNativeTask, createNativeTaskWrapper, createOmniAccountPermission } from './utils/type_creators';
 import { sendRawTaskPlain } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount, sleep } from './utils/helpers';
@@ -245,11 +241,13 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             context.mrEnclave
         );
-        await sendRawTaskPlain(context, nativeTaskWrapper);
+        const response = await sendRawTaskPlain(context, nativeTaskWrapper);
+        console.log('response:', response.toHuman());
+
         currentNonce++;
 
         // wait for the intent to be processed and the tx to be finalized on-chain
-        await sleep(20);
+        await sleep(60);
 
         const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
         assert.equal(
