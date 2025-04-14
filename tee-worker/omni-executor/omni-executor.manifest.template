@@ -16,7 +16,7 @@ loader.env.MALLOC_ARENA_MAX = "1"
 loader.env.RUST_BACKTRACE = "full"
 
 sgx.allowed_files = [
-  "file:local/unsafe-keystore"
+  "file:local/untrusted-keystore"
 ]
 
 fs.mounts = [
