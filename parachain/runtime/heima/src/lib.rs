@@ -231,7 +231,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: create_runtime_str!("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9240,
+	spec_version: 9241,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1316,7 +1316,7 @@ construct_runtime! {
 		// also see the comment above `AllPalletsWithSystem` and
 		// https://github.com/litentry/heima/issues/336
 		Authorship: pallet_authorship = 40,
-		//41 is for old CollatorSelection, replaced by ParachainSTaking
+		// 41 was: CollatorSelection
 		Session: pallet_session = 42,
 		Aura: pallet_aura = 43,
 		AuraExt: cumulus_pallet_aura_ext = 44,
@@ -1332,7 +1332,7 @@ construct_runtime! {
 		Assets: pallet_assets = 56,
 		MessageQueue: pallet_message_queue = 57,
 
-		// Litentry pallets
+		// Local pallets
 		ChainBridge: pallet_chain_bridge= 60,
 		BridgeTransfer: pallet_bridge_transfer = 61,
 		ExtrinsicFilter: pallet_extrinsic_filter = 63,
@@ -1357,7 +1357,6 @@ construct_runtime! {
 		Ethereum: pallet_ethereum = 121,
 
 		// TMP
-		// State Trie Migration
 		StateTrieMigration: pallet_state_trie_migration = 251,
 		AccountFix: pallet_account_fix = 254,
 	}
