@@ -12,6 +12,7 @@ use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
+	pub user_id: String,
 	pub user_email: String,
 	pub request_id: Option<u32>,
 	pub chain_id: u32,
@@ -33,7 +34,7 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: TransferWithdrawParams) -> Self {
 		Self {
 			task: NativeTask::PumpxTransferWidthdraw(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
+				Identity::from_web2_account(p.user_id.as_str(), Web2IdentityType::Pumpx),
 				p.request_id,
 				p.chain_id,
 				p.wallet_index,
@@ -44,7 +45,7 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 				p.lang,
 			),
 			nonce: None,
-			auth: Some(OmniAuth::Email(p.email_code)),
+			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
 		}
 	}
 }
@@ -54,6 +55,24 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("pumpx_transferWithdraw", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<TransferWithdrawParams>()?;
+
+			// verify user_id and user_email matches
+			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
+				log::error!("Failed to call get_account_user_id");
+				return Err(
+					ErrorCode::ServerError(PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE).into()
+				);
+			};
+
+			if res.user_id != params.user_id {
+				log::error!(
+					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
+					params.user_id,
+					params.user_email,
+					res.user_id
+				);
+				return Err(ErrorCode::ServerError(USER_EMAIL_ID_MISMATCH_CODE).into());
+			}
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 

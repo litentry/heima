@@ -18,6 +18,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
 			let params = params.parse::<RequestEmailVerificationCodeParams>()?;
+			// please note here we still use `email_identity` as key
 			let email_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
 			let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
