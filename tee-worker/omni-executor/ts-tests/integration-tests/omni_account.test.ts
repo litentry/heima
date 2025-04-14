@@ -247,7 +247,7 @@ describe('OmniAccount', function () {
         currentNonce++;
 
         // wait for the intent to be processed and the tx to be finalized on-chain
-        await sleep(20);
+        await sleep(90);
 
         const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
         assert.equal(

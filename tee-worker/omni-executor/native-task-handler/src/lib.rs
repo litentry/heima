@@ -943,7 +943,7 @@ async fn dispatch_as_omni_account<
 	);
 	let tx = signer.sign(call).await;
 	// notify parentchain - for now we continue even with error
-	match client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
+	match client.submit_tx(&tx).await {
 		Ok(_) => {
 			log::debug!("Submitted dispatch_as_omni_account parentchain call")
 		},
