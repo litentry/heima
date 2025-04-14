@@ -82,15 +82,20 @@ impl<
 		let mut block_number_to_sync = if let Some(ref checkpoint) =
 			self.checkpoint_repository.get().expect("Could not read checkpoint")
 		{
-			if checkpoint.just_block_num() {
-				// let's start syncing from next block as we processed previous fully
-				checkpoint.get_block_num() + 1
+			let last_block_num = checkpoint.get_block_num();
+
+			// Ensure `start_block` overrides only if it's valid
+			if start_block > last_block_num {
+				start_block
+			} else if checkpoint.just_block_num() {
+				// Start syncing from the next block as we processed the previous one fully
+				last_block_num + 1
 			} else {
-				// block processing was interrupted, so we have to process last block again
-				// but currently processed logs will be skipped
-				checkpoint.get_block_num()
+				// Reprocess the last block if interrupted
+				last_block_num
 			}
 		} else {
+			// Default to start_block if no checkpoint exists
 			start_block
 		};
 		log::debug!("Starting sync from {:?}", block_number_to_sync);
