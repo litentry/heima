@@ -673,7 +673,7 @@ impl<
 									continue;
 								},
 							};
-							if deposit.status == 1 && // 1 = completed
+							if deposit.status == 1 && // 1 = success
 							   deposit.coin == binance_coin_name &&
 							   deposit.network == binance_network_info.network &&
                                deposit_amount == amount_to_transfer
