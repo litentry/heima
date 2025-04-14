@@ -5,10 +5,11 @@ use types::{
 	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
-	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody, GetGasInfoBody,
-	GetGasInfoResponse, GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse,
-	SendTransferTxBody, SendTransferTxResponse, UserConnectBody, UserConnectResponse,
-	UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
+	GetAccountUserIdBody, GetAccountUserIdResponseData, GetGasInfoBody, GetGasInfoResponse,
+	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
+	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
+	VerifyGoogleCodeResponse,
 };
 use url::Url;
 
@@ -37,13 +38,14 @@ impl PumpxApi {
 	pub async fn user_connect(
 		&self,
 		access_token: &str,
+		user_id: String,
 		email: String,
 		invite_code: Option<String>,
 		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
 		let endpoint = format!("{}/v3/account/user_connect", self.base_url);
-		let body = UserConnectBody { email: email.clone(), invite_code, google_code };
+		let body = UserConnectBody { email, invite_code, google_code, user_id };
 
 		let response = self
 			.http_client
@@ -425,5 +427,14 @@ impl PumpxApi {
 			.await?
 			.json()
 			.await
+	}
+
+	pub async fn get_account_user_id(
+		&self,
+		email: String,
+	) -> Result<GetAccountUserIdResponseData, Error> {
+		let endpoint = format!("{}/v3/account/get_account_user_id", self.base_url);
+		let body = GetAccountUserIdBody { email };
+		self.http_client.get(&endpoint).json(&body).send().await?.json().await
 	}
 }

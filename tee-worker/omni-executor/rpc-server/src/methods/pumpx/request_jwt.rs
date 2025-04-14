@@ -12,7 +12,6 @@ use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct RequestJwtParams {
-	pub user_uid: String,
 	pub user_email: String,
 	pub invite_code: Option<String>,
 	pub google_code: String,
@@ -31,7 +30,7 @@ impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: RequestJwtParams) -> Self {
 		Self {
 			task: NativeTask::PumpxRequestJwt(
-				Identity::from_web2_account(p.user_uid.as_str(), Web2IdentityType::Pumpx),
+				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email), // actually unused
 				p.user_email.clone(),
 				p.invite_code,
 				p.google_code,

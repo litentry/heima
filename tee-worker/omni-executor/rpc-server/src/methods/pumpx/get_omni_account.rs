@@ -19,11 +19,11 @@ use crate::ErrorCode;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
-	pub user_uid: String,
+	pub user_id: String,
 }
 
 // TODO: the omni-account needs to be read from AccountStore once we enable it
@@ -33,7 +33,7 @@ pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 			match params.parse::<GetOmniAccountParams>() {
 				Ok(params) => {
 					let account = Identity::from_web2_account(
-						params.user_uid.as_str(),
+						params.user_id.as_str(),
 						Web2IdentityType::Pumpx,
 					)
 					.to_omni_account();

@@ -12,7 +12,7 @@ use serde::Serialize;
 
 #[derive(Debug, Deserialize)]
 pub struct AddWalletParams {
-	pub user_uid: String,
+	pub user_id: String,
 	pub auth_token: String,
 }
 
@@ -25,7 +25,7 @@ impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: AddWalletParams) -> Self {
 		Self {
 			task: NativeTask::PumpxAddWallet(Identity::from_web2_account(
-				p.user_uid.as_str(),
+				p.user_id.as_str(),
 				Web2IdentityType::Pumpx,
 			)),
 			nonce: None,

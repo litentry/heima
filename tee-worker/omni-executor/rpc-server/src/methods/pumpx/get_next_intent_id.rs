@@ -24,7 +24,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct GetNextIntentIdParams {
-	pub user_uid: String,
+	pub user_id: String,
 }
 
 pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
@@ -33,7 +33,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 			match params.parse::<GetNextIntentIdParams>() {
 				Ok(params) => {
 					let account = Identity::from_web2_account(
-						params.user_uid.as_str(),
+						params.user_id.as_str(),
 						Web2IdentityType::Pumpx,
 					)
 					.to_omni_account();
