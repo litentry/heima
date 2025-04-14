@@ -104,10 +104,10 @@ pub fn verify_web3_authentication<T: NativeTaskTrait>(
 
 pub fn verify_email_authentication(
 	ctx: Arc<RpcContext>,
-	email: &String,
+	email: &str,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	let storage_key = Identity::from_web2_account(email.as_str(), Web2IdentityType::Email).hash();
+	let storage_key = Identity::from_web2_account(email, Web2IdentityType::Email).hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Some(code) = verification_code_storage.get(&storage_key) else {
 		return Err(AuthenticationError::EmailVerificationCodeNotFound);

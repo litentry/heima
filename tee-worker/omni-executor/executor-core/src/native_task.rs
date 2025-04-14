@@ -39,7 +39,7 @@ pub enum NativeTask {
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
-	PumpxRequestJwt(Identity, Option<String>, GoogleCode, Option<String>),
+	PumpxRequestJwt(Identity, String, Option<String>, GoogleCode, Option<String>),
 	#[codec(index = 21)]
 	PumpxExportWallet(Identity, GoogleCode, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]

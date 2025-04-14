@@ -34,7 +34,7 @@ export default {
                 __Unused17: "Null",
                 __Unused18: "Null",
                 __Unused19: "Null",
-                PumpxRequestJwt: "(Identity, Option<String>, Option<String>, Option<String>)",
+                PumpxRequestJwt: "(Identity, String, Option<String>, Option<String>, Option<String>)",
             },
         },
         OmniAuth: {

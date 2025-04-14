@@ -32,6 +32,7 @@ impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 		Self {
 			task: NativeTask::PumpxRequestJwt(
 				Identity::from_web2_account(p.user_uid.as_str(), Web2IdentityType::Pumpx),
+				p.user_email.clone(),
 				p.invite_code,
 				p.google_code,
 				p.language,
