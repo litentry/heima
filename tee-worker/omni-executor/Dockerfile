@@ -94,7 +94,7 @@ RUN apt-get install -y \
     clang \
     ca-certificates
 
-mkdir -p /wkdir /wkdir/local
+RUN mkdir -p /wkdir /wkdir/local
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
@@ -110,8 +110,6 @@ RUN chmod +x $BIN_DIR/omni-executor
 RUN chown ubuntu:ubuntu *
 RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
 RUN ls -al $BIN_DIR
-
-WORKDIR /wkdir
 
 USER ubuntu
 CMD ["$BIN_DIR/omni-executor"]
