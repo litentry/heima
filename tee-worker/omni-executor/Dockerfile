@@ -40,18 +40,27 @@ CMD ["$BIN_DIR/executor-worker"]
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
 # rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
-FROM rust:1.82-bookworm AS sgx-builder
+FROM gramineproject/gramine:stable-jammy AS sgx-builder
 
-# It's easier to install gramine rather than to install cargo.
-RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ bookworm main" \
-| tee /etc/apt/sources.list.d/gramine.list
+# Update default packages
+RUN apt-get update
 
-RUN curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
-RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
-| tee /etc/apt/sources.list.d/intel-sgx.list
+# Get Ubuntu packages
+RUN apt-get install -y \
+    build-essential \
+    curl \
+    libssl-dev \
+    clang \
+    pkg-config \
+    ca-certificates
 
-RUN apt update && apt install -y gramine clang
+# Get Rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
+# Add .cargo/bin to PATH
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+RUN cargo --version
 
 # Build
 ENV HOME=/home/ubuntu
@@ -65,30 +74,44 @@ RUN make
 
 ### Release image (with SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:1.8-jammy AS omni-release
+FROM gramineproject/gramine:stable-jammy AS omni-release
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
 ENV BUILD_DIR=$HOME/tee-worker/omni-executor
-ENV BIN_DIR=/usr/local/bin
+ENV BIN_DIR=/wkdir
 WORKDIR $BIN_DIR
 
-RUN apt update && apt install -y ca-certificates && apt clean
+# Update default packages
+RUN apt-get update
 
-COPY --from=sgx-builder $BUILD_DIR/omni-executor-worker $BIN_DIR/omni-executor-worker
+# Get Ubuntu packages
+RUN apt-get install -y \
+    build-essential \
+    curl \
+    libssl-dev \
+    clang \
+    ca-certificates
+
+RUN mkdir -p /wkdir /wkdir/local
+
+COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
 
-RUN groupadd -g 1000 appgroup && \
-    useradd -r -u 1000 -g appgroup appuser && \
+RUN groupadd -g 1000 ubuntu && \
+    useradd -r -u 1000 -g ubuntu ubuntu && \
     mkdir -p /dev/attestation && \
-    chown -R appuser:appgroup /dev/attestation
+    chown -R ubuntu:ubuntu /dev/attestation /wkdir
 
-RUN chmod +x $BIN_DIR/omni-executor-worker
-RUN chown appuser:appgroup *
-RUN ldd $BIN_DIR/omni-executor-worker && $BIN_DIR/omni-executor-worker --version
-RUN ls -al $BIN_DIR
+RUN chmod +x $BIN_DIR/omni-executor && \
+    chown ubuntu:ubuntu * && \
+    ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version && \
+    ls -al $BIN_DIR 
 
-USER appuser
-CMD ["$BIN_DIR/omni-executor-worker"]
+USER ubuntu
+
+ENTRYPOINT [ "/usr/bin/gramine-sgx" ]
+
+CMD ["$BIN_DIR/omni-executor"]
