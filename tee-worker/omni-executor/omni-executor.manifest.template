@@ -71,4 +71,5 @@ loader.env.OE_SENDGRID_FROM_NAME = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_ID = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_SECRET = { passthrough = true }
 
-fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"
+# This key is a workaround because gramine-direct doesn't provide _sgx_mrsigner key
+{{'' if env.get('SGX', '0') == '1' else 'fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"'}}
