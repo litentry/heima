@@ -61,12 +61,14 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			})?;
 
 			// verify user_id and user_email matches
+			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
 				log::error!("Failed to call get_account_user_id");
 				return Err(
 					ErrorCode::ServerError(PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE).into()
 				);
 			};
+			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			if res.data.user_id != params.user_id {
 				log::error!(

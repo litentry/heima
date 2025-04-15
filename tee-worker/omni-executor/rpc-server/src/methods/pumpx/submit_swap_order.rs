@@ -151,13 +151,14 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				to_address: None,
 			};
 
+			log::debug!("Calling pumpx get_user_trade_info, user_id: {}", params.user_id);
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
 					log::error!("Failed to get user trade info");
 					ErrorCode::InvalidParams
 				})?;
 
-			log::debug!("Trade info for user_id {}: {:?}", params.user_id, user_trade_info.data);
+			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
 			let gas_type = match params.to_chain_id {
 				BASE_CHAIN_ID => user_trade_info.data.gas_type_base.to_number() as u32,
