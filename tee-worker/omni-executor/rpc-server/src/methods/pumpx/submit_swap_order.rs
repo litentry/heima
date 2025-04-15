@@ -156,6 +156,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					log::error!("Failed to get user trade info");
 					ErrorCode::InvalidParams
 				})?;
+
+			log::debug!("Trade info for user_id {}: {:?}", params.user_id, user_trade_info.data);
+
 			let gas_type = match params.to_chain_id {
 				BASE_CHAIN_ID => user_trade_info.data.gas_type_base.to_number() as u32,
 				ETHEREUM_CHAIN_ID => user_trade_info.data.gas_type_eth.to_number() as u32,
