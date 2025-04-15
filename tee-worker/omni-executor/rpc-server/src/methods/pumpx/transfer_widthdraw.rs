@@ -56,13 +56,18 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<TransferWithdrawParams>()?;
 
+			log::debug!("Received pumpx_transferWithdraw, user_id: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}", 
+		params.user_id, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
+
 			// verify user_id and user_email matches
+			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
 				log::error!("Failed to call get_account_user_id");
 				return Err(
 					ErrorCode::ServerError(PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE).into()
 				);
 			};
+			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			if res.data.user_id != params.user_id {
 				log::error!(

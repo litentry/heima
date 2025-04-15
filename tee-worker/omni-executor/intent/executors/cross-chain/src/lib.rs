@@ -300,7 +300,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
-							debug!("Sending market order: {:?}", body);
+							debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 							let response = self
 								.pumpx_api
 								.create_market_order_tx(&access_token, body)
@@ -309,7 +309,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 									log::error!("Failed to create market order tx");
 								})?;
 
-							debug!("Received create_market_order_tx response: {:?}", response);
+							debug!("Response create_market_order_tx: {:?}", response);
 							(response.encode(), true)
 						},
 						PumpxOrderType::Limit => {
@@ -382,7 +382,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								slippage: pumpx_config.slippage,
 								wallet_index: pumpx_config.wallet_index,
 							};
-							debug!("Sending limit order: {:?}", new_limit_order);
+							debug!(
+								"Calling pumpx create_limit_order, order: {:?}",
+								new_limit_order
+							);
 							let response = self
 								.pumpx_api
 								.create_limit_order(&access_token, new_limit_order)
@@ -391,7 +394,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 									log::error!("Failed to create limit order");
 								})?;
 
-							debug!("Received limit order response: {:?}", response);
+							debug!("Response create_limit_order: {:?}", response);
 
 							(response.encode(), false)
 						},
@@ -476,20 +479,21 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							token_ca: from_token_ca,
 						}],
 					};
-					debug!("Creating cross order with data: {:?}", body);
+					debug!("Calling pumpx create_cross_order, body: {:?}", body);
 					let response =
 						self.pumpx_api.create_cross_order(&access_token, body).await.map_err(
 							|_| {
 								log::error!("Failed to create cross order");
 							},
 						)?;
-					debug!("Received response: {:?}", response);
+					debug!("Response create_cross_order: {:?}", response);
 
 					// 2. transfer from_asset to binance deposit address
 					let coins_info =
-						self.binance_api.wallet().get_all_coins_info().await.map_err(|_| {
-							log::error!("Failed to get all coins info");
+						self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
+							log::error!("Failed to get all coins info, {:?}", e);
 						})?;
+
 					// TODO: create an util function to convert ChainAsset to binance names
 					// and create constants for SOL, USDC, USDT, etc
 					let (from_network_name, binance_coin_name, token_address) =
@@ -523,6 +527,14 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								return Err(());
 							},
 						};
+
+					log::debug!(
+						"from_network_name: {}, binance_coin_name: {}, token_address: {}",
+						from_network_name,
+						binance_coin_name,
+						token_address
+					);
+
 					let Some(binance_coin_info) =
 						coins_info.iter().find(|c| c.coin == binance_coin_name)
 					else {
@@ -543,6 +555,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						);
 						return Err(());
 					};
+
 					let deposit_address = self
 						.binance_api
 						.wallet()
@@ -551,9 +564,17 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						.map_err(|_| {
 							log::error!("Failed to get deposit address");
 						})?;
+
 					let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
 						log::error!("Failed to parse from_amount_string");
 					})?;
+
+					log::debug!(
+						"Binance deposit address: {}, from_amount: {}",
+						deposit_address,
+						from_amount
+					);
+
 					let asset_decimal_multiplier = match binance_coin_name.as_str() {
 						"USDC" => Decimal::from(1_000_000),    // 10^6
 						"USDT" => Decimal::from(1_000_000),    // 10^6
@@ -864,7 +885,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							log::error!("Failed to execute pay out request");
 						})?;
 
-					debug!("Quering gas info");
+					debug!("Calling pumpx get_gas_info, chain_id: {}", pumpx_config.to_chain_id);
 					let gas_info = self
 						.pumpx_api
 						.get_gas_info(&access_token, pumpx_config.to_chain_id)
@@ -872,6 +893,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						.map_err(|_| {
 							log::error!("Failed to get gas info");
 						})?;
+					debug!("Response get_gas_info: {:?}", gas_info);
+
 					let gas_fee = match pumpx_config.gas_type {
 						1 => gas_info.data.gas_info.normal,
 						2 => gas_info.data.gas_info.fast,
@@ -934,7 +957,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						slippage: pumpx_config.slippage,
 						wallet_index: pumpx_config.wallet_index,
 					};
-					debug!("Sending market order: {:?}", body);
+					debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 					let response =
 						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
 							|_| {
@@ -942,7 +965,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							},
 						)?;
 
-					debug!("Received create_market_order_tx response: {:?}", response);
+					debug!("Response create_market_order_tx: {:?}", response);
 					result = (Some(response.encode()), true);
 				}
 

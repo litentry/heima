@@ -45,6 +45,9 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<ExportWalletParams>()?;
+
+			log::debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
+
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
@@ -61,12 +64,14 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			})?;
 
 			// verify user_id and user_email matches
+			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
 				log::error!("Failed to call get_account_user_id");
 				return Err(
 					ErrorCode::ServerError(PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE).into()
 				);
 			};
+			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			if res.data.user_id != params.user_id {
 				log::error!(

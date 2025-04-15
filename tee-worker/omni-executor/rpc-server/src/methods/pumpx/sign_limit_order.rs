@@ -65,8 +65,10 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_signLimitOrder", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-
 			let params: SignLimitOrderParams = params.parse::<SignLimitOrderParams>()?;
+
+			log::debug!("Received pumpx_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
+
 			let private_key = RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key)
 				.map_err(|_| internal_error.clone())?;
 			let public_key =

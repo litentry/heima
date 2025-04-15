@@ -47,6 +47,9 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("pumpx_requestJwt", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<RequestJwtParams>().map_err(|_| ErrorCode::ParseError)?;
+
+			log::debug!("Received pumpx_requestJwt, user_email: {}", params.user_email);
+
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
