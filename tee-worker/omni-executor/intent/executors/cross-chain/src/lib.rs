@@ -488,6 +488,15 @@ impl<
 							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
+					let from_address = match from_chain_type {
+						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
+						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+						_ => {
+							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							return Err(());
+						},
+					};
+
 					let body = CreateCrossOrderBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
@@ -504,16 +513,7 @@ impl<
 						cross_info: vec![CrossOrderInfo {
 							chain_id: pumpx_config.from_chain_id,
 							wallet_index: pumpx_config.wallet_index,
-							address: match from_chain_type {
-								ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
-								ChainType::Solana => {
-									pubkey_to_solana_address(&from_wallet_address)?
-								},
-								_ => {
-									log::error!("Unsupported {:?} wallet address", from_chain_type);
-									return Err(());
-								},
-							},
+							address: from_address.clone(),
 							amount: from_amount.clone(),
 							usd: usd_worth,
 							token_ca: from_token_ca,
@@ -727,6 +727,20 @@ impl<
 						self.binance_api.spot_trading().create_order(binance_order_params).await
 					else {
 						log::error!("Failed to create binance order");
+						self.binance_api
+							.wallet()
+							.withdraw(
+								&binance_coin_name,
+								&from_address,
+								amount_to_transfer_decimal.to_string(),
+								Some(&binance_network_info.network),
+							)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to withdraw asset back to omni account");
+							})?;
+						log::debug!("Withdrawed asset back to omni account");
+
 						let body = CrossFailBody {
 							request_id: intent_id,
 							// TODO: is this a user facing error? what should we return?
@@ -735,8 +749,6 @@ impl<
 						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
 							log::error!("Failed to notify pumpx-signer");
 						})?;
-						// TODO: Figure out how to transfer back the asset to the omni account
-						// check https://developers.binance.com/docs/wallet/capital/withdraw
 
 						return Err(());
 					};
