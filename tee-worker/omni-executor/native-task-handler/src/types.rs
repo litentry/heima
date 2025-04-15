@@ -18,6 +18,10 @@ pub enum NativeTaskOk {
 		id_token: String,
 		backend_response: UserConnectResponse,
 	},
+	RequestIntentResult {
+		intent_id: u32,
+		success: bool,
+	},
 	IntentSwapResponse(Vec<u8>),
 	PumpxExportWallet(Vec<u8>),
 	PumpxAddWallet(AddWalletResponse),

@@ -39,6 +39,8 @@ sgx.trusted_files = [
   "file:/usr/lib/ssl/certs/ca-certificates.crt",
 ]
 
+sgx.allowed_files = [ "file:/usr/lib/ssl/certs" ]
+
 # The maximum number of threads in a single process needs to be declared in advance.
 # You need to account for:
 # - one main thread

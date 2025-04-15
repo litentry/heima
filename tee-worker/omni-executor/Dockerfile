@@ -69,7 +69,7 @@ ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 COPY . $HOME
 WORKDIR $BUILD_DIR
 
-RUN make
+RUN make SGX=1 SGX_DEBUG=0
 
 
 ### Release image (with SGX Hardware)
@@ -91,12 +91,12 @@ RUN apt-get install -y \
     curl \
     libssl-dev \
     clang \
+    pkg-config \
     ca-certificates
 
 RUN mkdir -p /wkdir /wkdir/local
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
-COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $BIN_DIR/omni-executor.manifest
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
 
@@ -108,7 +108,7 @@ RUN groupadd -g 1000 ubuntu && \
 RUN chmod +x $BIN_DIR/omni-executor && \
     chown ubuntu:ubuntu * && \
     ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version && \
-    ls -al $BIN_DIR 
+    ls -al $BIN_DIR
 
 USER ubuntu
 
