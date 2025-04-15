@@ -445,6 +445,15 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
+					let from_address = match from_chain_type {
+						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
+						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+						_ => {
+							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							return Err(());
+						},
+					};
+
 					let body = CreateCrossOrderBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
@@ -461,16 +470,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						cross_info: vec![CrossOrderInfo {
 							chain_id: pumpx_config.from_chain_id,
 							wallet_index: pumpx_config.wallet_index,
-							address: match from_chain_type {
-								ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
-								ChainType::Solana => {
-									pubkey_to_solana_address(&from_wallet_address)?
-								},
-								_ => {
-									log::error!("Unsupported {:?} wallet address", from_chain_type);
-									return Err(());
-								},
-							},
+							address: from_address.clone(),
 							amount: from_amount.clone(),
 							usd: usd_worth,
 							token_ca: from_token_ca,
@@ -576,23 +576,27 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						Handle::current(),
 					);
 
+					let mut tx_id: Option<String> = None;
 					// TODO: change this when adding support for more tokens/chains
 					if binance_coin_name == "SOL" {
 						// Native transfer
 						debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
-						self.solana_client
+						let signature = self
+							.solana_client
 							.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
 							.await
 							.map_err(|_| {
 								log::error!("Failed to transfer SOL");
 							})?;
+						tx_id = Some(signature);
 					} else {
 						debug!(
 							"Transfering {:?} {:?} to {:?}",
 							amount_to_transfer, token_address, deposit_address
 						);
 						// SPL transfer
-						self.solana_client
+						let signature = self
+							.solana_client
 							.transfer_spl(
 								&deposit_address,
 								amount_to_transfer,
@@ -603,7 +607,84 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							.map_err(|_| {
 								log::error!("Failed to transfer SPL");
 							})?;
+						tx_id = Some(signature);
 					}
+
+					debug!("Waiting for deposit to be confirmed on Binance...");
+					let mut deposit_confirmed = false;
+					let start_time = std::time::Instant::now();
+					let timeout = Duration::from_secs(300); // 5 minute timeout
+
+					while !deposit_confirmed && start_time.elapsed() < timeout {
+						let Ok(deposit_history) = self
+							.binance_api
+							.wallet()
+							.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
+							.await
+						else {
+							log::error!("Failed to get deposit history");
+							continue;
+						};
+
+						// Check if there's a recent successful deposit
+						for deposit in deposit_history {
+							let deposit_amount: u64 = match Decimal::from_str(&deposit.amount) {
+								Ok(deposit_amount) => deposit_amount.to_u64().unwrap_or(0),
+								Err(_) => {
+									log::error!("Failed to parse deposit amount");
+									continue;
+								},
+							};
+							if deposit.status == 2 || deposit.status == 7 {
+								// 2 = rejected, 7 = Wrong Deposit
+								log::error!("Deposit failed with status: {}", deposit.status);
+								let body = CrossFailBody {
+									request_id: intent_id,
+									fail_reason: format!(
+										"Deposit failed with status: {}",
+										deposit.status
+									),
+								};
+								self.pumpx_api.cross_fail(&access_token, body).await.map_err(
+									|_| {
+										log::error!("Failed to notify pumpx-signer");
+									},
+								)?;
+								return Err(());
+							}
+							if deposit.status == 1 && // 1 = success
+							   deposit.coin == binance_coin_name &&
+							   deposit.network == binance_network_info.network &&
+                               deposit.source_address == Some(from_address.clone()) &&
+                               deposit_amount == amount_to_transfer
+							{
+								deposit_confirmed = true;
+								debug!(
+									"Deposit confirmed on Binance for {} {}",
+									deposit.amount, binance_coin_name
+								);
+								break;
+							}
+						}
+
+						if !deposit_confirmed {
+							debug!("Deposit not confirmed yet, waiting 5 seconds...");
+							sleep(Duration::from_secs(5)).await;
+						}
+					}
+
+					if !deposit_confirmed {
+						log::error!("Deposit not confirmed within timeout period");
+						let body = CrossFailBody {
+							request_id: intent_id,
+							fail_reason: "Deposit not confirmed on Binance".to_string(),
+						};
+						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+							log::error!("Failed to notify pumpx-signer");
+						})?;
+						return Err(());
+					}
+
 					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
 						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
 						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
@@ -626,6 +707,23 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						self.binance_api.spot_trading().create_order(binance_order_params).await
 					else {
 						log::error!("Failed to create binance order");
+						self.binance_api
+							.wallet()
+							.withdraw(
+								&binance_coin_name,
+								&from_address,
+								from_amount,
+								Some(&binance_network_info.network),
+							)
+							.await
+							.map_err(|e| {
+								log::error!(
+									"Failed to withdraw asset back to omni account, error: {:?}",
+									e
+								);
+							})?;
+						log::debug!("Withdrawed asset back to omni account");
+
 						let body = CrossFailBody {
 							request_id: intent_id,
 							// TODO: is this a user facing error? what should we return?
@@ -634,8 +732,6 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
 							log::error!("Failed to notify pumpx-signer");
 						})?;
-						// TODO: Figure out how to transfer back the asset to the omni account
-						// check https://developers.binance.com/docs/wallet/capital/withdraw
 
 						return Err(());
 					};
@@ -699,6 +795,23 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					}
 					if !trade_success {
 						log::error!("Binance order failed");
+						self.binance_api
+							.wallet()
+							.withdraw(
+								&binance_coin_name,
+								&from_address,
+								from_amount,
+								Some(&binance_network_info.network),
+							)
+							.await
+							.map_err(|e| {
+								log::error!(
+									"Failed to withdraw asset back to omni account, error: {:?}",
+									e
+								);
+							})?;
+						log::debug!("Withdrawed asset back to omni account");
+
 						let body = CrossFailBody {
 							request_id: intent_id,
 							// TODO: is this a user facing error? what should we return?
@@ -707,8 +820,6 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
 							log::error!("Failed to notify pumpx-signer");
 						})?;
-						// TODO: Figure out how to transfer back the asset to the omni account
-						// check https://developers.binance.com/docs/wallet/capital/withdraw
 
 						return Err(());
 					}

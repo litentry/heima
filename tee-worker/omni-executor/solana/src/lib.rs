@@ -24,7 +24,7 @@ impl SolanaClient {
 		to: &str,
 		value: u64,
 		signer: &Signer,
-	) -> Result<(), ()> {
+	) -> Result<String, ()> {
 		let block_hash = self
 			.rpc_client
 			.get_latest_blockhash()
@@ -49,7 +49,7 @@ impl SolanaClient {
 		log::debug!("Successfully transferred {} tokens from sender {}", value, signer.pubkey());
 		log::debug!("Transaction signature: {:?}", tx_signature);
 
-		Ok(())
+		Ok(tx_signature.to_string())
 	}
 
 	pub async fn transfer_spl<Signer: SignerTrait>(
@@ -58,7 +58,7 @@ impl SolanaClient {
 		value: u64,
 		mint_address: &str,
 		signer: &Signer,
-	) -> Result<(), ()> {
+	) -> Result<String, ()> {
 		let block_hash = self
 			.rpc_client
 			.get_latest_blockhash()
@@ -99,6 +99,6 @@ impl SolanaClient {
 		log::debug!("Successfully transferred {} tokens from sender {}", value, signer.pubkey());
 		log::debug!("Transaction signature: {:?}", tx_signature);
 
-		Ok(())
+		Ok(tx_signature.to_string())
 	}
 }
