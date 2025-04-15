@@ -68,10 +68,11 @@ async fn main() -> Result<(), ()> {
 			let ts = buf.timestamp_micros();
 			writeln!(
 				buf,
-				"{} [{}][{}]: {}",
+				"{} [{}][{}][{}]: {}",
 				ts,
 				record.level(),
 				std::thread::current().name().unwrap_or("none"),
+				record.target(),
 				record.args(),
 			)
 		})
