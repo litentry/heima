@@ -60,7 +60,12 @@ export default {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
                 PumpxRequestJwt: "PumpxRequestJwt",
+                RequestIntentResult: "RequestIntentResult",
             },
+        },
+        RequestIntentResult: {
+            intent_id: "u32",
+            success: "bool",
         },
         XtReport: {
             // Hash of the extrinsic.
