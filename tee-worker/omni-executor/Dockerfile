@@ -69,7 +69,7 @@ ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 COPY . $HOME
 WORKDIR $BUILD_DIR
 
-RUN make SGX=1
+RUN make SGX=1 SGX_DEBUG=0
 
 
 ### Release image (with SGX Hardware)
@@ -91,6 +91,7 @@ RUN apt-get install -y \
     curl \
     libssl-dev \
     clang \
+    pkg-config \
     ca-certificates
 
 RUN mkdir -p /wkdir /wkdir/local
