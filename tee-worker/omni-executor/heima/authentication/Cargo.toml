@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+chrono = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rsa = { workspace = true }
@@ -16,7 +17,6 @@ executor-primitives = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }
-chrono = { workspace = true }
 
 [lints]
 workspace = true
