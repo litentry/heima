@@ -5,8 +5,8 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-log = { workspace = true }
 hex = { workspace = true }
+log = { workspace = true }
 parity-scale-codec = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
