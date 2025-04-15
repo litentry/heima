@@ -676,6 +676,7 @@ impl<
 							if deposit.status == 1 && // 1 = success
 							   deposit.coin == binance_coin_name &&
 							   deposit.network == binance_network_info.network &&
+                               deposit.source_address == Some(from_address.clone()) &&
                                deposit_amount == amount_to_transfer
 							{
 								deposit_confirmed = true;
