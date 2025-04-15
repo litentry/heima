@@ -795,6 +795,23 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					}
 					if !trade_success {
 						log::error!("Binance order failed");
+						self.binance_api
+							.wallet()
+							.withdraw(
+								&binance_coin_name,
+								&from_address,
+								from_amount,
+								Some(&binance_network_info.network),
+							)
+							.await
+							.map_err(|e| {
+								log::error!(
+									"Failed to withdraw asset back to omni account, error: {:?}",
+									e
+								);
+							})?;
+						log::debug!("Withdrawed asset back to omni account");
+
 						let body = CrossFailBody {
 							request_id: intent_id,
 							// TODO: is this a user facing error? what should we return?
@@ -803,8 +820,6 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
 							log::error!("Failed to notify pumpx-signer");
 						})?;
-						// TODO: Figure out how to transfer back the asset to the omni account
-						// check https://developers.binance.com/docs/wallet/capital/withdraw
 
 						return Err(());
 					}
