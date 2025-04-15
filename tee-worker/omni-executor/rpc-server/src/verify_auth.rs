@@ -1,13 +1,15 @@
-use crate::{server::RpcContext, Encode};
+use crate::server::RpcContext;
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature,
-	utils::hex::{hex_encode, ToHexPrefixed},
-	Identity, MrEnclave, OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
-use heima_authentication::auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation};
+use heima_authentication::{
+	auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation},
+	web3::{generate_message_code, HeimaMessagePayload, MESSAGE_CODE_PERIOD},
+};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use std::{fmt::Display, sync::Arc};
@@ -19,7 +21,6 @@ pub enum AuthenticationError {
 	EmailInvalidVerificationCode,
 	OAuth2Error(String),
 	AuthTokenError(AuthTokenError),
-	InvalidNonce,
 	AuthNotExist,
 }
 
@@ -41,9 +42,6 @@ impl Display for AuthenticationError {
 			AuthenticationError::AuthTokenError(err) => {
 				write!(f, "Auth token error: {:?}", err)
 			},
-			AuthenticationError::InvalidNonce => {
-				write!(f, "Invalid nonce")
-			},
 			AuthenticationError::AuthNotExist => {
 				write!(f, "Auth not exist")
 			},
@@ -58,7 +56,7 @@ pub async fn verify_auth(
 	match wrapper.auth {
 		None => Err(AuthenticationError::AuthNotExist),
 		Some(OmniAuth::Web3(ref signature)) => {
-			verify_web3_authentication(signature, &wrapper.task, wrapper.nonce, ctx.mrenclave)
+			verify_web3_authentication(wrapper.task.sender(), signature)
 		},
 		Some(OmniAuth::Email(ref email, ref verification_code)) => {
 			verify_email_authentication(ctx, email, verification_code)
@@ -72,31 +70,16 @@ pub async fn verify_auth(
 	}
 }
 
-pub fn verify_web3_authentication<T: NativeTaskTrait>(
+pub fn verify_web3_authentication(
+	signer: &Identity,
 	signature: &HeimaMultiSignature,
-	task: &T,
-	nonce: Option<u32>,
-	mrenclave: MrEnclave,
 ) -> Result<(), AuthenticationError> {
-	let nonce = nonce.ok_or(AuthenticationError::InvalidNonce)?;
-
-	let mut payload = task.encode();
-	payload.append(&mut nonce.encode());
-	payload.append(&mut mrenclave.encode());
-
-	// The signature should be valid in either case:
-	// 1. blake2_256(payload)
-	// 2. Signature Prefix + blake2_256(payload)
-
-	let hashed = blake2_256(&payload);
-
-	let prettified_msg_hash = task.signature_message_prefix() + &hex_encode(&hashed);
-	let prettified_msg_hash = prettified_msg_hash.as_bytes();
+	let message = HeimaMessagePayload { message_code: generate_message_code(MESSAGE_CODE_PERIOD) };
+	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
+	let hashed = blake2_256(payload.as_bytes());
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(prettified_msg_hash, task.sender())
-		|| signature.verify(&hashed, task.sender())
-	{
+	match signature.verify(&hashed, signer) {
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
