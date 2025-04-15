@@ -345,44 +345,56 @@ async fn handle_native_task<
 					(IntentCompletedDetail::Success, true)
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					if let Err(e) = ctx
-						.ethereum_intent_executor
-						.execute(&omni_account, intent_id, intent.clone())
-						.await
-					{
-						log::error!("Error executing intent: {:?}", e);
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: false },
-						);
-						(IntentCompletedDetail::Failure, true)
-					} else {
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: true },
-						);
-						(IntentCompletedDetail::Success, true)
-					}
+					// if let Err(e) = ctx
+					// 	.ethereum_intent_executor
+					// 	.execute(&omni_account, intent_id, intent.clone())
+					// 	.await
+					// {
+					// 	log::error!("Error executing intent: {:?}", e);
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
+					// 	);
+					// 	(IntentCompletedDetail::Failure, true)
+					// } else {
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					// 	);
+					// 	(IntentCompletedDetail::Success, true)
+					// }
+					send_error(
+						"Intent not accepted".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					(IntentCompletedDetail::Failure, true)
 				},
 				Intent::TransferSolana(_) => {
-					if let Err(e) = ctx
-						.solana_intent_executor
-						.execute(&omni_account, intent_id, intent.clone())
-						.await
-					{
-						log::error!("Error executing intent: {:?}", e);
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: false },
-						);
-						(IntentCompletedDetail::Failure, true)
-					} else {
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: true },
-						);
-						(IntentCompletedDetail::Success, true)
-					}
+					// if let Err(e) = ctx
+					// 	.solana_intent_executor
+					// 	.execute(&omni_account, intent_id, intent.clone())
+					// 	.await
+					// {
+					// 	log::error!("Error executing intent: {:?}", e);
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
+					// 	);
+					// 	(IntentCompletedDetail::Failure, true)
+					// } else {
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					// 	);
+					// 	(IntentCompletedDetail::Success, true)
+					// }
+					send_error(
+						"Intent not accepted".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					(IntentCompletedDetail::Failure, true)
 				},
 				Intent::Swap(..) => {
 					let (execution_result, should_notify_parentchain, response) = match ctx

@@ -60,3 +60,28 @@ pub struct NetworkInfo {
 	pub deposit_dust: Option<String>,
 	pub denomination: Option<u64>,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Deposit {
+	pub id: String,
+	pub amount: String,
+	pub coin: String,
+	pub network: String,
+	pub status: u8,
+	pub address: String,
+	pub address_tag: Option<String>,
+	pub tx_id: Option<String>,
+	pub insert_time: u64,
+	pub complete_time: Option<u64>,
+	pub transfer_type: u8,
+	pub confirm_times: String,
+	pub unlock_confirm: u8,
+	pub wallet_type: u8,
+	pub source_address: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WithdrawOrder {
+	pub id: String,
+}
