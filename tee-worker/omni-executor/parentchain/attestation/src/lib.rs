@@ -51,7 +51,7 @@ pub async fn perform_attestation(
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
 
 		mrenclave = dcap_quote.body.mr_enclave;
-		info!("MRENCLAVE {:?}", mrenclave);
+		info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
 	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
