@@ -40,6 +40,10 @@ impl<'a> WalletApi<'a> {
 	pub async fn get_deposit_history(&self, coin: Option<String>) -> Result<Vec<Deposit>, Error> {
 		let endpoint = format!("{}/capital/deposit/hisrec", WALLET_API);
 		let mut params = HashMap::new();
+		params.insert(
+			"startTime".to_string(),
+			(chrono::Utc::now() - chrono::Duration::hours(1)).timestamp_millis().to_string(),
+		);
 		params.insert("includeSource".to_string(), "true".to_string());
 		if let Some(coin) = coin {
 			params.insert("coin".to_string(), coin);
