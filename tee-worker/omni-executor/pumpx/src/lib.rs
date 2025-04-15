@@ -52,7 +52,7 @@ pub fn pubkey_to_evm_address_bytes(pubkey: &[u8]) -> Result<[u8; 20], ()> {
 }
 
 pub fn hex_encode_evm_address_bytes(bytes: &[u8]) -> String {
-	format!("0x{}", hex::encode(bytes)).to_lowercase()
+	format!("0x{}", hex::encode(bytes))
 }
 
 pub fn pubkey_to_evm_address(pubkey: &[u8]) -> Result<String, ()> {
@@ -70,7 +70,7 @@ pub fn pubkey_to_evm_address(pubkey: &[u8]) -> Result<String, ()> {
 
 	let address: String =
 		format!("0x{}", hex::encode(&keccak_256(&uncompressed_pubkey[1..])[12..]));
-	Ok(address.to_lowercase())
+	Ok(address)
 }
 
 pub fn pubkey_to_solana_address(pubkey: &[u8]) -> Result<String, ()> {
