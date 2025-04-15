@@ -737,8 +737,11 @@ impl<
 								Some(&binance_network_info.network),
 							)
 							.await
-							.map_err(|_| {
-								log::error!("Failed to withdraw asset back to omni account");
+							.map_err(|e| {
+								log::error!(
+									"Failed to withdraw asset back to omni account, error: {:?}",
+									e
+								);
 							})?;
 						log::debug!("Withdrawed asset back to omni account");
 
