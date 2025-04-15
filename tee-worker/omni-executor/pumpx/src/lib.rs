@@ -25,6 +25,7 @@ mod pumpx_api;
 pub use pumpx_api::*;
 
 use base58::ToBase58;
+use ethers::core::utils::to_checksum;
 use executor_primitives::ChainAsset;
 use log::error;
 use sp_core::keccak_256;
@@ -52,25 +53,11 @@ pub fn pubkey_to_evm_address_bytes(pubkey: &[u8]) -> Result<[u8; 20], ()> {
 }
 
 pub fn hex_encode_evm_address_bytes(bytes: &[u8]) -> String {
-	format!("0x{}", hex::encode(bytes)).to_lowercase()
+	format!("0x{}", hex::encode(bytes))
 }
 
 pub fn pubkey_to_evm_address(pubkey: &[u8]) -> Result<String, ()> {
-	let pubkey: [u8; 33] = pubkey.try_into().map_err(|_| {
-		error!("wrong pubkey length: expect 33 bytes");
-	})?;
-	let uncompressed_pubkey = libsecp256k1::PublicKey::parse_slice(
-		&pubkey,
-		Some(libsecp256k1::PublicKeyFormat::Compressed),
-	)
-	.map_err(|_| {
-		error!("libsecp256k1 can't parse pubkey");
-	})?
-	.serialize();
-
-	let address: String =
-		format!("0x{}", hex::encode(&keccak_256(&uncompressed_pubkey[1..])[12..]));
-	Ok(address.to_lowercase())
+	pubkey_to_evm_address_bytes(pubkey).map(|bytes| to_checksum(&bytes.into(), None))
 }
 
 pub fn pubkey_to_solana_address(pubkey: &[u8]) -> Result<String, ()> {

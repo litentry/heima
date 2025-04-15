@@ -45,10 +45,10 @@ pub async fn perform_attestation(
 		f.write_all(&content).unwrap();
 
 		quote = fs::read("/dev/attestation/quote").unwrap();
-		info!("Attestation quote {:?}", quote);
 
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
+		info!("Attestation dcap_quote {:?}", dcap_quote);
 
 		mrenclave = dcap_quote.body.mr_enclave;
 		info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));

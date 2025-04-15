@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 use async_trait::async_trait;
+use executor_core::intent_executor::IntentExecutionResult;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::Intent;
@@ -48,7 +49,7 @@ impl IntentExecutor for SolanaIntentExecutor {
 		_account_id: &AccountId,
 		_intent_id: IntentId,
 		intent: Intent,
-	) -> Result<Option<Vec<u8>>, ()> {
+	) -> Result<IntentExecutionResult, ()> {
 		info!("Executing intent: {:?}", intent);
 		// TODO: get key from key store
 		let signer_key_pair = Keypair::read_from_file("dev-key.json")
@@ -82,6 +83,6 @@ impl IntentExecutor for SolanaIntentExecutor {
 			},
 		}
 
-		Ok(None)
+		Ok((None, false))
 	}
 }

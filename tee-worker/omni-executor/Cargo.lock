@@ -6686,6 +6686,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "executor-primitives",
+ "hex",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
@@ -7421,6 +7422,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "base58",
+ "ethers",
  "executor-core",
  "executor-crypto",
  "executor-primitives",

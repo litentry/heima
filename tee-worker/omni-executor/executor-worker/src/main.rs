@@ -209,13 +209,10 @@ async fn main() -> Result<(), ()> {
 			);
 			let accounting_contract_client = AccountingContractClient::new(
 				ethereum_rpc_provider,
-				//todo: from CLI
-				"0xb0830ef478a215ed393c20a0c97aa69869a0beea".parse().unwrap(),
+				args.accounting_contract_address.parse().unwrap(),
 			);
 
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
-				parentchain_rpc_client_factory.clone(),
-				tx_signer.clone(),
 				rpc_endpoint_registry,
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
