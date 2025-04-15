@@ -619,23 +619,27 @@ impl<
 						Handle::current(),
 					);
 
+					let mut tx_id: Option<String> = None;
 					// TODO: change this when adding support for more tokens/chains
 					if binance_coin_name == "SOL" {
 						// Native transfer
 						debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
-						self.solana_client
+						let signature = self
+							.solana_client
 							.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
 							.await
 							.map_err(|_| {
 								log::error!("Failed to transfer SOL");
 							})?;
+						tx_id = Some(signature);
 					} else {
 						debug!(
 							"Transfering {:?} {:?} to {:?}",
 							amount_to_transfer, token_address, deposit_address
 						);
 						// SPL transfer
-						self.solana_client
+						let signature = self
+							.solana_client
 							.transfer_spl(
 								&deposit_address,
 								amount_to_transfer,
@@ -646,6 +650,7 @@ impl<
 							.map_err(|_| {
 								log::error!("Failed to transfer SPL");
 							})?;
+						tx_id = Some(signature);
 					}
 
 					debug!("Waiting for deposit to be confirmed on Binance...");
@@ -657,7 +662,7 @@ impl<
 						let Ok(deposit_history) = self
 							.binance_api
 							.wallet()
-							.get_deposit_history(Some(binance_coin_name.clone()))
+							.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
 							.await
 						else {
 							log::error!("Failed to get deposit history");
@@ -673,6 +678,23 @@ impl<
 									continue;
 								},
 							};
+							if deposit.status == 2 || deposit.status == 7 {
+								// 2 = rejected, 7 = Wrong Deposit
+								log::error!("Deposit failed with status: {}", deposit.status);
+								let body = CrossFailBody {
+									request_id: intent_id,
+									fail_reason: format!(
+										"Deposit failed with status: {}",
+										deposit.status
+									),
+								};
+								self.pumpx_api.cross_fail(&access_token, body).await.map_err(
+									|_| {
+										log::error!("Failed to notify pumpx-signer");
+									},
+								)?;
+								return Err(());
+							}
 							if deposit.status == 1 && // 1 = success
 							   deposit.coin == binance_coin_name &&
 							   deposit.network == binance_network_info.network &&

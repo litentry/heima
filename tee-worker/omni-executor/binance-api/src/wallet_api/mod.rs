@@ -37,7 +37,11 @@ impl<'a> WalletApi<'a> {
 	}
 
 	/// Fetch deposit history
-	pub async fn get_deposit_history(&self, coin: Option<String>) -> Result<Vec<Deposit>, Error> {
+	pub async fn get_deposit_history(
+		&self,
+		coin: Option<String>,
+		tx_id: Option<String>,
+	) -> Result<Vec<Deposit>, Error> {
 		let endpoint = format!("{}/capital/deposit/hisrec", WALLET_API);
 		let mut params = HashMap::new();
 		params.insert(
@@ -47,6 +51,9 @@ impl<'a> WalletApi<'a> {
 		params.insert("includeSource".to_string(), "true".to_string());
 		if let Some(coin) = coin {
 			params.insert("coin".to_string(), coin);
+		}
+		if let Some(tx_id) = tx_id {
+			params.insert("txId".to_string(), tx_id);
 		}
 		self.base_api
 			.make_signed_request(&endpoint, Method::GET, Some(params), None)
