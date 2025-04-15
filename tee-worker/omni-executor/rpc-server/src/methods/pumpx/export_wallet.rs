@@ -45,6 +45,9 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<ExportWalletParams>()?;
+
+			log::debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
+
 			let aes_key = ctx
 				.shielding_key
 				.private_key()

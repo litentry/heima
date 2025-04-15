@@ -24,6 +24,13 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<NotifyLimitOrderResultParams>()?;
 
+			log::debug!(
+				"Received pumpx_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
+				params.intent_id,
+				params.result,
+				params.message
+			);
+
 			let private_key = RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key)
 				.map_err(|_| internal_error.clone())?;
 			let public_key =
