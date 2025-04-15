@@ -733,7 +733,7 @@ impl<
 							.withdraw(
 								&binance_coin_name,
 								&from_address,
-								amount_to_transfer_decimal.to_string(),
+								from_amount,
 								Some(&binance_network_info.network),
 							)
 							.await
