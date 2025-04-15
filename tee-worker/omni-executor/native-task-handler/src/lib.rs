@@ -311,7 +311,7 @@ async fn handle_native_task<
 			let (execution_result, should_notify_parentchain) = match intent {
 				Intent::SystemRemark(remark) => {
 					let remark_call = SystemCall::remark { remark: remark.to_vec() };
-					let _ = dispatch_as_omni_account(
+					let _ = dispatch_as_signed(
 						&mut rpc_client,
 						ctx.transaction_signer.clone(),
 						sender,
@@ -330,7 +330,7 @@ async fn handle_native_task<
 						dest: transfer.to.to_subxt_type().into(),
 						value: transfer.value,
 					};
-					let _ = dispatch_as_omni_account(
+					let _ = dispatch_as_signed(
 						&mut rpc_client,
 						ctx.transaction_signer.clone(),
 						sender,
@@ -926,7 +926,7 @@ fn send_ok(sender: ResponseSender, ok_res: NativeTaskOk) {
 	send_response(sender, NativeTaskResponse::Ok(ok_res));
 }
 
-async fn dispatch_as_omni_account<
+async fn dispatch_as_signed<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 >(
@@ -936,7 +936,7 @@ async fn dispatch_as_omni_account<
 	call: RuntimeCall,
 	auth_type: Option<OmniAccountAuthType>,
 ) {
-	let call = parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
+	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
 		sender.hash().to_subxt_type(),
 		call,
 		auth_type.map(|t| t.to_subxt_type()),
@@ -945,10 +945,10 @@ async fn dispatch_as_omni_account<
 	// notify parentchain - for now we continue even with error
 	match client.submit_tx(&tx).await {
 		Ok(_) => {
-			log::debug!("Submitted dispatch_as_omni_account parentchain call")
+			log::debug!("Submitted dispatch_as_signed parentchain call")
 		},
 		Err(_) => {
-			log::error!("Failed to submit dispatch_as_omni_account parentchain call",);
+			log::error!("Failed to submit dispatch_as_signed parentchain call",);
 			signer.update_nonce().await
 		},
 	};
