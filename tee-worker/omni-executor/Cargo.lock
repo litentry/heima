@@ -6685,6 +6685,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "executor-primitives",
+ "hex",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",

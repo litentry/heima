@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 log = { workspace = true }
+hex = { workspace = true }
 parity-scale-codec = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
