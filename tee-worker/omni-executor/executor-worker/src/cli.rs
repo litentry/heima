@@ -34,6 +34,13 @@ pub struct RunArgs {
 		value_name = "delegation contract address"
 	)]
 	pub delegation_contract_address: String,
+	#[arg(
+		short,
+		long,
+		default_value = "0xb0830ef478a215ed393c20a0c97aa69869a0beea",
+		value_name = "accounting contract address"
+	)]
+	pub accounting_contract_address: String,
 }
 
 #[derive(Args)]
