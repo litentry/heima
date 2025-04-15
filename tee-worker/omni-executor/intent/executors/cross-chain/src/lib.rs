@@ -29,7 +29,7 @@ use binance_api::{
 	BinanceApi,
 };
 use ethereum_rpc::RpcProvider as EthereumRpcProvider;
-use executor_core::intent_executor::IntentExecutor;
+use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
@@ -63,7 +63,6 @@ use pumpx::types::{
 use pumpx::PumpxApi;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use executor_primitives::AccountId;
@@ -71,11 +70,8 @@ use executor_primitives::ChainAsset;
 use parentchain_rpc_client::metadata::Metadata;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::CustomConfig;
-use parentchain_rpc_client::SubstrateRpcClient;
-use parentchain_rpc_client::SubstrateRpcClientFactory;
 use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
-use parentchain_rpc_client::ToSubxtType;
 use parentchain_signer::TxSigner;
 
 use log::debug;
@@ -104,14 +100,8 @@ const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyT
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
-> {
-	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-	transaction_signer: Arc<ParentchainTxSigner>,
+pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
+{
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
@@ -120,20 +110,13 @@ pub struct CrossChainIntentExecutor<
 	binance_api: Arc<BinanceApi>,
 	solana_client: Arc<SolanaClient>,
 	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
-	phantom: PhantomData<(Header, RpcClient)>,
 }
 
-impl<
-		Header,
-		RpcClient: SubstrateRpcClient<Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-		Provider: EthereumRpcProvider<Transaction = TransactionRequest>,
-	> CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
+impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
+	CrossChainIntentExecutor<Provider>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-		transaction_signer: Arc<ParentchainTxSigner>,
 		_rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<PumpxApi>,
@@ -145,8 +128,6 @@ impl<
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
 		Ok(Self {
-			parentchain_rpc_client_factory,
-			transaction_signer,
 			// account_asset_lock,
 			// rpc_endpoint_registry,
 			pumpx_signer_client,
@@ -155,18 +136,13 @@ impl<
 			binance_api,
 			solana_client,
 			accounting_contract_client,
-			phantom: PhantomData,
 		})
 	}
 }
 
 #[async_trait]
-impl<
-		Header: Send + Sync,
-		RpcClient: SubstrateRpcClient<Header> + Send + Sync,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync,
-		Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync,
-	> IntentExecutor for CrossChainIntentExecutor<Header, RpcClient, RpcClientFactory, Provider>
+impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync> IntentExecutor
+	for CrossChainIntentExecutor<Provider>
 {
 	#[allow(unused_assignments)]
 	async fn execute(
@@ -174,15 +150,11 @@ impl<
 		account_id: &AccountId,
 		intent_id: IntentId,
 		intent: Intent,
-	) -> Result<Option<Vec<u8>>, ()> {
+	) -> Result<IntentExecutionResult, ()> {
 		match intent {
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
-				let Ok(mut rpc_client) = self.parentchain_rpc_client_factory.new_client().await
-				else {
-					log::error!("Failed to create rpc client");
-					return Err(());
-				};
+
 				// let available_amount = match &swap_order.from_asset {
 				// 	ChainAsset::Ethereum(chain_id, token) => {
 				// 		let rpc_url =
@@ -229,22 +201,6 @@ impl<
 				// )?;
 				//
 
-				let intent_accepted_event_emit_call = parentchain_api_interface::tx()
-					.omni_account()
-					.intent_accepted(account_id.to_subxt_type(), intent_id, intent.to_subxt_type());
-
-				let tx = self.transaction_signer.sign(intent_accepted_event_emit_call).await;
-
-				match rpc_client.submit_tx(&tx).await {
-					Ok(report) => report,
-					Err(e) => {
-						log::error!("Failed to submit and watch tx: {:?}", e);
-						return Err(());
-					},
-				};
-
-				debug!("Submitted intent accepted parentchain call");
-
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
 
@@ -279,7 +235,7 @@ impl<
 					return Err(());
 				};
 
-				let pumpx_order_response: Option<Vec<u8>>;
+				let result: IntentExecutionResult;
 
 				if pumpx_config.from_chain_id == pumpx_config.to_chain_id {
 					debug!("from and to chain are equal, performing single chain swap");
@@ -297,7 +253,8 @@ impl<
 							log::error!("Could not get wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let order_response = match pumpx_config.order_type {
+					let (order_response, should_notify_parentchain) = match pumpx_config.order_type
+					{
 						PumpxOrderType::Market => {
 							debug!("Doing market order");
 							let body = CreateMarketOrderTxBody {
@@ -344,7 +301,7 @@ impl<
 								wallet_index: pumpx_config.wallet_index,
 							};
 							debug!("Sending market order: {:?}", body);
-							let res = self
+							let response = self
 								.pumpx_api
 								.create_market_order_tx(&access_token, body)
 								.await
@@ -352,8 +309,8 @@ impl<
 									log::error!("Failed to create market order tx");
 								})?;
 
-							debug!("Received create_market_order_tx response: {:?}", res);
-							res.encode()
+							debug!("Received create_market_order_tx response: {:?}", response);
+							(response.encode(), true)
 						},
 						PumpxOrderType::Limit => {
 							debug!("Doing limit order");
@@ -426,7 +383,7 @@ impl<
 								wallet_index: pumpx_config.wallet_index,
 							};
 							debug!("Sending limit order: {:?}", new_limit_order);
-							let limit_order_res = self
+							let response = self
 								.pumpx_api
 								.create_limit_order(&access_token, new_limit_order)
 								.await
@@ -434,12 +391,12 @@ impl<
 									log::error!("Failed to create limit order");
 								})?;
 
-							debug!("Received limit order response: {:?}", limit_order_res);
+							debug!("Received limit order response: {:?}", response);
 
-							limit_order_res.encode()
+							(response.encode(), false)
 						},
 					};
-					pumpx_order_response = Some(order_response);
+					result = (Some(order_response), should_notify_parentchain);
 				} else {
 					debug!("from and to chain are different, performing cross chain swap");
 					if !matches!(
@@ -867,15 +824,15 @@ impl<
 						wallet_index: pumpx_config.wallet_index,
 					};
 					debug!("Sending market order: {:?}", body);
-					let res =
+					let response =
 						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
 							|_| {
 								log::error!("Failed to create market order tx");
 							},
 						)?;
 
-					debug!("Received create_market_order_tx response: {:?}", res);
-					pumpx_order_response = Some(res.encode())
+					debug!("Received create_market_order_tx response: {:?}", response);
+					result = (Some(response.encode()), true);
 				}
 
 				// self.account_asset_lock.release(
@@ -886,7 +843,7 @@ impl<
 				// 	})?,
 				// )?;
 
-				return Ok(pumpx_order_response);
+				return Ok(result);
 			},
 			_ => {
 				log::error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);
