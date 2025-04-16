@@ -148,7 +148,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				})?;
 
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Some(access_token) =
+			let Ok(Some(access_token)) =
 				storage.get(&(user_identity.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				log::error!("Failed to get access token from storage");

@@ -202,7 +202,7 @@ async fn handle_native_task<
 	let (response_sender, tx) = match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
+			let Ok(Some(omni_account)) = omni_account_storage.get(&sender.hash()) else {
 				send_error(
 					"No omni account found".to_string(),
 					response_sender,
@@ -268,14 +268,18 @@ async fn handle_native_task<
 			let omni_account = sender.to_omni_account();
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
-			let Some(stored_intent_id) = intent_id_storage.get(&omni_account) else {
-				send_error(
-					"Failed to read intent from store".to_string(),
-					response_sender,
-					NativeTaskError::InternalError,
-				);
-				return;
+			let stored_intent_id = match intent_id_storage.get(&omni_account) {
+				Ok(id) => id.unwrap_or_default(),
+				Err(_) => {
+					send_error(
+						"Failed to read intent from store".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
 			};
+
 			if intent_id == stored_intent_id + 1 {
 				if intent_id_storage.insert(&omni_account, intent_id).is_err() {
 					send_error(
@@ -439,7 +443,7 @@ async fn handle_native_task<
 		},
 		NativeTask::AddAccount(sender, identity, validation_data, public_account, permissions) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Some(omni_account) = omni_account_storage.get(&sender.hash()) else {
+			let Ok(Some(omni_account)) = omni_account_storage.get(&sender.hash()) else {
 				send_error(
 					"No omni account found".to_string(),
 					response_sender,
@@ -687,7 +691,7 @@ async fn handle_native_task<
 			expected_wallet_address,
 		) => {
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Some(access_token) =
+			let Ok(Some(access_token)) =
 				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
@@ -765,7 +769,7 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxAddWallet(sender) => {
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Some(access_token) =
+			let Ok(Some(access_token)) =
 				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
@@ -831,7 +835,7 @@ async fn handle_native_task<
 		) => {
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Some(access_token) =
+			let Ok(Some(access_token)) =
 				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(

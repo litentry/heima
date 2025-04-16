@@ -33,17 +33,18 @@ pub trait Storage<K: Encode, V: Codec> {
 	fn db(&self) -> Arc<StorageDB>;
 	fn name(&self) -> &'static str;
 
-	fn get(&self, key: &K) -> Option<V> {
+	fn get(&self, key: &K) -> Result<Option<V>, ()> {
 		match self.db().get(storage_key(self.name(), &key.encode())) {
-			Ok(Some(v)) => V::decode(&mut &v[..])
-				.map_err(|e| {
+			Ok(Some(v)) => {
+				let decoded_v = V::decode(&mut &v[..]).map_err(|e| {
 					log::error!("Error decoding value from storage: {:?}", e);
-				})
-				.ok(),
-			Ok(None) => None,
+				})?;
+				Ok(Some(decoded_v))
+			},
+			Ok(None) => Ok(None),
 			Err(e) => {
 				log::error!("Error getting value from storage: {:?}", e);
-				None
+				Err(())
 			},
 		}
 	}

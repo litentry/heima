@@ -36,10 +36,14 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 					})?;
 
 					let storage = IntentIdStorage::new(ctx.storage_db.clone());
-					let intent_id = storage.get(&AccountId::from(account.0)).ok_or_else(|| {
-						log::error!("Could not get IntentId from store");
-						<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
-					})?;
+					let intent_id = storage
+						.get(&AccountId::from(account.0))
+						.map_err(|e| {
+							log::error!("Could not get IntentId from store: {:?}", e);
+							<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
+						})?
+						.unwrap_or_default();
+
 					Ok::<u32, ErrorObject>(intent_id + 1)
 				},
 				Err(_) => Err(ErrorCode::ParseError.into()),

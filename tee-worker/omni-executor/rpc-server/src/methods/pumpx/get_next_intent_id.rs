@@ -40,10 +40,14 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 					.to_omni_account();
 
 			let storage = IntentIdStorage::new(ctx.storage_db.clone());
-			let intent_id = storage.get(&AccountId::from(account)).ok_or_else(|| {
-				log::error!("Could not get IntentId from store");
-				PumpxRpcError::from_error_code(ErrorCode::InternalError)
-			})?;
+			let intent_id = storage
+				.get(&AccountId::from(account))
+				.map_err(|e| {
+					log::error!("Could not get IntentId from store: {:?}", e);
+					PumpxRpcError::from_error_code(ErrorCode::InternalError)
+				})?
+				.unwrap_or_default();
+
 			Ok::<u32, ErrorObject>(intent_id + 1)
 		})
 		.expect("Failed to register getIntentId method");
