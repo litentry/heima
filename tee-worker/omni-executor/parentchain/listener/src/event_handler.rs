@@ -143,14 +143,14 @@ impl<
 							Error::NonRecoverableError
 						})?;
 					self.member_account_storage
-						.insert(member_account.hash(), omni_account.clone())
+						.insert(&member_account.hash(), omni_account.clone())
 						.map_err(|e| {
 							log::error!("Error inserting member account hash: {:?}", e);
 							Error::NonRecoverableError
 						})?;
 					account_store.push(member_account);
 				}
-				self.account_store_storage.insert(omni_account, account_store).map_err(|_| {
+				self.account_store_storage.insert(&omni_account, account_store).map_err(|_| {
 					log::error!("Could not insert account store into storage");
 					Error::NonRecoverableError
 				})?;

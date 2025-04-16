@@ -20,7 +20,7 @@ pub fn register_get_oauth2_google_authorization_url(module: &mut RpcModule<RpcCo
 							google::get_authorize_data(&ctx.google_client_id, &redirect_uri);
 						let storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
 						storage
-							.insert(google_identity.hash(), authorization_data.state.clone())
+							.insert(&google_identity.hash(), authorization_data.state.clone())
 							.map_err(|_| ErrorCode::InternalError)?;
 						Ok::<String, ErrorObject>(authorization_data.authorize_url.to_hex())
 					},

@@ -27,7 +27,6 @@ pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use executor_storage::StorageDB;
-	use intent_core::InMemoryIntentIdStore;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -41,7 +40,7 @@ mod test {
 	#[tokio::test]
 	pub async fn get_health_works() {
 		let tmp_dir = tempdir().unwrap();
-		let port = 2000;
+		let port = 2004;
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 		let db = StorageDB::open_default(tmp_dir.path()).unwrap();
@@ -50,7 +49,6 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let intent_id_store = InMemoryIntentIdStore::default();
 		let pumpx_api = PumpxApi::new(None);
 
 		start_server(
@@ -61,7 +59,6 @@ mod test {
 			Arc::new(db),
 			[0u8; 32],
 			jwt_private_key.as_bytes().to_vec(),
-			Arc::new(Box::new(intent_id_store)),
 		)
 		.await
 		.unwrap();

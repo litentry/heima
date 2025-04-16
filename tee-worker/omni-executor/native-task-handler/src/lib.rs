@@ -14,10 +14,11 @@ use executor_primitives::{
 	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, MemberAccount,
 	OmniAccountAuthType, ValidationData, Web2IdentityType,
 };
-use executor_storage::{MemberOmniAccountStorage, PumpxJwtStorage, Storage, StorageDB};
+use executor_storage::{
+	IntentIdStorage, MemberOmniAccountStorage, PumpxJwtStorage, Storage, StorageDB,
+};
 use heima_authentication::auth_token::*;
 use heima_identity_verification::{get_verification_message, web2, web3};
-use intent_core::IntentIdStore;
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
 	pallet_balances::pallet::Call as BalancesCall,
@@ -76,7 +77,6 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<PumpxApi>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -110,7 +110,6 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<PumpxApi>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		intent_id_store: Arc<Box<dyn IntentIdStore>>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -123,7 +122,6 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
-			intent_id_store,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -267,8 +265,10 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::RequestIntent(sender, intent_id, intent) => {
-			let Ok(stored_intent_id) = ctx.intent_id_store.get(&sender.to_omni_account()).await
-			else {
+			let omni_account = sender.to_omni_account();
+
+			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
+			let Some(stored_intent_id) = intent_id_storage.get(&omni_account) else {
 				send_error(
 					"Failed to read intent from store".to_string(),
 					response_sender,
@@ -277,7 +277,7 @@ async fn handle_native_task<
 				return;
 			};
 			if intent_id == stored_intent_id + 1 {
-				if ctx.intent_id_store.update(sender.to_omni_account(), intent_id).await.is_err() {
+				if intent_id_storage.insert(&omni_account, intent_id).is_err() {
 					send_error(
 						"Failed to save intent id".to_string(),
 						response_sender,
@@ -624,7 +624,7 @@ async fn handle_native_task<
 
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
 			if storage
-				.insert((omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
 			{
 				log::error!(
@@ -669,7 +669,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			if storage.insert((omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
+			if storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
 				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
 			};
 

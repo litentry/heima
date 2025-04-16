@@ -19,6 +19,7 @@ use std::str::FromStr;
 use crate::server::RpcContext;
 use crate::ErrorCode;
 use executor_primitives::AccountId;
+use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use log::error;
 use parentchain_rpc_client::AccountId32;
@@ -33,13 +34,12 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 						error!("Could not parse AccountId: {:?}", e);
 						<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InvalidParams)
 					})?;
-					let intent_id =
-						ctx.intent_id_store.get(&AccountId::from(account.0)).await.map_err(
-							|e| {
-								error!("Could not get IntentId from store: {:?}", e);
-								<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
-							},
-						)?;
+
+					let storage = IntentIdStorage::new(ctx.storage_db.clone());
+					let intent_id = storage.get(&AccountId::from(account.0)).ok_or_else(|| {
+						log::error!("Could not get IntentId from store");
+						<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
+					})?;
 					Ok::<u32, ErrorObject>(intent_id + 1)
 				},
 				Err(_) => Err(ErrorCode::ParseError.into()),

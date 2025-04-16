@@ -1,14 +1,3 @@
-mod member_omni_account;
-pub use member_omni_account::MemberOmniAccountStorage;
-mod verification_code;
-pub use verification_code::VerificationCodeStorage;
-mod account_store;
-pub use account_store::AccountStoreStorage;
-mod oauth2_state_verifier;
-pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
-mod pumpx_jwt;
-pub use pumpx_jwt::PumpxJwtStorage;
-
 use executor_crypto::hashing::{blake2_128, twox_128};
 use executor_primitives::{AccountId, MemberAccount};
 use frame_support::sp_runtime::traits::BlakeTwo256;
@@ -22,6 +11,19 @@ use parity_scale_codec::{Codec, Decode, Encode};
 use rocksdb::{WriteOptions, DB};
 use sp_state_machine::{read_proof_check, StorageProof};
 use std::{sync::Arc, vec::Vec};
+
+mod member_omni_account;
+pub use member_omni_account::MemberOmniAccountStorage;
+mod verification_code;
+pub use verification_code::VerificationCodeStorage;
+mod account_store;
+pub use account_store::AccountStoreStorage;
+mod oauth2_state_verifier;
+pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
+mod pumpx_jwt;
+pub use pumpx_jwt::PumpxJwtStorage;
+mod intent_id;
+pub use intent_id::IntentIdStorage;
 
 const STORAGE_DB_PATH: &str = "storage_db";
 
@@ -49,7 +51,7 @@ pub trait Storage<K: Encode, V: Codec> {
 		self.db().key_may_exist(storage_key(self.name(), &key.encode()))
 	}
 
-	fn insert(&self, key: K, value: V) -> Result<(), ()> {
+	fn insert(&self, key: &K, value: V) -> Result<(), ()> {
 		let mut opts = WriteOptions::default();
 		opts.set_sync(true);
 		self.db()
@@ -174,13 +176,13 @@ async fn init_omni_account_storages(
 					for member in account_store.0.iter() {
 						let member_account: MemberAccount = member.to_primitive_type();
 						member_omni_account_storage
-							.insert(member_account.hash(), omni_account.clone())
+							.insert(&member_account.hash(), omni_account.clone())
 							.map_err(|e| {
 								log::error!("Error inserting member account hash: {:?}", e);
 							})?;
 						member_accounts.push(member_account);
 					}
-					account_store_storage.insert(omni_account, member_accounts).map_err(|e| {
+					account_store_storage.insert(&omni_account, member_accounts).map_err(|e| {
 						log::error!("Error inserting account store: {:?}", e);
 					})?;
 				},

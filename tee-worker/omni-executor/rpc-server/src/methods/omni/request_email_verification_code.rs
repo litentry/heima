@@ -31,7 +31,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 			let verification_code = generate_verification_code();
 
 			verification_code_storage
-				.insert(email_identity.hash(), verification_code.clone())
+				.insert(&email_identity.hash(), verification_code.clone())
 				.map_err(|_| ErrorCode::InternalError)?;
 
 			send_verification_email(&ctx.mailer, params.user_email, verification_code)
