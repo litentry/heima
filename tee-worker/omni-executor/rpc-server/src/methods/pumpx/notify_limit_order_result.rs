@@ -1,14 +1,17 @@
-use crate::{error_code::*, oneshot, server::RpcContext, Decode, Deserialize, ErrorCode};
+use crate::methods::pumpx::PumpxRpcError;
+use crate::{error_code::*, server::RpcContext, Deserialize, ErrorCode};
 use executor_core::native_task::*;
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::FromHexPrefixed, OmniAuth};
 use heima_authentication::auth_token::AuthTokenClaims;
 use heima_primitives::{Address32, Identity};
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use jsonrpsee::RpcModule;
+use native_task_handler::NativeTaskOk;
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs1::EncodeRsaPublicKey;
 use rsa::RsaPrivateKey;
+
+use super::common::handle_pumpx_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct NotifyLimitOrderResultParams {
@@ -21,8 +24,10 @@ pub struct NotifyLimitOrderResultParams {
 pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_notifyLimitOrderResult", |params, ctx, _| async move {
-			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-			let params = params.parse::<NotifyLimitOrderResultParams>()?;
+			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+			})?;
 
 			log::debug!(
 				"Received pumpx_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
@@ -31,25 +36,35 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 				params.message
 			);
 
-			let private_key = RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key)
-				.map_err(|_| internal_error.clone())?;
-			let public_key =
-				private_key.to_public_key().to_pkcs1_der().map_err(|_| internal_error.clone())?;
+			let private_key =
+				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
+					log::error!("Failed to parse private key: {:?}", e);
+					PumpxRpcError::from_error_code(ErrorCode::InternalError)
+				})?;
+
+			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
+				log::error!("Failed to generate public key: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::InternalError)
+			})?;
 
 			// this validates jwt - we skip exp check for this call
 			let Ok(token) =
 				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes(), true)
 			else {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				)));
 			};
 			if token.typ != "access" {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				)));
 			}
 
 			let omni_account = token.sub;
 			let Ok(address) = Address32::from_hex(&omni_account) else {
-				log::error!("Not a valid address");
-				return Err(internal_error);
+				log::error!("Failed to parse from omni account token");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
 			let wrapper = NativeTaskWrapper {
@@ -63,42 +78,14 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 				auth: Some(OmniAuth::AuthToken(params.auth_token)),
 			};
 
-			let (response_sender, response_receiver) = oneshot::channel();
-
-			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
-				log::error!("Failed to send request to native call executor");
-				return Err(ErrorCode::InternalError.into());
-			}
-
-			match response_receiver.await {
-				Ok(response) => {
-					let native_task_response: NativeTaskResponse =
-						Decode::decode(&mut response.as_slice())
-							.map_err(|_| internal_error.clone())?;
-					match native_task_response {
-						Ok(NativeTaskOk::PumpxNotifyLimitOrderResult) => Ok(()),
-						Err(NativeTaskError::InternalError) => {
-							log::error!("Internal error in native task");
-							Err(internal_error)
-						},
-						Err(native_task_error) => {
-							log::error!("Native task error: {:?}", native_task_error);
-							Err(ErrorCode::ServerError(get_native_task_error_code(
-								&native_task_error,
-							))
-							.into())
-						},
-						_ => {
-							log::error!("Unexpected response type");
-							Err(internal_error)
-						},
-					}
+			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
+				_ => {
+					log::error!("Unexpected response type");
+					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
-				Err(e) => {
-					log::error!("Failed to receive response from native call handler: {:?}", e);
-					Err(internal_error)
-				},
-			}
+			})
+			.await
 		})
 		.expect("Failed to register pumpx_notifyLimitOrderResult method");
 }

@@ -593,7 +593,16 @@ async fn handle_native_task<
 			};
 			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			let user_id = res.data.user_id;
+			let Some(res_data) = res.data else {
+				send_error(
+					"Response data of call get_account_user_id is none".to_string(),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
+				);
+				return;
+			};
+
+			let user_id = res_data.user_id;
 			log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
 			let omni_account =
 				Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account();
@@ -693,9 +702,15 @@ async fn handle_native_task<
 			let verify_result =
 				ctx.pumpx_api.verify_google_code(&access_token, google_code, None).await;
 			let verify_success = match verify_result {
-				Ok(response) => response.data.result,
-				Err(_) => {
-					log::error!("Google code verification request failed");
+				Ok(res) => match res.data {
+					Some(data) => data.result,
+					None => {
+						log::error!("Google code verification response data is none");
+						false
+					},
+				},
+				Err(e) => {
+					log::error!("Google code verification request failed: {:?}", e);
 					false
 				},
 			};
@@ -836,9 +851,15 @@ async fn handle_native_task<
 				.await;
 
 			let verify_success = match verify_result {
-				Ok(res) => res.data.result,
-				Err(_) => {
-					log::error!("Google code verification request failed");
+				Ok(res) => match res.data {
+					Some(data) => data.result,
+					None => {
+						log::error!("Google code verification response data is none");
+						false
+					},
+				},
+				Err(e) => {
+					log::error!("Google code verification request failed: {:?}", e);
 					false
 				},
 			};

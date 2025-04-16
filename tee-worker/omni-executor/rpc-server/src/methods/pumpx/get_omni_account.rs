@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::server::RpcContext;
 use crate::ErrorCode;
+use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -30,17 +30,15 @@ pub struct GetOmniAccountParams {
 pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_getOmniAccount", |params, _, _| async move {
-			match params.parse::<GetOmniAccountParams>() {
-				Ok(params) => {
-					let account = Identity::from_web2_account(
-						params.user_id.as_str(),
-						Web2IdentityType::Pumpx,
-					)
+			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+			})?;
+
+			let account =
+				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
 					.to_omni_account();
-					Ok::<String, ErrorObject>(account.to_hex())
-				},
-				Err(_) => Err(ErrorCode::ParseError.into()),
-			}
+			Ok::<String, ErrorObject>(account.to_hex())
 		})
 		.expect("Failed to register pumpx_getOmniAccount method");
 }

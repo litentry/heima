@@ -1,14 +1,16 @@
 use crate::{
-	error_code::*, oneshot, server::RpcContext, verify_auth::verify_auth, Decode, Deserialize,
-	ErrorCode,
+	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
+	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use jsonrpsee::RpcModule;
+use native_task_handler::NativeTaskOk;
 use pumpx::types::AddWalletResponse;
 use serde::Serialize;
+
+use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct AddWalletParams {
@@ -37,53 +39,32 @@ impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
-			let internal_error: ErrorObject = ErrorCode::InternalError.into();
-			let params = params.parse::<AddWalletParams>()?;
+			let params = params.parse::<AddWalletParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+			})?;
 
 			log::debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				)));
 			}
 
-			let (response_sender, response_receiver) = oneshot::channel();
-
-			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
-				log::error!("Failed to send request to native call executor");
-				return Err(ErrorCode::InternalError.into());
-			}
-			match response_receiver.await {
-				Ok(response) => {
-					let native_task_response: NativeTaskResponse =
-						Decode::decode(&mut response.as_slice())
-							.map_err(|_| internal_error.clone())?;
-					match native_task_response {
-						Ok(NativeTaskOk::PumpxAddWallet(res)) => {
-							Ok(RPCAddWalletResponse { backend_response: res })
-						},
-						Err(NativeTaskError::InternalError) => {
-							log::error!("Internal error in native task");
-							Err(internal_error)
-						},
-						Err(native_task_error) => {
-							log::error!("Native task error: {:?}", native_task_error);
-							Err(ErrorCode::ServerError(get_native_task_error_code(
-								&native_task_error,
-							))
-							.into())
-						},
-						_ => {
-							log::error!("Unexpected response type");
-							Err(internal_error)
-						},
-					}
+			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+				NativeTaskOk::PumpxAddWallet(response) => {
+					check_pumpx_api_response(response.clone(), "Add wallet".into())?;
+					Ok(RPCAddWalletResponse { backend_response: response })
 				},
-				Err(e) => {
-					log::error!("Failed to receive response from native call handler: {:?}", e);
-					Err(internal_error)
+				_ => {
+					log::error!("Unexpected response type");
+					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
-			}
+			})
+			.await
 		})
 		.expect("Failed to register pumpx_addWallet method");
 }
