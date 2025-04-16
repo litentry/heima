@@ -28,14 +28,16 @@ impl RemoteSigner {
 
 impl Signer for RemoteSigner {
 	fn try_pubkey(&self) -> Result<Pubkey, SignerError> {
-		let wallet = self.handle.block_on(async {
-			self.signer_client
-				.request_wallet(ChainType::Solana, self.wallet_index, self.omni_account)
-				.await
-				.map_err(|e| {
-					log::error!("Error requesting wallet: {:?}", e);
-					SignerError::Custom(format!("Error requesting wallet: {:?}", e))
-				})
+		let wallet = tokio::task::block_in_place(|| {
+			self.handle.block_on(async {
+				self.signer_client
+					.request_wallet(ChainType::Solana, self.wallet_index, self.omni_account)
+					.await
+					.map_err(|e| {
+						log::error!("Error requesting wallet: {:?}", e);
+						SignerError::Custom(format!("Error requesting wallet: {:?}", e))
+					})
+			})
 		})?;
 		let wallet_pubkey: [u8; 32] = wallet.try_into().map_err(|e| {
 			log::error!("Error converting wallet to Pubkey: {:?}", e);
@@ -46,19 +48,21 @@ impl Signer for RemoteSigner {
 	}
 
 	fn try_sign_message(&self, message: &[u8]) -> Result<Signature, SignerError> {
-		let signed_message = self.handle.block_on(async {
-			self.signer_client
-				.request_signature(
-					ChainType::Solana,
-					self.wallet_index,
-					self.omni_account,
-					message.to_vec(),
-				)
-				.await
-				.map_err(|e| {
-					log::error!("Error requesting signature: {:?}", e);
-					SignerError::Custom(format!("Error requesting signature: {:?}", e))
-				})
+		let signed_message = tokio::task::block_in_place(|| {
+			self.handle.block_on(async {
+				self.signer_client
+					.request_signature(
+						ChainType::Solana,
+						self.wallet_index,
+						self.omni_account,
+						message.to_vec(),
+					)
+					.await
+					.map_err(|e| {
+						log::error!("Error requesting signature: {:?}", e);
+						SignerError::Custom(format!("Error requesting signature: {:?}", e))
+					})
+			})
 		})?;
 		let signed_message: [u8; 64] = signed_message.try_into().map_err(|e| {
 			log::error!("Error converting signed message to Signature: {:?}", e);
