@@ -633,6 +633,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					}
 
 					debug!("Waiting for deposit to be confirmed on Binance...");
+					debug!("Deposit tx_id: {:?}", tx_id);
+					debug!("Source address: {:?}", from_address);
 					let mut deposit_confirmed = false;
 					let start_time = std::time::Instant::now();
 					let timeout = Duration::from_secs(300); // 5 minute timeout
@@ -650,13 +652,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 
 						// Check if there's a recent successful deposit
 						for deposit in deposit_history {
-							let deposit_amount: u64 = match Decimal::from_str(&deposit.amount) {
-								Ok(deposit_amount) => deposit_amount.to_u64().unwrap_or(0),
-								Err(_) => {
-									log::error!("Failed to parse deposit amount");
-									continue;
-								},
-							};
+							debug!("Deposit: {:?}", deposit);
 							if deposit.status == 2 || deposit.status == 7 {
 								// 2 = rejected, 7 = Wrong Deposit
 								log::error!("Deposit failed with status: {}", deposit.status);
@@ -677,8 +673,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							if deposit.status == 1 && // 1 = success
 							   deposit.coin == binance_coin_name &&
 							   deposit.network == binance_network_info.network &&
-                               deposit.source_address == Some(from_address.clone()) &&
-                               deposit_amount == amount_to_transfer
+                               deposit.source_address == Some(from_address.clone())
 							{
 								deposit_confirmed = true;
 								debug!(
@@ -687,6 +682,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								);
 								break;
 							}
+							debug!("Deposit not confirmed yet, status: {}", deposit.status);
 						}
 
 						if !deposit_confirmed {
