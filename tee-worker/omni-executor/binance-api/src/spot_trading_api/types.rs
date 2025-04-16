@@ -174,7 +174,7 @@ pub enum SymbolFilter {
 	},
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 #[allow(clippy::upper_case_acronyms, non_camel_case_types)]
 pub enum Permission {
 	SPOT,
@@ -182,6 +182,29 @@ pub enum Permission {
 	LEVERAGED,
 	TradingGroup(u32), // Holds the number extracted from "TRD_GRP_XXX"
 	Unknown(String),   //  Catch-all for unexpected values
+}
+
+impl<'de> Deserialize<'de> for Permission {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		let s = String::deserialize(deserializer)?;
+		match s.as_str() {
+			"SPOT" => Ok(Permission::SPOT),
+			"MARGIN" => Ok(Permission::MARGIN),
+			"LEVERAGED" => Ok(Permission::LEVERAGED),
+			s if s.starts_with("TRD_GRP_") => {
+				// Extract the number part from "TRD_GRP_XXX"
+				let num_str = &s[8..]; // Skip "TRD_GRP_"
+				match num_str.parse::<u32>() {
+					Ok(num) => Ok(Permission::TradingGroup(num)),
+					Err(_) => Ok(Permission::Unknown(s.to_string())),
+				}
+			},
+			_ => Ok(Permission::Unknown(s.to_string())),
+		}
+	}
 }
 
 impl From<String> for Permission {
