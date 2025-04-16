@@ -174,10 +174,7 @@ async fn main() -> Result<(), ()> {
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
 			rpc_endpoint_registry.insert(Chain::Solana, args.solana_url.clone());
-
-			if let Some(ref bsc_url) = args.bsc_url {
-				rpc_endpoint_registry.insert(Chain::Ethereum(56), bsc_url.to_owned());
-			}
+			rpc_endpoint_registry.insert(Chain::Ethereum(56), args.bsc_url.clone());
 
 			if let Some(ref bsc_testnet_url) = args.bsc_testnet_url {
 				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
@@ -202,12 +199,12 @@ async fn main() -> Result<(), ()> {
 					.expect("Could not create accounting contract signer");
 			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
 
-			let ethereum_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
-				&args.ethereum_url,
+			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&args.bsc_url,
 				accounting_contract_wallet,
 			);
 			let accounting_contract_client = AccountingContractClient::new(
-				ethereum_rpc_provider,
+				bsc_rpc_provider,
 				args.accounting_contract_address.parse().unwrap(),
 			);
 
