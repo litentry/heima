@@ -14,7 +14,7 @@ use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use std::{fmt::Display, sync::Arc};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AuthenticationError {
 	Web3InvalidSignature,
 	EmailVerificationCodeNotFound,
@@ -151,5 +151,30 @@ async fn verify_google_oauth2(
 	match sender.hash() == google_identity.hash() {
 		true => Ok(()),
 		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use executor_crypto::{sr25519::Pair, PairTrait};
+	use executor_primitives::Identity;
+
+	#[test]
+	fn test_verify_web3_authentication() {
+		let alice = Pair::from_string("//Alice", None).unwrap();
+		let public_key: [u8; 32] = alice.public().into();
+		let alice_identity = Identity::from(public_key);
+
+		let message =
+			HeimaMessagePayload { message_code: generate_message_code(MESSAGE_CODE_PERIOD) };
+		let payload = serde_json::to_string(&message).expect("serialize");
+		let hashed = blake2_256(payload.as_bytes());
+
+		let signature = alice.sign(&hashed);
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		let result = verify_web3_authentication(&alice_identity, &multi_signature);
+		assert!(result.is_ok());
 	}
 }
