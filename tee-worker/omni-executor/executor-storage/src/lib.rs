@@ -18,8 +18,8 @@ use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
 	ToPrimitiveType,
 };
-use parity_scale_codec::Decode;
-use rocksdb::DB;
+use parity_scale_codec::{Codec, Decode, Encode};
+use rocksdb::{WriteOptions, DB};
 use sp_state_machine::{read_proof_check, StorageProof};
 use std::{sync::Arc, vec::Vec};
 
@@ -27,11 +27,47 @@ const STORAGE_DB_PATH: &str = "storage_db";
 
 pub type StorageDB = DB;
 
-pub trait Storage<K, V> {
-	fn get(&self, key: &K) -> Option<V>;
-	fn insert(&self, key: K, value: V) -> Result<(), ()>;
-	fn remove(&self, key: &K) -> Result<(), ()>;
-	fn contains_key(&self, key: &K) -> bool;
+pub trait Storage<K: Encode, V: Codec> {
+	fn db(&self) -> Arc<StorageDB>;
+	fn name(&self) -> &'static str;
+
+	fn get(&self, key: &K) -> Option<V> {
+		match self.db().get(storage_key(self.name(), &key.encode())) {
+			Ok(Some(v)) => V::decode(&mut &v[..])
+				.map_err(|e| {
+					log::error!("Error decoding value from storage: {:?}", e);
+				})
+				.ok(),
+			Ok(None) => None,
+			Err(e) => {
+				log::error!("Error getting value from storage: {:?}", e);
+				None
+			},
+		}
+	}
+	fn contains_key(&self, key: &K) -> bool {
+		self.db().key_may_exist(storage_key(self.name(), &key.encode()))
+	}
+
+	fn insert(&self, key: K, value: V) -> Result<(), ()> {
+		let mut opts = WriteOptions::default();
+		opts.set_sync(true);
+		self.db()
+			.put_opt(storage_key(self.name(), &key.encode()), value.encode(), &opts)
+			.map_err(|e| {
+				log::error!("Error inserting value into storage: {:?}", e);
+			})
+	}
+
+	fn remove(&self, key: &K) -> Result<(), ()> {
+		let mut opts = WriteOptions::default();
+		opts.set_sync(true);
+		self.db()
+			.delete_opt(storage_key(self.name(), &key.encode()), &opts)
+			.map_err(|e| {
+				log::error!("Error removing value from storage: {:?}", e);
+			})
+	}
 }
 
 pub fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
