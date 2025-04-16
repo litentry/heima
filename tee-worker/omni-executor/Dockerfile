@@ -94,7 +94,7 @@ RUN apt-get install -y \
     pkg-config \
     ca-certificates
 
-RUN mkdir -p /wkdir /wkdir/local
+RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db 
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx

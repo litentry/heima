@@ -105,6 +105,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("pumpx_submitSwapOrder", |params, ctx, _| async move {
 			let params =
 				params.parse::<SubmitSwapOrderParams>().map_err(|_| ErrorCode::ParseError)?;
+
+			log::debug!("Received pumpx_submitSwapOrder, user_id: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}", 
+			params.user_id, params.intent_id, params.order_type, params.swap_type, params.from_chain_id, params.from_token_ca, params.from_amount, params.to_chain_id, params.to_token_ca, params.wallet_index);
+
 			let user_identity =
 				Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
 			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token)
@@ -151,13 +155,14 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				to_address: None,
 			};
 
+			log::debug!("Calling pumpx get_user_trade_info, user_id: {}", params.user_id);
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
 					log::error!("Failed to get user trade info");
 					ErrorCode::InvalidParams
 				})?;
 
-			log::debug!("Trade info for user_id {}: {:?}", params.user_id, user_trade_info.data);
+			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
 			let gas_type = match params.to_chain_id {
 				BASE_CHAIN_ID => user_trade_info.data.gas_type_base.to_number() as u32,

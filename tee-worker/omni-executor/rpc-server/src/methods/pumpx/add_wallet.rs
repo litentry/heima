@@ -40,6 +40,8 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 			let internal_error: ErrorObject = ErrorCode::InternalError.into();
 			let params = params.parse::<AddWalletParams>()?;
 
+			log::debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
+
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
 				return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());

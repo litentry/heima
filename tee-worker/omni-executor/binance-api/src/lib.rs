@@ -8,7 +8,7 @@ mod wallet_api;
 use convert_api::ConvertApi;
 use error::Error;
 use hmac::{Hmac, Mac};
-use log::error;
+use log::{debug, error};
 use reqwest::{Client, Method};
 use sha2::Sha256;
 use spot_trading_api::SpotTradingApi;
@@ -83,6 +83,8 @@ impl BinanceApi {
 			Error::RequestFailed
 		})?;
 
+		debug!("Binance-api make_public_get_request response: {:?}", response);
+
 		response.json::<T>().await.map_err(|e| {
 			error!("Error parsing response: {}", e);
 			Error::ParseResponseFailed
@@ -145,10 +147,13 @@ impl BinanceApi {
 			},
 		};
 
+		debug!("Binance-api make_signed_request: {:?}", request);
 		let response = request.send().await.map_err(|e| {
 			error!("API request failed: {}", e);
 			Error::RequestFailed
 		})?;
+
+		debug!("Binance-api make_signed_request response: {:?}", response);
 
 		response.json::<T>().await.map_err(|e| {
 			error!("Error parsing response: {}", e);

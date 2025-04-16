@@ -345,44 +345,56 @@ async fn handle_native_task<
 					(IntentCompletedDetail::Success, true)
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					if let Err(e) = ctx
-						.ethereum_intent_executor
-						.execute(&omni_account, intent_id, intent.clone())
-						.await
-					{
-						log::error!("Error executing intent: {:?}", e);
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: false },
-						);
-						(IntentCompletedDetail::Failure, true)
-					} else {
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: true },
-						);
-						(IntentCompletedDetail::Success, true)
-					}
+					// if let Err(e) = ctx
+					// 	.ethereum_intent_executor
+					// 	.execute(&omni_account, intent_id, intent.clone())
+					// 	.await
+					// {
+					// 	log::error!("Error executing intent: {:?}", e);
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
+					// 	);
+					// 	(IntentCompletedDetail::Failure, true)
+					// } else {
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					// 	);
+					// 	(IntentCompletedDetail::Success, true)
+					// }
+					send_error(
+						"Intent not accepted".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					(IntentCompletedDetail::Failure, true)
 				},
 				Intent::TransferSolana(_) => {
-					if let Err(e) = ctx
-						.solana_intent_executor
-						.execute(&omni_account, intent_id, intent.clone())
-						.await
-					{
-						log::error!("Error executing intent: {:?}", e);
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: false },
-						);
-						(IntentCompletedDetail::Failure, true)
-					} else {
-						send_ok(
-							response_sender,
-							NativeTaskOk::RequestIntentResult { intent_id, success: true },
-						);
-						(IntentCompletedDetail::Success, true)
-					}
+					// if let Err(e) = ctx
+					// 	.solana_intent_executor
+					// 	.execute(&omni_account, intent_id, intent.clone())
+					// 	.await
+					// {
+					// 	log::error!("Error executing intent: {:?}", e);
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
+					// 	);
+					// 	(IntentCompletedDetail::Failure, true)
+					// } else {
+					// 	send_ok(
+					// 		response_sender,
+					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					// 	);
+					// 	(IntentCompletedDetail::Success, true)
+					// }
+					send_error(
+						"Intent not accepted".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					(IntentCompletedDetail::Failure, true)
 				},
 				Intent::Swap(..) => {
 					let (execution_result, should_notify_parentchain, response) = match ctx
@@ -570,6 +582,7 @@ async fn handle_native_task<
 				.timestamp();
 			let auth_options = AuthOptions { expires_at };
 
+			log::debug!("Calling pumpx get_account_user_id, email: {}", email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(email.clone()).await else {
 				send_error(
 					"Failed to get_account_user_id".to_string(),
@@ -578,6 +591,7 @@ async fn handle_native_task<
 				);
 				return;
 			};
+			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let user_id = res.data.user_id;
 			log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
@@ -610,6 +624,7 @@ async fn handle_native_task<
 				);
 			};
 
+			log::debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
 			let Ok(backend_response) = ctx
 				.pumpx_api
 				.user_connect(
@@ -629,6 +644,8 @@ async fn handle_native_task<
 				);
 				return;
 			};
+			log::debug!("Response pumpx user_connect: {:?}", backend_response);
+
 			let id_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
 				AUTH_TOKEN_ID_TYPE.to_string(),
@@ -672,6 +689,7 @@ async fn handle_native_task<
 				return;
 			};
 
+			log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
 			let verify_result =
 				ctx.pumpx_api.verify_google_code(&access_token, google_code, None).await;
 			let verify_success = match verify_result {
@@ -744,6 +762,7 @@ async fn handle_native_task<
 			};
 
 			// Call Pumpx API to add wallet
+			log::debug!("Calling pumpx add_wallet");
 			let Ok(backend_response) = ctx.pumpx_api.add_wallet(&access_token, None).await else {
 				send_error(
 					"Failed to add wallet through Pumpx API".to_string(),
@@ -810,6 +829,7 @@ async fn handle_native_task<
 			};
 
 			// 2. Verify google code in every case
+			log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
 			let verify_result = ctx
 				.pumpx_api
 				.verify_google_code(&access_token, google_code, language.clone())
@@ -842,6 +862,8 @@ async fn handle_native_task<
 				token_ca,
 				amount,
 			};
+
+			log::debug!("Calling pumpx create_transfer_tx, body {:?}", body);
 			match ctx.pumpx_api.create_transfer_tx(&access_token, body, language.clone()).await {
 				Ok(res) => {
 					send_ok(response_sender, NativeTaskOk::PumpxTransferWithdraw(res));

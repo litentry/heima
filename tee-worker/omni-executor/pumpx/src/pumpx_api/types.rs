@@ -186,7 +186,7 @@ pub struct CreateMarketOrderTxResponseData {
 }
 
 // /v3/trade/create_transfer_tx
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransferTxBody {
 	pub request_id: Option<u32>,
