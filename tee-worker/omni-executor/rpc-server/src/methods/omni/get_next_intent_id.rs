@@ -18,7 +18,6 @@ use std::str::FromStr;
 
 use crate::server::RpcContext;
 use crate::ErrorCode;
-use executor_primitives::AccountId;
 use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use log::error;
@@ -37,7 +36,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 
 					let storage = IntentIdStorage::new(ctx.storage_db.clone());
 					let intent_id = storage
-						.get(&AccountId::from(account.0))
+						.get(&account.0.into())
 						.map_err(|e| {
 							log::error!("Could not get IntentId from store: {:?}", e);
 							<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
