@@ -55,8 +55,8 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_transferWithdraw", |params, ctx, _| async move {
-			let params = params.parse::<TransferWithdrawParams>().map_err(|_| {
-				log::error!("Failed to parse params");
+			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
@@ -67,20 +67,29 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
 				log::error!("Failed to call get_account_user_id");
-				return Err(
-					ErrorCode::ServerError(PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE).into()
-				);
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
 			};
 			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			if res.data.user_id != params.user_id {
+			let Some(res_data) = res.data else {
+				log::error!("Response data of call get_account_user_id is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
+			if res_data.user_id != params.user_id {
 				log::error!(
 					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
 					params.user_id,
 					params.user_email,
-					res.data.user_id
+					res_data.user_id
 				);
-				return Err(ErrorCode::ServerError(USER_EMAIL_ID_MISMATCH_CODE).into());
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					USER_EMAIL_ID_MISMATCH_CODE,
+				)));
 			}
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();

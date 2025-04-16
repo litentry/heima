@@ -39,8 +39,8 @@ impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
-			let params = params.parse::<AddWalletParams>().map_err(|_| {
-				log::error!("Failed to parse params");
+			let params = params.parse::<AddWalletParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 

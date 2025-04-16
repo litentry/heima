@@ -67,11 +67,11 @@ impl GasType {
 pub struct ApiResponse<T: Codec> {
 	pub code: u32,
 	pub message: String,
-	pub data: T,
+	pub data: Option<T>,
 }
 
 impl<T: Codec> ApiResponse<T> {
-	pub fn data(&self) -> &T {
+	pub fn data(&self) -> &Option<T> {
 		&self.data
 	}
 }

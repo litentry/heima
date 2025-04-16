@@ -106,8 +106,8 @@ struct BackendResponse {
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_submitSwapOrder", |params, ctx, _| async move {
-			let params = params.parse::<SubmitSwapOrderParams>().map_err(|_| {
-				log::error!("Failed to parse params");
+			let params = params.parse::<SubmitSwapOrderParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
@@ -164,18 +164,24 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			log::debug!("Calling pumpx get_user_trade_info, user_id: {}", params.user_id);
 			let user_trade_info =
-				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|_| {
-					log::error!("Failed to get user trade info");
+				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
+					log::error!("Failed to get user trade info: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
 			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
+			let Some(user_trade_info_data) = user_trade_info.data else {
+				log::error!("Response data of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
 			let gas_type = match params.to_chain_id {
-				BASE_CHAIN_ID => user_trade_info.data.gas_type_base.to_number() as u32,
-				ETHEREUM_CHAIN_ID => user_trade_info.data.gas_type_eth.to_number() as u32,
-				BSC_CHAIN_ID => user_trade_info.data.gas_type_bsc.to_number() as u32,
-				SOLANA_CHAIN_ID => user_trade_info.data.gas_type_base.to_number() as u32,
+				BASE_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
+				ETHEREUM_CHAIN_ID => user_trade_info_data.gas_type_eth.to_number() as u32,
+				BSC_CHAIN_ID => user_trade_info_data.gas_type_bsc.to_number() as u32,
+				SOLANA_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
 				_ => {
 					log::error!("Unsupported chain id: {}", params.to_chain_id);
 					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
@@ -232,10 +238,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				)?,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
-				is_anti_mev: user_trade_info.data.is_anti_mev,
-				is_auto_slippage: user_trade_info.data.is_auto_slippage,
+				is_anti_mev: user_trade_info_data.is_anti_mev,
+				is_auto_slippage: user_trade_info_data.is_auto_slippage,
 				gas_type,
-				slippage: user_trade_info.data.slippage,
+				slippage: user_trade_info_data.slippage,
 				wallet_index: params.wallet_index,
 				token_cap,
 				price_usd,
@@ -261,8 +267,8 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				NativeTaskOk::IntentSwapResponse(swap_response) => {
 					if params.order_type == PumpxOrderType::Market {
 						let market_order_response: CreateMarketOrderTxResponse =
-							Decode::decode(&mut swap_response.as_slice()).map_err(|_| {
-								log::error!("Failed to decode market order response");
+							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
+								log::error!("Failed to decode market order response: {:?}", e);
 								PumpxRpcError::from_error_code(ErrorCode::InternalError)
 							})?;
 						check_pumpx_api_response(
@@ -278,8 +284,8 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						Ok(response)
 					} else {
 						let limit_order_response: OrderInfoResponse =
-							Decode::decode(&mut swap_response.as_slice()).map_err(|_| {
-								log::error!("Failed to decode limit order response");
+							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
+								log::error!("Failed to decode limit order response: {:?}", e);
 								PumpxRpcError::from_error_code(ErrorCode::InternalError)
 							})?;
 						check_pumpx_api_response(

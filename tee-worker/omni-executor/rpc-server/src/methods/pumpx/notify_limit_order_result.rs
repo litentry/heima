@@ -24,8 +24,8 @@ pub struct NotifyLimitOrderResultParams {
 pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_notifyLimitOrderResult", |params, ctx, _| async move {
-			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|_| {
-				log::error!("Failed to parse params");
+			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
@@ -37,13 +37,13 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			);
 
 			let private_key =
-				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|_| {
-					log::error!("Failed to parse private key");
+				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
+					log::error!("Failed to parse private key: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?;
 
-			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|_| {
-				log::error!("Failed to generate public key");
+			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
+				log::error!("Failed to generate public key: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::InternalError)
 			})?;
 

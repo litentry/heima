@@ -62,21 +62,21 @@ pub struct SignLimitOrderResponse {
 pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_signLimitOrder", |params, ctx, _| async move {
-			let params = params.parse::<SignLimitOrderParams>().map_err(|_| {
-				log::error!("Failed to parse params");
+			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
 			log::debug!("Received pumpx_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
 
 			let private_key =
-				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|_| {
-					log::error!("Failed to parse private key");
+				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
+					log::error!("Failed to parse private key: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?;
 
-			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|_| {
-				log::error!("Failed to generate public key");
+			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
+				log::error!("Failed to generate public key: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::InternalError)
 			})?;
 

@@ -903,10 +903,14 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						})?;
 					debug!("Response get_gas_info: {:?}", gas_info);
 
+					let Some(gas_info_data) = gas_info.data else {
+						log::error!("Response data of call get gas info is none");
+						return Err(());
+					};
 					let gas_fee = match pumpx_config.gas_type {
-						1 => gas_info.data.gas_info.normal,
-						2 => gas_info.data.gas_info.fast,
-						3 => gas_info.data.gas_info.super_fast,
+						1 => gas_info_data.gas_info.normal,
+						2 => gas_info_data.gas_info.fast,
+						3 => gas_info_data.gas_info.super_fast,
 						_ => {
 							log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
 							return Err(());

@@ -11,28 +11,51 @@ use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
 pub struct PumpxRpcError {
 	pub code: i32,
 	pub message: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub data: Option<PumpxRpcErrorData>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct PumpxRpcErrorData {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub backend_response: Option<PumpxRpcErrorBackendResponse>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct PumpxRpcErrorBackendResponse {
+	pub code: i32,
+	pub message: String,
 }
 
 impl PumpxRpcError {
 	pub fn from_code_and_message(code: i32, message: String) -> Self {
-		Self { code, message }
+		Self { code, message, data: None }
 	}
 
 	pub fn from_error_code(error_code: ErrorCode) -> Self {
-		let (code, message) = match error_code {
-			ErrorCode::ParseError => (-32700, "Parse error"),
-			ErrorCode::InvalidParams => (-32602, "Invalid params"),
-			ErrorCode::InternalError => (-32603, "Internal error"),
-			ErrorCode::ServerError(n) => (n, "Server error"),
-			_ => todo!(),
-		};
-		Self { code, message: message.to_string() }
+		Self { code: error_code.code(), message: error_code.message().to_string(), data: None }
+	}
+
+	pub fn from_api_response<T>(api_response: ApiResponse<T>) -> Self
+	where
+		T: Codec,
+	{
+		Self {
+			code: ErrorCode::InternalError.code(),
+			message: ErrorCode::InternalError.message().to_string(),
+			data: Some(PumpxRpcErrorData {
+				backend_response: Some(PumpxRpcErrorBackendResponse {
+					code: api_response.code as i32,
+					message: api_response.message,
+				}),
+			}),
+		}
 	}
 }
 
 impl From<PumpxRpcError> for ErrorObjectOwned {
 	fn from(error: PumpxRpcError) -> Self {
-		ErrorObjectOwned::owned(error.code, error.message, None::<()>)
+		ErrorObjectOwned::owned(error.code, error.message, error.data)
 	}
 }
 
@@ -92,7 +115,7 @@ where
 {
 	if response.code != 10000 {
 		log::error!("{} failed: code={}, message={}", name, response.code, response.message);
-		return Err(PumpxRpcError::from_code_and_message(response.code as i32, response.message));
+		return Err(PumpxRpcError::from_api_response(response));
 	}
 	Ok(())
 }

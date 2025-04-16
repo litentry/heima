@@ -47,8 +47,8 @@ impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_requestJwt", |params, ctx, _| async move {
-			let params = params.parse::<RequestJwtParams>().map_err(|_| {
-				log::error!("Failed to parse params");
+			let params = params.parse::<RequestJwtParams>().map_err(|e| {
+				log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
