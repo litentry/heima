@@ -41,6 +41,7 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use solana::{signer::RemoteSigner, SolanaClient};
+use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
 	time::{sleep, Duration},
@@ -437,6 +438,15 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
 						})?;
 
+					let from_address = match from_chain_type {
+						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
+						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+						_ => {
+							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							return Err(());
+						},
+					};
+
 					let to_wallet_address = self
 						.pumpx_signer_client
 						.request_wallet(
@@ -449,11 +459,11 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let from_address = match from_chain_type {
-						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
-						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+					let to_address = match to_chain_type {
+						ChainType::Evm => pubkey_to_evm_address(&to_wallet_address)?,
+						ChainType::Solana => pubkey_to_solana_address(&to_wallet_address)?,
 						_ => {
-							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							log::error!("Unsupported {:?} wallet address", to_chain_type);
 							return Err(());
 						},
 					};
@@ -852,7 +862,9 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 
 					debug!("Total received {} bnb", bnb_received);
 
-					let payout_address: Address = Address::from_slice(&to_wallet_address);
+					let payout_address = Address::from_str(&to_address).map_err(|_| {
+						log::error!("Failed to parse payout address");
+					})?;
 					let payout_amount = match str_to_u256(&bnb_received, 18) {
 						Some(a) => a,
 						None => {
