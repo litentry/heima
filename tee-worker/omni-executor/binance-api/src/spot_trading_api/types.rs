@@ -403,7 +403,7 @@ impl TryIntoParams for CreateOrderParams {
 	}
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum OrderSide {
 	#[default]
@@ -487,7 +487,7 @@ pub enum OrderStatus {
 	EXPIRED_IN_MATCH,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 pub enum TestTradeOrder {

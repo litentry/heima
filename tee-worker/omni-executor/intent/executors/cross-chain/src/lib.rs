@@ -719,8 +719,16 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
 					let binance_order_params = BinanceCreateOrderParams {
 						symbol: trade_symbol.clone(),
-						side: order_side,
+						side: order_side.clone(),
 						order_type: BinanceOrderType::MARKET,
+						quote_order_qty: match order_side {
+							BinanceOrderSide::BUY => Some(from_amount.clone()),
+							BinanceOrderSide::SELL => None,
+						},
+						quantity: match order_side {
+							BinanceOrderSide::BUY => None,
+							BinanceOrderSide::SELL => Some(from_amount.clone()),
+						},
 						..Default::default()
 					};
 					debug!("Creating binance order with params: {:?}", binance_order_params);
