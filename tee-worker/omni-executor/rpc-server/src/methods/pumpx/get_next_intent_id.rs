@@ -17,6 +17,7 @@
 use crate::ErrorCode;
 use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
 use executor_primitives::AccountId;
+use executor_storage::{IntentIdStorage, Storage};
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::Deserialize;
@@ -37,11 +38,16 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 			let account =
 				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
 					.to_omni_account();
-			let intent_id =
-				ctx.intent_id_store.get(&AccountId::from(account)).await.map_err(|e| {
+
+			let storage = IntentIdStorage::new(ctx.storage_db.clone());
+			let intent_id = storage
+				.get(&AccountId::from(account))
+				.map_err(|e| {
 					log::error!("Could not get IntentId from store: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
-				})?;
+				})?
+				.unwrap_or_default();
+
 			Ok::<u32, ErrorObject>(intent_id + 1)
 		})
 		.expect("Failed to register getIntentId method");

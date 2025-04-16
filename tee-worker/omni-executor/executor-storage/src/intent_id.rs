@@ -1,21 +1,21 @@
 use crate::Storage;
-use executor_primitives::{AccountId, Hash};
+use executor_primitives::{AccountId, IntentId};
 use rocksdb::DB;
 use std::sync::Arc;
 
-const STORAGE_NAME: &str = "member_omni_account";
+const STORAGE_NAME: &str = "intent_id_storage";
 
-pub struct MemberOmniAccountStorage {
+pub struct IntentIdStorage {
 	db: Arc<DB>,
 }
 
-impl MemberOmniAccountStorage {
+impl IntentIdStorage {
 	pub fn new(db: Arc<DB>) -> Self {
 		Self { db }
 	}
 }
 
-impl Storage<Hash, AccountId> for MemberOmniAccountStorage {
+impl Storage<AccountId, IntentId> for IntentIdStorage {
 	fn db(&self) -> Arc<crate::StorageDB> {
 		self.db.clone()
 	}

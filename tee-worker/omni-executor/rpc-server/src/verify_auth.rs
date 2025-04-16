@@ -109,7 +109,7 @@ pub fn verify_email_authentication(
 ) -> Result<(), AuthenticationError> {
 	let storage_key = Identity::from_web2_account(email, Web2IdentityType::Email).hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
-	let Some(code) = verification_code_storage.get(&storage_key) else {
+	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
 		return Err(AuthenticationError::EmailVerificationCodeNotFound);
 	};
 	if code != *verification_code {
@@ -148,7 +148,7 @@ async fn verify_google_oauth2(
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
-	let Some(state_verifier) = state_verifier_storage.get(&sender.hash()) else {
+	let Ok(Some(state_verifier)) = state_verifier_storage.get(&sender.hash()) else {
 		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
 	};
 	if state_verifier != payload.state {

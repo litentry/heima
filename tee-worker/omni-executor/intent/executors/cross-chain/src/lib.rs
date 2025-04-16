@@ -229,7 +229,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					.map(|v| v.to_string())?;
 
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
-				let Some(access_token) = storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
+				let Ok(Some(access_token)) =
+					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 				else {
 					log::error!("Failed to get access token from storage");
 					return Err(());

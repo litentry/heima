@@ -28,7 +28,6 @@ heima-authentication = { workspace = true }
 heima-hex-utils = { workspace = true }
 heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
-intent-core = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }

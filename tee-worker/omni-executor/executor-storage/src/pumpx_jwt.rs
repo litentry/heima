@@ -1,6 +1,5 @@
-use crate::{storage_key, Storage};
+use crate::Storage;
 use executor_primitives::AccountId;
-use parity_scale_codec::{Decode, Encode};
 use rocksdb::DB;
 use std::sync::Arc;
 
@@ -19,31 +18,11 @@ impl PumpxJwtStorage {
 }
 
 impl Storage<PumpxJwtStorageKey, String> for PumpxJwtStorage {
-	fn get(&self, key: &PumpxJwtStorageKey) -> Option<String> {
-		match self.db.get(storage_key(STORAGE_NAME, &key.encode())) {
-			Ok(Some(value)) => String::decode(&mut &value[..]).ok(),
-			_ => {
-				log::error!("Error getting pumpx_{}_jwt_token from storage", key.1);
-				None
-			},
-		}
+	fn db(&self) -> Arc<crate::StorageDB> {
+		self.db.clone()
 	}
 
-	fn insert(&self, key: PumpxJwtStorageKey, token: String) -> Result<(), ()> {
-		self.db
-			.put(storage_key(STORAGE_NAME, &key.encode()), token.encode())
-			.map_err(|e| {
-				log::error!("Error inserting pumpx_{}_jwt_token into storage: {:?}", key.1, e);
-			})
-	}
-
-	fn remove(&self, key: &PumpxJwtStorageKey) -> Result<(), ()> {
-		self.db.delete(storage_key(STORAGE_NAME, &key.encode())).map_err(|e| {
-			log::error!("Error removing pumpx_{}_jwt_token from storage: {:?}", key.1, e);
-		})
-	}
-
-	fn contains_key(&self, key: &PumpxJwtStorageKey) -> bool {
-		self.db.key_may_exist(storage_key(STORAGE_NAME, &key.encode()))
+	fn name(&self) -> &'static str {
+		STORAGE_NAME
 	}
 }

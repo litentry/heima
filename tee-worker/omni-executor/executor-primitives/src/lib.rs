@@ -26,7 +26,7 @@ pub mod signature;
 pub mod utils;
 pub use heima_primitives::{
 	identity::Address32, omni::*, teebag::DcapQuote, AccountId, BlockNumber, ChainAsset, Hash,
-	Identity, MrEnclave, Nonce, ShardIdentifier, Web2IdentityType,
+	Identity, IntentId, MrEnclave, Nonce, ShardIdentifier, Web2IdentityType,
 };
 use std::fmt::Debug;
 

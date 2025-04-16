@@ -1,3 +1,17 @@
+use executor_crypto::hashing::{blake2_128, twox_128};
+use executor_primitives::{AccountId, MemberAccount};
+use frame_support::sp_runtime::traits::BlakeTwo256;
+use frame_support::storage::storage_prefix;
+use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
+use parentchain_rpc_client::{
+	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
+	ToPrimitiveType,
+};
+use parity_scale_codec::{Codec, Decode, Encode};
+use rocksdb::{WriteOptions, DB};
+use sp_state_machine::{read_proof_check, StorageProof};
+use std::{sync::Arc, vec::Vec};
+
 mod member_omni_account;
 pub use member_omni_account::MemberOmniAccountStorage;
 mod verification_code;
@@ -8,30 +22,55 @@ mod oauth2_state_verifier;
 pub use oauth2_state_verifier::OAuth2StateVerifierStorage;
 mod pumpx_jwt;
 pub use pumpx_jwt::PumpxJwtStorage;
-
-use executor_crypto::hashing::{blake2_128, twox_128};
-use executor_primitives::{AccountId, MemberAccount};
-use frame_support::sp_runtime::traits::BlakeTwo256;
-use frame_support::storage::storage_prefix;
-use parentchain_api_interface::omni_account::storage::types::account_store::AccountStore;
-use parentchain_rpc_client::{
-	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient, SubxtClientFactory,
-	ToPrimitiveType,
-};
-use parity_scale_codec::Decode;
-use rocksdb::DB;
-use sp_state_machine::{read_proof_check, StorageProof};
-use std::{sync::Arc, vec::Vec};
+mod intent_id;
+pub use intent_id::IntentIdStorage;
 
 const STORAGE_DB_PATH: &str = "storage_db";
 
 pub type StorageDB = DB;
 
-pub trait Storage<K, V> {
-	fn get(&self, key: &K) -> Option<V>;
-	fn insert(&self, key: K, value: V) -> Result<(), ()>;
-	fn remove(&self, key: &K) -> Result<(), ()>;
-	fn contains_key(&self, key: &K) -> bool;
+pub trait Storage<K: Encode, V: Codec> {
+	fn db(&self) -> Arc<StorageDB>;
+	fn name(&self) -> &'static str;
+
+	fn get(&self, key: &K) -> Result<Option<V>, ()> {
+		match self.db().get(storage_key(self.name(), &key.encode())) {
+			Ok(Some(v)) => {
+				let decoded_v = V::decode(&mut &v[..]).map_err(|e| {
+					log::error!("Error decoding value from storage: {:?}", e);
+				})?;
+				Ok(Some(decoded_v))
+			},
+			Ok(None) => Ok(None),
+			Err(e) => {
+				log::error!("Error getting value from storage: {:?}", e);
+				Err(())
+			},
+		}
+	}
+	fn contains_key(&self, key: &K) -> bool {
+		self.db().key_may_exist(storage_key(self.name(), &key.encode()))
+	}
+
+	fn insert(&self, key: &K, value: V) -> Result<(), ()> {
+		let mut opts = WriteOptions::default();
+		opts.set_sync(true);
+		self.db()
+			.put_opt(storage_key(self.name(), &key.encode()), value.encode(), &opts)
+			.map_err(|e| {
+				log::error!("Error inserting value into storage: {:?}", e);
+			})
+	}
+
+	fn remove(&self, key: &K) -> Result<(), ()> {
+		let mut opts = WriteOptions::default();
+		opts.set_sync(true);
+		self.db()
+			.delete_opt(storage_key(self.name(), &key.encode()), &opts)
+			.map_err(|e| {
+				log::error!("Error removing value from storage: {:?}", e);
+			})
+	}
 }
 
 pub fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
@@ -138,13 +177,13 @@ async fn init_omni_account_storages(
 					for member in account_store.0.iter() {
 						let member_account: MemberAccount = member.to_primitive_type();
 						member_omni_account_storage
-							.insert(member_account.hash(), omni_account.clone())
+							.insert(&member_account.hash(), omni_account.clone())
 							.map_err(|e| {
 								log::error!("Error inserting member account hash: {:?}", e);
 							})?;
 						member_accounts.push(member_account);
 					}
-					account_store_storage.insert(omni_account, member_accounts).map_err(|e| {
+					account_store_storage.insert(&omni_account, member_accounts).map_err(|e| {
 						log::error!("Error inserting account store: {:?}", e);
 					})?;
 				},

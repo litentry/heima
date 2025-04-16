@@ -30,8 +30,6 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
-use intent_core::IntentIdStore;
-use intent_core::StorageDbIntentIdStore;
 use log::{error, info};
 use native_task_handler::{
 	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
@@ -223,9 +221,6 @@ async fn main() -> Result<(), ()> {
 				Arc::new(accounting_contract_client),
 			)?;
 
-			let intent_id_store: Arc<Box<dyn IntentIdStore>> =
-				Arc::new(Box::new(StorageDbIntentIdStore::new(storage_db.clone())));
-
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -237,7 +232,6 @@ async fn main() -> Result<(), ()> {
 				Arc::new(cross_chain_intent_executor),
 				pumpx_api.clone(),
 				pumpx_signer_client.clone(),
-				intent_id_store.clone(),
 			);
 			// TODO: make buffer size configurable
 			let native_task_sender =
@@ -282,7 +276,6 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				mrenclave,
 				jwt_rsa_private_key,
-				intent_id_store,
 			)
 			.await
 			.map_err(|e| {

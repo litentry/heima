@@ -3719,7 +3719,6 @@ dependencies = [
  "executor-primitives",
  "executor-storage",
  "hex",
- "intent-core",
  "log",
  "native-task-handler",
  "parentchain-attestation",
@@ -5300,20 +5299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "intent-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "core-primitives",
- "executor-primitives",
- "executor-storage",
- "log",
- "parity-scale-codec",
- "rocksdb",
- "tokio",
-]
-
-[[package]]
 name = "intent-token-query"
 version = "0.1.0"
 dependencies = [
@@ -6228,7 +6213,6 @@ dependencies = [
  "heima-authentication",
  "heima-identity-verification",
  "hex",
- "intent-core",
  "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
@@ -8021,7 +8005,6 @@ dependencies = [
  "heima-authentication",
  "heima-identity-verification",
  "hex",
- "intent-core",
  "jsonrpsee",
  "litentry-hex-utils",
  "log",
