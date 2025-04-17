@@ -500,6 +500,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					debug!("Response create_cross_order: {:?}", response);
 
 					// 2. transfer from_asset to binance deposit address
+					let should_wait_for_deposit_confirm = false; // Switch for strategy
+
 					let coins_info =
 						self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
 							log::error!("Failed to get all coins info, {:?}", e);
@@ -642,77 +644,6 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						tx_id = Some(signature);
 					}
 
-					debug!("Waiting for deposit to be confirmed on Binance...");
-					debug!("Deposit tx_id: {:?}", tx_id);
-					debug!("Source address: {:?}", from_address);
-					let mut deposit_confirmed = false;
-					let start_time = std::time::Instant::now();
-					let timeout = Duration::from_secs(300); // 5 minute timeout
-
-					while !deposit_confirmed && start_time.elapsed() < timeout {
-						let Ok(deposit_history) = self
-							.binance_api
-							.wallet()
-							.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
-							.await
-						else {
-							log::error!("Failed to get deposit history");
-							continue;
-						};
-
-						// Check if there's a recent successful deposit
-						for deposit in deposit_history {
-							debug!("Deposit: {:?}", deposit);
-							if deposit.status == 2 || deposit.status == 7 {
-								// 2 = rejected, 7 = Wrong Deposit
-								log::error!("Deposit failed with status: {}", deposit.status);
-								let body = CrossFailBody {
-									request_id: intent_id,
-									fail_reason: format!(
-										"Deposit failed with status: {}",
-										deposit.status
-									),
-								};
-								self.pumpx_api.cross_fail(&access_token, body).await.map_err(
-									|_| {
-										log::error!("Failed to notify pumpx-signer");
-									},
-								)?;
-								return Err(());
-							}
-							if deposit.status == 1 && // 1 = success
-							   deposit.coin == binance_coin_name &&
-							   deposit.network == binance_network_info.network &&
-                               deposit.source_address == Some(from_address.clone())
-							{
-								deposit_confirmed = true;
-								debug!(
-									"Deposit confirmed on Binance for {} {}",
-									deposit.amount, binance_coin_name
-								);
-								break;
-							}
-							debug!("Deposit not confirmed yet, status: {}", deposit.status);
-						}
-
-						if !deposit_confirmed {
-							debug!("Deposit not confirmed yet, waiting 5 seconds...");
-							sleep(Duration::from_secs(5)).await;
-						}
-					}
-
-					if !deposit_confirmed {
-						log::error!("Deposit not confirmed within timeout period");
-						let body = CrossFailBody {
-							request_id: intent_id,
-							fail_reason: "Deposit not confirmed on Binance".to_string(),
-						};
-						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-							log::error!("Failed to notify pumpx-signer");
-						})?;
-						return Err(());
-					}
-
 					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
 						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
 						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
@@ -723,152 +654,271 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						},
 					};
 
-					// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
-					let binance_order_params = BinanceCreateOrderParams {
-						symbol: trade_symbol.clone(),
-						side: order_side.clone(),
-						order_type: BinanceOrderType::MARKET,
-						quote_order_qty: match order_side {
-							BinanceOrderSide::BUY => Some(from_amount.clone()),
-							BinanceOrderSide::SELL => None,
-						},
-						quantity: match order_side {
-							BinanceOrderSide::BUY => None,
-							BinanceOrderSide::SELL => Some(from_amount.clone()),
-						},
-						..Default::default()
-					};
-					debug!("Creating binance order with params: {:?}", binance_order_params);
-					let Ok(binance_order) =
-						self.binance_api.spot_trading().create_order(binance_order_params).await
-					else {
-						log::error!("Failed to create binance order");
-						self.binance_api
-							.wallet()
-							.withdraw(
-								&binance_coin_name,
-								&from_address,
-								from_amount,
-								Some(&binance_network_info.network),
-							)
-							.await
-							.map_err(|e| {
-								log::error!(
-									"Failed to withdraw asset back to omni account, error: {:?}",
-									e
-								);
+					let mut bnb_to_receive = "".to_string();
+
+					if should_wait_for_deposit_confirm {
+						debug!("Waiting for deposit to be confirmed on Binance...");
+						debug!("Deposit tx_id: {:?}", tx_id);
+						debug!("Source address: {:?}", from_address);
+						let mut deposit_confirmed = false;
+						let start_time = std::time::Instant::now();
+						let timeout = Duration::from_secs(300); // 5 minute timeout
+
+						while !deposit_confirmed && start_time.elapsed() < timeout {
+							let Ok(deposit_history) = self
+								.binance_api
+								.wallet()
+								.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
+								.await
+							else {
+								log::error!("Failed to get deposit history");
+								continue;
+							};
+
+							// Check if there's a recent successful deposit
+							for deposit in deposit_history {
+								debug!("Deposit: {:?}", deposit);
+								if deposit.status == 2 || deposit.status == 7 {
+									// 2 = rejected, 7 = Wrong Deposit
+									log::error!("Deposit failed with status: {}", deposit.status);
+									let body = CrossFailBody {
+										request_id: intent_id,
+										fail_reason: format!(
+											"Deposit failed with status: {}",
+											deposit.status
+										),
+									};
+									self.pumpx_api.cross_fail(&access_token, body).await.map_err(
+										|_| {
+											log::error!("Failed to notify pumpx-signer");
+										},
+									)?;
+									return Err(());
+								}
+								if deposit.status == 1 && // 1 = success
+							   deposit.coin == binance_coin_name &&
+							   deposit.network == binance_network_info.network &&
+                               deposit.source_address == Some(from_address.clone())
+								{
+									deposit_confirmed = true;
+									debug!(
+										"Deposit confirmed on Binance for {} {}",
+										deposit.amount, binance_coin_name
+									);
+									break;
+								}
+								debug!("Deposit not confirmed yet, status: {}", deposit.status);
+							}
+
+							if !deposit_confirmed {
+								debug!("Deposit not confirmed yet, waiting 5 seconds...");
+								sleep(Duration::from_secs(5)).await;
+							}
+						}
+
+						if !deposit_confirmed {
+							log::error!("Deposit not confirmed within timeout period");
+							let body = CrossFailBody {
+								request_id: intent_id,
+								fail_reason: "Deposit not confirmed on Binance".to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
 							})?;
-						log::debug!("Withdrawed asset back to omni account");
+							return Err(());
+						}
 
-						let body = CrossFailBody {
-							request_id: intent_id,
-							// TODO: is this a user facing error? what should we return?
-							fail_reason: "Failed to create binance order".to_string(),
+						// 3. Make the trade using binance spot trading api from_asset => BNB, If it fails, notify the backend via /v3/trade/cross_fail
+						let binance_order_params = BinanceCreateOrderParams {
+							symbol: trade_symbol.clone(),
+							side: order_side.clone(),
+							order_type: BinanceOrderType::MARKET,
+							quote_order_qty: match order_side {
+								BinanceOrderSide::BUY => Some(from_amount.clone()),
+								BinanceOrderSide::SELL => None,
+							},
+							quantity: match order_side {
+								BinanceOrderSide::BUY => None,
+								BinanceOrderSide::SELL => Some(from_amount.clone()),
+							},
+							..Default::default()
 						};
-						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-							log::error!("Failed to notify pumpx-signer");
-						})?;
-
-						return Err(());
-					};
-
-					// Binance trade pair format:
-					// <base-asset><quote-asset>, e.g. BNBUSDT, SOLBNB...
-					//
-					// SELL: sell the "base-asset" to get "quote-asset"
-					// BUY:  buy the "base-asset" with "quote-asset"
-					//
-					// executedQty: quantity of "base-asset"
-					// cummulativeQuoteQty: quantity of "quote-asset"
-					//
-					// so, in SELL orders:
-					// - `executedQty` reflects the amount of the base-asset sold
-					// - `cummulativeQuoteQty` reflects the amount of the quote-asset received
-					//
-					// in BUY orders:
-					// - `executedQty` indicates the amount of the base-asset bought
-					// - `cummulativeQuoteQty`` shows the total amount of the quote-asset spent
-					let mut trade_success = false;
-					let mut bnb_received = "".to_string();
-					loop {
-						let trade_order = self
+						debug!("Creating binance order with params: {:?}", binance_order_params);
+						let Ok(binance_order) = self
 							.binance_api
 							.spot_trading()
-							.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
+							.create_order(binance_order_params)
 							.await
-							.map_err(|_| {
-								log::error!("Failed to get binance order");
-							})?;
-
-						match trade_order.status {
-							BinanceOrderStatus::FILLED => {
-								log::info!("Binance order filled");
-								bnb_received = match trade_order.side {
-									BinanceOrderSide::BUY => trade_order.executed_qty,
-									BinanceOrderSide::SELL => trade_order.cummulative_quote_qty,
-								};
-								trade_success = true;
-								break;
-							},
-							BinanceOrderStatus::CANCELED => {
-								log::error!("Binance order canceled");
-							},
-							BinanceOrderStatus::REJECTED => {
-								log::error!("Binance order rejected");
-							},
-							BinanceOrderStatus::EXPIRED => {
-								log::error!("Binance order expired");
-							},
-							BinanceOrderStatus::EXPIRED_IN_MATCH => {
-								log::error!("Binance order expired in matching");
-							},
-							_ => {
-								log::debug!("Binance order status: {:?}", trade_order.status);
-							},
-						}
-						//todo: how long we wait ?
-						sleep(Duration::from_millis(500)).await;
-					}
-					if !trade_success {
-						log::error!("Binance order failed");
-						self.binance_api
-							.wallet()
-							.withdraw(
-								&binance_coin_name,
-								&from_address,
-								from_amount,
-								Some(&binance_network_info.network),
-							)
-							.await
-							.map_err(|e| {
-								log::error!(
+						else {
+							log::error!("Failed to create binance order");
+							self.binance_api
+								.wallet()
+								.withdraw(
+									&binance_coin_name,
+									&from_address,
+									from_amount,
+									Some(&binance_network_info.network),
+								)
+								.await
+								.map_err(|e| {
+									log::error!(
 									"Failed to withdraw asset back to omni account, error: {:?}",
 									e
 								);
+								})?;
+							log::debug!("Withdrawed asset back to omni account");
+
+							let body = CrossFailBody {
+								request_id: intent_id,
+								// TODO: is this a user facing error? what should we return?
+								fail_reason: "Failed to create binance order".to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
 							})?;
-						log::debug!("Withdrawed asset back to omni account");
 
-						let body = CrossFailBody {
-							request_id: intent_id,
-							// TODO: is this a user facing error? what should we return?
-							fail_reason: "Binance order failed".to_string(),
+							return Err(());
 						};
-						self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-							log::error!("Failed to notify pumpx-signer");
-						})?;
 
-						return Err(());
+						// Binance trade pair format:
+						// <base-asset><quote-asset>, e.g. BNBUSDT, SOLBNB...
+						//
+						// SELL: sell the "base-asset" to get "quote-asset"
+						// BUY:  buy the "base-asset" with "quote-asset"
+						//
+						// executedQty: quantity of "base-asset"
+						// cummulativeQuoteQty: quantity of "quote-asset"
+						//
+						// so, in SELL orders:
+						// - `executedQty` reflects the amount of the base-asset sold
+						// - `cummulativeQuoteQty` reflects the amount of the quote-asset received
+						//
+						// in BUY orders:
+						// - `executedQty` indicates the amount of the base-asset bought
+						// - `cummulativeQuoteQty`` shows the total amount of the quote-asset spent
+						let mut trade_success = false;
+						let mut bnb_received = "".to_string();
+						loop {
+							let trade_order = self
+								.binance_api
+								.spot_trading()
+								.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
+								.await
+								.map_err(|_| {
+									log::error!("Failed to get binance order");
+								})?;
+
+							match trade_order.status {
+								BinanceOrderStatus::FILLED => {
+									log::info!("Binance order filled");
+									bnb_received = match trade_order.side {
+										BinanceOrderSide::BUY => trade_order.executed_qty,
+										BinanceOrderSide::SELL => trade_order.cummulative_quote_qty,
+									};
+									trade_success = true;
+									break;
+								},
+								BinanceOrderStatus::CANCELED => {
+									log::error!("Binance order canceled");
+								},
+								BinanceOrderStatus::REJECTED => {
+									log::error!("Binance order rejected");
+								},
+								BinanceOrderStatus::EXPIRED => {
+									log::error!("Binance order expired");
+								},
+								BinanceOrderStatus::EXPIRED_IN_MATCH => {
+									log::error!("Binance order expired in matching");
+								},
+								_ => {
+									log::debug!("Binance order status: {:?}", trade_order.status);
+								},
+							}
+							//todo: how long we wait ?
+							sleep(Duration::from_millis(500)).await;
+						}
+						if !trade_success {
+							log::error!("Binance order failed");
+							self.binance_api
+								.wallet()
+								.withdraw(
+									&binance_coin_name,
+									&from_address,
+									from_amount,
+									Some(&binance_network_info.network),
+								)
+								.await
+								.map_err(|e| {
+									log::error!(
+									"Failed to withdraw asset back to omni account, error: {:?}",
+									e
+								);
+								})?;
+							log::debug!("Withdrawed asset back to omni account");
+
+							let body = CrossFailBody {
+								request_id: intent_id,
+								// TODO: is this a user facing error? what should we return?
+								fail_reason: "Binance order failed".to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
+							})?;
+
+							return Err(());
+						}
+
+						debug!("Total received {} bnb", bnb_received);
+					} else {
+						// Estimate BNB payout (simulate spot trade, apply service fee)
+						let price_str = self
+							.binance_api
+							.spot_trading()
+							.get_symbol_price(&trade_symbol)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to get symbol price for {}", trade_symbol);
+							})?;
+
+						let price = if binance_coin_name == "SOL" {
+							// For SOL, we sell SOL to get BNB, so get SOLBNB price
+							Decimal::from_str(&price_str).map_err(|_| {
+								log::error!("Failed to parse symbol price {}", price_str);
+							})?
+						} else {
+							// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
+							let price = Decimal::from_str(&price_str).map_err(|_| {
+								log::error!("Failed to parse symbol price {}", price_str);
+							})?;
+							if price.is_zero() {
+								log::error!("Symbol price is zero for {}", trade_symbol);
+								return Err(());
+							}
+							Decimal::ONE / price
+						};
+
+						let bnb_estimated = from_amount_decimal * price;
+
+						// Apply 0.1% service fee
+						let service_fee_rate =
+							Decimal::from_str("0.001").expect("Failed to parse service fee rate");
+						let decimal_bnb_to_receive =
+							bnb_estimated * (Decimal::ONE - service_fee_rate);
+						bnb_to_receive = decimal_bnb_to_receive.to_string();
+
+						debug!(
+							"BNB estimated: {}, after 0.1% fee: {}",
+							bnb_estimated, bnb_to_receive
+						);
 					}
-
-					debug!("Total received {} bnb", bnb_received);
 
 					let payout_address = Address::from_str(&to_address).map_err(|_| {
 						log::error!("Failed to parse payout address");
 					})?;
-					let payout_amount = match str_to_u256(&bnb_received, 18) {
+					let payout_amount = match str_to_u256(&bnb_to_receive, 18) {
 						Some(a) => a,
 						None => {
-							log::error!("Fail to convert bnb amount {} to U256", bnb_received);
+							log::error!("Fail to convert bnb amount {} to U256", bnb_to_receive);
 							let body = CrossFailBody {
 								request_id: intent_id,
 								fail_reason:
@@ -940,12 +990,12 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					};
 					debug!("Gas fee for chain_id {} is {}", pumpx_config.to_chain_id, gas_fee);
 
-					let amount_in = match calculate_amount_in(&bnb_received, gas_fee) {
+					let amount_in = match calculate_amount_in(&bnb_to_receive, gas_fee) {
 						Some(a) => a,
 						None => {
 							log::error!(
 								"Fail to calculate amount_in from amount {}, gas {}",
-								bnb_received,
+								bnb_to_receive,
 								gas_fee
 							);
 							let body = CrossFailBody {
