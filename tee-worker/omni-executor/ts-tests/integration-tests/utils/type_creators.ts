@@ -74,7 +74,7 @@ export async function createNativeTaskWrapper(
     api: ApiPromise,
     task: NativeTask,
     signer: Signer,
-    nonce: Codec
+    nonce: Codec,
     msgCode: string
 ): Promise<NativeTaskWrapper> {
     const payload = JSON.stringify({ message_code: msgCode });
