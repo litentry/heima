@@ -1,9 +1,6 @@
 import { u8aToHex } from '@polkadot/util';
 import { ApiPromise } from '@polkadot/api';
-import {
-    NativeTaskWrapper,
-    NativeTaskResponse,
-} from 'parachain-api';
+import { NativeTaskWrapper, NativeTaskResponse } from 'parachain-api';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';
@@ -40,6 +37,29 @@ export async function sendRawTaskPlain(
     );
 
     return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
+}
+
+export async function getMessageCode(context: IntegrationTestContext): Promise<{ message_code: string }> {
+    const request = createJsonRpcRequest('omni_getMessageCode', [], nextRequestId(context));
+
+    const response = new Promise<{ message_code: string }>((resolve, reject) =>
+        context.teeWsClient.onMessage.addListener((data) => {
+            const parsed = JSON.parse(data);
+            if (parsed.id !== request.id) {
+                return;
+            }
+            if ('error' in parsed) {
+                const transaction = { request, response: parsed };
+                console.log('Request failed: ' + JSON.stringify(transaction, null, 2));
+                reject(new Error(parsed.error.message, { cause: transaction }));
+            }
+            const response = parsed.result;
+            context.teeWsClient.onMessage.removeAllListeners();
+            resolve(response);
+        })
+    );
+    context.teeWsClient.sendRequest(request);
+    return response;
 }
 
 async function sendRequest(

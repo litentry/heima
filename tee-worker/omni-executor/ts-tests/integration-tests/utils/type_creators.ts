@@ -13,6 +13,7 @@ import {
     NativeTaskWrapper,
 } from 'parachain-api';
 import { Signer } from './signer';
+import { getMessageCode } from './requests';
 
 export async function createIdentityType(
     api: ApiPromise,
@@ -73,33 +74,20 @@ export async function createNativeTaskWrapper(
     api: ApiPromise,
     task: NativeTask,
     signer: Signer,
-    nonce: Codec,
-    mrenclave: string,
-    withWrappedBytes = false,
-    withPrefix = false
+    nonce: Codec
+    msgCode: string
 ): Promise<NativeTaskWrapper> {
-    let payload: string = blake2AsHex(u8aConcat(task.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
-
-    if (withWrappedBytes) {
-        payload = `<Bytes>${payload}</Bytes>`;
-    }
-
-    if (withPrefix) {
-        const prefix = 'Token: ';
-        const msg = prefix + payload;
-        payload = msg;
-        console.log('Signing message: ', payload);
-    }
+    const payload = JSON.stringify({ message_code: msgCode });
+    const hashedPayload = blake2AsHex(payload, 256);
 
     const signature = await createHeimaMultiSignature(api, {
         signer,
-        payload,
+        payload: hashedPayload,
     });
 
     const auth: OmniAuth = api.createType('OmniAuth', {
         Web3: api.createType('(HeimaMultiSignature)', signature),
     });
-
 
     let n = api.createType('Option<Nonce>', nonce);
     let a = api.createType('Option<OmniAuth>', auth);
@@ -111,10 +99,7 @@ export async function createNativeTaskWrapper(
     });
 }
 
-export function createRawTaskPlain(
-    api: ApiPromise,
-    nativeTaskWrapper: NativeTaskWrapper
-): RawTask {
+export function createRawTaskPlain(api: ApiPromise, nativeTaskWrapper: NativeTaskWrapper): RawTask {
     return api.createType('RawTask', {
         ['Plain']: nativeTaskWrapper,
     });
