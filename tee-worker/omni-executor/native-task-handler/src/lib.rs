@@ -649,7 +649,7 @@ async fn handle_native_task<
 			log::debug!("Response pumpx user_connect: {:?}", backend_response);
 
 			// check google auth value
-			if let Some(user_connect_res) = backend_response.clone().data {
+			if let Some(ref user_connect_res) = backend_response.data {
 				if !user_connect_res.google_auth_check {
 					send_error(
 						"Google code verification failed from user_connect".to_string(),
