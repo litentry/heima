@@ -49,7 +49,6 @@ mod test {
 			Arc::new(sender),
 			Arc::new(pumpx_api),
 			Arc::new(db),
-			[0u8; 32],
 			jwt_private_key.as_bytes().to_vec(),
 		)
 		.await

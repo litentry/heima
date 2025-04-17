@@ -1,5 +1,4 @@
 use crate::{methods::register_methods, ShieldingKey};
-use executor_primitives::MrEnclave;
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
@@ -11,7 +10,6 @@ pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
 	pub storage_db: Arc<StorageDB>,
-	pub mrenclave: MrEnclave,
 	pub mailer: Mailer,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
@@ -25,7 +23,6 @@ impl RpcContext {
 		shielding_key: ShieldingKey,
 		native_task_sender: Arc<NativeTaskSender>,
 		storage_db: Arc<StorageDB>,
-		mrenclave: [u8; 32],
 		mailer: Mailer,
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
@@ -36,7 +33,6 @@ impl RpcContext {
 			shielding_key,
 			native_task_sender,
 			storage_db,
-			mrenclave: MrEnclave::from(mrenclave),
 			mailer,
 			jwt_rsa_private_key,
 			google_client_id,
@@ -46,14 +42,12 @@ impl RpcContext {
 	}
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn start_server(
 	port: u16,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,
 	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
-	mrenclave: [u8; 32],
 	jwt_rsa_private_key: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
@@ -77,7 +71,6 @@ pub async fn start_server(
 		shielding_key,
 		native_task_sender,
 		storage_db,
-		mrenclave,
 		mailer,
 		jwt_rsa_private_key,
 		google_client_id,

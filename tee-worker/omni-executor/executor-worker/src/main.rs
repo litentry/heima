@@ -253,7 +253,7 @@ async fn main() -> Result<(), ()> {
 			})
 			.expect("Could not serialize shielding public key");
 
-			let mrenclave = perform_attestation(
+			let _ = perform_attestation(
 				parentchain_rpc_client_factory,
 				parentchain_signer,
 				tx_signer.clone(),
@@ -271,7 +271,6 @@ async fn main() -> Result<(), ()> {
 				Arc::new(native_task_sender),
 				pumpx_api,
 				storage_db.clone(),
-				mrenclave,
 				jwt_rsa_private_key,
 			)
 			.await
