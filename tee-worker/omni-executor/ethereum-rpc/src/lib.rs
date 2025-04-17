@@ -94,7 +94,7 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get transaction count: {:?}", e))
 	}
 
-	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()> {
+	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<(), ()> {
 		if self.wallet.is_none() {
 			return Err(());
 		}
@@ -106,6 +106,16 @@ impl RpcProvider for AlloyRpcProvider {
 					.ok_or(error!("Provider without a wallet cannot send transactions"))?,
 			)
 			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+
+		let mut tx: TransactionRequest = Default::default();
+		if let Some(wallet) = self.wallet.clone() {
+			let signer_address = wallet.default_signer().address();
+			tx = raw_tx.from(signer_address);
+			// Bump the gas by 10%
+			// TODO: Set gas fees via CLI
+			tx.gas = Some(self.estimate_gas(tx.clone()).await? * 110 / 100);
+			tx.gas_price = Some(self.get_gas_price().await?);
+		}
 
 		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
