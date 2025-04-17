@@ -94,17 +94,15 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get transaction count: {:?}", e))
 	}
 
-	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<(), ()> {
-		if self.wallet.is_none() {
+
+	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()> {
+		let Some(ref wallet) = self.wallet else {
+			error!("Provider without a wallet cannot send transactions");
 			return Err(());
-		}
+		};
 
 		let provider = ProviderBuilder::new()
-			.wallet(
-				self.wallet
-					.clone()
-					.ok_or(error!("Provider without a wallet cannot send transactions"))?,
-			)
+			.wallet(wallet.clone())
 			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
 		let mut tx: TransactionRequest = Default::default();
