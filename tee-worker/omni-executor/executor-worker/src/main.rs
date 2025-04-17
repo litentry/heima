@@ -282,7 +282,9 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			listen_to_parentchain(*args, storage_db).await.unwrap();
+			if args.parentchain_sync {
+				listen_to_parentchain(*args, storage_db).await.unwrap();
+			}
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
