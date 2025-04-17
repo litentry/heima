@@ -41,6 +41,8 @@ pub struct RunArgs {
 		value_name = "accounting contract address"
 	)]
 	pub accounting_contract_address: String,
+	#[arg(long, value_name = "should sync with parentchain")]
+	pub parentchain_sync: bool,
 }
 
 #[derive(Args)]
