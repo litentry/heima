@@ -626,17 +626,6 @@ async fn handle_native_task<
 				return;
 			};
 
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			if storage
-				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
-				.is_err()
-			{
-				log::error!(
-					"Failed to insert pumpx_{}_jwt_token into storage",
-					AUTH_TOKEN_ACCESS_TYPE
-				);
-			};
-
 			log::debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
 			let Ok(backend_response) = ctx
 				.pumpx_api
@@ -659,6 +648,25 @@ async fn handle_native_task<
 			};
 			log::debug!("Response pumpx user_connect: {:?}", backend_response);
 
+			// check google auth value
+			if let Some(user_connect_res) = backend_response.clone().data {
+				if !user_connect_res.google_auth_check {
+					send_error(
+						"Google code verification failed from user_connect".to_string(),
+						response_sender,
+						NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
+					);
+					return;
+				}
+			} else {
+				send_error(
+					"Invalid response data field of user_connect".to_string(),
+					response_sender,
+					NativeTaskError::PumpxApiError(PumpxApiError::UserConnectionFailed),
+				);
+				return;
+			}
+
 			let id_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
 				AUTH_TOKEN_ID_TYPE.to_string(),
@@ -671,6 +679,17 @@ async fn handle_native_task<
 					NativeTaskError::AuthTokenCreationFailed,
 				);
 				return;
+			};
+
+			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			if storage
+				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+				.is_err()
+			{
+				log::error!(
+					"Failed to insert pumpx_{}_jwt_token into storage",
+					AUTH_TOKEN_ACCESS_TYPE
+				);
 			};
 
 			if storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
