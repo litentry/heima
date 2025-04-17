@@ -94,8 +94,7 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get transaction count: {:?}", e))
 	}
 
-
-	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()> {
+	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<(), ()> {
 		let Some(ref wallet) = self.wallet else {
 			error!("Provider without a wallet cannot send transactions");
 			return Err(());
