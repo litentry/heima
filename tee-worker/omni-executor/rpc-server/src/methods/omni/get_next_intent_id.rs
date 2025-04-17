@@ -14,40 +14,40 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::str::FromStr;
-
 use crate::server::RpcContext;
 use crate::ErrorCode;
 use executor_primitives::AccountId;
 use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use log::error;
-use parentchain_rpc_client::AccountId32;
+use serde::Deserialize;
+use std::str::FromStr;
+
+#[derive(Debug, Deserialize)]
+pub struct GetNextIntentIdParams {
+	// can be of ss58 or hex format
+	pub omni_account: String,
+}
 
 pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_getNextIntentId", |params, ctx, _| async move {
-			//ss58 encoded account_id
-			match params.parse::<String>() {
-				Ok(omni_account) => {
-					let account = AccountId32::from_str(&omni_account).map_err(|e| {
-						error!("Could not parse AccountId: {:?}", e);
-						<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InvalidParams)
-					})?;
+			let params = params.parse::<GetNextIntentIdParams>()?;
+			let account = AccountId::from_str(&params.omni_account).map_err(|e| {
+				error!("Could not parse AccountId: {:?}", e);
+				<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InvalidParams)
+			})?;
 
-					let storage = IntentIdStorage::new(ctx.storage_db.clone());
-					let intent_id = storage
-						.get(&AccountId::from(account.0))
-						.map_err(|e| {
-							log::error!("Could not get IntentId from store: {:?}", e);
-							<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
-						})?
-						.unwrap_or_default();
+			let storage = IntentIdStorage::new(ctx.storage_db.clone());
+			let intent_id = storage
+				.get(&account)
+				.map_err(|e| {
+					log::error!("Could not get IntentId from store: {:?}", e);
+					<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
+				})?
+				.unwrap_or_default();
 
-					Ok::<u32, ErrorObject>(intent_id + 1)
-				},
-				Err(_) => Err(ErrorCode::ParseError.into()),
-			}
+			Ok::<u32, ErrorObject>(intent_id + 1)
 		})
 		.expect("Failed to register getIntentId method");
 }
