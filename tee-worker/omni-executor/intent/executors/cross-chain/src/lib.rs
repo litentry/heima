@@ -904,23 +904,35 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						})?;
 
 					debug!("Calling pumpx get_gas_info, chain_id: {}", pumpx_config.to_chain_id);
-					let gas_info = self
+					let res = self
 						.pumpx_api
 						.get_gas_info(&access_token, pumpx_config.to_chain_id)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to get gas info");
 						})?;
-					debug!("Response get_gas_info: {:?}", gas_info);
+					debug!("Response get_gas_info: {:?}", res);
 
-					let Some(gas_info_data) = gas_info.data else {
+					let Some(gas_info_data) = res.data else {
 						log::error!("Response data of call get gas info is none");
 						return Err(());
 					};
+					let Some(gas_info) = gas_info_data
+						.gas_info
+						.iter()
+						.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
+					else {
+						log::error!(
+							"Could not find matching gas_info with chain_id {}",
+							pumpx_config.to_chain_id
+						);
+						return Err(());
+					};
+
 					let gas_fee = match pumpx_config.gas_type {
-						1 => gas_info_data.gas_info.normal,
-						2 => gas_info_data.gas_info.fast,
-						3 => gas_info_data.gas_info.super_fast,
+						1 => &gas_info.normal,
+						2 => &gas_info.fast,
+						3 => &gas_info.super_fast,
 						_ => {
 							log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
 							return Err(());
@@ -928,7 +940,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					};
 					debug!("Gas fee for chain_id {} is {}", pumpx_config.to_chain_id, gas_fee);
 
-					let amount_in = match calculate_amount_in(&bnb_received, &gas_fee) {
+					let amount_in = match calculate_amount_in(&bnb_received, gas_fee) {
 						Some(a) => a,
 						None => {
 							log::error!(
