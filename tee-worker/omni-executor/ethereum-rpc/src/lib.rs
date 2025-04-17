@@ -15,14 +15,13 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use alloy::network::EthereumWallet;
-use alloy::network::TransactionBuilder;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
 use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
-use log::{debug, error};
+use log::error;
 
 pub trait RpcProviderFactory {
 	type Provider;
@@ -105,16 +104,7 @@ impl RpcProvider for AlloyRpcProvider {
 			.wallet(wallet.clone())
 			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
-		let current_nonce = provider
-			.get_transaction_count(wallet.default_signer().address())
-			.await
-			.map_err(|e| error!("Cannot get nonce, {:?}", e))?;
-
-		debug!("{:?} nonce is {}", wallet.default_signer().address(), current_nonce);
-		let mut tx_cloned = tx.clone();
-		tx_cloned.set_nonce(current_nonce);
-
-		let pending_tx = provider.send_transaction(tx_cloned).await.map_err(|e| {
+		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
 		})?;
 		// wait for transaction to be included

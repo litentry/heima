@@ -893,6 +893,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						)?;
 
 					debug!("Received {:?} nonce", user_nonce);
+					let user_nonce = user_nonce + U256::from(1u64);
 					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, payout_amount);
 
 					self.accounting_contract_client
