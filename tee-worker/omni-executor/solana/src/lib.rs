@@ -46,7 +46,12 @@ impl SolanaClient {
 			.await
 			.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
 
-		log::debug!("Successfully transferred {} tokens from sender {}", value, signer.pubkey());
+		log::debug!(
+			"Successfully transferred {} tokens from sender {} to {}",
+			value,
+			signer.pubkey(),
+			to_pubkey
+		);
 		log::debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(tx_signature.to_string())
@@ -59,12 +64,6 @@ impl SolanaClient {
 		mint_address: &str,
 		signer: &Signer,
 	) -> Result<String, ()> {
-		let block_hash = self
-			.rpc_client
-			.get_latest_blockhash()
-			.await
-			.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
-
 		let mint_pubkey = Pubkey::from_str(mint_address)
 			.map_err(|e| log::error!("Could not parse mint address: {:?}", e))?;
 		let to_pubkey =
@@ -75,9 +74,10 @@ impl SolanaClient {
 
 		let destination_exists = self.rpc_client.get_account(&destination_pubkey).await.is_ok();
 
-		let mut instructions = vec![];
-
+		// if dest ATA doesn't exist, send one tx to create it, two ix in one tx didn't seem to work
+		// this should happen only once as the dest ATA would be initialized after one interaction
 		if !destination_exists {
+			log::debug!("Destination ATA {} doesn't exist, creating it now", destination_pubkey);
 			let create_ata_ix =
 				spl_associated_token_account::instruction::create_associated_token_account(
 					&signer.pubkey(), // payer
@@ -85,8 +85,33 @@ impl SolanaClient {
 					&mint_pubkey,     // token mint
 					&spl_token::id(),
 				);
-			instructions.push(create_ata_ix);
+			let block_hash = self
+				.rpc_client
+				.get_latest_blockhash()
+				.await
+				.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
+
+			let tx = Transaction::new_signed_with_payer(
+				&[create_ata_ix],
+				Some(&signer.pubkey()),
+				&[signer],
+				block_hash,
+			);
+
+			let tx_signature = self
+				.rpc_client
+				.send_and_confirm_transaction(&tx)
+				.await
+				.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
+
+			log::debug!("Successfully created destination ATA, tx signature {:?}", tx_signature);
 		}
+
+		let block_hash = self
+			.rpc_client
+			.get_latest_blockhash()
+			.await
+			.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
 
 		let transfer_ix = spl_token::instruction::transfer(
 			&spl_token::id(),
@@ -99,10 +124,9 @@ impl SolanaClient {
 		.map_err(|e| {
 			log::error!("Could not create transfer instruction: {:?}", e);
 		})?;
-		instructions.push(transfer_ix);
 
 		let tx = Transaction::new_signed_with_payer(
-			&instructions,
+			&[transfer_ix],
 			Some(&signer.pubkey()),
 			&[signer],
 			block_hash,
