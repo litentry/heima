@@ -10,6 +10,9 @@ async-trait = { workspace = true }
 log = { workspace = true }
 mockall = { workspace = true }
 
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
 [lints]
 workspace = true
 

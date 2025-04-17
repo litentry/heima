@@ -3284,6 +3284,7 @@ dependencies = [
  "async-trait",
  "log",
  "mockall",
+ "tokio",
 ]
 
 [[package]]

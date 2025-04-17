@@ -110,6 +110,7 @@ impl RpcProvider for AlloyRpcProvider {
 		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
 		})?;
+		println!("tx hash is: {}", pending_tx.tx_hash().to_string());
 		// wait for transaction to be included
 		let _ = pending_tx.get_receipt().await.map_err(|e| {
 			error!("Could not get transaction receipt: {:?}", e);
@@ -198,5 +199,33 @@ pub mod mocks {
 		fn create(&self, wallet: Self::Context) -> Self::Provider {
 			self.providers.borrow_mut().remove(&wallet.default_signer().address()).unwrap()
 		}
+	}
+}
+
+#[cfg(test)]
+pub mod tests {
+	use crate::AlloyRpcProvider;
+	use crate::RpcProvider;
+	use alloy::network::{EthereumWallet, TransactionBuilder};
+	use alloy::primitives::{Address, U256};
+	use alloy::rpc::types::TransactionRequest;
+	use alloy::signers::local::PrivateKeySigner;
+	use std::str::FromStr;
+
+	#[tokio::test]
+	async fn test_tx() {
+		let private_key = "0b7ff5a0daaaefa75487e1495bff5729aeace7c3ce8d97c0d444a62842de86af";
+		// https://hoodi-faucet.pk910.de
+		// address 0x3c174bdca218d8fde527baa822672128975a8eae
+		let signer = PrivateKeySigner::from_str(private_key).expect("Invalid private key");
+		let wallet = EthereumWallet::from(signer);
+
+		let to_address = Address::from_str("0x742d35Cc6634C0532925a3b844Bc454e4438f44e").unwrap();
+		let amount = U256::from(1_000_000_000_000_000u64); // 0.001 ETH = 10^15 Wei
+
+		let provider = AlloyRpcProvider::new_with_wallet("https://rpc.hoodi.ethpandaops.io", wallet);
+		let tx: TransactionRequest = TransactionRequest::default().with_to(to_address).with_value(amount);
+
+		provider.send_transaction(tx).await.expect("Failed to send transaction");
 	}
 }
