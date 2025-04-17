@@ -15,13 +15,14 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use alloy::network::EthereumWallet;
+use alloy::network::TransactionBuilder;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
 use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
-use log::error;
+use log::{debug, error};
 
 pub trait RpcProviderFactory {
 	type Provider;
@@ -95,19 +96,25 @@ impl RpcProvider for AlloyRpcProvider {
 	}
 
 	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()> {
-		if self.wallet.is_none() {
+		let Some(ref wallet) = self.wallet else {
+			error!("Provider without a wallet cannot send transactions");
 			return Err(());
-		}
+		};
 
 		let provider = ProviderBuilder::new()
-			.wallet(
-				self.wallet
-					.clone()
-					.ok_or(error!("Provider without a wallet cannot send transactions"))?,
-			)
+			.wallet(wallet.clone())
 			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
 
-		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
+		let current_nonce = provider
+			.get_transaction_count(wallet.default_signer().address())
+			.await
+			.map_err(|e| error!("Cannot get nonce, {:?}", e))?;
+
+		debug!("{:?} nonce is {}", wallet.default_signer().address(), current_nonce);
+		let mut tx_cloned = tx.clone();
+		tx_cloned.set_nonce(current_nonce);
+
+		let pending_tx = provider.send_transaction(tx_cloned).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
 		})?;
 		// wait for transaction to be included
