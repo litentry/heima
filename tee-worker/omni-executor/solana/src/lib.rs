@@ -73,7 +73,22 @@ impl SolanaClient {
 		let source_pubkey = get_associated_token_address(&signer.pubkey(), &mint_pubkey);
 		let destination_pubkey = get_associated_token_address(&to_pubkey, &mint_pubkey);
 
-		let transfer_instruction = spl_token::instruction::transfer(
+		let destination_exists = self.rpc_client.get_account(&destination_pubkey).await.is_ok();
+
+		let mut instructions = vec![];
+
+		if !destination_exists {
+			let create_ata_ix =
+				spl_associated_token_account::instruction::create_associated_token_account(
+					&signer.pubkey(), // payer
+					&to_pubkey,       // owner of the new ATA
+					&mint_pubkey,     // token mint
+					&spl_token::id(),
+				);
+			instructions.push(create_ata_ix);
+		}
+
+		let transfer_ix = spl_token::instruction::transfer(
 			&spl_token::id(),
 			&source_pubkey,
 			&destination_pubkey,
@@ -84,8 +99,10 @@ impl SolanaClient {
 		.map_err(|e| {
 			log::error!("Could not create transfer instruction: {:?}", e);
 		})?;
+		instructions.push(transfer_ix);
+
 		let tx = Transaction::new_signed_with_payer(
-			&[transfer_instruction],
+			&instructions,
 			Some(&signer.pubkey()),
 			&[signer],
 			block_hash,
@@ -96,7 +113,12 @@ impl SolanaClient {
 			.await
 			.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
 
-		log::debug!("Successfully transferred {} tokens from sender {}", value, signer.pubkey());
+		log::debug!(
+			"Successfully transferred {} tokens from sender {} to {}",
+			value,
+			signer.pubkey(),
+			to_pubkey
+		);
 		log::debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(tx_signature.to_string())
