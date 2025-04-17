@@ -318,7 +318,7 @@ pub struct GetGasInfoParams {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGasInfoResponseData {
-	pub gas_info: GasInfo,
+	pub gas_info: Vec<GasInfo>,
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]

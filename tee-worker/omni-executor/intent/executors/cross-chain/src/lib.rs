@@ -41,6 +41,7 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use solana::{signer::RemoteSigner, SolanaClient};
+use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
 	time::{sleep, Duration},
@@ -437,6 +438,15 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
 						})?;
 
+					let from_address = match from_chain_type {
+						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
+						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+						_ => {
+							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							return Err(());
+						},
+					};
+
 					let to_wallet_address = self
 						.pumpx_signer_client
 						.request_wallet(
@@ -449,11 +459,11 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 						})?;
 
-					let from_address = match from_chain_type {
-						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
-						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+					let to_address = match to_chain_type {
+						ChainType::Evm => pubkey_to_evm_address(&to_wallet_address)?,
+						ChainType::Solana => pubkey_to_solana_address(&to_wallet_address)?,
 						_ => {
-							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							log::error!("Unsupported {:?} wallet address", to_chain_type);
 							return Err(());
 						},
 					};
@@ -633,6 +643,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					}
 
 					debug!("Waiting for deposit to be confirmed on Binance...");
+					debug!("Deposit tx_id: {:?}", tx_id);
+					debug!("Source address: {:?}", from_address);
 					let mut deposit_confirmed = false;
 					let start_time = std::time::Instant::now();
 					let timeout = Duration::from_secs(300); // 5 minute timeout
@@ -650,13 +662,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 
 						// Check if there's a recent successful deposit
 						for deposit in deposit_history {
-							let deposit_amount: u64 = match Decimal::from_str(&deposit.amount) {
-								Ok(deposit_amount) => deposit_amount.to_u64().unwrap_or(0),
-								Err(_) => {
-									log::error!("Failed to parse deposit amount");
-									continue;
-								},
-							};
+							debug!("Deposit: {:?}", deposit);
 							if deposit.status == 2 || deposit.status == 7 {
 								// 2 = rejected, 7 = Wrong Deposit
 								log::error!("Deposit failed with status: {}", deposit.status);
@@ -677,8 +683,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							if deposit.status == 1 && // 1 = success
 							   deposit.coin == binance_coin_name &&
 							   deposit.network == binance_network_info.network &&
-                               deposit.source_address == Some(from_address.clone()) &&
-                               deposit_amount == amount_to_transfer
+                               deposit.source_address == Some(from_address.clone())
 							{
 								deposit_confirmed = true;
 								debug!(
@@ -687,6 +692,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								);
 								break;
 							}
+							debug!("Deposit not confirmed yet, status: {}", deposit.status);
 						}
 
 						if !deposit_confirmed {
@@ -856,7 +862,9 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 
 					debug!("Total received {} bnb", bnb_received);
 
-					let payout_address: Address = Address::from_slice(&to_wallet_address);
+					let payout_address = Address::from_str(&to_address).map_err(|_| {
+						log::error!("Failed to parse payout address");
+					})?;
 					let payout_amount = match str_to_u256(&bnb_received, 18) {
 						Some(a) => a,
 						None => {
@@ -885,6 +893,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						)?;
 
 					debug!("Received {:?} nonce", user_nonce);
+					let user_nonce = user_nonce + U256::from(1u64);
 					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, payout_amount);
 
 					self.accounting_contract_client
@@ -895,23 +904,35 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						})?;
 
 					debug!("Calling pumpx get_gas_info, chain_id: {}", pumpx_config.to_chain_id);
-					let gas_info = self
+					let res = self
 						.pumpx_api
 						.get_gas_info(&access_token, pumpx_config.to_chain_id)
 						.await
 						.map_err(|_| {
 							log::error!("Failed to get gas info");
 						})?;
-					debug!("Response get_gas_info: {:?}", gas_info);
+					debug!("Response get_gas_info: {:?}", res);
 
-					let Some(gas_info_data) = gas_info.data else {
+					let Some(gas_info_data) = res.data else {
 						log::error!("Response data of call get gas info is none");
 						return Err(());
 					};
+					let Some(gas_info) = gas_info_data
+						.gas_info
+						.iter()
+						.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
+					else {
+						log::error!(
+							"Could not find matching gas_info with chain_id {}",
+							pumpx_config.to_chain_id
+						);
+						return Err(());
+					};
+
 					let gas_fee = match pumpx_config.gas_type {
-						1 => gas_info_data.gas_info.normal,
-						2 => gas_info_data.gas_info.fast,
-						3 => gas_info_data.gas_info.super_fast,
+						1 => &gas_info.normal,
+						2 => &gas_info.fast,
+						3 => &gas_info.super_fast,
 						_ => {
 							log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
 							return Err(());
@@ -919,7 +940,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					};
 					debug!("Gas fee for chain_id {} is {}", pumpx_config.to_chain_id, gas_fee);
 
-					let amount_in = match calculate_amount_in(&bnb_received, &gas_fee) {
+					let amount_in = match calculate_amount_in(&bnb_received, gas_fee) {
 						Some(a) => a,
 						None => {
 							log::error!(
