@@ -613,13 +613,23 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						},
 					};
 
-					let estimated_bnb_receive = estimate_bnb_amount(&self.binance_api, &trade_symbol, &binance_coin_name, from_amount_decimal).await?;
+					let estimated_bnb_receive = estimate_bnb_amount(
+						&self.binance_api,
+						&trade_symbol,
+						&binance_coin_name,
+						from_amount_decimal,
+					)
+					.await?;
 					let payout_amount = str_to_u256(&estimated_bnb_receive, 18).ok_or(())?;
 
 					// Fetch contract balance
 					let balance = self.accounting_contract_client.get_balance().await?;
 					if balance < payout_amount {
-						log::error!("There is not enough balance in the accounting contract, {} < {}", balance, payout_amount);
+						log::error!(
+							"There is not enough balance in the accounting contract, {} < {}",
+							balance,
+							payout_amount
+						);
 						return Err(());
 					}
 
@@ -1061,12 +1071,14 @@ fn calculate_amount_in(amount: &str, gas: &str) -> Option<String> {
 	}
 }
 
-async fn estimate_bnb_amount(binance_api: &Arc<BinanceApi>, trade_symbol: &str, binance_coin_name: &str, from_amount_decimal: Decimal) -> Result<String, ()> {
-	let price_str = binance_api
-		.spot_trading()
-		.get_symbol_price(&trade_symbol)
-		.await
-		.map_err(|_| {
+async fn estimate_bnb_amount(
+	binance_api: &Arc<BinanceApi>,
+	trade_symbol: &str,
+	binance_coin_name: &str,
+	from_amount_decimal: Decimal,
+) -> Result<String, ()> {
+	let price_str =
+		binance_api.spot_trading().get_symbol_price(&trade_symbol).await.map_err(|_| {
 			log::error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 
@@ -1090,15 +1102,10 @@ async fn estimate_bnb_amount(binance_api: &Arc<BinanceApi>, trade_symbol: &str, 
 	let bnb_estimated = from_amount_decimal * price;
 
 	// Apply 0.1% service fee
-	let service_fee_rate =
-		Decimal::from_str("0.001").expect("Failed to parse service fee rate");
-	let decimal_bnb_to_receive =
-		bnb_estimated * (Decimal::ONE - service_fee_rate);
+	let service_fee_rate = Decimal::from_str("0.001").expect("Failed to parse service fee rate");
+	let decimal_bnb_to_receive = bnb_estimated * (Decimal::ONE - service_fee_rate);
 
-	debug!(
-		"BNB estimated: {}, after 0.1% fee: {}",
-		bnb_estimated, decimal_bnb_to_receive
-	);
+	debug!("BNB estimated: {}, after 0.1% fee: {}", bnb_estimated, decimal_bnb_to_receive);
 
 	Ok(decimal_bnb_to_receive.to_string())
 }

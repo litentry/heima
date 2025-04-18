@@ -58,8 +58,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<
 	}
 
 	pub async fn get_balance(&self) -> Result<U256, ()> {
-		let call = AccountingContractCalls::getBalance(AccountingContract::getBalanceCall {  })
-			.abi_encode();
+		let call =
+			AccountingContractCalls::getBalance(AccountingContract::getBalanceCall {}).abi_encode();
 		let tx = TransactionRequest {
 			to: Some(TxKind::Call(self.contract_address)),
 			input: TransactionInput { data: Some(call.into()), ..Default::default() },
