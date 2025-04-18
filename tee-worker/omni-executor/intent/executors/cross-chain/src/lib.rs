@@ -1085,9 +1085,8 @@ fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Option<String>
 	if amount <= gas {
 		None
 	} else {
-		let mut amount_in = amount - gas;
-		amount_in.rescale(decimals);
-		Some(amount_in.to_string())
+		let amount = amount - gas;
+		Some(amount.trunc_with_scale(decimals).to_string())
 	}
 }
 
@@ -1095,12 +1094,13 @@ fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Option<String>
 mod tests {
 	use super::*;
 
-	#[tokio::test]
-	async fn test_calculate_amount_in() {
+	#[test]
+	fn test_calculate_amount_in() {
 		let bnb_to_receive = "0.0050773374896233926847036101";
 		let gas = "0.0004731804";
+		let decimals = 18;
 
-		let result = calculate_amount_in(bnb_to_receive, gas, 18);
-		assert_eq!(result, Some("0.004604157089623393".to_string()));
+		let result = calculate_amount_in(bnb_to_receive, gas, decimals);
+		assert_eq!(result, Some("0.004604157089623392".to_string()));
 	}
 }
