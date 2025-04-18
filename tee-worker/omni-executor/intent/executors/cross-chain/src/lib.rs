@@ -1095,6 +1095,15 @@ mod tests {
 	use super::*;
 
 	#[test]
+	fn test_str_to_u256() {
+		let amount = "0.0050773374896233926847036101";
+		let decimals = 18;
+
+		let result = str_to_u256(amount, decimals);
+		assert_eq!(result, Some(U256::from_str("5077337489623392").unwrap()));
+	}
+
+	#[test]
 	fn test_calculate_amount_in() {
 		let bnb_to_receive = "0.0050773374896233926847036101";
 		let gas = "0.0004731804";
