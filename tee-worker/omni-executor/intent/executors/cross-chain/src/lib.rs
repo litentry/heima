@@ -1078,7 +1078,7 @@ async fn estimate_bnb_amount(
 	from_amount_decimal: Decimal,
 ) -> Result<String, ()> {
 	let price_str =
-		binance_api.spot_trading().get_symbol_price(&trade_symbol).await.map_err(|_| {
+		binance_api.spot_trading().get_symbol_price(trade_symbol).await.map_err(|_| {
 			log::error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 
