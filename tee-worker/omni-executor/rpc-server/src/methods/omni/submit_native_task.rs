@@ -79,8 +79,14 @@ async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult {
 		return Err(ErrorCode::ServerError(REQUIRE_ENCRYPTED_REQUEST_CODE).into());
 	}
 
-	if wrapper.task.require_auth() && verify_auth(ctx, &wrapper).await.is_err() {
-		return Err(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE).into());
+	if wrapper.task.require_auth() {
+		let Some(ref auth) = wrapper.auth else {
+			return Err(ErrorCode::ServerError(REQUIRE_AUTHENTICATION_CODE).into());
+		};
+		verify_auth(ctx, auth, wrapper.task.sender()).await.map_err(|_| {
+			log::error!("Failed to verify auth: {:?}", wrapper.auth);
+			ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
+		})?;
 	}
 
 	Ok((wrapper, maybe_aes_key))
