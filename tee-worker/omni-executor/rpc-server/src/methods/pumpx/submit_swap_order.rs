@@ -4,9 +4,9 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
+use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
 use executor_storage::{PumpxJwtStorage, Storage};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::auth_token::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
 	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
@@ -111,19 +111,25 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received pumpx_submitSwapOrder, user_id: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}", 
+			log::debug!("Received pumpx_submitSwapOrder, user_id: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}",
 			params.user_id, params.intent_id, params.order_type, params.swap_type, params.from_chain_id, params.from_token_ca, params.from_amount, params.to_chain_id, params.to_token_ca, params.wallet_index);
 
 			let user_identity =
 				Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
-			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token)
-				.is_err()
-			{
+
+			let Ok(claims) = verify_auth_token_authentication(ctx.clone(), &params.auth_token, AUTH_TOKEN_ID_TYPE, false) else {
 				log::error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
-			}
+			};
+
+            if claims.sub != user_identity.to_omni_account().to_hex() {
+                log::error!("User identity does not match with auth token");
+                return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+                    AUTH_VERIFICATION_FAILED_CODE,
+                )));
+            }
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				log::error!("Failed to get from chain asset");
