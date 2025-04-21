@@ -37,52 +37,65 @@ impl AuthTokenClaims {
 }
 
 pub struct Validation {
-	pub sub: String,
+	pub typ: String,
+	pub skip_exp_check: bool,
 }
 
 impl Validation {
-	pub fn new(sub: String) -> Self {
-		Self { sub }
+	pub fn new(typ: String, skip_exp_check: bool) -> Self {
+		Self { typ, skip_exp_check }
 	}
 
 	pub fn validate(&self, claims: &AuthTokenClaims) -> Result<(), Error> {
-		if self.sub != claims.sub {
-			return Err(Error::JwtError(jwt::ErrorKind::InvalidSubject));
+		if self.typ != claims.typ {
+			return Err(Error::JwtError(jwt::ErrorKind::InvalidToken));
 		}
 
 		Ok(())
 	}
 }
 
-pub trait AuthTokenValidator {
-	fn validate(&self, secret: &[u8], validation: Validation) -> Result<(), Error>;
+pub trait AuthTokenValidator<T> {
+	fn validate(&self, secret: &[u8], validation: Validation) -> Result<T, Error>;
 }
 
-impl AuthTokenValidator for String {
-	fn validate(&self, private_key: &[u8], validation: Validation) -> Result<(), Error> {
+impl AuthTokenValidator<AuthTokenClaims> for String {
+	fn validate(
+		&self,
+		private_key: &[u8],
+		validation: Validation,
+	) -> Result<AuthTokenClaims, Error> {
 		let rsa_private_key =
 			RsaPrivateKey::from_pkcs1_der(private_key).map_err(|_| Error::InternalError)?;
 		let public_key = rsa_private_key
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), false)
-			.map_err(|e| Error::JwtError(e.kind().clone()))
-			.and_then(|claims| validation.validate(&claims))
+		let claims =
+			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
+				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		validation.validate(&claims)?;
+		Ok(claims)
 	}
 }
 
-impl AuthTokenValidator for &str {
-	fn validate(&self, private_key: &[u8], validation: Validation) -> Result<(), Error> {
+impl AuthTokenValidator<AuthTokenClaims> for &str {
+	fn validate(
+		&self,
+		private_key: &[u8],
+		validation: Validation,
+	) -> Result<AuthTokenClaims, Error> {
 		let rsa_private_key =
 			RsaPrivateKey::from_pkcs1_der(private_key).map_err(|_| Error::InternalError)?;
 		let public_key = rsa_private_key
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), false)
-			.map_err(|e| Error::JwtError(e.kind().clone()))
-			.and_then(|claims| validation.validate(&claims))
+		let claims =
+			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
+				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		validation.validate(&claims)?;
+		Ok(claims)
 	}
 }
 
@@ -92,6 +105,18 @@ mod tests {
 	use chrono::{Days, Utc};
 	use executor_primitives::{utils::hex::ToHexPrefixed, Identity, Web2IdentityType};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+
+	#[derive(PartialEq, Debug, Serialize, Deserialize)]
+	pub struct TestAuthTokenNoSubClaims {
+		pub typ: String,
+		pub exp: i64,
+	}
+
+	#[derive(PartialEq, Debug, Serialize, Deserialize)]
+	pub struct TestAuthTokenNoTypClaims {
+		pub sub: String,
+		pub exp: i64,
+	}
 
 	#[test]
 	fn test_auth_token() {
@@ -110,15 +135,15 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
-			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new(omni_account.to_hex());
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 
-		assert_eq!(result, Ok(()));
+		assert_eq!(result, Ok(claims));
 	}
 
 	#[test]
@@ -133,19 +158,19 @@ mod tests {
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
-			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new(omni_account.to_hex());
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::ExpiredSignature)));
 	}
 
 	#[test]
-	fn test_auth_token_invalid_subject() {
+	fn test_auth_token_missing_subject() {
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
@@ -156,8 +181,55 @@ mod tests {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 
-		let uid = Identity::from_web2_account("012345", Web2IdentityType::Pumpx);
-		let omni_account = uid.to_omni_account();
+		let claims =
+			TestAuthTokenNoSubClaims { typ: AUTH_TOKEN_ID_TYPE.to_string(), exp: expires_at };
+		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
+
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let result = token.validate(private_key.as_bytes(), validation);
+		let Err(Error::JwtError(jwt::ErrorKind::Json(e))) = result else {
+			panic!("Expected JsonError, got {:?}", result);
+		};
+		assert!(e.to_string().contains("missing field `sub`"));
+	}
+
+	#[test]
+	fn test_auth_token_missing_typ() {
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
+
+		let expires_at = Utc::now()
+			.checked_add_days(Days::new(1))
+			.expect("Failed to calculate expiration")
+			.timestamp();
+
+		let claims = TestAuthTokenNoTypClaims { sub: "test-sub".to_string(), exp: expires_at };
+		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
+
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let result = token.validate(private_key.as_bytes(), validation);
+		let Err(Error::JwtError(jwt::ErrorKind::Json(e))) = result else {
+			panic!("Expected JsonError, got {:?}", result);
+		};
+		assert!(e.to_string().contains("missing field `typ`"));
+	}
+
+	#[test]
+	fn test_auth_token_invalid_type() {
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
+
+		let expires_at = Utc::now()
+			.checked_add_days(Days::new(1))
+			.expect("Failed to calculate expiration")
+			.timestamp();
+
+		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
+		let omni_account = email_identity.to_omni_account();
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
@@ -166,9 +238,9 @@ mod tests {
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation = Validation::new("invalid-sub".to_string());
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 
-		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidSubject)));
+		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidToken)));
 	}
 }
