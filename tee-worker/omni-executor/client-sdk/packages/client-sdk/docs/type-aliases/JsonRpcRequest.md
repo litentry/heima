@@ -41,6 +41,6 @@ Defined in: [utils/types.ts:5](https://github.com/litentry/heima/blob/dev/utils/
 
 ### params
 
-> **params**: `string`[] \| `Record`\<`string`, `string`\>
+> **params**: `any`
 
 Defined in: [utils/types.ts:6](https://github.com/litentry/heima/blob/dev/utils/types.ts#L6)
