@@ -620,7 +620,25 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						from_amount_decimal,
 					)
 					.await?;
-					let payout_amount = str_to_u256(&estimated_bnb_receive, 18).ok_or(())?;
+					let mut payout_amount = match str_to_u256(&estimated_bnb_receive, 18) {
+						Some(a) => a,
+						None => {
+							log::error!(
+								"Fail to convert bnb amount {} to U256",
+								estimated_bnb_receive
+							);
+							let body = CrossFailBody {
+								request_id: intent_id,
+								fail_reason:
+									"Fail to construct payout request due to U256 conversion error"
+										.to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
+							})?;
+							return Err(());
+						},
+					};
 
 					// Fetch contract balance
 					let balance = self.accounting_contract_client.get_balance().await?;
@@ -889,6 +907,30 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						}
 
 						debug!("Total received {} bnb", bnb_received);
+
+						// We need to recalculate payout amount based on the order filled
+						payout_amount = match str_to_u256(&bnb_to_receive, 18) {
+							Some(a) => a,
+							None => {
+								log::error!(
+									"Fail to convert bnb amount {} to U256",
+									bnb_to_receive
+								);
+								let body = CrossFailBody {
+									request_id: intent_id,
+									fail_reason:
+									"Fail to construct payout request due to U256 conversion error"
+										.to_string(),
+								};
+								self.pumpx_api.cross_fail(&access_token, body).await.map_err(
+									|_| {
+										log::error!("Failed to notify pumpx-signer");
+									},
+								)?;
+								// TODO: what to do with user asset?
+								return Err(());
+							},
+						};
 					} else {
 						// Estimate BNB payout (simulate spot trade, apply service fee)
 						bnb_to_receive = estimated_bnb_receive;
@@ -897,23 +939,6 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					let payout_address = Address::from_str(&to_address).map_err(|_| {
 						log::error!("Failed to parse payout address");
 					})?;
-					let payout_amount = match str_to_u256(&bnb_to_receive, 18) {
-						Some(a) => a,
-						None => {
-							log::error!("Fail to convert bnb amount {} to U256", bnb_to_receive);
-							let body = CrossFailBody {
-								request_id: intent_id,
-								fail_reason:
-									"Fail to construct payout request due to U256 conversion error"
-										.to_string(),
-							};
-							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
-							})?;
-							// TODO: what to do with user asset?
-							return Err(());
-						},
-					};
 
 					debug!("Getting {:?} nonce for payout request", payout_address);
 					// 4. Call accounting contract on BSC
