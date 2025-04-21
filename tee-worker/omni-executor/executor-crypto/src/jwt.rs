@@ -22,6 +22,7 @@ pub fn decode<T: DeserializeOwned>(
 	if skip_exp_check {
 		validation.validate_exp = false;
 	}
+	validation.set_required_spec_claims(&["sub", "typ"]);
 	let decoding_key = DecodingKey::from_rsa_der(public_key);
 	decode_jwt::<T>(token, &decoding_key, &validation).map(|data| data.claims)
 }
