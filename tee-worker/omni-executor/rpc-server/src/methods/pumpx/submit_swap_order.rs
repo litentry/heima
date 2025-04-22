@@ -4,7 +4,7 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
+use executor_primitives::OmniAuth;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_hex_utils::decode_hex;
@@ -117,19 +117,12 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let user_identity =
 				Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
 
-			let Ok(claims) = verify_auth_token_authentication(ctx.clone(), &params.auth_token, AUTH_TOKEN_ID_TYPE, false) else {
+			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token, AUTH_TOKEN_ID_TYPE, false).is_err() {
 				log::error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
 			};
-
-            if claims.sub != user_identity.to_omni_account().to_hex() {
-                log::error!("User identity does not match with auth token");
-                return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-                    AUTH_VERIFICATION_FAILED_CODE,
-                )));
-            }
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				log::error!("Failed to get from chain asset");

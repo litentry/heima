@@ -1,8 +1,8 @@
 use crate::server::RpcContext;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, Identity, OAuth2Data, OAuth2Provider, OmniAuth,
-	VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
 use heima_authentication::{
@@ -61,7 +61,8 @@ pub async fn verify_auth(
 			verify_oauth2_authentication(ctx, sender, oauth2_data).await
 		},
 		OmniAuth::AuthToken(ref auth_token) => {
-			verify_auth_token_authentication(ctx, auth_token, AUTH_TOKEN_ID_TYPE, false).map(|_| ())
+			verify_auth_token_authentication(ctx, sender, auth_token, AUTH_TOKEN_ID_TYPE, false)
+				.map(|_| ())
 		},
 	}
 }
@@ -101,11 +102,13 @@ pub fn verify_email_authentication(
 
 pub fn verify_auth_token_authentication(
 	ctx: Arc<RpcContext>,
+	sender: &Identity,
 	auth_token: &str,
 	token_typ: &str,
 	skip_exp_check: bool,
 ) -> Result<AuthTokenClaims, AuthenticationError> {
-	let validation = Validation::new(token_typ.to_string(), skip_exp_check);
+	let validation =
+		Validation::new(sender.to_omni_account().to_hex(), token_typ.to_string(), skip_exp_check);
 	auth_token
 		.validate(&ctx.jwt_rsa_private_key, validation)
 		.map_err(AuthenticationError::AuthTokenError)
