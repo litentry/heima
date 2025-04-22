@@ -22,31 +22,31 @@ pub const MESSAGE_CODE_PERIOD: u64 = 60; // 1 minute
 /// A string containing a 6-digit message code that changes every `period` seconds
 pub fn generate_message_code(period_in_seconds: u64) -> String {
 	let now = Utc::now().timestamp() as u64;
-	let timestep = now / period_in_seconds;
+	message_code_at(period_in_seconds, now)
+}
+
+fn message_code_at(period: u64, timestamp: u64) -> String {
+	let timestep = timestamp / period;
 	format!("{:06}", timestep % 1_000_000)
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::thread::sleep;
-	use std::time::Duration;
 
 	#[test]
-	fn test_generate_message_code() {
+	fn test_message_code_at() {
 		let period = 5;
-		let code = generate_message_code(period);
-		assert_eq!(code.len(), 6);
 
-		// Generate the code within the same period
-		sleep(Duration::new(2, 0));
-		let expected_code = generate_message_code(period);
+		let base_ts = 1_000;
 
-		assert_eq!(code, expected_code);
+		let code1 = message_code_at(period, base_ts);
+		// +2 seconds is still inside the same 5s window -> same code
+		let code2 = message_code_at(period, base_ts + 2);
+		assert_eq!(code1, code2);
 
-		// Simulate waiting for the period to pass
-		sleep(Duration::new(4, 0));
-		let new_code = generate_message_code(period);
-		assert_ne!(code, new_code);
+		// +5 seconds jumps to the next window -> different code
+		let code3 = message_code_at(period, base_ts + 5);
+		assert_ne!(code1, code3);
 	}
 }
