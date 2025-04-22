@@ -518,10 +518,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 										let mint_address_string = mint_address.as_ref().to_base58();
 										match mint_address_string.as_str() {
 											SOLANA_USDC_MINT_ADDRESS => {
-												("USDC", SOLANA_USDT_MINT_ADDRESS)
+												("USDC", SOLANA_USDC_MINT_ADDRESS)
 											},
 											SOLANA_USDT_MINT_ADDRESS => {
-												("USDT", SOLANA_USDC_MINT_ADDRESS)
+												("USDT", SOLANA_USDT_MINT_ADDRESS)
 											},
 											_ => {
 												log::error!(
