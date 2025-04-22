@@ -835,7 +835,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						// - `executedQty` indicates the amount of the base-asset bought
 						// - `cummulativeQuoteQty`` shows the total amount of the quote-asset spent
 						let mut trade_success = false;
-						let mut bnb_received = "".to_string();
+						let mut bnb_acquired = "".to_string();
 						loop {
 							let trade_order = self
 								.binance_api
@@ -849,7 +849,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							match trade_order.status {
 								BinanceOrderStatus::FILLED => {
 									log::info!("Binance order filled");
-									bnb_received = match trade_order.side {
+									bnb_acquired = match trade_order.side {
 										BinanceOrderSide::BUY => trade_order.executed_qty,
 										BinanceOrderSide::SELL => trade_order.cummulative_quote_qty,
 									};
@@ -906,10 +906,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							return Err(());
 						}
 
-						debug!("Total received {} bnb", bnb_received);
+						debug!("Total acquired {} bnb", bnb_acquired);
 
 						// We need to recalculate payout amount based on the order filled
-						payout_amount = match str_to_u256(&bnb_to_receive, 18) {
+						payout_amount = match str_to_u256(&bnb_acquired, 18) {
 							Some(a) => a,
 							None => {
 								log::error!(
@@ -931,6 +931,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								return Err(());
 							},
 						};
+
+						bnb_to_receive = bnb_acquired
 					} else {
 						// Estimate BNB payout (simulate spot trade, apply service fee)
 						bnb_to_receive = estimated_bnb_receive;
