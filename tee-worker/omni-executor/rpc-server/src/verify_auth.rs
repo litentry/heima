@@ -67,7 +67,8 @@ pub fn verify_web3_authentication(
 	signer: &Identity,
 	signature: &HeimaMultiSignature,
 ) -> Result<(), AuthenticationError> {
-	let message = HeimaMessagePayload { message_code: generate_message_code(MESSAGE_CODE_PERIOD) };
+	let (message_code, _) = generate_message_code(MESSAGE_CODE_PERIOD);
+	let message = HeimaMessagePayload { message_code };
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
 	let hashed = blake2_256(payload.as_bytes());
 
@@ -159,8 +160,8 @@ mod tests {
 		let public_key: [u8; 32] = alice.public().into();
 		let alice_identity = Identity::from(public_key);
 
-		let message =
-			HeimaMessagePayload { message_code: generate_message_code(MESSAGE_CODE_PERIOD) };
+		let (message_code, _) = generate_message_code(MESSAGE_CODE_PERIOD);
+		let message = HeimaMessagePayload { message_code };
 		let payload = serde_json::to_string(&message).expect("serialize");
 		let hashed = blake2_256(payload.as_bytes());
 
