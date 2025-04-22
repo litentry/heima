@@ -39,10 +39,15 @@ export async function sendRawTaskPlain(
     return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
 }
 
-export async function getMessageCode(context: IntegrationTestContext): Promise<{ message_code: string }> {
+type GetMessageCodeResponse = {
+    message_code: string;
+    seconds_left: number;
+};
+
+export async function getMessageCode(context: IntegrationTestContext): Promise<GetMessageCodeResponse> {
     const request = createJsonRpcRequest('omni_getMessageCode', [], nextRequestId(context));
 
-    const response = new Promise<{ message_code: string }>((resolve, reject) =>
+    const response = new Promise<GetMessageCodeResponse>((resolve, reject) =>
         context.teeWsClient.onMessage.addListener((data) => {
             const parsed = JSON.parse(data);
             if (parsed.id !== request.id) {

@@ -29,7 +29,14 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        const msgCode = await getMessageCode(context);
+        let msgCode = await getMessageCode(context);
+
+        if (msgCode.seconds_left < 2) {
+            console.log('Waiting for next message code...');
+            await sleep(2);
+            msgCode = await getMessageCode(context);
+        }
+
         const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'LitentryIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
