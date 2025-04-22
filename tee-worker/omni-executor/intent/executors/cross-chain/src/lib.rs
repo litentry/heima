@@ -931,6 +931,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								return Err(());
 							},
 						};
+
+						bnb_to_receive = bnb_acquired
 					} else {
 						// Estimate BNB payout (simulate spot trade, apply service fee)
 						bnb_to_receive = estimated_bnb_receive;
