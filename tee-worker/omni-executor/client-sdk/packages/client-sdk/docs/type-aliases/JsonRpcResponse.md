@@ -30,6 +30,6 @@ Defined in: [utils/types.ts:15](https://github.com/litentry/heima/blob/dev/utils
 
 ### result
 
-> **result**: `string`
+> **result**: `any`
 
 Defined in: [utils/types.ts:17](https://github.com/litentry/heima/blob/dev/utils/types.ts#L17)
