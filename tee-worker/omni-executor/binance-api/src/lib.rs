@@ -29,6 +29,13 @@ pub struct BinanceApi {
 	api_secret: String,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+pub enum BinanceApiResponse<T> {
+	Success(T),
+	Error { code: i32, msg: String },
+}
+
 impl BinanceApi {
 	pub fn new(api_key: String, api_secret: String, base_url: Option<String>) -> BinanceApi {
 		let base_url = match base_url {
@@ -85,10 +92,20 @@ impl BinanceApi {
 
 		debug!("Binance-api make_public_get_request response: {:?}", response);
 
-		response.json::<T>().await.map_err(|e| {
-			error!("Error parsing response: {}", e);
-			Error::ParseResponseFailed
-		})
+		response
+			.json::<BinanceApiResponse<T>>()
+			.await
+			.map_err(|e| {
+				error!("Error parsing response: {}", e);
+				Error::ParseResponseFailed
+			})
+			.and_then(|res| match res {
+				BinanceApiResponse::Success(data) => Ok(data),
+				BinanceApiResponse::Error { code, msg } => {
+					error!("Binance API Error: {} - {}", code, msg);
+					Err(Error::RequestFailed)
+				},
+			})
 	}
 
 	/// Helper for making signed API requests
@@ -155,10 +172,20 @@ impl BinanceApi {
 
 		debug!("Binance-api make_signed_request response: {:?}", response);
 
-		response.json::<T>().await.map_err(|e| {
-			error!("Error parsing response: {}", e);
-			Error::ParseResponseFailed
-		})
+		response
+			.json::<BinanceApiResponse<T>>()
+			.await
+			.map_err(|e| {
+				error!("Error parsing response: {}", e);
+				Error::ParseResponseFailed
+			})
+			.and_then(|res| match res {
+				BinanceApiResponse::Success(data) => Ok(data),
+				BinanceApiResponse::Error { code, msg } => {
+					error!("Binance API Error: {} - {}", code, msg);
+					Err(Error::RequestFailed)
+				},
+			})
 	}
 }
 
