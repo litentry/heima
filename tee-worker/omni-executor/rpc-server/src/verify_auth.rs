@@ -62,10 +62,14 @@ pub async fn verify_auth(
 		OmniAuth::OAuth2(ref oauth2_data) => {
 			verify_oauth2_authentication(ctx, sender, oauth2_data).await
 		},
-		OmniAuth::AuthToken(ref auth_token) => {
-			verify_auth_token_authentication(ctx, sender, auth_token, AUTH_TOKEN_ID_TYPE, false)
-				.map(|_| ())
-		},
+		OmniAuth::AuthToken(ref auth_token) => verify_auth_token_authentication(
+			ctx,
+			sender.to_omni_account().to_hex(),
+			auth_token,
+			AUTH_TOKEN_ID_TYPE,
+			false,
+		)
+		.map(|_| ()),
 	}
 }
 
@@ -111,13 +115,12 @@ pub fn verify_email_authentication(
 
 pub fn verify_auth_token_authentication(
 	ctx: Arc<RpcContext>,
-	sender: &Identity,
+	omni_account: String,
 	auth_token: &str,
 	token_typ: &str,
 	skip_exp_check: bool,
 ) -> Result<AuthTokenClaims, AuthenticationError> {
-	let validation =
-		Validation::new(sender.to_omni_account().to_hex(), token_typ.to_string(), skip_exp_check);
+	let validation = Validation::new(omni_account, token_typ.to_string(), skip_exp_check);
 	auth_token
 		.validate(&ctx.jwt_rsa_private_key, validation)
 		.map_err(AuthenticationError::AuthTokenError)
