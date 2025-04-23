@@ -41,11 +41,13 @@ export async function sendRawTaskPlain(
 
 type GetMessageCodeResponse = {
     message_code: string;
-    seconds_left: number;
 };
 
-export async function getMessageCode(context: IntegrationTestContext): Promise<GetMessageCodeResponse> {
-    const request = createJsonRpcRequest('omni_getMessageCode', [], nextRequestId(context));
+export async function getMessageCode(
+    context: IntegrationTestContext,
+    omniAccount: string
+): Promise<GetMessageCodeResponse> {
+    const request = createJsonRpcRequest('omni_getMessageCode', { omni_account: omniAccount }, nextRequestId(context));
 
     const response = new Promise<GetMessageCodeResponse>((resolve, reject) =>
         context.teeWsClient.onMessage.addListener((data) => {

@@ -29,14 +29,7 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        let msgCode = await getMessageCode(context);
-
-        if (msgCode.seconds_left < 2) {
-            console.log('Waiting for next message code...');
-            await sleep(2);
-            msgCode = await getMessageCode(context);
-        }
-
+        let msgCode = await getMessageCode(context, omniAccount);
         const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'LitentryIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
@@ -87,7 +80,7 @@ describe('OmniAccount', function () {
                 [createOmniAccountPermission(context.api, 'All')],
             ]
         );
-        const msgCode = await getMessageCode(context);
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -119,7 +112,7 @@ describe('OmniAccount', function () {
             ['PublicizeAccount', '(LitentryIdentity, LitentryIdentity)'],
             [aliceIdentity, bobIdentity]
         );
-        const msgCode = await getMessageCode(context);
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -170,7 +163,7 @@ describe('OmniAccount', function () {
             ['SetPermissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
-        const msgCode = await getMessageCode(context);
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -209,7 +202,7 @@ describe('OmniAccount', function () {
             ['RemoveAccounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
-        const msgCode = await getMessageCode(context);
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -246,7 +239,7 @@ describe('OmniAccount', function () {
             ['RequestIntent', '(LitentryIdentity, u32, Intent)'],
             [aliceIdentity, intentId, intent]
         );
-        const msgCode = await getMessageCode(context);
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
