@@ -21,7 +21,9 @@ export async function requestEmailVerificationCode(args: { email: string }, encl
   const rpcRequest: JsonRpcRequest = {
     jsonrpc: '2.0',
     method: 'omni_requestEmailVerificationCode',
-    params: [email],
+    params: {
+      user_email: email,
+    },
   };
 
   await enclaveInstance.send(rpcRequest);

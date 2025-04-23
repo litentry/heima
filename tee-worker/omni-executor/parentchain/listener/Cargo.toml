@@ -11,7 +11,7 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-encode = { workspace = true }
 sp-core = { workspace = true }
-subxt = { workspace = true }
+subxt = { workspace = true, features = ["reconnecting-rpc-client"] }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
