@@ -1,13 +1,13 @@
 use crate::server::RpcContext;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Identity, OAuth2Data,
+	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
-use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
+use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
 	auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation},
-	web3::{generate_message_code, HeimaMessagePayload, MESSAGE_CODE_PERIOD},
+	web3::HeimaMessagePayload,
 };
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
@@ -16,8 +16,8 @@ use std::{fmt::Display, sync::Arc};
 #[derive(Debug, PartialEq)]
 pub enum AuthenticationError {
 	Web3InvalidSignature,
-	EmailVerificationCodeNotFound,
-	EmailInvalidVerificationCode,
+	VerificationCodeNotFound,
+	InvalidVerificationCode,
 	OAuth2Error(String),
 	AuthTokenError(AuthTokenError),
 }
@@ -28,10 +28,10 @@ impl Display for AuthenticationError {
 			AuthenticationError::Web3InvalidSignature => {
 				write!(f, "Invalid Web3 signature")
 			},
-			AuthenticationError::EmailVerificationCodeNotFound => {
-				write!(f, "Email verification code not found")
+			AuthenticationError::VerificationCodeNotFound => {
+				write!(f, "Verification code not found")
 			},
-			AuthenticationError::EmailInvalidVerificationCode => {
+			AuthenticationError::InvalidVerificationCode => {
 				write!(f, "Invalid email verification code")
 			},
 			AuthenticationError::OAuth2Error(msg) => {
@@ -50,7 +50,9 @@ pub async fn verify_auth(
 	sender: &Identity,
 ) -> Result<(), AuthenticationError> {
 	match auth {
-		OmniAuth::Web3(ref signature) => verify_web3_authentication(sender, signature),
+		OmniAuth::Web3(ref signature) => {
+			verify_web3_authentication(ctx.storage_db.clone(), sender, signature)
+		},
 		OmniAuth::Email(ref email, ref verification_code) => {
 			verify_email_authentication(ctx, email, verification_code)
 		},
@@ -64,10 +66,16 @@ pub async fn verify_auth(
 }
 
 pub fn verify_web3_authentication(
+	storage_db: Arc<StorageDB>,
 	signer: &Identity,
 	signature: &HeimaMultiSignature,
 ) -> Result<(), AuthenticationError> {
-	let (message_code, _) = generate_message_code(MESSAGE_CODE_PERIOD);
+	let storage_key = signer.to_omni_account().hash();
+	let verification_code_storage = VerificationCodeStorage::new(storage_db);
+	let Ok(Some(message_code)) = verification_code_storage.get(&storage_key) else {
+		return Err(AuthenticationError::VerificationCodeNotFound);
+	};
+
 	let message = HeimaMessagePayload { message_code };
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
 	let hashed = blake2_256(payload.as_bytes());
@@ -87,10 +95,10 @@ pub fn verify_email_authentication(
 	let storage_key = Identity::from_web2_account(email, Web2IdentityType::Email).hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
-		return Err(AuthenticationError::EmailVerificationCodeNotFound);
+		return Err(AuthenticationError::VerificationCodeNotFound);
 	};
 	if code != *verification_code {
-		return Err(AuthenticationError::EmailInvalidVerificationCode);
+		return Err(AuthenticationError::InvalidVerificationCode);
 	}
 	let _ = verification_code_storage.remove(&storage_key);
 
@@ -151,16 +159,29 @@ async fn verify_google_oauth2(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_crypto::{sr25519::Pair, PairTrait};
-	use executor_primitives::Identity;
+	use executor_crypto::{hashing::blake2_256, sr25519::Pair, PairTrait};
+	use executor_primitives::{Hashable, Identity};
+	use heima_identity_verification::helpers::generate_otp;
+	use tempfile::tempdir;
 
 	#[test]
 	fn test_verify_web3_authentication() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
 		let alice = Pair::from_string("//Alice", None).unwrap();
 		let public_key: [u8; 32] = alice.public().into();
 		let alice_identity = Identity::from(public_key);
+		let alice_omni_account = alice_identity.to_omni_account();
 
-		let (message_code, _) = generate_message_code(MESSAGE_CODE_PERIOD);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&alice_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
 		let message = HeimaMessagePayload { message_code };
 		let payload = serde_json::to_string(&message).expect("serialize");
 		let hashed = blake2_256(payload.as_bytes());
@@ -168,7 +189,7 @@ mod tests {
 		let signature = alice.sign(&hashed);
 		let multi_signature = HeimaMultiSignature::from(signature);
 
-		let result = verify_web3_authentication(&alice_identity, &multi_signature);
+		let result = verify_web3_authentication(storage_db, &alice_identity, &multi_signature);
 		assert!(result.is_ok());
 	}
 }
