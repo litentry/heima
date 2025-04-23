@@ -603,6 +603,54 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						return Err(());
 					};
 
+					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
+						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
+						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
+						"SOL" => ("SOLBNB".to_string(), BinanceOrderSide::SELL),
+						_ => {
+							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							return Err(());
+						},
+					};
+
+					let estimated_bnb_receive = estimate_bnb_amount(
+						&self.binance_api,
+						&trade_symbol,
+						&binance_coin_name,
+						from_amount_decimal,
+					)
+					.await?;
+					let mut payout_amount = match str_to_u256(&estimated_bnb_receive, 18) {
+						Some(a) => a,
+						None => {
+							log::error!(
+								"Fail to convert bnb amount {} to U256",
+								estimated_bnb_receive
+							);
+							let body = CrossFailBody {
+								request_id: intent_id,
+								fail_reason:
+									"Fail to construct payout request due to U256 conversion error"
+										.to_string(),
+							};
+							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
+								log::error!("Failed to notify pumpx-signer");
+							})?;
+							return Err(());
+						},
+					};
+
+					// Fetch contract balance
+					let balance = self.accounting_contract_client.get_balance().await?;
+					if balance < payout_amount {
+						log::error!(
+							"There is not enough balance in the accounting contract, {} < {}",
+							balance,
+							payout_amount
+						);
+						return Err(());
+					}
+
 					let remote_signer = RemoteSigner::new(
 						self.pumpx_signer_client.clone(),
 						pumpx_config.wallet_index,
@@ -643,16 +691,6 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							})?;
 						tx_id = Some(signature);
 					}
-
-					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
-						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
-						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
-						"SOL" => ("SOLBNB".to_string(), BinanceOrderSide::SELL),
-						_ => {
-							log::error!("Unsupported asset: {:?}", binance_coin_name);
-							return Err(());
-						},
-					};
 
 					let mut bnb_to_receive = "".to_string();
 
@@ -797,7 +835,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						// - `executedQty` indicates the amount of the base-asset bought
 						// - `cummulativeQuoteQty`` shows the total amount of the quote-asset spent
 						let mut trade_success = false;
-						let mut bnb_received = "".to_string();
+						let mut bnb_acquired = "".to_string();
 						loop {
 							let trade_order = self
 								.binance_api
@@ -811,7 +849,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							match trade_order.status {
 								BinanceOrderStatus::FILLED => {
 									log::info!("Binance order filled");
-									bnb_received = match trade_order.side {
+									bnb_acquired = match trade_order.side {
 										BinanceOrderSide::BUY => trade_order.executed_qty,
 										BinanceOrderSide::SELL => trade_order.cummulative_quote_qty,
 									};
@@ -868,70 +906,41 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							return Err(());
 						}
 
-						debug!("Total received {} bnb", bnb_received);
-					} else {
-						// Estimate BNB payout (simulate spot trade, apply service fee)
-						let price_str = self
-							.binance_api
-							.spot_trading()
-							.get_symbol_price(&trade_symbol)
-							.await
-							.map_err(|_| {
-								log::error!("Failed to get symbol price for {}", trade_symbol);
-							})?;
+						debug!("Total acquired {} bnb", bnb_acquired);
 
-						let price = if binance_coin_name == "SOL" {
-							// For SOL, we sell SOL to get BNB, so get SOLBNB price
-							Decimal::from_str(&price_str).map_err(|_| {
-								log::error!("Failed to parse symbol price {}", price_str);
-							})?
-						} else {
-							// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
-							let price = Decimal::from_str(&price_str).map_err(|_| {
-								log::error!("Failed to parse symbol price {}", price_str);
-							})?;
-							if price.is_zero() {
-								log::error!("Symbol price is zero for {}", trade_symbol);
+						// We need to recalculate payout amount based on the order filled
+						payout_amount = match str_to_u256(&bnb_acquired, 18) {
+							Some(a) => a,
+							None => {
+								log::error!(
+									"Fail to convert bnb amount {} to U256",
+									bnb_to_receive
+								);
+								let body = CrossFailBody {
+									request_id: intent_id,
+									fail_reason:
+									"Fail to construct payout request due to U256 conversion error"
+										.to_string(),
+								};
+								self.pumpx_api.cross_fail(&access_token, body).await.map_err(
+									|_| {
+										log::error!("Failed to notify pumpx-signer");
+									},
+								)?;
+								// TODO: what to do with user asset?
 								return Err(());
-							}
-							Decimal::ONE / price
+							},
 						};
 
-						let bnb_estimated = from_amount_decimal * price;
-
-						// Apply 0.1% service fee
-						let service_fee_rate =
-							Decimal::from_str("0.001").expect("Failed to parse service fee rate");
-						let decimal_bnb_to_receive =
-							bnb_estimated * (Decimal::ONE - service_fee_rate);
-						bnb_to_receive = decimal_bnb_to_receive.to_string();
-
-						debug!(
-							"BNB estimated: {}, after 0.1% fee: {}",
-							bnb_estimated, bnb_to_receive
-						);
+						bnb_to_receive = bnb_acquired
+					} else {
+						// Estimate BNB payout (simulate spot trade, apply service fee)
+						bnb_to_receive = estimated_bnb_receive;
 					}
 
 					let payout_address = Address::from_str(&to_address).map_err(|_| {
 						log::error!("Failed to parse payout address");
 					})?;
-					let payout_amount = match str_to_u256(&bnb_to_receive, 18) {
-						Some(a) => a,
-						None => {
-							log::error!("Fail to convert bnb amount {} to U256", bnb_to_receive);
-							let body = CrossFailBody {
-								request_id: intent_id,
-								fail_reason:
-									"Fail to construct payout request due to U256 conversion error"
-										.to_string(),
-							};
-							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
-							})?;
-							// TODO: what to do with user asset?
-							return Err(());
-						},
-					};
 
 					debug!("Getting {:?} nonce for payout request", payout_address);
 					// 4. Call accounting contract on BSC
@@ -1112,4 +1121,43 @@ mod tests {
 		let result = calculate_amount_in(bnb_to_receive, gas, decimals);
 		assert_eq!(result, Some("0.004604157089623392".to_string()));
 	}
+}
+
+async fn estimate_bnb_amount(
+	binance_api: &Arc<BinanceApi>,
+	trade_symbol: &str,
+	binance_coin_name: &str,
+	from_amount_decimal: Decimal,
+) -> Result<String, ()> {
+	let price_str =
+		binance_api.spot_trading().get_symbol_price(trade_symbol).await.map_err(|_| {
+			log::error!("Failed to get symbol price for {}", trade_symbol);
+		})?;
+
+	let price = if binance_coin_name == "SOL" {
+		// For SOL, we sell SOL to get BNB, so get SOLBNB price
+		Decimal::from_str(&price_str).map_err(|_| {
+			log::error!("Failed to parse symbol price {}", price_str);
+		})?
+	} else {
+		// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
+		let price = Decimal::from_str(&price_str).map_err(|_| {
+			log::error!("Failed to parse symbol price {}", price_str);
+		})?;
+		if price.is_zero() {
+			log::error!("Symbol price is zero for {}", trade_symbol);
+			return Err(());
+		}
+		Decimal::ONE / price
+	};
+
+	let bnb_estimated = from_amount_decimal * price;
+
+	// Apply 0.1% service fee
+	let service_fee_rate = Decimal::from_str("0.001").expect("Failed to parse service fee rate");
+	let decimal_bnb_to_receive = bnb_estimated * (Decimal::ONE - service_fee_rate);
+
+	debug!("BNB estimated: {}, after 0.1% fee: {}", bnb_estimated, decimal_bnb_to_receive);
+
+	Ok(decimal_bnb_to_receive.to_string())
 }
