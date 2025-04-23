@@ -74,9 +74,9 @@ sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
 spl-associated-token-account = "6.0.0"
 spl-token = "7.0.0"
-subxt = "0.38.0"
-subxt-core = "0.38.0"
-subxt-signer = { version = "0.38.0", features = ["subxt"] }
+subxt = "0.40.0"
+subxt-core = "0.40.0"
+subxt-signer = { version = "0.40.0", features = ["subxt"] }
 tempfile = "3.19.1"
 tokio = "1.43.0"
 url = "2.5.4"
