@@ -48,5 +48,8 @@
 	"nx": {
 		"includedScripts": []
 	},
-	"packageManager": "pnpm@8.7.6"
+	"packageManager": "pnpm@8.7.6",
+	"engines": {
+		"node": "18.x"
+	}
 }

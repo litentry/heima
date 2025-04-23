@@ -815,7 +815,18 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxSignLimitOrder(sender, chain_id, wallet_index, unsigned_tx) => {
-			let omni_account = sender.to_omni_account();
+			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
+			let omni_account: AccountId = match sender {
+				Identity::Substrate(ref account) => account.into(),
+				_ => {
+					send_error(
+						"Invalid sender type for PumpxSignLimitOrder".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
+			};
 			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
 				log::error!("Failed to map pumpx chain_id {}", chain_id);
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
@@ -943,11 +954,25 @@ async fn handle_native_task<
 				log::info!("Limit order result message for intent_id {}: {}", intent_id, msg);
 			}
 
+			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
+			let omni_account: AccountId = match sender {
+				Identity::Substrate(ref account) => account.into(),
+				_ => {
+					send_error(
+						"Invalid sender type for PumpxSignLimitOrder".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
+			};
+
 			send_ok(response_sender, NativeTaskOk::PumpxNotifyLimitOrderResult);
+
 			notify_intent_completed(
 				&mut rpc_client,
 				ctx.transaction_signer.clone(),
-				sender.to_omni_account(),
+				omni_account,
 				intent_id,
 				execution_result,
 			)
