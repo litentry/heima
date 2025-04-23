@@ -85,4 +85,8 @@ impl IntentExecutor for SolanaIntentExecutor {
 
 		Ok((None, false))
 	}
+
+	async fn name(&self) -> &'static str {
+		"solana"
+	}
 }

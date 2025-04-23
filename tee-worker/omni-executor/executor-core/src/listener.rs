@@ -23,6 +23,7 @@ use crate::event_handler::{Error, EventHandler};
 use crate::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
 use crate::sync_checkpoint_repository::{Checkpoint, CheckpointRepository};
 use executor_primitives::GetEventId;
+use metrics::{describe_gauge, gauge};
 
 /// Component, used to listen to chain and execute requested intents
 /// Requires specific implementations of:
@@ -65,6 +66,7 @@ impl<
 		stop_signal: Receiver<()>,
 		last_processed_log_repository: CheckpointRepositoryT,
 	) -> Result<Self, ()> {
+		describe_gauge!(synced_block_gauge_name(id), "Last synced block");
 		Ok(Self {
 			id: id.to_string(),
 			handle,
@@ -185,6 +187,7 @@ impl<
 						self.checkpoint_repository
 							.save(CheckpointT::from(block_number_to_sync))
 							.expect("Could not save checkpoint");
+						gauge!(synced_block_gauge_name(&self.id)).set(block_number_to_sync as f64);
 						log::debug!("Finished syncing block: {}", block_number_to_sync);
 						block_number_to_sync += 1;
 					},
@@ -204,4 +207,8 @@ impl<
 			}
 		}
 	}
+}
+
+fn synced_block_gauge_name(listener_id: &str) -> String {
+	format!("{}_synced_block", listener_id)
 }

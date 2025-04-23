@@ -1078,6 +1078,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 			},
 		}
 	}
+
+	async fn name(&self) -> &'static str {
+		"cross-chain"
+	}
 }
 
 fn str_to_u256(amount: &str, decimals: u32) -> Option<U256> {

@@ -43,6 +43,8 @@ pub struct RunArgs {
 	pub accounting_contract_address: String,
 	#[arg(long, value_name = "should sync with parentchain")]
 	pub parentchain_sync: bool,
+	#[arg(short, long, default_value = "9090", value_name = "metrics port")]
+	pub metrics_port: String,
 }
 
 #[derive(Args)]
