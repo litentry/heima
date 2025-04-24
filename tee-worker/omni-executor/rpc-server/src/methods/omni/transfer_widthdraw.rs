@@ -62,13 +62,22 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			log::debug!("Received omni_transferWithdraw, user_email: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.user_email, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
+
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				log::error!("Failed to verify auth token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
+          	if wrapper.task.require_auth() {
+				let Some(ref auth) = wrapper.auth else {
+					log::error!("Missing auth token");
+					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						REQUIRE_AUTHENTICATION_CODE,
+					)));
+				};
+				verify_auth(ctx.clone(), auth, wrapper.task.sender()).await.map_err(|_| {
+					log::error!("Failed to verify auth: {:?}", wrapper.auth);
+					PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						AUTH_VERIFICATION_FAILED_CODE,
+					))
+				})?;
 			}
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
