@@ -52,6 +52,8 @@ jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 libsecp256k1 = "0.7.1"
 log = "0.4.22"
+metrics = "0.24.1"
+metrics-exporter-prometheus = "0.16.2"
 mockall = "0.13.1"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
