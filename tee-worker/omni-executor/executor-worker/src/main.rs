@@ -31,6 +31,7 @@ use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
 use log::{error, info};
+use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::{
 	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
 };
@@ -49,7 +50,9 @@ use solana::SolanaClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
+use std::net::SocketAddr;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
@@ -80,6 +83,14 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			let builder = PrometheusBuilder::new();
+
+			let address = SocketAddr::from_str(&format!("0.0.0.0:{}", args.metrics_port)).unwrap();
+			builder
+				.with_http_listener(address)
+				.install()
+				.expect("failed to install Prometheus recorder");
+
 			let auth_token_key_store = AuthTokenKeyStore::new(
 				Path::new(&args.local_directory_path)
 					.join("keystore/auth_token_key.bin")
