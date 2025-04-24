@@ -411,6 +411,7 @@ async fn handle_native_task<
 						},
 						Err(e) => {
 							log::error!("Error executing intent: {:?}", e);
+							ctx.cross_chain_intent_executor.on_execution_error().await;
 							(IntentCompletedDetail::Failure, true, None)
 						},
 					};

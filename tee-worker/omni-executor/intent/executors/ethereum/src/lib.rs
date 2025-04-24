@@ -91,6 +91,10 @@ impl IntentExecutor for EthereumIntentExecutor {
 		}
 		Ok((None, false))
 	}
+
+	async fn name(&self) -> &'static str {
+		"ethereum"
+	}
 }
 
 #[cfg(test)]
