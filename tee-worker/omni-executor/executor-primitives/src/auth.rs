@@ -1,23 +1,27 @@
 use crate::{signature::HeimaMultiSignature, OmniAccountAuthType};
+use heima_primitives::Identity;
 use parity_scale_codec::{Decode, Encode};
 
 pub type VerificationCode = String;
+type Email = String;
+type OmniAccount = String;
+type JwtToken = String;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum OmniAuth {
-	Web3(HeimaMultiSignature),
-	Email(String, VerificationCode),
-	AuthToken(String),
-	OAuth2(OAuth2Data),
+	Web3(Identity, HeimaMultiSignature), // (Signer, Signature)
+	Email(Email, VerificationCode),
+	AuthToken(OmniAccount, JwtToken),
+	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
 }
 
 impl From<OmniAuth> for OmniAccountAuthType {
 	fn from(value: OmniAuth) -> Self {
 		match value {
-			OmniAuth::Web3(_) => Self::Web3,
+			OmniAuth::Web3(..) => Self::Web3,
 			OmniAuth::Email(..) => Self::Email,
-			OmniAuth::OAuth2(_) => Self::OAuth2,
-			OmniAuth::AuthToken(_) => Self::AuthToken,
+			OmniAuth::OAuth2(..) => Self::OAuth2,
+			OmniAuth::AuthToken(..) => Self::AuthToken,
 		}
 	}
 }

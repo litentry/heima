@@ -3,7 +3,7 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
+use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
@@ -25,13 +25,11 @@ pub struct RPCAddWalletResponse {
 
 impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: AddWalletParams) -> Self {
+		let sender = Identity::from_web2_account(p.user_id.as_str(), Web2IdentityType::Pumpx);
 		Self {
-			task: NativeTask::PumpxAddWallet(Identity::from_web2_account(
-				p.user_id.as_str(),
-				Web2IdentityType::Pumpx,
-			)),
+			task: NativeTask::PumpxAddWallet(sender.clone()),
 			nonce: None,
-			auth: Some(OmniAuth::AuthToken(p.auth_token)),
+			auth: Some(OmniAuth::AuthToken(sender.to_omni_account().to_hex(), p.auth_token)),
 		}
 	}
 }

@@ -257,9 +257,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
 			let wrapper = NativeTaskWrapper {
-				task: NativeTask::RequestIntent(user_identity, params.intent_id, intent),
+				task: NativeTask::RequestIntent(user_identity.clone(), params.intent_id, intent),
 				nonce: None,
-				auth: Some(OmniAuth::AuthToken(params.auth_token)),
+				auth: Some(OmniAuth::AuthToken(user_identity.to_omni_account().to_hex() ,params.auth_token)),
 			};
 
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
