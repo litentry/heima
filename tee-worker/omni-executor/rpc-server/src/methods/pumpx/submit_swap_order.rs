@@ -19,7 +19,9 @@ use pumpx::constants::*;
 use pumpx::types::{CreateMarketOrderTxResponse, OrderInfoResponse, SwapType};
 use serde::Serialize;
 
-use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
+use super::common::{
+	check_and_get_option_response_data, check_pumpx_api_response, handle_pumpx_native_task,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -171,17 +173,16 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
-			let Some(user_trade_info_data) = user_trade_info.data else {
-				log::error!("Response data of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
+			let user_trade_info_data = check_and_get_option_response_data(user_trade_info.data, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data of call get_user_trade_info is none")?;
+			let gas_type_base = check_and_get_option_response_data(user_trade_info_data.gas_type_base, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_base of call get_user_trade_info is none")?;
+			let gas_type_bsc = check_and_get_option_response_data(user_trade_info_data.gas_type_bsc, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_bsc of call get_user_trade_info is none")?;
+			let gas_type_eth = check_and_get_option_response_data(user_trade_info_data.gas_type_eth, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_eth of call get_user_trade_info is none")?;
+
 			let gas_type = match params.to_chain_id {
-				BASE_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
-				ETHEREUM_CHAIN_ID => user_trade_info_data.gas_type_eth.to_number() as u32,
-				BSC_CHAIN_ID => user_trade_info_data.gas_type_bsc.to_number() as u32,
-				SOLANA_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
+				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
+				ETHEREUM_CHAIN_ID => gas_type_eth.to_number() as u32,
+				BSC_CHAIN_ID => gas_type_bsc.to_number() as u32,
+				SOLANA_CHAIN_ID => gas_type_base.to_number() as u32,
 				_ => {
 					log::error!("Unsupported chain id: {}", params.to_chain_id);
 					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
@@ -211,6 +212,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
+			let is_anti_mev = check_and_get_option_response_data(user_trade_info_data.is_anti_mev, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_anti_mev of call get_user_trade_info is none")?;
+			let is_auto_slippage = check_and_get_option_response_data(user_trade_info_data.is_auto_slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_auto_slippage of call get_user_trade_info is none")?;
+			let slippage = check_and_get_option_response_data(user_trade_info_data.slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.slippage of call get_user_trade_info is none")?;
+
 			let pumpx_config = PumpxConfig {
 				order_type: params.order_type.clone(),
 				swap_type: params.swap_type.to_number() as u32,
@@ -238,10 +243,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				)?,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
-				is_anti_mev: user_trade_info_data.is_anti_mev,
-				is_auto_slippage: user_trade_info_data.is_auto_slippage,
+				is_anti_mev,
+				is_auto_slippage,
 				gas_type,
-				slippage: user_trade_info_data.slippage,
+				slippage,
 				wallet_index: params.wallet_index,
 				token_cap,
 				price_usd,

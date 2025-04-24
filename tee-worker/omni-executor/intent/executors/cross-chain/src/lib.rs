@@ -976,8 +976,11 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						log::error!("Response data of call get gas info is none");
 						return Err(());
 					};
-					let Some(gas_info) = gas_info_data
-						.gas_info
+					let Some(gas_info_vec) = gas_info_data.gas_info else {
+						log::error!("Response data.gas_info of call get gas info is none");
+						return Err(());
+					};
+					let Some(gas_info) = gas_info_vec
 						.iter()
 						.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
 					else {
