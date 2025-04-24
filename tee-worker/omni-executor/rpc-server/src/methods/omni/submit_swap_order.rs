@@ -6,7 +6,7 @@ use crate::{
 use executor_core::native_task::*;
 use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
 use executor_storage::{PumpxJwtStorage, Storage};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::auth_token::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
 	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
@@ -116,7 +116,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let user_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
-			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token)
+			if verify_auth_token_authentication(ctx.clone(), user_identity.to_omni_account().to_hex(), &params.auth_token, AUTH_TOKEN_ID_TYPE, false)
 				.is_err()
 			{
 				log::error!("Failed to verify auth token");
