@@ -46,6 +46,9 @@ use submit_swap_order::*;
 mod transfer_widthdraw;
 use transfer_widthdraw::*;
 
+mod get_omni_account;
+use get_omni_account::*;
+
 pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
@@ -62,4 +65,5 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_submit_swap_order(module);
 	register_sign_limit_order_params(module);
 	register_notify_limit_order_result(module);
+	register_get_omni_account(module);
 }
