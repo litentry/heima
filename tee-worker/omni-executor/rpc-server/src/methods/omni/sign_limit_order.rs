@@ -108,7 +108,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
 				),
 				nonce: None,
-				auth: Some(OmniAuth::AuthToken(params.auth_token)),
+				auth: Some(OmniAuth::AuthToken(omni_account, params.auth_token)),
 			};
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {

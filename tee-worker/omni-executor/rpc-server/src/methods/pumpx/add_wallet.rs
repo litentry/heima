@@ -53,7 +53,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 						REQUIRE_AUTHENTICATION_CODE,
 					)));
 				};
-				verify_auth(ctx.clone(), auth, wrapper.task.sender()).await.map_err(|_| {
+				verify_auth(ctx.clone(), auth).await.map_err(|_| {
 					log::error!("Failed to verify auth: {:?}", wrapper.auth);
 					PumpxRpcError::from_error_code(ErrorCode::ServerError(
 						AUTH_VERIFICATION_FAILED_CODE,

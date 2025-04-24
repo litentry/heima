@@ -1,8 +1,8 @@
 use crate::server::RpcContext;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature, Hashable, Identity, OAuth2Data, OAuth2Provider, OmniAuth,
+	VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
@@ -47,24 +47,20 @@ impl Display for AuthenticationError {
 	}
 }
 
-pub async fn verify_auth(
-	ctx: Arc<RpcContext>,
-	auth: &OmniAuth,
-	sender: &Identity,
-) -> Result<(), AuthenticationError> {
+pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), AuthenticationError> {
 	match auth {
-		OmniAuth::Web3(ref signature) => {
-			verify_web3_authentication(ctx.storage_db.clone(), sender, signature)
+		OmniAuth::Web3(ref signer, ref signature) => {
+			verify_web3_authentication(ctx.storage_db.clone(), signer, signature)
 		},
 		OmniAuth::Email(ref email, ref verification_code) => {
 			verify_email_authentication(ctx, email, verification_code)
 		},
-		OmniAuth::OAuth2(ref oauth2_data) => {
+		OmniAuth::OAuth2(ref sender, ref oauth2_data) => {
 			verify_oauth2_authentication(ctx, sender, oauth2_data).await
 		},
-		OmniAuth::AuthToken(ref auth_token) => verify_auth_token_authentication(
+		OmniAuth::AuthToken(omni_account, ref auth_token) => verify_auth_token_authentication(
 			ctx,
-			sender.to_omni_account().to_hex(),
+			omni_account.to_string(),
 			auth_token,
 			AUTH_TOKEN_ID_TYPE,
 			false,
