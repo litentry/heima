@@ -205,6 +205,8 @@ jobs:
           cargo fmt --all -- --check
 
       - name: Use Latest Corepack
+        with:
+          node-version: '20.x'
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
           npm install -g corepack@latest
@@ -636,6 +638,8 @@ jobs:
           docker load < heima.tar.gz
 
       - name: Use Latest Corepack
+        with:
+          node-version: '20.x'
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
           npm install -g corepack@latest
@@ -782,6 +786,8 @@ jobs:
           docker images
 
       - name: Use Latest Corepack
+        with:
+          node-version: '20.x'
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
           npm install -g corepack@latest
@@ -874,6 +880,8 @@ jobs:
           docker images
 
       - name: Use Latest Corepack
+        with:
+          node-version: '20.x'
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
           npm install -g corepack@latest
