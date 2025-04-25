@@ -52,6 +52,8 @@ jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 libsecp256k1 = "0.7.1"
 log = "0.4.22"
+metrics = "0.24.1"
+metrics-exporter-prometheus = "0.16.2"
 mockall = "0.13.1"
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
@@ -74,9 +76,9 @@ sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
 spl-associated-token-account = "6.0.0"
 spl-token = "7.0.0"
-subxt = "0.38.0"
-subxt-core = "0.38.0"
-subxt-signer = { version = "0.38.0", features = ["subxt"] }
+subxt = "0.40.0"
+subxt-core = "0.40.0"
+subxt-signer = { version = "0.40.0", features = ["subxt"] }
 tempfile = "3.19.1"
 tokio = "1.43.0"
 url = "2.5.4"

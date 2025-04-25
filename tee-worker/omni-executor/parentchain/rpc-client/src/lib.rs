@@ -399,12 +399,13 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 	for SubxtClientFactory<ChainConfig>
 {
 	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, ()> {
-		let rpc_client = subxt::backend::rpc::RpcClient::from_insecure_url(self.url.clone())
+		let rpc_client = subxt::backend::rpc::reconnecting_rpc_client::RpcClient::builder()
+			.build(self.url.clone())
 			.await
 			.map_err(|e| {
 				log::error!("Could not create RpcClient: {:?}", e);
 			})?;
-		let legacy = LegacyRpcMethods::new(rpc_client);
+		let legacy = LegacyRpcMethods::new(rpc_client.into());
 
 		let online_client =
 			OnlineClient::from_insecure_url(self.url.clone()).await.map_err(|e| {

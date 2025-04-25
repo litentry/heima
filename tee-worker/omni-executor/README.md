@@ -22,7 +22,7 @@ Gramine is required for running inside TEE, please refer to [installation option
 2. Build omni-executor docker image:
 
    ```bash
-   make docker-build
+   make build-docker
    ```
 
 3. Start local omni-executor:

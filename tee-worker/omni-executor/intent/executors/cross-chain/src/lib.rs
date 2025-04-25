@@ -999,7 +999,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					};
 					debug!("Gas fee for chain_id {} is {}", pumpx_config.to_chain_id, gas_fee);
 
-					let amount_in = match calculate_amount_in(&bnb_to_receive, gas_fee) {
+					let amount_in = match calculate_amount_in(&bnb_to_receive, gas_fee, 18) {
 						Some(a) => a,
 						None => {
 							log::error!(
@@ -1078,6 +1078,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 			},
 		}
 	}
+
+	async fn name(&self) -> &'static str {
+		"cross-chain"
+	}
 }
 
 fn str_to_u256(amount: &str, decimals: u32) -> Option<U256> {
@@ -1088,13 +1092,38 @@ fn str_to_u256(amount: &str, decimals: u32) -> Option<U256> {
 	U256::from_str(&int_str).ok()
 }
 
-fn calculate_amount_in(amount: &str, gas: &str) -> Option<String> {
+fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Option<String> {
 	let amount = Decimal::from_str(amount).ok()?;
 	let gas = Decimal::from_str(gas).ok()?;
 	if amount <= gas {
 		None
 	} else {
-		Some((amount - gas).to_string())
+		let amount = amount - gas;
+		Some(amount.trunc_with_scale(decimals).to_string())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_str_to_u256() {
+		let amount = "0.0050773374896233926847036101";
+		let decimals = 18;
+
+		let result = str_to_u256(amount, decimals);
+		assert_eq!(result, Some(U256::from_str("5077337489623392").unwrap()));
+	}
+
+	#[test]
+	fn test_calculate_amount_in() {
+		let bnb_to_receive = "0.0050773374896233926847036101";
+		let gas = "0.0004731804";
+		let decimals = 18;
+
+		let result = calculate_amount_in(bnb_to_receive, gas, decimals);
+		assert_eq!(result, Some("0.004604157089623392".to_string()));
 	}
 }
 
