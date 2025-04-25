@@ -1,12 +1,12 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / ConnectionState
+[@heima-network/client-sdk](../README.md) / ConnectionState
 
 # Enumeration: ConnectionState
 
-Defined in: [enclave.ts:16](https://github.com/litentry/heima/blob/dev/enclave.ts#L16)
+Defined in: [enclave.ts:17](https://github.com/litentry/heima/blob/dev/enclave.ts#L17)
 
 ## Enumeration Members
 
@@ -14,7 +14,7 @@ Defined in: [enclave.ts:16](https://github.com/litentry/heima/blob/dev/enclave.t
 
 > **Connected**: `"connected"`
 
-Defined in: [enclave.ts:17](https://github.com/litentry/heima/blob/dev/enclave.ts#L17)
+Defined in: [enclave.ts:18](https://github.com/litentry/heima/blob/dev/enclave.ts#L18)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [enclave.ts:17](https://github.com/litentry/heima/blob/dev/enclave.t
 
 > **Connecting**: `"connecting"`
 
-Defined in: [enclave.ts:18](https://github.com/litentry/heima/blob/dev/enclave.ts#L18)
+Defined in: [enclave.ts:19](https://github.com/litentry/heima/blob/dev/enclave.ts#L19)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [enclave.ts:18](https://github.com/litentry/heima/blob/dev/enclave.t
 
 > **Disconnected**: `"disconnected"`
 
-Defined in: [enclave.ts:19](https://github.com/litentry/heima/blob/dev/enclave.ts#L19)
+Defined in: [enclave.ts:20](https://github.com/litentry/heima/blob/dev/enclave.ts#L20)
 
 ***
 
@@ -38,4 +38,4 @@ Defined in: [enclave.ts:19](https://github.com/litentry/heima/blob/dev/enclave.t
 
 > **Disconnecting**: `"disconnecting"`
 
-Defined in: [enclave.ts:20](https://github.com/litentry/heima/blob/dev/enclave.ts#L20)
+Defined in: [enclave.ts:21](https://github.com/litentry/heima/blob/dev/enclave.ts#L21)

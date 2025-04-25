@@ -4,73 +4,57 @@ use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use std::{env, marker::PhantomData, net::SocketAddr, sync::Arc};
+use pumpx::PumpxApi;
+use std::{env, net::SocketAddr, sync::Arc};
 
-pub(crate) struct RpcContext<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-> {
+pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
-	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub mrenclave: MrEnclave,
 	pub mailer: Mailer,
-	pub jwt_secret: String,
+	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
-	phantom_header: PhantomData<Header>,
-	phantom_rpc_client: PhantomData<RpcClient>,
+	pub pumpx_api: Arc<PumpxApi>,
 }
 
-impl<
-		Header,
-		RpcClient: SubstrateRpcClient<Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
-	> RpcContext<Header, RpcClient, RpcClientFactory>
-{
+impl RpcContext {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		shielding_key: ShieldingKey,
 		native_task_sender: Arc<NativeTaskSender>,
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		storage_db: Arc<StorageDB>,
 		mrenclave: [u8; 32],
 		mailer: Mailer,
-		jwt_secret: String,
+		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
+		pumpx_api: Arc<PumpxApi>,
 	) -> Self {
 		Self {
 			shielding_key,
 			native_task_sender,
-			parentchain_rpc_client_factory,
 			storage_db,
 			mrenclave: MrEnclave::from(mrenclave),
 			mailer,
-			jwt_secret,
+			jwt_rsa_private_key,
 			google_client_id,
 			google_client_secret,
-			phantom_header: PhantomData,
-			phantom_rpc_client: PhantomData,
+			pumpx_api,
 		}
 	}
 }
 
-pub async fn start_server<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(
+#[allow(clippy::too_many_arguments)]
+pub async fn start_server(
 	port: u16,
-	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,
+	pumpx_api: Arc<PumpxApi>,
 	storage_db: Arc<StorageDB>,
 	mrenclave: [u8; 32],
-	jwt_secret: String,
+	jwt_rsa_private_key: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
@@ -92,13 +76,13 @@ pub async fn start_server<
 	let ctx = RpcContext::new(
 		shielding_key,
 		native_task_sender,
-		parentchain_rpc_client_factory,
 		storage_db,
 		mrenclave,
 		mailer,
-		jwt_secret,
+		jwt_rsa_private_key,
 		google_client_id,
 		google_client_secret,
+		pumpx_api,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

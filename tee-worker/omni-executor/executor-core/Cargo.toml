@@ -7,11 +7,15 @@ edition.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 log = { workspace = true }
+metrics = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
+rand = { workspace = true }
 regex = { workspace = true }
-tokio = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true, features = ["sync", "rt"] }
 
 # Local dependencies
+executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 heima-authentication = { workspace = true }
 

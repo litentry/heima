@@ -8,6 +8,7 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/packages/client-sdk',
-  transformIgnorePatterns: ['node_modules/(?!(@heima/|.pnpm/@heima)).*'],
+  transformIgnorePatterns: ['node_modules/(?!(@heima-network/|.pnpm/@heima-network)).*'],
+  testPathIgnorePatterns: ['dist'],
   moduleNameMapper: {},
 };

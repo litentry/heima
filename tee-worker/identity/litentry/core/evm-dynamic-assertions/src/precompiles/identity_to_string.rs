@@ -29,7 +29,7 @@ pub fn identity_to_string(input: Vec<u8>) -> PrecompileResult {
 			Ok(d) => d,
 			Err(e) => {
 				log::debug!("Could not decode input {:?}, reason: {:?}", input, e);
-				return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+				return Ok(failure_precompile_output(ethabi::Token::String(Default::default())));
 			},
 		};
 
@@ -43,14 +43,18 @@ pub fn identity_to_string(input: Vec<u8>) -> PrecompileResult {
 				Ok(s) => s,
 				Err(e) => {
 					log::debug!("{:?}", e);
-					return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::String(Default::default()),
+					));
 				},
 			};
 			match ss58_address_of(v.as_ref(), &network) {
 				Ok(s) => s,
 				Err(e) => {
 					log::debug!("Cannot parse {:?} to ss58 address, reason: {:?}", v, e);
-					return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::String(Default::default()),
+					));
 				},
 			}
 		},
@@ -64,7 +68,9 @@ pub fn identity_to_string(input: Vec<u8>) -> PrecompileResult {
 				Web3Network::Combo.get_code(),
 			]
 			.contains(&n) =>
-			format!("0x{}", hex::encode(&v)),
+		{
+			format!("0x{}", hex::encode(&v))
+		},
 		// Bitcoin
 		(Some(n), Some(v))
 			if n >= Web3Network::BitcoinP2tr.get_code()
@@ -80,7 +86,7 @@ pub fn identity_to_string(input: Vec<u8>) -> PrecompileResult {
 				"Could not decode input {:?}, reason: network type or identity value is invalid",
 				input
 			);
-			return Ok(failure_precompile_output(ethabi::Token::String(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::String(Default::default())));
 		},
 	};
 

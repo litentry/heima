@@ -1,6 +1,6 @@
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { TypeRegistry } from '@polkadot/types';
-import { trusted_operations, identity } from '@litentry/parachain-api';
+import { trusted_operations, identity } from '@heima-network/parachain-api';
 import { createTCAuthenticationType } from './tc-authentication';
 import { createLitentryIdentityType } from './litentry-identity';
 

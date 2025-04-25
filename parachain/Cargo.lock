@@ -9303,6 +9303,7 @@ dependencies = [
 name = "pallet-omni-bridge"
 version = "0.1.0"
 dependencies = [
+ "core-primitives",
  "frame-support",
  "frame-system",
  "hex",

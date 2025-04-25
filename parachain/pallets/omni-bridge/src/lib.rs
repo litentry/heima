@@ -17,6 +17,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
+use core_primitives::omni::ChainType;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -42,14 +43,6 @@ mod tests;
 
 const MODULE_ID: PalletId = PalletId(*b"hm/ombrg");
 const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
-
-// TODO: maybe using xcm Location is better
-//       but we'd need enums for all foreign types, or use GeneralIndex
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ChainType {
-	Heima,         // this chain
-	Ethereum(u32), // with chain id
-}
 
 // We assume "chain + asset-id" can uniquely identify an asset that can
 // be bridged out/in

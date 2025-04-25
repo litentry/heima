@@ -89,7 +89,7 @@ where
 			None => Ok(None),
 			Some(block) => {
 				if predicate(block) {
-					return Ok(Some(block.clone()))
+					return Ok(Some(block.clone()));
 				}
 				Ok(None)
 			},

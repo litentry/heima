@@ -192,7 +192,7 @@ where
 	fn ready_at(&self, at: NumberFor<Self::Block>, shard: ShardIdentifier) -> PolledIterator<TOP> {
 		if self.ready_poll.lock().unwrap().updated_at() >= at {
 			let iterator: ReadyIteratorFor<TOP> = Box::new(self.pool.validated_pool().ready(shard));
-			return Box::pin(ready(iterator))
+			return Box::pin(ready(iterator));
 		}
 
 		Box::pin(self.ready_poll.lock().unwrap().add(at).map(|received| {

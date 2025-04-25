@@ -111,10 +111,11 @@ where
 {
 	fn is_initialized(&self) -> bool {
 		match WorkerModeProvider::worker_mode() {
-			WorkerMode::Sidechain =>
+			WorkerMode::Sidechain => {
 				*self.registered_on_parentchain.read()
 					&& *self.worker_for_shard_registered.read()
-					&& *self.sidechain_block_produced.read(),
+					&& *self.sidechain_block_produced.read()
+			},
 			_ => *self.registered_on_parentchain.read(),
 		}
 	}

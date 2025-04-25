@@ -78,14 +78,14 @@ fn get_quote(
 			Ok(r) => r,
 			Err(e) => {
 				error!("[-]  Failed to get quote: {:?}", e);
-				return e.into()
+				return e.into();
 			},
 		};
 
 	let quote = get_quote_result.1;
 
 	if quote.len() as u32 > maxlen {
-		return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT
+		return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT;
 	}
 
 	let quote_slice = unsafe { slice::from_raw_parts_mut(p_quote, quote.len()) };
@@ -125,12 +125,12 @@ fn get_dcap_quote(
 		Ok(r) => r,
 		Err(e) => {
 			error!("Failed to get dcap quote: {:?}", e);
-			return e.into()
+			return e.into();
 		},
 	};
 
 	if quote.len() as u32 > quote_size {
-		return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT
+		return sgx_status_t::SGX_ERROR_FAAS_BUFFER_TOO_SHORT;
 	}
 
 	let quote_slice = unsafe { slice::from_raw_parts_mut(p_quote, quote.len()) };

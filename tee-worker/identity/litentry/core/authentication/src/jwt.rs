@@ -69,11 +69,11 @@ impl Validation {
 
 	pub fn validate(&self, payload: &Payload) -> Result<(), Error> {
 		if self.sub != payload.sub {
-			return Err(Error::InvalidSubject)
+			return Err(Error::InvalidSubject);
 		}
 
 		if self.current_block > payload.exp {
-			return Err(Error::ExpiredToken)
+			return Err(Error::ExpiredToken);
 		}
 
 		Ok(())
@@ -105,7 +105,7 @@ pub fn create(payload: &Payload, secret: &[u8]) -> Result<String, Error> {
 pub fn verify(jwt: &str, secret: &[u8], validation: Validation) -> Result<(), Error> {
 	let parts: Vec<&str> = jwt.split('.').collect();
 	if parts.len() != 3 {
-		return Err(Error::InvalidToken)
+		return Err(Error::InvalidToken);
 	}
 
 	let data = [parts[0], parts[1]].join(".");
@@ -122,7 +122,7 @@ pub fn verify(jwt: &str, secret: &[u8], validation: Validation) -> Result<(), Er
 pub fn decode(jwt: &str) -> Result<Payload, Error> {
 	let parts: Vec<&str> = jwt.split('.').collect();
 	if parts.len() != 3 {
-		return Err(Error::InvalidToken)
+		return Err(Error::InvalidToken);
 	}
 	let payload = base64_decode(parts[1])?;
 	let payload: Payload = serde_json::from_slice(&payload).map_err(|_| Error::JsonError)?;

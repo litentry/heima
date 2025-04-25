@@ -10,6 +10,7 @@ import { u8aToBase64Url } from '@utils/u8aToBase64Url';
 import { ENCLAVE_ENDPOINT } from './config';
 
 export interface EnclaveConfig {
+  debug: boolean;
   requestTimeout: number;
 }
 
@@ -19,8 +20,6 @@ export enum ConnectionState {
   Disconnected = 'disconnected',
   Disconnecting = 'disconnecting',
 }
-
-const log = process.env.NODE_ENV !== 'production' ? console.log.bind(console) : () => 0;
 
 /**
  * This is a singleton class to mainly hold the Enclave's Shielding Key and MrEnclave.
@@ -34,9 +33,10 @@ const log = process.env.NODE_ENV !== 'production' ? console.log.bind(console) : 
  * (1) Querying from the Parachain, instead of directly from the Enclave Worker itself helps
  * ensuring clients are connected to a trusted worker.
  *
+ * 1. Using the global enclave instance:
  * @example
  * ```ts
- * import { enclave } from '@heima/client-sdk';
+ * import { enclave } from '@heima-network/client-sdk';
  *
  * const mrEnclave = await enclave.getMrEnclave(api);
  * const key = await enclave.getShieldingKey();
@@ -52,6 +52,17 @@ const log = process.env.NODE_ENV !== 'production' ? console.log.bind(console) : 
  *  method: 'native_submitAesRequest',
  *  params: ['0x123']
  * });
+ * ```
+ * 
+ * 2. Create your own enclave instance:
+ * @example
+ * ```ts
+ * import { Enclave } from '@heima-network/client-sdk';
+ *
+ * const enclave = new Enclave('ws://tee-dev.litentry.io');
+ * 
+ * // you can also set debug mode for logging debug logs
+ * enclave.setEnableDebug(true);
  * ```
  */
 export class Enclave {
@@ -90,10 +101,20 @@ export class Enclave {
   constructor(endpoint: string, config: Partial<EnclaveConfig> = {}) {
     this.#endpoint = endpoint;
     this.#config = {
+      // enable debug logs
+      debug: false,
       // default request timeout 30 seconds
       requestTimeout: 60000,
       ...config,
     };
+  }
+
+  /**
+   * Set debug mode.
+   * @param enable Enable debug logs
+   */
+  setEnableDebug(enable: boolean) {
+    this.#config.debug = enable;
   }
 
   /**
@@ -153,23 +174,20 @@ export class Enclave {
       return this.#shieldingKey;
     }
 
-    const hexString = await this.send({
+    const res= await this.send({
       jsonrpc: '2.0',
-      method: 'native_getShieldingKey',
+      method: 'omni_getShieldingKey',
       params: [],
-    });
+    }) as unknown as { n: HexString; e: HexString };
 
-    // Remove the hex prefix and SCALE prefix
-    const [, data] = compactStripLength(hexToU8a(hexString));
-    const pubKey = u8aToString(data);
-    const pubKeyJSON = JSON.parse(pubKey);
-
+    const nHex = res.n.startsWith('0x') ? res.n.substring(2) : res.n;
+    const eHex = res.e.startsWith('0x') ? res.e.substring(2) : res.e;
     const jwkData = {
       alg: 'RSA-OAEP-256',
       kty: 'RSA',
       use: 'enc',
-      n: u8aToBase64Url(new Uint8Array([...pubKeyJSON.n].reverse())),
-      e: u8aToBase64Url(new Uint8Array([...pubKeyJSON.e].reverse())),
+      n: u8aToBase64Url(new Uint8Array([...hexToU8a(nHex).reverse()])),
+      e: u8aToBase64Url(new Uint8Array([...hexToU8a(eHex).reverse()])),
     };
 
     this.#shieldingKey = await globalThis.crypto.subtle.importKey(
@@ -235,7 +253,7 @@ export class Enclave {
       }
 
       try {
-        log('[debug:omni-sdk] sending request', request);
+        this.#log('[debug:omni-sdk] sending request', request);
         this.#ws.send(JSON.stringify(request));
       } catch (err) {
         clearTimeout(timeoutId);
@@ -318,15 +336,15 @@ export class Enclave {
         this.#ws.addEventListener('message', (event: WebSocket.MessageEvent) => {
           try {
             const response = JSON.parse(event.data as string);
-            log('[debug:omni-sdk] received response', response);
+            this.#log('[debug:omni-sdk] received response', response);
             if (typeof response.id !== 'number') {
-              log('[error:omni-sdk] Invalid response id:', response);
+              this.#log('[error:omni-sdk] Invalid response id:', response);
               return;
             }
 
             const pendingRequest = this.#pendingRequests.get(response.id);
             if (!pendingRequest) {
-              log('[error:omni-sdk] No pending request found for id:', response.id);
+              this.#log('[error:omni-sdk] No pending request found for id:', response.id);
               return;
             }
 
@@ -337,7 +355,7 @@ export class Enclave {
               pendingRequest.resolve(response.result);
             }
           } catch (err) {
-            log('[error:omni-sdk] Failed to process message:', err);
+            this.#log('[error:omni-sdk] Failed to process message:', err);
           }
         });
       } catch (err) {
@@ -359,6 +377,17 @@ export class Enclave {
     this.#messageId = nextId;
     return nextId;
   }
+
+  #log(...args: unknown[]) {
+    if (this.#config.debug) {
+      console.log(...args);
+    }
+  }
 }
 
 export const enclave = Enclave.getInstance();
+try {
+  enclave.setEnableDebug(process.env.NODE_ENV !== 'production')
+} catch (e) {
+  console.warn('cannot set enclave debug mode via process.env.NODE_ENV', e);
+}

@@ -32,20 +32,18 @@ pub use assertion::Assertion;
 pub mod identity;
 pub use identity::*;
 
-pub mod intent;
-pub use intent::*;
-
-pub mod omni_account;
-pub use omni_account::*;
+pub mod omni;
+pub use omni::*;
 
 extern crate alloc;
 extern crate core;
 use alloc::{format, str, str::FromStr, string::String, vec, vec::Vec};
-use sp_runtime::{traits::ConstU32, BoundedVec};
+use sp_runtime::traits::ConstU32;
 
 pub use constants::*;
 pub use litentry_proc_macros::*;
 pub use opaque::*;
+pub use sp_runtime::BoundedVec;
 pub use types::*;
 
 pub type ParameterString = BoundedVec<u8, ConstU32<64>>;

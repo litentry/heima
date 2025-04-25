@@ -1,13 +1,14 @@
 mod convert_api;
 mod error;
-mod spot_trading_api;
+pub mod spot_trading_api;
 mod traits;
 mod types;
+mod wallet_api;
 
 use convert_api::ConvertApi;
 use error::Error;
 use hmac::{Hmac, Mac};
-use log::error;
+use log::{debug, error};
 use reqwest::{Client, Method};
 use sha2::Sha256;
 use spot_trading_api::SpotTradingApi;
@@ -16,6 +17,7 @@ use std::{
 	time::{SystemTime, UNIX_EPOCH},
 };
 use url::Url;
+use wallet_api::WalletApi;
 
 const MAX_RECV_WINDOW: u32 = 60000;
 
@@ -25,6 +27,13 @@ pub struct BinanceApi {
 	base_url: Url,
 	api_key: String,
 	api_secret: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+pub enum BinanceApiResponse<T> {
+	Success(T),
+	Error { code: i32, msg: String },
 }
 
 impl BinanceApi {
@@ -45,6 +54,11 @@ impl BinanceApi {
 	/// Create a new SpotTradingApi instance
 	pub fn spot_trading(&self) -> SpotTradingApi {
 		SpotTradingApi::new(self)
+	}
+
+	/// Create a new WalletApi instance
+	pub fn wallet(&self) -> WalletApi {
+		WalletApi::new(self)
 	}
 
 	/// Create HMAC SHA256 signature for request parameters
@@ -76,10 +90,22 @@ impl BinanceApi {
 			Error::RequestFailed
 		})?;
 
-		response.json::<T>().await.map_err(|e| {
-			error!("Error parsing response: {}", e);
-			Error::ParseResponseFailed
-		})
+		debug!("Binance-api make_public_get_request response: {:?}", response);
+
+		response
+			.json::<BinanceApiResponse<T>>()
+			.await
+			.map_err(|e| {
+				error!("Error parsing response: {}", e);
+				Error::ParseResponseFailed
+			})
+			.and_then(|res| match res {
+				BinanceApiResponse::Success(data) => Ok(data),
+				BinanceApiResponse::Error { code, msg } => {
+					error!("Binance API Error: {} - {}", code, msg);
+					Err(Error::RequestFailed)
+				},
+			})
 	}
 
 	/// Helper for making signed API requests
@@ -138,15 +164,28 @@ impl BinanceApi {
 			},
 		};
 
+		debug!("Binance-api make_signed_request: {:?}", request);
 		let response = request.send().await.map_err(|e| {
 			error!("API request failed: {}", e);
 			Error::RequestFailed
 		})?;
 
-		response.json::<T>().await.map_err(|e| {
-			error!("Error parsing response: {}", e);
-			Error::ParseResponseFailed
-		})
+		debug!("Binance-api make_signed_request response: {:?}", response);
+
+		response
+			.json::<BinanceApiResponse<T>>()
+			.await
+			.map_err(|e| {
+				error!("Error parsing response: {}", e);
+				Error::ParseResponseFailed
+			})
+			.and_then(|res| match res {
+				BinanceApiResponse::Success(data) => Ok(data),
+				BinanceApiResponse::Error { code, msg } => {
+					error!("Binance API Error: {} - {}", code, msg);
+					Err(Error::RequestFailed)
+				},
+			})
 	}
 }
 

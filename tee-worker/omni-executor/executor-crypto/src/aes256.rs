@@ -1,3 +1,4 @@
+use ethers::types::Bytes;
 use parity_scale_codec::{Decode, Encode};
 use rand::Rng;
 use ring::{
@@ -7,6 +8,7 @@ use ring::{
 	},
 	error::Unspecified,
 };
+use serde::{Deserialize, Serialize};
 use std::vec::Vec;
 
 // we use 256-bit AES-GCM as request enc/dec key
@@ -24,6 +26,20 @@ pub struct AesOutput {
 	pub ciphertext: Vec<u8>,
 	pub aad: Vec<u8>,
 	pub nonce: Aes256KeyNonce, // IV
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+
+pub struct SerdeAesOutput {
+	pub ciphertext: Bytes,
+	pub aad: Bytes,
+	pub nonce: Bytes, // IV
+}
+
+impl From<AesOutput> for SerdeAesOutput {
+	fn from(v: AesOutput) -> Self {
+		Self { ciphertext: v.ciphertext.into(), aad: v.aad.into(), nonce: v.nonce.into() }
+	}
 }
 
 // Returns the default if any error happens

@@ -2,16 +2,15 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { WsProvider } from '@polkadot/rpc-provider';
 import { u8aToHex } from '@polkadot/util';
 
-import { getChain } from '@heima/chaindata';
-import { identity, omniAccount, omniExecutor } from '@heima/parachain-api';
+import { identity, omniExecutor, sidechain } from '@heima-network/parachain-api';
 
 import { createIdentityType } from '@type-creators/identity';
 import { transferEthereum } from '@requests/intents/transfer-ethereum.request';
 
 const types = {
   ...identity.types, // Identity is defined here
-  ...omniAccount.types, // AuthOptions is defined here
   ...omniExecutor.types, // NativeCall is defined here
+  ...sidechain.types, // AesOutput is defined here
 };
 
 describe.skip('transfer-ethereum', () => {
@@ -19,7 +18,7 @@ describe.skip('transfer-ethereum', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider(getChain('heima-local').rpcs[0].url),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 
@@ -34,16 +33,17 @@ describe.skip('transfer-ethereum', () => {
       type: 'Substrate',
     });
 
-    const { send, payloadToSign = '' } = await transferEthereum(api, {
+    const { send, getPayloadToSign = () => '' } = await transferEthereum(api, {
       member,
       to: '0x0000000000000000000000000000000000000000',
       amount: '0x01',
     });
 
+    const payloadToSign = await getPayloadToSign();
     const signatureHex = u8aToHex(memberSigner.sign(payloadToSign));
 
     const result = await send({
-      authentication: {
+      authData: {
         type: 'Web3',
         signer: member,
         signature: signatureHex,

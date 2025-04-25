@@ -5,6 +5,8 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+chrono = { workspace = true }
+hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
@@ -21,6 +23,7 @@ heima-identity-verification = { workspace = true }
 parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
+pumpx = { workspace = true }
 
 [lints]
 workspace = true

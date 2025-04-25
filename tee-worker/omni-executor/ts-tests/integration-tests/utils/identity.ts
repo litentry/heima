@@ -1,5 +1,6 @@
 import type { HexString } from '@polkadot/util/types';
-import type { ApiPromise, CorePrimitivesIdentity, LitentryValidationData } from 'parachain-api';
+import type { Identity, ValidationData } from 'parachain-api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { ethers } from 'ethers';
@@ -8,14 +9,14 @@ import { Signer } from './signer';
 // blake2_256(<OmniAccount nonce> + <MemberIdentity AccountId> + <identity-to-be-linked>)
 export function generateVerificationMessage(
     api: ApiPromise,
-    memberIdentity: CorePrimitivesIdentity,
-    identityToAdd: CorePrimitivesIdentity,
+    memberIdentity: Identity,
+    identityToAdd: Identity,
     omniAccountNonce: number,
     options?: { prettifiedMessage?: boolean }
 ): string {
     const opts = { prettifiedMessage: false, ...options };
-    const encodedMemberIdentity = api.createType('CorePrimitivesIdentity', memberIdentity).toU8a();
-    const encodedIdentityToAdd = api.createType('CorePrimitivesIdentity', identityToAdd).toU8a();
+    const encodedMemberIdentity = api.createType('Identity', memberIdentity).toU8a();
+    const encodedIdentityToAdd = api.createType('Identity', identityToAdd).toU8a();
     const encodedOmniAccountNonce = api.createType('u64', omniAccountNonce);
     const msg = Buffer.concat([encodedOmniAccountNonce.toU8a(), encodedMemberIdentity, encodedIdentityToAdd]);
     const hash = blake2AsHex(msg, 256);
@@ -31,30 +32,30 @@ export type Web2ValidationConfig =
     | {
           identityType: 'Discord';
           api: ApiPromise;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: Identity;
+          linkIdentity: Identity;
           verificationType: 'PublicMessage' | 'OAuth2';
           validationNonce: number;
       }
     | {
           identityType: 'Twitter';
           api: ApiPromise;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: Identity;
+          linkIdentity: Identity;
           verificationType: 'PublicTweet';
           validationNonce: number;
       }
     | {
           identityType: 'Twitter';
           api: ApiPromise;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: Identity;
+          linkIdentity: Identity;
           verificationType: 'OAuth2';
           validationNonce: number;
           oauthState: string;
       };
 
-export async function buildWeb2Validation(config: Web2ValidationConfig): Promise<LitentryValidationData> {
+export async function buildWeb2Validation(config: Web2ValidationConfig): Promise<ValidationData> {
     const { api, signerIdentitity, linkIdentity, validationNonce } = config;
     const msg = generateVerificationMessage(api, signerIdentitity, linkIdentity, validationNonce);
     console.log(`post verification msg to ${config.identityType}:`, msg);
@@ -83,7 +84,7 @@ export async function buildWeb2Validation(config: Web2ValidationConfig): Promise
             };
         }
 
-        return api.createType('LitentryValidationData', discordValidationData);
+        return api.createType('ValidationData', discordValidationData);
     } else {
         const twitterValidationData = {
             Web2Validation: {
@@ -107,18 +108,18 @@ export async function buildWeb2Validation(config: Web2ValidationConfig): Promise
             };
         }
 
-        return api.createType('LitentryValidationData', twitterValidationData);
+        return api.createType('ValidationData', twitterValidationData);
     }
 }
 
 export async function buildValidations(
     api: ApiPromise,
-    signerIdentitity: CorePrimitivesIdentity,
-    linkIdentity: CorePrimitivesIdentity,
+    signerIdentitity: Identity,
+    linkIdentity: Identity,
     startingSidechainNonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer?: Signer
-): Promise<LitentryValidationData> {
+): Promise<ValidationData> {
     const validationNonce = startingSidechainNonce++;
 
     const msg = generateVerificationMessage(api, signerIdentitity, linkIdentity, validationNonce);
@@ -139,7 +140,7 @@ export async function buildValidations(
 
         evmValidationData!.Web3Validation.Evm.signature.Ethereum = evmSignature;
 
-        return api.createType('LitentryValidationData', evmValidationData);
+        return api.createType('ValidationData', evmValidationData);
     }
 
     if (network === 'substrate') {
@@ -158,7 +159,7 @@ export async function buildValidations(
         const substrateSignature = await signer!.sign(msg);
         substrateValidationData!.Web3Validation.Substrate.signature.Sr25519 = u8aToHex(substrateSignature);
 
-        return api.createType('LitentryValidationData', substrateValidationData);
+        return api.createType('ValidationData', substrateValidationData);
     }
 
     if (network === 'bitcoin') {
@@ -177,7 +178,7 @@ export async function buildValidations(
         const bitcoinSignature = await signer!.sign(msg.substring(2));
         bitcoinValidationData!.Web3Validation.Bitcoin.signature.Bitcoin = u8aToHex(bitcoinSignature);
 
-        return api.createType('LitentryValidationData', bitcoinValidationData);
+        return api.createType('ValidationData', bitcoinValidationData);
     }
 
     if (network === 'solana') {
@@ -196,7 +197,7 @@ export async function buildValidations(
         const solanaSignature = await signer!.sign(msg);
         solanaValidationData!.Web3Validation.Solana.signature.Ed25519 = u8aToHex(solanaSignature);
 
-        return api.createType('LitentryValidationData', solanaValidationData);
+        return api.createType('ValidationData', solanaValidationData);
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);
@@ -204,12 +205,12 @@ export async function buildValidations(
 
 export async function buildWeb3ValidationData(
     api: ApiPromise,
-    sender: CorePrimitivesIdentity,
-    accountToAdd: CorePrimitivesIdentity,
+    sender: Identity,
+    accountToAdd: Identity,
     nonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer: Signer
-): Promise<LitentryValidationData> {
+): Promise<ValidationData> {
     const msg = generateVerificationMessage(api, sender, accountToAdd, nonce);
 
     if (network === 'evm') {
@@ -229,7 +230,7 @@ export async function buildWeb3ValidationData(
 
         evmValidationData!.Web3Validation.Evm.signature.Ethereum = evmSignature;
 
-        return api.createType('LitentryValidationData', evmValidationData);
+        return api.createType('ValidationData', evmValidationData);
     }
 
     if (network === 'substrate') {
@@ -248,7 +249,7 @@ export async function buildWeb3ValidationData(
         const substrateSignature = await signer.sign(msg);
         substrateValidationData!.Web3Validation.Substrate.signature.Sr25519 = u8aToHex(substrateSignature);
 
-        return api.createType('LitentryValidationData', substrateValidationData);
+        return api.createType('ValidationData', substrateValidationData);
     }
 
     if (network === 'bitcoin') {
@@ -267,7 +268,7 @@ export async function buildWeb3ValidationData(
         const bitcoinSignature = await signer.sign(msg.substring(2));
         bitcoinValidationData!.Web3Validation.Bitcoin.signature.Bitcoin = u8aToHex(bitcoinSignature);
 
-        return api.createType('LitentryValidationData', bitcoinValidationData);
+        return api.createType('ValidationData', bitcoinValidationData);
     }
 
     if (network === 'solana') {
@@ -286,7 +287,7 @@ export async function buildWeb3ValidationData(
         const solanaSignature = await signer.sign(msg);
         solanaValidationData!.Web3Validation.Solana.signature.Ed25519 = u8aToHex(solanaSignature);
 
-        return api.createType('LitentryValidationData', solanaValidationData);
+        return api.createType('ValidationData', solanaValidationData);
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);

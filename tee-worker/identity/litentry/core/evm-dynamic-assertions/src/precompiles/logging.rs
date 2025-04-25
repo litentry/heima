@@ -45,14 +45,14 @@ pub fn logging(input: Vec<u8>, precompiles: &Precompiles) -> PrecompileResult {
 			Ok(d) => d,
 			Err(e) => {
 				log::debug!("Could not decode input {:?}, reason: {:?}", input, e);
-				return Ok(failure_precompile_output(ethabi::Token::Bool(Default::default())))
+				return Ok(failure_precompile_output(ethabi::Token::Bool(Default::default())));
 			},
 		};
 	let level = match decoded.get(0).and_then(|v| v.clone().into_uint()) {
 		Some(v) => v,
 		None => {
 			log::debug!("Could not convert decoded[0] to uint");
-			return Ok(failure_precompile_output(ethabi::Token::Bool(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Bool(Default::default())));
 		},
 	}
 	.as_u32() as u8;
@@ -60,7 +60,7 @@ pub fn logging(input: Vec<u8>, precompiles: &Precompiles) -> PrecompileResult {
 		Some(v) => v,
 		None => {
 			log::debug!("Could not convert decoded[1] to string");
-			return Ok(failure_precompile_output(ethabi::Token::Bool(Default::default())))
+			return Ok(failure_precompile_output(ethabi::Token::Bool(Default::default())));
 		},
 	};
 

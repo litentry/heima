@@ -88,7 +88,7 @@ pub fn build(
 
 	// Redundant check in principle, but better safe than sorry :)
 	if accounts.is_empty() {
-		return Err(emit_error(&htype, &min_balance, ErrorDetail::NoEligibleIdentity))
+		return Err(emit_error(&htype, &min_balance, ErrorDetail::NoEligibleIdentity));
 	}
 
 	let holding_date = search_holding_date(data_provider_config, accounts, &q_min_balance)
@@ -165,7 +165,7 @@ fn account_is_holding(
 	return client.is_holder(account.address.as_str(), holding).map_err(|e| {
 		error!("Assertion HoldingTime request error: {:?}", e);
 		e.into_error_detail()
-	})
+	});
 }
 
 // Check against the data provider whether any of the given accounts has been holding since the given date.
@@ -192,7 +192,7 @@ fn holding_time_search_step(
 			.zip(outcomes.iter())
 			.filter_map(|(account, outcome)| (!is_negative(outcome)).then_some(account))
 			.collect();
-		return (Ok(true), new_accounts)
+		return (Ok(true), new_accounts);
 	}
 
 	/*
@@ -309,12 +309,13 @@ fn emit_error(
 fn match_token_address(htype: &AmountHoldingTimeType, network: &Web3Network) -> Option<String> {
 	match htype {
 		AmountHoldingTimeType::WBTC => Some(WBTC_TOKEN_ADDRESS.into()),
-		AmountHoldingTimeType::LIT =>
+		AmountHoldingTimeType::LIT => {
 			if *network == Web3Network::Ethereum {
 				Some(LIT_TOKEN_ADDRESS.into())
 			} else {
 				None
-			},
+			}
+		},
 		_ => None,
 	}
 }
@@ -326,7 +327,7 @@ where
 	let mut trapped_error: Option<E> = None;
 	let wrapped_pred = |element: &T| -> bool {
 		if trapped_error.is_some() {
-			return true
+			return true;
 		}
 		match pred(element) {
 			Ok(result) => result,

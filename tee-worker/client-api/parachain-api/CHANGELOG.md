@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Update NativeTaskOk::PumpxJwt to NativeTaskOk::PumpxRequestJwt
+
+## [0.9.24-next.4] - 2025-04-02
+
+### Changed
+
+-   Merge `NativeCall` and `NativeQuery` into `NativeTask`.
+-   Change `NativeOperation**` to `NativeTask**`.
+
+### Added
+
+-   Add `HeimaMultiSignature`.
+-   Add `PumpxJwt`.
+-   Add `PumpxUserConnectResponse`.
+-   Add `PumpxConnectedUser`.
+
 ## [0.9.21-next.3] - 2024-12-31
 
 ### Added

@@ -1,37 +1,34 @@
-import type { Enum } from '@polkadot/types-codec';
+import { ApiPromise } from '@polkadot/api';
 import { HexString } from '@polkadot/util/types';
-import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
+import { u8aToHex, hexToU8a, stringToU8a, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
-    ApiPromise,
-    Authentication,
-    CorePrimitivesIdentity,
-    LitentryMultiSignature,
-    NativeCall,
-    NativeCallAuthenticatedOperation,
-    NativeQuery,
-    NativeQueryAuthenticatedOperation,
+    OmniAuth,
+    Identity,
+    HeimaMultiSignature,
+    NativeTask,
     OmniAccountPermission,
-    PlainRequest,
+    RawTask,
+    NativeTaskWrapper,
 } from 'parachain-api';
 import { Signer } from './signer';
 
 export async function createIdentityType(
     api: ApiPromise,
     address: HexString | string,
-    type: CorePrimitivesIdentity['type']
-): Promise<CorePrimitivesIdentity> {
+    type: Identity['type']
+): Promise<Identity> {
     const identity = {
         [type]: address,
     };
-    return api.createType('CorePrimitivesIdentity', identity);
+    return api.createType('Identity', identity);
 }
 
-export async function createLitentryMultiSignature(
+export async function createHeimaMultiSignature(
     api: ApiPromise,
     args: { signer: Signer; payload: Uint8Array | string }
-): Promise<LitentryMultiSignature> {
+): Promise<HeimaMultiSignature> {
     const { signer, payload } = args;
     const signerType = signer.type();
 
@@ -40,7 +37,7 @@ export async function createLitentryMultiSignature(
     if (payload instanceof Uint8Array) {
         const signature = await signer.sign(signerType === 'bitcoin' ? u8aToHex(payload).substring(2) : payload);
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType('HeimaMultiSignature', {
             [signerType]: signature,
         });
     }
@@ -50,7 +47,7 @@ export async function createLitentryMultiSignature(
     if (payload.startsWith('0x')) {
         const signature = await signer.sign(signerType === 'bitcoin' ? payload.substring(2) : hexToU8a(payload));
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType('HeimaMultiSignature', {
             [signerType]: signature,
         });
     }
@@ -59,36 +56,29 @@ export async function createLitentryMultiSignature(
     // For Bitcoin, pass it as it is, for other types, convert it to raw bytes
     const signature = await signer.sign(signerType === 'bitcoin' ? payload : stringToU8a(payload));
 
-    return api.createType('LitentryMultiSignature', {
+    return api.createType('HeimaMultiSignature', {
         [signerType]: signature,
     });
 }
 
-export function createNativeCall(api: ApiPromise, call: [string, string], params: unknown): NativeCall {
+export function createNativeTask(api: ApiPromise, call: [string, string], params: unknown): NativeTask {
     const [variant, argType] = call;
-    return api.createType('NativeCall', {
-        [variant]: api.createType(argType, params),
-    });
-}
-
-export function createNativeQuery(api: ApiPromise, query: [string, string], params: unknown): NativeQuery {
-    const [variant, argType] = query;
-    return api.createType('NativeQuery', {
+    return api.createType('NativeTask', {
         [variant]: api.createType(argType, params),
     });
 }
 
 // We only support web3 authentication in these tests
-export async function createNativeAuthenticatedOperation<OP extends Enum>(
+export async function createNativeTaskWrapper(
     api: ApiPromise,
-    operation: OP,
+    task: NativeTask,
     signer: Signer,
     nonce: Codec,
     mrenclave: string,
     withWrappedBytes = false,
     withPrefix = false
-): Promise<OP extends NativeCall ? NativeCallAuthenticatedOperation : NativeQueryAuthenticatedOperation> {
-    let payload: string = blake2AsHex(u8aConcat(operation.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
+): Promise<NativeTaskWrapper> {
+    let payload: string = blake2AsHex(u8aConcat(task.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
 
     if (withWrappedBytes) {
         payload = `<Bytes>${payload}</Bytes>`;
@@ -101,38 +91,32 @@ export async function createNativeAuthenticatedOperation<OP extends Enum>(
         console.log('Signing message: ', payload);
     }
 
-    const signature = await createLitentryMultiSignature(api, {
+    const signature = await createHeimaMultiSignature(api, {
         signer,
         payload,
     });
 
-    const authentication: Authentication = api.createType('Authentication', {
-        Web3: api.createType('(LitentryMultiSignature)', signature),
+    const auth: OmniAuth = api.createType('OmniAuth', {
+        Web3: api.createType('(HeimaMultiSignature)', signature),
     });
 
-    if ('isGetAccountStore' in operation) {
-        return api.createType('NativeQueryAuthenticatedOperation', {
-            operation: operation,
-            nonce,
-            authentication,
-        });
-    }
 
-    return api.createType('NativeCallAuthenticatedOperation', {
-        operation: operation,
-        nonce,
-        authentication,
+    let n = api.createType('Option<Nonce>', nonce);
+    let a = api.createType('Option<OmniAuth>', auth);
+
+    return api.createType('NativeTaskWrapper', {
+        task: task,
+        nonce: n,
+        auth: a,
     });
 }
 
-export function createPlainRequest(
+export function createRawTaskPlain(
     api: ApiPromise,
-    mrenclave: string,
-    authenticated_operation: NativeCallAuthenticatedOperation | NativeQueryAuthenticatedOperation
-): PlainRequest {
-    return api.createType('PlainRequest', {
-        mrenclave: hexToU8a(mrenclave),
-        payload: compactAddLength(authenticated_operation.toU8a()),
+    nativeTaskWrapper: NativeTaskWrapper
+): RawTask {
+    return api.createType('RawTask', {
+        ['Plain']: nativeTaskWrapper,
     });
 }
 

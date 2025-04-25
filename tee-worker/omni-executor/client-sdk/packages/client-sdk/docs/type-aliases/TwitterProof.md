@@ -1,23 +1,25 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / TwitterProof
+[@heima-network/client-sdk](../README.md) / TwitterProof
 
 # Type Alias: TwitterProof
 
-> **TwitterProof**: `object`
+> **TwitterProof** = `object`
 
 Defined in: [type-creators/validation-data.ts:27](https://github.com/litentry/heima/blob/dev/type-creators/validation-data.ts#L27)
 
 Ownership proof for Twitter accounts
 
-## Type declaration
+## See
+
+createValidationDataType
+
+## Properties
 
 ### tweetId
 
 > **tweetId**: `string`
 
-## See
-
-createValidationDataType
+Defined in: [type-creators/validation-data.ts:27](https://github.com/litentry/heima/blob/dev/type-creators/validation-data.ts#L27)

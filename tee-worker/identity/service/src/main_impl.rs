@@ -842,7 +842,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 				// Set that the service is initialized.
 				initialization_handler.worker_for_shard_registered();
 				info!("[+] Found `WorkerForShard` on parentchain state",);
-				break
+				break;
 			}
 			thread::sleep(Duration::from_secs(POLL_INTERVAL_SECS));
 		}

@@ -18,15 +18,17 @@ use std::str::FromStr;
 
 use alloy::primitives::Address;
 use async_trait::async_trait;
+use ethereum_rpc::AlloyRpcProviderFactory;
+use executor_core::intent_executor::IntentExecutionResult;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::intent::Intent;
+use executor_primitives::AccountId;
+use executor_primitives::Intent;
+use executor_primitives::IntentId;
 use log::{error, info};
-use rpc::AlloyRpcProviderFactory;
 use signer::get_omni_account_signer;
 use tx::submit;
 
 mod delegate_call;
-mod rpc;
 mod signer;
 mod tx;
 
@@ -46,7 +48,12 @@ impl EthereumIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for EthereumIntentExecutor {
-	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+	async fn execute(
+		&self,
+		_account_id: &AccountId,
+		_intent_id: IntentId,
+		intent: Intent,
+	) -> Result<IntentExecutionResult, ()> {
 		info!("Executing intent: {:?}", intent);
 
 		let omni_account_signer = get_omni_account_signer();
@@ -82,7 +89,11 @@ impl IntentExecutor for EthereumIntentExecutor {
 				return Err(());
 			},
 		}
-		Ok(())
+		Ok((None, false))
+	}
+
+	async fn name(&self) -> &'static str {
+		"ethereum"
 	}
 }
 

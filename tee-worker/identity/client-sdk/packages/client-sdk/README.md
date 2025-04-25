@@ -11,7 +11,7 @@ This is a browser package, it may not work as-is on Node.js due to Crypto Subtle
 1. Install from NPM
 
     ```
-    npm install @litentry/parachain-api @litentry/sidechain-api @litentry/client-sdk
+    npm install @heima-network/parachain-api @litentry/sidechain-api @litentry/client-sdk
     ```
 
 2. Set the right environment

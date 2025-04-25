@@ -5,27 +5,35 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+alloy = { workspace = true, features = ["signer-local"] }
 clap = { workspace = true, features = ["derive"] }
 env_logger = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
 scale-encode = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 url = { workspace = true }
 
 # Local dependencies
+accounting-contract-client = { workspace = true }
+binance-api = { workspace = true }
 cross-chain-intent-executor = { workspace = true }
 ethereum-intent-executor = { workspace = true }
+ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
+executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-attestation = { workspace = true }
 parentchain-listener = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
+pumpx = { workspace = true }
 rpc-server = { workspace = true }
+solana = { workspace = true }
 solana-intent-executor = { workspace = true }
 
 [lints]

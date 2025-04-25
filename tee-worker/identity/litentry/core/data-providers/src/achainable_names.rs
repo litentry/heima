@@ -45,9 +45,9 @@ impl AchainableNameBasic {
 		let name_str = vec_to_string(param.to_vec())?;
 
 		if name_str == AchainableNameBasic::BABHolder.name() {
-			return Ok(AchainableNameBasic::BABHolder)
+			return Ok(AchainableNameBasic::BABHolder);
 		} else if name_str == AchainableNameBasic::UniswapV23User.name() {
-			return Ok(AchainableNameBasic::UniswapV23User)
+			return Ok(AchainableNameBasic::UniswapV23User);
 		}
 
 		Err(Error::AchainableError("Invalid Achainable Name in Basic Type".to_string()))
@@ -64,8 +64,9 @@ impl GetAchainableName for AchainableNameMirror {
 	fn name(&self) -> &'static str {
 		match self {
 			AchainableNameMirror::IsAPublicationOnMirror => "Is a publication on Mirror",
-			AchainableNameMirror::HasWrittenOverQuantityPostsOnMirror =>
-				"Has written over quantity posts on Mirror",
+			AchainableNameMirror::HasWrittenOverQuantityPostsOnMirror => {
+				"Has written over quantity posts on Mirror"
+			},
 		}
 	}
 }
@@ -75,9 +76,9 @@ impl AchainableNameMirror {
 		let name_str = vec_to_string(param.to_vec())?;
 
 		if name_str == AchainableNameMirror::IsAPublicationOnMirror.name() {
-			return Ok(AchainableNameMirror::IsAPublicationOnMirror)
+			return Ok(AchainableNameMirror::IsAPublicationOnMirror);
 		} else if name_str == AchainableNameMirror::HasWrittenOverQuantityPostsOnMirror.name() {
-			return Ok(AchainableNameMirror::HasWrittenOverQuantityPostsOnMirror)
+			return Ok(AchainableNameMirror::HasWrittenOverQuantityPostsOnMirror);
 		}
 
 		Err(Error::AchainableError("Invalid Achainable Name".to_string()))
@@ -107,11 +108,11 @@ impl AchainableNameAmount {
 		let name_str = vec_to_string(param.to_vec())?;
 
 		if name_str == AchainableNameAmount::BalanceUnderAmount.name() {
-			return Ok(AchainableNameAmount::BalanceUnderAmount)
+			return Ok(AchainableNameAmount::BalanceUnderAmount);
 		} else if name_str == AchainableNameAmount::BalanceOverAmount.name() {
-			return Ok(AchainableNameAmount::BalanceOverAmount)
+			return Ok(AchainableNameAmount::BalanceOverAmount);
 		} else if name_str == AchainableNameAmount::CreatedOverAmountContracts.name() {
-			return Ok(AchainableNameAmount::CreatedOverAmountContracts)
+			return Ok(AchainableNameAmount::CreatedOverAmountContracts);
 		}
 
 		Err(Error::AchainableError("Invalid Achainable Name".to_string()))
@@ -142,13 +143,13 @@ impl AchainableNameAmountToken {
 		let name_str = vec_to_string(param.to_vec())?;
 
 		if name_str == AchainableNameAmountToken::BEP20BalanceOverAmount.name() {
-			return Ok(AchainableNameAmountToken::BEP20BalanceOverAmount)
+			return Ok(AchainableNameAmountToken::BEP20BalanceOverAmount);
 		} else if name_str == AchainableNameAmountToken::ERC20BalanceOverAmount.name() {
-			return Ok(AchainableNameAmountToken::ERC20BalanceOverAmount)
+			return Ok(AchainableNameAmountToken::ERC20BalanceOverAmount);
 		} else if name_str == AchainableNameAmountToken::BalanceOverAmount.name() {
-			return Ok(AchainableNameAmountToken::BalanceOverAmount)
+			return Ok(AchainableNameAmountToken::BalanceOverAmount);
 		} else if name_str == AchainableNameAmountToken::LITHoldingAmount.name() {
-			return Ok(AchainableNameAmountToken::LITHoldingAmount)
+			return Ok(AchainableNameAmountToken::LITHoldingAmount);
 		}
 
 		Err(Error::AchainableError("Unsupported name in this Type".to_string()))

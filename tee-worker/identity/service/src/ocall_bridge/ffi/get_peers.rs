@@ -23,14 +23,14 @@ fn get_trusted_peers_urls(
 		Ok(r) => r,
 		Err(e) => {
 			error!("get peers failed: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED
+			return sgx_status_t::SGX_ERROR_UNEXPECTED;
 		},
 	};
 
 	let peers_encoded_slice = unsafe { slice::from_raw_parts_mut(peers_ptr, peers_size as usize) };
 	if let Err(e) = write_slice_and_whitespace_pad(peers_encoded_slice, peers_encoded) {
 		error!("Failed to transfer encoded peers to o-call buffer: {:?}", e);
-		return sgx_status_t::SGX_ERROR_UNEXPECTED
+		return sgx_status_t::SGX_ERROR_UNEXPECTED;
 	}
 
 	sgx_status_t::SGX_SUCCESS

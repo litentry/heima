@@ -1,46 +1,62 @@
-use executor_primitives::{Hash, Identity};
+use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use std::vec::Vec;
+use pumpx::types::{AddWalletResponse, CreateTransferTxResponse, UserConnectResponse};
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub enum NativeOperationOk {
-	CallResponse(CallResponse),
-	QueryResponse(QueryResponse),
-}
-
-#[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub enum CallResponse {
+pub enum NativeTaskOk {
 	ExtrinsicReport {
 		extrinsic_hash: Hash,
 		block_hash: Option<Hash>,
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken(String),
-}
-
-impl From<CallResponse> for Result<NativeOperationOk, NativeOperationError> {
-	fn from(response: CallResponse) -> Self {
-		Ok(NativeOperationOk::CallResponse(response))
-	}
-}
-
-#[derive(Encode, Decode, Debug, PartialEq, Eq)]
-pub enum QueryResponse {
-	AccountStore(Vec<Identity>),
-}
-
-impl From<QueryResponse> for Result<NativeOperationOk, NativeOperationError> {
-	fn from(response: QueryResponse) -> Self {
-		Ok(NativeOperationOk::QueryResponse(response))
-	}
+	PumpxRequestJwt {
+		/// Used for less sensitive operations
+		access_token: String,
+		/// Used for user's identity verification before making sensitive operations
+		id_token: String,
+		backend_response: UserConnectResponse,
+	},
+	RequestIntentResult {
+		intent_id: u32,
+		success: bool,
+	},
+	IntentSwapResponse(Vec<u8>),
+	PumpxExportWallet(Vec<u8>),
+	PumpxAddWallet(AddWalletResponse),
+	PumpxSignLimitOrder(Vec<Vec<u8>>),
+	PumpxTransferWithdraw(CreateTransferTxResponse),
+	PumpxNotifyLimitOrderResult,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum NativeOperationError {
+pub enum NativeTaskError {
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
 	InternalError,
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
+	UnsupportedIdentityType,
+	PumpxApiError(PumpxApiError),
+	PumpxSignerError(PumpxSignerError),
+	IntentNonceMismatch,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxApiError {
+	GoogleCodeVerificationFailed,
+	UserConnectionFailed,
+	UnknownError,
+	InvalidInput,
+	AddWalletFailed,
+	CreateTransferUnsignedTxFailed,
+	SendTransferTxFailed,
+	CreateTransferTxFailed,
+	GetAccountUserIdFailed,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub enum PumpxSignerError {
+	RequestSignatureFailed,
 }

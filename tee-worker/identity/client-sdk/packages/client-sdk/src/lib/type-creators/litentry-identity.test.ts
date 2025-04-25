@@ -2,7 +2,7 @@ import { u8aToHex } from '@polkadot/util';
 import { TypeRegistry } from '@polkadot/types';
 import { cryptoWaitReady, addressEq } from '@polkadot/util-crypto';
 
-import { identity } from '@litentry/parachain-api';
+import { identity } from '@heima-network/parachain-api';
 
 import { createLitentryIdentityType } from './litentry-identity';
 

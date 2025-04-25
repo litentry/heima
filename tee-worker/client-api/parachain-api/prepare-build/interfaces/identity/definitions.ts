@@ -19,7 +19,7 @@ export default {
             mutated_id_graph: "AesOutput",
             id_graph_hash: "H256",
         },
-        LitentryIdentity: {
+        Identity: {
             _enum: {
                 Twitter: "IdentityString",
                 Discord: "IdentityString",
@@ -31,6 +31,7 @@ export default {
                 Email: "IdentityString",
             },
         },
+        LitentryIdentity: "Identity",
         Address32: "[u8;32]",
         Address20: "[u8;20]",
         Address33: "[u8;33]",
@@ -57,12 +58,13 @@ export default {
                 "Combo",
             ],
         },
-        LitentryValidationData: {
+        ValidationData: {
             _enum: {
                 Web2Validation: "Web2ValidationData",
                 Web3Validation: "Web3ValidationData",
             },
         },
+        LitentryValidationData: "ValidationData",
         Web2ValidationData: {
             _enum: {
                 Twitter: "TwitterValidationData",
@@ -116,7 +118,7 @@ export default {
             signature: "LitentryMultiSignature",
         },
 
-        LitentryMultiSignature: {
+        MultiSignature: {
             _enum: {
                 Ed25519: "Ed25519Signature",
                 Sr25519: "Sr25519Signature",
@@ -125,6 +127,7 @@ export default {
                 Bitcoin: "BitcoinSignature",
             },
         },
+        LitentryMultiSignature: "MultiSignature",
         Ed25519Signature: "([u8; 64])",
         Sr25519Signature: "([u8; 64])",
         EcdsaSignature: "([u8; 65])",

@@ -1,47 +1,48 @@
 export default {
     types: {
-        OmniAesRequest: {
-            mrenclave: "MrEnclave",
-            key: "Vec<u8>",
-            payload: "AesOutput",
+        RawTask: {
+            _enum: {
+                Plain: "NativeTaskWrapper",
+                Aes: "AesTask",
+            },
         },
-        PlainRequest: {
-            mrenclave: "MrEnclave",
-            payload: "Vec<u8>",
+        NativeTaskWrapper: {
+            task: "NativeTask",
+            nonce: "Option<Nonce>",
+            auth: "Option<OmniAuth>",
         },
         MrEnclave: "H256",
-        NativeCall: {
+        NativeTask: {
             _enum: {
-                request_auth_token: "(LitentryIdentity, AuthOptions)",
-                request_intent: "(LitentryIdentity, Intent)",
-                create_account_store: "(LitentryIdentity)",
-                add_account: "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)",
-                remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
-                publicize_account: "(LitentryIdentity, LitentryIdentity)",
-                set_permissions: "(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)",
+                RequestAuthToken: "(Identity)",
+                RequestIntent: "(Identity, u32, Intent)",
+                CreateAccountStore: "(Identity)",
+                AddAccount: "(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>)",
+                RemoveAccounts: "(Identity, Vec<Identity>)",
+                PublicizeAccount: "(Identity, Identity)",
+                SetPermissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
+                __Unused7: "Null",
+                __Unused8: "Null",
+                __Unused9: "Null",
+                __Unused10: "Null",
+                __Unused11: "Null",
+                __Unused12: "Null",
+                __Unused13: "Null",
+                __Unused14: "Null",
+                __Unused15: "Null",
+                __Unused16: "Null",
+                __Unused17: "Null",
+                __Unused18: "Null",
+                __Unused19: "Null",
+                PumpxRequestJwt: "(Identity, String, Option<String>, Option<String>, Option<String>)",
             },
         },
-        NativeCallAuthenticatedOperation: {
-            operation: "NativeCall",
-            nonce: "Index",
-            authentication: "Authentication",
-        },
-        NativeQueryAuthenticatedOperation: {
-            operation: "NativeQuery",
-            nonce: "Index",
-            authentication: "Authentication",
-        },
-        Authentication: {
+        OmniAuth: {
             _enum: {
-                Web3: "(LitentryMultiSignature)",
-                Email: "(Text)",
+                Web3: "(HeimaMultiSignature)",
+                Email: "(Text, Text)",
                 AuthToken: "(Text)",
                 OAuth2: "(OAuth2Data)",
-            },
-        },
-        NativeQuery: {
-            _enum: {
-                get_account_store: "(LitentryIdentity)",
             },
         },
         OAuth2Data: {
@@ -53,23 +54,18 @@ export default {
         OAuth2Provider: {
             _enum: ["Google"],
         },
-        NativeOperationResponse: "Result<NativeOperationOk, NativeOperationError>",
-        NativeOperationOk: {
-            _enum: {
-                CallResponse: "CallResponse",
-                QueryResponse: "QueryResponse",
-            },
-        },
-        CallResponse: {
+        NativeTaskResponse: "Result<NativeTaskOk, NativeTaskError>",
+        NativeTaskOk: {
             _enum: {
                 ExtrinsicReport: "XtReport",
                 AuthToken: "Text",
+                PumpxRequestJwt: "PumpxRequestJwt",
+                RequestIntentResult: "RequestIntentResult",
             },
         },
-        QueryResponse: {
-            _enum: {
-                AccountStore: "Vec<LitentryIdentity>",
-            },
+        RequestIntentResult: {
+            intent_id: "u32",
+            success: "bool",
         },
         XtReport: {
             // Hash of the extrinsic.
@@ -106,14 +102,45 @@ export default {
                 Invalid: "Null",
             },
         },
-        NativeOperationError: {
+        PumpxRequestJwt: {
+            access_token: "Text",
+            id_token: "Text",
+            backend_response: "PumpxUserConnectResponse",
+        },
+        PumpxUserConnectResponse: {
+            code: "u32",
+            message: "Text",
+            data: "PumpxConnectedUser",
+        },
+        PumpxConnectedUser: {
+            userId: "Text",
+            googleAuthCheck: "bool",
+        },
+        NativeTaskError: {
             _enum: {
                 UnauthorizedSender: "Null",
                 AuthTokenCreationFailed: "Null",
                 InternalError: "Null",
                 InvalidMemberIdentity: "Null",
                 ValidationDataVerificationFailed: "Null",
+                UnsupportedIdentityType: "Null",
+                PumpxApiError: "Null",
+                IntentNonceMismatch: "Null",
             },
+        },
+        HeimaMultiSignature: {
+            _enum: {
+                Ed25519: "Ed25519Signature",
+                Sr25519: "Sr25519Signature",
+                Ecdsa: "EcdsaSignature",
+                Ethereum: "EthereumSignature",
+                Bitcoin: "BitcoinSignature",
+            },
+        },
+        Nonce: "u32",
+        AesTask: {
+            key: "Vec<u8>",
+            payload: "AesOutput",
         },
     },
 };

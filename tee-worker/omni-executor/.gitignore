@@ -9,6 +9,7 @@ cache
 omni-executor.manifest
 omni-executor.manifest.sgx
 omni-executor.sig
-omni-executor-worker
+omni-executor
 storage_db
-test_storage_db
+test_get_health_storage_db
+test_get_shielding_key_storage_db

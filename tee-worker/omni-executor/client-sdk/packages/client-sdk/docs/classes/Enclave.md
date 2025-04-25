@@ -1,12 +1,12 @@
-[**@heima/client-sdk**](../README.md)
+[**@heima-network/client-sdk**](../README.md)
 
 ***
 
-[@heima/client-sdk](../README.md) / Enclave
+[@heima-network/client-sdk](../README.md) / Enclave
 
 # Class: Enclave
 
-Defined in: [enclave.ts:57](https://github.com/litentry/heima/blob/dev/enclave.ts#L57)
+Defined in: [enclave.ts:68](https://github.com/litentry/heima/blob/dev/enclave.ts#L68)
 
 This is a singleton class to mainly hold the Enclave's Shielding Key and MrEnclave.
 
@@ -19,10 +19,12 @@ With this class you can:
 (1) Querying from the Parachain, instead of directly from the Enclave Worker itself helps
 ensuring clients are connected to a trusted worker.
 
-## Example
+1. Using the global enclave instance:
+
+## Examples
 
 ```ts
-import { enclave } from '@heima/client-sdk';
+import { enclave } from '@heima-network/client-sdk';
 
 const mrEnclave = await enclave.getMrEnclave(api);
 const key = await enclave.getShieldingKey();
@@ -40,13 +42,24 @@ const response = await enclave.send({
 });
 ```
 
+2. Create your own enclave instance:
+
+```ts
+import { Enclave } from '@heima-network/client-sdk';
+
+const enclave = new Enclave('ws://tee-dev.litentry.io');
+
+// you can also set debug mode for logging debug logs
+enclave.setEnableDebug(true);
+```
+
 ## Constructors
 
-### new Enclave()
+### Constructor
 
-> **new Enclave**(`endpoint`, `config`): [`Enclave`](Enclave.md)
+> **new Enclave**(`endpoint`, `config`): `Enclave`
 
-Defined in: [enclave.ts:90](https://github.com/litentry/heima/blob/dev/enclave.ts#L90)
+Defined in: [enclave.ts:101](https://github.com/litentry/heima/blob/dev/enclave.ts#L101)
 
 Creates a new Omni client instance
 
@@ -66,7 +79,7 @@ Optional configuration overrides
 
 #### Returns
 
-[`Enclave`](Enclave.md)
+`Enclave`
 
 ## Methods
 
@@ -74,7 +87,7 @@ Optional configuration overrides
 
 > **disconnect**(): `void`
 
-Defined in: [enclave.ts:252](https://github.com/litentry/heima/blob/dev/enclave.ts#L252)
+Defined in: [enclave.ts:270](https://github.com/litentry/heima/blob/dev/enclave.ts#L270)
 
 Closes the WebSocket connection and performs cleanup
 Use this method to properly terminate the client connection
@@ -89,7 +102,7 @@ Use this method to properly terminate the client connection
 
 > **encrypt**(`__namedParameters`): `Promise`\<\{ `ciphertext`: `Uint8Array`; \}\>
 
-Defined in: [enclave.ts:189](https://github.com/litentry/heima/blob/dev/enclave.ts#L189)
+Defined in: [enclave.ts:207](https://github.com/litentry/heima/blob/dev/enclave.ts#L207)
 
 #### Parameters
 
@@ -109,7 +122,7 @@ Defined in: [enclave.ts:189](https://github.com/litentry/heima/blob/dev/enclave.
 
 > **getConnectionState**(): [`ConnectionState`](../enumerations/ConnectionState.md)
 
-Defined in: [enclave.ts:102](https://github.com/litentry/heima/blob/dev/enclave.ts#L102)
+Defined in: [enclave.ts:123](https://github.com/litentry/heima/blob/dev/enclave.ts#L123)
 
 Returns the current connection state
 
@@ -123,7 +136,7 @@ Returns the current connection state
 
 > **getMrEnclave**(`api`): `Promise`\<`` `0x${string}` ``\>
 
-Defined in: [enclave.ts:116](https://github.com/litentry/heima/blob/dev/enclave.ts#L116)
+Defined in: [enclave.ts:137](https://github.com/litentry/heima/blob/dev/enclave.ts#L137)
 
 Retrieve the Enclave's mrEnclave from the Parachain.
 
@@ -152,7 +165,7 @@ Test it by yourself https://polkadot.js.org/apps/?rpc=wss://tee-dev.litentry.io#
 
 > **getShieldingKey**(): `Promise`\<`CryptoKey`\>
 
-Defined in: [enclave.ts:151](https://github.com/litentry/heima/blob/dev/enclave.ts#L151)
+Defined in: [enclave.ts:172](https://github.com/litentry/heima/blob/dev/enclave.ts#L172)
 
 Get the Enclave's Shielding Key.
 
@@ -166,9 +179,9 @@ Promise that resolves with the crypto key, the value will be held in memory for 
 
 ### send()
 
-> **send**(`payload`, `options`?): `Promise`\<`string`\>
+> **send**(`payload`, `options?`): `Promise`\<`string`\>
 
-Defined in: [enclave.ts:209](https://github.com/litentry/heima/blob/dev/enclave.ts#L209)
+Defined in: [enclave.ts:227](https://github.com/litentry/heima/blob/dev/enclave.ts#L227)
 
 Sends a JSON-RPC request over the WebSocket connection
 
@@ -176,7 +189,7 @@ Sends a JSON-RPC request over the WebSocket connection
 
 ##### payload
 
-`JsonRpcRequest`
+[`JsonRpcRequest`](../type-aliases/JsonRpcRequest.md)
 
 The JSON-RPC request to send
 
@@ -196,12 +209,34 @@ Promise that resolves with the response
 
 ***
 
-### getInstance()
+### setEnableDebug()
 
-> `static` **getInstance**(): [`Enclave`](Enclave.md)
+> **setEnableDebug**(`enable`): `void`
 
-Defined in: [enclave.ts:78](https://github.com/litentry/heima/blob/dev/enclave.ts#L78)
+Defined in: [enclave.ts:116](https://github.com/litentry/heima/blob/dev/enclave.ts#L116)
+
+Set debug mode.
+
+#### Parameters
+
+##### enable
+
+`boolean`
+
+Enable debug logs
 
 #### Returns
 
-[`Enclave`](Enclave.md)
+`void`
+
+***
+
+### getInstance()
+
+> `static` **getInstance**(): `Enclave`
+
+Defined in: [enclave.ts:89](https://github.com/litentry/heima/blob/dev/enclave.ts#L89)
+
+#### Returns
+
+`Enclave`

@@ -1,5 +1,5 @@
-import { ApiPromise, identity, WsProvider } from '@heima/parachain-api';
-
+import { identity } from '@heima-network/parachain-api';
+import { ApiPromise, WsProvider } from '@polkadot/api';
 import { getOmniAccountNonceWithIdentity } from '@requests/get-nonce.request';
 import { createIdentityType } from '@type-creators/identity';
 
@@ -12,7 +12,7 @@ describe('get-nonce', () => {
 
   beforeAll(async () => {
     api = new ApiPromise({
-      provider: new WsProvider('ws://localhost:9944'),
+      provider: new WsProvider(process.env.PARACHAIN_NETWORK),
       types,
     });
 

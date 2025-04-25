@@ -1,5 +1,5 @@
 import type { Registry } from '@polkadot/types-codec/types';
-import type { WorkerRpcReturnValue } from '@litentry/parachain-api';
+import type { WorkerRpcReturnValue } from '@heima-network/parachain-api';
 import { Index } from '@polkadot/types/interfaces';
 import { hexToU8a } from '@polkadot/util';
 

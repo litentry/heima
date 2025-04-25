@@ -8,7 +8,7 @@
 import { ApiPromise } from '@polkadot/api';
 import { Metadata, TypeRegistry } from '@polkadot/types';
 
-import metadataRpc from '@litentry/parachain-api/prepare-build/litentry-parachain-metadata.json';
+import metadataRpc from '@heima-network/parachain-api/prepare-build/litentry-parachain-metadata.json';
 
 import {
   validateEnclaveRegistry,

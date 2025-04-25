@@ -100,7 +100,7 @@ fn add_account_without_creating_store_fails() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::AccountNotFound
 		);
@@ -128,7 +128,7 @@ fn add_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
@@ -156,7 +156,7 @@ fn add_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 		let expected_member_accounts: MemberAccounts<Test> = BoundedVec::truncate_from(vec![
 			public_member_account(alice()),
@@ -225,20 +225,20 @@ fn add_account_with_already_linked_account_fails() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call.clone(),
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [0, 0, 0, 0],
@@ -259,13 +259,13 @@ fn add_account_with_already_linked_account_fails() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			charlie().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [0, 0, 0, 0],
@@ -306,13 +306,13 @@ fn add_account_store_len_limit_reached_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [1, 0, 0, 0],
@@ -340,7 +340,7 @@ fn remove_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		// normal signed origin should give `BadOrigin`, no matter
@@ -366,13 +366,13 @@ fn remove_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -408,7 +408,7 @@ fn remove_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		assert!(!AccountStore::<Test>::contains_key(alice().omni_account));
@@ -431,7 +431,7 @@ fn remove_account_empty_account_check_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let call = remove_accounts_call(vec![]);
@@ -440,12 +440,12 @@ fn remove_account_empty_account_check_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [5, 0, 0, 0],
@@ -474,7 +474,7 @@ fn publicize_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let expected_member_accounts: MemberAccounts<Test> =
@@ -489,13 +489,13 @@ fn publicize_account_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -538,7 +538,7 @@ fn publicize_account_identity_not_found_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::AccountNotFound
 		);
@@ -553,7 +553,7 @@ fn publicize_account_identity_not_found_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let call = publicize_account_call(charlie().identity);
@@ -561,12 +561,12 @@ fn publicize_account_identity_not_found_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: Err(DispatchError::Module(ModuleError {
 					index: 5,
 					error: [2, 0, 0, 0],
@@ -594,7 +594,7 @@ fn request_intent_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let intent =
@@ -605,13 +605,13 @@ fn request_intent_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		System::assert_has_event(
 			Event::DispatchedAsOmniAccount {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -644,7 +644,7 @@ fn dispatch_as_signed_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let call = make_balance_transfer_call(bob().native_account, 5);
@@ -652,12 +652,12 @@ fn dispatch_as_signed_works() {
 			RuntimeOrigin::signed(tee_signer),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 		System::assert_has_event(
 			Event::DispatchedAsSigned {
 				who: alice().omni_account,
-				auth_type: OmniAccountAuthType::Web3,
+				auth_type: Some(OmniAccountAuthType::Web3),
 				result: DispatchResult::Ok(()),
 			}
 			.into(),
@@ -686,7 +686,7 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
@@ -716,7 +716,7 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 			RuntimeOrigin::signed(tee_signer),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 		assert_eq!(System::account_nonce(alice().omni_account), 1);
 	});
@@ -746,7 +746,7 @@ fn ensure_permission_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		// An Account cannot be added with more permissions than the account that added it
@@ -757,7 +757,7 @@ fn ensure_permission_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				bob.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -769,7 +769,7 @@ fn ensure_permission_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				bob.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -782,7 +782,7 @@ fn ensure_permission_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				bob.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -796,7 +796,7 @@ fn ensure_permission_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			bob.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		// An account with no permissions cannot remove accounts
@@ -806,7 +806,7 @@ fn ensure_permission_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				charlie.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -823,7 +823,7 @@ fn ensure_permission_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				bob.hash(),
 				call.clone(),
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -831,7 +831,7 @@ fn ensure_permission_works() {
 			RuntimeOrigin::signed(tee_signer),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 	});
 }
@@ -859,7 +859,7 @@ fn set_permissions_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let charlie = private_member_account(charlie());
@@ -869,7 +869,7 @@ fn set_permissions_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		// Assert Set permissions
@@ -882,7 +882,7 @@ fn set_permissions_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				bob.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -895,7 +895,7 @@ fn set_permissions_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				bob.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -910,7 +910,7 @@ fn set_permissions_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			bob.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		// The caller most have permission to set_permissions
@@ -920,7 +920,7 @@ fn set_permissions_works() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				charlie.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -932,7 +932,7 @@ fn set_permissions_works() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 	});
 }
@@ -958,7 +958,7 @@ fn set_permissions_with_only_one_member_fails() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::AccountStoreHasOneMember
 		);
@@ -987,7 +987,7 @@ fn set_permissions_with_no_member_with_default_permissions_fails() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		let new_alice_permissions = vec![
@@ -1001,7 +1001,7 @@ fn set_permissions_with_no_member_with_default_permissions_fails() {
 				RuntimeOrigin::signed(tee_signer.clone()),
 				alice().identity.hash(),
 				call,
-				OmniAccountAuthType::Web3
+				Some(OmniAccountAuthType::Web3)
 			),
 			Error::<Test>::NoPermission
 		);
@@ -1045,7 +1045,7 @@ fn create_account_store_already_exists_fails() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			alice().identity.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		// remove alice from the account store
@@ -1054,7 +1054,7 @@ fn create_account_store_already_exists_fails() {
 			RuntimeOrigin::signed(tee_signer.clone()),
 			bob.hash(),
 			call,
-			OmniAccountAuthType::Web3
+			Some(OmniAccountAuthType::Web3)
 		));
 
 		assert_noop!(
