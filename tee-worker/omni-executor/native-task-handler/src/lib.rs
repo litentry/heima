@@ -734,8 +734,7 @@ async fn handle_native_task<
 				verify_google_code(ctx.pumpx_api.as_ref(), &access_token, google_code, None).await;
 			if !verify_success {
 				send_error(
-					"Failed to verify google code within NativeTask::PumpxExportWallet"
-					.to_string(),
+					"Failed to verify google code within NativeTask::PumpxExportWallet".to_string(),
 					response_sender,
 					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
 				);
@@ -883,7 +882,8 @@ async fn handle_native_task<
 			.await;
 			if !verify_success {
 				send_error(
-					"Failed to verify google code within NativeTask::PumpxTransferWidthdraw".to_string(),
+					"Failed to verify google code within NativeTask::PumpxTransferWidthdraw"
+						.to_string(),
 					response_sender,
 					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
 				);
