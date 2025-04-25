@@ -109,15 +109,15 @@ export async function setAliceAsAdmin(api: ApiPromise) {
     const keyring = new Keyring({ type: 'sr25519' });
     const alice = keyring.addFromUri('//Alice');
 
-    const tx = await sudoWrapperGC(api, api.tx.teebag.setAdmin('esqZdrqhgH8zy1wqYh1aLKoRyoRWLFbX9M62eKfaTAoK67pJ5'));
+    const tx = await sudoWrapperGc(api, api.tx.teebag.setAdmin('esqZdrqhgH8zy1wqYh1aLKoRyoRWLFbX9M62eKfaTAoK67pJ5'));
 
     console.log(`Setting Alice as Admin for Teebag`);
     return signAndSend(tx, alice);
 }
 
 export function signAndSend(tx: SubmittableExtrinsic<ApiTypes>, account: AddressOrPair) {
-    return new Promise<{ block: string }>(async (resolve, reject) => {
-        await tx.signAndSend(account, (result) => {
+    return new Promise<{ block: string }>((resolve, reject) => {
+        tx.signAndSend(account, (result) => {
             console.log(`Current status is ${result.status}`);
             if (result.status.isInBlock) {
                 console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
@@ -132,13 +132,12 @@ export function signAndSend(tx: SubmittableExtrinsic<ApiTypes>, account: Address
         });
     });
 }
-
 // After removing the sudo module, we use `EnsureRootOrHalfCouncil` instead of `Sudo`,
 // and there are only two council members in rococo-dev/litentry-dev.
 // So only `propose` is required, no vote.
 //
 // TODO: support to send the `vote extrinsic`, if the number of council members is greater than 2.
-export async function sudoWrapperGC(api: ApiPromise, tx: SubmittableExtrinsic<ApiTypes>) {
+export async function sudoWrapperGc(api: ApiPromise, tx: SubmittableExtrinsic<ApiTypes>) {
     const chain = (await api.rpc.system.chain()).toString().toLowerCase();
     if (chain != 'rococo-dev') {
         const threshold = api.createType('Compact<u32>', 1);

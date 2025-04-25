@@ -6,8 +6,8 @@ import {
     describeLitentry,
     loadConfig,
     subscribeToEvents,
-    sudoWrapperGC,
-    sudoWrapperTC,
+    sudoWrapperGc,
+    sudoWrapperTc,
 } from '../common/utils';
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
@@ -131,7 +131,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     };
 
     step('Set ExtrinsicFilter mode to Test', async function () {
-        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
+        let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
         await signAndSend(extrinsic, context.alice);
     });
 
@@ -172,7 +172,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
 
         // Set admin
-        const setAdminTx = await sudoWrapperGC(context.api, context.api.tx.omniBridge.setAdmin(context.alice.address));
+        const setAdminTx = await sudoWrapperGc(context.api, context.api.tx.omniBridge.setAdmin(context.alice.address));
         await signAndSend(setAdminTx, context.alice);
 
         // add_pay_in_pair
@@ -377,7 +377,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     });
 
     step('Set ExtrinsicFilter mode to Normal', async function () {
-        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
+        let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
         await signAndSend(extrinsic, context.alice);
     });
 });

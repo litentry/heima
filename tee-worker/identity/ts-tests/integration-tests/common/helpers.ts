@@ -103,7 +103,7 @@ export const createWeb3Wallets = (): Wallets => {
 
 export function stfErrorToString(stfError: StfError): string {
     if (stfError.isRequestVCFailed) {
-        const [_assertionIgnored, errorDetail] = stfError.asRequestVCFailed;
+        const [assertionIgnored, errorDetail] = stfError.asRequestVCFailed;
 
         return `${stfError.type}: ${errorDetail.type}: ${errorDetail.value?.toHuman()}`;
     }
