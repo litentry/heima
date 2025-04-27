@@ -173,7 +173,7 @@ export const createSignedTrustedGetter = async (
     });
     const payload = blake2AsU8a(getter.toU8a(), 256);
 
-    let signature = await createLitentryMultiSignature(parachainApi, {
+    const signature = await createLitentryMultiSignature(parachainApi, {
         signer,
         payload,
     });

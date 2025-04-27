@@ -204,6 +204,11 @@ jobs:
         run: |
           cargo fmt --all -- --check
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
       - name: Use Latest Corepack
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
@@ -635,6 +640,11 @@ jobs:
         run: |
           docker load < heima.tar.gz
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
       - name: Use Latest Corepack
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
@@ -781,6 +791,11 @@ jobs:
           docker load < litentry-identity.tar.gz
           docker images
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
       - name: Use Latest Corepack
         run: |
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
@@ -872,6 +887,11 @@ jobs:
           docker load < heima.tar.gz
           docker load < litentry-identity.tar.gz
           docker images
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
 
       - name: Use Latest Corepack
         run: |

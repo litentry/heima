@@ -32,7 +32,7 @@ export function signAndSend(tx: SubmittableExtrinsic<ApiTypes>, account: Address
 // So only `propose` is required, no vote.
 //
 // TODO: support to send the `vote extrinsic`, if the number of council members is greater than 2.
-export async function sudoWrapperTC(api: ApiPromise, tx: SubmittableExtrinsic<ApiTypes>) {
+export async function sudoWrapperTc(api: ApiPromise, tx: SubmittableExtrinsic<ApiTypes>) {
     const chain = (await api.rpc.system.chain()).toString().toLowerCase();
     if (chain != 'rococo-dev') {
         const threshold = api.createType('Compact<u32>', 1);
@@ -48,7 +48,7 @@ export async function sudoWrapperTC(api: ApiPromise, tx: SubmittableExtrinsic<Ap
 // So only `propose` is required, no vote.
 //
 // TODO: support to send the `vote extrinsic`, if the number of council members is greater than 2.
-export async function sudoWrapperGC(api: ApiPromise, tx: SubmittableExtrinsic<ApiTypes>) {
+export async function sudoWrapperGc(api: ApiPromise, tx: SubmittableExtrinsic<ApiTypes>) {
     const chain = (await api.rpc.system.chain()).toString().toLowerCase();
     if (chain != 'rococo-dev') {
         const threshold = api.createType('Compact<u32>', 1);
