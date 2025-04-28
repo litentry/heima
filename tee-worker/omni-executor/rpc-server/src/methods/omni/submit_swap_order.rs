@@ -177,11 +177,54 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
 				)));
 			};
+
+			let Some(gas_type_base) = user_trade_info_data.gas_type_base else {
+				log::error!("Response data.gas_type_base of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
+			let Some(gas_type_bsc) = user_trade_info_data.gas_type_bsc else {
+				log::error!("Response data.gas_type_bsc of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
+			let Some(gas_type_eth) = user_trade_info_data.gas_type_eth else {
+				log::error!("Response data.gas_type_eth of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
+			let Some(is_anti_mev) = user_trade_info_data.is_anti_mev else {
+				log::error!("Response data.is_anti_mev of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
+			let Some(is_auto_slippage) = user_trade_info_data.is_auto_slippage else {
+				log::error!("Response data.is_auto_slippage of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
+			let Some(slippage) = user_trade_info_data.slippage else {
+				log::error!("Response data.slippage of call get_user_trade_info is none");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				)));
+			};
+
 			let gas_type = match params.to_chain_id {
-				BASE_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
-				ETHEREUM_CHAIN_ID => user_trade_info_data.gas_type_eth.to_number() as u32,
-				BSC_CHAIN_ID => user_trade_info_data.gas_type_bsc.to_number() as u32,
-				SOLANA_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
+				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
+				ETHEREUM_CHAIN_ID => gas_type_eth.to_number() as u32,
+				BSC_CHAIN_ID => gas_type_bsc.to_number() as u32,
+				SOLANA_CHAIN_ID => gas_type_base.to_number() as u32,
 				_ => {
 					log::error!("Unsupported chain id: {}", params.to_chain_id);
 					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
@@ -238,10 +281,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				)?,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
-				is_anti_mev: user_trade_info_data.is_anti_mev,
-				is_auto_slippage: user_trade_info_data.is_auto_slippage,
+				is_anti_mev,
+				is_auto_slippage,
 				gas_type,
-				slippage: user_trade_info_data.slippage,
+				slippage,
 				wallet_index: params.wallet_index,
 				token_cap,
 				price_usd,
