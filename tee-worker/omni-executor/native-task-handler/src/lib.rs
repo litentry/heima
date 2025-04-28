@@ -75,7 +75,7 @@ pub struct TaskHandlerContext<
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-	pub pumpx_api: Arc<PumpxApi>,
+	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -108,7 +108,7 @@ impl<
 		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-		pumpx_api: Arc<PumpxApi>,
+		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	) -> Self {
 		Self {

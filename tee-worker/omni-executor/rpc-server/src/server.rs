@@ -16,7 +16,7 @@ pub(crate) struct RpcContext {
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
-	pub pumpx_api: Arc<PumpxApi>,
+	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 }
 
 impl RpcContext {
@@ -30,7 +30,7 @@ impl RpcContext {
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
-		pumpx_api: Arc<PumpxApi>,
+		pumpx_api: Arc<Box<dyn PumpxApi>>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -51,7 +51,7 @@ pub async fn start_server(
 	port: u16,
 	shielding_key: ShieldingKey,
 	native_task_sender: Arc<NativeTaskSender>,
-	pumpx_api: Arc<PumpxApi>,
+	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	mrenclave: [u8; 32],
 	jwt_rsa_private_key: Vec<u8>,

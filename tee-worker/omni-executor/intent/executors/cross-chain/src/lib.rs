@@ -106,7 +106,7 @@ pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = 
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	pumpx_api: Arc<PumpxApi>,
+	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceApi>,
 	solana_client: Arc<SolanaClient>,
@@ -120,7 +120,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 	pub fn new(
 		_rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		pumpx_api: Arc<PumpxApi>,
+		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceApi>,
 		solana_client: Arc<SolanaClient>,
