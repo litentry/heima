@@ -1,6 +1,9 @@
 {
     "type": "module",
     "license": "ISC",
+    "engines": {
+        "node": ">=20.0.0"
+    },
     "scripts": {
         "update": "pnpm --filter parachain-api run update-metadata && pnpm --filter sidechain-api run update-metadata",
         "build": "pnpm --filter parachain-api run build && pnpm --filter sidechain-api run build",
@@ -10,5 +13,5 @@
         "check-format": "pnpm run --recursive check-format",
         "clean": "pnpm --filter parachain-api run clean && pnpm --filter sidechain-api run clean"
     },
-    "packageManager": "pnpm@8.7.6"
+    "packageManager": "pnpm@9.15.2"
 }
