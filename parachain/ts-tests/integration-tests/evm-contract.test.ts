@@ -1,6 +1,6 @@
 import { assert, expect } from 'chai';
 import { step } from 'mocha-steps';
-import { signAndSend, describeLitentry, loadConfig, sudoWrapperTC } from '../common/utils';
+import { signAndSend, describeLitentry, loadConfig, sudoWrapperTc } from '../common/utils';
 import { compiled } from '../common/utils/compile';
 import { evmToAddress } from '@polkadot/util-crypto';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
@@ -17,7 +17,7 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
     };
 
     step('Set ExtrinsicFilter mode to Test', async function () {
-        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
+        let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
         await signAndSend(extrinsic, context.alice);
     });
 
@@ -215,7 +215,7 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
     });
 
     step('Set ExtrinsicFilter mode to Normal', async function () {
-        let extrinsic = await sudoWrapperTC(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
+        let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
         await signAndSend(extrinsic, context.alice);
     });
 });
