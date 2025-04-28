@@ -598,16 +598,7 @@ async fn handle_native_task<
 			};
 			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			let Some(res_data) = res.data else {
-				send_error(
-					"Response data of call get_account_user_id is none".to_string(),
-					response_sender,
-					NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
-				);
-				return;
-			};
-
-			let Some(user_id) = res_data.user_id else {
+			let Some(user_id) = res.data.user_id else {
 				send_error(
 					"Response data.user_id of call get_account_user_id is none".to_string(),
 					response_sender,
@@ -658,20 +649,11 @@ async fn handle_native_task<
 			log::debug!("Response pumpx user_connect: {:?}", backend_response);
 
 			// check google auth value
-			if let Some(ref user_connect_res) = backend_response.data {
-				if !user_connect_res.google_auth_check.unwrap_or(false) {
-					send_error(
-						"Google code verification failed from user_connect".to_string(),
-						response_sender,
-						NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
-					);
-					return;
-				}
-			} else {
+			if !backend_response.data.google_auth_check.unwrap_or(false) {
 				send_error(
-					"Invalid response data field of user_connect".to_string(),
+					"Google code verification failed from user_connect".to_string(),
 					response_sender,
-					NativeTaskError::PumpxApiError(PumpxApiError::UserConnectionFailed),
+					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
 				);
 				return;
 			}
@@ -1100,27 +1082,19 @@ async fn verify_google_code(
 	language: Option<String>,
 ) -> bool {
 	log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
-	let verify_result = pumpx_api.verify_google_code(&access_token, google_code, language).await;
+	let verify_result = pumpx_api.verify_google_code(access_token, google_code, language).await;
 	verify_result.map_or_else(
 		|e| {
 			log::error!("Google code verification request failed: {:?}", e);
 			false
 		},
 		|res| {
-			res.data.map_or_else(
+			res.data.result.map_or_else(
 				|| {
-					log::error!("Google code verification response data is none");
+					log::error!("Google code verification response result is none");
 					false
 				},
-				|data| {
-					data.result.map_or_else(
-						|| {
-							log::error!("Google code verification response result is none");
-							false
-						},
-						|success| success,
-					)
-				},
+				|success| success,
 			)
 		},
 	)

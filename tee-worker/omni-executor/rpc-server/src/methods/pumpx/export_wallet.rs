@@ -84,8 +84,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			};
 			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			let res_data = check_and_get_option_response_data(res.data, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data of call get_account_user_id is none")?;
-			let user_id = check_and_get_option_response_data(res_data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
+			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
 
 			if user_id != params.user_id {
 				log::error!(

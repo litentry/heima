@@ -171,54 +171,12 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
-			let Some(user_trade_info_data) = user_trade_info.data else {
-				log::error!("Response data of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-
-			let Some(gas_type_base) = user_trade_info_data.gas_type_base else {
-				log::error!("Response data.gas_type_base of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-
-			let Some(gas_type_bsc) = user_trade_info_data.gas_type_bsc else {
-				log::error!("Response data.gas_type_bsc of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-
-			let Some(gas_type_eth) = user_trade_info_data.gas_type_eth else {
-				log::error!("Response data.gas_type_eth of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-
-			let Some(is_anti_mev) = user_trade_info_data.is_anti_mev else {
-				log::error!("Response data.is_anti_mev of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-
-			let Some(is_auto_slippage) = user_trade_info_data.is_auto_slippage else {
-				log::error!("Response data.is_auto_slippage of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-
-			let Some(slippage) = user_trade_info_data.slippage else {
-				log::error!("Response data.slippage of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
+			let gas_type_base = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_base, "gas_type_base")?;
+			let gas_type_bsc = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_bsc, "gas_type_bsc")?;
+			let gas_type_eth = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_eth, "gas_type_eth")?;
+			let is_anti_mev = check_and_get_option_user_trade_info_field(user_trade_info.data.is_anti_mev, "is_anti_mev")?;
+			let is_auto_slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.is_auto_slippage, "is_auto_slippage")?;
+			let slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.slippage, "slippage")?;
 
 			let gas_type = match params.to_chain_id {
 				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
@@ -352,4 +310,16 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			.await
 		})
 		.expect("Failed to register omni_submitSwapOrder method");
+}
+
+fn check_and_get_option_user_trade_info_field<T>(
+	field_value: Option<T>,
+	field_name: &str,
+) -> Result<T, PumpxRpcError> {
+	field_value.ok_or_else(|| {
+		log::error!("Response data.{} of call get_user_trade_info is none", field_name);
+		PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+		))
+	})
 }

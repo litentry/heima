@@ -173,10 +173,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
-			let user_trade_info_data = check_and_get_option_response_data(user_trade_info.data, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data of call get_user_trade_info is none")?;
-			let gas_type_base = check_and_get_option_response_data(user_trade_info_data.gas_type_base, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_base of call get_user_trade_info is none")?;
-			let gas_type_bsc = check_and_get_option_response_data(user_trade_info_data.gas_type_bsc, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_bsc of call get_user_trade_info is none")?;
-			let gas_type_eth = check_and_get_option_response_data(user_trade_info_data.gas_type_eth, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_eth of call get_user_trade_info is none")?;
+			let gas_type_base = check_and_get_option_response_data(user_trade_info.data.gas_type_base, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_base of call get_user_trade_info is none")?;
+			let gas_type_bsc = check_and_get_option_response_data(user_trade_info.data.gas_type_bsc, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_bsc of call get_user_trade_info is none")?;
+			let gas_type_eth = check_and_get_option_response_data(user_trade_info.data.gas_type_eth, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_eth of call get_user_trade_info is none")?;
 
 			let gas_type = match params.to_chain_id {
 				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
@@ -212,9 +211,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
-			let is_anti_mev = check_and_get_option_response_data(user_trade_info_data.is_anti_mev, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_anti_mev of call get_user_trade_info is none")?;
-			let is_auto_slippage = check_and_get_option_response_data(user_trade_info_data.is_auto_slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_auto_slippage of call get_user_trade_info is none")?;
-			let slippage = check_and_get_option_response_data(user_trade_info_data.slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.slippage of call get_user_trade_info is none")?;
+			let is_anti_mev = check_and_get_option_response_data(user_trade_info.data.is_anti_mev, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_anti_mev of call get_user_trade_info is none")?;
+			let is_auto_slippage = check_and_get_option_response_data(user_trade_info.data.is_auto_slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_auto_slippage of call get_user_trade_info is none")?;
+			let slippage = check_and_get_option_response_data(user_trade_info.data.slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.slippage of call get_user_trade_info is none")?;
 
 			let pumpx_config = PumpxConfig {
 				order_type: params.order_type.clone(),
