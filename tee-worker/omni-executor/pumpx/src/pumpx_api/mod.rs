@@ -111,9 +111,9 @@ impl PumpxApi {
 		let response = self
 			.http_client
 			.post(endpoint)
+			.header("Content-Length", 0)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
-			.json(&serde_json::json!({}))
 			.send()
 			.await
 			.map_err(|e| {
