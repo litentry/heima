@@ -1,5 +1,6 @@
 pub mod signer;
 
+use async_trait::async_trait;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
 	commitment_config::CommitmentConfig, pubkey::Pubkey, signer::Signer as SignerTrait,
@@ -8,22 +9,43 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 
-pub struct SolanaClient {
+#[async_trait]
+pub trait SolanaClient: Send + Sync {
+	async fn transfer_sol(
+		&self,
+		to: &str,
+		value: u64,
+		signer: &(dyn SignerTrait + Send + Sync),
+	) -> Result<String, ()>;
+
+	async fn transfer_spl(
+		&self,
+		to: &str,
+		value: u64,
+		mint_address: &str,
+		signer: &(dyn SignerTrait + Send + Sync),
+	) -> Result<String, ()>;
+}
+
+pub struct SolanaRpcClient {
 	rpc_client: RpcClient,
 }
 
-impl SolanaClient {
+impl SolanaRpcClient {
 	pub fn new(rpc_url: &str) -> Self {
 		let client =
 			RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
 		Self { rpc_client: client }
 	}
+}
 
-	pub async fn transfer_sol<Signer: SignerTrait>(
+#[async_trait]
+impl SolanaClient for SolanaRpcClient {
+	async fn transfer_sol(
 		&self,
 		to: &str,
 		value: u64,
-		signer: &Signer,
+		signer: &(dyn SignerTrait + Send + Sync),
 	) -> Result<String, ()> {
 		let block_hash = self
 			.rpc_client
@@ -57,12 +79,12 @@ impl SolanaClient {
 		Ok(tx_signature.to_string())
 	}
 
-	pub async fn transfer_spl<Signer: SignerTrait>(
+	async fn transfer_spl(
 		&self,
 		to: &str,
 		value: u64,
 		mint_address: &str,
-		signer: &Signer,
+		signer: &(dyn SignerTrait + Send + Sync),
 	) -> Result<String, ()> {
 		let mint_pubkey = Pubkey::from_str(mint_address)
 			.map_err(|e| log::error!("Could not parse mint address: {:?}", e))?;
