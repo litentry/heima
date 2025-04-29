@@ -2453,6 +2453,7 @@ dependencies = [
  "pumpx",
  "rust_decimal",
  "solana",
+ "solana-sdk",
  "tokio",
 ]
 
@@ -9265,6 +9266,7 @@ dependencies = [
 name = "solana"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "log",
  "pumpx",
  "solana-client",

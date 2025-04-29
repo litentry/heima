@@ -47,6 +47,7 @@ use pumpx::signer_client::SignerClient;
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana::SolanaClient;
+use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
@@ -204,7 +205,8 @@ async fn main() -> Result<(), ()> {
 				binance_api_base_url,
 			));
 
-			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
+			let solana_client: Arc<Box<dyn SolanaClient>> =
+				Arc::new(Box::new(SolanaRpcClient::new(&args.solana_url)));
 
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())

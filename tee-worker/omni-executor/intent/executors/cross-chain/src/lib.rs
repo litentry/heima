@@ -109,7 +109,7 @@ pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = 
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceApi>,
-	solana_client: Arc<SolanaClient>,
+	solana_client: Arc<Box<dyn SolanaClient>>,
 	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 }
 
@@ -123,7 +123,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceApi>,
-		solana_client: Arc<SolanaClient>,
+		solana_client: Arc<Box<dyn SolanaClient>>,
 		accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
@@ -651,12 +651,13 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						return Err(());
 					}
 
-					let remote_signer = RemoteSigner::new(
-						self.pumpx_signer_client.clone(),
-						pumpx_config.wallet_index,
-						*account_id.as_ref(),
-						Handle::current(),
-					);
+					let remote_signer: Box<dyn solana_sdk::signer::Signer + Send + Sync> =
+						Box::new(RemoteSigner::new(
+							self.pumpx_signer_client.clone(),
+							pumpx_config.wallet_index,
+							*account_id.as_ref(),
+							Handle::current(),
+						));
 
 					let mut tx_id: Option<String> = None;
 					// TODO: change this when adding support for more tokens/chains
