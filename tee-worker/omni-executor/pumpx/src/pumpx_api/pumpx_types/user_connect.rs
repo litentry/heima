@@ -1,6 +1,7 @@
-use crate::pumpx_api::common::ApiResponse;
+use crate::pumpx_types::common::ApiResponse;
 use serde::{Deserialize, Serialize};
 
+// /v3/account/user_connect
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserConnectBody {

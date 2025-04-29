@@ -7,7 +7,7 @@ use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use pumpx::types::CreateTransferTxResponse;
+use pumpx::pumpx_types::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
 
 use super::common::{check_omni_api_response, handle_omni_native_task};

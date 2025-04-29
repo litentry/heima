@@ -1,3 +1,19 @@
+pub mod add_wallet;
 pub mod common;
+pub mod create_cross_order;
+pub mod create_limit_order;
+pub mod create_market_order_unsigned_tx;
+pub mod create_transfer_unsigned_tx;
+pub mod cross_fail;
+pub mod order_info;
+pub mod send_order_tx;
+pub mod send_transfer_tx;
 pub mod user_connect;
+pub mod user_trade_info;
 pub mod verify_google_code;
+
+// new APIs
+pub mod create_market_order_tx;
+pub mod create_transfer_tx;
+pub mod get_account_user_id;
+pub mod get_gas_info;
