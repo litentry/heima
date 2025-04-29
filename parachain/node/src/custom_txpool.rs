@@ -3,7 +3,7 @@ use sc_transaction_pool_api::{
 	ImportNotificationStream, PoolFuture, PoolStatus, ReadyTransactions, TransactionFor,
 	TransactionPool, TransactionSource, TransactionStatusStreamFor, TxHash,
 };
-use sp_runtime::traits::{Block as BlockT, NumberFor};
+use sp_runtime::traits::Block as BlockT;
 use std::{collections::HashMap, pin::Pin, sync::Arc};
 
 pub struct CustomPool<I> {
@@ -79,7 +79,7 @@ where
 
 	fn ready_at(
 		&self,
-		at: NumberFor<Self::Block>,
+		at: <Self::Block as BlockT>::Hash,
 	) -> Pin<
 		Box<
 			dyn Future<
@@ -88,6 +88,21 @@ where
 		>,
 	> {
 		self.inner_pool.ready_at(at)
+	}
+
+	fn ready_at_with_timeout(
+		&self,
+		_at: <Self::Block as BlockT>::Hash,
+		_timeout: std::time::Duration,
+	) -> Pin<
+		Box<
+			dyn Future<
+					Output = Box<dyn ReadyTransactions<Item = Arc<Self::InPoolTransaction>> + Send>,
+				> + Send
+				+ '_,
+		>,
+	> {
+		unimplemented!()
 	}
 
 	fn ready(&self) -> Box<dyn ReadyTransactions<Item = Arc<Self::InPoolTransaction>> + Send> {

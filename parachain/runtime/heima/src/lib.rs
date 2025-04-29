@@ -235,7 +235,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
 	// https://hackmd.io/JagpUd8tTjuKf9HQtpvHIQ
-	state_version: 1,
+	system_version: 1,
 };
 
 /// The version information used to identify this runtime when compiled natively.
@@ -269,6 +269,7 @@ impl frame_system::Config for Runtime {
 	type DbWeight = RocksDbWeight;
 	type BaseCallFilter = BaseCallFilter;
 	type SystemWeightInfo = ();
+	type ExtensionsWeightInfo = ();
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = BlockLength;
 	type SS58Prefix = SS58Prefix;
@@ -468,6 +469,7 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_utility::Config for Runtime {
@@ -493,7 +495,7 @@ impl OnUnbalanced<Credit<AccountId, Balances>> for ToAuthor {
 
 pub struct DealWithFees;
 impl OnUnbalanced<Credit<AccountId, Balances>> for DealWithFees {
-	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = Credit<AccountId, Balances>>) {
+	fn on_unbalanceds(mut fees_then_tips: impl Iterator<Item = Credit<AccountId, Balances>>) {
 		if let Some(fees) = fees_then_tips.next() {
 			// for fees, (1) to treasury, (2) to author and (3) burned
 			let (unburned, to_burn) =
@@ -520,6 +522,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = ConstU8<5>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -592,6 +595,9 @@ impl pallet_collective::Config<CouncilInstance> for Runtime {
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 	type MaxProposalWeight = MaxProposalWeight;
+	type DisapproveOrigin = EnsureRoot<Self::AccountId>;
+	type KillOrigin = EnsureRoot<Self::AccountId>;
+	type Consideration = ();
 }
 
 impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
@@ -622,6 +628,9 @@ impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 	type MaxProposalWeight = MaxProposalWeight;
+	type DisapproveOrigin = EnsureRoot<Self::AccountId>;
+	type KillOrigin = EnsureRoot<Self::AccountId>;
+	type Consideration = ();
 }
 
 impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
@@ -648,6 +657,9 @@ impl pallet_collective::Config<DeveloperCommitteeInstance> for Runtime {
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 	type MaxProposalWeight = MaxProposalWeight;
+	type DisapproveOrigin = EnsureRoot<Self::AccountId>;
+	type KillOrigin = EnsureRoot<Self::AccountId>;
+	type Consideration = ();
 }
 
 impl pallet_membership::Config<DeveloperCommitteeMembershipInstance> for Runtime {
@@ -718,6 +730,7 @@ impl pallet_treasury::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -739,6 +752,7 @@ impl pallet_bounties::Config for Runtime {
 parameter_types! {
 	pub const BasicDeposit: Balance = deposit(1, 258);  // 258 bytes on-chain
 	pub const ByteDeposit: Balance = deposit(0, 1);
+	pub const UsernameDeposit: Balance = deposit(0, 32);
 	pub const SubAccountDeposit: Balance = deposit(1, 53);  // 53 bytes on-chain
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
@@ -750,6 +764,7 @@ impl pallet_identity::Config for Runtime {
 	type Currency = Balances;
 	type BasicDeposit = BasicDeposit;
 	type ByteDeposit = ByteDeposit;
+	type UsernameDeposit = UsernameDeposit;
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
 	type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
@@ -761,6 +776,7 @@ impl pallet_identity::Config for Runtime {
 	type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
 	type UsernameAuthorityOrigin = EnsureRootOrHalfCouncil;
 	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
+	type UsernameGracePeriod = ConstU32<{ 30 * DAYS }>;
 	type MaxSuffixLength = ConstU32<7>;
 	type MaxUsernameLength = ConstU32<32>;
 	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
@@ -797,6 +813,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 	type ConsensusHook = ConsensusHook;
+	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 	type WeightInfo = ();
 }
 
@@ -948,7 +965,7 @@ parameter_types! {
 
 impl pallet_ethereum::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
+	type StateRoot = pallet_ethereum::IntermediateStateRoot<<Runtime as frame_system::Config>::Version>;
 	type PostLogContent = PostBlockAndTxnHashes;
 	// Maximum length (in bytes) of revert message to include in Executed event
 	type ExtraDataLength = ConstU32<256>;
@@ -1670,8 +1687,7 @@ impl_runtime_apis! {
 		}
 
 		fn storage_at(address: H160, index: U256) -> H256 {
-			let mut tmp = [0u8; 32];
-			index.to_big_endian(&mut tmp);
+			let tmp = index.to_big_endian(); // Get the big-endian byte array
 			pallet_evm::AccountStorages::<Runtime>::get(address, H256::from_slice(&tmp[..]))
 		}
 
@@ -1893,7 +1909,7 @@ impl_runtime_apis! {
 
 	impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
 		fn convert_transaction(transaction: pallet_ethereum::Transaction) -> <Block as BlockT>::Extrinsic {
-			UncheckedExtrinsic::new_unsigned(
+			UncheckedExtrinsic::new_bare(
 				pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
 			)
 		}

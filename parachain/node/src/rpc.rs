@@ -36,7 +36,7 @@ use sc_client_api::{
 };
 use sc_network::service::traits::NetworkService;
 use sc_network_sync::SyncingService;
-pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
+pub use sc_rpc::SubscriptionTaskExecutor;
 use sc_transaction_pool::{ChainApi, Pool};
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::{CallApiAt, ProvideRuntimeApi};
@@ -107,8 +107,6 @@ pub struct FullDeps<C, P, A: ChainApi> {
 	pub network: Arc<dyn NetworkService>,
 	/// Chain syncing service
 	pub sync: Arc<SyncingService<Block>>,
-	/// Whether to deny unsafe calls
-	pub deny_unsafe: DenyUnsafe,
 	/// The Node authority flag
 	pub is_authority: bool,
 	/// Frontier Backend.
@@ -176,7 +174,6 @@ where
 		graph,
 		network,
 		sync,
-		deny_unsafe,
 		is_authority,
 		frontier_backend,
 		filter_pool,
@@ -188,7 +185,7 @@ where
 	} = deps;
 
 	let cloned = (client.clone(), pool.clone());
-	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(System::new(client.clone(), pool).into_rpc())?;
 	module.merge(TransactionPayment::new(client).into_rpc())?;
 
 	{

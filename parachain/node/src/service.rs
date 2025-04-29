@@ -59,6 +59,7 @@ use sc_network::{config::FullNetworkConfiguration, service::traits::NetworkBacke
 use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+// use sc_transaction_pool::{BasicPool, FullChainApi};
 use sp_keystore::KeystorePtr;
 use sp_runtime::{app_crypto::AppCrypto, traits::Header};
 use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
@@ -89,6 +90,8 @@ type ParachainBlockImport = TParachainBlockImport<
 
 type MaybeSelectChain = Option<LongestChain<ParachainBackend, Block>>;
 
+// type FullPool<B, RA, HF> = BasicPool<FullChainApi<FullClient<B, RA, HF>, B>, B>;
+
 /// Starts a `ServiceBuilder` for a full service.
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
@@ -104,7 +107,7 @@ pub fn new_partial<BIQ>(
 		ParachainBackend,
 		MaybeSelectChain,
 		sc_consensus::DefaultImportQueue<Block>,
-		sc_transaction_pool::FullPool<Block, ParachainClient>,
+		sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>,
 		(
 			ParachainBlockImport,
 			Option<Telemetry>,
@@ -135,14 +138,14 @@ where
 		})
 		.transpose()?;
 
-	let heap_pages = config.default_heap_pages.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h: u64| {
+	let heap_pages = config.executor.default_heap_pages.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h: u64| {
 		HeapAllocStrategy::Static { extra_pages: h as _ }
 	});
 
 	let executor = sc_executor::WasmExecutor::<HostFunctions>::builder()
-		.with_execution_method(config.wasm_method)
-		.with_max_runtime_instances(config.max_runtime_instances)
-		.with_runtime_cache_size(config.runtime_cache_size)
+		.with_execution_method(config.executor.wasm_method)
+		.with_max_runtime_instances(config.executor.max_runtime_instances)
+		.with_runtime_cache_size(config.executor.runtime_cache_size)
 		.with_onchain_heap_alloc_strategy(heap_pages)
 		.with_offchain_heap_alloc_strategy(heap_pages)
 		.build();
@@ -246,7 +249,7 @@ where
 			sc_rpc::DenyUnsafe,
 			Arc<ParachainClient>,
 			Arc<ParachainBackend>,
-			Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+			Arc<sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>>,
 		) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>
 		+ 'static,
 	BIQ: FnOnce(
@@ -264,7 +267,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+		Arc<sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -300,7 +303,7 @@ where
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue_service = params.import_queue.service();
-	let net_config = FullNetworkConfiguration::<_, _, Net>::new(&parachain_config.network);
+	let net_config = FullNetworkConfiguration::<_, _, Net>::new(&parachain_config.network, prometheus_registry.clone());
 
 	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
 		build_network(BuildNetworkParams {
@@ -359,7 +362,7 @@ where
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
 
-		let result = move |deny_unsafe, subscription| {
+		let result = move | subscription| {
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
@@ -367,7 +370,6 @@ where
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: validator,
-				deny_unsafe,
 				frontier_backend: frontier_backend.clone(),
 				filter_pool: filter_pool.clone(),
 				fee_history_limit,
@@ -539,13 +541,13 @@ pub fn build_import_queue(
 							);
 
 						let mocked_parachain = MockValidationDataInherentDataProvider {
-						// When using manual seal we start from block 0, and it's very unlikely to
-						// reach a block number > u32::MAX.
-						current_para_block: UniqueSaturatedInto::<u32>::unique_saturated_into(
-							*current_para_head.number(),
-						),
-						para_id: 2013.into(),
-						current_para_block_head,
+							// When using manual seal we start from block 0, and it's very unlikely to
+							// reach a block number > u32::MAX.
+							current_para_block: UniqueSaturatedInto::<u32>::unique_saturated_into(
+								*current_para_head.number(),
+							),
+							para_id: 2013.into(),
+							current_para_block_head,
 							relay_offset: 1000,
 							relay_blocks_per_para_block: 2,
 							para_blocks_per_relay_epoch: 0,
@@ -558,6 +560,7 @@ pub fn build_import_queue(
 							raw_downward_messages: vec![],
 							raw_horizontal_messages: vec![],
 							additional_key_values: None,
+							upgrade_go_ahead: None,
 						};
 
 						Ok((slot, timestamp, mocked_parachain))
@@ -631,7 +634,7 @@ pub async fn start_standalone_node(
 	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
 
 	let net_config =
-		FullNetworkConfiguration::<_, _, sc_network::NetworkWorker<_, _>>::new(&config.network);
+		FullNetworkConfiguration::<_, _, sc_network::NetworkWorker<_, _>>::new(&config.network, None);
 
 	let (network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -642,7 +645,7 @@ pub async fn start_standalone_node(
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue,
 			block_announce_validator_builder: None,
-			warp_sync_params: None,
+			warp_sync_config: None,
 			block_relay: None,
 			metrics: sc_network::NotificationMetrics::new(None),
 		})?;
@@ -743,6 +746,7 @@ pub async fn start_standalone_node(
 						raw_downward_messages: vec![],
 						raw_horizontal_messages: vec![],
 						additional_key_values: None,
+						upgrade_go_ahead: None,
 					};
 
 					Ok((slot, timestamp, mocked_parachain))
@@ -780,7 +784,7 @@ pub async fn start_standalone_node(
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks;
 
-		Box::new(move |deny_unsafe, subscription| {
+		Box::new(move |subscription| {
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
@@ -788,7 +792,6 @@ pub async fn start_standalone_node(
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: role.is_authority(),
-				deny_unsafe,
 				frontier_backend: frontier_backend.clone(),
 				filter_pool: filter_pool.clone(),
 				fee_history_limit,
@@ -951,7 +954,7 @@ fn start_lookahead_aura_consensus(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+	transaction_pool: Arc<sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
@@ -1011,7 +1014,7 @@ fn start_lookahead_aura_consensus(
 fn warn_if_slow_hardware(hwbench: &sc_sysinfo::HwBench) {
 	// Polkadot para-chains should generally use these requirements to ensure that the relay-chain
 	// will not take longer than expected to import its blocks.
-	if let Err(err) = frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE.check_hardware(hwbench) {
+	if let Err(err) = frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE.check_hardware(hwbench, false) {
 		log::warn!(
 			"⚠️  The hardware does not meet the minimal requirements {} for role 'Authority' find out more at:\n\
 			https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware",

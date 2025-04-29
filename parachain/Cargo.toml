@@ -96,7 +96,7 @@ hex-literal = { version = "0.4.1", default-features = false }
 similar-asserts = { version = "1.6.0" }
 sha3 = { version = "0.10", default-features = false }
 futures = { version = "0.3.30", features = ["compat"] }
-jsonrpsee = { version = "0.23.2", features = ["server"] }
+jsonrpsee = { version = "0.24.8", features = ["server"] }
 tokio = { version = "1.40.0", features = ["macros", "sync"] }
 strum = { version = "0.26", default-features = false }
 strum_macros = { version = "0.26", default-features = false }
@@ -106,6 +106,7 @@ num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
 webpki = { version = "0.102.8", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+# getrandom = { version = "0.2.15", default-features = false, features = ["js"] }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
