@@ -7,13 +7,13 @@ use types::{
 	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
 	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
-	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse,
-	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
-	SendTransferTxResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
+	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
+	SendTransferTxResponse, UserTradeInfoResponse,
 };
 use url::Url;
 pub mod pumpx_types;
 use pumpx_types::user_connect::{UserConnectBody, UserConnectResponse};
+use pumpx_types::verify_google_code::{GoogleCode, VerifyGoogleCodeResponse};
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
