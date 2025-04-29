@@ -107,7 +107,7 @@ pub fn new_partial<BIQ>(
 		ParachainBackend,
 		MaybeSelectChain,
 		sc_consensus::DefaultImportQueue<Block>,
-		sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>,
+		sc_transaction_pool::FullPool<Block, ParachainClient>,
 		(
 			ParachainBlockImport,
 			Option<Telemetry>,
@@ -252,7 +252,7 @@ where
 			sc_rpc::DenyUnsafe,
 			Arc<ParachainClient>,
 			Arc<ParachainBackend>,
-			Arc<sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>>,
+			Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
 		) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>
 		+ 'static,
 	BIQ: FnOnce(
@@ -270,7 +270,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>>,
+		Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -962,7 +962,7 @@ fn start_lookahead_aura_consensus(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<sc_transaction_pool::TransactionPoolWrapper<Block, ParachainClient>>,
+	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
