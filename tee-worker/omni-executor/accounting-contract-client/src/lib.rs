@@ -4,6 +4,7 @@ use alloy::{
 	sol,
 	sol_types::{SolInterface, SolValue},
 };
+use async_trait::async_trait;
 use ethereum_rpc::RpcProvider;
 use AccountingContract::AccountingContractCalls;
 
@@ -14,17 +15,37 @@ sol!(
 	"./abi/AccountingContract.json"
 );
 
-pub struct AccountingContractClient<P: RpcProvider<Transaction = TransactionRequest>> {
+#[async_trait]
+pub trait AccountingContractApi: Send + Sync {
+	async fn execute_pay_out_request(
+		&self,
+		beneficiary: Address,
+		nonce: U256,
+		amount: U256,
+	) -> Result<(), ()>;
+
+	async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
+
+	async fn get_balance(&self) -> Result<U256, ()>;
+}
+
+pub struct AccountingContractClient<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
+{
 	pub provider: P,
 	pub contract_address: Address,
 }
 
-impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<P> {
+impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingContractClient<P> {
 	pub fn new(provider: P, contract_address: Address) -> Self {
 		Self { provider, contract_address }
 	}
+}
 
-	pub async fn execute_pay_out_request(
+#[async_trait]
+impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingContractApi
+	for AccountingContractClient<P>
+{
+	async fn execute_pay_out_request(
 		&self,
 		beneficiary: Address,
 		nonce: U256,
@@ -43,7 +64,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<
 		self.provider.send_transaction(tx).await
 	}
 
-	pub async fn get_nonce(&self, user: Address) -> Result<U256, ()> {
+	async fn get_nonce(&self, user: Address) -> Result<U256, ()> {
 		let call = AccountingContractCalls::getNonce(AccountingContract::getNonceCall { user })
 			.abi_encode();
 		let tx = TransactionRequest {
@@ -57,7 +78,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> AccountingContractClient<
 		})
 	}
 
-	pub async fn get_balance(&self) -> Result<U256, ()> {
+	async fn get_balance(&self) -> Result<U256, ()> {
 		let call =
 			AccountingContractCalls::getBalance(AccountingContract::getBalanceCall {}).abi_encode();
 		let tx = TransactionRequest {
