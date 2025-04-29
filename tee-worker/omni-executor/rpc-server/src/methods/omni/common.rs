@@ -1,6 +1,6 @@
 use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
 use parity_scale_codec::Codec;
-use pumpx::types::ApiResponse;
+use pumpx::pumpx_types::common::ApiResponse;
 use serde::Serialize;
 
 use crate::{error_code::*, oneshot, server::RpcContext, Decode};

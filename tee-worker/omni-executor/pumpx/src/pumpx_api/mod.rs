@@ -1,18 +1,26 @@
-pub mod types;
-
 use async_trait::async_trait;
 use reqwest::{Client, Error};
-use types::{
-	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
-	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
-	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
-	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
-	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
-	SendTransferTxResponse, UserTradeInfoResponse,
-};
 use url::Url;
 pub mod pumpx_types;
+use pumpx_types::add_wallet::AddWalletResponse;
+use pumpx_types::create_cross_order::CreateCrossOrderBody;
+use pumpx_types::create_limit_order::CreateLimitOrderBody;
+use pumpx_types::create_market_order_tx::{CreateMarketOrderTxBody, CreateMarketOrderTxResponse};
+use pumpx_types::create_market_order_unsigned_tx::{
+	CreateMarketOrderUnsignedTxBody, CreateMarketOrderUnsignedTxResponse,
+};
+use pumpx_types::create_transfer_tx::{CreateTransferTxBody, CreateTransferTxResponse};
+use pumpx_types::create_transfer_unsigned_tx::{
+	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse,
+};
+use pumpx_types::cross_fail::CrossFailBody;
+use pumpx_types::get_account_user_id::{GetAccountUserIdParams, GetAccountUserIdResponse};
+use pumpx_types::get_gas_info::{GetGasInfoParams, GetGasInfoResponse};
+use pumpx_types::order_info::OrderInfoResponse;
+use pumpx_types::send_order_tx::{SendOrderTxBody, SendOrderTxResponse};
+use pumpx_types::send_transfer_tx::{SendTransferTxBody, SendTransferTxResponse};
 use pumpx_types::user_connect::{UserConnectBody, UserConnectResponse};
+use pumpx_types::user_trade_info::UserTradeInfoResponse;
 use pumpx_types::verify_google_code::{GoogleCode, VerifyGoogleCodeResponse};
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
