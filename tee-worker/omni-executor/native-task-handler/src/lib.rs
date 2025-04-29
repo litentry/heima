@@ -713,7 +713,7 @@ async fn handle_native_task<
 			};
 
 			let verify_success =
-				verify_google_code(ctx.pumpx_api.as_ref(), &access_token, google_code, None).await;
+				verify_google_code(ctx.pumpx_api.as_ref().as_ref(), &access_token, google_code, None).await;
 			if !verify_success {
 				send_error(
 					"Failed to verify google code within NativeTask::PumpxExportWallet".to_string(),
@@ -856,7 +856,7 @@ async fn handle_native_task<
 
 			// 2. Verify google code in every case
 			let verify_success = verify_google_code(
-				ctx.pumpx_api.as_ref(),
+				ctx.pumpx_api.as_ref().as_ref(),
 				&access_token,
 				google_code,
 				language.clone(),
@@ -1076,7 +1076,7 @@ async fn notify_intent_completed<
 }
 
 async fn verify_google_code(
-	pumpx_api: &PumpxApi,
+	pumpx_api: &dyn PumpxApi,
 	access_token: &str,
 	google_code: String,
 	language: Option<String>,
