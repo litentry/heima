@@ -17,14 +17,14 @@ export function generateVerificationMessage(
     sidechainNonce: number,
     options?: { prettifiedMessage?: boolean }
 ): string {
-    const _options = { prettifiedMessage: false, ...options };
+    const optionsParam = { prettifiedMessage: false, ...options };
     const encodedIdentity = context.api.createType('CorePrimitivesIdentity', identity).toU8a();
     const encodedWho = context.api.createType('CorePrimitivesIdentity', signer).toU8a();
     const encodedSidechainNonce = context.api.createType('Index', sidechainNonce);
     const msg = Buffer.concat([encodedSidechainNonce.toU8a(), encodedWho, encodedIdentity]);
     const hash = blake2AsHex(msg, 256);
 
-    if (_options.prettifiedMessage) {
+    if (optionsParam.prettifiedMessage) {
         return `Token: ${hash}`;
     }
 
@@ -150,7 +150,7 @@ export async function buildValidations(
     signer?: Signer,
     options?: { prettifiedMessage?: boolean }
 ): Promise<LitentryValidationData> {
-    const _options = { prettifiedMessage: false, ...options };
+    const optionsParam = { prettifiedMessage: false, ...options };
     const validationNonce = startingSidechainNonce++;
 
     const msg = generateVerificationMessage(context, signerIdentitity, linkIdentity, validationNonce);

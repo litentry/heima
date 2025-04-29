@@ -44,9 +44,10 @@ use parentchain_rpc_client::{
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use pumpx::pubkey_to_evm_address;
 use pumpx::signer_client::SignerClient;
-use pumpx::PumpxApi;
+use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana::SolanaClient;
+use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
 use std::io::Write;
@@ -192,7 +193,8 @@ async fn main() -> Result<(), ()> {
 			}
 
 			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
-			let pumpx_api = Arc::new(PumpxApi::new(pumpx_api_base_url));
+			let pumpx_api: Arc<Box<dyn PumpxApi>> =
+				Arc::new(Box::new(PumpxApiClient::new(pumpx_api_base_url)));
 
 			let binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
 			let binance_api_secret = env::var("OE_BINANCE_API_SECRET").unwrap_or("".to_string());
@@ -203,7 +205,8 @@ async fn main() -> Result<(), ()> {
 				binance_api_base_url,
 			));
 
-			let solana_client = Arc::new(SolanaClient::new(&args.solana_url));
+			let solana_client: Arc<Box<dyn SolanaClient>> =
+				Arc::new(Box::new(SolanaRpcClient::new(&args.solana_url)));
 
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())

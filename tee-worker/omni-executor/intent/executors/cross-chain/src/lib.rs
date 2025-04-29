@@ -106,10 +106,10 @@ pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = 
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	pumpx_api: Arc<PumpxApi>,
+	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceApi>,
-	solana_client: Arc<SolanaClient>,
+	solana_client: Arc<Box<dyn SolanaClient>>,
 	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 }
 
@@ -120,10 +120,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 	pub fn new(
 		_rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		pumpx_api: Arc<PumpxApi>,
+		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceApi>,
-		solana_client: Arc<SolanaClient>,
+		solana_client: Arc<Box<dyn SolanaClient>>,
 		accounting_contract_client: Arc<AccountingContractClient<Provider>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
@@ -651,12 +651,13 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						return Err(());
 					}
 
-					let remote_signer = RemoteSigner::new(
-						self.pumpx_signer_client.clone(),
-						pumpx_config.wallet_index,
-						*account_id.as_ref(),
-						Handle::current(),
-					);
+					let remote_signer: Box<dyn solana_sdk::signer::Signer + Send + Sync> =
+						Box::new(RemoteSigner::new(
+							self.pumpx_signer_client.clone(),
+							pumpx_config.wallet_index,
+							*account_id.as_ref(),
+							Handle::current(),
+						));
 
 					let mut tx_id: Option<String> = None;
 					// TODO: change this when adding support for more tokens/chains
@@ -972,12 +973,11 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						})?;
 					debug!("Response get_gas_info: {:?}", res);
 
-					let Some(gas_info_data) = res.data else {
-						log::error!("Response data of call get gas info is none");
+					let Some(gas_info_vec) = res.data.gas_info else {
+						log::error!("Response data.gas_info of call get gas info is none");
 						return Err(());
 					};
-					let Some(gas_info) = gas_info_data
-						.gas_info
+					let Some(gas_info) = gas_info_vec
 						.iter()
 						.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
 					else {

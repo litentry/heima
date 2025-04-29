@@ -1,5 +1,8 @@
 use crate::{
-	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
+	error_code::*,
+	methods::pumpx::{common::check_and_get_option_response_data, PumpxRpcError},
+	server::RpcContext,
+	verify_auth::verify_auth,
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
@@ -73,19 +76,14 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			};
 			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			let Some(res_data) = res.data else {
-				log::error!("Response data of call get_account_user_id is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
+			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
 
-			if res_data.user_id != params.user_id {
+			if user_id != params.user_id {
 				log::error!(
 					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
 					params.user_id,
 					params.user_email,
-					res_data.user_id
+					user_id
 				);
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					USER_EMAIL_ID_MISMATCH_CODE,

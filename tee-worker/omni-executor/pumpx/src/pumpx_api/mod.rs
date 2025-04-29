@@ -1,5 +1,6 @@
 pub mod types;
 
+use async_trait::async_trait;
 use reqwest::{Client, Error};
 use types::{
 	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
@@ -15,12 +16,108 @@ use url::Url;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
-pub struct PumpxApi {
+#[async_trait]
+pub trait PumpxApi: Send + Sync {
+	async fn user_connect(
+		&self,
+		access_token: &str,
+		user_id: String,
+		email: String,
+		invite_code: Option<String>,
+		google_code: String,
+		language: Option<String>,
+	) -> Result<UserConnectResponse, Error>;
+
+	async fn verify_google_code(
+		&self,
+		access_token: &str,
+		google_code: String,
+		language: Option<String>,
+	) -> Result<VerifyGoogleCodeResponse, Error>;
+
+	async fn add_wallet(
+		&self,
+		access_token: &str,
+		language: Option<String>,
+	) -> Result<AddWalletResponse, Error>;
+
+	async fn get_user_trade_info(&self, access_token: &str)
+		-> Result<UserTradeInfoResponse, Error>;
+
+	async fn create_market_order_unsigned_tx(
+		&self,
+		access_token: &str,
+		body: CreateMarketOrderUnsignedTxBody,
+	) -> Result<CreateMarketOrderUnsignedTxResponse, Error>;
+
+	async fn send_order_tx(
+		&self,
+		access_token: &str,
+		body: SendOrderTxBody,
+	) -> Result<SendOrderTxResponse, Error>;
+
+	async fn create_limit_order(
+		&self,
+		access_token: &str,
+		body: CreateLimitOrderBody,
+	) -> Result<OrderInfoResponse, Error>;
+
+	async fn create_cross_order(
+		&self,
+		access_token: &str,
+		data: CreateCrossOrderBody,
+	) -> Result<OrderInfoResponse, Error>;
+
+	async fn cross_fail(
+		&self,
+		access_token: &str,
+		data: CrossFailBody,
+	) -> Result<OrderInfoResponse, Error>;
+
+	#[allow(clippy::too_many_arguments)]
+	async fn create_transfer_unsigned_tx(
+		&self,
+		access_token: &str,
+		body: CreateTransferUnsignedTxBody,
+		language: Option<String>,
+	) -> Result<CreateTransferUnsignedTxResponse, Error>;
+
+	async fn send_transfer_tx(
+		&self,
+		access_token: &str,
+		body: SendTransferTxBody,
+		language: Option<String>,
+	) -> Result<SendTransferTxResponse, Error>;
+
+	async fn create_market_order_tx(
+		&self,
+		access_token: &str,
+		body: CreateMarketOrderTxBody,
+	) -> Result<CreateMarketOrderTxResponse, Error>;
+
+	#[allow(clippy::too_many_arguments)]
+	async fn create_transfer_tx(
+		&self,
+		access_token: &str,
+		body: CreateTransferTxBody,
+		language: Option<String>,
+	) -> Result<CreateTransferTxResponse, Error>;
+
+	async fn get_gas_info(
+		&self,
+		access_token: &str,
+		chain_id: u32,
+	) -> Result<GetGasInfoResponse, Error>;
+
+	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error>;
+}
+
+pub struct PumpxApiClient {
 	http_client: Client,
 	base_url: Url,
 }
 
-impl PumpxApi {
+impl PumpxApiClient {
 	pub fn new(base_url: Option<String>) -> Self {
 		let base_url = match base_url {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
@@ -32,10 +129,13 @@ impl PumpxApi {
 			.default_headers(default_headers)
 			.build()
 			.expect("Failed to build HTTP client");
-		PumpxApi { http_client, base_url }
+		PumpxApiClient { http_client, base_url }
 	}
+}
 
-	pub async fn user_connect(
+#[async_trait]
+impl PumpxApi for PumpxApiClient {
+	async fn user_connect(
 		&self,
 		access_token: &str,
 		user_id: String,
@@ -72,7 +172,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn verify_google_code(
+	async fn verify_google_code(
 		&self,
 		access_token: &str,
 		google_code: String,
@@ -102,7 +202,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn add_wallet(
+	async fn add_wallet(
 		&self,
 		access_token: &str,
 		language: Option<String>,
@@ -111,6 +211,7 @@ impl PumpxApi {
 		let response = self
 			.http_client
 			.post(endpoint)
+			.header("Content-Length", 0)
 			.header("X-Language", language.unwrap_or("en".to_string()))
 			.bearer_auth(access_token)
 			.send()
@@ -130,7 +231,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn get_user_trade_info(
+	async fn get_user_trade_info(
 		&self,
 		access_token: &str,
 	) -> Result<UserTradeInfoResponse, Error> {
@@ -144,7 +245,7 @@ impl PumpxApi {
 			.await
 	}
 
-	pub async fn create_market_order_unsigned_tx(
+	async fn create_market_order_unsigned_tx(
 		&self,
 		access_token: &str,
 		body: CreateMarketOrderUnsignedTxBody,
@@ -178,7 +279,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn send_order_tx(
+	async fn send_order_tx(
 		&self,
 		access_token: &str,
 		body: SendOrderTxBody,
@@ -208,7 +309,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn create_limit_order(
+	async fn create_limit_order(
 		&self,
 		access_token: &str,
 		body: CreateLimitOrderBody,
@@ -224,7 +325,7 @@ impl PumpxApi {
 			.await
 	}
 
-	pub async fn create_cross_order(
+	async fn create_cross_order(
 		&self,
 		access_token: &str,
 		data: CreateCrossOrderBody,
@@ -250,7 +351,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn cross_fail(
+	async fn cross_fail(
 		&self,
 		access_token: &str,
 		data: CrossFailBody,
@@ -277,7 +378,7 @@ impl PumpxApi {
 	}
 
 	#[allow(clippy::too_many_arguments)]
-	pub async fn create_transfer_unsigned_tx(
+	async fn create_transfer_unsigned_tx(
 		&self,
 		access_token: &str,
 		body: CreateTransferUnsignedTxBody,
@@ -313,7 +414,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn send_transfer_tx(
+	async fn send_transfer_tx(
 		&self,
 		access_token: &str,
 		body: SendTransferTxBody,
@@ -345,7 +446,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn create_market_order_tx(
+	async fn create_market_order_tx(
 		&self,
 		access_token: &str,
 		body: CreateMarketOrderTxBody,
@@ -376,7 +477,7 @@ impl PumpxApi {
 	}
 
 	#[allow(clippy::too_many_arguments)]
-	pub async fn create_transfer_tx(
+	async fn create_transfer_tx(
 		&self,
 		access_token: &str,
 		body: CreateTransferTxBody,
@@ -412,7 +513,7 @@ impl PumpxApi {
 		})
 	}
 
-	pub async fn get_gas_info(
+	async fn get_gas_info(
 		&self,
 		access_token: &str,
 		chain_id: u32,
@@ -429,10 +530,7 @@ impl PumpxApi {
 			.await
 	}
 
-	pub async fn get_account_user_id(
-		&self,
-		email: String,
-	) -> Result<GetAccountUserIdResponse, Error> {
+	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error> {
 		let endpoint = self.base_url.join("v3/account/get_account_user_id").unwrap();
 		let params = GetAccountUserIdParams { email };
 		self.http_client.get(endpoint).query(&params).send().await?.json().await

@@ -13,8 +13,8 @@ import {
     ParachainConfig,
     signAndSend,
     sleep,
-    sudoWrapperGC,
-    sudoWrapperTC,
+    sudoWrapperGc,
+    sudoWrapperTc,
 } from '../utils';
 import { toWei } from 'web3-utils';
 import { destResourceId } from '../utils/consts';
@@ -146,19 +146,19 @@ async function setupCrossChainTransfer(
     for (let i = 0; i < parachainRelayers.length; i++) {
         const isRelayer = await pConfig.api.query.chainBridge.relayers(parachainRelayers[i]);
         if (!isRelayer.toHuman()) {
-            const temp = await sudoWrapperGC(pConfig.api, pConfig.api.tx.chainBridge.addRelayer(parachainRelayers[i]));
+            const temp = await sudoWrapperGc(pConfig.api, pConfig.api.tx.chainBridge.addRelayer(parachainRelayers[i]));
             extrinsic.push(temp);
         }
     }
 
     const whitelist = await pConfig.api.query.chainBridge.chainNonces(sourceChainID);
     if (!whitelist.toHuman()) {
-        extrinsic.push(await sudoWrapperGC(pConfig.api, pConfig.api.tx.chainBridge.whitelistChain(sourceChainID)));
+        extrinsic.push(await sudoWrapperGc(pConfig.api, pConfig.api.tx.chainBridge.whitelistChain(sourceChainID)));
     }
 
     const filterMode = (await pConfig.api.query.extrinsicFilter.mode()).toHuman();
     if ('Test' !== filterMode) {
-        let extrinsic = await sudoWrapperTC(pConfig.api, pConfig.api.tx.extrinsicFilter.setMode('Test'));
+        let extrinsic = await sudoWrapperTc(pConfig.api, pConfig.api.tx.extrinsicFilter.setMode('Test'));
         let temp = await pConfig.api.rpc.chain.getBlock();
         console.log(`setMode await Before: ${temp.block.header.number}`);
         await signAndSend(extrinsic, pConfig.alice);
@@ -168,7 +168,7 @@ async function setupCrossChainTransfer(
     const BeforeAssetInfo = await pConfig.api.query.assetsHandler.resourceToAssetInfo(destResourceId);
     if (BeforeAssetInfo.isEmpty) {
         extrinsic.push(
-            await sudoWrapperGC(
+            await sudoWrapperGc(
                 pConfig.api,
                 pConfig.api.tx.assetsHandler.setResource(destResourceId, { fee: parachainFee, asset: null })
             )

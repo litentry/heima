@@ -171,17 +171,18 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			log::debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
-			let Some(user_trade_info_data) = user_trade_info.data else {
-				log::error!("Response data of call get_user_trade_info is none");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
+			let gas_type_base = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_base, "gas_type_base")?;
+			let gas_type_bsc = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_bsc, "gas_type_bsc")?;
+			let gas_type_eth = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_eth, "gas_type_eth")?;
+			let is_anti_mev = check_and_get_option_user_trade_info_field(user_trade_info.data.is_anti_mev, "is_anti_mev")?;
+			let is_auto_slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.is_auto_slippage, "is_auto_slippage")?;
+			let slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.slippage, "slippage")?;
+
 			let gas_type = match params.to_chain_id {
-				BASE_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
-				ETHEREUM_CHAIN_ID => user_trade_info_data.gas_type_eth.to_number() as u32,
-				BSC_CHAIN_ID => user_trade_info_data.gas_type_bsc.to_number() as u32,
-				SOLANA_CHAIN_ID => user_trade_info_data.gas_type_base.to_number() as u32,
+				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
+				ETHEREUM_CHAIN_ID => gas_type_eth.to_number() as u32,
+				BSC_CHAIN_ID => gas_type_bsc.to_number() as u32,
+				SOLANA_CHAIN_ID => gas_type_base.to_number() as u32,
 				_ => {
 					log::error!("Unsupported chain id: {}", params.to_chain_id);
 					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
@@ -238,10 +239,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				)?,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
-				is_anti_mev: user_trade_info_data.is_anti_mev,
-				is_auto_slippage: user_trade_info_data.is_auto_slippage,
+				is_anti_mev,
+				is_auto_slippage,
 				gas_type,
-				slippage: user_trade_info_data.slippage,
+				slippage,
 				wallet_index: params.wallet_index,
 				token_cap,
 				price_usd,
@@ -309,4 +310,16 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			.await
 		})
 		.expect("Failed to register omni_submitSwapOrder method");
+}
+
+fn check_and_get_option_user_trade_info_field<T>(
+	field_value: Option<T>,
+	field_name: &str,
+) -> Result<T, PumpxRpcError> {
+	field_value.ok_or_else(|| {
+		log::error!("Response data.{} of call get_user_trade_info is none", field_name);
+		PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+		))
+	})
 }
