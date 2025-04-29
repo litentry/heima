@@ -1,6 +1,7 @@
 mod types;
 
-use crate::{error::Error, traits::TryIntoParams, types::AssetSymbol, BinanceApi, Method};
+use crate::BinanceApi;
+use crate::{error::Error, traits::TryIntoParams, types::AssetSymbol, BinanceApiClient, Method};
 use log::error;
 use std::collections::HashMap;
 use types::{
@@ -14,11 +15,11 @@ const CONVERT_API: &str = "/sapi/v1/convert";
 const MAX_LIMIT: u16 = 1000;
 
 pub struct ConvertApi<'a> {
-	base_api: &'a BinanceApi,
+	base_api: &'a BinanceApiClient,
 }
 
 impl<'a> ConvertApi<'a> {
-	pub fn new(binance_api: &BinanceApi) -> ConvertApi {
+	pub fn new(binance_api: &BinanceApiClient) -> ConvertApi {
 		ConvertApi { base_api: binance_api }
 	}
 

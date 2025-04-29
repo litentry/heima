@@ -5,6 +5,7 @@ mod traits;
 mod types;
 mod wallet_api;
 
+use async_trait::async_trait;
 use convert_api::ConvertApi;
 use error::Error;
 use hmac::{Hmac, Mac};
@@ -21,8 +22,34 @@ use wallet_api::WalletApi;
 
 const MAX_RECV_WINDOW: u32 = 60000;
 
+#[async_trait]
+pub trait BinanceApi: Send + Sync {
+	fn convert(&self) -> ConvertApi;
+	fn spot_trading(&self) -> SpotTradingApi;
+	fn wallet(&self) -> WalletApi;
+
+	fn sign_request(&self, query_string: &str) -> String;
+	async fn make_public_get_request<T>(
+		&self,
+		endpoint: &str,
+		parameters: Option<HashMap<String, String>>,
+	) -> Result<T, Error>
+	where
+		T: serde::de::DeserializeOwned;
+
+	async fn make_signed_request<T>(
+		&self,
+		endpoint: &str,
+		method: Method,
+		parameters: Option<HashMap<String, String>>,
+		recv_window: Option<u32>,
+	) -> Result<T, Error>
+	where
+		T: serde::de::DeserializeOwned;
+}
+
 #[derive(Debug, Clone)]
-pub struct BinanceApi {
+pub struct BinanceApiClient {
 	client: Client,
 	base_url: Url,
 	api_key: String,
@@ -36,33 +63,36 @@ pub enum BinanceApiResponse<T> {
 	Error { code: i32, msg: String },
 }
 
-impl BinanceApi {
-	pub fn new(api_key: String, api_secret: String, base_url: Option<String>) -> BinanceApi {
+impl BinanceApiClient {
+	pub fn new(api_key: String, api_secret: String, base_url: Option<String>) -> BinanceApiClient {
 		let base_url = match base_url {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse("https://api.binance.com").unwrap(),
 		};
 		let client = Client::new();
-		BinanceApi { client, base_url, api_key, api_secret }
+		BinanceApiClient { client, base_url, api_key, api_secret }
 	}
+}
 
+#[async_trait]
+impl BinanceApi for BinanceApiClient {
 	/// Create a new ConvertApi instance
-	pub fn convert(&self) -> ConvertApi {
+	fn convert(&self) -> ConvertApi {
 		ConvertApi::new(self)
 	}
 
 	/// Create a new SpotTradingApi instance
-	pub fn spot_trading(&self) -> SpotTradingApi {
+	fn spot_trading(&self) -> SpotTradingApi {
 		SpotTradingApi::new(self)
 	}
 
 	/// Create a new WalletApi instance
-	pub fn wallet(&self) -> WalletApi {
+	fn wallet(&self) -> WalletApi {
 		WalletApi::new(self)
 	}
 
 	/// Create HMAC SHA256 signature for request parameters
-	pub fn sign_request(&self, query_string: &str) -> String {
+	fn sign_request(&self, query_string: &str) -> String {
 		let mut mac = Hmac::<Sha256>::new_from_slice(self.api_secret.as_bytes())
 			.expect("HMAC can take key of any size");
 		mac.update(query_string.as_bytes());
@@ -72,7 +102,7 @@ impl BinanceApi {
 	}
 
 	/// Helper for making public API requests
-	pub async fn make_public_get_request<T>(
+	async fn make_public_get_request<T>(
 		&self,
 		endpoint: &str,
 		parameters: Option<HashMap<String, String>>,
@@ -109,7 +139,7 @@ impl BinanceApi {
 	}
 
 	/// Helper for making signed API requests
-	pub async fn make_signed_request<T>(
+	async fn make_signed_request<T>(
 		&self,
 		endpoint: &str,
 		method: Method,
@@ -200,7 +230,7 @@ mod tests {
 		let api_secret =
 			"NhqPtmdSJYdKjVHjA7PZj4Mge3R5YNiP1e3UZjInClVN65XAbvqqM6A7H5fATj0j".to_string();
 		let query_string = "symbol=LTCBTC&side=BUY&type=LIMIT&timeInForce=GTC&quantity=1&price=0.1&recvWindow=5000&timestamp=1499827319559".to_string();
-		let binance_api = BinanceApi::new(api_key, api_secret, None);
+		let binance_api = BinanceApiClient::new(api_key, api_secret, None);
 		let signature = binance_api.sign_request(&query_string);
 
 		assert_eq!(signature, "c8db56825ae71d6d79447849e617115f4a920fa2acdcab2b053c4b2838bd6b71");

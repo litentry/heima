@@ -14,21 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use accounting_contract_client::AccountingContractClient;
-use alloy::{
-	primitives::{Address, U256},
-	rpc::types::TransactionRequest,
-};
+use alloy::primitives::{Address, U256};
 use async_trait::async_trait;
 use base58::ToBase58;
-use binance_api::{
-	spot_trading_api::types::{
-		CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
-		OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
-	},
-	BinanceApi,
+use binance_api::spot_trading_api::types::{
+	CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
+	OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
 };
-use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
@@ -66,6 +58,8 @@ use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use accounting_contract_client::AccountingContractApi;
+use binance_api::BinanceApi;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
 use parentchain_rpc_client::metadata::Metadata;
@@ -101,30 +95,27 @@ const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyT
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
-{
+pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi> {
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	pumpx_api: Arc<PumpxApi>,
+	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
-	binance_api: Arc<BinanceApi>,
-	solana_client: Arc<SolanaClient>,
-	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
+	binance_api: Arc<BinanceClient>,
+	solana_client: Arc<Box<dyn SolanaClient>>,
+	accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 }
 
-impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
-	CrossChainIntentExecutor<Provider>
-{
+impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		_rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		pumpx_api: Arc<PumpxApi>,
+		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
-		binance_api: Arc<BinanceApi>,
-		solana_client: Arc<SolanaClient>,
-		accounting_contract_client: Arc<AccountingContractClient<Provider>>,
+		binance_api: Arc<BinanceClient>,
+		solana_client: Arc<Box<dyn SolanaClient>>,
+		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -142,9 +133,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 }
 
 #[async_trait]
-impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync> IntentExecutor
-	for CrossChainIntentExecutor<Provider>
-{
+impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<BinanceClient> {
 	#[allow(unused_assignments)]
 	async fn execute(
 		&self,
@@ -651,12 +640,13 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						return Err(());
 					}
 
-					let remote_signer = RemoteSigner::new(
-						self.pumpx_signer_client.clone(),
-						pumpx_config.wallet_index,
-						*account_id.as_ref(),
-						Handle::current(),
-					);
+					let remote_signer: Box<dyn solana_sdk::signer::Signer + Send + Sync> =
+						Box::new(RemoteSigner::new(
+							self.pumpx_signer_client.clone(),
+							pumpx_config.wallet_index,
+							*account_id.as_ref(),
+							Handle::current(),
+						));
 
 					let mut tx_id: Option<String> = None;
 					// TODO: change this when adding support for more tokens/chains
@@ -972,12 +962,11 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						})?;
 					debug!("Response get_gas_info: {:?}", res);
 
-					let Some(gas_info_data) = res.data else {
-						log::error!("Response data of call get gas info is none");
+					let Some(gas_info_vec) = res.data.gas_info else {
+						log::error!("Response data.gas_info of call get gas info is none");
 						return Err(());
 					};
-					let Some(gas_info) = gas_info_data
-						.gas_info
+					let Some(gas_info) = gas_info_vec
 						.iter()
 						.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
 					else {
@@ -1127,8 +1116,8 @@ mod tests {
 	}
 }
 
-async fn estimate_bnb_amount(
-	binance_api: &Arc<BinanceApi>,
+async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
+	binance_api: &Arc<BinanceClient>,
 	trade_symbol: &str,
 	binance_coin_name: &str,
 	from_amount_decimal: Decimal,

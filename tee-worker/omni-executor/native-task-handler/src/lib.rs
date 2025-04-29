@@ -75,7 +75,7 @@ pub struct TaskHandlerContext<
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-	pub pumpx_api: Arc<PumpxApi>,
+	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -108,7 +108,7 @@ impl<
 		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-		pumpx_api: Arc<PumpxApi>,
+		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	) -> Self {
 		Self {
@@ -598,16 +598,15 @@ async fn handle_native_task<
 			};
 			log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			let Some(res_data) = res.data else {
+			let Some(user_id) = res.data.user_id else {
 				send_error(
-					"Response data of call get_account_user_id is none".to_string(),
+					"Response data.user_id of call get_account_user_id is none".to_string(),
 					response_sender,
 					NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
 				);
 				return;
 			};
 
-			let user_id = res_data.user_id;
 			log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
 			let omni_account =
 				Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account();
@@ -650,20 +649,11 @@ async fn handle_native_task<
 			log::debug!("Response pumpx user_connect: {:?}", backend_response);
 
 			// check google auth value
-			if let Some(ref user_connect_res) = backend_response.data {
-				if !user_connect_res.google_auth_check {
-					send_error(
-						"Google code verification failed from user_connect".to_string(),
-						response_sender,
-						NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
-					);
-					return;
-				}
-			} else {
+			if !backend_response.data.google_auth_check.unwrap_or(false) {
 				send_error(
-					"Invalid response data field of user_connect".to_string(),
+					"Google code verification failed from user_connect".to_string(),
 					response_sender,
-					NativeTaskError::PumpxApiError(PumpxApiError::UserConnectionFailed),
+					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
 				);
 				return;
 			}
@@ -722,25 +712,16 @@ async fn handle_native_task<
 				return;
 			};
 
-			log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
-			let verify_result =
-				ctx.pumpx_api.verify_google_code(&access_token, google_code, None).await;
-			let verify_success = match verify_result {
-				Ok(res) => match res.data {
-					Some(data) => data.result,
-					None => {
-						log::error!("Google code verification response data is none");
-						false
-					},
-				},
-				Err(e) => {
-					log::error!("Google code verification request failed: {:?}", e);
-					false
-				},
-			};
+			let verify_success = verify_google_code(
+				ctx.pumpx_api.as_ref().as_ref(),
+				&access_token,
+				google_code,
+				None,
+			)
+			.await;
 			if !verify_success {
 				send_error(
-					"Google code verification failed".to_string(),
+					"Failed to verify google code within NativeTask::PumpxExportWallet".to_string(),
 					response_sender,
 					NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed),
 				);
@@ -879,26 +860,13 @@ async fn handle_native_task<
 			};
 
 			// 2. Verify google code in every case
-			log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
-			let verify_result = ctx
-				.pumpx_api
-				.verify_google_code(&access_token, google_code, language.clone())
-				.await;
-
-			let verify_success = match verify_result {
-				Ok(res) => match res.data {
-					Some(data) => data.result,
-					None => {
-						log::error!("Google code verification response data is none");
-						false
-					},
-				},
-				Err(e) => {
-					log::error!("Google code verification request failed: {:?}", e);
-					false
-				},
-			};
-
+			let verify_success = verify_google_code(
+				ctx.pumpx_api.as_ref().as_ref(),
+				&access_token,
+				google_code,
+				language.clone(),
+			)
+			.await;
 			if !verify_success {
 				send_error(
 					"Failed to verify google code within NativeTask::PumpxTransferWidthdraw"
@@ -1110,4 +1078,29 @@ async fn notify_intent_completed<
 			signer.update_nonce().await
 		},
 	};
+}
+
+async fn verify_google_code(
+	pumpx_api: &dyn PumpxApi,
+	access_token: &str,
+	google_code: String,
+	language: Option<String>,
+) -> bool {
+	log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
+	let verify_result = pumpx_api.verify_google_code(access_token, google_code, language).await;
+	verify_result.map_or_else(
+		|e| {
+			log::error!("Google code verification request failed: {:?}", e);
+			false
+		},
+		|res| {
+			res.data.result.map_or_else(
+				|| {
+					log::error!("Google code verification response result is none");
+					false
+				},
+				|success| success,
+			)
+		},
+	)
 }
