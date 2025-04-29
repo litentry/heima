@@ -67,11 +67,11 @@ impl GasType {
 pub struct ApiResponse<T: Codec> {
 	pub code: u32,
 	pub message: String,
-	pub data: Option<T>,
+	pub data: T,
 }
 
 impl<T: Codec> ApiResponse<T> {
-	pub fn data(&self) -> &Option<T> {
+	pub fn data(&self) -> &T {
 		&self.data
 	}
 }
@@ -95,8 +95,8 @@ pub struct CreateTransferUnsignedTxBody {
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransferUnsignedTxResponseData {
 	pub tx_data: Option<Vec<String>>,
-	pub transfer_id: u32,
-	pub chain_id: u32,
+	pub transfer_id: Option<u32>,
+	pub chain_id: Option<u32>,
 }
 
 // /v3/trade/send_transfer_tx
@@ -127,8 +127,8 @@ pub struct UserConnectBody {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UserConnectResponseData {
-	pub user_id: String,
-	pub google_auth_check: bool,
+	pub user_id: Option<String>,
+	pub google_auth_check: Option<bool>,
 }
 
 // /v3/trade/create_market_order_unsigned_tx
@@ -153,9 +153,9 @@ pub struct CreateMarketOrderUnsignedTxBody {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMarketOrderUnsignedTxResponseData {
-	pub chain_id: u32,
-	pub order_id: u32,
-	pub tx_data: Vec<String>,
+	pub chain_id: Option<u32>,
+	pub order_id: Option<u32>,
+	pub tx_data: Option<Vec<String>>,
 }
 
 // /v3/trade/create_market_order_tx
@@ -200,9 +200,9 @@ pub struct CreateTransferTxBody {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransferTxResponseData {
-	pub tx_hash: String,
-	pub transfer_id: u32,
-	pub chain_id: u32,
+	pub tx_hash: Option<String>,
+	pub transfer_id: Option<u32>,
+	pub chain_id: Option<u32>,
 }
 
 // /v3/trade/send_order_tx
@@ -224,15 +224,15 @@ pub struct SendOrderTxResponseData {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UserTradeInfoResponseData {
-	pub gas_type_base: GasType,
-	pub gas_type_bsc: GasType,
-	pub gas_type_eth: GasType,
-	pub gas_type_sol: GasType,
-	pub gas_type_omni: GasType,
-	pub is_anti_mev: bool,
-	pub is_auto_slippage: bool,
-	pub slippage: u32,
-	pub slippage_display: String,
+	pub gas_type_base: Option<GasType>,
+	pub gas_type_bsc: Option<GasType>,
+	pub gas_type_eth: Option<GasType>,
+	pub gas_type_sol: Option<GasType>,
+	pub gas_type_omni: Option<GasType>,
+	pub is_anti_mev: Option<bool>,
+	pub is_auto_slippage: Option<bool>,
+	pub slippage: Option<u32>,
+	pub slippage_display: Option<String>,
 }
 
 // /v3/trade/create_limit_order/
@@ -274,7 +274,7 @@ pub struct GoogleCode {
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 pub struct VerifyGoogleCodeResponseData {
-	pub result: bool,
+	pub result: Option<bool>,
 }
 
 // /v3/trade/create_cross_order
@@ -318,7 +318,7 @@ pub struct GetGasInfoParams {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GetGasInfoResponseData {
-	pub gas_info: Vec<GasInfo>,
+	pub gas_info: Option<Vec<GasInfo>>,
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
@@ -346,5 +346,5 @@ pub struct GetAccountUserIdParams {
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAccountUserIdResponseData {
-	pub user_id: String,
+	pub user_id: Option<String>,
 }

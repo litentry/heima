@@ -16,6 +16,7 @@ pub struct PumpxRpcError {
 }
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PumpxRpcErrorData {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub backend_response: Option<PumpxRpcErrorBackendResponse>,
@@ -118,4 +119,15 @@ where
 		return Err(PumpxRpcError::from_api_response(response));
 	}
 	Ok(())
+}
+
+pub fn check_and_get_option_response_data<T>(
+	data: Option<T>,
+	code: i32,
+	message: &str,
+) -> Result<T, PumpxRpcError> {
+	data.ok_or_else(|| {
+		log::error!("{}", message);
+		PumpxRpcError::from_error_code(ErrorCode::ServerError(code))
+	})
 }
