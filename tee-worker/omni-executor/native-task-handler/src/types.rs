@@ -1,7 +1,8 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::types::{AddWalletResponse, CreateTransferTxResponse, UserConnectResponse};
+use pumpx::types::{AddWalletResponse, CreateTransferTxResponse};
+use pumpx_types::user_connect::UserConnectResponse;
 
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {

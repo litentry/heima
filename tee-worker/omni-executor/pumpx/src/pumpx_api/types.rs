@@ -9,7 +9,6 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 //
 // TODO: split this file to individual file per API
 
-pub type UserConnectResponse = ApiResponse<UserConnectResponseData>;
 pub type CreateMarketOrderUnsignedTxResponse = ApiResponse<CreateMarketOrderUnsignedTxResponseData>;
 pub type SendOrderTxResponse = ApiResponse<SendOrderTxResponseData>;
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfoResponseData>;
