@@ -229,7 +229,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				binance_api,
 				solana_client,
-				Arc::new(accounting_contract_client),
+				Arc::new(Box::new(accounting_contract_client)),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(
