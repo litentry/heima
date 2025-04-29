@@ -30,11 +30,11 @@ use binance_api::{
 };
 use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
-use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_primitives::SolanaToken;
+use executor_primitives::{EthereumToken, Intent, PumpxConfig};
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
@@ -99,6 +99,17 @@ pub type ParentchainTxSigner = TxSigner<
 // TODO: temporary solution
 const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
+const BSC_USDC_ADDRESS: &str = "8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+const BSC_USDT_ADDRESS: &str = "55d398326f99059fF775485246999027B3197955";
+
+// Binance coins
+pub const BINANCE_COIN_BNB: &str = "BNB";
+pub const BINANCE_COIN_SOL: &str = "SOL";
+pub const BINANCE_COIN_USDC: &str = "USDC";
+pub const BINANCE_COIN_USDT: &str = "USDT";
+// Binance networks
+pub const BINANCE_NETWORK_SOL: &str = "SOL";
+pub const BINANCE_NETWORK_BSC: &str = "BSC";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
@@ -111,6 +122,13 @@ pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = 
 	binance_api: Arc<BinanceApi>,
 	solana_client: Arc<Box<dyn SolanaClient>>,
 	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
+}
+
+struct CrossChainOrderParams {
+	pub to_token_ca: String,
+	pub from_token_ca: String,
+	pub from_amount: String,
+	pub usd_worth: String,
 }
 
 impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
@@ -138,6 +156,159 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 			solana_client,
 			accounting_contract_client,
 		})
+	}
+
+	async fn prepare_cross_chain_order_and_addresses(
+		&self,
+		pumpx_config: &PumpxConfig,
+		account_id: &AccountId,
+		intent_id: IntentId,
+		access_token: &str,
+		params: CrossChainOrderParams,
+	) -> Result<(Vec<u8>, String, Vec<u8>, String), ()> {
+		// notify backend about it
+		let Some(from_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
+		else {
+			log::error!("Unsupported from_chain_id: {}", pumpx_config.from_chain_id);
+			return Err(());
+		};
+
+		let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id) else {
+			log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+			return Err(());
+		};
+
+		let from_wallet_address = self
+			.pumpx_signer_client
+			.request_wallet(from_chain_type, pumpx_config.wallet_index, *account_id.as_ref())
+			.await
+			.map_err(|e| log::error!("Could not get from_wallet from pumpx-signer: {:?}", e))?;
+
+		let from_address = match from_chain_type {
+			ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
+			ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
+			_ => {
+				log::error!("Unsupported {:?} wallet address", from_chain_type);
+				return Err(());
+			},
+		};
+
+		let to_wallet_address = self
+			.pumpx_signer_client
+			.request_wallet(to_chain_type, pumpx_config.wallet_index, *account_id.as_ref())
+			.await
+			.map_err(|e| log::error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
+
+		let to_address = match to_chain_type {
+			ChainType::Evm => pubkey_to_evm_address(&to_wallet_address)?,
+			ChainType::Solana => pubkey_to_solana_address(&to_wallet_address)?,
+			_ => {
+				log::error!("Unsupported {:?} wallet address", to_chain_type);
+				return Err(());
+			},
+		};
+
+		let body = CreateCrossOrderBody {
+			request_id: intent_id,
+			chain_id: pumpx_config.to_chain_id,
+			token_ca: params.to_token_ca,
+			swap_type: match pumpx_config.swap_type {
+				1 => SwapType::Buy,
+				2 => SwapType::Sell,
+				_ => {
+					log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+					return Err(());
+				},
+			},
+			is_one_click: pumpx_config.is_one_click,
+			cross_info: vec![CrossOrderInfo {
+				chain_id: pumpx_config.from_chain_id,
+				wallet_index: pumpx_config.wallet_index,
+				address: from_address.clone(),
+				amount: params.from_amount.clone(),
+				usd: params.usd_worth,
+				token_ca: params.from_token_ca,
+			}],
+		};
+		debug!("Calling pumpx create_cross_order, body: {:?}", body);
+		let response =
+			self.pumpx_api.create_cross_order(access_token, body).await.map_err(|_| {
+				log::error!("Failed to create cross order");
+			})?;
+		debug!("Response create_cross_order: {:?}", response);
+
+		Ok((from_wallet_address, from_address, to_wallet_address, to_address))
+	}
+
+	async fn get_binance_deposit_info(
+		&self,
+		swap_order_from_asset: &ChainAsset,
+		from_amount: &str,
+	) -> Result<(String, String, String, Decimal, u64, String), ()> {
+		let coins_info = self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
+			log::error!("Failed to get all coins info, {:?}", e);
+		})?;
+
+		let (from_network_name, binance_coin_name, token_address) =
+			chain_asset_to_binance_info(swap_order_from_asset)?;
+
+		log::debug!(
+			"from_network_name: {}, binance_coin_name: {}, token_address: {}",
+			from_network_name,
+			binance_coin_name,
+			token_address
+		);
+
+		let Some(binance_coin_info) = coins_info.iter().find(|c| c.coin == binance_coin_name)
+		else {
+			log::error!("Failed to find binance network list for asset: {:?}", binance_coin_name);
+			return Err(());
+		};
+		let Some(binance_network_info) =
+			binance_coin_info.network_list.iter().find(|n| n.network == from_network_name)
+		else {
+			log::error!("Failed to find binance network list for asset: {:?}", binance_coin_name);
+			return Err(());
+		};
+
+		let deposit_address = self
+			.binance_api
+			.wallet()
+			.get_deposit_address(&binance_coin_name, &binance_network_info.network)
+			.await
+			.map_err(|_| {
+				log::error!("Failed to get deposit address");
+			})?;
+
+		let from_amount_decimal = Decimal::from_str(from_amount).map_err(|_| {
+			log::error!("Failed to parse from_amount_string");
+		})?;
+
+		log::debug!("Binance deposit address: {}, from_amount: {}", deposit_address, from_amount);
+
+		let asset_decimal_multiplier = match binance_coin_name.as_str() {
+			"USDC" => Decimal::from(1_000_000),    // 10^6
+			"USDT" => Decimal::from(1_000_000),    // 10^6
+			"SOL" => Decimal::from(1_000_000_000), // 10^9
+			_ => {
+				log::error!("Unsupported asset: {:?}", binance_coin_name);
+				return Err(());
+			},
+		};
+		let amount_to_transfer_decimal = from_amount_decimal * asset_decimal_multiplier;
+		let Some(amount_to_transfer) = amount_to_transfer_decimal.to_u64() else {
+			log::error!("Failed to convert amount to transfer to u64");
+			return Err(());
+		};
+
+		Ok((
+			deposit_address,
+			binance_coin_name,
+			token_address,
+			from_amount_decimal,
+			amount_to_transfer,
+			binance_network_info.network.clone(),
+		))
 	}
 }
 
@@ -404,204 +575,53 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					result = (Some(order_response), should_notify_parentchain);
 				} else {
 					debug!("from and to chain are different, performing cross chain swap");
-					if !matches!(
-						swap_order.to_asset,
-						ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)
-					) {
-						log::error!("Only BSC payout supported");
-					}
-
-					// notify backend about it
-					let Some(from_chain_type) =
-						ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
-					else {
-						log::error!("Unsupported from_chain_id: {}", pumpx_config.from_chain_id);
-						return Err(());
-					};
-
-					let Some(to_chain_type) =
-						ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
-					else {
-						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
-						return Err(());
-					};
-
-					let from_wallet_address = self
-						.pumpx_signer_client
-						.request_wallet(
-							from_chain_type,
-							pumpx_config.wallet_index,
-							*account_id.as_ref(),
-						)
-						.await
-						.map_err(|e| {
-							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
-						})?;
-
-					let from_address = match from_chain_type {
-						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
-						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
-						_ => {
-							log::error!("Unsupported {:?} wallet address", from_chain_type);
-							return Err(());
-						},
-					};
-
-					let to_wallet_address = self
-						.pumpx_signer_client
-						.request_wallet(
-							to_chain_type,
-							pumpx_config.wallet_index,
-							*account_id.as_ref(),
-						)
-						.await
-						.map_err(|e| {
-							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
-						})?;
-
-					let to_address = match to_chain_type {
-						ChainType::Evm => pubkey_to_evm_address(&to_wallet_address)?,
-						ChainType::Solana => pubkey_to_solana_address(&to_wallet_address)?,
-						_ => {
-							log::error!("Unsupported {:?} wallet address", to_chain_type);
-							return Err(());
-						},
-					};
-
-					let body = CreateCrossOrderBody {
-						request_id: intent_id,
-						chain_id: pumpx_config.to_chain_id,
-						token_ca: to_token_ca.clone(),
-						swap_type: match pumpx_config.swap_type {
-							1 => SwapType::Buy,
-							2 => SwapType::Sell,
-							_ => {
-								log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
-								return Err(());
-							},
-						},
-						is_one_click: pumpx_config.is_one_click,
-						cross_info: vec![CrossOrderInfo {
-							chain_id: pumpx_config.from_chain_id,
-							wallet_index: pumpx_config.wallet_index,
-							address: from_address.clone(),
-							amount: from_amount.clone(),
-							usd: usd_worth,
-							token_ca: from_token_ca,
-						}],
-					};
-					debug!("Calling pumpx create_cross_order, body: {:?}", body);
-					let response =
-						self.pumpx_api.create_cross_order(&access_token, body).await.map_err(
-							|_| {
-								log::error!("Failed to create cross order");
-							},
-						)?;
-					debug!("Response create_cross_order: {:?}", response);
 
 					// 2. transfer from_asset to binance deposit address
 					let should_wait_for_deposit_confirm = false; // Switch for strategy
 
-					let coins_info =
-						self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
-							log::error!("Failed to get all coins info, {:?}", e);
-						})?;
-
-					// TODO: create an util function to convert ChainAsset to binance names
-					// and create constants for SOL, USDC, USDT, etc
-					let (from_network_name, binance_coin_name, token_address) =
-						match swap_order.from_asset {
-							ChainAsset::Solana(ref token) => {
-								let (asset, token_address) = match token {
-									SolanaToken::Native => ("SOL", ""),
-									SolanaToken::SPL(mint_address) => {
-										let mint_address_string = mint_address.as_ref().to_base58();
-										match mint_address_string.as_str() {
-											SOLANA_USDC_MINT_ADDRESS => {
-												("USDC", SOLANA_USDC_MINT_ADDRESS)
-											},
-											SOLANA_USDT_MINT_ADDRESS => {
-												("USDT", SOLANA_USDT_MINT_ADDRESS)
-											},
-											_ => {
-												log::error!(
-													"Unsupported SPL token: {:?}",
-													mint_address
-												);
-												return Err(());
-											},
-										}
-									},
-								};
-								("SOL".to_string(), asset.to_string(), token_address.to_string())
-							},
-							ChainAsset::Ethereum(..) => {
-								log::error!("Unsupported from_asset: {:?}", swap_order.from_asset);
-								return Err(());
-							},
-						};
-
-					log::debug!(
-						"from_network_name: {}, binance_coin_name: {}, token_address: {}",
-						from_network_name,
-						binance_coin_name,
-						token_address
-					);
-
-					let Some(binance_coin_info) =
-						coins_info.iter().find(|c| c.coin == binance_coin_name)
-					else {
-						log::error!(
-							"Failed to find binance network list for asset: {:?}",
-							binance_coin_name
-						);
-						return Err(());
-					};
-					let Some(binance_network_info) = binance_coin_info
-						.network_list
-						.iter()
-						.find(|n| n.network == from_network_name)
-					else {
-						log::error!(
-							"Failed to find binance network list for asset: {:?}",
-							binance_coin_name
-						);
-						return Err(());
-					};
-
-					let deposit_address = self
-						.binance_api
-						.wallet()
-						.get_deposit_address(&binance_coin_name, &binance_network_info.network)
-						.await
-						.map_err(|_| {
-							log::error!("Failed to get deposit address");
-						})?;
-
-					let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
-						log::error!("Failed to parse from_amount_string");
-					})?;
-
-					log::debug!(
-						"Binance deposit address: {}, from_amount: {}",
-						deposit_address,
-						from_amount
-					);
-
-					let asset_decimal_multiplier = match binance_coin_name.as_str() {
-						"USDC" => Decimal::from(1_000_000),    // 10^6
-						"USDT" => Decimal::from(1_000_000),    // 10^6
-						"SOL" => Decimal::from(1_000_000_000), // 10^9  TODO: double check this
+					match (&swap_order.from_asset, &swap_order.to_asset) {
+						// SOL to BSC
+						(
+							ChainAsset::Solana(_),
+							ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _),
+						) => {},
+						// BSC to SOL
+						(
+							ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _),
+							ChainAsset::Solana(_),
+						) => {},
 						_ => {
-							log::error!("Unsupported asset: {:?}", binance_coin_name);
-							return Err(());
+							log::error!(
+								"Unsupported cross chain swap from {:?} to {:?}",
+								swap_order.from_asset,
+								swap_order.to_asset
+							);
 						},
-					};
-					let amount_to_transfer_decimal = from_amount_decimal * asset_decimal_multiplier;
-					let Some(amount_to_transfer) = amount_to_transfer_decimal.to_u64() else {
-						log::error!("Failed to convert amount to transfer to u64");
-						return Err(());
-					};
+					}
+
+					let (_from_wallet_address, from_address, to_wallet_address, to_address) = self
+						.prepare_cross_chain_order_and_addresses(
+							pumpx_config,
+							account_id,
+							intent_id,
+							&access_token,
+							CrossChainOrderParams {
+								to_token_ca: to_token_ca.clone(),
+								from_token_ca: from_token_ca.clone(),
+								from_amount: from_amount.clone(),
+								usd_worth: usd_worth.clone(),
+							},
+						)
+						.await?;
+
+					let (
+						deposit_address,
+						binance_coin_name,
+						token_address,
+						from_amount_decimal,
+						amount_to_transfer,
+						binance_network,
+					) = self.get_binance_deposit_info(&swap_order.from_asset, &from_amount).await?;
 
 					let (trade_symbol, order_side) = match binance_coin_name.as_str() {
 						"USDC" => ("BNBUSDC".to_string(), BinanceOrderSide::BUY),
@@ -736,7 +756,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 								}
 								if deposit.status == 1 && // 1 = success
 							   deposit.coin == binance_coin_name &&
-							   deposit.network == binance_network_info.network &&
+							   deposit.network == binance_network &&
                                deposit.source_address == Some(from_address.clone())
 								{
 									deposit_confirmed = true;
@@ -796,7 +816,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 									&binance_coin_name,
 									&from_address,
 									from_amount,
-									Some(&binance_network_info.network),
+									Some(&binance_network),
 								)
 								.await
 								.map_err(|e| {
@@ -884,7 +904,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 									&binance_coin_name,
 									&from_address,
 									from_amount,
-									Some(&binance_network_info.network),
+									Some(&binance_network),
 								)
 								.await
 								.map_err(|e| {
@@ -1081,6 +1101,67 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 
 	async fn name(&self) -> &'static str {
 		"cross-chain"
+	}
+}
+
+fn chain_asset_to_binance_info(asset: &ChainAsset) -> Result<(String, String, String), ()> {
+	match asset {
+		ChainAsset::Solana(token) => match token {
+			SolanaToken::Native => {
+				Ok((BINANCE_NETWORK_SOL.to_string(), BINANCE_COIN_SOL.to_string(), "".to_string()))
+			},
+			SolanaToken::SPL(mint_address) => {
+				let mint_address_string = mint_address.as_ref().to_base58();
+				match mint_address_string.as_str() {
+					SOLANA_USDC_MINT_ADDRESS => Ok((
+						BINANCE_NETWORK_SOL.to_string(),
+						BINANCE_COIN_USDC.to_string(),
+						SOLANA_USDC_MINT_ADDRESS.to_string(),
+					)),
+					SOLANA_USDT_MINT_ADDRESS => Ok((
+						BINANCE_NETWORK_SOL.to_string(),
+						BINANCE_COIN_USDT.to_string(),
+						SOLANA_USDT_MINT_ADDRESS.to_string(),
+					)),
+					_ => {
+						log::error!("Unsupported SPL token: {:?}", mint_address);
+						Err(())
+					},
+				}
+			},
+		},
+		ChainAsset::Ethereum(chain_id, token) if *chain_id == pumpx::constants::BSC_CHAIN_ID => {
+			match token {
+				EthereumToken::Native => Ok((
+					BINANCE_NETWORK_BSC.to_string(),
+					BINANCE_COIN_BNB.to_string(),
+					"".to_string(),
+				)),
+				EthereumToken::ERC20(address) => {
+					let address_hex = hex::encode(address.as_ref());
+					match address_hex.as_str() {
+						BSC_USDC_ADDRESS => Ok((
+							BINANCE_NETWORK_BSC.to_string(),
+							BINANCE_COIN_USDC.to_string(),
+							address_hex,
+						)),
+						BSC_USDT_ADDRESS => Ok((
+							BINANCE_NETWORK_BSC.to_string(),
+							BINANCE_COIN_USDT.to_string(),
+							address_hex,
+						)),
+						_ => {
+							log::error!("Unsupported BSC token: {:?}", address);
+							Err(())
+						},
+					}
+				},
+			}
+		},
+		_ => {
+			log::error!("Unsupported from asset: {:?}", asset);
+			Err(())
+		},
 	}
 }
 
