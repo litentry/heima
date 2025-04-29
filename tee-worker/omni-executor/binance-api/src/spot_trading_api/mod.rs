@@ -1,6 +1,7 @@
 pub mod types;
 
-use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
+use crate::BinanceApi;
+use crate::{error::Error, traits::TryIntoParams, BinanceApiClient, Method};
 use std::collections::HashMap;
 use types::{
 	AccountInfo, CancelOrderRestrictions, CreateOrderParams, EmptyResponse, ExchangeInfo,
@@ -11,11 +12,11 @@ use types::{
 const SPOT_TRADING_API: &str = "/api/v3";
 
 pub struct SpotTradingApi<'a> {
-	base_api: &'a BinanceApi,
+	base_api: &'a BinanceApiClient,
 }
 
 impl<'a> SpotTradingApi<'a> {
-	pub fn new(binance_api: &BinanceApi) -> SpotTradingApi {
+	pub fn new(binance_api: &BinanceApiClient) -> SpotTradingApi {
 		SpotTradingApi { base_api: binance_api }
 	}
 

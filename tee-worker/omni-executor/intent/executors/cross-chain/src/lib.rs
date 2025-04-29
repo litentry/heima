@@ -17,12 +17,9 @@
 use alloy::primitives::{Address, U256};
 use async_trait::async_trait;
 use base58::ToBase58;
-use binance_api::{
-	spot_trading_api::types::{
-		CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
-		OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
-	},
-	BinanceApi,
+use binance_api::spot_trading_api::types::{
+	CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
+	OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
 };
 use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
 use executor_primitives::Intent;
@@ -62,6 +59,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use accounting_contract_client::AccountingContractApi;
+use binance_api::BinanceApi;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
 use parentchain_rpc_client::metadata::Metadata;
@@ -97,25 +95,25 @@ const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyT
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor {
+pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi> {
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
-	binance_api: Arc<BinanceApi>,
+	binance_api: Arc<BinanceClient>,
 	solana_client: Arc<Box<dyn SolanaClient>>,
 	accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 }
 
-impl CrossChainIntentExecutor {
+impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		_rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
-		binance_api: Arc<BinanceApi>,
+		binance_api: Arc<BinanceClient>,
 		solana_client: Arc<Box<dyn SolanaClient>>,
 		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 	) -> Result<Self, ()> {
@@ -135,7 +133,7 @@ impl CrossChainIntentExecutor {
 }
 
 #[async_trait]
-impl IntentExecutor for CrossChainIntentExecutor {
+impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<BinanceClient> {
 	#[allow(unused_assignments)]
 	async fn execute(
 		&self,
@@ -1119,8 +1117,8 @@ mod tests {
 	}
 }
 
-async fn estimate_bnb_amount(
-	binance_api: &Arc<BinanceApi>,
+async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
+	binance_api: &Arc<BinanceClient>,
 	trade_symbol: &str,
 	binance_coin_name: &str,
 	from_amount_decimal: Decimal,
