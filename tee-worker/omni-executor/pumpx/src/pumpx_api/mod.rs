@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use reqwest::{Client, Error};
 use url::Url;
-pub mod pumpx_types;
 pub mod pumpx_methods;
+pub mod pumpx_types;
 
 use pumpx_types::add_wallet::AddWalletResponse;
 use pumpx_types::create_cross_order::CreateCrossOrderBody;
@@ -155,7 +155,16 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
-		pumpx_methods::user_connect::user_connect(self, access_token, user_id, email, invite_code, google_code, language).await
+		pumpx_methods::user_connect::user_connect(
+			self,
+			access_token,
+			user_id,
+			email,
+			invite_code,
+			google_code,
+			language,
+		)
+		.await
 	}
 
 	async fn verify_google_code(
@@ -164,7 +173,13 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<VerifyGoogleCodeResponse, Error> {
-		pumpx_methods::verify_google_code::verify_google_code(self, access_token, google_code, language).await
+		pumpx_methods::verify_google_code::verify_google_code(
+			self,
+			access_token,
+			google_code,
+			language,
+		)
+		.await
 	}
 
 	async fn add_wallet(
