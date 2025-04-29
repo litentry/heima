@@ -138,9 +138,12 @@ where
 		})
 		.transpose()?;
 
-	let heap_pages = config.executor.default_heap_pages.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h: u64| {
-		HeapAllocStrategy::Static { extra_pages: h as _ }
-	});
+	let heap_pages = config
+		.executor
+		.default_heap_pages
+		.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h: u64| HeapAllocStrategy::Static {
+			extra_pages: h as _,
+		});
 
 	let executor = sc_executor::WasmExecutor::<HostFunctions>::builder()
 		.with_execution_method(config.executor.wasm_method)
@@ -303,7 +306,10 @@ where
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue_service = params.import_queue.service();
-	let net_config = FullNetworkConfiguration::<_, _, Net>::new(&parachain_config.network, prometheus_registry.clone());
+	let net_config = FullNetworkConfiguration::<_, _, Net>::new(
+		&parachain_config.network,
+		prometheus_registry.clone(),
+	);
 
 	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
 		build_network(BuildNetworkParams {
@@ -362,7 +368,7 @@ where
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
 
-		let result = move | subscription| {
+		let result = move |subscription| {
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
@@ -633,8 +639,10 @@ pub async fn start_standalone_node(
 	> = Default::default();
 	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
 
-	let net_config =
-		FullNetworkConfiguration::<_, _, sc_network::NetworkWorker<_, _>>::new(&config.network, None);
+	let net_config = FullNetworkConfiguration::<_, _, sc_network::NetworkWorker<_, _>>::new(
+		&config.network,
+		None,
+	);
 
 	let (network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -1014,7 +1022,9 @@ fn start_lookahead_aura_consensus(
 fn warn_if_slow_hardware(hwbench: &sc_sysinfo::HwBench) {
 	// Polkadot para-chains should generally use these requirements to ensure that the relay-chain
 	// will not take longer than expected to import its blocks.
-	if let Err(err) = frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE.check_hardware(hwbench, false) {
+	if let Err(err) =
+		frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE.check_hardware(hwbench, false)
+	{
 		log::warn!(
 			"⚠️  The hardware does not meet the minimal requirements {} for role 'Authority' find out more at:\n\
 			https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware",

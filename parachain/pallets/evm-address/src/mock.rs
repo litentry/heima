@@ -200,7 +200,8 @@ parameter_types! {
 
 impl pallet_ethereum::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type StateRoot = pallet_ethereum::IntermediateStateRoot<<Test as frame_system::Config>::Version>;
+	type StateRoot =
+		pallet_ethereum::IntermediateStateRoot<<Test as frame_system::Config>::Version>;
 	type PostLogContent = PostBlockAndTxnHashes;
 	// Maximum length (in bytes) of revert message to include in Executed event
 	type ExtraDataLength = ConstU32<256>;
