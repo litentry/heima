@@ -9,12 +9,11 @@ use types::{
 	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
 	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse,
 	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
-	SendTransferTxResponse, UserTradeInfoResponse,
-	VerifyGoogleCodeResponse,
+	SendTransferTxResponse, UserTradeInfoResponse, VerifyGoogleCodeResponse,
 };
 use url::Url;
 pub mod pumpx_types;
-use pumpx_types::user_connect::{UserConnectResponse, UserConnectBody};
+use pumpx_types::user_connect::{UserConnectBody, UserConnectResponse};
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
