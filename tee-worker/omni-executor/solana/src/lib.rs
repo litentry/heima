@@ -11,19 +11,19 @@ use std::str::FromStr;
 
 #[async_trait]
 pub trait SolanaClient: Send + Sync {
-	async fn transfer_sol(
+	async fn transfer_sol<Signer: SignerTrait + Send + Sync>(
 		&self,
 		to: &str,
 		value: u64,
-		signer: &(dyn SignerTrait + Send + Sync),
+		signer: &Signer,
 	) -> Result<String, ()>;
 
-	async fn transfer_spl(
+	async fn transfer_spl<Signer: SignerTrait + Send + Sync>(
 		&self,
 		to: &str,
 		value: u64,
 		mint_address: &str,
-		signer: &(dyn SignerTrait + Send + Sync),
+		signer: &Signer,
 	) -> Result<String, ()>;
 }
 
@@ -41,11 +41,11 @@ impl SolanaRpcClient {
 
 #[async_trait]
 impl SolanaClient for SolanaRpcClient {
-	async fn transfer_sol(
+	async fn transfer_sol<Signer: SignerTrait + Send + Sync>(
 		&self,
 		to: &str,
 		value: u64,
-		signer: &(dyn SignerTrait + Send + Sync),
+		signer: &Signer,
 	) -> Result<String, ()> {
 		let block_hash = self
 			.rpc_client
@@ -79,12 +79,12 @@ impl SolanaClient for SolanaRpcClient {
 		Ok(tx_signature.to_string())
 	}
 
-	async fn transfer_spl(
+	async fn transfer_spl<Signer: SignerTrait + Send + Sync>(
 		&self,
 		to: &str,
 		value: u64,
 		mint_address: &str,
-		signer: &(dyn SignerTrait + Send + Sync),
+		signer: &Signer,
 	) -> Result<String, ()> {
 		let mint_pubkey = Pubkey::from_str(mint_address)
 			.map_err(|e| log::error!("Could not parse mint address: {:?}", e))?;
@@ -168,5 +168,41 @@ impl SolanaClient for SolanaRpcClient {
 		log::debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(tx_signature.to_string())
+	}
+}
+
+#[cfg(feature = "mocks")]
+pub mod mocks {
+
+	use crate::SignerTrait;
+	use crate::SolanaClient;
+	use async_trait::async_trait;
+	use mockall::mock;
+	use solana_client::client_error::reqwest::header::ValueDrain;
+
+	mock! {
+		pub SolanaRpcClient {}
+
+		#[async_trait]
+		impl SolanaClient for SolanaRpcClient {
+
+			#[mockall::concretize]
+			async fn transfer_sol<Signer: SignerTrait + Send + Sync>(
+				&self,
+				to: &str,
+				value: u64,
+				signer: &Signer,
+			) -> Result<String, ()>;
+
+			#[mockall::concretize]
+			async fn transfer_spl<Signer: SignerTrait + Send + Sync>(
+				&self,
+				to: &str,
+				value: u64,
+				mint_address: &str,
+				signer: &Signer,
+			) -> Result<String, ()>;
+		}
+
 	}
 }

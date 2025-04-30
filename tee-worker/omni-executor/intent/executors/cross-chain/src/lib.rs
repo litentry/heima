@@ -32,7 +32,7 @@ use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
-use solana::{signer::RemoteSigner, SolanaClient};
+use solana::{signer::RemoteSigner, SolanaClient as SolanaClientTrait};
 use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
@@ -59,6 +59,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use accounting_contract_client::AccountingContractApi;
+use binance_api::spot_trading_api::SpotTradingApi;
+use binance_api::wallet_api::WalletApi;
 use binance_api::BinanceApi;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
@@ -95,18 +97,20 @@ const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyT
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi> {
+pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> {
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceClient>,
-	solana_client: Arc<Box<dyn SolanaClient>>,
+	solana_client: Arc<SolanaClient>,
 	accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 }
 
-impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
+impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
+	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+{
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		_rpc_endpoint_registry: RpcEndpointRegistry,
@@ -114,7 +118,7 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceClient>,
-		solana_client: Arc<Box<dyn SolanaClient>>,
+		solana_client: Arc<SolanaClient>,
 		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
@@ -133,7 +137,9 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 }
 
 #[async_trait]
-impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<BinanceClient> {
+impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
+	for CrossChainIntentExecutor<BinanceClient, SolanaClient>
+{
 	#[allow(unused_assignments)]
 	async fn execute(
 		&self,
@@ -491,8 +497,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					// 2. transfer from_asset to binance deposit address
 					let should_wait_for_deposit_confirm = false; // Switch for strategy
 
-					let coins_info =
-						self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
+					let coins_info = WalletApi::new(self.binance_api.as_ref())
+						.get_all_coins_info()
+						.await
+						.map_err(|e| {
 							log::error!("Failed to get all coins info, {:?}", e);
 						})?;
 
@@ -558,9 +566,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						return Err(());
 					};
 
-					let deposit_address = self
-						.binance_api
-						.wallet()
+					let deposit_address = WalletApi::new(self.binance_api.as_ref())
 						.get_deposit_address(&binance_coin_name, &binance_network_info.network)
 						.await
 						.map_err(|_| {
@@ -693,9 +699,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						let timeout = Duration::from_secs(300); // 5 minute timeout
 
 						while !deposit_confirmed && start_time.elapsed() < timeout {
-							let Ok(deposit_history) = self
-								.binance_api
-								.wallet()
+							let Ok(deposit_history) = WalletApi::new(self.binance_api.as_ref())
 								.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
 								.await
 							else {
@@ -772,15 +776,12 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							..Default::default()
 						};
 						debug!("Creating binance order with params: {:?}", binance_order_params);
-						let Ok(binance_order) = self
-							.binance_api
-							.spot_trading()
+						let Ok(binance_order) = SpotTradingApi::new(self.binance_api.as_ref())
 							.create_order(binance_order_params)
 							.await
 						else {
 							log::error!("Failed to create binance order");
-							self.binance_api
-								.wallet()
+							WalletApi::new(self.binance_api.as_ref())
 								.withdraw(
 									&binance_coin_name,
 									&from_address,
@@ -827,9 +828,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						let mut trade_success = false;
 						let mut bnb_acquired = "".to_string();
 						loop {
-							let trade_order = self
-								.binance_api
-								.spot_trading()
+							let trade_order = SpotTradingApi::new(self.binance_api.as_ref())
 								.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
 								.await
 								.map_err(|_| {
@@ -867,8 +866,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						}
 						if !trade_success {
 							log::error!("Binance order failed");
-							self.binance_api
-								.wallet()
+							WalletApi::new(self.binance_api.as_ref())
 								.withdraw(
 									&binance_coin_name,
 									&from_address,
@@ -1122,8 +1120,10 @@ async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
 	binance_coin_name: &str,
 	from_amount_decimal: Decimal,
 ) -> Result<String, ()> {
-	let price_str =
-		binance_api.spot_trading().get_symbol_price(trade_symbol).await.map_err(|_| {
+	let price_str = SpotTradingApi::new(binance_api.as_ref())
+		.get_symbol_price(trade_symbol)
+		.await
+		.map_err(|_| {
 			log::error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 

@@ -10,6 +10,7 @@ chrono = { workspace = true }
 hex = { workspace = true }
 hmac = { workspace = true }
 log = { workspace = true }
+mockall = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 sha2 = { workspace = true }
@@ -20,3 +21,6 @@ env_logger = { workspace = true }
 
 [lints]
 workspace = true
+
+[features]
+mocks = []

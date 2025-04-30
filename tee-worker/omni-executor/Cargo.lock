@@ -1415,6 +1415,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "log",
+ "mockall",
  "reqwest 0.12.15",
  "serde",
  "sha2 0.10.8",
@@ -9269,6 +9270,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "log",
+ "mockall",
  "pumpx",
  "solana-client",
  "solana-sdk",
