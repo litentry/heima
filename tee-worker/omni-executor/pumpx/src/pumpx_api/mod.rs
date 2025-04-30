@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use reqwest::{Client, Error};
 use url::Url;
-pub mod pumpx_types;
 pub mod pumpx_methods;
+pub mod pumpx_types;
+pub use pumpx_methods::user_connect::user_connect_impl;
 use pumpx_types::add_wallet::AddWalletResponse;
 use pumpx_types::create_cross_order::CreateCrossOrderBody;
 use pumpx_types::create_limit_order::CreateLimitOrderBody;
@@ -23,7 +24,6 @@ use pumpx_types::send_transfer_tx::{SendTransferTxBody, SendTransferTxResponse};
 use pumpx_types::user_connect::{UserConnectBody, UserConnectResponse};
 use pumpx_types::user_trade_info::UserTradeInfoResponse;
 use pumpx_types::verify_google_code::{GoogleCode, VerifyGoogleCodeResponse};
-pub use pumpx_methods::user_connect::user_connect_impl;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
@@ -155,7 +155,8 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
-		user_connect_impl(self, access_token, user_id, email, invite_code, google_code, language).await
+		user_connect_impl(self, access_token, user_id, email, invite_code, google_code, language)
+			.await
 	}
 
 	async fn verify_google_code(
