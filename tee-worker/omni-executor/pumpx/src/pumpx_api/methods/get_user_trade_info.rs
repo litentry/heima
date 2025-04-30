@@ -1,8 +1,8 @@
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-use crate::pumpx_types::common::ApiResponse;
-use crate::pumpx_types::types::GasType;
+use super::common::{ApiResponse, GasType};
+use crate::pumpx_api::PumpxApiClient;
 
 // /v3/account/get_user_trade_info
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
@@ -20,3 +20,18 @@ pub struct UserTradeInfoResponseData {
 }
 
 pub type UserTradeInfoResponse = ApiResponse<UserTradeInfoResponseData>;
+
+pub async fn get_user_trade_info_impl(
+	client: &PumpxApiClient,
+	access_token: &str,
+) -> Result<UserTradeInfoResponse, Error> {
+	let endpoint = client.base_url.join("v3/account/get_user_trade_info").unwrap();
+	client
+		.http_client
+		.get(endpoint)
+		.bearer_auth(access_token)
+		.send()
+		.await?
+		.json()
+		.await
+}

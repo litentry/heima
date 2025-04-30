@@ -53,15 +53,15 @@ use tokio::{
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
-use pumpx::pumpx_types::common::{GasType, SwapType};
-use pumpx::pumpx_types::create_cross_order::CrossOrderInfo;
+use pumpx::methods::common::{GasType, SwapType};
+use pumpx::methods::create_cross_order::CrossOrderInfo;
 use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
 
-use pumpx::pumpx_types::create_cross_order::CreateCrossOrderBody;
-use pumpx::pumpx_types::create_limit_order::CreateLimitOrderBody;
-use pumpx::pumpx_types::create_market_order_tx::CreateMarketOrderTxBody;
-use pumpx::pumpx_types::cross_fail::CrossFailBody;
+use pumpx::methods::create_cross_order::CreateCrossOrderBody;
+use pumpx::methods::create_limit_order::CreateLimitOrderBody;
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
+use pumpx::methods::cross_fail::CrossFailBody;
 use pumpx::PumpxApi;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;

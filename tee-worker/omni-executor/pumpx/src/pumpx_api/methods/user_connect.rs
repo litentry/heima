@@ -1,6 +1,27 @@
-use crate::pumpx_api::pumpx_types::user_connect::{UserConnectBody, UserConnectResponse};
+use crate::methods::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
+use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
+use serde::{Deserialize, Serialize};
+
+// /v3/account/user_connect
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserConnectBody {
+	pub email: String,
+	pub invite_code: Option<String>,
+	pub google_code: String,
+	pub user_id: String,
+}
+
+#[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UserConnectResponseData {
+	pub user_id: Option<String>,
+	pub google_auth_check: Option<bool>,
+}
+
+pub type UserConnectResponse = ApiResponse<UserConnectResponseData>;
 
 pub async fn user_connect_impl(
 	client: &PumpxApiClient,

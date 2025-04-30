@@ -1,6 +1,8 @@
-use crate::pumpx_types::common::ApiResponse;
+use super::common::ApiResponse;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+
+use crate::pumpx_api::PumpxApiClient;
 
 // /v1/trade/get_gas_info
 #[derive(Serialize, Debug)]
@@ -30,3 +32,22 @@ pub struct GasInfo {
 	pub super_fast_price: String,
 }
 pub type GetGasInfoResponse = ApiResponse<GetGasInfoResponseData>;
+
+pub async fn get_gas_info_impl(
+	client: &PumpxApiClient,
+
+	access_token: &str,
+	chain_id: u32,
+) -> Result<GetGasInfoResponse, Error> {
+	let endpoint = client.base_url.join("v1/trade/get_gas_info").unwrap();
+	let params = GetGasInfoParams { chain_id };
+	client
+		.http_client
+		.get(endpoint)
+		.bearer_auth(access_token)
+		.query(&params)
+		.send()
+		.await?
+		.json()
+		.await
+}

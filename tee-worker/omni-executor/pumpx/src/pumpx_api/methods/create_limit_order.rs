@@ -1,5 +1,7 @@
-use crate::pumpx_types::common::{GasType, SwapType};
 use serde::Serialize;
+
+use super::common::{GasType, OrderInfoResponse, SwapType};
+use crate::pumpx_api::PumpxApiClient;
 
 // /v3/trade/create_limit_order/
 #[derive(Serialize, Debug)]
@@ -20,4 +22,21 @@ pub struct CreateLimitOrderBody {
 	pub gas_type: GasType,
 	pub slippage: u32,
 	pub wallet_index: u32,
+}
+
+pub async fn create_limit_order_impl(
+	client: &PumpxApiClient,
+	access_token: &str,
+	body: CreateLimitOrderBody,
+) -> Result<OrderInfoResponse, Error> {
+	let endpoint = client.base_url.join("v3/trade/create_limit_order").unwrap();
+	client
+		.http_client
+		.post(endpoint)
+		.bearer_auth(access_token)
+		.json(&body)
+		.send()
+		.await?
+		.json()
+		.await
 }

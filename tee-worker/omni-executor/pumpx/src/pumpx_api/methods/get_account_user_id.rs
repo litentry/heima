@@ -1,4 +1,6 @@
-use crate::pumpx_types::common::ApiResponse;
+use crate::pumpx_api::PumpxApiClient;
+
+use super::common::ApiResponse;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
@@ -15,3 +17,12 @@ pub struct GetAccountUserIdResponseData {
 	pub user_id: Option<String>,
 }
 pub type GetAccountUserIdResponse = ApiResponse<GetAccountUserIdResponseData>;
+
+pub async fn get_account_user_id_impl(
+	client: &PumpxApiClient,
+	email: String,
+) -> Result<GetAccountUserIdResponse, Error> {
+	let endpoint = client.base_url.join("v3/account/get_account_user_id").unwrap();
+	let params = GetAccountUserIdParams { email };
+	client.http_client.get(endpoint).query(&params).send().await?.json().await
+}
