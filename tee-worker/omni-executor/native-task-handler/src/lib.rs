@@ -33,7 +33,7 @@ use parentchain_rpc_client::{
 use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
 use pumpx::{
-	methods::*,
+	methods::create_transfer_tx::CreateTransferTxBody,
 	signer_client::{ChainType, SignerClient},
 	PumpxApi,
 };

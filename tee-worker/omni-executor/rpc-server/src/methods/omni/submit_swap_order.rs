@@ -16,7 +16,7 @@ use heima_primitives::{
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::constants::*;
-use pumpx::methods::common::{OrderInfoResponse, OrderInfoResponseData, SwapType};
+use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponse;
 use serde::Serialize;
 
