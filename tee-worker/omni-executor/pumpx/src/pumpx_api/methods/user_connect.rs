@@ -1,8 +1,9 @@
-use crate::methods::common::ApiResponse;
-use crate::pumpx_api::PumpxApiClient;
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+
+use crate::methods::common::ApiResponse;
+use crate::pumpx_api::PumpxApiClient;
 
 // /v3/account/user_connect
 #[derive(Deserialize, Serialize)]

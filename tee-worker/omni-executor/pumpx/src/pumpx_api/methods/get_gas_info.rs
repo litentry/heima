@@ -1,6 +1,8 @@
-use super::common::ApiResponse;
 use parity_scale_codec::{Decode, Encode};
+use reqwest::Error;
 use serde::{Deserialize, Serialize};
+
+use super::common::ApiResponse;
 
 use crate::pumpx_api::PumpxApiClient;
 

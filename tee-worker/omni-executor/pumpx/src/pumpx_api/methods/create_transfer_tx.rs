@@ -1,6 +1,7 @@
 use super::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
 use parity_scale_codec::{Decode, Encode};
+use reqwest::Error;
 use serde::{Deserialize, Serialize};
 
 // /v3/trade/create_transfer_tx

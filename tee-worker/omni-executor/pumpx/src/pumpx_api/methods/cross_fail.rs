@@ -1,3 +1,4 @@
+use reqwest::Error;
 use serde::Serialize;
 
 use crate::pumpx_api::PumpxApiClient;

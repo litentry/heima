@@ -1,7 +1,9 @@
+use parity_scale_codec::{Decode, Encode};
+use reqwest::Error;
+use serde::{Deserialize, Serialize};
+
 use super::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
-use parity_scale_codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 
 // /v3/trade/send_order_tx
 #[derive(Deserialize, Serialize, Encode, Decode, Debug)]

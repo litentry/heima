@@ -13,7 +13,7 @@ use methods::cross_fail::{cross_fail_impl, CrossFailBody};
 use methods::get_user_trade_info::{get_user_trade_info_impl, UserTradeInfoResponse};
 use methods::send_order_tx::{send_order_tx_impl, SendOrderTxBody, SendOrderTxResponse};
 use methods::user_connect::{user_connect_impl, UserConnectResponse};
-use methods::verify_google_code::{verify_google_code_impl, GoogleCode, VerifyGoogleCodeResponse};
+use methods::verify_google_code::{verify_google_code_impl, VerifyGoogleCodeResponse};
 
 use methods::create_transfer_unsigned_tx::{
 	create_transfer_unsigned_tx_impl, CreateTransferUnsignedTxBody,
@@ -32,12 +32,10 @@ use methods::create_transfer_tx::{
 	create_transfer_tx_impl, CreateTransferTxBody, CreateTransferTxResponse,
 };
 
-use methods::get_gas_info::{get_gas_info_impl, GetGasInfoParams, GetGasInfoResponse};
+use methods::get_gas_info::{get_gas_info_impl, GetGasInfoResponse};
 
 use methods::common::OrderInfoResponse;
-use methods::get_account_user_id::{
-	get_account_user_id_impl, GetAccountUserIdParams, GetAccountUserIdResponse,
-};
+use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdResponse};
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
@@ -226,7 +224,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		data: CreateCrossOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
-		create_cross_order_impl(selft, access_token, data).await
+		create_cross_order_impl(self, access_token, data).await
 	}
 
 	async fn cross_fail(

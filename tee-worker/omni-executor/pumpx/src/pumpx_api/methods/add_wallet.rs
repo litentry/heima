@@ -1,3 +1,5 @@
+use reqwest::Error;
+
 use super::common::{ApiResponse, EmptyResponse};
 use crate::pumpx_api::PumpxApiClient;
 

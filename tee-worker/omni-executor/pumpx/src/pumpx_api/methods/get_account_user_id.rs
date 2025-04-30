@@ -1,8 +1,10 @@
+use parity_scale_codec::{Decode, Encode};
+use reqwest::Error;
+use serde::{Deserialize, Serialize};
+
 use crate::pumpx_api::PumpxApiClient;
 
 use super::common::ApiResponse;
-use parity_scale_codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 
 // /v3/account/get_account_user_id
 #[derive(Serialize, Debug)]

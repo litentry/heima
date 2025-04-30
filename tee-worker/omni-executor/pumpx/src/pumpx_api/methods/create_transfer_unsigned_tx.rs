@@ -1,4 +1,5 @@
 use parity_scale_codec::{Decode, Encode};
+use reqwest::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::pumpx_api::PumpxApiClient;

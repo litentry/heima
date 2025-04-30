@@ -1,7 +1,9 @@
+use parity_scale_codec::{Decode, Encode};
+use reqwest::Error;
+use serde::{Deserialize, Serialize};
+
 use crate::methods::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
-use parity_scale_codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 
 // v3/account/verify_google_code
 #[derive(Serialize)]

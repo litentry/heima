@@ -1,3 +1,4 @@
+use reqwest::Error;
 use serde::Serialize;
 
 use super::common::{OrderInfoResponse, SwapType};
@@ -28,7 +29,6 @@ pub struct CrossOrderInfo {
 
 pub async fn create_cross_order_impl(
 	client: &PumpxApiClient,
-
 	access_token: &str,
 	data: CreateCrossOrderBody,
 ) -> Result<OrderInfoResponse, Error> {
