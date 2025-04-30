@@ -69,6 +69,15 @@ use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_signer::TxSigner;
 
+use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
+
+use intent_asset_lock::AmountType;
+use intent_token_query::query_ethereum;
+use intent_token_query::query_solana;
+use intent_token_query::EthereumAddress;
+use intent_token_query::SolanaPubkey;
+
 use log::debug;
 
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
@@ -96,8 +105,8 @@ const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8Ben
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi> {
-	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
-	// rpc_endpoint_registry: RpcEndpointRegistry,
+	account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
+	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
@@ -109,7 +118,7 @@ pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi> {
 impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		_rpc_endpoint_registry: RpcEndpointRegistry,
+		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
@@ -118,10 +127,10 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
-		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
+		let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
 		Ok(Self {
-			// account_asset_lock,
-			// rpc_endpoint_registry,
+			account_asset_lock,
+			rpc_endpoint_registry,
 			pumpx_signer_client,
 			pumpx_api,
 			storage_db,
@@ -144,52 +153,6 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 		match intent {
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
-
-				// let available_amount = match &swap_order.from_asset {
-				// 	ChainAsset::Ethereum(chain_id, token) => {
-				// 		let rpc_url =
-				// 			self.rpc_endpoint_registry.get(&Chain::Ethereum(*chain_id)).ok_or(())?;
-				// 		let address = self
-				// 			.pumpx_signer_client
-				// 			.request_wallet(
-				// 				pumpx::signer_client::ChainType::Evm,
-				// 				0,
-				// 				*account_id.as_ref(),
-				// 			)
-				// 			.await
-				// 			.map_err(|e| {
-				// 				error!("Could not get wallet from pumpx-signer: {:?}", e)
-				// 			})?;
-				// 		query_ethereum(rpc_url, EthereumAddress::from_slice(&address), token)
-				// 			.await?
-				// 	},
-				// 	ChainAsset::Solana(token) => {
-				// 		let rpc_url = self.rpc_endpoint_registry.get(&Chain::Solana).ok_or(())?;
-				// 		let address = self
-				// 			.pumpx_signer_client
-				// 			.request_wallet(
-				// 				pumpx::signer_client::ChainType::Solana,
-				// 				0,
-				// 				*account_id.as_ref(),
-				// 			)
-				// 			.await
-				// 			.map_err(|e| {
-				// 				error!("Could not get wallet from pumpx-signer: {:?}", e)
-				// 			})?;
-				// 		let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
-				// 			error!("Could not create solana pubkey from wallet address: {:?}", e)
-				// 		})?;
-				// 		query_solana(rpc_url, &pubkey, token).await.map(|v| AmountType::from(v))?
-				// 	},
-				// };
-
-				// self.account_asset_lock.check_and_insert(
-				// 	account_id.clone(),
-				// 	swap_order.from_asset.clone(),
-				// 	AmountType::from(from_amount),
-				// 	available_amount,
-				// )?;
-				//
 
 				// TODO: update this when we have more providers
 				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
@@ -330,7 +293,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								request_id: intent_id,
 								chain_id: pumpx_config.to_chain_id,
 								token_ca: to_token_ca,
-								amount: from_amount,
+								amount: from_amount.clone(),
 								swap_type: match pumpx_config.swap_type {
 									1 => SwapType::Buy,
 									2 => SwapType::Sell,
@@ -602,6 +565,89 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						},
 					};
 
+					let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
+						&self.binance_api,
+						"SOLUSDT",
+						&binance_coin_name,
+						from_amount_decimal,
+					)
+					.await?;
+
+					let instant_threshold = Decimal::from(200);
+					let instant = estimated_from_amount_in_usdt > instant_threshold;
+
+					log::debug!(
+						"Instant: {}, threshold: {:?}, estimated usdt amount: {:?}",
+						instant,
+						instant_threshold,
+						estimated_from_amount_in_usdt
+					);
+
+					if instant {
+						let available_amount = match &swap_order.from_asset {
+							ChainAsset::Ethereum(chain_id, token) => {
+								let rpc_url = self
+									.rpc_endpoint_registry
+									.get(&Chain::Ethereum(*chain_id))
+									.ok_or(())?;
+								let address = self
+									.pumpx_signer_client
+									.request_wallet(
+										pumpx::signer_client::ChainType::Evm,
+										0,
+										*account_id.as_ref(),
+									)
+									.await
+									.map_err(|e| {
+										log::error!(
+											"Could not get wallet from pumpx-signer: {:?}",
+											e
+										)
+									})?;
+								query_ethereum(
+									rpc_url,
+									EthereumAddress::from_slice(&address),
+									token,
+								)
+								.await?
+							},
+							ChainAsset::Solana(token) => {
+								let rpc_url =
+									self.rpc_endpoint_registry.get(&Chain::Solana).ok_or(())?;
+								let address = self
+									.pumpx_signer_client
+									.request_wallet(
+										pumpx::signer_client::ChainType::Solana,
+										0,
+										*account_id.as_ref(),
+									)
+									.await
+									.map_err(|e| {
+										log::error!(
+											"Could not get wallet from pumpx-signer: {:?}",
+											e
+										)
+									})?;
+								let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
+									log::error!(
+										"Could not create solana pubkey from wallet address: {:?}",
+										e
+									)
+								})?;
+								query_solana(rpc_url, &pubkey, token)
+									.await
+									.map(|v| AmountType::from(v))?
+							},
+						};
+
+						self.account_asset_lock.check_and_insert(
+							account_id.clone(),
+							swap_order.from_asset.clone(),
+							AmountType::from_str(&from_amount).unwrap(),
+							available_amount,
+						)?;
+					}
+
 					let estimated_bnb_receive = estimate_bnb_amount(
 						&self.binance_api,
 						&trade_symbol,
@@ -609,6 +655,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						from_amount_decimal,
 					)
 					.await?;
+
 					let mut payout_amount = match str_to_u256(&estimated_bnb_receive, 18) {
 						Some(a) => a,
 						None => {
@@ -684,7 +731,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 
 					let mut bnb_to_receive = "".to_string();
 
-					if should_wait_for_deposit_confirm {
+					if should_wait_for_deposit_confirm && !instant {
 						debug!("Waiting for deposit to be confirmed on Binance...");
 						debug!("Deposit tx_id: {:?}", tx_id);
 						debug!("Source address: {:?}", from_address);
@@ -932,25 +979,28 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						log::error!("Failed to parse payout address");
 					})?;
 
-					debug!("Getting {:?} nonce for payout request", payout_address);
-					// 4. Call accounting contract on BSC
-					let user_nonce =
-						self.accounting_contract_client.get_nonce(payout_address).await.map_err(
-							|_| {
+					if !instant {
+						debug!("Getting {:?} nonce for payout request", payout_address);
+						// 4. Call accounting contract on BSC
+						let user_nonce = self
+							.accounting_contract_client
+							.get_nonce(payout_address)
+							.await
+							.map_err(|_| {
 								log::error!("Failed to get nonce");
-							},
-						)?;
+							})?;
 
-					debug!("Received {:?} nonce", user_nonce);
-					let user_nonce = user_nonce + U256::from(1u64);
-					debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, payout_amount);
+						debug!("Received {:?} nonce", user_nonce);
+						let user_nonce = user_nonce + U256::from(1u64);
+						debug!("Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}", payout_address, user_nonce, payout_amount);
 
-					self.accounting_contract_client
-						.execute_pay_out_request(payout_address, user_nonce, payout_amount)
-						.await
-						.map_err(|_| {
-							log::error!("Failed to execute pay out request");
-						})?;
+						self.accounting_contract_client
+							.execute_pay_out_request(payout_address, user_nonce, payout_amount)
+							.await
+							.map_err(|_| {
+								log::error!("Failed to execute pay out request");
+							})?;
+					}
 
 					debug!("Calling pumpx get_gas_info, chain_id: {}", pumpx_config.to_chain_id);
 					let res = self
@@ -1009,6 +1059,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					};
 
 					debug!("Doing market order");
+					// TODO: in case of instant swap we should provide payout address
 					let body = CreateMarketOrderTxBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
@@ -1048,16 +1099,20 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						)?;
 
 					debug!("Response create_market_order_tx: {:?}", response);
+
+					if instant {
+						// in case of which errors lock should be released ?
+						self.account_asset_lock.release(
+							account_id.clone(),
+							swap_order.from_asset.clone(),
+							AmountType::from_str(&from_amount).map_err(|_| {
+								log::error!("Failed to parse from_amount");
+							})?,
+						)?;
+					}
+
 					result = (Some(response.encode()), true);
 				}
-
-				// self.account_asset_lock.release(
-				// 	account_id.clone(),
-				// 	swap_order.from_asset.clone(),
-				// 	AmountType::from_str_radix(&from_amount_string, 10).map_err(|_| {
-				// 		log::error!("Failed to parse from_amount_string");
-				// 	})?,
-				// )?;
 
 				return Ok(result);
 			},
@@ -1114,6 +1169,40 @@ mod tests {
 		let result = calculate_amount_in(bnb_to_receive, gas, decimals);
 		assert_eq!(result, Some("0.004604157089623392".to_string()));
 	}
+}
+
+async fn estimate_asset_value_in_usdt<BinanceClient: BinanceApi>(
+	binance_api: &Arc<BinanceClient>,
+	trade_symbol: &str,
+	binance_coin_name: &str,
+	from_amount_decimal: Decimal,
+) -> Result<Decimal, ()> {
+	let price_str =
+		binance_api.spot_trading().get_symbol_price(trade_symbol).await.map_err(|_| {
+			log::error!("Failed to get symbol price for {}", trade_symbol);
+		})?;
+
+	let price = if binance_coin_name == "SOL" {
+		// For SOL, we sell SOL to get BNB, so get SOLBNB price
+		Decimal::from_str(&price_str).map_err(|_| {
+			log::error!("Failed to parse symbol price {}", price_str);
+		})?
+	} else {
+		// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
+		let price = Decimal::from_str(&price_str).map_err(|_| {
+			log::error!("Failed to parse symbol price {}", price_str);
+		})?;
+		if price.is_zero() {
+			log::error!("Symbol price is zero for {}", trade_symbol);
+			return Err(());
+		}
+		Decimal::ONE / price
+	};
+
+	let amount = from_amount_decimal * price;
+
+	debug!("From amount in usdt: {}", amount);
+	Ok(amount)
 }
 
 async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
