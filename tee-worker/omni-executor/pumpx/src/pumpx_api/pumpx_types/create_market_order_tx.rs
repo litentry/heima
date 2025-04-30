@@ -31,4 +31,3 @@ pub struct CreateMarketOrderTxResponseData {
 }
 
 pub type CreateMarketOrderTxResponse = ApiResponse<CreateMarketOrderTxResponseData>;
-pub type CreateMarketOrderTxResponse = CreateMarketOrderTxBody;

@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 use reqwest::{Client, Error};
 use url::Url;
-pub mod pumpx_methods;
 pub mod pumpx_types;
-
+pub mod pumpx_methods;
 use pumpx_types::add_wallet::AddWalletResponse;
 use pumpx_types::create_cross_order::CreateCrossOrderBody;
 use pumpx_types::create_limit_order::CreateLimitOrderBody;
@@ -24,6 +23,7 @@ use pumpx_types::send_transfer_tx::{SendTransferTxBody, SendTransferTxResponse};
 use pumpx_types::user_connect::{UserConnectBody, UserConnectResponse};
 use pumpx_types::user_trade_info::UserTradeInfoResponse;
 use pumpx_types::verify_google_code::{GoogleCode, VerifyGoogleCodeResponse};
+pub use pumpx_methods::user_connect::user_connect_impl;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
@@ -155,16 +155,7 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
-		pumpx_methods::user_connect::user_connect(
-			self,
-			access_token,
-			user_id,
-			email,
-			invite_code,
-			google_code,
-			language,
-		)
-		.await
+		user_connect_impl(self, access_token, user_id, email, invite_code, google_code, language).await
 	}
 
 	async fn verify_google_code(
@@ -173,13 +164,28 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<VerifyGoogleCodeResponse, Error> {
-		pumpx_methods::verify_google_code::verify_google_code(
-			self,
-			access_token,
-			google_code,
-			language,
-		)
-		.await
+		let endpoint = self.base_url.join("v3/account/verify_google_code").unwrap();
+		let response = self
+			.http_client
+			.post(endpoint)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.json(&GoogleCode { google_code })
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send Google code verification request: {:?}", e);
+				e
+			})?;
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("Google code verification failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse Google code verification response: {:?}", e);
+			e
+		})
 	}
 
 	async fn add_wallet(
@@ -187,14 +193,42 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		language: Option<String>,
 	) -> Result<AddWalletResponse, Error> {
-		pumpx_methods::add_wallet::add_wallet(self, access_token, language).await
+		let endpoint = self.base_url.join("v3/account/add_wallet").unwrap();
+		let response = self
+			.http_client
+			.post(endpoint)
+			.header("Content-Length", 0)
+			.header("X-Language", language.unwrap_or("en".to_string()))
+			.bearer_auth(access_token)
+			.send()
+			.await
+			.map_err(|e| {
+				log::error!("Failed to send add_wallet request: {:?}", e);
+				e
+			})?;
+		let status = response.status();
+		let response = response.error_for_status().map_err(|e| {
+			log::error!("add_wallet request failed with status: {}, error: {:?}", status, e);
+			e
+		})?;
+		response.json().await.map_err(|e| {
+			log::error!("Failed to parse add_wallet response: {:?}", e);
+			e
+		})
 	}
 
 	async fn get_user_trade_info(
 		&self,
 		access_token: &str,
 	) -> Result<UserTradeInfoResponse, Error> {
-		pumpx_methods::get_user_trade_info::get_user_trade_info(self, access_token).await
+		let endpoint = self.base_url.join("v3/account/get_user_trade_info").unwrap();
+		self.http_client
+			.get(endpoint)
+			.bearer_auth(access_token)
+			.send()
+			.await?
+			.json()
+			.await
 	}
 
 	async fn create_market_order_unsigned_tx(
