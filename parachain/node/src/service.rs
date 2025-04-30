@@ -59,7 +59,6 @@ use sc_network::{config::FullNetworkConfiguration, service::traits::NetworkBacke
 use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-// use sc_transaction_pool::{BasicPool, FullChainApi};
 use sp_keystore::KeystorePtr;
 use sp_runtime::{app_crypto::AppCrypto, traits::Header};
 use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
@@ -90,8 +89,6 @@ type ParachainBlockImport = TParachainBlockImport<
 
 type MaybeSelectChain = Option<LongestChain<ParachainBackend, Block>>;
 
-// type FullPool<B, RA, HF> = BasicPool<FullChainApi<FullClient<B, RA, HF>, B>, B>;
-
 /// Starts a `ServiceBuilder` for a full service.
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
@@ -107,7 +104,7 @@ pub fn new_partial<BIQ>(
 		ParachainBackend,
 		MaybeSelectChain,
 		sc_consensus::DefaultImportQueue<Block>,
-		sc_transaction_pool::FullPool<Block, ParachainClient>,
+		sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>,
 		(
 			ParachainBlockImport,
 			Option<Telemetry>,
@@ -169,12 +166,15 @@ where
 		telemetry
 	});
 
-	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
-		config.transaction_pool.clone(),
-		config.role.is_authority().into(),
-		config.prometheus_registry(),
-		task_manager.spawn_essential_handle(),
-		client.clone(),
+	let transaction_pool = Arc::from(
+		sc_transaction_pool::Builder::new(
+			task_manager.spawn_essential_handle(),
+			client.clone(),
+			config.role.is_authority().into(),
+		)
+		.with_options(config.transaction_pool.clone())
+		.with_prometheus(config.prometheus_registry())
+		.build(),
 	);
 
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
@@ -252,7 +252,7 @@ where
 			sc_rpc::DenyUnsafe,
 			Arc<ParachainClient>,
 			Arc<ParachainBackend>,
-			Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+			Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 		) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>
 		+ 'static,
 	BIQ: FnOnce(
@@ -270,7 +270,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+		Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -962,7 +962,7 @@ fn start_lookahead_aura_consensus(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+	transaction_pool: Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
