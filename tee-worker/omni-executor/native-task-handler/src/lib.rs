@@ -33,8 +33,8 @@ use parentchain_rpc_client::{
 use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
 use pumpx::{
+	methods::*,
 	signer_client::{ChainType, SignerClient},
-	types::*,
 	PumpxApi,
 };
 use std::{marker::PhantomData, sync::Arc};
