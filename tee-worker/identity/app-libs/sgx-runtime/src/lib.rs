@@ -31,8 +31,6 @@
 #[cfg(feature = "evm")]
 mod evm;
 
-extern crate alloc;
-
 mod migration;
 
 #[cfg(feature = "evm")]
@@ -140,14 +138,14 @@ pub mod opaque {
 }
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: alloc::borrow::Cow::Borrowed("node-template"),
-	impl_name: alloc::borrow::Cow::Borrowed("node-template"),
+	spec_name: create_runtime_str!("node-template"),
+	impl_name: create_runtime_str!("node-template"),
 	authoring_version: 1,
 	spec_version: 111,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
-	system_version: 0,
+	state_version: 0,
 };
 
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
