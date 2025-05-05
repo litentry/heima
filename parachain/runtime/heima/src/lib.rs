@@ -24,6 +24,7 @@
 #[macro_use]
 extern crate frame_benchmarking;
 
+extern crate alloc;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
@@ -53,7 +54,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, RuntimeDebug, H160, H256, U256}
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
+	generic, impl_opaque_keys,
 	traits::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto, DispatchInfoOf, Dispatchable,
 		PostDispatchInfoOf, UniqueSaturatedInto,
@@ -226,8 +227,8 @@ impl_opaque_keys! {
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// has to match the on-chain registered spec-name, which is `litentry-parachain`
-	spec_name: create_runtime_str!("litentry-parachain"),
-	impl_name: create_runtime_str!("heima"),
+	spec_name: alloc::borrow::Cow::Borrowed("litentry-parachain"),
+	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
 	spec_version: 9241,
