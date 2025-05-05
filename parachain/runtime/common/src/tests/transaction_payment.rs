@@ -121,13 +121,15 @@ where
 
 		old_sender_balance = Balances::<R>::free_balance(&alice());
 		old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
-		assert_ok!(<pallet_transaction_payment::ChargeTransactionPayment::<R>>::post_dispatch_details(
-			pre,
-			&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
-			&post_info_from_weight(Weight::from_parts(post_dispatch_info as u64, 0)),
-			len as usize,
-			&Ok(())
-		));
+		assert_ok!(
+			<pallet_transaction_payment::ChargeTransactionPayment::<R>>::post_dispatch_details(
+				pre,
+				&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
+				&post_info_from_weight(Weight::from_parts(post_dispatch_info as u64, 0)),
+				len as usize,
+				&Ok(())
+			)
+		);
 		// (dispatch_info - post_dispatch_info) weights (toFee) are refunded
 		let refunded = (dispatch_info - post_dispatch_info) * WEIGHT_TO_FEE_FACTOR;
 		assert_eq!(Balances::<R>::free_balance(&alice()) - old_sender_balance, refunded);
