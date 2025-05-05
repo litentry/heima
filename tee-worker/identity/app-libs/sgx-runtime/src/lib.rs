@@ -31,7 +31,6 @@
 #[cfg(feature = "evm")]
 mod evm;
 
-
 extern crate alloc;
 
 mod migration;
