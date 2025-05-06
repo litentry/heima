@@ -29,7 +29,22 @@ parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
+rand = { workspace = true }
 solana = { workspace = true }
+
+
+[dev-dependencies]
+accounting-contract-client = { workspace = true, features = ["mocks"] }
+sp-core = { workspace = true }
+pumpx = { workspace = true, features = ["mocks"] }
+binance-api = { workspace = true, features = ["mocks"] }
+solana = { workspace = true, features = ["mocks"] }
+tempfile = { workspace = true }
+mockall = { workspace = true }
+serde_json = { workspace = true }
+heima-primitives = { workspace = true }
+reqwest = { workspace = true }
+
 
 [lints]
 workspace = true

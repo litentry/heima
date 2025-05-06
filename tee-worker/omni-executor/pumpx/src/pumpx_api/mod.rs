@@ -665,9 +665,6 @@ pub mod mocks {
 			) -> Result<GetGasInfoResponse, Error>;
 
 			async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error>;
-
-
-
 		}
 	}
 }

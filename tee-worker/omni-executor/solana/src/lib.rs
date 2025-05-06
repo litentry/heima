@@ -178,7 +178,6 @@ pub mod mocks {
 	use crate::SolanaClient;
 	use async_trait::async_trait;
 	use mockall::mock;
-	use solana_client::client_error::reqwest::header::ValueDrain;
 
 	mock! {
 		pub SolanaRpcClient {}

@@ -25,7 +25,7 @@ pub type CreateTransferTxResponse = ApiResponse<CreateTransferTxResponseData>;
 pub type GetGasInfoResponse = ApiResponse<GetGasInfoResponseData>;
 pub type GetAccountUserIdResponse = ApiResponse<GetAccountUserIdResponseData>;
 
-#[derive(Deserialize_repr, Serialize_repr, Debug)]
+#[derive(Deserialize_repr, Serialize_repr, Debug, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum SwapType {
@@ -159,7 +159,7 @@ pub struct CreateMarketOrderUnsignedTxResponseData {
 }
 
 // /v3/trade/create_market_order_tx
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMarketOrderTxBody {
 	pub request_id: u32,
@@ -236,7 +236,7 @@ pub struct UserTradeInfoResponseData {
 }
 
 // /v3/trade/create_limit_order/
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateLimitOrderBody {
 	pub request_id: u32,

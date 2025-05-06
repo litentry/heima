@@ -95,7 +95,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 
 #[cfg(feature = "mocks")]
 pub mod mocks {
-
 	use crate::AccountingContractApi;
 	use crate::Address;
 	use crate::U256;
@@ -119,11 +118,6 @@ pub mod mocks {
 			async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
 
 			async fn get_balance(&self) -> Result<U256, ()>;
-
-
 		}
-
-
-
 	}
 }

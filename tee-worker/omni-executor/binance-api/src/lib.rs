@@ -199,10 +199,6 @@ impl BinanceApi for BinanceApiClient {
 
 #[cfg(feature = "mocks")]
 pub mod mocks {
-
-	use crate::convert_api::ConvertApi;
-	use crate::spot_trading_api::SpotTradingApi;
-	use crate::wallet_api::WalletApi;
 	use crate::BinanceApi;
 	use crate::Error;
 	use crate::HashMap;
@@ -235,7 +231,6 @@ pub mod mocks {
 			) -> Result<T, Error>
 			where
 				T: 'static + serde::de::DeserializeOwned;
-
 		}
 	}
 }

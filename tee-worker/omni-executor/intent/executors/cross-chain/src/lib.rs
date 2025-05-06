@@ -73,6 +73,11 @@ use parentchain_signer::TxSigner;
 
 use log::debug;
 
+#[cfg(test)]
+mod cross_chain_swap_tests;
+#[cfg(test)]
+mod single_chain_swap_tests;
+
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
 
