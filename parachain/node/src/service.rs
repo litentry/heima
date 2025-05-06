@@ -722,14 +722,14 @@ pub async fn start_standalone_node(
 	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
 	//       presumably in stable2412
 	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
-	let custom_txpool =
-		std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
+	// let custom_txpool =
+	// 	std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
 
 	if role.is_authority() {
 		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
 			task_manager.spawn_handle(),
 			client.clone(),
-			custom_txpool,
+			transaction_pool.clone(),
 			None,
 			None,
 		);
@@ -1009,13 +1009,13 @@ fn start_lookahead_aura_consensus(
 	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
 	//       presumably in stable2412
 	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
-	let custom_txpool =
-		std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
+	// let custom_txpool =
+	// 	std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
 
 	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 		task_manager.spawn_handle(),
 		client.clone(),
-		custom_txpool,
+		transaction_pool.clone(),
 		prometheus_registry,
 		telemetry.clone(),
 	);
