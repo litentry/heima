@@ -11,6 +11,7 @@ pub struct CustomPool<I> {
 }
 
 impl<I> CustomPool<I> {
+	#[allow(dead_code)]
 	pub fn new(inner_pool: Arc<I>) -> Self {
 		Self { inner_pool }
 	}
