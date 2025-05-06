@@ -50,26 +50,7 @@ async fn simple_cross_chain_swap() {
 		to_address: None,
 	};
 
-	let single_chain_swap_provider = SingleChainSwapProvider::Pumpx(PumpxConfig {
-		order_type: PumpxOrderType::Limit,
-		swap_type: 1,
-		from_chain_id: 100000,
-		from_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
-		to_chain_id: 56,
-		to_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
-		from_amount: BoundedVec::truncate_from("100".as_bytes().to_vec()),
-		double_out: false,
-		is_one_click: false,
-		is_anti_mev: false,
-		is_auto_slippage: false,
-		gas_type: 1,
-		slippage: 0,
-		wallet_index: 1,
-		token_cap: None,
-		price_usd: None,
-		usd_worth: BoundedVec::truncate_from([0u8; 128].to_vec()),
-		trailing_percent: None,
-	});
+	let single_chain_swap_provider = SingleChainSwapProvider::Pumpx(prepare_pumpx_config());
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
@@ -163,7 +144,8 @@ async fn simple_cross_chain_swap() {
 			slippage: 0,
 			wallet_index: 1
 		}))
-		.times(1).returning(|_, _| {
+		.times(1)
+		.returning(|_, _| {
 			Ok(CreateMarketOrderTxResponse {
 				code: 0,
 				data: CreateMarketOrderTxResponseData {
@@ -186,52 +168,7 @@ async fn simple_cross_chain_swap() {
 			mockall::predicate::eq(None),
 		)
 		.times(1)
-		.returning(|_, _, _, _| {
-			Ok(vec![CoinInfo {
-				coin: "SOL".to_string(),
-				deposit_all_enable: false,
-				free: "".to_string(),
-				freeze: "".to_string(),
-				ipoable: "".to_string(),
-				ipoing: "".to_string(),
-				is_legal_money: false,
-				locked: "".to_string(),
-				name: "Solana".to_string(),
-				network_list: vec![NetworkInfo {
-					address_regex: "".to_string(),
-					coin: "SOL".to_string(),
-					deposit_desc: None,
-					deposit_enable: false,
-					is_default: false,
-					memo_regex: "".to_string(),
-					min_confirm: 0,
-					name: "SOL".to_string(),
-					network: "SOL".to_string(),
-					special_tips: None,
-					special_withdraw_tips: None,
-					un_lock_confirm: None,
-					withdraw_desc: None,
-					withdraw_enable: None,
-					withdraw_fee: None,
-					withdraw_integer_multiple: None,
-					withdraw_max: None,
-					withdraw_min: None,
-					withdraw_internal_min: None,
-					same_address: None,
-					estimated_arrival_time: None,
-					busy: None,
-					contract_address_url: None,
-					contract_address: None,
-					reset_address_status: None,
-					deposit_dust: None,
-					denomination: None,
-				}],
-				storage: None,
-				trading: None,
-				withdraw_all_enable: None,
-				withdrawing: None,
-			}])
-		});
+		.returning(|_, _, _, _| Ok(vec![prepare_sol_coin_info()]));
 
 	binance_api_mock
 		.expect_make_signed_request()
@@ -317,4 +254,74 @@ async fn simple_cross_chain_swap() {
 		.unwrap();
 
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
+}
+
+fn prepare_sol_coin_info() -> CoinInfo {
+	CoinInfo {
+		coin: "SOL".to_string(),
+		deposit_all_enable: false,
+		free: "".to_string(),
+		freeze: "".to_string(),
+		ipoable: "".to_string(),
+		ipoing: "".to_string(),
+		is_legal_money: false,
+		locked: "".to_string(),
+		name: "Solana".to_string(),
+		network_list: vec![NetworkInfo {
+			address_regex: "".to_string(),
+			coin: "SOL".to_string(),
+			deposit_desc: None,
+			deposit_enable: false,
+			is_default: false,
+			memo_regex: "".to_string(),
+			min_confirm: 0,
+			name: "SOL".to_string(),
+			network: "SOL".to_string(),
+			special_tips: None,
+			special_withdraw_tips: None,
+			un_lock_confirm: None,
+			withdraw_desc: None,
+			withdraw_enable: None,
+			withdraw_fee: None,
+			withdraw_integer_multiple: None,
+			withdraw_max: None,
+			withdraw_min: None,
+			withdraw_internal_min: None,
+			same_address: None,
+			estimated_arrival_time: None,
+			busy: None,
+			contract_address_url: None,
+			contract_address: None,
+			reset_address_status: None,
+			deposit_dust: None,
+			denomination: None,
+		}],
+		storage: None,
+		trading: None,
+		withdraw_all_enable: None,
+		withdrawing: None,
+	}
+}
+
+fn prepare_pumpx_config() -> PumpxConfig {
+	PumpxConfig {
+		order_type: PumpxOrderType::Limit,
+		swap_type: 1,
+		from_chain_id: 100000,
+		from_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		to_chain_id: 56,
+		to_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		from_amount: BoundedVec::truncate_from("100".as_bytes().to_vec()),
+		double_out: false,
+		is_one_click: false,
+		is_anti_mev: false,
+		is_auto_slippage: false,
+		gas_type: 1,
+		slippage: 0,
+		wallet_index: 1,
+		token_cap: None,
+		price_usd: None,
+		usd_worth: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		trailing_percent: None,
+	}
 }
