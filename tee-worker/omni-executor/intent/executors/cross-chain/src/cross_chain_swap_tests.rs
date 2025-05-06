@@ -223,6 +223,7 @@ async fn simple_cross_chain_swap() {
 
 	solana_client_mock
 		.expect_transfer_sol()
+		.withf(|to, value, _| to == "deposit_address" && value == &100000000000)
 		.times(1)
 		.returning(|_, _, _| Ok("".to_string()));
 
