@@ -35,7 +35,6 @@ solana = { workspace = true }
 
 [dev-dependencies]
 accounting-contract-client = { workspace = true, features = ["mocks"] }
-sp-core = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
 binance-api = { workspace = true, features = ["mocks"] }
 solana = { workspace = true, features = ["mocks"] }
@@ -44,7 +43,6 @@ mockall = { workspace = true }
 serde_json = { workspace = true }
 heima-primitives = { workspace = true }
 reqwest = { workspace = true }
-
 
 [lints]
 workspace = true

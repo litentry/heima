@@ -14,12 +14,12 @@ use executor_storage::PumpxJwtStorage;
 use executor_storage::Storage;
 use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
 use pumpx::signer_client::{ChainType, SignerClient};
 use pumpx::types::CreateLimitOrderBody;
 use pumpx::types::{OrderInfoResponse, OrderInfoResponseData};
 use pumpx::PumpxApi;
-use sp_core::bounded::BoundedVec;
 use std::sync::Arc;
 use tempfile::tempdir;
 
