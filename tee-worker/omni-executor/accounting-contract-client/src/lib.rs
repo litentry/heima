@@ -92,3 +92,32 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 		})
 	}
 }
+
+#[cfg(feature = "mocks")]
+pub mod mocks {
+	use crate::AccountingContractApi;
+	use crate::Address;
+	use crate::U256;
+	use async_trait::async_trait;
+	use mockall::mock;
+
+	mock! {
+
+		pub AccountingContractClient {}
+
+		#[async_trait]
+		impl AccountingContractApi for AccountingContractClient {
+
+			async fn execute_pay_out_request(
+				&self,
+				beneficiary: Address,
+				nonce: U256,
+				amount: U256,
+			) -> Result<(), ()>;
+
+			async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
+
+			async fn get_balance(&self) -> Result<U256, ()>;
+		}
+	}
+}

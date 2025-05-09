@@ -46,7 +46,7 @@ use pumpx::pubkey_to_evm_address;
 use pumpx::signer_client::SignerClient;
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
-use solana::SolanaClient;
+use rust_decimal::Decimal;
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
@@ -205,8 +205,8 @@ async fn main() -> Result<(), ()> {
 				binance_api_base_url,
 			));
 
-			let solana_client: Arc<Box<dyn SolanaClient>> =
-				Arc::new(Box::new(SolanaRpcClient::new(&args.solana_url)));
+			let solana_client: Arc<SolanaRpcClient> =
+				Arc::new(SolanaRpcClient::new(&args.solana_url));
 
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())
@@ -230,6 +230,7 @@ async fn main() -> Result<(), ()> {
 				binance_api,
 				solana_client,
 				Arc::new(Box::new(accounting_contract_client)),
+				Decimal::from_str("200").unwrap(),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(
