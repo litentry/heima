@@ -19,8 +19,8 @@ dependencies = [
  "alloy",
  "async-trait",
  "ethereum-rpc",
- "log",
  "mockall",
+ "tracing",
 ]
 
 [[package]]
@@ -1411,13 +1411,13 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
- "env_logger",
  "hex",
  "hmac 0.12.1",
- "log",
  "reqwest 0.12.15",
  "serde",
  "sha2 0.10.8",
+ "tracing",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -2446,7 +2446,6 @@ dependencies = [
  "hex",
  "intent-asset-lock",
  "intent-token-query",
- "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
@@ -2456,6 +2455,7 @@ dependencies = [
  "solana",
  "solana-sdk",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3181,29 +3181,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "env_filter"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "186e05a59d4c50738528153b83b0b0194d3a29507dfec16eccd4b342903397d0"
-dependencies = [
- "log",
- "regex",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.11.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13c863f0904021b108aa8b2f55046443e6b1ebde8fd4a15c399893aae4fa069f"
-dependencies = [
- "anstream",
- "anstyle",
- "env_filter",
- "jiff",
- "log",
-]
-
-[[package]]
 name = "environmental"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3307,9 +3284,9 @@ dependencies = [
  "executor-core",
  "executor-primitives",
  "futures",
- "log",
  "mockall",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3318,8 +3295,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "log",
  "mockall",
+ "tracing",
 ]
 
 [[package]]
@@ -3679,13 +3656,13 @@ dependencies = [
  "executor-crypto",
  "executor-primitives",
  "heima-authentication",
- "log",
  "metrics",
  "parity-scale-codec",
  "rand 0.8.5",
  "regex",
  "serde",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3695,7 +3672,6 @@ dependencies = [
  "chrono",
  "ethers",
  "jsonwebtoken 9.3.1",
- "log",
  "parity-scale-codec",
  "rand 0.8.5",
  "ring 0.16.20",
@@ -3704,6 +3680,7 @@ dependencies = [
  "serde",
  "serde_with",
  "sp-core 35.0.0",
+ "tracing",
 ]
 
 [[package]]
@@ -3715,28 +3692,28 @@ dependencies = [
  "core-primitives",
  "executor-crypto",
  "hex",
- "log",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sp-core 35.0.0",
+ "tracing",
 ]
 
 [[package]]
 name = "executor-storage"
 version = "0.1.0"
 dependencies = [
- "env_logger",
  "executor-crypto",
  "executor-primitives",
  "frame-support 39.1.0",
- "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parity-scale-codec",
  "rocksdb",
  "sp-state-machine 0.44.0",
  "subxt-core",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3748,7 +3725,6 @@ dependencies = [
  "binance-api",
  "clap",
  "cross-chain-intent-executor",
- "env_logger",
  "ethereum-intent-executor",
  "ethereum-rpc",
  "executor-core",
@@ -3756,7 +3732,6 @@ dependencies = [
  "executor-primitives",
  "executor-storage",
  "hex",
- "log",
  "metrics-exporter-prometheus",
  "native-task-handler",
  "parentchain-attestation",
@@ -3770,6 +3745,8 @@ dependencies = [
  "solana",
  "solana-intent-executor",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "url",
 ]
 
@@ -4701,11 +4678,11 @@ dependencies = [
  "chrono",
  "executor-crypto",
  "executor-primitives",
- "log",
  "parity-scale-codec",
  "rand 0.8.5",
  "rsa",
  "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -4717,13 +4694,13 @@ dependencies = [
  "executor-crypto",
  "executor-primitives",
  "executor-storage",
- "log",
  "oauth-providers",
  "parity-scale-codec",
  "rand 0.8.5",
  "sendgrid",
  "serde",
  "serde_json",
+ "tracing",
  "url",
 ]
 
@@ -5349,13 +5326,13 @@ dependencies = [
  "ethereum-rpc",
  "executor-primitives",
  "hex-literal",
- "log",
  "serde_json",
  "solana-account-decoder-client-types",
  "solana-client",
  "solana-sdk",
  "spl-token 7.0.0",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -5420,30 +5397,6 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
-
-[[package]]
-name = "jiff"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f33145a5cbea837164362c7bd596106eb7c5198f97d1ba6f6ebb3223952e488"
-dependencies = [
- "jiff-static",
- "log",
- "portable-atomic",
- "portable-atomic-util",
- "serde",
-]
-
-[[package]]
-name = "jiff-static"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43ce13c40ec6956157a3635d97a1ee2df323b263f09ea14165131289cb0f5c19"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
 
 [[package]]
 name = "jni"
@@ -6303,7 +6256,6 @@ dependencies = [
  "heima-authentication",
  "heima-identity-verification",
  "hex",
- "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
@@ -6312,6 +6264,7 @@ dependencies = [
  "rand 0.8.5",
  "subxt",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -6758,16 +6711,16 @@ dependencies = [
 name = "parentchain-attestation"
 version = "0.1.0"
 dependencies = [
- "env_logger",
  "executor-primitives",
  "hex",
- "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
  "subxt-core",
  "subxt-signer",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -6775,12 +6728,10 @@ name = "parentchain-listener"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "env_logger",
  "executor-core",
  "executor-primitives",
  "executor-storage",
  "hex",
- "log",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
@@ -6791,6 +6742,8 @@ dependencies = [
  "subxt-core",
  "subxt-signer",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -6798,9 +6751,7 @@ name = "parentchain-rpc-client"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "env_logger",
  "executor-primitives",
- "log",
  "parentchain-api-interface",
  "parity-scale-codec",
  "scale-encode",
@@ -6808,21 +6759,23 @@ dependencies = [
  "subxt",
  "subxt-core",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
 name = "parentchain-signer"
 version = "0.1.0"
 dependencies = [
- "env_logger",
  "executor-core",
  "executor-crypto",
  "executor-primitives",
- "log",
  "parentchain-rpc-client",
  "parity-scale-codec",
  "subxt-core",
  "subxt-signer",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -7264,15 +7217,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "350e9b48cbc6b0e028b0473b114454c6316e57336ee184ceab6e53f72c178b3e"
 
 [[package]]
-name = "portable-atomic-util"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8a2f0d8d040d7848a709caf78912debcc3f33ee4b3cac47d73d1e1069e83507"
-dependencies = [
- "portable-atomic",
-]
-
-[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7494,7 +7438,6 @@ dependencies = [
  "hex",
  "jsonrpsee",
  "libsecp256k1 0.7.2",
- "log",
  "mockall",
  "parity-scale-codec",
  "rand 0.8.5",
@@ -7506,6 +7449,7 @@ dependencies = [
  "serde_with",
  "sha2 0.10.8",
  "sp-core 35.0.0",
+ "tracing",
  "url",
 ]
 
@@ -8097,7 +8041,6 @@ dependencies = [
  "hex",
  "jsonrpsee",
  "litentry-hex-utils",
- "log",
  "native-task-handler",
  "oauth-providers",
  "parentchain-rpc-client",
@@ -8111,6 +8054,7 @@ dependencies = [
  "sha2 0.10.8",
  "tempfile",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -9268,13 +9212,13 @@ name = "solana"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "log",
  "pumpx",
  "solana-client",
  "solana-sdk",
  "spl-associated-token-account",
  "spl-token 7.0.0",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -9634,11 +9578,11 @@ dependencies = [
  "async-trait",
  "executor-core",
  "executor-primitives",
- "log",
  "pumpx",
  "solana-client",
  "solana-sdk",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

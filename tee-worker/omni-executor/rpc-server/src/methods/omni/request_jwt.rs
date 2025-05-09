@@ -48,16 +48,16 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_requestJwt", |params, ctx, _| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received omni_requestJwt, user_email: {}", params.user_email);
+			tracing::log::debug!("Received omni_requestJwt, user_email: {}", params.user_email);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				log::error!("Failed to verify auth token");
+				tracing::log::error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
@@ -69,7 +69,7 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 					Ok(RequestJwtResponse { access_token, id_token, backend_response })
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

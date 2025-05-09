@@ -42,18 +42,22 @@ pub async fn create_transfer_tx_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			log::error!("Failed to send create_transfer_tx request: {:?}", e);
+			tracing::log::error!("Failed to send create_transfer_tx request: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("create_transfer_tx request failed with status: {}, error: {:?}", status, e);
+		tracing::log::error!(
+			"create_transfer_tx request failed with status: {}, error: {:?}",
+			status,
+			e
+		);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse create_transfer_tx response: {:?}", e);
+		tracing::log::error!("Failed to parse create_transfer_tx response: {:?}", e);
 		e
 	})
 }

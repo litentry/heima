@@ -8,7 +8,7 @@ pub fn create<T: Serialize>(claims: &T, private_key: &[u8]) -> Result<String, St
 	let encoding_key = EncodingKey::from_rsa_der(private_key);
 	let header = Header::new(Algorithm::RS256);
 	encode(&header, claims, &encoding_key).map_err(|e| {
-		log::error!("Failed to encode token: {:?}", e);
+		tracing::log::error!("Failed to encode token: {:?}", e);
 		e.to_string()
 	})
 }

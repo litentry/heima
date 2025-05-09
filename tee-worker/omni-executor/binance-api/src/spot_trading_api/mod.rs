@@ -69,7 +69,7 @@ impl<'a> SpotTradingApi<'a> {
 		let endpoint = format!("{}/order", SPOT_TRADING_API);
 		let recv_window = create_order_params.recv_window;
 		let params = create_order_params.try_into_params().map_err(|e| {
-			log::error!("Error converting create order params: {}", e);
+			tracing::log::error!("Error converting create order params: {}", e);
 			Error::InvalidParams
 		})?;
 		self.base_api
@@ -86,7 +86,7 @@ impl<'a> SpotTradingApi<'a> {
 		let endpoint = format!("{}/order/test", SPOT_TRADING_API);
 		let recv_window = create_order_params.recv_window;
 		let mut params = create_order_params.try_into_params().map_err(|e| {
-			log::error!("Error converting create order params: {}", e);
+			tracing::log::error!("Error converting create order params: {}", e);
 			Error::InvalidParams
 		})?;
 		params

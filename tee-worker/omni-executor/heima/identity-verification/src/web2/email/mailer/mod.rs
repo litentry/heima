@@ -45,7 +45,7 @@ impl MailerTrait for Mailer {
 			.add_personalization(personalization);
 		let sender = Sender::new(self.api_key.clone(), None);
 		sender.send(&message).await.map_err(|_| {
-			log::error!("Failed to send email");
+			tracing::log::error!("Failed to send email");
 			Error::SendEmailFailed
 		})?;
 

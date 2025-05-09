@@ -87,18 +87,18 @@ impl<
 	>
 {
 	async fn handle(&self, event: BlockEvent) -> Result<(), Error> {
-		log::debug!("Got event: {:?}, variant name: {}", event.id, event.variant_name);
+		tracing::log::debug!("Got event: {:?}, variant name: {}", event.id, event.variant_name);
 
 		if event.pallet_name != "OmniAccount" {
 			// we are not interested in this event
-			log::debug!("Not interested in {} events", event.pallet_name);
+			tracing::log::debug!("Not interested in {} events", event.pallet_name);
 			return Ok(());
 		}
 
 		let metadata = self.metadata_provider.get(Some(event.id.block_num)).await;
 
 		let pallet = metadata.pallet_by_name(&event.pallet_name).ok_or_else(move || {
-			log::error!(
+			tracing::log::error!(
 				"No pallet metadata found for event {} and pallet {} ",
 				event.id.block_num,
 				event.pallet_name
@@ -106,7 +106,7 @@ impl<
 			Error::NonRecoverableError
 		})?;
 		let variant = pallet.event_variant_by_index(event.variant_index).ok_or_else(move || {
-			log::error!(
+			tracing::log::error!(
 				"No event variant metadata found for event {} and variant {}",
 				event.id.block_num,
 				event.variant_index
@@ -128,7 +128,7 @@ impl<
 						metadata.types(),
 					)
 					.map_err(|_| {
-						log::error!("Could not decode event {:?}", event.id);
+						tracing::log::error!("Could not decode event {:?}", event.id);
 						Error::NonRecoverableError
 					})?;
 
@@ -139,24 +139,24 @@ impl<
 					let member_bytes = member.encode();
 					let member_account: MemberAccount = Decode::decode(&mut &member_bytes[..])
 						.map_err(|e| {
-							log::error!("Error decoding member account: {:?}", e);
+							tracing::log::error!("Error decoding member account: {:?}", e);
 							Error::NonRecoverableError
 						})?;
 					self.member_account_storage
 						.insert(&member_account.hash(), omni_account.clone())
 						.map_err(|e| {
-							log::error!("Error inserting member account hash: {:?}", e);
+							tracing::log::error!("Error inserting member account hash: {:?}", e);
 							Error::NonRecoverableError
 						})?;
 					account_store.push(member_account);
 				}
 				self.account_store_storage.insert(&omni_account, account_store).map_err(|_| {
-					log::error!("Could not insert account store into storage");
+					tracing::log::error!("Could not insert account store into storage");
 					Error::NonRecoverableError
 				})?;
 			},
 			_ => {
-				log::debug!("Not interested in {} events", event.variant_name);
+				tracing::log::debug!("Not interested in {} events", event.variant_name);
 			},
 		}
 

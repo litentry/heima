@@ -24,8 +24,8 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
-use log::{error, info};
 use signer::get_omni_account_signer;
+use tracing::log::{error, info};
 use tx::submit;
 
 mod delegate_call;
@@ -106,8 +106,8 @@ pub mod test {
 	use alloy::providers::{Provider, ProviderBuilder, WalletProvider};
 	use alloy::rpc::types::{TransactionInput, TransactionRequest};
 	use alloy::signers::local::PrivateKeySigner;
-	use log::error;
 	use std::str::FromStr;
+	use tracing::log::error;
 
 	// #[tokio::test]
 	pub async fn test() {

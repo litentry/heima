@@ -30,7 +30,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_getNextIntentId", |params, ctx, _| async move {
 			let params = params.parse::<GetNextIntentIdParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
@@ -42,7 +42,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 			let intent_id = storage
 				.get(&account)
 				.map_err(|e| {
-					log::error!("Could not get IntentId from store: {:?}", e);
+					tracing::log::error!("Could not get IntentId from store: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?
 				.unwrap_or_default();

@@ -29,12 +29,12 @@ pub async fn cross_fail_impl(
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("Cross order failed with status: {}, error: {:?}", status, e);
+		tracing::log::error!("Cross order failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse cross order failed response: {:?}", e);
+		tracing::log::error!("Failed to parse cross order failed response: {:?}", e);
 		e
 	})
 }

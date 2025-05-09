@@ -6,12 +6,12 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-log = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 pumpx = { workspace = true }

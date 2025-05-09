@@ -59,27 +59,27 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_transferWithdraw", |params, ctx, _| async move {
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received pumpx_transferWithdraw, user_id: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}", 
+			tracing::log::debug!("Received pumpx_transferWithdraw, user_id: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}", 
 		params.user_id, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
 			// verify user_id and user_email matches
-			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
+			tracing::log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
-				log::error!("Failed to call get_account_user_id");
+				tracing::log::error!("Failed to call get_account_user_id");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
 				)));
 			};
-			log::debug!("Response pumpx get_account_user_id: {:?}", res);
+			tracing::log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
 
 			if user_id != params.user_id {
-				log::error!(
+				tracing::log::error!(
 					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
 					params.user_id,
 					params.user_email,
@@ -93,7 +93,7 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				log::error!("Failed to verify auth token");
+				tracing::log::error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
@@ -105,7 +105,7 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 					Ok(TransferWithdrawResponse { backend_response: response })
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

@@ -71,9 +71,9 @@ use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use log::debug;
 use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
 use pumpx::methods::send_order_tx::{SendOrderTxBody, SendOrderTxResponse};
+use tracing::log::debug;
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
 
@@ -199,25 +199,25 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 
 				let usd_worth = std::str::from_utf8(&pumpx_config.usd_worth)
 					.map_err(|_| {
-						log::error!("Failed to parse usd_worth");
+						tracing::log::error!("Failed to parse usd_worth");
 					})
 					.map(|v| v.to_string())?;
 
 				let from_token_ca = std::str::from_utf8(&pumpx_config.from_token_ca)
 					.map_err(|_| {
-						log::error!("Failed to parse from_token_ca");
+						tracing::log::error!("Failed to parse from_token_ca");
 					})
 					.map(|v| v.to_string())?;
 
 				let to_token_ca = std::str::from_utf8(&pumpx_config.to_token_ca)
 					.map_err(|_| {
-						log::error!("Failed to parse to_token_ca");
+						tracing::log::error!("Failed to parse to_token_ca");
 					})
 					.map(|v| v.to_string())?;
 
 				let from_amount = std::str::from_utf8(&pumpx_config.from_amount)
 					.map_err(|_| {
-						log::error!("Failed to parse from_amount");
+						tracing::log::error!("Failed to parse from_amount");
 					})
 					.map(|v| v.to_string())?;
 
@@ -225,7 +225,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 				let Ok(Some(access_token)) =
 					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 				else {
-					log::error!("Failed to get access token from storage");
+					tracing::log::error!("Failed to get access token from storage");
 					return Err(());
 				};
 
@@ -235,7 +235,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					debug!("from and to chain are equal, performing single chain swap");
 					let Some(chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
 					else {
-						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+						tracing::log::error!(
+							"Unsupported to_chain_id: {}",
+							pumpx_config.to_chain_id
+						);
 						return Err(());
 					};
 
@@ -244,7 +247,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						.request_wallet(chain_type, pumpx_config.wallet_index, *account_id.as_ref())
 						.await
 						.map_err(|e| {
-							log::error!("Could not get wallet from pumpx-signer: {:?}", e)
+							tracing::log::error!("Could not get wallet from pumpx-signer: {:?}", e)
 						})?;
 
 					let (order_response, should_notify_parentchain) = match pumpx_config.order_type
@@ -259,7 +262,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									1 => SwapType::Buy,
 									2 => SwapType::Sell,
 									_ => {
-										log::error!(
+										tracing::log::error!(
 											"Unsupported swap type: {}",
 											pumpx_config.swap_type
 										);
@@ -273,7 +276,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									ChainType::Evm => pubkey_to_evm_address(&wallet_address)?,
 									ChainType::Solana => pubkey_to_solana_address(&wallet_address)?,
 									_ => {
-										log::error!("Unsupported {:?} wallet address", chain_type);
+										tracing::log::error!(
+											"Unsupported {:?} wallet address",
+											chain_type
+										);
 										return Err(());
 									},
 								},
@@ -284,7 +290,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									2 => GasType::Medium,
 									3 => GasType::Fast,
 									_ => {
-										log::error!(
+										tracing::log::error!(
 											"Unsupported gas type: {}",
 											pumpx_config.gas_type
 										);
@@ -300,7 +306,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								.create_market_order_tx(&access_token, body)
 								.await
 								.map_err(|_| {
-									log::error!("Failed to create market order tx");
+									tracing::log::error!("Failed to create market order tx");
 								})?;
 
 							debug!("Response create_market_order_tx: {:?}", response);
@@ -312,7 +318,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								Some(ref token_cap) => Some(
 									std::str::from_utf8(token_cap)
 										.map_err(|_| {
-											log::error!("Failed to parse token_cap");
+											tracing::log::error!("Failed to parse token_cap");
 										})
 										.map(|v| v.to_string())?,
 								),
@@ -322,7 +328,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								Some(ref price_usd) => Some(
 									std::str::from_utf8(price_usd)
 										.map_err(|_| {
-											log::error!("Failed to parse price_usd");
+											tracing::log::error!("Failed to parse price_usd");
 										})
 										.map(|v| v.to_string())?,
 								),
@@ -338,7 +344,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									1 => SwapType::Buy,
 									2 => SwapType::Sell,
 									_ => {
-										log::error!(
+										tracing::log::error!(
 											"Unsupported swap type: {}",
 											pumpx_config.swap_type
 										);
@@ -355,7 +361,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									ChainType::Evm => pubkey_to_evm_address(&wallet_address)?,
 									ChainType::Solana => pubkey_to_solana_address(&wallet_address)?,
 									_ => {
-										log::error!("Unsupported {:?} wallet address", chain_type);
+										tracing::log::error!(
+											"Unsupported {:?} wallet address",
+											chain_type
+										);
 										return Err(());
 									},
 								},
@@ -366,7 +375,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									2 => GasType::Medium,
 									3 => GasType::Fast,
 									_ => {
-										log::error!(
+										tracing::log::error!(
 											"Unsupported gas type: {}",
 											pumpx_config.gas_type
 										);
@@ -385,7 +394,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								.create_limit_order(&access_token, new_limit_order)
 								.await
 								.map_err(|_| {
-									log::error!("Failed to create limit order");
+									tracing::log::error!("Failed to create limit order");
 								})?;
 
 							debug!("Response create_limit_order: {:?}", response);
@@ -400,21 +409,27 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						swap_order.to_asset,
 						ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)
 					) {
-						log::error!("Only BSC payout supported");
+						tracing::log::error!("Only BSC payout supported");
 					}
 
 					// notify backend about it
 					let Some(from_chain_type) =
 						ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
 					else {
-						log::error!("Unsupported from_chain_id: {}", pumpx_config.from_chain_id);
+						tracing::log::error!(
+							"Unsupported from_chain_id: {}",
+							pumpx_config.from_chain_id
+						);
 						return Err(());
 					};
 
 					let Some(to_chain_type) =
 						ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
 					else {
-						log::error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+						tracing::log::error!(
+							"Unsupported to_chain_id: {}",
+							pumpx_config.to_chain_id
+						);
 						return Err(());
 					};
 
@@ -427,14 +442,20 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						)
 						.await
 						.map_err(|e| {
-							log::error!("Could not get from_wallet from pumpx-signer: {:?}", e)
+							tracing::log::error!(
+								"Could not get from_wallet from pumpx-signer: {:?}",
+								e
+							)
 						})?;
 
 					let from_address = match from_chain_type {
 						ChainType::Evm => pubkey_to_evm_address(&from_wallet_address)?,
 						ChainType::Solana => pubkey_to_solana_address(&from_wallet_address)?,
 						_ => {
-							log::error!("Unsupported {:?} wallet address", from_chain_type);
+							tracing::log::error!(
+								"Unsupported {:?} wallet address",
+								from_chain_type
+							);
 							return Err(());
 						},
 					};
@@ -448,14 +469,17 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						)
 						.await
 						.map_err(|e| {
-							log::error!("Could not get to_wallet from pumpx-signer: {:?}", e)
+							tracing::log::error!(
+								"Could not get to_wallet from pumpx-signer: {:?}",
+								e
+							)
 						})?;
 
 					let to_address = match to_chain_type {
 						ChainType::Evm => pubkey_to_evm_address(&to_wallet_address)?,
 						ChainType::Solana => pubkey_to_solana_address(&to_wallet_address)?,
 						_ => {
-							log::error!("Unsupported {:?} wallet address", to_chain_type);
+							tracing::log::error!("Unsupported {:?} wallet address", to_chain_type);
 							return Err(());
 						},
 					};
@@ -468,7 +492,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							1 => SwapType::Buy,
 							2 => SwapType::Sell,
 							_ => {
-								log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+								tracing::log::error!(
+									"Unsupported swap type: {}",
+									pumpx_config.swap_type
+								);
 								return Err(());
 							},
 						},
@@ -486,7 +513,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					let response =
 						self.pumpx_api.create_cross_order(&access_token, body).await.map_err(
 							|_| {
-								log::error!("Failed to create cross order");
+								tracing::log::error!("Failed to create cross order");
 							},
 						)?;
 					debug!("Response create_cross_order: {:?}", response);
@@ -496,7 +523,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 
 					let coins_info =
 						self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
-							log::error!("Failed to get all coins info, {:?}", e);
+							tracing::log::error!("Failed to get all coins info, {:?}", e);
 						})?;
 
 					// TODO: create an util function to convert ChainAsset to binance names
@@ -516,7 +543,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 												("USDT", SOLANA_USDT_MINT_ADDRESS)
 											},
 											_ => {
-												log::error!(
+												tracing::log::error!(
 													"Unsupported SPL token: {:?}",
 													mint_address
 												);
@@ -528,12 +555,15 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								("SOL".to_string(), asset.to_string(), token_address.to_string())
 							},
 							ChainAsset::Ethereum(..) => {
-								log::error!("Unsupported from_asset: {:?}", swap_order.from_asset);
+								tracing::log::error!(
+									"Unsupported from_asset: {:?}",
+									swap_order.from_asset
+								);
 								return Err(());
 							},
 						};
 
-					log::debug!(
+					tracing::log::debug!(
 						"from_network_name: {}, binance_coin_name: {}, token_address: {}",
 						from_network_name,
 						binance_coin_name,
@@ -543,7 +573,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					let Some(binance_coin_info) =
 						coins_info.iter().find(|c| c.coin == binance_coin_name)
 					else {
-						log::error!(
+						tracing::log::error!(
 							"Failed to find binance network list for asset: {:?}",
 							binance_coin_name
 						);
@@ -554,7 +584,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						.iter()
 						.find(|n| n.network == from_network_name)
 					else {
-						log::error!(
+						tracing::log::error!(
 							"Failed to find binance network list for asset: {:?}",
 							binance_coin_name
 						);
@@ -567,14 +597,14 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						.get_deposit_address(&binance_coin_name, &binance_network_info.network)
 						.await
 						.map_err(|_| {
-							log::error!("Failed to get deposit address");
+							tracing::log::error!("Failed to get deposit address");
 						})?;
 
 					let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
-						log::error!("Failed to parse from_amount_string");
+						tracing::log::error!("Failed to parse from_amount_string");
 					})?;
 
-					log::debug!(
+					tracing::log::debug!(
 						"Binance deposit address: {}, from_amount: {}",
 						deposit_address,
 						from_amount
@@ -585,13 +615,13 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						"USDT" => Decimal::from(1_000_000),    // 10^6
 						"SOL" => Decimal::from(1_000_000_000), // 10^9  TODO: double check this
 						_ => {
-							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							tracing::log::error!("Unsupported asset: {:?}", binance_coin_name);
 							return Err(());
 						},
 					};
 					let amount_to_transfer_decimal = from_amount_decimal * asset_decimal_multiplier;
 					let Some(amount_to_transfer) = amount_to_transfer_decimal.to_u64() else {
-						log::error!("Failed to convert amount to transfer to u64");
+						tracing::log::error!("Failed to convert amount to transfer to u64");
 						return Err(());
 					};
 
@@ -600,7 +630,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						"USDT" => ("BNBUSDT".to_string(), BinanceOrderSide::BUY),
 						"SOL" => ("SOLBNB".to_string(), BinanceOrderSide::SELL),
 						_ => {
-							log::error!("Unsupported asset: {:?}", binance_coin_name);
+							tracing::log::error!("Unsupported asset: {:?}", binance_coin_name);
 							return Err(());
 						},
 					};
@@ -615,7 +645,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					let mut payout_amount = match str_to_u256(&estimated_bnb_receive, 18) {
 						Some(a) => a,
 						None => {
-							log::error!(
+							tracing::log::error!(
 								"Fail to convert bnb amount {} to U256",
 								estimated_bnb_receive
 							);
@@ -626,7 +656,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 										.to_string(),
 							};
 							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
+								tracing::log::error!("Failed to notify pumpx-signer");
 							})?;
 							return Err(());
 						},
@@ -635,7 +665,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					// Fetch contract balance
 					let balance = self.accounting_contract_client.get_balance().await?;
 					if balance < payout_amount {
-						log::error!(
+						tracing::log::error!(
 							"There is not enough balance in the accounting contract, {} < {}",
 							balance,
 							payout_amount
@@ -661,7 +691,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
 							.await
 							.map_err(|_| {
-								log::error!("Failed to transfer SOL");
+								tracing::log::error!("Failed to transfer SOL");
 							})?;
 						tx_id = Some(signature);
 					} else {
@@ -680,7 +710,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							)
 							.await
 							.map_err(|_| {
-								log::error!("Failed to transfer SPL");
+								tracing::log::error!("Failed to transfer SPL");
 							})?;
 						tx_id = Some(signature);
 					}
@@ -702,7 +732,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
 								.await
 							else {
-								log::error!("Failed to get deposit history");
+								tracing::log::error!("Failed to get deposit history");
 								continue;
 							};
 
@@ -711,7 +741,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								debug!("Deposit: {:?}", deposit);
 								if deposit.status == 2 || deposit.status == 7 {
 									// 2 = rejected, 7 = Wrong Deposit
-									log::error!("Deposit failed with status: {}", deposit.status);
+									tracing::log::error!(
+										"Deposit failed with status: {}",
+										deposit.status
+									);
 									let body = CrossFailBody {
 										request_id: intent_id,
 										fail_reason: format!(
@@ -721,7 +754,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									};
 									self.pumpx_api.cross_fail(&access_token, body).await.map_err(
 										|_| {
-											log::error!("Failed to notify pumpx-signer");
+											tracing::log::error!("Failed to notify pumpx-signer");
 										},
 									)?;
 									return Err(());
@@ -748,13 +781,13 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						}
 
 						if !deposit_confirmed {
-							log::error!("Deposit not confirmed within timeout period");
+							tracing::log::error!("Deposit not confirmed within timeout period");
 							let body = CrossFailBody {
 								request_id: intent_id,
 								fail_reason: "Deposit not confirmed on Binance".to_string(),
 							};
 							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
+								tracing::log::error!("Failed to notify pumpx-signer");
 							})?;
 							return Err(());
 						}
@@ -781,7 +814,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							.create_order(binance_order_params)
 							.await
 						else {
-							log::error!("Failed to create binance order");
+							tracing::log::error!("Failed to create binance order");
 							self.binance_api
 								.wallet()
 								.withdraw(
@@ -792,12 +825,12 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								)
 								.await
 								.map_err(|e| {
-									log::error!(
+									tracing::log::error!(
 									"Failed to withdraw asset back to omni account, error: {:?}",
 									e
 								);
 								})?;
-							log::debug!("Withdrawed asset back to omni account");
+							tracing::log::debug!("Withdrawed asset back to omni account");
 
 							let body = CrossFailBody {
 								request_id: intent_id,
@@ -805,7 +838,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								fail_reason: "Failed to create binance order".to_string(),
 							};
 							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
+								tracing::log::error!("Failed to notify pumpx-signer");
 							})?;
 
 							return Err(());
@@ -836,12 +869,12 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
 								.await
 								.map_err(|_| {
-									log::error!("Failed to get binance order");
+									tracing::log::error!("Failed to get binance order");
 								})?;
 
 							match trade_order.status {
 								BinanceOrderStatus::FILLED => {
-									log::info!("Binance order filled");
+									tracing::log::info!("Binance order filled");
 									bnb_acquired = match trade_order.side {
 										BinanceOrderSide::BUY => trade_order.executed_qty,
 										BinanceOrderSide::SELL => trade_order.cummulative_quote_qty,
@@ -850,26 +883,29 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 									break;
 								},
 								BinanceOrderStatus::CANCELED => {
-									log::error!("Binance order canceled");
+									tracing::log::error!("Binance order canceled");
 								},
 								BinanceOrderStatus::REJECTED => {
-									log::error!("Binance order rejected");
+									tracing::log::error!("Binance order rejected");
 								},
 								BinanceOrderStatus::EXPIRED => {
-									log::error!("Binance order expired");
+									tracing::log::error!("Binance order expired");
 								},
 								BinanceOrderStatus::EXPIRED_IN_MATCH => {
-									log::error!("Binance order expired in matching");
+									tracing::log::error!("Binance order expired in matching");
 								},
 								_ => {
-									log::debug!("Binance order status: {:?}", trade_order.status);
+									tracing::log::debug!(
+										"Binance order status: {:?}",
+										trade_order.status
+									);
 								},
 							}
 							//todo: how long we wait ?
 							sleep(Duration::from_millis(500)).await;
 						}
 						if !trade_success {
-							log::error!("Binance order failed");
+							tracing::log::error!("Binance order failed");
 							self.binance_api
 								.wallet()
 								.withdraw(
@@ -880,12 +916,12 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								)
 								.await
 								.map_err(|e| {
-									log::error!(
+									tracing::log::error!(
 									"Failed to withdraw asset back to omni account, error: {:?}",
 									e
 								);
 								})?;
-							log::debug!("Withdrawed asset back to omni account");
+							tracing::log::debug!("Withdrawed asset back to omni account");
 
 							let body = CrossFailBody {
 								request_id: intent_id,
@@ -893,7 +929,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								fail_reason: "Binance order failed".to_string(),
 							};
 							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
+								tracing::log::error!("Failed to notify pumpx-signer");
 							})?;
 
 							return Err(());
@@ -905,7 +941,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						payout_amount = match str_to_u256(&bnb_acquired, 18) {
 							Some(a) => a,
 							None => {
-								log::error!(
+								tracing::log::error!(
 									"Fail to convert bnb amount {} to U256",
 									bnb_to_receive
 								);
@@ -917,7 +953,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								};
 								self.pumpx_api.cross_fail(&access_token, body).await.map_err(
 									|_| {
-										log::error!("Failed to notify pumpx-signer");
+										tracing::log::error!("Failed to notify pumpx-signer");
 									},
 								)?;
 								// TODO: what to do with user asset?
@@ -932,7 +968,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					}
 
 					let payout_address = Address::from_str(&to_address).map_err(|_| {
-						log::error!("Failed to parse payout address");
+						tracing::log::error!("Failed to parse payout address");
 					})?;
 
 					debug!("Getting {:?} nonce for payout request", payout_address);
@@ -940,7 +976,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					let user_nonce =
 						self.accounting_contract_client.get_nonce(payout_address).await.map_err(
 							|_| {
-								log::error!("Failed to get nonce");
+								tracing::log::error!("Failed to get nonce");
 							},
 						)?;
 
@@ -952,7 +988,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						.execute_pay_out_request(payout_address, user_nonce, payout_amount)
 						.await
 						.map_err(|_| {
-							log::error!("Failed to execute pay out request");
+							tracing::log::error!("Failed to execute pay out request");
 						})?;
 
 					debug!("Calling pumpx get_gas_info, chain_id: {}", pumpx_config.to_chain_id);
@@ -961,19 +997,19 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						.get_gas_info(&access_token, pumpx_config.to_chain_id)
 						.await
 						.map_err(|_| {
-							log::error!("Failed to get gas info");
+							tracing::log::error!("Failed to get gas info");
 						})?;
 					debug!("Response get_gas_info: {:?}", res);
 
 					let Some(gas_info_vec) = res.data.gas_info else {
-						log::error!("Response data.gas_info of call get gas info is none");
+						tracing::log::error!("Response data.gas_info of call get gas info is none");
 						return Err(());
 					};
 					let Some(gas_info) = gas_info_vec
 						.iter()
 						.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
 					else {
-						log::error!(
+						tracing::log::error!(
 							"Could not find matching gas_info with chain_id {}",
 							pumpx_config.to_chain_id
 						);
@@ -985,7 +1021,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						2 => &gas_info.fast,
 						3 => &gas_info.super_fast,
 						_ => {
-							log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+							tracing::log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
 							return Err(());
 						},
 					};
@@ -994,7 +1030,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					let amount_in = match calculate_amount_in(&bnb_to_receive, gas_fee, 18) {
 						Some(a) => a,
 						None => {
-							log::error!(
+							tracing::log::error!(
 								"Fail to calculate amount_in from amount {}, gas {}",
 								bnb_to_receive,
 								gas_fee
@@ -1004,7 +1040,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 								fail_reason: "Fail to calculate amount_in".to_string(),
 							};
 							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
+								tracing::log::error!("Failed to notify pumpx-signer");
 							})?;
 							// TODO: what to do with user asset?
 							return Err(());
@@ -1020,7 +1056,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							1 => SwapType::Buy,
 							2 => SwapType::Sell,
 							_ => {
-								log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+								tracing::log::error!(
+									"Unsupported swap type: {}",
+									pumpx_config.swap_type
+								);
 								return Err(());
 							},
 						},
@@ -1035,7 +1074,10 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 							2 => GasType::Medium,
 							3 => GasType::Fast,
 							_ => {
-								log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+								tracing::log::error!(
+									"Unsupported gas type: {}",
+									pumpx_config.gas_type
+								);
 								return Err(());
 							},
 						},
@@ -1048,7 +1090,9 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					let response = self
 						.create_market_order_tx(&access_token, body, account_id)
 						.await
-						.map_err(|_| log::error!("Failed to create and submit market order tx"))?;
+						.map_err(|_| {
+							tracing::log::error!("Failed to create and submit market order tx")
+						})?;
 
 					debug!("Response create_market_order_tx: {:?}", response);
 					result = (Some(response.encode()), true);
@@ -1058,14 +1102,17 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 				// 	account_id.clone(),
 				// 	swap_order.from_asset.clone(),
 				// 	AmountType::from_str_radix(&from_amount_string, 10).map_err(|_| {
-				// 		log::error!("Failed to parse from_amount_string");
+				// 		tracing::log::error!("Failed to parse from_amount_string");
 				// 	})?,
 				// )?;
 
 				return Ok(result);
 			},
 			_ => {
-				log::error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);
+				tracing::log::error!(
+					"[CrossChainIntentExecutor]: Unsupported intent: {:?}",
+					intent
+				);
 				return Err(());
 			},
 		}
@@ -1088,16 +1135,16 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 			.pumpx_api
 			.create_market_order_unsigned_tx(access_token, order)
 			.await
-			.map_err(|_| log::error!("Failed to get unsigned market order tx"))?;
+			.map_err(|_| tracing::log::error!("Failed to get unsigned market order tx"))?;
 
 		let unsigned_tx_string = response.data.tx_data.ok_or_else(|| {
-			log::error!("Failed to unwrap tx_data");
+			tracing::log::error!("Failed to unwrap tx_data");
 		})?;
 		let order_id = response.data.order_id.ok_or_else(|| {
-			log::error!("Failed to unwrap order_id");
+			tracing::log::error!("Failed to unwrap order_id");
 		})?;
 		let chain_id = response.data.chain_id.ok_or_else(|| {
-			log::error!("Failed to unwrap chain_id");
+			tracing::log::error!("Failed to unwrap chain_id");
 		})?;
 
 		let unsigned_tx_bytes = unsigned_tx_string
@@ -1121,13 +1168,13 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 		let mut tx_data: Vec<String> = vec![];
 		for (x, y) in unsigned_tx_string.into_iter().zip(signatures.into_iter()) {
 			let bytes = hex::decode(x.trim_start_matches("0x"))
-				.map_err(|_| log::error!("invalid hex string"))?;
+				.map_err(|_| tracing::log::error!("invalid hex string"))?;
 			// We should be able to decode it to Legacy Transaction
 			// As it is RLP Encoded Bytes which adheres to string encoding rules
 			let unsigned_tx = TxLegacy::decode(&mut &bytes[..])
-				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+				.map_err(|_| tracing::log::error!("Failed to decode legacy tx"))?;
 			let signature = PrimitiveSignature::try_from(y.as_ref())
-				.map_err(|_| log::error!("Failed to create Typed signature"))?;
+				.map_err(|_| tracing::log::error!("Failed to create Typed signature"))?;
 
 			let signed_tx = unsigned_tx.into_signed(signature);
 			let mut encoded_signed_tx = vec![];
@@ -1139,7 +1186,7 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 			.pumpx_api
 			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
 			.await
-			.map_err(|_| log::error!("Failed to send order tx"))?;
+			.map_err(|_| tracing::log::error!("Failed to send order tx"))?;
 
 		Ok(response)
 	}
@@ -1196,21 +1243,21 @@ async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
 ) -> Result<String, ()> {
 	let price_str =
 		binance_api.spot_trading().get_symbol_price(trade_symbol).await.map_err(|_| {
-			log::error!("Failed to get symbol price for {}", trade_symbol);
+			tracing::log::error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 
 	let price = if binance_coin_name == "SOL" {
 		// For SOL, we sell SOL to get BNB, so get SOLBNB price
 		Decimal::from_str(&price_str).map_err(|_| {
-			log::error!("Failed to parse symbol price {}", price_str);
+			tracing::log::error!("Failed to parse symbol price {}", price_str);
 		})?
 	} else {
 		// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
 		let price = Decimal::from_str(&price_str).map_err(|_| {
-			log::error!("Failed to parse symbol price {}", price_str);
+			tracing::log::error!("Failed to parse symbol price {}", price_str);
 		})?;
 		if price.is_zero() {
-			log::error!("Symbol price is zero for {}", trade_symbol);
+			tracing::log::error!("Symbol price is zero for {}", trade_symbol);
 			return Err(());
 		}
 		Decimal::ONE / price

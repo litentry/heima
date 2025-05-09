@@ -410,7 +410,7 @@ async fn handle_native_task<
 							(IntentCompletedDetail::Success, should_notify_parentchain, response)
 						},
 						Err(e) => {
-							log::error!("Error executing intent: {:?}", e);
+							tracing::log::error!("Error executing intent: {:?}", e);
 							ctx.cross_chain_intent_executor.on_execution_error().await;
 							(IntentCompletedDetail::Failure, true, None)
 						},
@@ -481,7 +481,7 @@ async fn handle_native_task<
 						})
 						.await
 						.map_err(|e| {
-							log::error!("Failed to verify identity: {:?}", e);
+							tracing::log::error!("Failed to verify identity: {:?}", e);
 							NativeTaskError::InternalError
 						})
 						.and_then(|result| {
@@ -505,7 +505,7 @@ async fn handle_native_task<
 						})
 						.await
 						.map_err(|e| {
-							log::error!("Failed to verify identity: {:?}", e);
+							tracing::log::error!("Failed to verify identity: {:?}", e);
 							NativeTaskError::InternalError
 						})
 						.and_then(|result| {
@@ -587,7 +587,7 @@ async fn handle_native_task<
 				.timestamp();
 			let auth_options = AuthOptions { expires_at };
 
-			log::debug!("Calling pumpx get_account_user_id, email: {}", email);
+			tracing::log::debug!("Calling pumpx get_account_user_id, email: {}", email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(email.clone()).await else {
 				send_error(
 					"Failed to get_account_user_id".to_string(),
@@ -596,7 +596,7 @@ async fn handle_native_task<
 				);
 				return;
 			};
-			log::debug!("Response pumpx get_account_user_id: {:?}", res);
+			tracing::log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let Some(user_id) = res.data.user_id else {
 				send_error(
@@ -607,7 +607,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
+			tracing::log::debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
 			let omni_account =
 				Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account();
 
@@ -626,7 +626,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			log::debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
+			tracing::log::debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
 			let Ok(backend_response) = ctx
 				.pumpx_api
 				.user_connect(
@@ -646,7 +646,7 @@ async fn handle_native_task<
 				);
 				return;
 			};
-			log::debug!("Response pumpx user_connect: {:?}", backend_response);
+			tracing::log::debug!("Response pumpx user_connect: {:?}", backend_response);
 
 			// check google auth value
 			if !backend_response.data.google_auth_check.unwrap_or(false) {
@@ -677,14 +677,17 @@ async fn handle_native_task<
 				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
 			{
-				log::error!(
+				tracing::log::error!(
 					"Failed to insert pumpx_{}_jwt_token into storage",
 					AUTH_TOKEN_ACCESS_TYPE
 				);
 			};
 
 			if storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
-				log::error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
+				tracing::log::error!(
+					"Failed to insert pumpx_{}_jwt_token into storage",
+					AUTH_TOKEN_ID_TYPE
+				);
 			};
 
 			send_ok(
@@ -782,7 +785,7 @@ async fn handle_native_task<
 			};
 
 			// Call Pumpx API to add wallet
-			log::debug!("Calling pumpx add_wallet");
+			tracing::log::debug!("Calling pumpx add_wallet");
 			let Ok(backend_response) = ctx.pumpx_api.add_wallet(&access_token, None).await else {
 				send_error(
 					"Failed to add wallet through Pumpx API".to_string(),
@@ -809,10 +812,10 @@ async fn handle_native_task<
 				},
 			};
 			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
-				log::error!("Failed to map pumpx chain_id {}", chain_id);
+				tracing::log::error!("Failed to map pumpx chain_id {}", chain_id);
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
+					tracing::log::error!("Failed to send response");
 				}
 				return;
 			};
@@ -821,16 +824,16 @@ async fn handle_native_task<
 				.request_signatures(chain, wallet_index, omni_account.into(), unsigned_tx)
 				.await
 			else {
-				log::error!("Failed to request signatures from pumpx-signer");
+				tracing::log::error!("Failed to request signatures from pumpx-signer");
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
 				if response_sender.send(response.encode()).is_err() {
-					log::error!("Failed to send response");
+					tracing::log::error!("Failed to send response");
 				}
 				return;
 			};
 			let response = NativeTaskResponse::Ok(NativeTaskOk::PumpxSignLimitOrder(signed_txs));
 			if response_sender.send(response.encode()).is_err() {
-				log::error!("Failed to send response");
+				tracing::log::error!("Failed to send response");
 			}
 			return;
 		},
@@ -887,7 +890,7 @@ async fn handle_native_task<
 				amount,
 			};
 
-			log::debug!("Calling pumpx create_transfer_tx, body {:?}", body);
+			tracing::log::debug!("Calling pumpx create_transfer_tx, body {:?}", body);
 			match ctx.pumpx_api.create_transfer_tx(&access_token, body, language.clone()).await {
 				Ok(res) => {
 					send_ok(response_sender, NativeTaskOk::PumpxTransferWithdraw(res));
@@ -919,7 +922,11 @@ async fn handle_native_task<
 			};
 
 			if let Some(msg) = message {
-				log::info!("Limit order result message for intent_id {}: {}", intent_id, msg);
+				tracing::log::info!(
+					"Limit order result message for intent_id {}: {}",
+					intent_id,
+					msg
+				);
 			}
 
 			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
@@ -973,12 +980,12 @@ async fn handle_native_task<
 
 fn send_response(sender: ResponseSender, response: NativeTaskResponse) {
 	if sender.send(response.encode()).is_err() {
-		log::error!("Failed to send response");
+		tracing::log::error!("Failed to send response");
 	}
 }
 
 fn send_error(err_msg: String, sender: ResponseSender, error: NativeTaskError) {
-	log::error!("{}", err_msg);
+	tracing::log::error!("{}", err_msg);
 	send_response(sender, NativeTaskResponse::Err(error));
 }
 
@@ -1005,10 +1012,10 @@ async fn dispatch_as_signed<
 	// notify parentchain - for now we continue even with error
 	match client.submit_tx(&tx).await {
 		Ok(_) => {
-			log::debug!("Submitted dispatch_as_signed parentchain call")
+			tracing::log::debug!("Submitted dispatch_as_signed parentchain call")
 		},
 		Err(_) => {
-			log::error!("Failed to submit dispatch_as_signed parentchain call",);
+			tracing::log::error!("Failed to submit dispatch_as_signed parentchain call",);
 			signer.update_nonce().await
 		},
 	};
@@ -1035,10 +1042,13 @@ async fn notify_intent_accepted<
 	// notify parentchain - for now we continue even with error
 	match client.submit_tx(&tx).await {
 		Ok(_) => {
-			log::debug!("Submitted intent_accepted parentchain call for intent_id {}", intent_id)
+			tracing::log::debug!(
+				"Submitted intent_accepted parentchain call for intent_id {}",
+				intent_id
+			)
 		},
 		Err(_) => {
-			log::error!(
+			tracing::log::error!(
 				"Failed to submit intent_accepted parentchain call for intent_id {}",
 				intent_id
 			);
@@ -1068,10 +1078,13 @@ async fn notify_intent_completed<
 	// notify parentchain - for now we continue even with error
 	match client.submit_tx(&tx).await {
 		Ok(_) => {
-			log::debug!("Submitted intent_completed parentchain call for intent_id {}", intent_id)
+			tracing::log::debug!(
+				"Submitted intent_completed parentchain call for intent_id {}",
+				intent_id
+			)
 		},
 		Err(_) => {
-			log::error!(
+			tracing::log::error!(
 				"Failed to submit intent_completed parentchain call for intent_id {}",
 				intent_id
 			);
@@ -1086,17 +1099,17 @@ async fn verify_google_code(
 	google_code: String,
 	language: Option<String>,
 ) -> bool {
-	log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
+	tracing::log::debug!("Calling pumpx verify_google_code, code: {}", google_code);
 	let verify_result = pumpx_api.verify_google_code(access_token, google_code, language).await;
 	verify_result.map_or_else(
 		|e| {
-			log::error!("Google code verification request failed: {:?}", e);
+			tracing::log::error!("Google code verification request failed: {:?}", e);
 			false
 		},
 		|res| {
 			res.data.result.map_or_else(
 				|| {
-					log::error!("Google code verification response result is none");
+					tracing::log::error!("Google code verification response result is none");
 					false
 				},
 				|success| success,

@@ -49,25 +49,25 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
+			tracing::log::debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
 
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|e| {
-					log::error!("Failed to decrypt shielded value: {:?}", e);
+					tracing::log::error!("Failed to decrypt shielded value: {:?}", e);
 					PumpxRpcError::from_code_and_message(
 						DECRYPT_REQUEST_FAILED_CODE,
 						"Shielded value decryption failed".into(),
 					)
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				log::error!("Failed to convert AesKey");
+				tracing::log::error!("Failed to convert AesKey");
 				PumpxRpcError::from_code_and_message(
 					AES_KEY_CONVERT_FAILED_CODE,
 					"AesKey convert failed".into(),
@@ -75,19 +75,19 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			})?;
 
 			// verify user_id and user_email matches
-			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
+			tracing::log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
-				log::error!("Failed to call get_account_user_id");
+				tracing::log::error!("Failed to call get_account_user_id");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
 				)));
 			};
-			log::debug!("Response pumpx get_account_user_id: {:?}", res);
+			tracing::log::debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
 
 			if user_id != params.user_id {
-				log::error!(
+				tracing::log::error!(
 					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
 					params.user_id,
 					params.user_email,
@@ -113,7 +113,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 					Ok(encrypted_wallet)
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

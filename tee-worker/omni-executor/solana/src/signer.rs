@@ -34,13 +34,13 @@ impl Signer for RemoteSigner {
 					.request_wallet(ChainType::Solana, self.wallet_index, self.omni_account)
 					.await
 					.map_err(|e| {
-						log::error!("Error requesting wallet: {:?}", e);
+						tracing::log::error!("Error requesting wallet: {:?}", e);
 						SignerError::Custom(format!("Error requesting wallet: {:?}", e))
 					})
 			})
 		})?;
 		let wallet_pubkey: [u8; 32] = wallet.try_into().map_err(|e| {
-			log::error!("Error converting wallet to Pubkey: {:?}", e);
+			tracing::log::error!("Error converting wallet to Pubkey: {:?}", e);
 			SignerError::Custom(format!("Error converting wallet to Pubkey: {:?}", e))
 		})?;
 
@@ -59,13 +59,13 @@ impl Signer for RemoteSigner {
 					)
 					.await
 					.map_err(|e| {
-						log::error!("Error requesting signature: {:?}", e);
+						tracing::log::error!("Error requesting signature: {:?}", e);
 						SignerError::Custom(format!("Error requesting signature: {:?}", e))
 					})
 			})
 		})?;
 		let signed_message: [u8; 64] = signed_message.try_into().map_err(|e| {
-			log::error!("Error converting signed message to Signature: {:?}", e);
+			tracing::log::error!("Error converting signed message to Signature: {:?}", e);
 			SignerError::Custom(format!("Error converting signed message to Signature: {:?}", e))
 		})?;
 

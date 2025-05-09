@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use convert_api::ConvertApi;
 use error::Error;
 use hmac::{Hmac, Mac};
-use log::{debug, error};
 use reqwest::{Client, Method};
 use sha2::Sha256;
 use spot_trading_api::SpotTradingApi;
@@ -17,6 +16,7 @@ use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
 };
+use tracing::log::{debug, error};
 use url::Url;
 use wallet_api::WalletApi;
 

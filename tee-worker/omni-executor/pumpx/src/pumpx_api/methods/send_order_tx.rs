@@ -36,18 +36,22 @@ pub async fn send_order_tx_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			log::error!("Failed to send market order transaction: {:?}", e);
+			tracing::log::error!("Failed to send market order transaction: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("Market order transaction failed with status: {}, error: {:?}", status, e);
+		tracing::log::error!(
+			"Market order transaction failed with status: {}, error: {:?}",
+			status,
+			e
+		);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse market order transaction response: {:?}", e);
+		tracing::log::error!("Failed to parse market order transaction response: {:?}", e);
 		e
 	})
 }

@@ -40,11 +40,11 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
 			let params = params.parse::<AddWalletParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
+			tracing::log::debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
@@ -60,7 +60,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 					Ok(RPCAddWalletResponse { backend_response: response })
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

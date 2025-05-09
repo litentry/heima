@@ -21,7 +21,7 @@ use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
-use log::error;
+use tracing::log::error;
 
 pub trait RpcProviderFactory {
 	type Provider;

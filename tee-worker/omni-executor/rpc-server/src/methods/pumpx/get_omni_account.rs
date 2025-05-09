@@ -31,7 +31,7 @@ pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_getOmniAccount", |params, _, _| async move {
 			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 

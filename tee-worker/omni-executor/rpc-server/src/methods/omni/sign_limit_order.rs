@@ -63,20 +63,20 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, _| async move {
 			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received omni_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
+			tracing::log::debug!("Received omni_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
 
 			let private_key =
 				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
-					log::error!("Failed to parse private key: {:?}", e);
+					tracing::log::error!("Failed to parse private key: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?;
 
 			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
-				log::error!("Failed to generate public key: {:?}", e);
+				tracing::log::error!("Failed to generate public key: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::InternalError)
 			})?;
 
@@ -96,7 +96,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 
 			let omni_account = token.sub;
 			let Ok(address) = Address32::from_hex(&omni_account) else {
-				log::error!("Failed to parse from omni account token");
+				tracing::log::error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
@@ -119,7 +119,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 					signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
 				}),
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

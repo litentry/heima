@@ -19,7 +19,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
 			let params = params.parse::<RequestEmailVerificationCodeParams>()?;
 
-			log::debug!(
+			tracing::log::debug!(
 				"Received omni_requestEmailVerificationCode, user_email: {}",
 				params.user_email
 			);
@@ -37,7 +37,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 			send_verification_email(&ctx.mailer, params.user_email, verification_code)
 				.await
 				.map_err(|_| {
-					log::error!("Failed to send verification email");
+					tracing::log::error!("Failed to send verification email");
 					ErrorCode::InternalError
 				})?;
 

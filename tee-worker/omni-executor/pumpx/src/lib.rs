@@ -27,8 +27,8 @@ pub use pumpx_api::*;
 use base58::ToBase58;
 use ethers::core::utils::to_checksum;
 use executor_primitives::ChainAsset;
-use log::error;
 use sp_core::keccak_256;
+use tracing::log::error;
 
 pub fn chain_asset_to_pumpx_chain_id(asset: &ChainAsset) -> u32 {
 	match asset {

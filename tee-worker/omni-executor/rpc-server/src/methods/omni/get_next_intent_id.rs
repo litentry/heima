@@ -19,9 +19,9 @@ use crate::ErrorCode;
 use executor_primitives::AccountId;
 use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use log::error;
 use serde::Deserialize;
 use std::str::FromStr;
+use tracing::log::error;
 
 #[derive(Debug, Deserialize)]
 pub struct GetNextIntentIdParams {
@@ -42,7 +42,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 			let intent_id = storage
 				.get(&account)
 				.map_err(|e| {
-					log::error!("Could not get IntentId from store: {:?}", e);
+					tracing::log::error!("Could not get IntentId from store: {:?}", e);
 					<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
 				})?
 				.unwrap_or_default();

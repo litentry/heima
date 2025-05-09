@@ -7,11 +7,11 @@ edition.workspace = true
 [dependencies]
 chrono = { workspace = true }
 hex = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 subxt = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }

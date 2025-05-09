@@ -25,11 +25,11 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_notifyLimitOrderResult", |params, ctx, _| async move {
 			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!(
+			tracing::log::debug!(
 				"Received omni_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
 				params.intent_id,
 				params.result,
@@ -38,12 +38,12 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 
 			let private_key =
 				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
-					log::error!("Failed to parse private key: {:?}", e);
+					tracing::log::error!("Failed to parse private key: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?;
 
 			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
-				log::error!("Failed to generate public key: {:?}", e);
+				tracing::log::error!("Failed to generate public key: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::InternalError)
 			})?;
 
@@ -63,7 +63,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 
 			let omni_account = token.sub;
 			let Ok(address) = Address32::from_hex(&omni_account) else {
-				log::error!("Failed to parse from omni account token");
+				tracing::log::error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
@@ -81,7 +81,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

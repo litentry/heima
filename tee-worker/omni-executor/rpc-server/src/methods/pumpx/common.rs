@@ -74,20 +74,20 @@ where
 
 	// Send task to executor
 	ctx.native_task_sender.send((wrapper, response_sender)).await.map_err(|_| {
-		log::error!("Failed to send request to native call executor");
+		tracing::log::error!("Failed to send request to native call executor");
 		PumpxRpcError::from_error_code(ErrorCode::InternalError)
 	})?;
 
 	// Receive response
 	let response = response_receiver.await.map_err(|e| {
-		log::error!("Failed to receive response from native call handler: {:?}", e);
+		tracing::log::error!("Failed to receive response from native call handler: {:?}", e);
 		PumpxRpcError::from_error_code(ErrorCode::InternalError)
 	})?;
 
 	// Decode response
 	let native_task_response: NativeTaskResponse = Decode::decode(&mut response.as_slice())
 		.map_err(|_| {
-			log::error!("Failed to decode native task response");
+			tracing::log::error!("Failed to decode native task response");
 			PumpxRpcError::from_error_code(ErrorCode::InternalError)
 		})?;
 
@@ -95,11 +95,11 @@ where
 	match native_task_response {
 		Ok(task_ok) => task_ok_handler(task_ok),
 		Err(NativeTaskError::InternalError) => {
-			log::error!("Internal error in native task");
+			tracing::log::error!("Internal error in native task");
 			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 		},
 		Err(native_task_error) => {
-			log::error!("Failed to execute native task: {:?}", native_task_error);
+			tracing::log::error!("Failed to execute native task: {:?}", native_task_error);
 			Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(get_native_task_error_code(
 				&native_task_error,
 			))))
@@ -115,7 +115,12 @@ where
 	T: Codec,
 {
 	if response.code != 10000 {
-		log::error!("{} failed: code={}, message={}", name, response.code, response.message);
+		tracing::log::error!(
+			"{} failed: code={}, message={}",
+			name,
+			response.code,
+			response.message
+		);
 		return Err(PumpxRpcError::from_api_response(response));
 	}
 	Ok(())
@@ -127,7 +132,7 @@ pub fn check_and_get_option_response_data<T>(
 	message: &str,
 ) -> Result<T, PumpxRpcError> {
 	data.ok_or_else(|| {
-		log::error!("{}", message);
+		tracing::log::error!("{}", message);
 		PumpxRpcError::from_error_code(ErrorCode::ServerError(code))
 	})
 }

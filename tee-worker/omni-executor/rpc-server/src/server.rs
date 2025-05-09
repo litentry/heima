@@ -88,7 +88,7 @@ pub async fn start_server(
 	register_methods(&mut module);
 
 	let handle = server.start(module);
-	log::info!("Server listening on port {}", port);
+	tracing::log::info!("Server listening on port {}", port);
 	tokio::spawn(handle.stopped());
 
 	Ok(())

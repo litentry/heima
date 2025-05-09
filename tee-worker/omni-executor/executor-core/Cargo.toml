@@ -6,13 +6,13 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-log = { workspace = true }
 metrics = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 rand = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true, features = ["sync", "rt"] }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-crypto = { workspace = true }

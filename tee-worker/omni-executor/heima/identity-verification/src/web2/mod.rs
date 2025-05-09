@@ -13,11 +13,11 @@ pub fn verify_identity(
 ) -> Result<(), ()> {
 	let username = match validation_data {
 		Web2ValidationData::Twitter(_) => {
-			log::warn!("Twitter validation data is not implemented yet");
+			tracing::log::warn!("Twitter validation data is not implemented yet");
 			Err(())
 		},
 		Web2ValidationData::Discord(_) => {
-			log::warn!("Discord validation data is not implemented yet");
+			tracing::log::warn!("Discord validation data is not implemented yet");
 			Err(())
 		},
 		Web2ValidationData::Email(email_validation_data) => {
@@ -52,7 +52,7 @@ pub fn verify_identity(
 			}
 		},
 		_ => {
-			log::error!("Invalid identity type {:?}", identity);
+			tracing::log::error!("Invalid identity type {:?}", identity);
 			return Err(());
 		},
 	}

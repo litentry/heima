@@ -21,16 +21,16 @@ pub async fn add_wallet_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			log::error!("Failed to send add_wallet request: {:?}", e);
+			tracing::log::error!("Failed to send add_wallet request: {:?}", e);
 			e
 		})?;
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("add_wallet request failed with status: {}, error: {:?}", status, e);
+		tracing::log::error!("add_wallet request failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse add_wallet response: {:?}", e);
+		tracing::log::error!("Failed to parse add_wallet response: {:?}", e);
 		e
 	})
 }

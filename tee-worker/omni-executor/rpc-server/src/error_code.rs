@@ -60,7 +60,7 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			PumpxSignerError::RequestSignatureFailed => PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE,
 		},
 		NativeTaskError::InternalError => {
-			log::error!("Internal error: {:?}", error);
+			tracing::log::error!("Internal error: {:?}", error);
 			// This should not happen, we return the generic interal error code already from the api
 			-32099
 		},

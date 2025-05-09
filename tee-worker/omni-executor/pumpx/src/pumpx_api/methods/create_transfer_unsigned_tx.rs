@@ -46,13 +46,13 @@ pub async fn create_transfer_unsigned_tx_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			log::error!("Failed to send create_transfer_unsigned_tx request: {:?}", e);
+			tracing::log::error!("Failed to send create_transfer_unsigned_tx request: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!(
+		tracing::log::error!(
 			"create_transfer_unsigned_tx request failed with status: {}, error: {:?}",
 			status,
 			e
@@ -61,7 +61,7 @@ pub async fn create_transfer_unsigned_tx_impl(
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse create_transfer_unsigned_tx response: {:?}", e);
+		tracing::log::error!("Failed to parse create_transfer_unsigned_tx response: {:?}", e);
 		e
 	})
 }

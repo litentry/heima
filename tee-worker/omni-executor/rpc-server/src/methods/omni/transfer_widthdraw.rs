@@ -55,17 +55,17 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, _| async move {
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				tracing::log::error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received omni_transferWithdraw, user_email: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
+			tracing::log::debug!("Received omni_transferWithdraw, user_email: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.user_email, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				log::error!("Failed to verify auth token");
+				tracing::log::error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
@@ -77,7 +77,7 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 					Ok(TransferWithdrawResponse { backend_response: response })
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					tracing::log::error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})
