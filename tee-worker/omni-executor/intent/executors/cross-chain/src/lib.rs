@@ -1045,7 +1045,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 					debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 
 					let response = self
-						.create_market_order_tx(&access_token, body, &account_id)
+						.create_market_order_tx(&access_token, body, account_id)
 						.await
 						.map_err(|_| log::error!("Failed to create and submit market order tx"))?;
 
@@ -1082,16 +1082,22 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 		order: CreateMarketOrderUnsignedTxBody,
 		account_id: &AccountId,
 	) -> Result<SendOrderTxResponse, ()> {
-		let wallet_index = order.wallet_index.clone();
+		let wallet_index = order.wallet_index;
 		let response = self
 			.pumpx_api
 			.create_market_order_unsigned_tx(access_token, order)
 			.await
 			.map_err(|_| log::error!("Failed to get unsigned market order tx"))?;
 
-		let unsigned_tx_string = response.data.tx_data.ok_or_else(|| ())?;
-		let order_id = response.data.order_id.ok_or_else(|| ())?;
-		let chain_id = response.data.chain_id.ok_or_else(|| ())?;
+		let unsigned_tx_string = response.data.tx_data.ok_or_else(|| {
+			log::error!("Failed to unwrap tx_data");
+		})?;
+		let order_id = response.data.order_id.ok_or_else(|| {
+			log::error!("Failed to unwrap order_id");
+		})?;
+		let chain_id = response.data.chain_id.ok_or_else(|| {
+			log::error!("Failed to unwrap chain_id");
+		})?;
 
 		let unsigned_tx_bytes = unsigned_tx_string
 			.iter()
@@ -1130,7 +1136,7 @@ impl<BinanceClient: BinanceApi> CrossChainIntentExecutor<BinanceClient> {
 
 		let response = self
 			.pumpx_api
-			.send_order_tx(&access_token, SendOrderTxBody { order_id, chain_id, tx_data })
+			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
 			.await
 			.map_err(|_| log::error!("Failed to send order tx"))?;
 
