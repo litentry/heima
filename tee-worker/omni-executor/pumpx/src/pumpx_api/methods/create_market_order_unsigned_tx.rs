@@ -22,6 +22,7 @@ pub struct CreateMarketOrderUnsignedTxBody {
 	pub gas_type: GasType,
 	pub slippage: u32,
 	pub wallet_index: u32,
+	pub recipient_address: String,
 }
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
