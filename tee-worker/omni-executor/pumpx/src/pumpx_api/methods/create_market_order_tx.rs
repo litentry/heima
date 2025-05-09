@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::common::{ApiResponse, GasType, SwapType};
 use crate::pumpx_api::PumpxApiClient;
 // /v3/trade/create_market_order_tx
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateMarketOrderTxBody {
 	pub request_id: u32,

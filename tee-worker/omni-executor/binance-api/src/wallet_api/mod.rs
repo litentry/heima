@@ -1,20 +1,20 @@
-mod types;
+pub mod types;
 
 use types::{CoinInfo, Deposit, DepositAddress, WithdrawOrder};
 
 use crate::BinanceApi;
-use crate::{error::Error, BinanceApiClient, Method};
+use crate::{error::Error, Method};
 use std::collections::HashMap;
 
 /// https://developers.binance.com/docs/wallet/Introduction
 const WALLET_API: &str = "/sapi/v1";
 
-pub struct WalletApi<'a> {
-	base_api: &'a BinanceApiClient,
+pub struct WalletApi<'a, BinanceClient: BinanceApi> {
+	base_api: &'a BinanceClient,
 }
 
-impl<'a> WalletApi<'a> {
-	pub fn new(binance_api: &BinanceApiClient) -> WalletApi {
+impl<'a, BinanceClient: BinanceApi> WalletApi<'a, BinanceClient> {
+	pub fn new(binance_api: &BinanceClient) -> WalletApi<BinanceClient> {
 		WalletApi { base_api: binance_api }
 	}
 

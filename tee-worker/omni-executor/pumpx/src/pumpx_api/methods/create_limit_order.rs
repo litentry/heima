@@ -5,7 +5,7 @@ use super::common::{GasType, OrderInfoResponse, SwapType};
 use crate::pumpx_api::PumpxApiClient;
 
 // /v3/trade/create_limit_order/
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateLimitOrderBody {
 	pub request_id: u32,
