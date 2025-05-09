@@ -20,14 +20,17 @@ use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
+use pumpx::methods::common::GasType;
+use pumpx::methods::common::OrderInfoResponse;
+use pumpx::methods::common::OrderInfoResponseData;
+use pumpx::methods::common::SwapType;
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponse;
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponseData;
+use pumpx::methods::get_gas_info::GasInfo;
+use pumpx::methods::get_gas_info::GetGasInfoResponse;
+use pumpx::methods::get_gas_info::GetGasInfoResponseData;
 use pumpx::signer_client::SignerClient;
-use pumpx::types::CreateMarketOrderTxBody;
-use pumpx::types::GasType;
-use pumpx::types::SwapType;
-use pumpx::types::{
-	CreateMarketOrderTxResponse, CreateMarketOrderTxResponseData, GasInfo, GetGasInfoResponse,
-	GetGasInfoResponseData, OrderInfoResponse, OrderInfoResponseData,
-};
 use pumpx::PumpxApi;
 use reqwest::Method;
 use std::str::FromStr;

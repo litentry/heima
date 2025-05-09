@@ -1,18 +1,41 @@
-pub mod types;
-
 use async_trait::async_trait;
 use reqwest::{Client, Error};
-use types::{
-	AddWalletResponse, CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody,
-	CreateMarketOrderTxResponse, CreateMarketOrderUnsignedTxBody,
-	CreateMarketOrderUnsignedTxResponse, CreateTransferTxBody, CreateTransferTxResponse,
-	CreateTransferUnsignedTxBody, CreateTransferUnsignedTxResponse, CrossFailBody,
-	GetAccountUserIdParams, GetAccountUserIdResponse, GetGasInfoParams, GetGasInfoResponse,
-	GoogleCode, OrderInfoResponse, SendOrderTxBody, SendOrderTxResponse, SendTransferTxBody,
-	SendTransferTxResponse, UserConnectBody, UserConnectResponse, UserTradeInfoResponse,
-	VerifyGoogleCodeResponse,
-};
 use url::Url;
+pub mod methods;
+use methods::add_wallet::{add_wallet_impl, AddWalletResponse};
+use methods::create_cross_order::{create_cross_order_impl, CreateCrossOrderBody};
+use methods::create_limit_order::{create_limit_order_impl, CreateLimitOrderBody};
+use methods::create_market_order_unsigned_tx::{
+	create_market_order_unsigned_tx_impl, CreateMarketOrderUnsignedTxBody,
+	CreateMarketOrderUnsignedTxResponse,
+};
+use methods::cross_fail::{cross_fail_impl, CrossFailBody};
+use methods::get_user_trade_info::{get_user_trade_info_impl, UserTradeInfoResponse};
+use methods::send_order_tx::{send_order_tx_impl, SendOrderTxBody, SendOrderTxResponse};
+use methods::user_connect::{user_connect_impl, UserConnectResponse};
+use methods::verify_google_code::{verify_google_code_impl, VerifyGoogleCodeResponse};
+
+use methods::create_transfer_unsigned_tx::{
+	create_transfer_unsigned_tx_impl, CreateTransferUnsignedTxBody,
+	CreateTransferUnsignedTxResponse,
+};
+
+use methods::send_transfer_tx::{
+	send_transfer_tx_impl, SendTransferTxBody, SendTransferTxResponse,
+};
+
+use methods::create_market_order_tx::{
+	create_market_order_tx_impl, CreateMarketOrderTxBody, CreateMarketOrderTxResponse,
+};
+
+use methods::create_transfer_tx::{
+	create_transfer_tx_impl, CreateTransferTxBody, CreateTransferTxResponse,
+};
+
+use methods::get_gas_info::{get_gas_info_impl, GetGasInfoResponse};
+
+use methods::common::OrderInfoResponse;
+use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdResponse};
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
@@ -144,32 +167,8 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<UserConnectResponse, Error> {
-		let endpoint = self.base_url.join("v3/account/user_connect").unwrap();
-		let body = UserConnectBody { email, invite_code, google_code, user_id };
-
-		let response = self
-			.http_client
-			.post(endpoint)
-			.header("X-Language", language.unwrap_or("en".to_string()))
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
+		user_connect_impl(self, access_token, user_id, email, invite_code, google_code, language)
 			.await
-			.map_err(|e| {
-				log::error!("Failed to send user connect request: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("User connect request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse user connect response: {:?}", e);
-			e
-		})
 	}
 
 	async fn verify_google_code(
@@ -178,28 +177,7 @@ impl PumpxApi for PumpxApiClient {
 		google_code: String,
 		language: Option<String>,
 	) -> Result<VerifyGoogleCodeResponse, Error> {
-		let endpoint = self.base_url.join("v3/account/verify_google_code").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.header("X-Language", language.unwrap_or("en".to_string()))
-			.bearer_auth(access_token)
-			.json(&GoogleCode { google_code })
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send Google code verification request: {:?}", e);
-				e
-			})?;
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("Google code verification failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse Google code verification response: {:?}", e);
-			e
-		})
+		verify_google_code_impl(self, access_token, google_code, language).await
 	}
 
 	async fn add_wallet(
@@ -207,42 +185,14 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		language: Option<String>,
 	) -> Result<AddWalletResponse, Error> {
-		let endpoint = self.base_url.join("v3/account/add_wallet").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.header("Content-Length", 0)
-			.header("X-Language", language.unwrap_or("en".to_string()))
-			.bearer_auth(access_token)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send add_wallet request: {:?}", e);
-				e
-			})?;
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("add_wallet request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse add_wallet response: {:?}", e);
-			e
-		})
+		add_wallet_impl(self, access_token, language).await
 	}
 
 	async fn get_user_trade_info(
 		&self,
 		access_token: &str,
 	) -> Result<UserTradeInfoResponse, Error> {
-		let endpoint = self.base_url.join("v3/account/get_user_trade_info").unwrap();
-		self.http_client
-			.get(endpoint)
-			.bearer_auth(access_token)
-			.send()
-			.await?
-			.json()
-			.await
+		get_user_trade_info_impl(self, access_token).await
 	}
 
 	async fn create_market_order_unsigned_tx(
@@ -250,33 +200,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		body: CreateMarketOrderUnsignedTxBody,
 	) -> Result<CreateMarketOrderUnsignedTxResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/create_market_order_unsigned_tx").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send create_market_order_unsigned_tx request: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!(
-				"create_market_order_unsigned_tx failed with status: {}, error: {:?}",
-				status,
-				e
-			);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse create_market_order_unsigned_tx response: {:?}", e);
-			e
-		})
+		create_market_order_unsigned_tx_impl(self, access_token, body).await
 	}
 
 	async fn send_order_tx(
@@ -284,29 +208,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		body: SendOrderTxBody,
 	) -> Result<SendOrderTxResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/send_order_tx").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send market order transaction: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("Market order transaction failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse market order transaction response: {:?}", e);
-			e
-		})
+		send_order_tx_impl(self, access_token, body).await
 	}
 
 	async fn create_limit_order(
@@ -314,15 +216,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		body: CreateLimitOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/create_limit_order").unwrap();
-		self.http_client
-			.post(endpoint)
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await?
-			.json()
-			.await
+		create_limit_order_impl(self, access_token, body).await
 	}
 
 	async fn create_cross_order(
@@ -330,25 +224,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		data: CreateCrossOrderBody,
 	) -> Result<OrderInfoResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/create_cross_order").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.bearer_auth(access_token)
-			.json(&data)
-			.send()
-			.await?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("Cross order creation failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse cross order creation response: {:?}", e);
-			e
-		})
+		create_cross_order_impl(self, access_token, data).await
 	}
 
 	async fn cross_fail(
@@ -356,25 +232,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		data: CrossFailBody,
 	) -> Result<OrderInfoResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/cross_fail").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.bearer_auth(access_token)
-			.json(&data)
-			.send()
-			.await?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("Cross order failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse cross order failed response: {:?}", e);
-			e
-		})
+		cross_fail_impl(self, access_token, data).await
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -384,34 +242,7 @@ impl PumpxApi for PumpxApiClient {
 		body: CreateTransferUnsignedTxBody,
 		language: Option<String>,
 	) -> Result<CreateTransferUnsignedTxResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/create_transfer_unsigned_tx").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.header("X-Language", language.unwrap_or("en".to_string()))
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send create_transfer_unsigned_tx request: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!(
-				"create_transfer_unsigned_tx request failed with status: {}, error: {:?}",
-				status,
-				e
-			);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse create_transfer_unsigned_tx response: {:?}", e);
-			e
-		})
+		create_transfer_unsigned_tx_impl(self, access_token, body, language).await
 	}
 
 	async fn send_transfer_tx(
@@ -420,30 +251,7 @@ impl PumpxApi for PumpxApiClient {
 		body: SendTransferTxBody,
 		language: Option<String>,
 	) -> Result<SendTransferTxResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/send_transfer_tx").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.header("X-Language", language.unwrap_or("en".to_string()))
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send send_transfer_tx request: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("send_transfer_tx request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse send_transfer_tx response: {:?}", e);
-			e
-		})
+		send_transfer_tx_impl(self, access_token, body, language).await
 	}
 
 	async fn create_market_order_tx(
@@ -451,29 +259,7 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		body: CreateMarketOrderTxBody,
 	) -> Result<CreateMarketOrderTxResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/create_market_order_tx").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send create_market_order_tx request: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!("create_market_order_tx failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse create_market_order_tx response: {:?}", e);
-			e
-		})
+		create_market_order_tx_impl(self, access_token, body).await
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -483,34 +269,7 @@ impl PumpxApi for PumpxApiClient {
 		body: CreateTransferTxBody,
 		language: Option<String>,
 	) -> Result<CreateTransferTxResponse, Error> {
-		let endpoint = self.base_url.join("v3/trade/create_transfer_tx").unwrap();
-		let response = self
-			.http_client
-			.post(endpoint)
-			.header("X-Language", language.unwrap_or("en".to_string()))
-			.bearer_auth(access_token)
-			.json(&body)
-			.send()
-			.await
-			.map_err(|e| {
-				log::error!("Failed to send create_transfer_tx request: {:?}", e);
-				e
-			})?;
-
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			log::error!(
-				"create_transfer_tx request failed with status: {}, error: {:?}",
-				status,
-				e
-			);
-			e
-		})?;
-
-		response.json().await.map_err(|e| {
-			log::error!("Failed to parse create_transfer_tx response: {:?}", e);
-			e
-		})
+		create_transfer_tx_impl(self, access_token, body, language).await
 	}
 
 	async fn get_gas_info(
@@ -518,22 +277,11 @@ impl PumpxApi for PumpxApiClient {
 		access_token: &str,
 		chain_id: u32,
 	) -> Result<GetGasInfoResponse, Error> {
-		let endpoint = self.base_url.join("v1/trade/get_gas_info").unwrap();
-		let params = GetGasInfoParams { chain_id };
-		self.http_client
-			.get(endpoint)
-			.bearer_auth(access_token)
-			.query(&params)
-			.send()
-			.await?
-			.json()
-			.await
+		get_gas_info_impl(self, access_token, chain_id).await
 	}
 
 	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error> {
-		let endpoint = self.base_url.join("v3/account/get_account_user_id").unwrap();
-		let params = GetAccountUserIdParams { email };
-		self.http_client.get(endpoint).query(&params).send().await?.json().await
+		get_account_user_id_impl(self, email).await
 	}
 }
 

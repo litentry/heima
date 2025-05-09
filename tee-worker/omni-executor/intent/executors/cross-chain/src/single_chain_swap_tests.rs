@@ -16,9 +16,12 @@ use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
+use pumpx::methods::common::GasType;
+use pumpx::methods::common::OrderInfoResponse;
+use pumpx::methods::common::OrderInfoResponseData;
+use pumpx::methods::common::SwapType;
+use pumpx::methods::create_limit_order::CreateLimitOrderBody;
 use pumpx::signer_client::{ChainType, SignerClient};
-use pumpx::types::CreateLimitOrderBody;
-use pumpx::types::{OrderInfoResponse, OrderInfoResponseData};
 use pumpx::PumpxApi;
 use std::sync::Arc;
 use tempfile::tempdir;
@@ -90,7 +93,7 @@ async fn simple_single_chain_swap() {
         chain_id: 100000,
         token_ca: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_string(),
         amount: "100".to_string(),
-        swap_type: pumpx::types::SwapType::Buy,
+        swap_type: SwapType::Buy,
         double_out: false,
         token_cap: None,
         price_usd: None,
@@ -98,7 +101,7 @@ async fn simple_single_chain_swap() {
         address: "B9umkjBoYNxyajiVwty2f6W3WWG2tf5SmkCz6KqWrv5f".to_string(),
         is_anti_mev: false,
         is_auto_slippage: false,
-        gas_type: pumpx::types::GasType::Slow,
+        gas_type: GasType::Slow,
         slippage: 0,
         wallet_index: 1
     }))
