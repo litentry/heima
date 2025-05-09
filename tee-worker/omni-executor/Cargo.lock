@@ -2436,6 +2436,7 @@ version = "0.1.0"
 dependencies = [
  "accounting-contract-client",
  "alloy",
+ "alloy-rlp",
  "async-trait",
  "base58",
  "binance-api",

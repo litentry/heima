@@ -6,7 +6,7 @@ use super::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
 
 // /v3/trade/send_order_tx
-#[derive(Deserialize, Serialize, Encode, Decode, Debug)]
+#[derive(Deserialize, Serialize, Encode, Decode, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SendOrderTxBody {
 	pub chain_id: u32,

@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use alloy::primitives::{Address, U256};
+use alloy::consensus::{SignableTransaction, TxLegacy};
+use alloy::primitives::{Address, PrimitiveSignature, U256};
 use async_trait::async_trait;
 use base58::ToBase58;
 use binance_api::spot_trading_api::types::{
@@ -50,16 +51,8 @@ use pumpx::methods::create_cross_order::CrossOrderInfo;
 use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
 
-use pumpx::methods::create_cross_order::CreateCrossOrderBody;
-use pumpx::methods::create_limit_order::CreateLimitOrderBody;
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
-use pumpx::methods::cross_fail::CrossFailBody;
-use pumpx::PumpxApi;
-use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use accounting_contract_client::AccountingContractApi;
+use alloy::primitives::private::alloy_rlp::Decodable;
 use binance_api::spot_trading_api::SpotTradingApi;
 use binance_api::wallet_api::WalletApi;
 use binance_api::BinanceApi;
@@ -71,6 +64,16 @@ use parentchain_rpc_client::CustomConfig;
 use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_signer::TxSigner;
+use pumpx::methods::create_cross_order::CreateCrossOrderBody;
+use pumpx::methods::create_limit_order::CreateLimitOrderBody;
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
+use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
+use pumpx::methods::cross_fail::CrossFailBody;
+use pumpx::methods::send_order_tx::{SendOrderTxBody, SendOrderTxResponse};
+use pumpx::PumpxApi;
+use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use log::debug;
 
@@ -1013,7 +1016,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 					};
 
 					debug!("Doing market order");
-					let body = CreateMarketOrderTxBody {
+					let body = CreateMarketOrderUnsignedTxBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
 						token_ca: to_token_ca.clone(),
@@ -1042,14 +1045,14 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 						},
 						slippage: pumpx_config.slippage,
 						wallet_index: pumpx_config.wallet_index,
+						recipient_address: String::from(""),
 					};
 					debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
-					let response =
-						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
-							|_| {
-								log::error!("Failed to create market order tx");
-							},
-						)?;
+
+					let response = self
+						.create_market_order_tx(&access_token, body, account_id)
+						.await
+						.map_err(|_| log::error!("Failed to create and submit market order tx"))?;
 
 					debug!("Response create_market_order_tx: {:?}", response);
 					result = (Some(response.encode()), true);
@@ -1074,6 +1077,77 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 
 	async fn name(&self) -> &'static str {
 		"cross-chain"
+	}
+}
+
+impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
+	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+{
+	pub async fn create_market_order_tx(
+		&self,
+		access_token: &str,
+		order: CreateMarketOrderUnsignedTxBody,
+		account_id: &AccountId,
+	) -> Result<SendOrderTxResponse, ()> {
+		let wallet_index = order.wallet_index;
+		let response = self
+			.pumpx_api
+			.create_market_order_unsigned_tx(access_token, order)
+			.await
+			.map_err(|_| log::error!("Failed to get unsigned market order tx"))?;
+
+		let unsigned_tx_string = response.data.tx_data.ok_or_else(|| {
+			log::error!("Failed to unwrap tx_data");
+		})?;
+		let order_id = response.data.order_id.ok_or_else(|| {
+			log::error!("Failed to unwrap order_id");
+		})?;
+		let chain_id = response.data.chain_id.ok_or_else(|| {
+			log::error!("Failed to unwrap chain_id");
+		})?;
+
+		let unsigned_tx_bytes = unsigned_tx_string
+			.iter()
+			.map(|s| {
+				let hex_str = s.trim_start_matches("0x");
+				hex::decode(hex_str).expect("Invalid hex string")
+			})
+			.collect();
+
+		let signatures = self
+			.pumpx_signer_client
+			.request_signatures(
+				ChainType::Evm,
+				wallet_index,
+				*account_id.as_ref(),
+				unsigned_tx_bytes,
+			)
+			.await?;
+
+		let mut tx_data: Vec<String> = vec![];
+		for (x, y) in unsigned_tx_string.into_iter().zip(signatures.into_iter()) {
+			let bytes = hex::decode(x.trim_start_matches("0x"))
+				.map_err(|_| log::error!("invalid hex string"))?;
+			// We should be able to decode it to Legacy Transaction
+			// As it is RLP Encoded Bytes which adheres to string encoding rules
+			let unsigned_tx = TxLegacy::decode(&mut &bytes[..])
+				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+			let signature = PrimitiveSignature::try_from(y.as_ref())
+				.map_err(|_| log::error!("Failed to create Typed signature"))?;
+
+			let signed_tx = unsigned_tx.into_signed(signature);
+			let mut encoded_signed_tx = vec![];
+			signed_tx.rlp_encode(&mut encoded_signed_tx);
+			tx_data.push(hex::encode(encoded_signed_tx));
+		}
+
+		let response = self
+			.pumpx_api
+			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
+			.await
+			.map_err(|_| log::error!("Failed to send order tx"))?;
+
+		Ok(response)
 	}
 }
 

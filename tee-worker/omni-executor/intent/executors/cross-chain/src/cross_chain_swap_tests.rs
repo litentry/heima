@@ -24,12 +24,15 @@ use pumpx::methods::common::GasType;
 use pumpx::methods::common::OrderInfoResponse;
 use pumpx::methods::common::OrderInfoResponseData;
 use pumpx::methods::common::SwapType;
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponse;
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponseData;
+use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
+use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxResponse;
+use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxResponseData;
 use pumpx::methods::get_gas_info::GasInfo;
 use pumpx::methods::get_gas_info::GetGasInfoResponse;
 use pumpx::methods::get_gas_info::GetGasInfoResponseData;
+use pumpx::methods::send_order_tx::SendOrderTxBody;
+use pumpx::methods::send_order_tx::SendOrderTxResponse;
+use pumpx::methods::send_order_tx::SendOrderTxResponseData;
 use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use reqwest::Method;
@@ -53,6 +56,7 @@ async fn simple_cross_chain_swap() {
 		128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
 	];
 	let to_chain_id = 56;
+	let order_id = 0;
 	let expected_payout_address = "0x8Fc876ca8b23Ef6b735e388Ea94327e189DD5Ea7";
 	let binance_deposit_address = "binance_deposit_address";
 	let solana_coin_ticker = "SOL";
@@ -91,11 +95,34 @@ async fn simple_cross_chain_swap() {
 			.to_vec())
 		});
 
+	let create_order_encoded_tx: Vec<u8> = vec![
+		233, 128, 133, 4, 227, 178, 146, 0, 131, 30, 132, 128, 148, 216, 218, 107, 242, 105, 100,
+		175, 157, 126, 237, 158, 3, 229, 52, 21, 211, 122, 169, 96, 69, 132, 59, 154, 202, 0, 128,
+		1, 128, 128,
+	];
+	let create_order_tx_signature: Vec<u8> = vec![
+		246, 199, 110, 255, 190, 229, 172, 159, 243, 65, 160, 239, 232, 91, 95, 148, 1, 171, 103,
+		60, 93, 28, 39, 70, 4, 30, 68, 110, 61, 25, 174, 163, 55, 71, 10, 172, 19, 241, 203, 77,
+		162, 15, 8, 106, 71, 92, 206, 179, 106, 91, 180, 253, 156, 245, 43, 72, 48, 10, 216, 64,
+		173, 20, 128, 173, 27,
+	];
+
+	pumpx_signer_client_mock
+		.expect_request_signatures()
+		.with(
+			mockall::predicate::eq(pumpx::signer_client::ChainType::Evm),
+			mockall::predicate::eq(pumpx_wallet_index),
+			mockall::predicate::eq(pumpx_wallet_omni_account),
+			mockall::predicate::eq(vec![create_order_encoded_tx.clone()]),
+		)
+		.times(1)
+		.returning(move |_, _, _, _| Ok(vec![create_order_tx_signature.to_vec()]));
+
 	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
-	pumpx_api_mock.expect_create_cross_order().times(1).returning(|_, _| {
+	pumpx_api_mock.expect_create_cross_order().times(1).returning(move |_, _| {
 		Ok(OrderInfoResponse {
 			code: 0,
-			data: OrderInfoResponseData { order_id: Some(1) },
+			data: OrderInfoResponseData { order_id: Some(order_id) },
 			message: "".to_string(),
 		})
 	});
@@ -124,34 +151,56 @@ async fn simple_cross_chain_swap() {
 			})
 		});
 
-	pumpx_api_mock.expect_create_market_order_tx()
-		.with(mockall::predicate::eq("test_token"), mockall::predicate::eq(CreateMarketOrderTxBody {
-			request_id: 0,
-			chain_id: to_chain_id,
-			token_ca: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_string(),
-			swap_type: SwapType::Buy,
-			amount_in: "998.000000000000000000".to_string(),
-			double_out: false,
-			is_one_click: false,
-			address: expected_payout_address.to_string(),
-			is_anti_mev: false,
-			is_auto_slippage: false,
-			gas_type: GasType::Slow,
-			slippage: 0,
-			wallet_index: 1
-		}))
+	pumpx_api_mock.expect_create_market_order_unsigned_tx()
+		.with(mockall::predicate::eq("test_token"), mockall::predicate::eq(
+			CreateMarketOrderUnsignedTxBody {
+				request_id: 0,
+				chain_id: to_chain_id,
+				token_ca: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_string(),
+				swap_type: SwapType::Buy,
+				amount_in: "998.000000000000000000".to_string(),
+				double_out: false,
+				is_one_click: false,
+				address: expected_payout_address.to_string(),
+				is_anti_mev: false,
+				is_auto_slippage: false,
+				gas_type: GasType::Slow,
+				slippage: 0,
+				wallet_index: 1,
+				recipient_address: "".to_string()
+			}
+		))
 		.times(1)
-		.returning(|_, _| {
-			Ok(CreateMarketOrderTxResponse {
+		.returning(move |_, _| {
+			Ok(CreateMarketOrderUnsignedTxResponse {
 				code: 0,
-				data: CreateMarketOrderTxResponseData {
-					chain_id: None,
-					order_id: None,
-					tx_hash: None,
+				data: CreateMarketOrderUnsignedTxResponseData {
+					chain_id: Some(to_chain_id),
+					order_id: Some(order_id),
+					tx_data: Some(
+						vec![format!("0x{}", hex::encode(create_order_encoded_tx.clone()))]
+					),
 				},
 				message: "".to_string(),
 			})
 		});
+
+	pumpx_api_mock.expect_send_order_tx()
+		.with(
+			mockall::predicate::eq("test_token"),
+			mockall::predicate::eq(SendOrderTxBody {
+				chain_id: to_chain_id,
+				order_id: order_id,
+				tx_data: vec!["f869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
+			}) )
+		.times(1)
+		.returning(|_, _| Ok(SendOrderTxResponse {
+			code: 0,
+			data: SendOrderTxResponseData {
+				tx_hash: None,
+			},
+			message: "".to_string()
+		}));
 
 	let mut binance_api_mock = binance_api::mocks::MockBinanceApiClient::new();
 

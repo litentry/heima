@@ -43,6 +43,7 @@ mockall = { workspace = true }
 serde_json = { workspace = true }
 heima-primitives = { workspace = true }
 reqwest = { workspace = true }
+alloy-rlp = { workspace = true }
 
 [lints]
 workspace = true
