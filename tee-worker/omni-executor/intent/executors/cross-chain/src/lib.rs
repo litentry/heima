@@ -1041,6 +1041,7 @@ impl<BinanceClient: BinanceApi> IntentExecutor for CrossChainIntentExecutor<Bina
 						},
 						slippage: pumpx_config.slippage,
 						wallet_index: pumpx_config.wallet_index,
+						recipient_address: String::from("")
 					};
 					debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 
