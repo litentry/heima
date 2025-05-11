@@ -27,7 +27,7 @@ pub trait SolanaClient: Send + Sync {
 		signer: &Signer,
 	) -> Result<String, ()>;
 
-	async fn get_balance(self, pubkey: &Pubkey) -> Result<u64, ()>;
+	async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, ()>;
 
 	async fn get_token_accounts_by_owner(
 		&self,
@@ -179,7 +179,7 @@ impl SolanaClient for SolanaRpcClient {
 		Ok(tx_signature.to_string())
 	}
 
-	async fn get_balance(self, pubkey: &Pubkey) -> Result<u64, ()> {
+	async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, ()> {
 		self.rpc_client
 			.get_balance(pubkey)
 			.await
@@ -205,6 +205,9 @@ pub mod mocks {
 	use crate::SolanaClient;
 	use async_trait::async_trait;
 	use mockall::mock;
+	use solana_client::rpc_request::TokenAccountsFilter;
+	use solana_client::rpc_response::RpcKeyedAccount;
+	use solana_sdk::pubkey::Pubkey;
 
 	mock! {
 		pub SolanaRpcClient {}
@@ -230,7 +233,7 @@ pub mod mocks {
 			) -> Result<String, ()>;
 
 			async fn get_token_accounts_by_owner(&self, owner: &Pubkey, token_account_filter: TokenAccountsFilter) -> Result<Vec<RpcKeyedAccount>, ()>;
-			async fn get_balance(self, pubkey: &Pubkey) -> Result<u64, ()>;
+			async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, ()>;
 		}
 
 	}

@@ -34,6 +34,7 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use solana::{signer::RemoteSigner, SolanaClient as SolanaClientTrait};
+use std::ops::Deref;
 use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
@@ -630,10 +631,6 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 								.await?
 							},
 							ChainAsset::Solana(token) => {
-								let rpc_url =
-									self.rpc_endpoint_registry.get(&Chain::Solana).ok_or(
-										log::error!("No RPC endpoint in registry for Solana chain"),
-									)?;
 								let address = self
 									.pumpx_signer_client
 									.request_wallet(
@@ -654,7 +651,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 										e
 									)
 								})?;
-								query_solana(rpc_url, &pubkey, token)
+								query_solana(self.solana_client.deref(), &pubkey, token)
 									.await
 									.map(|v| AmountType::from(v))?
 							},

@@ -5360,6 +5360,7 @@ dependencies = [
  "hex-literal",
  "log",
  "serde_json",
+ "solana",
  "solana-account-decoder-client-types",
  "solana-client",
  "solana-sdk",

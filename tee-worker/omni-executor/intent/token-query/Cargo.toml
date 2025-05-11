@@ -9,6 +9,7 @@ alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-
 ethereum-rpc = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
+solana = { workspace = true }
 solana-account-decoder-client-types = "2.1.5"
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
