@@ -30,6 +30,8 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use intent_asset_lock::precise::PreciseAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
 use log::{error, info};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::{
@@ -222,7 +224,11 @@ async fn main() -> Result<(), ()> {
 				args.accounting_contract_address.parse().unwrap(),
 			);
 
+			let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> =
+				AccountAssetLocks::empty();
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
+				account_assets_lock,
 				rpc_endpoint_registry,
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),

@@ -37,6 +37,8 @@ use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
+use intent_asset_lock::precise::PreciseAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
 use pumpx::methods::common::GasType;
 use pumpx::methods::common::OrderInfoResponse;
 use pumpx::methods::common::OrderInfoResponseData;
@@ -313,9 +315,12 @@ async fn simple_cross_chain_swap() {
 	let single_chain_swap_provider =
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(to_chain_id, pumpx_wallet_index));
 
+	let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> = AccountAssetLocks::empty();
+
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
 	let executor = CrossChainIntentExecutor::new(
+		account_assets_lock,
 		rpc_endpoint_registry,
 		pumpx_signer_client.clone(),
 		pumpx_api,
@@ -593,9 +598,12 @@ async fn instant_payout_cross_chain_swap() {
 	let single_chain_swap_provider =
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(to_chain_id, pumpx_wallet_index));
 
+	let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> = AccountAssetLocks::empty();
+
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
 	let executor = CrossChainIntentExecutor::new(
+		account_assets_lock,
 		rpc_endpoint_registry,
 		pumpx_signer_client.clone(),
 		pumpx_api,

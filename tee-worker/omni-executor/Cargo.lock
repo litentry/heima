@@ -3764,6 +3764,7 @@ dependencies = [
  "executor-primitives",
  "executor-storage",
  "hex",
+ "intent-asset-lock",
  "log",
  "metrics-exporter-prometheus",
  "native-task-handler",

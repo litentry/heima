@@ -32,6 +32,8 @@ use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
+use intent_asset_lock::precise::PreciseAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
 use pumpx::methods::common::GasType;
 use pumpx::methods::common::OrderInfoResponse;
 use pumpx::methods::common::OrderInfoResponseData;
@@ -141,7 +143,10 @@ async fn simple_single_chain_swap() {
 	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
 		Arc::new(Box::new(accounting_contract_client::mocks::MockAccountingContractClient::new()));
 
+	let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> = AccountAssetLocks::empty();
+
 	let executor = CrossChainIntentExecutor::new(
+		account_assets_lock,
 		rpc_endpoint_registry,
 		pumpx_signer_client.clone(),
 		pumpx_api,

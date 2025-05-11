@@ -134,6 +134,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
+		account_asset_lock: AccountAssetLocks<PreciseAssetsLock>,
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
@@ -143,8 +144,6 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 		instant_payout_threshold: Decimal,
 	) -> Result<Self, ()> {
-		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
-		let account_asset_lock = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		Ok(Self {
 			account_asset_lock,
 			rpc_endpoint_registry,
