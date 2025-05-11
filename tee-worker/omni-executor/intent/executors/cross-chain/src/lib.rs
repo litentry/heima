@@ -731,36 +731,14 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 							));
 
 						// TODO: change this when adding support for more tokens/chains
-						if binance_coin_name == "SOL" {
-							// Native transfer
-							debug!(
-								"Transfering {:?} SOL to {:?}",
-								amount_to_transfer, deposit_address
-							);
-							self.solana_client
-								.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
-								.await
-								.map_err(|_| {
-									log::error!("Failed to transfer SOL");
-								})?;
-						} else {
-							debug!(
-								"Transfering {:?} {:?} to {:?}",
-								amount_to_transfer, token_address, deposit_address
-							);
-							// SPL transfer
-							self.solana_client
-								.transfer_spl(
-									&deposit_address,
-									amount_to_transfer,
-									&token_address,
-									&remote_signer,
-								)
-								.await
-								.map_err(|_| {
-									log::error!("Failed to transfer SPL");
-								})?;
-						}
+						self.deposit_tokens_to_binance(
+							&binance_coin_name,
+							&deposit_address,
+							amount_to_transfer,
+							&token_address,
+							remote_signer,
+						)
+						.await?;
 
 						//release lock
 						// in case of which errors lock should be released ?
@@ -825,42 +803,16 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 								Handle::current(),
 							));
 
-						let mut tx_id: Option<String> = None;
 						// TODO: change this when adding support for more tokens/chains
-						if binance_coin_name == "SOL" {
-							// Native transfer
-							debug!(
-								"Transfering {:?} SOL to {:?}",
-								amount_to_transfer, deposit_address
-							);
-							let signature = self
-								.solana_client
-								.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
-								.await
-								.map_err(|_| {
-									log::error!("Failed to transfer SOL");
-								})?;
-							tx_id = Some(signature);
-						} else {
-							debug!(
-								"Transfering {:?} {:?} to {:?}",
-								amount_to_transfer, token_address, deposit_address
-							);
-							// SPL transfer
-							let signature = self
-								.solana_client
-								.transfer_spl(
-									&deposit_address,
-									amount_to_transfer,
-									&token_address,
-									&remote_signer,
-								)
-								.await
-								.map_err(|_| {
-									log::error!("Failed to transfer SPL");
-								})?;
-							tx_id = Some(signature);
-						}
+						let tx_id: Option<String> = self
+							.deposit_tokens_to_binance(
+								&binance_coin_name,
+								&deposit_address,
+								amount_to_transfer,
+								&token_address,
+								remote_signer,
+							)
+							.await?;
 
 						let mut bnb_to_receive = "".to_string();
 
@@ -1316,6 +1268,47 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		};
 		//todo: remove this to owned ?
 		Ok(gas_info.to_owned())
+	}
+
+	async fn deposit_tokens_to_binance(
+		&self,
+		coin_name: &str,
+		deposit_address: &str,
+		amount_to_transfer: u64,
+		spl_token_address: &str,
+		remote_signer: Box<dyn solana_sdk::signer::Signer + Send + Sync>,
+	) -> Result<Option<String>, ()> {
+		if coin_name == "SOL" {
+			// Native transfer
+			debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
+			Ok(Some(
+				self.solana_client
+					.transfer_sol(deposit_address, amount_to_transfer, &remote_signer)
+					.await
+					.map_err(|_| {
+						log::error!("Failed to transfer SOL");
+					})?,
+			))
+		} else {
+			debug!(
+				"Transfering {:?} {:?} to {:?}",
+				amount_to_transfer, spl_token_address, deposit_address
+			);
+			// SPL transfer
+			Ok(Some(
+				self.solana_client
+					.transfer_spl(
+						deposit_address,
+						amount_to_transfer,
+						spl_token_address,
+						&remote_signer,
+					)
+					.await
+					.map_err(|_| {
+						log::error!("Failed to transfer SPL");
+					})?,
+			))
+		}
 	}
 
 	pub async fn create_market_order_tx(
