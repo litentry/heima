@@ -54,6 +54,7 @@ use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use reqwest::Method;
 use rust_decimal::Decimal;
+use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use std::sync::Arc;
 use tempfile::tempdir;
@@ -358,6 +359,7 @@ async fn instant_payout_cross_chain_swap() {
 	let binance_deposit_address = "binance_deposit_address";
 	let solana_coin_ticker = "SOL";
 	let solana_coin_name = "Solana";
+	let accounting_contract_client_address = "0x7CE3464A6dc52001754b0b90878d9Ffd61B47c6C";
 
 	// this is called twice, one for solana address and later for ethereum address
 	pumpx_signer_client_mock
@@ -459,13 +461,13 @@ async fn instant_payout_cross_chain_swap() {
 				amount_in: "998.000000000000000000".to_string(),
 				double_out: false,
 				is_one_click: false,
-				address: expected_payout_address.to_string(),
+				address: accounting_contract_client_address.to_string(),
 				is_anti_mev: false,
 				is_auto_slippage: false,
 				gas_type: GasType::Slow,
 				slippage: 0,
 				wallet_index: 1,
-				recipient_address: "".to_string()
+				recipient_address: expected_payout_address.to_string()
 			}
 		))
 		.times(1)
@@ -543,26 +545,24 @@ async fn instant_payout_cross_chain_swap() {
 		accounting_contract_client::mocks::MockAccountingContractClient::new();
 
 	accounting_contract_client_mock
-		.expect_get_balance()
+		.expect_get_address()
 		.times(1)
-		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
+		.returning(|| Address::from_str(accounting_contract_client_address).unwrap());
 
-	accounting_contract_client_mock
-		.expect_get_nonce()
-		.times(1)
-		.returning(|_| Ok(U256::from(1)));
-
-	accounting_contract_client_mock
-		.expect_execute_pay_out_request()
-		.with(
-			mockall::predicate::eq(Address::from_str(expected_payout_address).unwrap()),
-			mockall::predicate::eq(U256::from(2)),
-			mockall::predicate::eq(U256::from_str("999000000000000000000").unwrap()),
-		)
-		.times(1)
-		.returning(|_, _, _| Ok(()));
+	// accounting_contract_client_mock
+	// 	.expect_get_balance()
+	// 	.times(1)
+	// 	.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
 
 	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
+
+	solana_client_mock
+		.expect_get_balance()
+		.with(mockall::predicate::eq(
+			Pubkey::from_str("B9umkjBoYNxyajiVwty2f6W3WWG2tf5SmkCz6KqWrv5f").unwrap(),
+		))
+		.times(1)
+		.returning(|_| Ok(100));
 
 	solana_client_mock
 		.expect_transfer_sol()
