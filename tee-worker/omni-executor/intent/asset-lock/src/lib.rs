@@ -70,6 +70,19 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 			Err(())
 		}
 	}
+
+	pub fn get_locked_amount(
+		&self,
+		account_id: &AccountId,
+		asset_id: AssetId,
+	) -> Option<AmountType> {
+		let account_lock = self.locks.read().unwrap();
+		if let Some(al) = account_lock.get(account_id) {
+			al.get(asset_id)
+		} else {
+			None
+		}
+	}
 }
 
 pub trait AssetsLock {
@@ -88,4 +101,6 @@ pub trait AssetsLock {
 	) -> Result<(), ()>;
 
 	fn release(&mut self, asset_id: AssetId, amount_to_release: AmountType) -> Result<(), ()>;
+
+	fn get(&self, asset_id: AssetId) -> Option<AmountType>;
 }

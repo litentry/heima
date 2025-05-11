@@ -70,6 +70,10 @@ impl AssetsLock for PreciseAssetsLock {
 		}
 		Ok(())
 	}
+
+	fn get(&self, asset_id: AssetId) -> Option<AmountType> {
+		self.locked_assets.get(&asset_id).copied()
+	}
 }
 
 #[cfg(test)]

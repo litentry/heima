@@ -61,6 +61,14 @@ impl AssetsLock for AccountWideAssetsLock {
 		self.locked = false;
 		Ok(())
 	}
+
+	fn get(&self, _asset_id: crate::AssetId) -> Option<AmountType> {
+		if self.locked {
+			Some(AmountType::from(0))
+		} else {
+			None
+		}
+	}
 }
 
 #[cfg(test)]

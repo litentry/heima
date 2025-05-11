@@ -45,4 +45,8 @@ impl AssetsLock for AlwaysUnlockedAssetsLock {
 	) -> Result<(), ()> {
 		Ok(())
 	}
+
+	fn get(&self, _asset_id: crate::AssetId) -> Option<AmountType> {
+		None
+	}
 }
