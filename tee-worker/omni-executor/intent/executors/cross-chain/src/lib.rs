@@ -601,61 +601,13 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 
 					if instant {
 						// instant payout flow
-						let available_amount = match &swap_order.from_asset {
-							ChainAsset::Ethereum(chain_id, token) => {
-								let rpc_url = self
-									.rpc_endpoint_registry
-									.get(&Chain::Ethereum(*chain_id))
-									.ok_or(log::error!(
-										"No RPC endpoint in registry for Ethereum chain"
-									))?;
-								let address = self
-									.pumpx_signer_client
-									.request_wallet(
-										pumpx::signer_client::ChainType::Evm,
-										pumpx_config.wallet_index,
-										*account_id.as_ref(),
-									)
-									.await
-									.map_err(|e| {
-										log::error!(
-											"Could not get wallet from pumpx-signer: {:?}",
-											e
-										)
-									})?;
-								query_ethereum(
-									rpc_url,
-									EthereumAddress::from_slice(&address),
-									token,
-								)
-								.await?
-							},
-							ChainAsset::Solana(token) => {
-								let address = self
-									.pumpx_signer_client
-									.request_wallet(
-										pumpx::signer_client::ChainType::Solana,
-										pumpx_config.wallet_index,
-										*account_id.as_ref(),
-									)
-									.await
-									.map_err(|e| {
-										log::error!(
-											"Could not get wallet from pumpx-signer: {:?}",
-											e
-										)
-									})?;
-								let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
-									log::error!(
-										"Could not create solana pubkey from wallet address: {:?}",
-										e
-									)
-								})?;
-								query_solana(self.solana_client.deref(), &pubkey, token)
-									.await
-									.map(|v| AmountType::from(v))?
-							},
-						};
+						let available_amount = self
+							.get_token_available_amount(
+								&swap_order.from_asset,
+								pumpx_config.wallet_index,
+								account_id,
+							)
+							.await?;
 
 						self.account_asset_lock.check_and_insert(
 							account_id.clone(),
@@ -1346,6 +1298,49 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
+	async fn get_token_available_amount(
+		&self,
+		asset: &ChainAsset,
+		wallet_index: u32,
+		account_id: &AccountId,
+	) -> Result<U256, ()> {
+		match &asset {
+			ChainAsset::Ethereum(chain_id, token) => {
+				let rpc_url = self
+					.rpc_endpoint_registry
+					.get(&Chain::Ethereum(*chain_id))
+					.ok_or(log::error!("No RPC endpoint in registry for Ethereum chain"))?;
+				let address = self
+					.pumpx_signer_client
+					.request_wallet(
+						pumpx::signer_client::ChainType::Evm,
+						wallet_index,
+						*account_id.as_ref(),
+					)
+					.await
+					.map_err(|e| log::error!("Could not get wallet from pumpx-signer: {:?}", e))?;
+				query_ethereum(rpc_url, EthereumAddress::from_slice(&address), token).await
+			},
+			ChainAsset::Solana(token) => {
+				let address = self
+					.pumpx_signer_client
+					.request_wallet(
+						pumpx::signer_client::ChainType::Solana,
+						wallet_index,
+						*account_id.as_ref(),
+					)
+					.await
+					.map_err(|e| log::error!("Could not get wallet from pumpx-signer: {:?}", e))?;
+				let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
+					log::error!("Could not create solana pubkey from wallet address: {:?}", e)
+				})?;
+				query_solana(self.solana_client.deref(), &pubkey, token)
+					.await
+					.map(|v| AmountType::from(v))
+			},
+		}
+	}
+
 	pub async fn create_market_order_tx(
 		&self,
 		access_token: &str,
