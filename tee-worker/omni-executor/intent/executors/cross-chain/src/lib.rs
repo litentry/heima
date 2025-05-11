@@ -31,6 +31,7 @@ use executor_primitives::SolanaToken;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use pumpx::methods::get_gas_info::GasInfo;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use solana::{signer::RemoteSigner, SolanaClient as SolanaClientTrait};
@@ -630,29 +631,9 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 							"Calling pumpx get_gas_info, chain_id: {}",
 							pumpx_config.to_chain_id
 						);
-						let res = self
-							.pumpx_api
-							.get_gas_info(&access_token, pumpx_config.to_chain_id)
-							.await
-							.map_err(|_| {
-								log::error!("Failed to get gas info");
-							})?;
-						debug!("Response get_gas_info: {:?}", res);
 
-						let Some(gas_info_vec) = res.data.gas_info else {
-							log::error!("Response data.gas_info of call get gas info is none");
-							return Err(());
-						};
-						let Some(gas_info) = gas_info_vec
-							.iter()
-							.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
-						else {
-							log::error!(
-								"Could not find matching gas_info with chain_id {}",
-								pumpx_config.to_chain_id
-							);
-							return Err(());
-						};
+						let gas_info =
+							self.get_gas_info(&access_token, pumpx_config.to_chain_id).await?;
 
 						let gas_fee = match pumpx_config.gas_type {
 							1 => &gas_info.normal,
@@ -1170,33 +1151,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 								log::error!("Failed to execute pay out request");
 							})?;
 
-						debug!(
-							"Calling pumpx get_gas_info, chain_id: {}",
-							pumpx_config.to_chain_id
-						);
-						let res = self
-							.pumpx_api
-							.get_gas_info(&access_token, pumpx_config.to_chain_id)
-							.await
-							.map_err(|_| {
-								log::error!("Failed to get gas info");
-							})?;
-						debug!("Response get_gas_info: {:?}", res);
-
-						let Some(gas_info_vec) = res.data.gas_info else {
-							log::error!("Response data.gas_info of call get gas info is none");
-							return Err(());
-						};
-						let Some(gas_info) = gas_info_vec
-							.iter()
-							.find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
-						else {
-							log::error!(
-								"Could not find matching gas_info with chain_id {}",
-								pumpx_config.to_chain_id
-							);
-							return Err(());
-						};
+						let gas_info =
+							self.get_gas_info(&access_token, pumpx_config.to_chain_id).await?;
 
 						let gas_fee = match pumpx_config.gas_type {
 							1 => &gas_info.normal,
@@ -1339,6 +1295,27 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 					.map(|v| AmountType::from(v))
 			},
 		}
+	}
+
+	async fn get_gas_info(&self, access_token: &str, to_chain_id: u32) -> Result<GasInfo, ()> {
+		let res: pumpx::methods::common::ApiResponse<
+			pumpx::methods::get_gas_info::GetGasInfoResponseData,
+		> = self.pumpx_api.get_gas_info(access_token, to_chain_id).await.map_err(|_| {
+			log::error!("Failed to get gas info");
+		})?;
+		debug!("Response get_gas_info: {:?}", res);
+
+		let Some(gas_info_vec) = res.data.gas_info else {
+			log::error!("Response data.gas_info of call get gas info is none");
+			return Err(());
+		};
+		let Some(gas_info) = gas_info_vec.iter().find(|g| g.chain_id == to_chain_id.to_string())
+		else {
+			log::error!("Could not find matching gas_info with chain_id {}", to_chain_id);
+			return Err(());
+		};
+		//todo: remove this to owned ?
+		Ok(gas_info.to_owned())
 	}
 
 	pub async fn create_market_order_tx(
