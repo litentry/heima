@@ -67,7 +67,7 @@ use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_signer::TxSigner;
 
-use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
+use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 
 use intent_asset_lock::AmountType;
@@ -118,7 +118,7 @@ const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8Ben
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> {
-	account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
+	account_asset_lock: AccountAssetLocks<PreciseAssetsLock>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
@@ -144,7 +144,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		instant_payout_threshold: Decimal,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
-		let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
+		let account_asset_lock = AccountAssetLocks::<PreciseAssetsLock>::empty();
 		Ok(Self {
 			account_asset_lock,
 			rpc_endpoint_registry,
