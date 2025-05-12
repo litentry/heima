@@ -47,7 +47,6 @@
         "node": ">=20.0.0"
     },
     "scripts": {
-        "clean": "rm -rf dist build node_modules",
         "generate": "pnpm generate:defs && pnpm generate:meta",
         "load:metadata": "pnpm load:meta:identity && pnpm load:meta:identity && pnpm load:sidechain",
         "load:metadata:identity": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-identity.json",
