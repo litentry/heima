@@ -62,6 +62,7 @@ regex = "1.7"
 reqwest = { version = "0.12", features = ["json"] }
 ring = "0.16.20"
 rsa = "0.9.7"
+ruint = "1.13.1"
 rust_decimal = "1.37.1"
 scale-encode = "0.10.0"
 scale-info = "2.11.6"

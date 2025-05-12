@@ -225,7 +225,7 @@ async fn main() -> Result<(), ()> {
 			);
 
 			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
-				Arc::new(AccountAssetLocks::empty());
+				Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				account_assets_lock,

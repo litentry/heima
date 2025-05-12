@@ -308,7 +308,7 @@ async fn simple_cross_chain_swap() {
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(to_chain_id, pumpx_wallet_index));
 
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
-		Arc::new(AccountAssetLocks::empty());
+		Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
@@ -337,7 +337,7 @@ async fn simple_cross_chain_swap() {
 			&account_id,
 			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
 		),
-		None
+		Ok(AmountType::from(0))
 	);
 }
 
@@ -583,7 +583,7 @@ async fn instant_payout_cross_chain_swap() {
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(to_chain_id, pumpx_wallet_index));
 
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
-		Arc::new(AccountAssetLocks::empty());
+		Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
@@ -612,7 +612,7 @@ async fn instant_payout_cross_chain_swap() {
 			&account_id,
 			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
 		),
-		Some(AmountType::from(0))
+		Ok(AmountType::from(0))
 	);
 }
 

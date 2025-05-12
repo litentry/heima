@@ -15,9 +15,15 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use executor_primitives::AccountId;
+use executor_storage::{AssetLockStorage, Key};
+use executor_storage::{Storage, StorageDB};
 use heima_primitives::ChainAsset;
+use log::error;
+use parity_scale_codec::Decode;
+use parity_scale_codec::Encode;
 use ruint::Uint;
-use std::{collections::HashMap, sync::RwLock};
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 pub type AssetId = ChainAsset;
 pub type AmountType = Uint<256, 4>;
@@ -30,12 +36,13 @@ pub mod always_unlocked;
 pub mod precise;
 
 pub struct AccountAssetLocks<AL: AssetsLock> {
-	locks: RwLock<HashMap<AccountId, AL>>,
+	storage: AssetLockStorage,
+	phantom: PhantomData<AL>,
 }
 
 impl<AL: AssetsLock> AccountAssetLocks<AL> {
-	pub fn empty() -> Self {
-		Self { locks: RwLock::new(HashMap::new()) }
+	pub fn new(db: Arc<StorageDB>) -> Self {
+		Self { storage: AssetLockStorage::new(db), phantom: PhantomData }
 	}
 
 	pub fn check_and_insert(
@@ -45,15 +52,25 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		amount_to_lock: AmountType,
 		available_amount: AmountType,
 	) -> Result<(), ()> {
-		let mut account_lock = self.locks.write().unwrap();
-
-		if let Some(account) = account_lock.get_mut(&account_id) {
-			account.lock(asset_id, amount_to_lock, available_amount)?;
+		let key = Key { account_id: account_id.clone(), asset_id: asset_id.clone() };
+		if let Some(account_lock) = self
+			.storage
+			.get(&key)
+			.map_err(|e| error!("Could not get account lock: {:?}", e))?
+		{
+			let mut account_lock = AL::decode(&mut account_lock.as_slice())
+				.map_err(|e| error!("Could not decode account lock: {:?}", e))?;
+			account_lock.lock(amount_to_lock, available_amount)?;
+			self.storage
+				.insert(&key, account_lock.encode())
+				.map_err(|e| error!("Could not insert account lock: {:?}", e))?;
+			// save
 		} else {
-			let account = AL::with_lock(asset_id, amount_to_lock, available_amount)?;
-			account_lock.insert(account_id, account);
+			let account_lock = AL::with_lock(amount_to_lock, available_amount)?;
+			self.storage
+				.insert(&key, account_lock.encode())
+				.map_err(|e| error!("Could not insert account lock: {:?}", e))?;
 		}
-
 		Ok(())
 	}
 
@@ -63,9 +80,21 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		asset_id: AssetId,
 		amount_to_release: AmountType,
 	) -> Result<(), ()> {
-		let mut account_lock = self.locks.write().unwrap();
-		if let Some(account) = account_lock.get_mut(&account_id) {
-			account.release(asset_id, amount_to_release)
+		let key = Key { account_id: account_id.clone(), asset_id: asset_id.clone() };
+		if let Some(account_lock) = self
+			.storage
+			.get(&key)
+			.map_err(|e| error!("Could not get account lock: {:?}", e))?
+		{
+			let mut account_lock = AL::decode(&mut account_lock.as_slice())
+				.map_err(|e| error!("Could not decode account lock: {:?}", e))?;
+			account_lock
+				.release(amount_to_release)
+				.map_err(|e| error!("Could not release locked amount: {:?}", e))?;
+			self.storage
+				.insert(&key, account_lock.encode())
+				.map_err(|e| error!("Could not insert account lock: {:?}", e))?;
+			Ok(())
 		} else {
 			Err(())
 		}
@@ -75,32 +104,29 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		&self,
 		account_id: &AccountId,
 		asset_id: AssetId,
-	) -> Option<AmountType> {
-		let account_lock = self.locks.read().unwrap();
-		if let Some(al) = account_lock.get(account_id) {
-			al.get(asset_id)
+	) -> Result<AmountType, ()> {
+		let key = Key { account_id: account_id.clone(), asset_id: asset_id.clone() };
+		if let Some(account_lock) = self
+			.storage
+			.get(&key)
+			.map_err(|e| error!("Could not get account lock: {:?}", e))?
+		{
+			let account_lock = AL::decode(&mut account_lock.as_slice())
+				.map_err(|e| error!("Could not decode account lock: {:?}", e))?;
+			Ok(account_lock.get())
 		} else {
-			None
+			Ok(AmountType::from(0))
 		}
 	}
 }
 
-pub trait AssetsLock {
-	fn with_lock(
-		asset_id: AssetId,
-		amount_to_lock: AmountType,
-		available_amount: AmountType,
-	) -> Result<Self, ()>
+pub trait AssetsLock: Encode + Decode {
+	fn with_lock(amount_to_lock: AmountType, available_amount: AmountType) -> Result<Self, ()>
 	where
 		Self: Sized;
-	fn lock(
-		&mut self,
-		asset_id: AssetId,
-		amount_to_lock: AmountType,
-		available_amount: AmountType,
-	) -> Result<(), ()>;
+	fn lock(&mut self, amount_to_lock: AmountType, available_amount: AmountType) -> Result<(), ()>;
 
-	fn release(&mut self, asset_id: AssetId, amount_to_release: AmountType) -> Result<(), ()>;
+	fn release(&mut self, amount_to_release: AmountType) -> Result<(), ()>;
 
-	fn get(&self, asset_id: AssetId) -> Option<AmountType>;
+	fn get(&self) -> AmountType;
 }

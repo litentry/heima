@@ -34,6 +34,7 @@ use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
+use intent_asset_lock::AmountType;
 use intent_asset_lock::AssetId;
 use pumpx::methods::common::GasType;
 use pumpx::methods::common::OrderInfoResponse;
@@ -146,7 +147,7 @@ async fn simple_single_chain_swap() {
 		Arc::new(Box::new(accounting_contract_client::mocks::MockAccountingContractClient::new()));
 
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
-		Arc::new(AccountAssetLocks::empty());
+		Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
@@ -170,6 +171,6 @@ async fn simple_single_chain_swap() {
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
 	assert_eq!(
 		account_assets_lock.get_locked_amount(&account_id, AssetId::Solana(SolanaToken::Native)),
-		None
+		Ok(AmountType::from(0))
 	);
 }

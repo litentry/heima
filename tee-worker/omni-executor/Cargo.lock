@@ -5348,7 +5348,11 @@ dependencies = [
  "core-primitives",
  "executor-core",
  "executor-primitives",
+ "executor-storage",
+ "log",
+ "parity-scale-codec",
  "ruint",
+ "tempfile",
 ]
 
 [[package]]
