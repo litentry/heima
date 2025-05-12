@@ -44,12 +44,12 @@ echo "Using trusted-worker uri $WORKER1URL:$WORKER1PORT"
 echo "Using node http uri $NODEHTTPURL:$NPORT"
 echo "waiting 20 secs worker to run successfully"
 sleep 20
-cd /client-api/parachain-api
-curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODEHTTPURL:$NPORT > prepare-build/litentry-parachain-metadata.json
+cd /client-api
+curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODEHTTPURL:$NPORT > metadata-parachain.json
 echo "update parachain metadata"
 
 cd  /client-api/sidechain-api
-${CLIENT} print-sgx-metadata-raw > prepare-build/litentry-sidechain-metadata.json
+${CLIENT} print-sgx-metadata-raw > metadata-sidechain.json
 echo "update sidechain metadata"
 
 cd /client-api
