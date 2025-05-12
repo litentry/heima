@@ -35,8 +35,8 @@ TEST=$1
 
 echo "Running integration tests for $TEST"
 
-cd /client-api/parachain-api
-curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > prepare-build/litentry-parachain-metadata.json
+cd /client-api
+curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > metadata-parachain.json
 echo "Parachain metadata fetched"
 
 # echo "Installing pnpm"
