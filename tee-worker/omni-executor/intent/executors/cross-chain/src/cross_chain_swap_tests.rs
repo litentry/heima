@@ -73,10 +73,11 @@ async fn simple_cross_chain_swap() {
 	let mut pumpx_signer_client_mock = pumpx::signer_client_mocks::MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
-	let pumpx_wallet_omni_account: [u8; 32] = [
-		127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171, 116, 52,
-		128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
-	];
+	let pumpx_wallet_omni_account: [u8; 32] =
+		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
+			.unwrap()
+			.try_into()
+			.unwrap();
 	let to_chain_id = 56;
 	let order_id = 0;
 	let expected_payout_address = "0x8Fc876ca8b23Ef6b735e388Ea94327e189DD5Ea7";
@@ -94,11 +95,9 @@ async fn simple_cross_chain_swap() {
 		)
 		.times(1)
 		.returning(|_, _, _| {
-			Ok([
-				150, 221, 47, 78, 207, 124, 147, 48, 228, 240, 229, 138, 142, 98, 114, 103, 47,
-				239, 238, 32, 136, 87, 205, 119, 46, 138, 161, 50, 123, 57, 219, 250,
-			]
-			.to_vec())
+			Ok(hex::decode("96dd2f4ecf7c9330e4f0e58a8e6272672fefee208857cd772e8aa1327b39dbfa")
+				.unwrap()
+				.to_vec())
 		});
 
 	pumpx_signer_client_mock
@@ -110,24 +109,16 @@ async fn simple_cross_chain_swap() {
 		)
 		.times(1)
 		.returning(|_, _, _| {
-			Ok([
-				3, 101, 219, 24, 34, 145, 151, 225, 255, 131, 94, 15, 170, 236, 154, 154, 153, 0,
-				176, 174, 181, 241, 142, 63, 170, 90, 76, 166, 12, 128, 33, 61, 124,
-			]
-			.to_vec())
+			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
+				.unwrap()
+				.to_vec())
 		});
 
-	let create_order_encoded_tx: Vec<u8> = vec![
-		233, 128, 133, 4, 227, 178, 146, 0, 131, 30, 132, 128, 148, 216, 218, 107, 242, 105, 100,
-		175, 157, 126, 237, 158, 3, 229, 52, 21, 211, 122, 169, 96, 69, 132, 59, 154, 202, 0, 128,
-		1, 128, 128,
-	];
-	let create_order_tx_signature: Vec<u8> = vec![
-		246, 199, 110, 255, 190, 229, 172, 159, 243, 65, 160, 239, 232, 91, 95, 148, 1, 171, 103,
-		60, 93, 28, 39, 70, 4, 30, 68, 110, 61, 25, 174, 163, 55, 71, 10, 172, 19, 241, 203, 77,
-		162, 15, 8, 106, 71, 92, 206, 179, 106, 91, 180, 253, 156, 245, 43, 72, 48, 10, 216, 64,
-		173, 20, 128, 173, 27,
-	];
+	let create_order_encoded_tx: Vec<u8> = hex::decode(
+		"e9808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca0080018080",
+	)
+	.unwrap();
+	let create_order_tx_signature: Vec<u8> = hex::decode("f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea337470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad1b").unwrap();
 
 	pumpx_signer_client_mock
 		.expect_request_signatures()
@@ -361,10 +352,11 @@ async fn instant_payout_cross_chain_swap() {
 	let mut pumpx_signer_client_mock = pumpx::signer_client_mocks::MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
-	let pumpx_wallet_omni_account: [u8; 32] = [
-		127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171, 116, 52,
-		128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
-	];
+	let pumpx_wallet_omni_account: [u8; 32] =
+		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
+			.unwrap()
+			.try_into()
+			.unwrap();
 	let to_chain_id = 56;
 	let order_id = 0;
 	let expected_payout_address = "0x8Fc876ca8b23Ef6b735e388Ea94327e189DD5Ea7";
@@ -384,11 +376,9 @@ async fn instant_payout_cross_chain_swap() {
 		//todo: should be called only once
 		.times(2)
 		.returning(|_, _, _| {
-			Ok([
-				150, 221, 47, 78, 207, 124, 147, 48, 228, 240, 229, 138, 142, 98, 114, 103, 47,
-				239, 238, 32, 136, 87, 205, 119, 46, 138, 161, 50, 123, 57, 219, 250,
-			]
-			.to_vec())
+			Ok(hex::decode("96dd2f4ecf7c9330e4f0e58a8e6272672fefee208857cd772e8aa1327b39dbfa")
+				.unwrap()
+				.to_vec())
 		});
 
 	pumpx_signer_client_mock
@@ -400,24 +390,16 @@ async fn instant_payout_cross_chain_swap() {
 		)
 		.times(1)
 		.returning(|_, _, _| {
-			Ok([
-				3, 101, 219, 24, 34, 145, 151, 225, 255, 131, 94, 15, 170, 236, 154, 154, 153, 0,
-				176, 174, 181, 241, 142, 63, 170, 90, 76, 166, 12, 128, 33, 61, 124,
-			]
-			.to_vec())
+			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
+				.unwrap()
+				.to_vec())
 		});
 
-	let create_order_encoded_tx: Vec<u8> = vec![
-		233, 128, 133, 4, 227, 178, 146, 0, 131, 30, 132, 128, 148, 216, 218, 107, 242, 105, 100,
-		175, 157, 126, 237, 158, 3, 229, 52, 21, 211, 122, 169, 96, 69, 132, 59, 154, 202, 0, 128,
-		1, 128, 128,
-	];
-	let create_order_tx_signature: Vec<u8> = vec![
-		246, 199, 110, 255, 190, 229, 172, 159, 243, 65, 160, 239, 232, 91, 95, 148, 1, 171, 103,
-		60, 93, 28, 39, 70, 4, 30, 68, 110, 61, 25, 174, 163, 55, 71, 10, 172, 19, 241, 203, 77,
-		162, 15, 8, 106, 71, 92, 206, 179, 106, 91, 180, 253, 156, 245, 43, 72, 48, 10, 216, 64,
-		173, 20, 128, 173, 27,
-	];
+	let create_order_encoded_tx: Vec<u8> = hex::decode(
+		"e9808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca0080018080",
+	)
+	.unwrap();
+	let create_order_tx_signature: Vec<u8> = hex::decode("f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea337470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad1b").unwrap();
 
 	pumpx_signer_client_mock
 		.expect_request_signatures()

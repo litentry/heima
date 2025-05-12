@@ -54,6 +54,16 @@ async fn simple_single_chain_swap() {
 	let account_id: AccountId =
 		Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec())).to_omni_account();
 	let intent_id = 0;
+	let pumpx_wallet_omni_account: [u8; 32] =
+		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
+			.unwrap()
+			.try_into()
+			.unwrap();
+	let solana_wallet_pub_key: [u8; 32] =
+		hex::decode("96dd2f4ecf7c9330e4f0e58a8e6272672fefee208857cd772e8aa1327b39dbfa")
+			.unwrap()
+			.try_into()
+			.unwrap();
 
 	let order = SwapOrder {
 		//value below is ignored ?
@@ -92,19 +102,10 @@ async fn simple_single_chain_swap() {
 		.with(
 			mockall::predicate::eq(ChainType::Solana),
 			mockall::predicate::eq(1),
-			mockall::predicate::eq([
-				127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171,
-				116, 52, 128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
-			]),
+			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
 		.times(1)
-		.returning(|_, _, _| {
-			Ok([
-				150, 221, 47, 78, 207, 124, 147, 48, 228, 240, 229, 138, 142, 98, 114, 103, 47,
-				239, 238, 32, 136, 87, 205, 119, 46, 138, 161, 50, 123, 57, 219, 250,
-			]
-			.to_vec())
-		});
+		.returning(move |_, _, _| Ok(solana_wallet_pub_key.to_vec()));
 
 	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_limit_order()
