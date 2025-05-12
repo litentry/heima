@@ -551,7 +551,7 @@ async fn instant_payout_cross_chain_swap() {
 			Pubkey::from_str("B9umkjBoYNxyajiVwty2f6W3WWG2tf5SmkCz6KqWrv5f").unwrap(),
 		))
 		.times(1)
-		.returning(|_| Ok(100));
+		.returning(|_| Ok(100_000_000_000));
 
 	solana_client_mock
 		.expect_transfer_sol()

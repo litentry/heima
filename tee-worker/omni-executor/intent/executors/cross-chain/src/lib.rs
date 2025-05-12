@@ -612,7 +612,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 						self.account_asset_lock.check_and_insert(
 							account_id.clone(),
 							swap_order.from_asset.clone(),
-							AmountType::from_str(&from_amount).unwrap(),
+							AmountType::from_str(&amount_to_transfer_decimal.to_string()).unwrap(),
 							available_amount,
 						)?;
 
@@ -744,9 +744,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 						self.account_asset_lock.release(
 							account_id.clone(),
 							swap_order.from_asset.clone(),
-							AmountType::from_str(&from_amount).map_err(|_| {
-								log::error!("Failed to parse from_amount");
-							})?,
+							AmountType::from_str(&amount_to_transfer_decimal.to_string()).unwrap(),
 						)?;
 
 						result = (Some(response.encode()), true);
