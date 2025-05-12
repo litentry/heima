@@ -9,15 +9,15 @@ import "./interfaces/registry.js";
 import "./interfaces/augment-api.js";
 
 export * from "@polkadot/types/lookup";
-export * from "./interfaces";
-import { default as identity } from "./interfaces/identity/definitions";
-import { default as vc } from "./interfaces/vc/definitions";
-import { default as trusted_operations } from "./interfaces/trusted_operations/definitions";
-import { default as sidechain } from "./interfaces/sidechain/definitions";
+export * from "./interfaces/index.js";
+import { default as identity } from "./interfaces/identity/definitions.js";
+import { default as vc } from "./interfaces/vc/definitions.js";
+import { default as trusted_operations } from "./interfaces/trusted_operations/definitions.js";
+import { default as sidechain } from "./interfaces/sidechain/definitions.js";
 export { identity, vc, trusted_operations, sidechain };
 
 // Export handy types
-import type { LitentryIdentity, Web3Network } from "./interfaces/identity/types";
+import type { LitentryIdentity, Web3Network } from "./interfaces/identity/types.js";
 
 export type SubstrateNetwork = Extract<
     Web3Network["type"],

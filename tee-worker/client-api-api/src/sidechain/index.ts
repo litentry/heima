@@ -8,4 +8,4 @@ import "./interfaces/registry.js";
 // augment API interfaces
 import "./interfaces/augment-api.js";
 
-export * from "./interfaces";
+export * from "./interfaces/index.js";

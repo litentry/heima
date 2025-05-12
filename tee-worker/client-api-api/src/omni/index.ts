@@ -9,10 +9,10 @@ import "./interfaces/registry.js";
 import "./interfaces/augment-api.js";
 
 export * from "@polkadot/types/lookup";
-export * from "./interfaces";
+export * from "./interfaces/index.js";
 
-import { default as omniAccount } from "./interfaces/omniAccount/definitions";
-import { default as omniExecutor } from "./interfaces/omniExecutor/definitions";
+import { default as omniAccount } from "./interfaces/omniAccount/definitions.js";
+import { default as omniExecutor } from "./interfaces/omniExecutor/definitions.js";
 export { omniAccount, omniExecutor };
 
 
