@@ -224,8 +224,8 @@ async fn main() -> Result<(), ()> {
 				args.accounting_contract_address.parse().unwrap(),
 			);
 
-			let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> =
-				AccountAssetLocks::empty();
+			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
+				Arc::new(AccountAssetLocks::empty());
 
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				account_assets_lock,

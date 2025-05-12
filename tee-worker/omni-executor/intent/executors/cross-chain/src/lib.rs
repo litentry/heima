@@ -118,7 +118,7 @@ const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8Ben
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> {
-	account_asset_lock: AccountAssetLocks<PreciseAssetsLock>,
+	account_asset_lock: Arc<AccountAssetLocks<PreciseAssetsLock>>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
@@ -134,7 +134,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		account_asset_lock: AccountAssetLocks<PreciseAssetsLock>,
+		account_asset_lock: Arc<AccountAssetLocks<PreciseAssetsLock>>,
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,

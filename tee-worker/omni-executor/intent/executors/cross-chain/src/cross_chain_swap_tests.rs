@@ -39,6 +39,7 @@ use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
+use intent_asset_lock::AmountType;
 use pumpx::methods::common::GasType;
 use pumpx::methods::common::OrderInfoResponse;
 use pumpx::methods::common::OrderInfoResponseData;
@@ -315,12 +316,13 @@ async fn simple_cross_chain_swap() {
 	let single_chain_swap_provider =
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(to_chain_id, pumpx_wallet_index));
 
-	let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> = AccountAssetLocks::empty();
+	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
+		Arc::new(AccountAssetLocks::empty());
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
 	let executor = CrossChainIntentExecutor::new(
-		account_assets_lock,
+		account_assets_lock.clone(),
 		rpc_endpoint_registry,
 		pumpx_signer_client.clone(),
 		pumpx_api,
@@ -339,6 +341,13 @@ async fn simple_cross_chain_swap() {
 		.unwrap();
 
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
+	assert_eq!(
+		account_assets_lock.get_locked_amount(
+			&account_id,
+			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
+		),
+		None
+	);
 }
 
 #[tokio::test]
@@ -348,8 +357,6 @@ async fn instant_payout_cross_chain_swap() {
 
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();
-
-	//todo: mock solana rpc client in token_query logic
 
 	let mut pumpx_signer_client_mock = pumpx::signer_client_mocks::MockSignerClient::new();
 
@@ -554,11 +561,6 @@ async fn instant_payout_cross_chain_swap() {
 		.times(1)
 		.returning(|| Address::from_str(accounting_contract_client_address).unwrap());
 
-	// accounting_contract_client_mock
-	// 	.expect_get_balance()
-	// 	.times(1)
-	// 	.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
-
 	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
 
 	solana_client_mock
@@ -598,12 +600,13 @@ async fn instant_payout_cross_chain_swap() {
 	let single_chain_swap_provider =
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(to_chain_id, pumpx_wallet_index));
 
-	let account_assets_lock: AccountAssetLocks<PreciseAssetsLock> = AccountAssetLocks::empty();
+	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
+		Arc::new(AccountAssetLocks::empty());
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
 	let executor = CrossChainIntentExecutor::new(
-		account_assets_lock,
+		account_assets_lock.clone(),
 		rpc_endpoint_registry,
 		pumpx_signer_client.clone(),
 		pumpx_api,
@@ -622,6 +625,13 @@ async fn instant_payout_cross_chain_swap() {
 		.unwrap();
 
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
+	assert_eq!(
+		account_assets_lock.get_locked_amount(
+			&account_id,
+			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
+		),
+		Some(AmountType::from(0))
+	);
 }
 
 fn prepare_sol_coin_info(ticker: &str, name: &str) -> CoinInfo {
