@@ -1,4 +1,0 @@
-build
-dist
-parachain-api/prepare-build/litentry-parachain-metadata.json
-sidechain-api/prepare-build/litentry-sidechain-metadata.json
