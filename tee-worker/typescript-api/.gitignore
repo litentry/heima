@@ -1,0 +1,19 @@
+# Build outputs
+/dist
+/build
+
+# Generated files
+/src/*/build/
+/src/**/interfaces/**/*.ts
+!/src/**/interfaces/**/definitions.ts
+
+# Node modules
+node_modules
+
+# Metadata files
+metadata-*.json
+
+# IDE and OS files
+.DS_Store
+.idea
+.vscode

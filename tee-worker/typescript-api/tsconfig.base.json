@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "Bundler",
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "baseUrl": ".",
+        "composite": true,
+        "declaration": true,
+        "paths": {
+            "identity": ["identity/src"],
+            "omni": ["omni/src"],
+            "sidechain": ["sidechain/src"]
+        }
+    },
+    "exclude": ["node_modules", "dist"]
+}
