@@ -28,15 +28,13 @@ use log::{debug, error};
 use parity_scale_codec::{Decode, Encode};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::vec::Vec;
 use subxt::{
 	backend::{legacy::LegacyRpcMethods, BlockRef},
 	blocks::BlocksClient,
 	config::{
-		signed_extensions,
 		substrate::{BlakeTwo256, SubstrateHeader},
-		Hasher,
+		transaction_extensions, Hasher,
 	},
 	events::EventsClient,
 	storage::StorageClient,
@@ -60,19 +58,20 @@ impl Config for CustomConfig {
 	type Signature = subxt::utils::MultiSignature;
 	type Hasher = BlakeTwo256;
 	type Header = SubstrateHeader<BlockNumber, Self::Hasher>;
-	type ExtrinsicParams = signed_extensions::AnyOf<
+	type ExtrinsicParams = transaction_extensions::AnyOf<
 		Self,
 		(
 			// Load in the existing signed extensions we're interested in
 			// (if the extension isn't actually needed it'll just be ignored):
-			signed_extensions::CheckSpecVersion,
-			signed_extensions::CheckTxVersion,
-			signed_extensions::CheckNonce,
-			signed_extensions::CheckGenesis<Self>,
-			signed_extensions::CheckMortality<Self>,
-			signed_extensions::ChargeAssetTxPayment<Self>,
-			signed_extensions::ChargeTransactionPayment,
-			signed_extensions::CheckMetadataHash,
+			transaction_extensions::VerifySignature<Self>,
+			transaction_extensions::CheckSpecVersion,
+			transaction_extensions::CheckTxVersion,
+			transaction_extensions::CheckNonce,
+			transaction_extensions::CheckGenesis<Self>,
+			transaction_extensions::CheckMortality<Self>,
+			transaction_extensions::ChargeAssetTxPayment<Self>,
+			transaction_extensions::ChargeTransactionPayment,
+			transaction_extensions::CheckMetadataHash,
 		),
 	>;
 	type AssetId = u32;
@@ -189,7 +188,7 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 			.chain_get_block_hash(block_num.map(|b| b.into()))
 			.await
 			.map_err(|_| ())?;
-		Ok(self.legacy.state_get_metadata(maybe_hash).await.unwrap().deref().encode())
+		Ok(self.legacy.state_get_metadata(maybe_hash).await.unwrap().into_raw())
 	}
 
 	async fn submit_tx(&mut self, raw_tx: &[u8]) -> Result<(), ()> {

@@ -82,7 +82,7 @@ impl<
 			log::info!("Signing call with nonce {}", nonce);
 		}
 		let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
-		let signed_call = tx::create_signed(&call, &state, &self.signer, params).unwrap();
+		let signed_call = tx::create_v4_signed(&call, &state, params).unwrap().sign(&self.signer);
 
 		signed_call.encoded().to_vec()
 	}
