@@ -18,7 +18,7 @@ use crate::cli::Cli;
 use accounting_contract_client::AccountingContractClient;
 use alloy::network::EthereumWallet;
 use alloy::signers::local::PrivateKeySigner;
-use binance_api::BinanceApi;
+use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
@@ -46,7 +46,6 @@ use pumpx::pubkey_to_evm_address;
 use pumpx::signer_client::SignerClient;
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
-use solana::SolanaClient;
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::env;
@@ -199,14 +198,14 @@ async fn main() -> Result<(), ()> {
 			let binance_api_key = env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
 			let binance_api_secret = env::var("OE_BINANCE_API_SECRET").unwrap_or("".to_string());
 			let binance_api_base_url = env::var("OE_BINANCE_API_BASE_URL").ok();
-			let binance_api = Arc::new(BinanceApi::new(
+			let binance_api = Arc::new(BinanceApiClient::new(
 				binance_api_key,
 				binance_api_secret,
 				binance_api_base_url,
 			));
 
-			let solana_client: Arc<Box<dyn SolanaClient>> =
-				Arc::new(Box::new(SolanaRpcClient::new(&args.solana_url)));
+			let solana_client: Arc<SolanaRpcClient> =
+				Arc::new(SolanaRpcClient::new(&args.solana_url));
 
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())
@@ -229,7 +228,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				binance_api,
 				solana_client,
-				Arc::new(accounting_contract_client),
+				Arc::new(Box::new(accounting_contract_client)),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(

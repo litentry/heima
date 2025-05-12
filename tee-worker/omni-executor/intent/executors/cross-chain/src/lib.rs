@@ -14,21 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use accounting_contract_client::AccountingContractClient;
-use alloy::{
-	primitives::{Address, U256},
-	rpc::types::TransactionRequest,
-};
+use alloy::consensus::{SignableTransaction, TxLegacy};
+use alloy::primitives::{Address, PrimitiveSignature, U256};
 use async_trait::async_trait;
 use base58::ToBase58;
-use binance_api::{
-	spot_trading_api::types::{
-		CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
-		OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
-	},
-	BinanceApi,
+use binance_api::spot_trading_api::types::{
+	CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
+	OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
 };
-use ethereum_rpc::RpcProvider as EthereumRpcProvider;
 use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
@@ -40,7 +33,7 @@ use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
-use solana::{signer::RemoteSigner, SolanaClient};
+use solana::{signer::RemoteSigner, SolanaClient as SolanaClientTrait};
 use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
@@ -53,19 +46,16 @@ use tokio::{
 // use intent_token_query::SolanaPubkey;
 // use log::error;
 use parity_scale_codec::Encode;
+use pumpx::methods::common::{GasType, SwapType};
+use pumpx::methods::create_cross_order::CrossOrderInfo;
 use pumpx::signer_client::ChainType;
 use pumpx::signer_client::SignerClient;
-use pumpx::types::CrossOrderInfo;
-use pumpx::types::GasType;
-use pumpx::types::SwapType;
-use pumpx::types::{
-	CreateCrossOrderBody, CreateLimitOrderBody, CreateMarketOrderTxBody, CrossFailBody,
-};
-use pumpx::PumpxApi;
-use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
-use std::collections::HashMap;
-use std::sync::Arc;
 
+use accounting_contract_client::AccountingContractApi;
+use alloy::primitives::private::alloy_rlp::Decodable;
+use binance_api::spot_trading_api::SpotTradingApi;
+use binance_api::wallet_api::WalletApi;
+use binance_api::BinanceApi;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
 use parentchain_rpc_client::metadata::Metadata;
@@ -74,8 +64,23 @@ use parentchain_rpc_client::CustomConfig;
 use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_signer::TxSigner;
+use pumpx::methods::create_cross_order::CreateCrossOrderBody;
+use pumpx::methods::create_limit_order::CreateLimitOrderBody;
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
+use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
+use pumpx::methods::cross_fail::CrossFailBody;
+use pumpx::methods::send_order_tx::{SendOrderTxBody, SendOrderTxResponse};
+use pumpx::PumpxApi;
+use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use log::debug;
+
+#[cfg(test)]
+mod cross_chain_swap_tests;
+#[cfg(test)]
+mod single_chain_swap_tests;
 
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
@@ -101,20 +106,19 @@ const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyT
 const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
-{
+pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> {
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
-	binance_api: Arc<BinanceApi>,
-	solana_client: Arc<Box<dyn SolanaClient>>,
-	accounting_contract_client: Arc<AccountingContractClient<Provider>>,
+	binance_api: Arc<BinanceClient>,
+	solana_client: Arc<SolanaClient>,
+	accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 }
 
-impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
-	CrossChainIntentExecutor<Provider>
+impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
+	CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -122,9 +126,9 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
-		binance_api: Arc<BinanceApi>,
-		solana_client: Arc<Box<dyn SolanaClient>>,
-		accounting_contract_client: Arc<AccountingContractClient<Provider>>,
+		binance_api: Arc<BinanceClient>,
+		solana_client: Arc<SolanaClient>,
+		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -142,8 +146,8 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest>>
 }
 
 #[async_trait]
-impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sync> IntentExecutor
-	for CrossChainIntentExecutor<Provider>
+impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
+	for CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
 	#[allow(unused_assignments)]
 	async fn execute(
@@ -502,8 +506,10 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					// 2. transfer from_asset to binance deposit address
 					let should_wait_for_deposit_confirm = false; // Switch for strategy
 
-					let coins_info =
-						self.binance_api.wallet().get_all_coins_info().await.map_err(|e| {
+					let coins_info = WalletApi::new(self.binance_api.as_ref())
+						.get_all_coins_info()
+						.await
+						.map_err(|e| {
 							log::error!("Failed to get all coins info, {:?}", e);
 						})?;
 
@@ -569,9 +575,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						return Err(());
 					};
 
-					let deposit_address = self
-						.binance_api
-						.wallet()
+					let deposit_address = WalletApi::new(self.binance_api.as_ref())
 						.get_deposit_address(&binance_coin_name, &binance_network_info.network)
 						.await
 						.map_err(|_| {
@@ -704,9 +708,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						let timeout = Duration::from_secs(300); // 5 minute timeout
 
 						while !deposit_confirmed && start_time.elapsed() < timeout {
-							let Ok(deposit_history) = self
-								.binance_api
-								.wallet()
+							let Ok(deposit_history) = WalletApi::new(self.binance_api.as_ref())
 								.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
 								.await
 							else {
@@ -783,15 +785,12 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 							..Default::default()
 						};
 						debug!("Creating binance order with params: {:?}", binance_order_params);
-						let Ok(binance_order) = self
-							.binance_api
-							.spot_trading()
+						let Ok(binance_order) = SpotTradingApi::new(self.binance_api.as_ref())
 							.create_order(binance_order_params)
 							.await
 						else {
 							log::error!("Failed to create binance order");
-							self.binance_api
-								.wallet()
+							WalletApi::new(self.binance_api.as_ref())
 								.withdraw(
 									&binance_coin_name,
 									&from_address,
@@ -838,9 +837,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						let mut trade_success = false;
 						let mut bnb_acquired = "".to_string();
 						loop {
-							let trade_order = self
-								.binance_api
-								.spot_trading()
+							let trade_order = SpotTradingApi::new(self.binance_api.as_ref())
 								.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
 								.await
 								.map_err(|_| {
@@ -878,8 +875,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						}
 						if !trade_success {
 							log::error!("Binance order failed");
-							self.binance_api
-								.wallet()
+							WalletApi::new(self.binance_api.as_ref())
 								.withdraw(
 									&binance_coin_name,
 									&from_address,
@@ -1020,7 +1016,7 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 					};
 
 					debug!("Doing market order");
-					let body = CreateMarketOrderTxBody {
+					let body = CreateMarketOrderUnsignedTxBody {
 						request_id: intent_id,
 						chain_id: pumpx_config.to_chain_id,
 						token_ca: to_token_ca.clone(),
@@ -1049,14 +1045,14 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 						},
 						slippage: pumpx_config.slippage,
 						wallet_index: pumpx_config.wallet_index,
+						recipient_address: String::from(""),
 					};
 					debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
-					let response =
-						self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(
-							|_| {
-								log::error!("Failed to create market order tx");
-							},
-						)?;
+
+					let response = self
+						.create_market_order_tx(&access_token, body, account_id)
+						.await
+						.map_err(|_| log::error!("Failed to create and submit market order tx"))?;
 
 					debug!("Response create_market_order_tx: {:?}", response);
 					result = (Some(response.encode()), true);
@@ -1081,6 +1077,77 @@ impl<Provider: EthereumRpcProvider<Transaction = TransactionRequest> + Send + Sy
 
 	async fn name(&self) -> &'static str {
 		"cross-chain"
+	}
+}
+
+impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
+	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+{
+	pub async fn create_market_order_tx(
+		&self,
+		access_token: &str,
+		order: CreateMarketOrderUnsignedTxBody,
+		account_id: &AccountId,
+	) -> Result<SendOrderTxResponse, ()> {
+		let wallet_index = order.wallet_index;
+		let response = self
+			.pumpx_api
+			.create_market_order_unsigned_tx(access_token, order)
+			.await
+			.map_err(|_| log::error!("Failed to get unsigned market order tx"))?;
+
+		let unsigned_tx_string = response.data.tx_data.ok_or_else(|| {
+			log::error!("Failed to unwrap tx_data");
+		})?;
+		let order_id = response.data.order_id.ok_or_else(|| {
+			log::error!("Failed to unwrap order_id");
+		})?;
+		let chain_id = response.data.chain_id.ok_or_else(|| {
+			log::error!("Failed to unwrap chain_id");
+		})?;
+
+		let unsigned_tx_bytes = unsigned_tx_string
+			.iter()
+			.map(|s| {
+				let hex_str = s.trim_start_matches("0x");
+				hex::decode(hex_str).expect("Invalid hex string")
+			})
+			.collect();
+
+		let signatures = self
+			.pumpx_signer_client
+			.request_signatures(
+				ChainType::Evm,
+				wallet_index,
+				*account_id.as_ref(),
+				unsigned_tx_bytes,
+			)
+			.await?;
+
+		let mut tx_data: Vec<String> = vec![];
+		for (x, y) in unsigned_tx_string.into_iter().zip(signatures.into_iter()) {
+			let bytes = hex::decode(x.trim_start_matches("0x"))
+				.map_err(|_| log::error!("invalid hex string"))?;
+			// We should be able to decode it to Legacy Transaction
+			// As it is RLP Encoded Bytes which adheres to string encoding rules
+			let unsigned_tx = TxLegacy::decode(&mut &bytes[..])
+				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+			let signature = PrimitiveSignature::try_from(y.as_ref())
+				.map_err(|_| log::error!("Failed to create Typed signature"))?;
+
+			let signed_tx = unsigned_tx.into_signed(signature);
+			let mut encoded_signed_tx = vec![];
+			signed_tx.rlp_encode(&mut encoded_signed_tx);
+			tx_data.push(hex::encode(encoded_signed_tx));
+		}
+
+		let response = self
+			.pumpx_api
+			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
+			.await
+			.map_err(|_| log::error!("Failed to send order tx"))?;
+
+		Ok(response)
 	}
 }
 
@@ -1127,14 +1194,16 @@ mod tests {
 	}
 }
 
-async fn estimate_bnb_amount(
-	binance_api: &Arc<BinanceApi>,
+async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
+	binance_api: &Arc<BinanceClient>,
 	trade_symbol: &str,
 	binance_coin_name: &str,
 	from_amount_decimal: Decimal,
 ) -> Result<String, ()> {
-	let price_str =
-		binance_api.spot_trading().get_symbol_price(trade_symbol).await.map_err(|_| {
+	let price_str = SpotTradingApi::new(binance_api.as_ref())
+		.get_symbol_price(trade_symbol)
+		.await
+		.map_err(|_| {
 			log::error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 

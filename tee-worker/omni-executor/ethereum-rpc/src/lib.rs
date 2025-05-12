@@ -44,7 +44,7 @@ impl RpcProviderFactory for AlloyRpcProviderFactory {
 }
 
 #[async_trait]
-pub trait RpcProvider {
+pub trait RpcProvider: Send + Sync {
 	type Addr;
 	type Transaction;
 

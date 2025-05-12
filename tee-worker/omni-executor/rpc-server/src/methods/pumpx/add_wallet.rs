@@ -7,7 +7,7 @@ use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use pumpx::types::AddWalletResponse;
+use pumpx::methods::add_wallet::AddWalletResponse;
 use serde::Serialize;
 
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};

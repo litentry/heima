@@ -1409,11 +1409,13 @@ checksum = "d965446196e3b7decd44aa7ee49e31d630118f90ef12f97900f262eb915c951d"
 name = "binance-api"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "env_logger",
  "hex",
  "hmac 0.12.1",
  "log",
+ "mockall",
  "reqwest 0.12.15",
  "serde",
  "sha2 0.10.8",
@@ -2434,9 +2436,11 @@ version = "0.1.0"
 dependencies = [
  "accounting-contract-client",
  "alloy",
+ "alloy-rlp",
  "async-trait",
  "base58",
  "binance-api",
+ "core-primitives",
  "ethereum-rpc",
  "executor-core",
  "executor-primitives",
@@ -2446,14 +2450,19 @@ dependencies = [
  "intent-asset-lock",
  "intent-token-query",
  "log",
+ "mockall",
  "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
  "pumpx",
+ "rand 0.8.5",
+ "reqwest 0.12.15",
  "rust_decimal",
+ "serde_json",
  "solana",
  "solana-sdk",
+ "tempfile",
  "tokio",
 ]
 
@@ -9268,6 +9277,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "log",
+ "mockall",
  "pumpx",
  "solana-client",
  "solana-sdk",
