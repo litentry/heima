@@ -373,7 +373,6 @@ async fn instant_payout_cross_chain_swap() {
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		//todo: should be called only once
 		.times(1)
 		.returning(|_, _, _| {
 			Ok(hex::decode("96dd2f4ecf7c9330e4f0e58a8e6272672fefee208857cd772e8aa1327b39dbfa")
