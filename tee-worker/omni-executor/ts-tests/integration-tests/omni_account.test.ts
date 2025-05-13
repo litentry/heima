@@ -30,6 +30,7 @@ describe('OmniAccount', function () {
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
         let msgCode = await getMessageCode(context, omniAccount);
+        console.log('msgCode:', msgCode);
         const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'LitentryIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
@@ -38,6 +39,7 @@ describe('OmniAccount', function () {
             context.api.createType('Index', currentNonce),
             msgCode.message_code
         );
+        console.log('nativeTaskWrapper:', nativeTaskWrapper.toHuman());
         await sendRawTaskPlain(context, nativeTaskWrapper);
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
