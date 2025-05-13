@@ -17,8 +17,8 @@ type JwtToken = String;
 /// A serializable representation of Identity for JSON interchange.
 /// ```json
 /// {
-///  "type": "Twitter",
-///  "data": "handle"
+///  "type": "Email",
+///  "data": "test@test.com"
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
