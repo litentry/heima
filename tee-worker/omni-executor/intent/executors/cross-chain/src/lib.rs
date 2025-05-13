@@ -380,6 +380,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 						ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)
 					) {
 						log::error!("Only BSC payout supported");
+						return Err(());
 					}
 
 					// notify backend about it
