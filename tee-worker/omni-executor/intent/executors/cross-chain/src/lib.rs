@@ -785,9 +785,19 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 							..Default::default()
 						};
 						debug!("Creating binance order with params: {:?}", binance_order_params);
-						let Ok(binance_order) = SpotTradingApi::new(self.binance_api.as_ref())
-							.create_order(binance_order_params)
+						let spot_trading_api = SpotTradingApi::new(self.binance_api.as_ref());
+						if let Ok(commission_rates) = spot_trading_api
+							.get_commission_rates(&binance_order_params.symbol)
 							.await
+						{
+							log::info!(
+								"Commission rates for {}: {:?}",
+								binance_order_params.symbol,
+								commission_rates
+							);
+						}
+						let Ok(binance_order) =
+							spot_trading_api.create_order(binance_order_params).await
 						else {
 							log::error!("Failed to create binance order");
 							WalletApi::new(self.binance_api.as_ref())
