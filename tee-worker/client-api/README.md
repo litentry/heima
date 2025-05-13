@@ -18,10 +18,12 @@ Heima types augment for @polkadot/api
 
 ## Installation
 
-`cd tee-worker/client-api`
-`nvm use`
-`corepack enable pnpm`
-`pnpm install`
+```
+cd tee-worker/client-api
+nvm use
+corepack enable pnpm
+pnpm install
+```
 
 ## Type Generated
 
