@@ -60,6 +60,8 @@ impl<'a, BinanceClient: BinanceApi> SpotTradingApi<'a, BinanceClient> {
 		self.base_api.make_public_get_request(&endpoint, Some(params)).await
 	}
 
+	/// Get commission rates
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints#query-commission-rates-user_data
 	pub async fn get_commission_rates(&self, symbol: &str) -> Result<ComissionRates, Error> {
 		let endpoint = format!("{}/account/commission", SPOT_TRADING_API);
 		let mut params = HashMap::new();
