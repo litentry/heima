@@ -594,7 +594,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 
 					let instant = estimated_from_amount_in_usdt <= self.instant_payout_threshold;
 
-					println!(
+					debug!(
 						"Instant: {}, threshold: {:?}, estimated usdt amount: {:?}",
 						instant, self.instant_payout_threshold, estimated_from_amount_in_usdt
 					);
