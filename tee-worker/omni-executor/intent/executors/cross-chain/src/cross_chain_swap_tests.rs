@@ -58,6 +58,7 @@ use pumpx::PumpxApi;
 use reqwest::Method;
 use rust_decimal::Decimal;
 use solana_sdk::pubkey::Pubkey;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use tempfile::tempdir;
@@ -248,10 +249,26 @@ async fn simple_cross_chain_swap() {
 			})
 		});
 
+	let mut sol_usdt_price_params: HashMap<String, String> = HashMap::new();
+	sol_usdt_price_params.insert("symbol".to_string(), "SOLUSDT".to_string());
 	binance_api_mock
 		.expect_make_public_get_request()
-		.with(mockall::predicate::eq("/api/v3/ticker/price"), mockall::predicate::always())
-		.times(2)
+		.with(
+			mockall::predicate::eq("/api/v3/ticker/price"),
+			mockall::predicate::eq(Some(sol_usdt_price_params)),
+		)
+		.times(1)
+		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
+
+	let mut sol_bnb_price_params: HashMap<String, String> = HashMap::new();
+	sol_bnb_price_params.insert("symbol".to_string(), "SOLBNB".to_string());
+	binance_api_mock
+		.expect_make_public_get_request()
+		.with(
+			mockall::predicate::eq("/api/v3/ticker/price"),
+			mockall::predicate::eq(Some(sol_bnb_price_params)),
+		)
+		.times(1)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
 	let mut accounting_contract_client_mock =
@@ -528,10 +545,26 @@ async fn instant_payout_cross_chain_swap() {
 			})
 		});
 
+	let mut sol_usdt_price_params: HashMap<String, String> = HashMap::new();
+	sol_usdt_price_params.insert("symbol".to_string(), "SOLUSDT".to_string());
 	binance_api_mock
 		.expect_make_public_get_request()
-		.with(mockall::predicate::eq("/api/v3/ticker/price"), mockall::predicate::always())
-		.times(2)
+		.with(
+			mockall::predicate::eq("/api/v3/ticker/price"),
+			mockall::predicate::eq(Some(sol_usdt_price_params)),
+		)
+		.times(1)
+		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
+
+	let mut sol_bnb_price_params: HashMap<String, String> = HashMap::new();
+	sol_bnb_price_params.insert("symbol".to_string(), "SOLBNB".to_string());
+	binance_api_mock
+		.expect_make_public_get_request()
+		.with(
+			mockall::predicate::eq("/api/v3/ticker/price"),
+			mockall::predicate::eq(Some(sol_bnb_price_params)),
+		)
+		.times(1)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
 	let mut accounting_contract_client_mock =
