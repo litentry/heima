@@ -1170,30 +1170,6 @@ fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Option<String>
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_str_to_u256() {
-		let amount = "0.0050773374896233926847036101";
-		let decimals = 18;
-
-		let result = str_to_u256(amount, decimals);
-		assert_eq!(result, Some(U256::from_str("5077337489623392").unwrap()));
-	}
-
-	#[test]
-	fn test_calculate_amount_in() {
-		let bnb_to_receive = "0.0050773374896233926847036101";
-		let gas = "0.0004731804";
-		let decimals = 18;
-
-		let result = calculate_amount_in(bnb_to_receive, gas, decimals);
-		assert_eq!(result, Some("0.004604157089623392".to_string()));
-	}
-}
-
 async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
 	binance_api: &Arc<BinanceClient>,
 	trade_symbol: &str,
@@ -1233,4 +1209,28 @@ async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
 	debug!("BNB estimated: {}, after 0.1% fee: {}", bnb_estimated, decimal_bnb_to_receive);
 
 	Ok(decimal_bnb_to_receive.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_str_to_u256() {
+		let amount = "0.0050773374896233926847036101";
+		let decimals = 18;
+
+		let result = str_to_u256(amount, decimals);
+		assert_eq!(result, Some(U256::from_str("5077337489623392").unwrap()));
+	}
+
+	#[test]
+	fn test_calculate_amount_in() {
+		let bnb_to_receive = "0.0050773374896233926847036101";
+		let gas = "0.0004731804";
+		let decimals = 18;
+
+		let result = calculate_amount_in(bnb_to_receive, gas, decimals);
+		assert_eq!(result, Some("0.004604157089623392".to_string()));
+	}
 }
