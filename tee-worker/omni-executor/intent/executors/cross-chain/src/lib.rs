@@ -636,6 +636,13 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 							3 => &gas_info.super_fast,
 							_ => {
 								log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+								self.release_asset_lock_in_error(
+									account_id.clone(),
+									swap_order.from_asset.clone(),
+									AmountType::from_str(&amount_to_transfer_decimal.to_string())
+										.unwrap(),
+								)
+								.await;
 								return Err(());
 							},
 						};
@@ -661,6 +668,13 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 										log::error!("Failed to notify pumpx-signer");
 									},
 								)?;
+								self.release_asset_lock_in_error(
+									account_id.clone(),
+									swap_order.from_asset.clone(),
+									AmountType::from_str(&amount_to_transfer_decimal.to_string())
+										.unwrap(),
+								)
+								.await;
 								// TODO: what to do with user asset?
 								return Err(());
 							},
@@ -679,6 +693,15 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 										"Unsupported swap type: {}",
 										pumpx_config.swap_type
 									);
+									self.release_asset_lock_in_error(
+										account_id.clone(),
+										swap_order.from_asset.clone(),
+										AmountType::from_str(
+											&amount_to_transfer_decimal.to_string(),
+										)
+										.unwrap(),
+									)
+									.await;
 									return Err(());
 								},
 							},
@@ -698,6 +721,15 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 								3 => GasType::Fast,
 								_ => {
 									log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+									self.release_asset_lock_in_error(
+										account_id.clone(),
+										swap_order.from_asset.clone(),
+										AmountType::from_str(
+											&amount_to_transfer_decimal.to_string(),
+										)
+										.unwrap(),
+									)
+									.await;
 									return Err(());
 								},
 							},
@@ -707,12 +739,20 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 						};
 						debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 
-						let response = self
-							.create_market_order_tx(&access_token, body, account_id)
-							.await
-							.map_err(|_| {
-								log::error!("Failed to create and submit market order tx")
-							})?;
+						let Ok(response) =
+							self.create_market_order_tx(&access_token, body, account_id).await
+						else {
+							log::error!("Failed to create and submit market order tx");
+
+							self.release_asset_lock_in_error(
+								account_id.clone(),
+								swap_order.from_asset.clone(),
+								AmountType::from_str(&amount_to_transfer_decimal.to_string())
+									.unwrap(),
+							)
+							.await;
+							return Err(());
+						};
 
 						debug!("Response create_market_order_tx: {:?}", response);
 
@@ -1199,6 +1239,19 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
+	async fn release_asset_lock_in_error(
+		&self,
+		account_id: AccountId,
+		asset_id: ChainAsset,
+		amount: AmountType,
+	) {
+		if let Err(e) =
+			self.account_asset_lock.release(account_id.clone(), asset_id.clone(), amount)
+		{
+			log::error!("Could not release asset lock for account: {:?}, amount: {:?}, asset: {:?}, reason: {:?}", account_id, asset_id, amount, e);
+		}
+	}
+
 	async fn get_token_available_amount(
 		&self,
 		asset: &ChainAsset,
