@@ -15,10 +15,16 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		swap_order: &SwapOrder,
 		pumpx_config: &PumpxConfig,
 	) -> Result<String, ()> {
+		// payout_amount
 		debug!("executing cross chain swap");
 
 		if pumpx_config.to_chain_id != BSC_CHAIN_ID {
 			error!("Only bsc payout supported");
+			return Err(());
+		}
+
+		if pumpx_config.order_type != PumpxOrderType::Market {
+			error!("Only market order supported");
 			return Err(());
 		}
 
