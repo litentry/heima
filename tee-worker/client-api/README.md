@@ -27,7 +27,7 @@ pnpm install
 
 ## Type Generated
 
-Update metadata: `pnpm load:metadata` or `pnpm load:metadata:identity`  for specific directory  
+Update metadata: `pnpm load:metadata` or `pnpm load:metadata:identity` for specific directory
 
 Generate types:`pnpm generate`
 
@@ -44,4 +44,3 @@ pnpm run generate
 pnpm run build
 pnpm run publish
 ```
-

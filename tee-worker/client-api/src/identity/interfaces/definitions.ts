@@ -3,4 +3,3 @@ export { default as vc } from "./vc/definitions";
 export { default as trusted_operations } from "./trusted_operations/definitions";
 export { default as sidechain } from "./sidechain/definitions";
 export { default as omniAccount } from "./omniAccount/definitions";
-
