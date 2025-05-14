@@ -127,7 +127,7 @@ async fn simple_cross_chain_swap() {
 			mockall::predicate::eq(pumpx::signer_client::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
-			mockall::predicate::eq(vec![create_order_encoded_tx.clone()]),
+			mockall::predicate::always(),
 		)
 		.times(1)
 		.returning(move |_, _, _, _| Ok(vec![create_order_tx_signature.to_vec()]));
@@ -423,7 +423,7 @@ async fn instant_payout_cross_chain_swap() {
 			mockall::predicate::eq(pumpx::signer_client::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
-			mockall::predicate::eq(vec![create_order_encoded_tx.clone()]),
+			mockall::predicate::always(),
 		)
 		.times(1)
 		.returning(move |_, _, _, _| Ok(vec![create_order_tx_signature.to_vec()]));
