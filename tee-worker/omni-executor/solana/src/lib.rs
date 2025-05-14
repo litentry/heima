@@ -1,6 +1,7 @@
 pub mod signer;
 
 use async_trait::async_trait;
+use executor_core::wallet_metrics::WalletBalanceFetcher;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
 	commitment_config::CommitmentConfig, pubkey::Pubkey, signer::Signer as SignerTrait,
@@ -168,6 +169,17 @@ impl SolanaClient for SolanaRpcClient {
 		log::debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(tx_signature.to_string())
+	}
+}
+
+#[async_trait]
+impl WalletBalanceFetcher for SolanaRpcClient {
+	async fn fetch(&self, address: &str) -> Result<f64, ()> {
+		self.rpc_client
+			.get_balance(&Pubkey::from_str(address).unwrap())
+			.await
+			.map_err(|e| log::error!("Could not fetch wallet balance: {:?}", e))
+			.map(|b| b as f64)
 	}
 }
 
