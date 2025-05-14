@@ -258,7 +258,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			let signed_tx = unsigned_tx.into_signed(signature);
 			let mut encoded_signed_tx = vec![];
 			signed_tx.rlp_encode(&mut encoded_signed_tx);
-			tx_data.push(hex::encode(encoded_signed_tx));
+			tx_data.push(format!("0x{}", hex::encode(encoded_signed_tx)));
 		}
 
 		let response = self
