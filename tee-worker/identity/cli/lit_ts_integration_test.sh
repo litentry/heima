@@ -65,7 +65,6 @@ echo "update sidechain metadata"
 
 cd /client-api
 pnpm install
-pnpm run generate
 pnpm run build
 
 cd /ts-tests

@@ -1,5 +1,5 @@
 import type { HexString } from '@polkadot/util/types';
-import type { Identity, ValidationData } from 'parachain-api';
+import type { Identity, ValidationData } from '@heima-network/api-argument/identity';
 import { ApiPromise } from '@polkadot/api';
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
