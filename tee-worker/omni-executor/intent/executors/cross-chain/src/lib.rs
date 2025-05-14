@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 #![allow(unused_assignments)]
+#![allow(clippy::too_many_arguments)]
 
 use alloy::consensus::{SignableTransaction, TxLegacy};
 use alloy::primitives::{Address, PrimitiveSignature, U256};

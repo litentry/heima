@@ -23,7 +23,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 
 		let to_wallet = self
 			.pumpx_signer_client
-			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account.clone())
+			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
 			.await
 			.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
 
@@ -154,7 +154,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		};
 		debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 		let response =
-			self.pumpx_api.create_market_order_tx(&access_token, body).await.map_err(|_| {
+			self.pumpx_api.create_market_order_tx(access_token, body).await.map_err(|_| {
 				log::error!("Failed to create market order tx");
 			})?;
 
@@ -316,13 +316,12 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			wallet_index: pumpx_config.wallet_index,
 		};
 		debug!("Calling pumpx create_limit_order, order: {:?}", new_limit_order);
-		let response = self
-			.pumpx_api
-			.create_limit_order(&access_token, new_limit_order)
-			.await
-			.map_err(|_| {
-				log::error!("Failed to create limit order");
-			})?;
+		let response =
+			self.pumpx_api.create_limit_order(access_token, new_limit_order).await.map_err(
+				|_| {
+					log::error!("Failed to create limit order");
+				},
+			)?;
 
 		debug!("Response create_limit_order: {:?}", response);
 		Ok(response.encode())

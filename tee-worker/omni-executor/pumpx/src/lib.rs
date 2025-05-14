@@ -67,8 +67,8 @@ pub fn pubkey_to_solana_address(pubkey: &[u8]) -> Result<String, ()> {
 
 pub fn pubkey_to_address(chain_type: ChainType, pubkey: &[u8]) -> Result<String, ()> {
 	match chain_type {
-		ChainType::Evm => pubkey_to_evm_address(&pubkey),
-		ChainType::Solana => pubkey_to_solana_address(&pubkey),
+		ChainType::Evm => pubkey_to_evm_address(pubkey),
+		ChainType::Solana => pubkey_to_solana_address(pubkey),
 		_ => {
 			log::error!("Unsupported {:?} wallet address", chain_type);
 			Err(())

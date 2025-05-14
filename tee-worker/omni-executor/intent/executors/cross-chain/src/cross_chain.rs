@@ -60,7 +60,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 
 		let from_wallet = self
 			.pumpx_signer_client
-			.request_wallet(from_chain_type, pumpx_config.wallet_index, omni_account.clone())
+			.request_wallet(from_chain_type, pumpx_config.wallet_index, omni_account)
 			.await
 			.map_err(|e| error!("Could not get from_wallet from pumpx-signer: {:?}", e))?;
 
@@ -68,7 +68,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 
 		let to_wallet = self
 			.pumpx_signer_client
-			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account.clone())
+			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
 			.await
 			.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
 
@@ -93,7 +93,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		// TODO: this should be abstracted away
 		let (payout_amount, payout_amount_u256) = self
 			.do_binance_swap(
-				omni_account.clone(),
+				omni_account,
 				swap_order.from_asset.clone(),
 				from_amount,
 				from_address,
@@ -142,7 +142,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		};
 		debug!("Calling pumpx create_cross_order, body: {:?}", body);
 		let response =
-			self.pumpx_api.create_cross_order(&access_token, body).await.map_err(|_| {
+			self.pumpx_api.create_cross_order(access_token, body).await.map_err(|_| {
 				error!("Failed to create cross order");
 			})?;
 		debug!("Response create_cross_order: {:?}", response);
@@ -506,7 +506,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		debug!("Calling pumpx get_gas_info, chain_id: {}", pumpx_config.to_chain_id);
 		let res = self
 			.pumpx_api
-			.get_gas_info(&access_token, pumpx_config.to_chain_id)
+			.get_gas_info(access_token, pumpx_config.to_chain_id)
 			.await
 			.map_err(|_| {
 				log::error!("Failed to get gas info");
