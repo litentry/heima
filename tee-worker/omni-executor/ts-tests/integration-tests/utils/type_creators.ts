@@ -79,6 +79,7 @@ export async function createNativeTaskWrapper(
 ): Promise<NativeTaskWrapper> {
     const payload = JSON.stringify({ message_code: msgCode });
     const hashedPayload = blake2AsHex(payload, 256);
+    const signerIdentity = await signer.getIdentity(api);
 
     const signature = await createHeimaMultiSignature(api, {
         signer,
@@ -86,9 +87,8 @@ export async function createNativeTaskWrapper(
     });
 
     const auth: OmniAuth = api.createType('OmniAuth', {
-        Web3: api.createType('(HeimaMultiSignature)', signature),
+        Web3: api.createType('(Identity, HeimaMultiSignature)', [signerIdentity, signature]),
     });
-
     let n = api.createType('Option<Nonce>', nonce);
     let a = api.createType('Option<OmniAuth>', auth);
 
