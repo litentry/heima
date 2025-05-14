@@ -34,6 +34,7 @@ use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use solana::{signer::RemoteSigner, SolanaClient as SolanaClientTrait};
+use sp_core::keccak_256;
 use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
@@ -1110,7 +1111,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.iter()
 			.map(|s| {
 				let hex_str = s.trim_start_matches("0x");
-				hex::decode(hex_str).expect("Invalid hex string")
+				let hex_decoded = hex::decode(hex_str).expect("Invalid hex string");
+				keccak_256(&hex_decoded).to_vec()
 			})
 			.collect();
 
