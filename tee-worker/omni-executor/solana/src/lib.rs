@@ -175,8 +175,10 @@ impl SolanaClient for SolanaRpcClient {
 #[async_trait]
 impl WalletBalanceFetcher for SolanaRpcClient {
 	async fn fetch(&self, address: &str) -> Result<f64, ()> {
+		let pubkey = Pubkey::from_str(address)
+			.map_err(|e| log::error!("Could not parse pubkey: {:?}", e))?;
 		self.rpc_client
-			.get_balance(&Pubkey::from_str(address).unwrap())
+			.get_balance(&pubkey)
 			.await
 			.map_err(|e| log::error!("Could not fetch wallet balance: {:?}", e))
 			.map(|b| b as f64)

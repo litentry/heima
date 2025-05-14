@@ -159,9 +159,10 @@ impl WalletBalanceFetcher for AlloyRpcProvider {
 	async fn fetch(&self, address: &str) -> Result<f64, ()> {
 		let provider = ProviderBuilder::new()
 			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
-
+		let address =
+			Address::from_str(address).map_err(|e| error!("Could not parse address: {:?}", e))?;
 		provider
-			.get_balance(Address::from_str(address).unwrap())
+			.get_balance(address)
 			.await
 			.map_err(|e| error!("Could not fetch wallet balance: {:?}", e))
 			.map(|b| b.to::<u64>() as f64)
