@@ -52,6 +52,7 @@
         "node": ">=20.0.0"
     },
     "scripts": {
+        "clean": "rm -rf dist node_modules",
         "generate": "pnpm generate:defs && pnpm generate:meta",
         "load:metadata": "pnpm load:meta:identity && pnpm load:meta:identity && pnpm load:sidechain",
         "load:metadata:identity": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
@@ -69,7 +70,8 @@
         "publish": "pnpm generate && pnpm build && pnpm publish",
         "format": "pnpm exec prettier --write .",
         "check-format": "pnpm exec prettier --check .",
-        "lint": "tsc --noEmit --pretty"
+        "lint": "tsc --noEmit --pretty",
+        "build-skip-sidechain": "pnpm generate:defs:identity && pnpm generate:defs:omni && pnpm generate:meta:identity && pnpm generate:meta:omni && SKIP_SIDECHAIN=true tsup"
     },
     "dependencies": {
         "@polkadot/api": "*",
