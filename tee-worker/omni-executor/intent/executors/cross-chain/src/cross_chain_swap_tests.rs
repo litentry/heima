@@ -207,7 +207,7 @@ async fn simple_cross_chain_swap() {
 			mockall::predicate::eq(SendOrderTxBody {
 				chain_id: to_chain_id,
 				order_id: order_id,
-				tx_data: vec!["f869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
+				tx_data: vec!["0xf869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
 			}) )
 		.times(1)
 		.returning(|_, _| Ok(SendOrderTxResponse {
