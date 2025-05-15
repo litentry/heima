@@ -56,7 +56,8 @@
     "packageManager": "pnpm@8.7.6",
     "pnpm": {
         "overrides": {
-            "elliptic": "6.6.1"
+            "elliptic": "6.6.1",
+            "ws": "^8.18.2"
         }
     }
 }

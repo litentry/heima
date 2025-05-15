@@ -1,13 +1,15 @@
 {
-  "type": "module",
-  "scripts": {
-    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
-  },
-  "license": "ISC",
-  "packageManager": "pnpm@10.2.1+sha512.398035c7bd696d0ba0b10a688ed558285329d27ea994804a52bad9167d8e3a72bcb993f9699585d3ca25779ac64949ef422757a6c31102c12ab932e5cbe5cc92",
-  	"pnpm": {
-		"overrides": {
-			"base-x": ">=4.0.1"
-		}
-	}
+    "type": "module",
+    "scripts": {
+        "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
+    },
+    "license": "ISC",
+    "packageManager": "pnpm@10.2.1+sha512.398035c7bd696d0ba0b10a688ed558285329d27ea994804a52bad9167d8e3a72bcb993f9699585d3ca25779ac64949ef422757a6c31102c12ab932e5cbe5cc92",
+    "pnpm": {
+        "overrides": {
+            "base-x": ">=4.0.1",
+            "ws": "^8.18.2",
+            "@types/ws": "^8.5.9"
+        }
+    }
 }
