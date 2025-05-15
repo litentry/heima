@@ -22,8 +22,12 @@ type ParentchainTxSigner = TxSigner<
 >;
 
 pub async fn get_attestation_data(signer: Keypair) -> Result<(Vec<u8>, MrEnclave), ()> {
-	let mut quote = vec![];
-	let mut mrenclave = MrEnclave::default();
+	#[cfg(feature = "gramine-quote")]
+	let (mut quote, mut mrenclave) = (vec![], MrEnclave::default());
+	#[cfg(not(feature = "gramine-quote"))]
+	let (quote, mrenclave) = (vec![], MrEnclave::default());
+
+	log::debug!("Using signer for attestation: {:?}", signer.public_key().0);
 
 	#[cfg(feature = "gramine-quote")]
 	{
