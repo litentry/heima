@@ -1,4 +1,5 @@
 use executor_primitives::MrEnclave;
+use log::info;
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
@@ -20,6 +21,35 @@ type ParentchainTxSigner = TxSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
+pub async fn get_attestation_data(signer: Keypair) -> Result<(Vec<u8>, MrEnclave), ()> {
+	let mut quote = vec![];
+	let mut mrenclave = MrEnclave::default();
+
+	#[cfg(feature = "gramine-quote")]
+	{
+		use executor_primitives::DcapQuote;
+		use parity_scale_codec::Decode;
+		use std::fs;
+		use std::fs::File;
+		use std::io::Write;
+
+		let mut f = File::create("/dev/attestation/user_report_data").unwrap();
+		let content = signer.public_key().0;
+		f.write_all(&content).unwrap();
+
+		let quote = fs::read("/dev/attestation/quote").unwrap();
+
+		let dcap_quote: DcapQuote =
+			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
+		info!("Attestation dcap_quote {:?}", dcap_quote);
+
+		mrenclave = dcap_quote.body.mr_enclave;
+	}
+	info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
+
+	Ok((quote, mrenclave))
+}
+
 #[allow(unused_assignments, unused_mut, unused_variables)]
 pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
@@ -28,31 +58,9 @@ pub async fn perform_attestation(
 	worker_url: &str,
 	shielding_pubkey: Vec<u8>,
 ) -> Result<MrEnclave, ()> {
-	let mut quote = vec![];
 	let mut attestation_type = AttestationType::Dcap(DcapProvider::Intel);
-	let mut mrenclave = MrEnclave::default();
+	let (quote, mrenclave) = get_attestation_data(signer.clone()).await?;
 
-	#[cfg(feature = "gramine-quote")]
-	{
-		use executor_primitives::DcapQuote;
-		use log::info;
-		use parity_scale_codec::Decode;
-		use std::fs;
-		use std::fs::File;
-		use std::io::Write;
-		let mut f = File::create("/dev/attestation/user_report_data").unwrap();
-		let content = signer.public_key().0;
-		f.write_all(&content).unwrap();
-
-		quote = fs::read("/dev/attestation/quote").unwrap();
-
-		let dcap_quote: DcapQuote =
-			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
-		info!("Attestation dcap_quote {:?}", dcap_quote);
-
-		mrenclave = dcap_quote.body.mr_enclave;
-		info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
-	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
 		attestation_type = AttestationType::Ignore;
