@@ -113,6 +113,12 @@ pub struct PumpxConfig {
     pub trailing_percent: Option<u32>,
 }
 
+impl PumpxConfig {
+    pub fn is_cross_chain(&self) -> bool {
+        self.from_chain_id != self.to_chain_id
+    }
+}
+
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PumpxOrderType {
