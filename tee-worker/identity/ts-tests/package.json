@@ -12,7 +12,7 @@
 	"packageManager": "pnpm@9.15.2",
 	"pnpm": {
 		"overrides": {
-			"base-x": "4.0.0",
+			"base-x": ">=4.0.1",
 			"elliptic": "6.6.1"
 		}
 	}
