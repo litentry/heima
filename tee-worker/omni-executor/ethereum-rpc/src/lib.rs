@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::str::FromStr;
+
 use alloy::network::EthereumWallet;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
@@ -21,6 +23,7 @@ use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
+use executor_core::wallet_metrics::WalletBalanceFetcher;
 use log::error;
 
 pub trait RpcProviderFactory {
@@ -148,6 +151,21 @@ impl RpcProvider for AlloyRpcProvider {
 		let result = provider.call(tx).await.map_err(|e| error!("Could not call: {:?}", e))?;
 
 		Ok(result.to_vec())
+	}
+}
+
+#[async_trait]
+impl WalletBalanceFetcher for AlloyRpcProvider {
+	async fn fetch(&self, address: &str) -> Result<f64, ()> {
+		let provider = ProviderBuilder::new()
+			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let address =
+			Address::from_str(address).map_err(|e| error!("Could not parse address: {:?}", e))?;
+		provider
+			.get_balance(address)
+			.await
+			.map_err(|e| error!("Could not fetch wallet balance: {:?}", e))
+			.map(|b| b.to::<u64>() as f64)
 	}
 }
 
