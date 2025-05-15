@@ -266,6 +266,15 @@ jobs:
           tags: litentry/omni-executor:${{ env.RELEASE_TAG }}
           target: omni-release
 
+      - name: Extract MRENCLAVE value
+        id: mrenclave
+        run: |
+          docker run --rm litentry/omni-executor:${{ env.RELEASE_TAG }} print-mr-enclave > mrenclave.txt
+          MRENCLAVE=$(cat mrenclave.txt | head -n1)
+          echo "MRENCLAVE=$MRENCLAVE"
+          echo "mrenclave=$MRENCLAVE" >> $GITHUB_OUTPUT
+
+
       - run: docker images --all
 
       - name: Dockerhub login
@@ -277,6 +286,8 @@ jobs:
       - name: Push worker image
         run: |
           docker push litentry/omni-executor:${{ env.RELEASE_TAG }}
+    outputs:
+      mrenclave: ${{ steps.mrenclave.outputs.mrenclave }}
 
   parachain-ts-tests:
     runs-on: ubuntu-22.04
@@ -366,7 +377,9 @@ jobs:
 
       - name: Generate release notes
         run: |
+          echo "MRENCLAVE: ${{ needs.build-omni-executor.outputs.mrenclave }}" > mrenclave.txt
           ./parachain/scripts/generate-release-notes.sh ${{ github.workspace }}/.github/release_notes.md ${{ needs.set-release-type.outputs.release_type }} ${{ env.DIFF_TAG }}
+          cat mrenclave.txt >> ${{ github.workspace }}/.github/release_notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
