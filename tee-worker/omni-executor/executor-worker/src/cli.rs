@@ -12,6 +12,7 @@ pub struct Cli {
 pub enum Commands {
 	Run(Box<RunArgs>),
 	GenKey(GenKeyArgs),
+	PrintMrEnclave(PrintMrEnclaveArgs),
 }
 
 #[derive(Args)]
@@ -49,6 +50,12 @@ pub struct RunArgs {
 
 #[derive(Args)]
 pub struct GenKeyArgs {
+	#[arg(short, long, default_value = "local", value_name = "local directory path")]
+	pub local_directory_path: String,
+}
+
+#[derive(Args)]
+pub struct PrintMrEnclaveArgs {
 	#[arg(short, long, default_value = "local", value_name = "local directory path")]
 	pub local_directory_path: String,
 }
