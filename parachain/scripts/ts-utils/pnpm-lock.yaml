@@ -14,6 +14,10 @@ importers:
       '@polkadot/util-crypto':
         specifier: ^13.0.2
         version: 13.0.2(@polkadot/util@13.4.4)
+    devDependencies:
+      '@types/node':
+        specifier: ^18.15.11
+        version: 18.15.11
       colors:
         specifier: ^1.4.0
         version: 1.4.0
@@ -32,10 +36,6 @@ importers:
       typescript:
         specifier: ^5.0.4
         version: 5.0.4
-    devDependencies:
-      '@types/node':
-        specifier: ^18.15.11
-        version: 18.15.11
 
 packages:
 
