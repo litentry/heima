@@ -12,7 +12,7 @@
   "dependencies": {
     "ts-node": "10.9.1",
     "tslib": "^2.5.3",
-    "ws": "^8.17.1"
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "@altack/nx-bundlefy": "^0.16.0",
