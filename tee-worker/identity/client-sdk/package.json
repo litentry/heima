@@ -13,7 +13,7 @@
 	"dependencies": {
 		"ts-node": "10.9.1",
 		"tslib": "^2.5.3",
-		"ws": "^8.17.1"
+		"ws": "^8.18.2"
 	},
 	"devDependencies": {
 		"@altack/nx-bundlefy": "0.16.0",
@@ -30,7 +30,7 @@
 		"@swc/core": "^1.4.17",
 		"@types/jest": "^29.4.0",
 		"@types/node": "18.7.1",
-		"@types/ws": "^8.5.9",
+		"@types/ws": "^8.18.1",
 		"@typescript-eslint/eslint-plugin": "5.x",
 		"@typescript-eslint/parser": "5.x",
 		"eslint": "~8.46.0",

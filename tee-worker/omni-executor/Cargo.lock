@@ -2473,6 +2473,7 @@ dependencies = [
  "serde_json",
  "solana",
  "solana-sdk",
+ "sp-core 35.0.0",
  "tempfile",
  "tokio",
 ]
@@ -3351,6 +3352,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
+ "executor-core",
  "log",
  "mockall",
 ]
@@ -9355,6 +9357,7 @@ name = "solana"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "executor-core",
  "log",
  "mockall",
  "pumpx",
