@@ -53,5 +53,10 @@
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true
     },
-    "packageManager": "pnpm@8.7.6"
+    "packageManager": "pnpm@8.7.6",
+    "pnpm": {
+        "overrides": {
+            "elliptic": "6.6.1"
+        }
+    }
 }
