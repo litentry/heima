@@ -13,4 +13,6 @@ export * from "./interfaces/index.js";
 
 import { default as omniAccount } from "./interfaces/omniAccount/definitions.js";
 import { default as omniExecutor } from "./interfaces/omniExecutor/definitions.js";
-export { omniAccount, omniExecutor };
+import { default as identity } from "./interfaces/identity/definitions.js";
+import { default as trusted_operations } from "./interfaces/trusted_operations/definitions.js";
+export { omniAccount, omniExecutor, identity, trusted_operations };
