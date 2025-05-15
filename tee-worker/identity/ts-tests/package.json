@@ -9,5 +9,11 @@
 	"engines": {
 		"node": ">=20.0.0"
 	},
-	"packageManager": "pnpm@9.15.2"
+	"packageManager": "pnpm@9.15.2",
+	"pnpm": {
+		"overrides": {
+			"base-x": "4.0.0",
+			"elliptic": "6.6.1"
+		}
+	}
 }
