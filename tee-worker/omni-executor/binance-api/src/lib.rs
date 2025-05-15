@@ -1,33 +1,26 @@
-mod convert_api;
+pub mod convert_api;
 mod error;
 pub mod spot_trading_api;
 mod traits;
 mod types;
-mod wallet_api;
+pub mod wallet_api;
 
 use async_trait::async_trait;
-use convert_api::ConvertApi;
 use error::Error;
 use hmac::{Hmac, Mac};
 use log::{debug, error};
 use reqwest::{Client, Method};
 use sha2::Sha256;
-use spot_trading_api::SpotTradingApi;
 use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
 };
 use url::Url;
-use wallet_api::WalletApi;
 
 const MAX_RECV_WINDOW: u32 = 60000;
 
 #[async_trait]
 pub trait BinanceApi: Send + Sync {
-	fn convert(&self) -> ConvertApi;
-	fn spot_trading(&self) -> SpotTradingApi;
-	fn wallet(&self) -> WalletApi;
-
 	fn sign_request(&self, query_string: &str) -> String;
 	async fn make_public_get_request<T>(
 		&self,
@@ -35,7 +28,7 @@ pub trait BinanceApi: Send + Sync {
 		parameters: Option<HashMap<String, String>>,
 	) -> Result<T, Error>
 	where
-		T: serde::de::DeserializeOwned;
+		T: 'static + serde::de::DeserializeOwned;
 
 	async fn make_signed_request<T>(
 		&self,
@@ -45,7 +38,7 @@ pub trait BinanceApi: Send + Sync {
 		recv_window: Option<u32>,
 	) -> Result<T, Error>
 	where
-		T: serde::de::DeserializeOwned;
+		T: 'static + serde::de::DeserializeOwned;
 }
 
 #[derive(Debug, Clone)]
@@ -76,21 +69,6 @@ impl BinanceApiClient {
 
 #[async_trait]
 impl BinanceApi for BinanceApiClient {
-	/// Create a new ConvertApi instance
-	fn convert(&self) -> ConvertApi {
-		ConvertApi::new(self)
-	}
-
-	/// Create a new SpotTradingApi instance
-	fn spot_trading(&self) -> SpotTradingApi {
-		SpotTradingApi::new(self)
-	}
-
-	/// Create a new WalletApi instance
-	fn wallet(&self) -> WalletApi {
-		WalletApi::new(self)
-	}
-
 	/// Create HMAC SHA256 signature for request parameters
 	fn sign_request(&self, query_string: &str) -> String {
 		let mut mac = Hmac::<Sha256>::new_from_slice(self.api_secret.as_bytes())
@@ -108,7 +86,7 @@ impl BinanceApi for BinanceApiClient {
 		parameters: Option<HashMap<String, String>>,
 	) -> Result<T, Error>
 	where
-		T: serde::de::DeserializeOwned,
+		T: 'static + serde::de::DeserializeOwned,
 	{
 		let mut url = self.base_url.join(endpoint).unwrap();
 		if let Some(p) = parameters {
@@ -147,7 +125,7 @@ impl BinanceApi for BinanceApiClient {
 		recv_window: Option<u32>,
 	) -> Result<T, Error>
 	where
-		T: serde::de::DeserializeOwned,
+		T: 'static + serde::de::DeserializeOwned,
 	{
 		let mut url = self.base_url.join(endpoint).unwrap();
 		let mut params = HashMap::new();
@@ -216,6 +194,44 @@ impl BinanceApi for BinanceApiClient {
 					Err(Error::RequestFailed)
 				},
 			})
+	}
+}
+
+#[cfg(feature = "mocks")]
+pub mod mocks {
+	use crate::BinanceApi;
+	use crate::Error;
+	use crate::HashMap;
+	use crate::Method;
+	use async_trait::async_trait;
+	use mockall::mock;
+
+	mock! {
+
+		pub BinanceApiClient {}
+
+		#[async_trait]
+		impl BinanceApi for BinanceApiClient {
+
+			fn sign_request(&self, query_string: &str) -> String;
+			async fn make_public_get_request<T>(
+				&self,
+				endpoint: &str,
+				parameters: Option<HashMap<String, String>>,
+			) -> Result<T, Error>
+			where
+				T: 'static + serde::de::DeserializeOwned;
+
+			async fn make_signed_request<T>(
+				&self,
+				endpoint: &str,
+				method: Method,
+				parameters: Option<HashMap<String, String>>,
+				recv_window: Option<u32>,
+			) -> Result<T, Error>
+			where
+				T: 'static + serde::de::DeserializeOwned;
+		}
 	}
 }
 
