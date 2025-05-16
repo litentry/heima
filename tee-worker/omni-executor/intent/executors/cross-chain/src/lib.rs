@@ -18,7 +18,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use alloy::consensus::{SignableTransaction, TxLegacy};
-use alloy::primitives::{Address, PrimitiveSignature, U256};
+use alloy::primitives::{Address, Signature, U256};
 use async_trait::async_trait;
 use base58::ToBase58;
 use binance_api::spot_trading_api::types::{
