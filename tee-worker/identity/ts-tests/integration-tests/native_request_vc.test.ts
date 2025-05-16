@@ -11,7 +11,7 @@ import {
     RequestVcOk,
     TrustedCallResult,
     WorkerRpcReturnValue,
-} from 'parachain-api';
+} from '@heima-network/api-argument/identity';
 import { IntegrationTestContext, SubstrateSigner } from './common/common-types';
 import {
     Web2ValidationConfig,

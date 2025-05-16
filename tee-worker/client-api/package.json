@@ -1,17 +1,103 @@
 {
+    "name": "@heima-network/api-augment",
     "type": "module",
+    "description": "Heima types augment for @polkadot/api",
     "license": "ISC",
+    "author": "Heima dev",
+    "main": "./dist/identity/index.cjs",
+    "module": "./dist/identity/index.js",
+    "types": "./dist/identity/index.d.ts",
+    "version": "0.0.1",
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/identity/index.d.ts",
+            "require": "./dist/identity/index.cjs",
+            "import": "./dist/identity/index.js"
+        },
+        "./identity": {
+            "types": "./dist/identity/index.d.ts",
+            "require": "./dist/identity/index.cjs",
+            "import": "./dist/identity/index.js"
+        },
+        "./omni": {
+            "types": "./dist/omni/index.d.ts",
+            "require": "./dist/omni/index.cjs",
+            "import": "./dist/omni/index.js"
+        },
+        "./sidechain": {
+            "types": "./dist/sidechain/index.d.ts",
+            "require": "./dist/sidechain/index.cjs",
+            "import": "./dist/sidechain/index.js"
+        }
+    },
+    "typesVersions": {
+        "*": {
+            "identity": [
+                "./dist/identity/index.d.ts"
+            ],
+            "omni": [
+                "./dist/omni/index.d.ts"
+            ],
+            "sidechain": [
+                "./dist/sidechain/index.d.ts"
+            ]
+        }
+    },
     "engines": {
         "node": ">=20.0.0"
     },
     "scripts": {
-        "update": "pnpm --filter parachain-api run update-metadata && pnpm --filter sidechain-api run update-metadata",
-        "build": "pnpm --filter parachain-api run build && pnpm --filter sidechain-api run build",
-        "build-parachain-api": "pnpm --filter parachain-api run build",
-        "update-build": "pnpm run update && pnpm run build",
-        "format": "pnpm run --recursive format",
-        "check-format": "pnpm run --recursive check-format",
-        "clean": "pnpm --filter parachain-api run clean && pnpm --filter sidechain-api run clean"
+        "clean": "rm -rf dist node_modules",
+        "generate": "pnpm generate:defs && pnpm generate:meta",
+        "load:metadata": "pnpm load:meta:identity && pnpm load:meta:identity && pnpm load:sidechain",
+        "load:metadata:identity": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
+        "load:metadata:omni": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
+        "load:metadata:sidechain": "../../identity/bin/litentry-cli print-sgx-metadata-raw > metadata-sidechain.json",
+        "generate:defs": "pnpm run generate:defs:identity && pnpm generate:defs:omni && pnpm generate:defs:sidechain",
+        "generate:defs:identity": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/identity/interfaces --input ./src/identity/interfaces --endpoint ./metadata-parachain.json",
+        "generate:defs:omni": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/omni/interfaces --input ./src/omni/interfaces --endpoint ./metadata-parachain.json",
+        "generate:defs:sidechain": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/sidechain/interfaces --input ./src/sidechain/interfaces --endpoint ./metadata-sidechain.json",
+        "generate:meta": "pnpm run generate:meta:identity && pnpm generate:meta:omni && pnpm generate:meta:sidechain",
+        "generate:meta:identity": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --endpoint ./metadata-parachain.json --package @heima-network/api-augment/identity/interfaces --output ./src/identity/interfaces",
+        "generate:meta:omni": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --endpoint ./metadata-parachain.json --package @heima-network/api-augment/omni/interfaces --output ./src/omni/interfaces",
+        "generate:meta:sidechain": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --endpoint ./metadata-sidechain.json --package @heima-network/api-augment/sidechain/interfaces --output ./src/sidechain/interfaces",
+        "build": "pnpm generate && tsup",
+        "publish": "pnpm generate && pnpm build && pnpm publish",
+        "format": "pnpm exec prettier --write .",
+        "check-format": "pnpm exec prettier --check .",
+        "lint": "tsc --noEmit --pretty",
+        "build-skip-sidechain": "pnpm generate:defs:identity && pnpm generate:defs:omni && pnpm generate:meta:identity && pnpm generate:meta:omni && SKIP_SIDECHAIN=true tsup"
+    },
+    "dependencies": {
+        "@polkadot/api": "*",
+        "@polkadot/api-augment": "*",
+        "@polkadot/api-base": "*",
+        "@polkadot/api-derive": "*",
+        "@polkadot/keyring": "^13.4.3",
+        "@polkadot/rpc-core": "*",
+        "@polkadot/types": "*",
+        "@polkadot/types-augment": "*",
+        "@polkadot/types-codec": "*",
+        "@polkadot/types-create": "*",
+        "@polkadot/types-known": "*",
+        "@polkadot/types-support": "*",
+        "@polkadot/typegen": "*",
+        "@types/node": "^20.4.4",
+        "prettier": "^2.8.3",
+        "ts-node": "^10.9.1",
+        "typescript": "^5.1.0",
+        "tsx": "^4.19.3",
+        "@polkadot/util": "^13.4.3",
+        "@polkadot/util-crypto": "^13.4.3",
+        "tsup": "^8.4.0"
+    },
+    "publishConfig": {
+        "access": "public"
     },
     "packageManager": "pnpm@9.15.2"
 }

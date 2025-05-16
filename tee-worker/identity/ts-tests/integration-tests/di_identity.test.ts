@@ -26,7 +26,7 @@ import {
 import type { IntegrationTestContext, WalletType } from './common/common-types';
 import { aesKey } from './common/call';
 import { createWeb3Wallet } from './common/helpers';
-import type { Web3Network, CorePrimitivesIdentity } from 'parachain-api';
+import type { Web3Network, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
 import { Vec, Bytes } from '@polkadot/types';
 import type { HexString } from '@polkadot/util/types';
 import { hexToU8a } from '@polkadot/util';
