@@ -39,7 +39,7 @@ use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::{
 	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
 };
-use parentchain_attestation::{get_attestation_data, perform_attestation};
+use parentchain_attestation::{generate_attestation_data, perform_attestation};
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
 	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory,
@@ -359,7 +359,7 @@ async fn main() -> Result<(), ()> {
 					.unwrap(),
 			));
 			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
-			let (_, mrenclave) = get_attestation_data(parentchain_signer).await?;
+			let (_, mrenclave) = generate_attestation_data(parentchain_signer).await?;
 			println!("{}", hex::encode(mrenclave));
 		},
 	}

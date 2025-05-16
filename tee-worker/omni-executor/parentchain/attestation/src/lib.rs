@@ -21,7 +21,7 @@ type ParentchainTxSigner = TxSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
-pub async fn get_attestation_data(signer: Keypair) -> Result<(Vec<u8>, MrEnclave), ()> {
+pub async fn generate_attestation_data(signer: Keypair) -> Result<(Vec<u8>, MrEnclave), ()> {
 	#[cfg(feature = "gramine-quote")]
 	let (mut quote, mut mrenclave) = (vec![], MrEnclave::default());
 	#[cfg(not(feature = "gramine-quote"))]
@@ -63,7 +63,7 @@ pub async fn perform_attestation(
 	shielding_pubkey: Vec<u8>,
 ) -> Result<MrEnclave, ()> {
 	let mut attestation_type = AttestationType::Dcap(DcapProvider::Intel);
-	let (quote, mrenclave) = get_attestation_data(signer.clone()).await?;
+	let (quote, mrenclave) = generate_attestation_data(signer.clone()).await?;
 
 	#[cfg(not(feature = "gramine-quote"))]
 	{
