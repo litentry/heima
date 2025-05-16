@@ -5,15 +5,14 @@ import type { KeyringPair } from '@polkadot/keyring/types';
 import type { HexString } from '@polkadot/util/types';
 import './config';
 import { IntegrationTestContext, JsonRpcRequest } from './common-types';
-import { createHash, randomBytes, type KeyObject } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { ECPairFactory, ECPairInterface } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import { ethers, Wallet } from 'ethers';
 import { Keypair } from '@solana/web3.js';
 import { EthersSigner, PolkadotSigner, BitcoinSigner, SolanaSigner, Signer } from './utils/crypto';
 import { Wallets } from './common-types';
-import type { ErrorDetail, StfError } from 'parachain-api';
-import { createSignedTrustedCallCleanIDGraphs, getSidechainNonce, sendRequestFromTrustedCall } from './di-utils';
+import type { ErrorDetail, StfError } from '@heima-network/api-argument/identity';
 
 export function blake2128Concat(data: HexString | Uint8Array): Uint8Array {
     return u8aConcat(blake2AsU8a(data, 128), u8aToU8a(data));

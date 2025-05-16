@@ -520,6 +520,24 @@ pub struct Discount {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Commission {
+	pub maker: String,
+	pub taker: String,
+	pub buyer: String,
+	pub seller: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ComissionRates {
+	pub symbol: String,
+	pub standard_commission: Commission,
+	pub tax_commission: Commission,
+	pub discount: Discount,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum CancelOrderRestrictions {
 	ONLY_NEW,

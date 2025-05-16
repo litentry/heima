@@ -1,9 +1,6 @@
 import { u8aToHex } from '@polkadot/util';
 import { ApiPromise } from '@polkadot/api';
-import {
-    NativeTaskWrapper,
-    NativeTaskResponse,
-} from 'parachain-api';
+import { NativeTaskWrapper, NativeTaskResponse } from '@heima-network/api-argument/omni';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';
