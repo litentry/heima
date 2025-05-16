@@ -209,12 +209,15 @@ if is_omni_executor_release; then
   WORKER_VERSION=$(grep '^version' tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed -E 's/^version *= *["'\''](.*)["'\'']/\1/')
   WORKER_BIN=$(grep '^name' tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed -E 's/^name *= *["'\''](.*)["'\'']/\1/')
   WORKER_RUSTC_VERSION=$(cd tee-worker/omni-executor && rustc --version)
+  docker run litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG print-mr-enclave > mrenclave.txt
+  MRENCLAVE=$(cat mrenclave.txt | head -n1)
 cat << EOF >> "$1"
 ## Omni-Executor
 
 <CODEBLOCK>
 client version               : $WORKER_VERSION
 client name                  : $WORKER_BIN
+mrenclave:                   : $MRENCLAVE
 rustc                        : $WORKER_RUSTC_VERSION
 docker image                 : litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG
 <CODEBLOCK>
