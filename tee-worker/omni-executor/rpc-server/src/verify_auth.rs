@@ -79,7 +79,9 @@ pub fn verify_web3_authentication(
 	let Ok(Some(message_code)) = verification_code_storage.get(&storage_key) else {
 		return Err(AuthenticationError::VerificationCodeNotFound);
 	};
-
+	verification_code_storage
+		.remove(&storage_key)
+		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
 	let message = HeimaMessagePayload { message_code };
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
 	let hashed = blake2_256(payload.as_bytes());
