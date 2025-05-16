@@ -22,11 +22,18 @@ pub fn register_get_message_code(module: &mut RpcModule<RpcContext>) {
 				ErrorCode::InvalidParams
 			})?;
 			let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
-			let message_code = generate_otp(8);
-
-			verification_code_storage
-				.insert(&omni_account.hash(), message_code.clone())
-				.map_err(|_| ErrorCode::InternalError)?;
+			let storage_key = omni_account.hash();
+			let message_code = match verification_code_storage.get(&storage_key) {
+				Ok(Some(message_code)) => message_code,
+				Ok(None) => {
+					let message_code = generate_otp(8);
+					verification_code_storage
+						.insert(&storage_key, message_code.clone())
+						.map_err(|_| ErrorCode::InternalError)?;
+					message_code
+				},
+				Err(_) => return Err(ErrorCode::InternalError.into()),
+			};
 
 			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload { message_code })
 		})
