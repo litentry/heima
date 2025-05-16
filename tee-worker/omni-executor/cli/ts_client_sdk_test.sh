@@ -30,14 +30,14 @@ function usage() {
 
 echo "Running client-sdk tests"
 
-cd /client-api/parachain-api
-curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > prepare-build/litentry-parachain-metadata.json
+cd /client-api
+curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > metadata-parachain.json
 echo "Parachain metadata fetched"
 
-echo "Installing dependencies and building parachain-api"
+echo "Installing dependencies and building client-api"
 cd /client-api
 pnpm install --force
-cd /client-api/parachain-api
+cd /client-api
 pnpm build
 
 echo "Installing dependencies and running client-sdk tests"

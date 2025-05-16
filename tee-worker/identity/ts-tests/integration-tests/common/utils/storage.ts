@@ -4,8 +4,8 @@ import { StorageEntryMetadataV14, SiLookupTypeId, StorageHasherV14 } from '@polk
 import { sendRequest } from '../call';
 import { blake2128Concat, twox64Concat, identity, createJsonRpcRequest, nextRequestId } from '../helpers';
 import type { IntegrationTestContext } from '../common-types';
-import type { PalletIdentityManagementTeeIdentityContext } from 'sidechain-api';
-import type { CorePrimitivesIdentity } from 'parachain-api';
+import type { PalletIdentityManagementTeeIdentityContext } from '@heima-network/api-argument/sidechain';
+import type { CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
 import type { HexString } from '@polkadot/util/types';
 import type { Metadata } from '@polkadot/types';
 

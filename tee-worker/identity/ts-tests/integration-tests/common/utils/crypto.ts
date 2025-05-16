@@ -1,7 +1,7 @@
 import type { HexString } from '@polkadot/util/types';
 import { bufferToU8a, hexToU8a, isString, stringToU8a, u8aToHex } from '@polkadot/util';
 import { KeyObject } from 'crypto';
-import { AesOutput, CorePrimitivesIdentity } from 'parachain-api';
+import { AesOutput, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
 import crypto from 'crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { ethers } from 'ethers';

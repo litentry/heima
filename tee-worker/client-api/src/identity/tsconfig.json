@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": "./",
+    "outDir": "../../dist/identity",
+    "declarationDir": "../../dist/identity",
+    "declarationMap": true,
+    "paths": {
+      "@heima-network/api-augment/identity/interfaces/*": ["interfaces/*"],
+      "@polkadot/api/augment": ["interfaces/augment-api.ts"],
+      "@polkadot/types/augment": ["interfaces/augment-types.ts"],
+      "@polkadot/types/lookup": ["interfaces/types-lookup.ts"]
+    }
+  }
+}
