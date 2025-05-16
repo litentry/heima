@@ -57,7 +57,6 @@ use pumpx::signer_client::SignerClient;
 use pumpx::PumpxApi;
 use reqwest::Method;
 use rust_decimal::Decimal;
-use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -108,7 +107,7 @@ async fn simple_cross_chain_swap() {
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		.times(1)
+		.times(2)
 		.returning(|_, _, _| {
 			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
 				.unwrap()
@@ -181,7 +180,7 @@ async fn simple_cross_chain_swap() {
 				gas_type: GasType::Slow,
 				slippage: 0,
 				wallet_index: 1,
-				recipient_address: "".to_string()
+				recipient_address: expected_payout_address.to_string()
 			}
 		))
 		.times(1)
@@ -205,7 +204,7 @@ async fn simple_cross_chain_swap() {
 			mockall::predicate::eq(SendOrderTxBody {
 				chain_id: to_chain_id,
 				order_id: order_id,
-				tx_data: vec!["f869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
+				tx_data: vec!["0xf869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
 			}) )
 		.times(1)
 		.returning(|_, _| Ok(SendOrderTxResponse {
@@ -402,9 +401,12 @@ async fn instant_payout_cross_chain_swap() {
 		.with(
 			mockall::predicate::eq(pumpx::signer_client::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
-			mockall::predicate::eq(pumpx_wallet_omni_account),
+			mockall::predicate::eq([
+				127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171,
+				116, 52, 128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
+			]),
 		)
-		.times(1)
+		.times(2)
 		.returning(|_, _, _| {
 			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
 				.unwrap()
@@ -501,7 +503,7 @@ async fn instant_payout_cross_chain_swap() {
 			mockall::predicate::eq(SendOrderTxBody {
 				chain_id: to_chain_id,
 				order_id: order_id,
-				tx_data: vec!["f869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
+				tx_data: vec!["0xf869808504e3b29200831e848094d8da6bf26964af9d7eed9e03e53415d37aa96045843b9aca008025a0f6c76effbee5ac9ff341a0efe85b5f9401ab673c5d1c2746041e446e3d19aea3a037470aac13f1cb4da20f086a475cceb36a5bb4fd9cf52b48300ad840ad1480ad".to_string()]
 			}) )
 		.times(1)
 		.returning(|_, _| Ok(SendOrderTxResponse {
@@ -575,13 +577,15 @@ async fn instant_payout_cross_chain_swap() {
 		.times(1)
 		.returning(|| Address::from_str(accounting_contract_client_address).unwrap());
 
+	accounting_contract_client_mock
+		.expect_get_balance()
+		.times(1)
+		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
+
 	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
 
 	solana_client_mock
 		.expect_get_balance()
-		.with(mockall::predicate::eq(
-			Pubkey::from_str("B9umkjBoYNxyajiVwty2f6W3WWG2tf5SmkCz6KqWrv5f").unwrap(),
-		))
 		.times(1)
 		.returning(|_| Ok(100_000_000_000));
 
@@ -697,7 +701,7 @@ fn prepare_sol_coin_info(ticker: &str, name: &str) -> CoinInfo {
 
 fn prepare_pumpx_config(to_chain_id: u32, wallet_index: u32) -> PumpxConfig {
 	PumpxConfig {
-		order_type: PumpxOrderType::Limit,
+		order_type: PumpxOrderType::Market,
 		swap_type: 1,
 		from_chain_id: 100000,
 		from_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),

@@ -105,7 +105,8 @@ async fn simple_single_chain_swap() {
 			mockall::predicate::eq(1),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		.times(1)
+		//from and to wallet - both are the same
+		.times(2)
 		.returning(move |_, _, _| Ok(solana_wallet_pub_key.to_vec()));
 
 	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
