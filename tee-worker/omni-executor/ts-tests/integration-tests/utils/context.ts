@@ -1,6 +1,6 @@
 import type { HexString } from '@polkadot/util/types';
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { identity, omniAccount, omniExecutor } from 'parachain-api';
+import { omniAccount, omniExecutor, trusted_operations,identity } from '@heima-network/api-argument/omni';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WsAsPromiseOptions from 'websocket-as-promised/types/options';
@@ -33,6 +33,7 @@ export async function createIntegrationTestContext(
             ...identity.types,
             ...omniAccount.types,
             ...omniExecutor.types,
+            ...trusted_operations.types
         },
     });
     const web3Wallets = createWeb3Wallets();

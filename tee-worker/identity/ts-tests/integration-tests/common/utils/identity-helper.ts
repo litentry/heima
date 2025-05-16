@@ -1,12 +1,11 @@
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import type { IntegrationTestContext } from '../common-types';
-import { AesOutput } from 'parachain-api';
+import { AesOutput, LitentryValidationData, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
 import { decryptWithAes, Signer } from './crypto';
 import { ethers } from 'ethers';
 import type { TypeRegistry } from '@polkadot/types';
-import type { PalletIdentityManagementTeeIdentityContext } from 'sidechain-api';
-import type { LitentryValidationData, CorePrimitivesIdentity } from 'parachain-api';
+import type { PalletIdentityManagementTeeIdentityContext } from '@heima-network/api-argument/sidechain';
 import type { HexString } from '@polkadot/util/types';
 
 // blake2_256(<sidechain nonce> + <primary AccountId> + <identity-to-be-linked>)

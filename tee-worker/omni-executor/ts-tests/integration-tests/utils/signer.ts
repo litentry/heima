@@ -4,7 +4,7 @@ import { bufferToU8a, hexToU8a, isString, stringToU8a, u8aToHex } from '@polkado
 import { KeyringPair } from '@polkadot/keyring/types';
 import { blake2AsU8a } from '@polkadot/util-crypto';
 import { ApiPromise } from '@polkadot/api';
-import { Identity } from 'parachain-api';
+import { Identity } from '@heima-network/api-argument/omni';
 import { ethers } from 'ethers';
 import { isHexString } from 'ethers/lib/utils';
 import { ECPairInterface } from 'ecpair';
