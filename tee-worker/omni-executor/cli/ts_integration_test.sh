@@ -35,8 +35,8 @@ TEST=$1
 
 echo "Running integration tests for $TEST"
 
-cd /client-api/parachain-api
-curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > prepare-build/litentry-parachain-metadata.json
+cd /client-api
+curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODE_URL > metadata-parachain.json
 echo "Parachain metadata fetched"
 
 # echo "Installing pnpm"
@@ -46,7 +46,9 @@ echo "Parachain metadata fetched"
 echo "Installing dependencies and building client-api"
 cd /client-api
 pnpm install --force
-pnpm run build-parachain-api
+
+# Here is no need to use sidechain, so skip the build of sidechain.  
+pnpm run build-skip-sidechain
 
 echo "Installing dependencies and building ts-tests"
 cd /ts-tests

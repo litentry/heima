@@ -13,9 +13,13 @@ import {
 import { buildIdentityHelper, buildValidations } from './common/utils';
 import type { IntegrationTestContext } from './common/common-types';
 import { aesKey } from './common/call';
-import type { CorePrimitivesIdentity, WorkerRpcReturnValue } from 'parachain-api';
+import type {
+    CorePrimitivesIdentity,
+    WorkerRpcReturnValue,
+    LitentryValidationData,
+    Web3Network,
+} from '@heima-network/api-argument/identity';
 import { mockBatchAssertion } from './common/utils/vc-helper';
-import type { LitentryValidationData, Web3Network } from 'parachain-api';
 import type { Vec, Bytes } from '@polkadot/types';
 import { subscribeToEventsWithExtHash } from './common/transactions';
 import { assert } from 'chai';

@@ -26,6 +26,10 @@ use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
 use executor_core::key_store::KeyStore;
 use executor_core::shielding_key_store::ShieldingKeyStore;
+use executor_core::wallet_metrics::Wallet;
+use executor_core::wallet_metrics::{
+	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
+};
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
@@ -48,6 +52,7 @@ use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
+use std::collections::HashMap;
 use std::env;
 use std::io::Write;
 use std::net::SocketAddr;
@@ -221,6 +226,33 @@ async fn main() -> Result<(), ()> {
 				args.accounting_contract_address.parse().unwrap(),
 			);
 
+			// wallet monitoring setup start
+			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
+				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(&args.bsc_url)));
+
+			let solana_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
+				Arc::new(Box::new(SolanaRpcClient::new(&args.solana_url)));
+
+			let mut balance_fetchers: HashMap<
+				WalletNetworkType,
+				Arc<Box<dyn WalletBalanceFetcher>>,
+			> = HashMap::new();
+			balance_fetchers.insert(WalletNetworkType::Solana, solana_wallet_balance_fetcher);
+			balance_fetchers.insert(WalletNetworkType::Ethereum(56), bsc_wallet_balance_fetcher);
+
+			let mut wallet_metrics = WalletMetrics::new(balance_fetchers);
+
+			wallet_metrics.register(Wallet {
+				id: WalletId {
+					address: args.accounting_contract_address.to_string(),
+					network_type: WalletNetworkType::Ethereum(56),
+				},
+				name: "bsc_accounting_contract".to_string(),
+			});
+
+			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
+			// wallet monitoring setup end
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				rpc_endpoint_registry,
 				pumpx_signer_client.clone(),
@@ -294,6 +326,10 @@ async fn main() -> Result<(), ()> {
 			if args.parentchain_sync {
 				listen_to_parentchain(*args, storage_db).await.unwrap();
 			}
+
+			if let Err(e) = join.await {
+				error!("There was an error in associated task: {:?}", e);
+			};
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},

@@ -11,7 +11,7 @@ import {
     OmniAccountPermission,
     RawTask,
     NativeTaskWrapper,
-} from 'parachain-api';
+} from '@heima-network/api-argument/omni';
 import { Signer } from './signer';
 import { getMessageCode } from './requests';
 
