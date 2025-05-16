@@ -181,7 +181,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 				let Some(from_chain_type) =
 					ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
 				else {
-					log::error!("Unsupported to_chain_id: {}", pumpx_config.from_chain_id);
+					log::error!("Unsupported from_chain_id: {}", pumpx_config.from_chain_id);
 					return Err(());
 				};
 				let from_wallet: Vec<u8> = self

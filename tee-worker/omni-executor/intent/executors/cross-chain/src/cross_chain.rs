@@ -68,18 +68,6 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			return Err(());
 		};
 
-		let to_wallet = self
-			.pumpx_signer_client
-			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
-			.await
-			.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
-
-		let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
-
-		let payout_address = Address::from_str(&to_address).map_err(|_| {
-			error!("Failed to parse payout address");
-		})?;
-
 		let from_asset_binance_coin_name = determine_binance_coin_name(&swap_order.from_asset)?;
 		let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
 			error!("Failed to parse from_amount_string");
@@ -178,17 +166,25 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		}
 
 		if !instant {
-			self.do_payout(&payout_address, &payout_amount_u256).await?;
-		}
+			let to_wallet = self
+				.pumpx_signer_client
+				.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
+				.await
+				.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
 
-		Ok((
-			self.apply_gas_fee(&payout_amount, access_token, pumpx_config).await?,
-			if instant {
-				self.accounting_contract_client.get_address().await.to_string()
-			} else {
-				to_address
-			},
-		))
+			let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
+
+			let payout_address = Address::from_str(&to_address).map_err(|_| {
+				error!("Failed to parse payout address");
+			})?;
+			self.do_payout(&payout_address, &payout_amount_u256).await?;
+			Ok((self.apply_gas_fee(&payout_amount, access_token, pumpx_config).await?, to_address))
+		} else {
+			Ok((
+				self.apply_gas_fee(&payout_amount, access_token, pumpx_config).await?,
+				self.accounting_contract_client.get_address().await.to_string(),
+			))
+		}
 	}
 
 	async fn pumpx_create_cross_order(

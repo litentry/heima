@@ -406,7 +406,7 @@ async fn instant_payout_cross_chain_swap() {
 				116, 52, 128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
 			]),
 		)
-		.times(2)
+		.times(1)
 		.returning(|_, _, _| {
 			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
 				.unwrap()
