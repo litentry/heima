@@ -33,7 +33,7 @@
         "colors": "^1.4.0",
         "js-base64": "^3.7.5",
         "scale-ts": "^0.2.11",
-        "ws": "^8.17.1"
+        "ws": "^8.18.1"
     },
     "devDependencies": {
         "@ethersproject/providers": "^5.7.2",
