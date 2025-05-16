@@ -1,5 +1,5 @@
 use executor_primitives::MrEnclave;
-use log::info;
+use log::{debug, info};
 use parentchain_api_interface::{
 	runtime_types::core_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
@@ -45,7 +45,7 @@ pub async fn generate_attestation_data(signer: Keypair) -> Result<(Vec<u8>, MrEn
 
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
-		info!("Attestation dcap_quote {:?}", dcap_quote);
+		debug!("Attestation dcap_quote {:?}", dcap_quote);
 
 		mrenclave = dcap_quote.body.mr_enclave;
 	}
