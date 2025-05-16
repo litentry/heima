@@ -1,8 +1,8 @@
 import { hexToU8a } from '@polkadot/util';
 import type { IntegrationTestContext } from './common-types';
 
-import { AddressOrPair, FrameSystemEventRecord } from 'parachain-api';
-
+import { FrameSystemEventRecord } from '@heima-network/api-argument/identity';
+import { AddressOrPair } from '@polkadot/api/types';
 import { Keyring } from '@polkadot/keyring';
 import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
 import { ApiPromise } from '@polkadot/api';

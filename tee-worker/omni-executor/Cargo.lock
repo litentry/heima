@@ -3327,6 +3327,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
+ "executor-core",
  "log",
  "mockall",
 ]
@@ -9284,6 +9285,7 @@ name = "solana"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "executor-core",
  "log",
  "mockall",
  "pumpx",

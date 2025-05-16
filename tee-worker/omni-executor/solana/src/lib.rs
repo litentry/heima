@@ -1,6 +1,7 @@
 pub mod signer;
 
 use async_trait::async_trait;
+use executor_core::wallet_metrics::WalletBalanceFetcher;
 use solana_client::rpc_response::RpcKeyedAccount;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
 use solana_sdk::{
@@ -195,6 +196,19 @@ impl SolanaClient for SolanaRpcClient {
 			.get_token_accounts_by_owner(owner, token_account_filter)
 			.await
 			.map_err(|e| log::error!("Could not get token accounts by owner: {:?}", e))
+	}
+}
+
+#[async_trait]
+impl WalletBalanceFetcher for SolanaRpcClient {
+	async fn fetch(&self, address: &str) -> Result<f64, ()> {
+		let pubkey = Pubkey::from_str(address)
+			.map_err(|e| log::error!("Could not parse pubkey: {:?}", e))?;
+		self.rpc_client
+			.get_balance(&pubkey)
+			.await
+			.map_err(|e| log::error!("Could not fetch wallet balance: {:?}", e))
+			.map(|b| b as f64)
 	}
 }
 

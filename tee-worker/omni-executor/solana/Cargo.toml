@@ -15,6 +15,7 @@ spl-token = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies
+executor-core = { workspace = true }
 pumpx = { workspace = true }
 
 [lints]

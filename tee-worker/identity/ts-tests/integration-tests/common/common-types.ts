@@ -1,4 +1,4 @@
-import { ApiPromise } from 'parachain-api';
+import { ApiPromise } from '@polkadot/api';
 import { KeyObject } from 'crypto';
 import WebSocketAsPromised from 'websocket-as-promised';
 import { Metadata, TypeRegistry } from '@polkadot/types';
