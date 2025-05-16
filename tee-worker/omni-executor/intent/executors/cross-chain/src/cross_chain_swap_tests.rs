@@ -577,11 +577,6 @@ async fn instant_payout_cross_chain_swap() {
 		.times(1)
 		.returning(|| Address::from_str(accounting_contract_client_address).unwrap());
 
-	accounting_contract_client_mock
-		.expect_get_balance()
-		.times(1)
-		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
-
 	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
 
 	solana_client_mock

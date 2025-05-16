@@ -6,7 +6,7 @@ use sp_core::keccak_256;
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
-	pub async fn execute_single_chain_swap(
+	pub(crate) async fn execute_single_chain_swap(
 		&self,
 		omni_account: [u8; 32],
 		intent_id: IntentId,
