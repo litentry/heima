@@ -11,6 +11,7 @@ log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rust_decimal = { workspace = true }
 solana-sdk = { workspace = true }
+sp-core = { workspace = true }
 tokio = { workspace = true }
 
 # Local dependencies

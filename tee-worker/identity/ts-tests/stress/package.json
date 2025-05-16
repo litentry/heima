@@ -21,7 +21,7 @@
         "micro-base58": "^0.5.1",
         "scale-ts": "^0.2.11",
         "websocket-as-promised": "^2.0.1",
-        "ws": "^8.17.1",
+        "ws": "^8.18.1",
         "zod": "^3.22.3"
     },
     "devDependencies": {

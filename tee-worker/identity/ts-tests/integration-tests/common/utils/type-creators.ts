@@ -1,6 +1,6 @@
 import { u8aToHex, hexToU8a, stringToU8a } from '@polkadot/util';
 import type { ApiPromise } from '@polkadot/api';
-import type { LitentryMultiSignature } from 'parachain-api';
+import type { LitentryMultiSignature } from '@heima-network/api-argument/identity';
 import type { Signer } from './crypto';
 
 export async function createLitentryMultiSignature(

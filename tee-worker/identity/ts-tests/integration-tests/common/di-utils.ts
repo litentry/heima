@@ -1,5 +1,5 @@
 import { ApiPromise } from '@polkadot/api';
-import { u8aToHex, hexToU8a, compactAddLength, bufferToU8a, u8aConcat, stringToU8a } from '@polkadot/util';
+import { u8aToHex, hexToU8a, compactAddLength, bufferToU8a, u8aConcat } from '@polkadot/util';
 import { Codec } from '@polkadot/types/types';
 import { TypeRegistry } from '@polkadot/types';
 import { Bytes } from '@polkadot/types-codec';
@@ -11,7 +11,7 @@ import type {
     CorePrimitivesIdentity,
     TrustedGetterSigned,
     TrustedCall,
-} from 'parachain-api';
+} from '@heima-network/api-argument/identity';
 import {
     encryptWithTeeShieldingKey,
     Signer,

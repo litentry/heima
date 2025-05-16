@@ -23,3 +23,4 @@ pub mod listener;
 pub mod native_task;
 pub mod shielding_key_store;
 pub mod sync_checkpoint_repository;
+pub mod wallet_metrics;
