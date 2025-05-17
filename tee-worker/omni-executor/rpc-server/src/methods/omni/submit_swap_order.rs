@@ -175,6 +175,8 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let gas_type_base = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_base, "gas_type_base")?;
 			let gas_type_bsc = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_bsc, "gas_type_bsc")?;
 			let gas_type_eth = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_eth, "gas_type_eth")?;
+			let gas_type_sol = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_sol, "gas_type_sol")?;
+
 			let is_anti_mev = check_and_get_option_user_trade_info_field(user_trade_info.data.is_anti_mev, "is_anti_mev")?;
 			let is_auto_slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.is_auto_slippage, "is_auto_slippage")?;
 			let slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.slippage, "slippage")?;
@@ -183,7 +185,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
 				ETHEREUM_CHAIN_ID => gas_type_eth.to_number() as u32,
 				BSC_CHAIN_ID => gas_type_bsc.to_number() as u32,
-				SOLANA_CHAIN_ID => gas_type_base.to_number() as u32,
+				SOLANA_CHAIN_ID => gas_type_sol.to_number() as u32,
 				_ => {
 					log::error!("Unsupported chain id: {}", params.to_chain_id);
 					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
