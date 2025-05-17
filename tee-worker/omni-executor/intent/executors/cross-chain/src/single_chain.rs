@@ -42,36 +42,18 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 
 				// evm market order => worker constructs, signs and sends it
 				// solana market order => pumpx (backend) constructs, signs and sends it => TODO
-				match to_chain_type {
-					ChainType::Evm => {
-						self.worker_do_market_order(
-							omni_account,
-							intent_id,
-							to_address.clone(),
-							amount,
-							token_ca,
-							to_address,
-							access_token,
-							pumpx_config,
-						)
-						.await
-					},
-					ChainType::Solana => {
-						self.pumpx_do_market_order(
-							intent_id,
-							amount,
-							token_ca,
-							to_address,
-							access_token,
-							pumpx_config,
-						)
-						.await
-					},
-					_ => {
-						error!("Unsupported chain_type");
-						Err(())
-					},
-				}
+				self.worker_do_market_order(
+					omni_account,
+					intent_id,
+					to_address.clone(),
+					amount,
+					token_ca,
+					to_address,
+					access_token,
+					pumpx_config,
+					to_chain_type,
+				)
+				.await
 			},
 			PumpxOrderType::Limit => {
 				debug!("Doing limit order");
@@ -112,55 +94,55 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	}
 
 	// call backend API in one step - it requires backend has signing access to signer, which will be gradually deprecated
-	async fn pumpx_do_market_order(
-		&self,
-		intent_id: IntentId,
-		amount: String,
-		token_ca: String,
-		recipient_address: String,
-		access_token: &str,
-		pumpx_config: &PumpxConfig,
-	) -> Result<Vec<u8>, ()> {
-		debug!("executing pumpx_do_market_order");
-		let body = CreateMarketOrderTxBody {
-			request_id: intent_id,
-			chain_id: pumpx_config.to_chain_id,
-			token_ca,
-			swap_type: match pumpx_config.swap_type {
-				1 => SwapType::Buy,
-				2 => SwapType::Sell,
-				_ => {
-					log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
-					return Err(());
-				},
-			},
-			amount_in: amount,
-			double_out: pumpx_config.double_out,
-			is_one_click: pumpx_config.is_one_click,
-			address: recipient_address,
-			is_anti_mev: pumpx_config.is_anti_mev,
-			is_auto_slippage: pumpx_config.is_auto_slippage,
-			gas_type: match pumpx_config.gas_type {
-				1 => GasType::Slow,
-				2 => GasType::Medium,
-				3 => GasType::Fast,
-				_ => {
-					log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
-					return Err(());
-				},
-			},
-			slippage: pumpx_config.slippage,
-			wallet_index: pumpx_config.wallet_index,
-		};
-		debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
-		let response =
-			self.pumpx_api.create_market_order_tx(access_token, body).await.map_err(|_| {
-				log::error!("Failed to create market order tx");
-			})?;
-
-		debug!("Response create_market_order_tx: {:?}", response);
-		Ok(response.encode())
-	}
+	// async fn pumpx_do_market_order(
+	// 	&self,
+	// 	intent_id: IntentId,
+	// 	amount: String,
+	// 	token_ca: String,
+	// 	recipient_address: String,
+	// 	access_token: &str,
+	// 	pumpx_config: &PumpxConfig,
+	// ) -> Result<Vec<u8>, ()> {
+	// 	debug!("executing pumpx_do_market_order");
+	// 	let body = CreateMarketOrderTxBody {
+	// 		request_id: intent_id,
+	// 		chain_id: pumpx_config.to_chain_id,
+	// 		token_ca,
+	// 		swap_type: match pumpx_config.swap_type {
+	// 			1 => SwapType::Buy,
+	// 			2 => SwapType::Sell,
+	// 			_ => {
+	// 				log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+	// 				return Err(());
+	// 			},
+	// 		},
+	// 		amount_in: amount,
+	// 		double_out: pumpx_config.double_out,
+	// 		is_one_click: pumpx_config.is_one_click,
+	// 		address: recipient_address,
+	// 		is_anti_mev: pumpx_config.is_anti_mev,
+	// 		is_auto_slippage: pumpx_config.is_auto_slippage,
+	// 		gas_type: match pumpx_config.gas_type {
+	// 			1 => GasType::Slow,
+	// 			2 => GasType::Medium,
+	// 			3 => GasType::Fast,
+	// 			_ => {
+	// 				log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+	// 				return Err(());
+	// 			},
+	// 		},
+	// 		slippage: pumpx_config.slippage,
+	// 		wallet_index: pumpx_config.wallet_index,
+	// 	};
+	// 	debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
+	// 	let response =
+	// 		self.pumpx_api.create_market_order_tx(access_token, body).await.map_err(|_| {
+	// 			log::error!("Failed to create market order tx");
+	// 		})?;
+	//
+	// 	debug!("Response create_market_order_tx: {:?}", response);
+	// 	Ok(response.encode())
+	// }
 
 	// call backend API in two steps, only worker has signing access to signer in this case
 	async fn worker_do_market_order(
@@ -173,6 +155,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		recipient_address: String,
 		access_token: &str,
 		pumpx_config: &PumpxConfig,
+		to_chain_id: ChainType,
 	) -> Result<Vec<u8>, ()> {
 		debug!("executing worker_do_market_order");
 		let body = CreateMarketOrderUnsignedTxBody {
@@ -225,6 +208,45 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			log::error!("Failed to unwrap chain_id");
 		})?;
 
+		match to_chain_id {
+			ChainType::Evm => {
+				self.do_worker_evm_order(
+					unsigned_tx_string,
+					access_token,
+					pumpx_config,
+					omni_account,
+					order_id,
+					chain_id,
+				)
+				.await
+			},
+			ChainType::Solana => {
+				self.do_worker_solana_order(
+					unsigned_tx_string,
+					access_token,
+					pumpx_config,
+					omni_account,
+					order_id,
+					chain_id,
+				)
+				.await
+			},
+			_ => {
+				error!("Unsupported chain type");
+				Err(())
+			},
+		}
+	}
+
+	async fn do_worker_evm_order(
+		&self,
+		unsigned_tx_string: Vec<String>,
+		access_token: &str,
+		pumpx_config: &PumpxConfig,
+		omni_account: [u8; 32],
+		order_id: u32,
+		chain_id: u32,
+	) -> Result<Vec<u8>, ()> {
 		let unsigned_tx_bytes = unsigned_tx_string
 			.iter()
 			.map(|s| {
@@ -259,6 +281,68 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			let mut encoded_signed_tx = vec![];
 			signed_tx.rlp_encode(&mut encoded_signed_tx);
 			tx_data.push(format!("0x{}", hex::encode(encoded_signed_tx)));
+		}
+
+		let response = self
+			.pumpx_api
+			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
+			.await
+			.map_err(|_| log::error!("Failed to send order tx"))?;
+
+		debug!("Response send_order_tx: {:?}", response);
+
+		Ok(response.encode())
+	}
+
+	async fn do_worker_solana_order(
+		&self,
+		unsigned_tx_string: Vec<String>,
+		access_token: &str,
+		pumpx_config: &PumpxConfig,
+		omni_account: [u8; 32],
+		order_id: u32,
+		chain_id: u32,
+	) -> Result<Vec<u8>, ()> {
+		// Note: Based on the go code, It is going to be mostly a single Transaction
+		let unsigned_tx: Vec<solana_sdk::transaction::Transaction> = unsigned_tx_string
+			.iter()
+			.map(|tx| {
+				let unsigned_tx_bytes = hex::decode(tx.trim_start_matches("0x")).unwrap();
+				bincode::deserialize(&unsigned_tx_bytes[..]).expect("Failed to decode solana tx")
+			})
+			.collect();
+
+		let messages_to_sign: Vec<Vec<u8>> =
+			unsigned_tx.iter().map(|tx| tx.message_data()).collect();
+
+		let signatures = self
+			.pumpx_signer_client
+			.request_signatures(
+				ChainType::Solana,
+				pumpx_config.wallet_index,
+				omni_account,
+				messages_to_sign,
+			)
+			.await?;
+
+		let mut tx_data: Vec<String> = vec![];
+		for (mut tx, sig) in unsigned_tx.into_iter().zip(signatures.into_iter()) {
+			let signature = solana_sdk::signature::Signature::try_from(sig.as_ref())
+				.map_err(|_| log::error!("Failed to convert to Solana Signature"))?;
+			let num_required_signatures: usize = tx.message.header.num_required_signatures as usize;
+			// Note: this is being done in the Go code as well, so although we technically have
+			// only one signature we are still filling all the required placeholder
+			// with the same signature
+			for i in 0_usize..num_required_signatures {
+				tx.signatures[i] = signature;
+			}
+			tx.verify().map_err(|e| {
+				log::error!("Solana transaction verification failed: {:?}", e);
+			})?;
+			let encoded_tx = bincode::serialize(&tx).map_err(|e| {
+				log::error!("Failed to serialize Solana transaction: {:?}", e);
+			})?;
+			tx_data.push(format!("0x{}", hex::encode(encoded_tx)));
 		}
 
 		let response = self
