@@ -253,7 +253,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			// As it is RLP Encoded Bytes which adheres to string encoding rules
 			let unsigned_tx = TxLegacy::decode(&mut &bytes[..])
 				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
-			let signature = PrimitiveSignature::try_from(y.as_ref())
+			let signature = Signature::try_from(y.as_ref())
 				.map_err(|_| log::error!("Failed to create Typed signature"))?;
 
 			let signed_tx = unsigned_tx.into_signed(signature);

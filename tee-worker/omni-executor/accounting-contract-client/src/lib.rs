@@ -75,7 +75,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 			..Default::default()
 		};
 		self.provider.call(tx).await.map_or(Err(()), |nonce| {
-			let nonce = U256::abi_decode(&nonce, true).unwrap();
+			let nonce = U256::abi_decode(&nonce).unwrap();
 			Ok(nonce)
 		})
 	}
@@ -89,7 +89,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 			..Default::default()
 		};
 		self.provider.call(tx).await.map_or(Err(()), |balance| {
-			let balance = U256::abi_decode(&balance, true).unwrap();
+			let balance = U256::abi_decode(&balance).unwrap();
 			Ok(balance)
 		})
 	}
