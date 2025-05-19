@@ -264,7 +264,7 @@ jobs:
           context: .
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:${{ env.RELEASE_TAG }}
-          target: omni-release
+          target: release
 
       - run: docker images --all
 
