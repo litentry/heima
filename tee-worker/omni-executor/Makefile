@@ -19,7 +19,7 @@ endif
 
 .PHONY: $(BIN_NAME)
 $(BIN_NAME):
-	cargo build --release --features=$(COMPILATION_FEATURES)
+	cargo build --release --locked --features=$(COMPILATION_FEATURES)
 	cp target/release/executor-worker $(BIN_NAME)
 
 
