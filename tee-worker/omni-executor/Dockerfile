@@ -62,7 +62,7 @@ ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 COPY . $HOME
 WORKDIR $BUILD_DIR
 
-RUN make SGX=1 SGX_DEBUG=0
+RUN make SGX=1 SGX_DEBUG=0 SOURCE_DATE_EPOCH=1700000000 CARGO_PROFILE_RELEASE_DEBUG=false
 
 
 ### Release image (with SGX Hardware)
