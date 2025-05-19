@@ -209,6 +209,8 @@ if is_omni_executor_release; then
   WORKER_VERSION=$(grep '^version' tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed -E 's/^version *= *["'\''](.*)["'\'']/\1/')
   WORKER_BIN=$(grep '^name' tee-worker/omni-executor/executor-worker/Cargo.toml | head -n1 | sed -E 's/^name *= *["'\''](.*)["'\'']/\1/')
   WORKER_RUSTC_VERSION=$(cd tee-worker/omni-executor && rustc --version)
+  docker run --rm --entrypoint gramine-sgx-sigstruct-view -v /var/run/aesmd:/var/run/aesmd litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG omni-executor.sig > enclave-sigstruct.txt
+  SIGSTRUCT=$(<enclave-sigstruct.txt)
 cat << EOF >> "$1"
 ## Omni-Executor
 
@@ -217,6 +219,8 @@ client version               : $WORKER_VERSION
 client name                  : $WORKER_BIN
 rustc                        : $WORKER_RUSTC_VERSION
 docker image                 : litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG
+sigstruct info
+$SIGSTRUCT
 <CODEBLOCK>
 
 EOF
