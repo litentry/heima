@@ -36,16 +36,12 @@ RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
 CMD ["$BIN_DIR/executor-worker"]
 
 
-
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
-# rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
 FROM gramineproject/gramine:stable-jammy AS sgx-builder
 
-# Update default packages
 RUN apt-get update
 
-# Get Ubuntu packages
 RUN apt-get install -y \
     build-essential \
     curl \
@@ -54,15 +50,12 @@ RUN apt-get install -y \
     pkg-config \
     ca-certificates
 
-# Get Rust
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-# Add .cargo/bin to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN cargo --version
 
-# Build
 ENV HOME=/home/ubuntu
 ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 
@@ -74,7 +67,7 @@ RUN make SGX=1 SGX_DEBUG=0 SOURCE_DATE_EPOCH=1700000000 CARGO_PROFILE_RELEASE_DE
 
 ### Release image (with SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS omni-release
+FROM gramineproject/gramine:stable-jammy AS release
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
