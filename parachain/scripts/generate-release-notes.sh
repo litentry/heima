@@ -219,7 +219,7 @@ client version               : $WORKER_VERSION
 client name                  : $WORKER_BIN
 rustc                        : $WORKER_RUSTC_VERSION
 docker image                 : litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG
-sigstruct info
+SGX enclave info
 $SIGSTRUCT
 <CODEBLOCK>
 
