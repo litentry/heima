@@ -9,6 +9,7 @@ async-trait = { workspace = true }
 chrono = { workspace = true }
 hex = { workspace = true }
 hmac = { workspace = true }
+mockall = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 sha2 = { workspace = true }
@@ -20,3 +21,6 @@ tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true
+
+[features]
+mocks = []

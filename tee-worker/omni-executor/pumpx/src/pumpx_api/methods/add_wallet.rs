@@ -2,6 +2,7 @@ use reqwest::Error;
 
 use super::common::{ApiResponse, EmptyResponse};
 use crate::pumpx_api::PumpxApiClient;
+use tracing::error;
 
 // /v3/account/add_wallet
 pub type AddWalletResponse = ApiResponse<EmptyResponse>;
@@ -21,16 +22,16 @@ pub async fn add_wallet_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			tracing::log::error!("Failed to send add_wallet request: {:?}", e);
+			error!("Failed to send add_wallet request: {:?}", e);
 			e
 		})?;
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		tracing::log::error!("add_wallet request failed with status: {}, error: {:?}", status, e);
+		error!("add_wallet request failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 	response.json().await.map_err(|e| {
-		tracing::log::error!("Failed to parse add_wallet response: {:?}", e);
+		error!("Failed to parse add_wallet response: {:?}", e);
 		e
 	})
 }

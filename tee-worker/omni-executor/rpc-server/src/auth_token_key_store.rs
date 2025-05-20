@@ -1,6 +1,7 @@
 use executor_core::key_store::KeyStore;
 use executor_crypto::rsa::RsaPrivateKey;
 use rsa::pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey};
+use tracing::{error, info};
 
 pub struct AuthTokenKeyStore {
 	path: String,
@@ -30,10 +31,10 @@ impl KeyStore<Vec<u8>> for AuthTokenKeyStore {
 	fn generate_key() -> Result<Vec<u8>, ()> {
 		let mut rng = rand::thread_rng();
 		let rsa_private_key = RsaPrivateKey::new(&mut rng, 2048).map_err(|e| {
-			tracing::log::error!("Failed to generate RSA key: {:?}", e);
+			error!("Failed to generate RSA key: {:?}", e);
 		})?;
 		let private_key = rsa_private_key.to_pkcs1_der().map_err(|e| {
-			tracing::log::error!("Failed to encode RSA key: {:?}", e);
+			error!("Failed to encode RSA key: {:?}", e);
 		})?;
 		Ok(private_key.as_bytes().to_vec())
 	}
@@ -44,12 +45,12 @@ impl KeyStore<Vec<u8>> for AuthTokenKeyStore {
 
 	fn deserialize(sealed: Vec<u8>) -> Result<Vec<u8>, ()> {
 		let private_key = RsaPrivateKey::from_pkcs1_der(&sealed).map_err(|e| {
-			tracing::log::error!("Failed to decode RSA key: {:?}", e);
+			error!("Failed to decode RSA key: {:?}", e);
 		})?;
 		let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
-			tracing::log::error!("Failed to encode RSA key: {:?}", e);
+			error!("Failed to encode RSA key: {:?}", e);
 		})?;
-		tracing::log::info!("Auth token (JWT) RSA public_key: {:?}", public_key.as_bytes());
+		info!("Auth token (JWT) RSA public_key: {:?}", public_key.as_bytes());
 
 		Ok(sealed)
 	}

@@ -2,19 +2,18 @@ import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { assert } from 'chai';
 import * as ed from '@noble/ed25519';
 import { parseIdGraph } from './identity-helper';
-import { CorePrimitivesIdentity } from 'parachain-api';
+import { CorePrimitivesIdentity, WorkerRpcReturnValue, StfError } from '@heima-network/api-argument/identity';
 import type { IntegrationTestContext } from '../common-types';
 import { getIdGraphHash } from '../di-utils';
 import type { HexString } from '@polkadot/util/types';
 import { nextRequestId } from '../helpers';
 import { aesKey, sendRequest } from '../call';
 import colors from 'colors';
-import { WorkerRpcReturnValue, StfError } from 'parachain-api';
 import { Bytes } from '@polkadot/types-codec';
 import { decryptWithAes } from './crypto';
 import { base58Encode, blake2AsHex } from '@polkadot/util-crypto';
 import { validateVcSchema } from '@litentry/vc-schema-validator';
-import { PalletIdentityManagementTeeIdentityContext } from 'sidechain-api';
+import { PalletIdentityManagementTeeIdentityContext } from '@heima-network/api-argument/sidechain';
 import { KeyObject } from 'crypto';
 
 export function assertIdGraph(

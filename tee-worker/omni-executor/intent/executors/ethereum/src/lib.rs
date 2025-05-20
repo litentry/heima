@@ -120,9 +120,9 @@ pub mod test {
 		.unwrap();
 		let wallet = EthereumWallet::from(signer);
 
-		let provider = ProviderBuilder::new()
-			.wallet(wallet)
-			.on_http(url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e)).unwrap());
+		let provider = ProviderBuilder::new().wallet(wallet).connect_http(
+			url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e)).unwrap(),
+		);
 		let nonce = provider
 			.get_transaction_count(provider.signer_addresses().next().unwrap())
 			.await

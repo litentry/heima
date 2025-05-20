@@ -2,7 +2,7 @@ use parity_scale_codec::{Codec, Decode, Encode};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-#[derive(Deserialize_repr, Serialize_repr, Debug)]
+#[derive(Deserialize_repr, Serialize_repr, Debug, PartialEq)]
 #[allow(clippy::upper_case_acronyms)]
 #[repr(u8)]
 pub enum SwapType {

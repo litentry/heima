@@ -10,6 +10,7 @@ use native_task_handler::NativeTaskOk;
 use rsa::pkcs1::DecodeRsaPrivateKey;
 use rsa::pkcs1::EncodeRsaPublicKey;
 use rsa::RsaPrivateKey;
+use tracing::{debug, error};
 
 use super::common::handle_pumpx_native_task;
 
@@ -25,25 +26,23 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_notifyLimitOrderResult", |params, ctx, _| async move {
 			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
-				tracing::log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			tracing::log::debug!(
+			debug!(
 				"Received pumpx_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
-				params.intent_id,
-				params.result,
-				params.message
+				params.intent_id, params.result, params.message
 			);
 
 			let private_key =
 				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
-					tracing::log::error!("Failed to parse private key: {:?}", e);
+					error!("Failed to parse private key: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?;
 
 			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
-				tracing::log::error!("Failed to generate public key: {:?}", e);
+				error!("Failed to generate public key: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::InternalError)
 			})?;
 
@@ -63,7 +62,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 
 			let omni_account = token.sub;
 			let Ok(address) = Address32::from_hex(&omni_account) else {
-				tracing::log::error!("Failed to parse from omni account token");
+				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
@@ -81,7 +80,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
 				_ => {
-					tracing::log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

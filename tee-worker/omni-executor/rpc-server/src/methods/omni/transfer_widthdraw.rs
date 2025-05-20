@@ -9,6 +9,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
+use tracing::{debug, error};
 
 use super::common::{check_omni_api_response, handle_omni_native_task};
 
@@ -55,17 +56,17 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, _| async move {
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
-				tracing::log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			tracing::log::debug!("Received omni_transferWithdraw, user_email: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
+			debug!("Received omni_transferWithdraw, user_email: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.user_email, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				tracing::log::error!("Failed to verify auth token");
+				error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
@@ -77,7 +78,7 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 					Ok(TransferWithdrawResponse { backend_response: response })
 				},
 				_ => {
-					tracing::log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

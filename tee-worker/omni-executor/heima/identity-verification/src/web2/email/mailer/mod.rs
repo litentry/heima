@@ -2,6 +2,7 @@ pub mod template;
 
 use async_trait::async_trait;
 use sendgrid::v3::{Content, Email, Message, Personalization, Sender};
+use tracing::error;
 
 #[derive(Debug)]
 pub enum Error {
@@ -45,7 +46,7 @@ impl MailerTrait for Mailer {
 			.add_personalization(personalization);
 		let sender = Sender::new(self.api_key.clone(), None);
 		sender.send(&message).await.map_err(|_| {
-			tracing::log::error!("Failed to send email");
+			error!("Failed to send email");
 			Error::SendEmailFailed
 		})?;
 

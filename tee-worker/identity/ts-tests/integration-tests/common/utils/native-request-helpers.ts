@@ -12,7 +12,7 @@ import {
     TCAuthentication,
     Intent,
     LitentryValidationData,
-} from 'parachain-api';
+} from '@heima-network/api-argument/identity';
 import { Signer, createLitentryMultiSignature } from '../utils';
 import { aesKey } from '../call';
 import { KeyObject } from 'crypto';

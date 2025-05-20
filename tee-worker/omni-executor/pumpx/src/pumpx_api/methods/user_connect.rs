@@ -1,6 +1,7 @@
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use crate::methods::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
@@ -44,16 +45,16 @@ pub async fn user_connect_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			tracing::log::error!("Failed to send user connect request: {:?}", e);
+			error!("Failed to send user connect request: {:?}", e);
 			e
 		})?;
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		tracing::log::error!("User connect request failed with status: {}, error: {:?}", status, e);
+		error!("User connect request failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 	response.json().await.map_err(|e| {
-		tracing::log::error!("Failed to parse user connect response: {:?}", e);
+		error!("Failed to parse user connect response: {:?}", e);
 		e
 	})
 }

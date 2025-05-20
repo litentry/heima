@@ -12,7 +12,7 @@
   "dependencies": {
     "ts-node": "10.9.1",
     "tslib": "^2.5.3",
-    "ws": "^8.17.1"
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "@altack/nx-bundlefy": "^0.16.0",
@@ -51,5 +51,11 @@
   "packageManager": "pnpm@9.15.2",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "elliptic": "6.6.1",
+      "path-to-regexp": ">=0.1.12"
+    }
   }
 }

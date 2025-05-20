@@ -73,7 +73,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 			..Default::default()
 		};
 		self.provider.call(tx).await.map_or(Err(()), |nonce| {
-			let nonce = U256::abi_decode(&nonce, true).unwrap();
+			let nonce = U256::abi_decode(&nonce).unwrap();
 			Ok(nonce)
 		})
 	}
@@ -87,8 +87,37 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 			..Default::default()
 		};
 		self.provider.call(tx).await.map_or(Err(()), |balance| {
-			let balance = U256::abi_decode(&balance, true).unwrap();
+			let balance = U256::abi_decode(&balance).unwrap();
 			Ok(balance)
 		})
+	}
+}
+
+#[cfg(feature = "mocks")]
+pub mod mocks {
+	use crate::AccountingContractApi;
+	use crate::Address;
+	use crate::U256;
+	use async_trait::async_trait;
+	use mockall::mock;
+
+	mock! {
+
+		pub AccountingContractClient {}
+
+		#[async_trait]
+		impl AccountingContractApi for AccountingContractClient {
+
+			async fn execute_pay_out_request(
+				&self,
+				beneficiary: Address,
+				nonce: U256,
+				amount: U256,
+			) -> Result<(), ()>;
+
+			async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
+
+			async fn get_balance(&self) -> Result<U256, ()>;
+		}
 	}
 }

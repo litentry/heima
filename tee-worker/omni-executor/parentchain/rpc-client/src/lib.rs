@@ -403,13 +403,13 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 			.build(self.url.clone())
 			.await
 			.map_err(|e| {
-				tracing::log::error!("Could not create RpcClient: {:?}", e);
+				error!("Could not create RpcClient: {:?}", e);
 			})?;
 		let legacy = LegacyRpcMethods::new(rpc_client.into());
 
 		let online_client =
 			OnlineClient::from_insecure_url(self.url.clone()).await.map_err(|e| {
-				tracing::log::error!("Could not create OnlineClient: {:?}", e);
+				error!("Could not create OnlineClient: {:?}", e);
 			})?;
 
 		let events = online_client.events();

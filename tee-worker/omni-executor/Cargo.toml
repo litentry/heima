@@ -33,7 +33,8 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-alloy = "0.12.5"
+alloy = "1.0.3"
+alloy-rlp = "0.3.11"
 async-trait = "0.1.82"
 base58 = "0.2.0"
 base64 = "0.22.1"

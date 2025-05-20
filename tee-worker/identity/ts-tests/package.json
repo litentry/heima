@@ -1,13 +1,21 @@
 {
-	"type": "module",
-	"license": "ISC",
-	"scripts": {
-		"format": "pnpm run --recursive format",
-		"check-format": "pnpm run --recursive check-format",
-		"clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
-	},
-	"engines": {
-		"node": ">=20.0.0"
-	},
-	"packageManager": "pnpm@9.15.2"
+    "type": "module",
+    "license": "ISC",
+    "scripts": {
+        "format": "pnpm run --recursive format",
+        "check-format": "pnpm run --recursive check-format",
+        "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "packageManager": "pnpm@9.15.2",
+    "pnpm": {
+        "overrides": {
+            "base-x": "4.0.1",
+            "elliptic": "6.6.1",
+            "ws": "^8.18.2",
+            "@types/ws": "^8.5.9"
+        }
+    }
 }

@@ -20,6 +20,7 @@ use executor_storage::{IntentIdStorage, Storage};
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::Deserialize;
+use tracing::error;
 
 #[derive(Debug, Deserialize)]
 pub struct GetNextIntentIdParams {
@@ -30,7 +31,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_getNextIntentId", |params, ctx, _| async move {
 			let params = params.parse::<GetNextIntentIdParams>().map_err(|e| {
-				tracing::log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
@@ -42,7 +43,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 			let intent_id = storage
 				.get(&account)
 				.map_err(|e| {
-					tracing::log::error!("Could not get IntentId from store: {:?}", e);
+					error!("Could not get IntentId from store: {:?}", e);
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?
 				.unwrap_or_default();

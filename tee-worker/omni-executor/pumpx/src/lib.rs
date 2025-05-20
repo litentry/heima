@@ -30,6 +30,8 @@ use executor_primitives::ChainAsset;
 use sp_core::keccak_256;
 use tracing::log::error;
 
+use crate::signer_client::ChainType;
+
 pub fn chain_asset_to_pumpx_chain_id(asset: &ChainAsset) -> u32 {
 	match asset {
 		ChainAsset::Ethereum(id, _) => *id,
@@ -37,7 +39,7 @@ pub fn chain_asset_to_pumpx_chain_id(asset: &ChainAsset) -> u32 {
 	}
 }
 
-pub fn pubkey_to_evm_address_bytes(pubkey: &[u8]) -> Result<[u8; 20], ()> {
+fn pubkey_to_evm_address_bytes(pubkey: &[u8]) -> Result<[u8; 20], ()> {
 	let pubkey: [u8; 33] = pubkey.try_into().map_err(|_| {
 		error!("wrong pubkey length: expect 33 bytes");
 	})?;
@@ -52,10 +54,6 @@ pub fn pubkey_to_evm_address_bytes(pubkey: &[u8]) -> Result<[u8; 20], ()> {
 	Ok(keccak_256(&uncompressed_pubkey[1..])[12..].try_into().unwrap())
 }
 
-pub fn hex_encode_evm_address_bytes(bytes: &[u8]) -> String {
-	format!("0x{}", hex::encode(bytes))
-}
-
 pub fn pubkey_to_evm_address(pubkey: &[u8]) -> Result<String, ()> {
 	pubkey_to_evm_address_bytes(pubkey).map(|bytes| to_checksum(&bytes.into(), None))
 }
@@ -65,4 +63,15 @@ pub fn pubkey_to_solana_address(pubkey: &[u8]) -> Result<String, ()> {
 		error!("wrong pubkey length: expect 32 bytes");
 	})?;
 	Ok(pubkey.to_base58())
+}
+
+pub fn pubkey_to_address(chain_type: ChainType, pubkey: &[u8]) -> Result<String, ()> {
+	match chain_type {
+		ChainType::Evm => pubkey_to_evm_address(pubkey),
+		ChainType::Solana => pubkey_to_solana_address(pubkey),
+		_ => {
+			error!("Unsupported {:?} wallet address", chain_type);
+			Err(())
+		},
+	}
 }

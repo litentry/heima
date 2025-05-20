@@ -42,7 +42,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 			let intent_id = storage
 				.get(&account)
 				.map_err(|e| {
-					tracing::log::error!("Could not get IntentId from store: {:?}", e);
+					error!("Could not get IntentId from store: {:?}", e);
 					<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
 				})?
 				.unwrap_or_default();

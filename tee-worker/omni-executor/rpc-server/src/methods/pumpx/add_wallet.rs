@@ -9,6 +9,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::methods::add_wallet::AddWalletResponse;
 use serde::Serialize;
+use tracing::{debug, error};
 
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
@@ -40,11 +41,11 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
 			let params = params.parse::<AddWalletParams>().map_err(|e| {
-				tracing::log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			tracing::log::debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
+			debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
@@ -60,7 +61,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 					Ok(RPCAddWalletResponse { backend_response: response })
 				},
 				_ => {
-					tracing::log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

@@ -3,6 +3,7 @@ use crate::pumpx_api::PumpxApiClient;
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 // /v3/trade/create_transfer_tx
 #[derive(Serialize, Debug)]
@@ -42,22 +43,18 @@ pub async fn create_transfer_tx_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			tracing::log::error!("Failed to send create_transfer_tx request: {:?}", e);
+			error!("Failed to send create_transfer_tx request: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		tracing::log::error!(
-			"create_transfer_tx request failed with status: {}, error: {:?}",
-			status,
-			e
-		);
+		error!("create_transfer_tx request failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		tracing::log::error!("Failed to parse create_transfer_tx response: {:?}", e);
+		error!("Failed to parse create_transfer_tx response: {:?}", e);
 		e
 	})
 }

@@ -9,6 +9,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
+use tracing::{debug, error};
 
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
@@ -48,16 +49,16 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_requestJwt", |params, ctx, _| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
-				tracing::log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			tracing::log::debug!("Received pumpx_requestJwt, user_email: {}", params.user_email);
+			debug!("Received pumpx_requestJwt, user_email: {}", params.user_email);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				tracing::log::error!("Failed to verify auth token");
+				error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
@@ -69,7 +70,7 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 					Ok(RequestJwtResponse { access_token, id_token, backend_response })
 				},
 				_ => {
-					tracing::log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

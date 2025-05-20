@@ -8,6 +8,7 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestEmailVerificationCodeParams {
@@ -19,10 +20,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
 			let params = params.parse::<RequestEmailVerificationCodeParams>()?;
 
-			tracing::log::debug!(
-				"Received omni_requestEmailVerificationCode, user_email: {}",
-				params.user_email
-			);
+			debug!("Received omni_requestEmailVerificationCode, user_email: {}", params.user_email);
 
 			// please note here we still use `email_identity` as key
 			let email_identity =
@@ -37,7 +35,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 			send_verification_email(&ctx.mailer, params.user_email, verification_code)
 				.await
 				.map_err(|_| {
-					tracing::log::error!("Failed to send verification email");
+					error!("Failed to send verification email");
 					ErrorCode::InternalError
 				})?;
 

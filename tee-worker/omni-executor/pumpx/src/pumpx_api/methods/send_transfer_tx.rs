@@ -1,6 +1,7 @@
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use super::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
@@ -39,22 +40,18 @@ pub async fn send_transfer_tx_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			tracing::log::error!("Failed to send send_transfer_tx request: {:?}", e);
+			error!("Failed to send send_transfer_tx request: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		tracing::log::error!(
-			"send_transfer_tx request failed with status: {}, error: {:?}",
-			status,
-			e
-		);
+		error!("send_transfer_tx request failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		tracing::log::error!("Failed to parse send_transfer_tx response: {:?}", e);
+		error!("Failed to parse send_transfer_tx response: {:?}", e);
 		e
 	})
 }

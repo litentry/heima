@@ -3,12 +3,13 @@ use jsonwebtoken::{
 	decode as decode_jwt, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{de::DeserializeOwned, Serialize};
+use tracing::error;
 
 pub fn create<T: Serialize>(claims: &T, private_key: &[u8]) -> Result<String, String> {
 	let encoding_key = EncodingKey::from_rsa_der(private_key);
 	let header = Header::new(Algorithm::RS256);
 	encode(&header, claims, &encoding_key).map_err(|e| {
-		tracing::log::error!("Failed to encode token: {:?}", e);
+		error!("Failed to encode token: {:?}", e);
 		e.to_string()
 	})
 }
