@@ -93,7 +93,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		}
 	}
 
-	// call backend API in one step - it requires backend has signing access to signer, which will be gradually deprecated
+	// call backend API in one step
+	// currently unused, will be deleted once we remove the signer signing access for backend
 	#[allow(unused)]
 	async fn pumpx_do_market_order(
 		&self,
