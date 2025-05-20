@@ -256,7 +256,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				let mut unsigned_tx = TxLegacy::decode(&mut &hex_decoded[..])
 					.map_err(|_| log::error!("Failed to decode legacy tx"))?;
 
-				unsigned_tx.chain_id = Some(ChainId::from(BSC_CHAIN_ID));
+				unsigned_tx.chain_id = Some(ChainId::from(chain_id));
 				let mut rlp_encoded_tx = vec![];
 				unsigned_tx.rlp_encode(&mut rlp_encoded_tx);
 
@@ -283,7 +283,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			let mut unsigned_tx = TxLegacy::decode(&mut &bytes[..])
 				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
 			// We need to explicitly set the chain id
-			unsigned_tx.chain_id = Some(ChainId::from(BSC_CHAIN_ID));
+			unsigned_tx.chain_id = Some(ChainId::from(chain_id));
 			let signature = Signature::try_from(y.as_ref())
 				.map_err(|_| log::error!("Failed to create Typed signature"))?;
 
