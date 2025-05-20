@@ -372,11 +372,7 @@ export const getIdGraphHash = async (
     teeShieldingKey: KeyObject,
     primeIdentity: CorePrimitivesIdentity
 ): Promise<H256> => {
-    const getterPublic = createPublicGetter(
-        context.api,
-        ['id_graph_hash', '(HeimaIdentity)'],
-        primeIdentity.toHuman()
-    );
+    const getterPublic = createPublicGetter(context.api, ['id_graph_hash', '(HeimaIdentity)'], primeIdentity.toHuman());
     const getter = context.api.createType('Getter', { public: getterPublic });
     const res = await sendRsaRequestFromGetter(context, teeShieldingKey, getter);
     const hash = context.api.createType('Option<Bytes>', hexToU8a(res.value.toHex())).unwrap();
