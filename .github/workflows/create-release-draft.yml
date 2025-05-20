@@ -253,7 +253,7 @@ jobs:
       - name: Write enclave signing key
         run: |
           cat << EOF > tee-worker/omni-executor/enclave_key.pem
-          ${{ secrets.OMNI_EXECUTOR_ENCLAVE_PROD_SIGNING_KEY }}
+          ${{ secrets.DEX_PROD_ENCLAVE_SIGNING_KEY }}
           EOF
 
       - name: Build omni-executor image
@@ -264,7 +264,7 @@ jobs:
           context: .
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:${{ env.RELEASE_TAG }}
-          target: omni-release
+          target: release
 
       - run: docker images --all
 

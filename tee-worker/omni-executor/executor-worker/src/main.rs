@@ -135,10 +135,10 @@ async fn main() -> Result<(), ()> {
 			let accounting_ecdsa_signer_key_pair =
 				ecdsa::Pair::from_seed_slice(&accounting_ecdsa_signer_key).unwrap();
 
-			info!(
-				"Accounting ecdsa signer address: {:?}",
-				pubkey_to_evm_address(accounting_ecdsa_signer_key_pair.public().as_ref()).unwrap()
-			);
+			let bsc_accounting_signer =
+				pubkey_to_evm_address(accounting_ecdsa_signer_key_pair.public().as_ref()).unwrap();
+
+			info!("Accounting ecdsa signer address: {:?}", bsc_accounting_signer);
 
 			let storage_db =
 				init_storage(&args.parentchain_url).await.expect("Could not initialize storage");
@@ -247,10 +247,10 @@ async fn main() -> Result<(), ()> {
 
 			wallet_metrics.register(Wallet {
 				id: WalletId {
-					address: args.accounting_contract_address.to_string(),
+					address: bsc_accounting_signer,
 					network_type: WalletNetworkType::Ethereum(56),
 				},
-				name: "bsc_accounting_contract".to_string(),
+				name: "bsc_accounting_signer".to_string(),
 			});
 
 			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
