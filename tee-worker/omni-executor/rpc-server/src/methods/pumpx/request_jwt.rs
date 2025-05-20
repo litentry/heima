@@ -31,17 +31,17 @@ pub struct RequestJwtResponse {
 
 impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: RequestJwtParams) -> Self {
-		Self {
-			task: NativeTask::PumpxRequestJwt(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxRequestJwt(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email), // actually unused
 				p.user_email.clone(),
 				p.invite_code,
 				p.google_code,
 				p.language,
 			),
-			nonce: None,
-			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
-		}
+			None,
+			Some(OmniAuth::Email(p.user_email, p.email_code)),
+		)
 	}
 }
 

@@ -34,8 +34,8 @@ pub struct TransferWithdrawResponse {
 
 impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: TransferWithdrawParams) -> Self {
-		Self {
-			task: NativeTask::PumpxTransferWidthdraw(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxTransferWidthdraw(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
 				p.request_id,
 				p.chain_id,
@@ -46,9 +46,9 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 				p.google_code,
 				p.lang,
 			),
-			nonce: None,
-			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
-		}
+			None,
+			Some(OmniAuth::Email(p.user_email, p.email_code)),
+		)
 	}
 }
 

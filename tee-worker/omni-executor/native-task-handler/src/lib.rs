@@ -39,7 +39,7 @@ use pumpx::{
 };
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot, Semaphore};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, span, Instrument, Level};
 
 pub use aes256_key_store::Aes256KeyStore;
 pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
@@ -158,8 +158,9 @@ pub async fn run_native_task_handler<
 			if let Ok(permit) = semaphore.clone().acquire_owned().await {
 				let ctx_cloned = ctx.clone();
 				tokio::spawn(async move {
+					let span = span!(Level::INFO, "native-task", id = wrapper.id);
 					let _permit = permit; // dropped when task finishes
-					handle_native_task(ctx_cloned, wrapper, sender).await
+					handle_native_task(ctx_cloned, wrapper, sender).instrument(span).await
 				});
 			}
 		}
@@ -368,6 +369,7 @@ async fn handle_native_task<
 					// 	);
 					// 	(IntentCompletedDetail::Success, true)
 					// }
+					info!("Intent rejected");
 					send_error(
 						"Intent not accepted".to_string(),
 						response_sender,

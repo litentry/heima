@@ -66,16 +66,16 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
-			let wrapper = NativeTaskWrapper {
-				task: NativeTask::PumpxNotifyLimitOrderResult(
+			let wrapper = NativeTaskWrapper::new(
+				NativeTask::PumpxNotifyLimitOrderResult(
 					Identity::Substrate(address),
 					params.intent_id,
 					params.result,
 					params.message,
 				),
-				nonce: None,
-				auth: Some(OmniAuth::AuthToken(params.auth_token)),
-			};
+				None,
+				Some(OmniAuth::AuthToken(params.auth_token)),
+			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),

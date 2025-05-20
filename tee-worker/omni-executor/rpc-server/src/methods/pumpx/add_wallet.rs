@@ -26,14 +26,14 @@ pub struct RPCAddWalletResponse {
 
 impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: AddWalletParams) -> Self {
-		Self {
-			task: NativeTask::PumpxAddWallet(Identity::from_web2_account(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxAddWallet(Identity::from_web2_account(
 				p.user_id.as_str(),
 				Web2IdentityType::Pumpx,
 			)),
-			nonce: None,
-			auth: Some(OmniAuth::AuthToken(p.auth_token)),
-		}
+			None,
+			Some(OmniAuth::AuthToken(p.auth_token)),
+		)
 	}
 }
 

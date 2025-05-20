@@ -13,6 +13,7 @@ regex = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true, features = ["sync", "rt"] }
 tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 
 # Local dependencies
 executor-crypto = { workspace = true }

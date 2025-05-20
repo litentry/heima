@@ -28,17 +28,17 @@ pub struct ExportWalletParams {
 
 impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: ExportWalletParams) -> Self {
-		Self {
-			task: NativeTask::PumpxExportWallet(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxExportWallet(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Pumpx),
 				p.google_code,
 				p.chain_id,
 				p.wallet_index,
 				p.wallet_address,
 			),
-			nonce: None,
-			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
-		}
+			None,
+			Some(OmniAuth::Email(p.user_email, p.email_code)),
+		)
 	}
 }
 

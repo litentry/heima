@@ -101,16 +101,16 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
-			let wrapper = NativeTaskWrapper {
-				task: NativeTask::PumpxSignLimitOrder(
+			let wrapper = NativeTaskWrapper::new(
+				NativeTask::PumpxSignLimitOrder(
 					Identity::Substrate(address),
 					params.chain_id,
 					params.wallet_index,
 					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
 				),
-				nonce: None,
-				auth: Some(OmniAuth::AuthToken(params.auth_token)),
-			};
+				None,
+				Some(OmniAuth::AuthToken(params.auth_token)),
+				);
 
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
