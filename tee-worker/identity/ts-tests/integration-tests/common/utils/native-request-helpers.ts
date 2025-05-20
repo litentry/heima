@@ -84,7 +84,7 @@ export function createAuthenticatedTrustedCallCreateAccountStore(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['create_account_store', '(LitentryIdentity)'],
+        ['create_account_store', '(HeimaIdentity)'],
         signer,
         mrenclave,
         nonce,
@@ -109,7 +109,7 @@ export function createAuthenticatedTrustedCallTransferNativeIntent(
     });
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['request_intent', '(LitentryIdentity, Intent)'],
+        ['request_intent', '(HeimaIdentity, Intent)'],
         signer,
         mrenclave,
         nonce,
@@ -129,7 +129,7 @@ export async function createAuthenticatedTrustedCallAddAccount(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['add_account', '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)'],
+        ['add_account', '(HeimaIdentity, HeimaIdentity, HeimaValidationData, bool)'],
         sender,
         mrenclave,
         nonce,
@@ -147,7 +147,7 @@ export async function createAuthenticatedTrustedCallRemoveAccounts(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+        ['remove_accounts', '(HeimaIdentity, Vec<HeimaIdentity>)'],
         sender,
         mrenclave,
         nonce,
@@ -165,7 +165,7 @@ export async function createAuthenticatedTrustedCallPublicizeAccount(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
+        ['publicize_account', '(HeimaIdentity, HeimaIdentity)'],
         sender,
         mrenclave,
         nonce,
@@ -187,7 +187,7 @@ export async function createAuthenticatedTrustedCallRequestBatchVc(
         parachainApi,
         [
             'request_batch_vc',
-            '(LitentryIdentity, LitentryIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
+            '(HeimaIdentity, HeimaIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
         ],
         sender,
         mrenclave,
@@ -208,7 +208,7 @@ export async function createAuthenticatedTrustedCallRequestVc(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['request_vc', '(LitentryIdentity, LitentryIdentity, Assertion, Option<RequestAesKey>, H256)'],
+        ['request_vc', '(HeimaIdentity, HeimaIdentity, Assertion, Option<RequestAesKey>, H256)'],
         sender,
         mrenclave,
         nonce,
