@@ -17,7 +17,7 @@ import {
     Signer,
     encryptWithAes,
     sleep,
-    createLitentryMultiSignature,
+    createHeimaMultiSignature,
     decryptWithAes,
 } from './utils';
 import { aesKey, decodeRpcBytesAsString, keyNonce } from './call';
@@ -131,7 +131,7 @@ export const createSignedTrustedCall = async (
         console.log('Signing message: ', payload);
     }
 
-    const signature = await createLitentryMultiSignature(parachainApi, {
+    const signature = await createHeimaMultiSignature(parachainApi, {
         signer,
         payload,
     });
@@ -173,7 +173,7 @@ export const createSignedTrustedGetter = async (
     });
     const payload = blake2AsU8a(getter.toU8a(), 256);
 
-    const signature = await createLitentryMultiSignature(parachainApi, {
+    const signature = await createHeimaMultiSignature(parachainApi, {
         signer,
         payload,
     });

@@ -20,7 +20,7 @@ import {
     Getter,
     ApiPromise as ParachainApiPromise,
     WorkerRpcReturnValue,
-    LitentryValidationData,
+    HeimaValidationData,
     Assertion,
     CorePrimitivesIdentity,
     TrustedCallSigned,
@@ -85,10 +85,10 @@ export async function buildValidation(
     identity: CorePrimitivesIdentity,
     startingSidechainNonce: number,
     signer: Wallet
-): Promise<LitentryValidationData> {
+): Promise<HeimaValidationData> {
     const message = generateVerificationMessage(parachainApi, signerIdentity, identity, startingSidechainNonce);
 
-    return parachainApi.createType('LitentryValidationData', {
+    return parachainApi.createType('HeimaValidationData', {
         Web3Validation:
             signer.type === 'substrate'
                 ? {
@@ -237,7 +237,7 @@ export const createSignedTrustedGetter = (
         [variant]: parachainApi.createType(argType, params),
     });
     const payload = getter.toU8a();
-    const signature = parachainApi.createType('LitentryMultiSignature', {
+    const signature = parachainApi.createType('HeimaMultiSignature', {
         [signer.type]: signer.sign(payload),
     });
     return parachainApi.createType('TrustedGetterSigned', {
@@ -393,10 +393,10 @@ const createSignedTrustedCall = async (
     }
     const signature =
         signer.type === 'substrate'
-            ? parachainApi.createType('LitentryMultiSignature', {
+            ? parachainApi.createType('HeimaMultiSignature', {
                   [signer.keyringPair.type]: u8aToHex(signer.keyringPair.sign(payload)),
               })
-            : parachainApi.createType('LitentryMultiSignature', {
+            : parachainApi.createType('HeimaMultiSignature', {
                   ['ethereum']: await signer.wallet.signMessage(payload),
               });
     return parachainApi.createType('TrustedCallSigned', {
