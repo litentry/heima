@@ -138,7 +138,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		} else {
 			// TODO: this should be abstracted away
 			// todo we only transfer to binance without swap
-
+			// TODO: move `should_wait_for_deposit_confirm` to provider config
 			let should_wait_for_deposit_confirm = false;
 
 			self.do_binance_deposit(
@@ -282,7 +282,6 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		Ok(payout_amount)
 	}
 
-	// TODO: move `should_wait_for_deposit_confirm` to provider config
 	async fn do_binance_trade(
 		&self,
 		from_asset: ChainAsset,
