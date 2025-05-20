@@ -307,9 +307,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.iter()
 			.map(|tx| {
 				let unsigned_tx_bytes = hex::decode(tx.trim_start_matches("0x")).unwrap();
-				bincode::deserialize(&unsigned_tx_bytes[..]).map_err(|e| {
-					log::error!("Failed to deserialize string: {:?}", e)
-				})
+				bincode::deserialize(&unsigned_tx_bytes[..])
+					.map_err(|e| log::error!("Failed to deserialize string: {:?}", e))
 			})
 			.collect::<Result<Vec<solana_sdk::transaction::Transaction>, _>>()?;
 
