@@ -1,6 +1,7 @@
 use super::*;
 use executor_primitives::PumpxConfig;
 use log::{debug, error};
+use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
 use sp_core::keccak_256;
 
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
@@ -39,9 +40,6 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		match pumpx_config.order_type {
 			PumpxOrderType::Market => {
 				debug!("Doing market order");
-
-				// evm market order => worker constructs, signs and sends it
-				// solana market order => pumpx (backend) constructs, signs and sends it => TODO
 				self.worker_do_market_order(
 					omni_account,
 					intent_id,
@@ -94,55 +92,56 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	}
 
 	// call backend API in one step - it requires backend has signing access to signer, which will be gradually deprecated
-	// async fn pumpx_do_market_order(
-	// 	&self,
-	// 	intent_id: IntentId,
-	// 	amount: String,
-	// 	token_ca: String,
-	// 	recipient_address: String,
-	// 	access_token: &str,
-	// 	pumpx_config: &PumpxConfig,
-	// ) -> Result<Vec<u8>, ()> {
-	// 	debug!("executing pumpx_do_market_order");
-	// 	let body = CreateMarketOrderTxBody {
-	// 		request_id: intent_id,
-	// 		chain_id: pumpx_config.to_chain_id,
-	// 		token_ca,
-	// 		swap_type: match pumpx_config.swap_type {
-	// 			1 => SwapType::Buy,
-	// 			2 => SwapType::Sell,
-	// 			_ => {
-	// 				log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
-	// 				return Err(());
-	// 			},
-	// 		},
-	// 		amount_in: amount,
-	// 		double_out: pumpx_config.double_out,
-	// 		is_one_click: pumpx_config.is_one_click,
-	// 		address: recipient_address,
-	// 		is_anti_mev: pumpx_config.is_anti_mev,
-	// 		is_auto_slippage: pumpx_config.is_auto_slippage,
-	// 		gas_type: match pumpx_config.gas_type {
-	// 			1 => GasType::Slow,
-	// 			2 => GasType::Medium,
-	// 			3 => GasType::Fast,
-	// 			_ => {
-	// 				log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
-	// 				return Err(());
-	// 			},
-	// 		},
-	// 		slippage: pumpx_config.slippage,
-	// 		wallet_index: pumpx_config.wallet_index,
-	// 	};
-	// 	debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
-	// 	let response =
-	// 		self.pumpx_api.create_market_order_tx(access_token, body).await.map_err(|_| {
-	// 			log::error!("Failed to create market order tx");
-	// 		})?;
-	//
-	// 	debug!("Response create_market_order_tx: {:?}", response);
-	// 	Ok(response.encode())
-	// }
+	#[allow(unused)]
+	async fn pumpx_do_market_order(
+		&self,
+		intent_id: IntentId,
+		amount: String,
+		token_ca: String,
+		recipient_address: String,
+		access_token: &str,
+		pumpx_config: &PumpxConfig,
+	) -> Result<Vec<u8>, ()> {
+		debug!("executing pumpx_do_market_order");
+		let body = CreateMarketOrderTxBody {
+			request_id: intent_id,
+			chain_id: pumpx_config.to_chain_id,
+			token_ca,
+			swap_type: match pumpx_config.swap_type {
+				1 => SwapType::Buy,
+				2 => SwapType::Sell,
+				_ => {
+					log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+					return Err(());
+				},
+			},
+			amount_in: amount,
+			double_out: pumpx_config.double_out,
+			is_one_click: pumpx_config.is_one_click,
+			address: recipient_address,
+			is_anti_mev: pumpx_config.is_anti_mev,
+			is_auto_slippage: pumpx_config.is_auto_slippage,
+			gas_type: match pumpx_config.gas_type {
+				1 => GasType::Slow,
+				2 => GasType::Medium,
+				3 => GasType::Fast,
+				_ => {
+					log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+					return Err(());
+				},
+			},
+			slippage: pumpx_config.slippage,
+			wallet_index: pumpx_config.wallet_index,
+		};
+		debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
+		let response =
+			self.pumpx_api.create_market_order_tx(access_token, body).await.map_err(|_| {
+				log::error!("Failed to create market order tx");
+			})?;
+
+		debug!("Response create_market_order_tx: {:?}", response);
+		Ok(response.encode())
+	}
 
 	// call backend API in two steps, only worker has signing access to signer in this case
 	async fn worker_do_market_order(
@@ -308,9 +307,11 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.iter()
 			.map(|tx| {
 				let unsigned_tx_bytes = hex::decode(tx.trim_start_matches("0x")).unwrap();
-				bincode::deserialize(&unsigned_tx_bytes[..]).expect("Failed to decode solana tx")
+				bincode::deserialize(&unsigned_tx_bytes[..]).map_err(|e| {
+					log::error!("Failed to deserialize string: {:?}", e)
+				})
 			})
-			.collect();
+			.collect::<Result<Vec<solana_sdk::transaction::Transaction>, _>>()?;
 
 		let messages_to_sign: Vec<Vec<u8>> =
 			unsigned_tx.iter().map(|tx| tx.message_data()).collect();
