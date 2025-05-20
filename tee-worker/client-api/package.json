@@ -54,7 +54,7 @@
     "scripts": {
         "clean": "rm -rf dist node_modules",
         "generate": "pnpm generate:defs && pnpm generate:meta",
-        "load:metadata": "pnpm load:meta:identity && pnpm load:meta:identity && pnpm load:sidechain",
+        "load:metadata": "pnpm load:metadata:identity && pnpm load:metadata:identity && pnpm load:metadata:sidechain",
         "load:metadata:identity": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
         "load:metadata:omni": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
         "load:metadata:sidechain": "../../identity/bin/litentry-cli print-sgx-metadata-raw > metadata-sidechain.json",

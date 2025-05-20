@@ -66,7 +66,6 @@ use pumpx::methods::common::{GasType, SwapType};
 use pumpx::methods::create_cross_order::CreateCrossOrderBody;
 use pumpx::methods::create_cross_order::CrossOrderInfo;
 use pumpx::methods::create_limit_order::CreateLimitOrderBody;
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
 use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
 use pumpx::methods::cross_fail::CrossFailBody;
 use pumpx::methods::send_order_tx::SendOrderTxBody;
