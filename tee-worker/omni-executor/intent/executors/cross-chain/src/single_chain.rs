@@ -1,4 +1,6 @@
 use super::*;
+use alloy::consensus::transaction::RlpEcdsaEncodableTx;
+use alloy::primitives::ChainId;
 use executor_primitives::PumpxConfig;
 use log::{debug, error};
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
@@ -251,9 +253,16 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.map(|s| {
 				let hex_str = s.trim_start_matches("0x");
 				let hex_decoded = hex::decode(hex_str).expect("Invalid hex string");
-				keccak_256(&hex_decoded).to_vec()
+				let mut unsigned_tx = TxLegacy::decode(&mut &hex_decoded[..])
+					.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+
+				unsigned_tx.chain_id = Some(ChainId::from(BSC_CHAIN_ID));
+				let mut rlp_encoded_tx = vec![];
+				unsigned_tx.rlp_encode(&mut rlp_encoded_tx);
+
+				Ok(keccak_256(&rlp_encoded_tx).to_vec())
 			})
-			.collect();
+			.collect::<Result<Vec<Vec<u8>>, ()>>()?;
 
 		let signatures = self
 			.pumpx_signer_client
@@ -271,8 +280,10 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				.map_err(|_| log::error!("invalid hex string"))?;
 			// We should be able to decode it to Legacy Transaction
 			// As it is RLP Encoded Bytes which adheres to string encoding rules
-			let unsigned_tx = TxLegacy::decode(&mut &bytes[..])
+			let mut unsigned_tx = TxLegacy::decode(&mut &bytes[..])
 				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+			// We need to explicitly set the chain id
+			unsigned_tx.chain_id = Some(ChainId::from(BSC_CHAIN_ID));
 			let signature = Signature::try_from(y.as_ref())
 				.map_err(|_| log::error!("Failed to create Typed signature"))?;
 
