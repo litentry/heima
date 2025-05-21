@@ -269,7 +269,7 @@ async fn handle_native_task<
 		NativeTask::RequestIntent(sender, intent_id, intent) => {
 			let omni_account = sender.to_omni_account();
 
-			debug!("Intent requested: intent_id: {}, omni_account: {:?}", intent_id, omni_account);
+			debug!("Intent requested");
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
 			let stored_intent_id = match intent_id_storage.get(&omni_account) {

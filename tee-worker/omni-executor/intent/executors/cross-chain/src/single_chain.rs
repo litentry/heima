@@ -17,10 +17,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		amount: String,
 		pumpx_config: &PumpxConfig,
 	) -> Result<Vec<u8>, ()> {
-		debug!(
-			"executing single chain swap, intent_id: {}, omni_account: {:?}",
-			intent_id, omni_account
-		);
+		debug!("executing single chain swap");
 
 		let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id) else {
 			error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
