@@ -7,10 +7,10 @@ edition.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 executor-core = { workspace = true }
-log = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }

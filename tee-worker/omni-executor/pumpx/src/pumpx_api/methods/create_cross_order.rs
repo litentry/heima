@@ -3,6 +3,7 @@ use serde::Serialize;
 
 use super::common::{OrderInfoResponse, SwapType};
 use crate::pumpx_api::PumpxApiClient;
+use tracing::error;
 
 // /v3/trade/create_cross_order
 #[derive(Serialize, Debug)]
@@ -43,12 +44,12 @@ pub async fn create_cross_order_impl(
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("Cross order creation failed with status: {}, error: {:?}", status, e);
+		error!("Cross order creation failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse cross order creation response: {:?}", e);
+		error!("Failed to parse cross order creation response: {:?}", e);
 		e
 	})
 }

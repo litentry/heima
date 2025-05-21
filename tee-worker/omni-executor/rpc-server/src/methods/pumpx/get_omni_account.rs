@@ -20,6 +20,7 @@ use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
@@ -31,7 +32,7 @@ pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_getOmniAccount", |params, _, _| async move {
 			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 

@@ -14,18 +14,19 @@ use jsonrpsee::{
 };
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
+use tracing::error;
 
 pub fn register_submit_native_task(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
 			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
-				log::error!("Failed to parse: {:?}", e);
+				error!("Failed to parse: {:?}", e);
 				ErrorCode::InternalError
 			})?;
 			let (response_sender, response_receiver) = oneshot::channel();
 
 			if ctx.native_task_sender.send((wrapper, response_sender)).await.is_err() {
-				log::error!("Failed to send request to native call executor");
+				error!("Failed to send request to native call executor");
 				return Err(ErrorCode::InternalError.into());
 			}
 			match response_receiver.await {
@@ -38,7 +39,7 @@ pub fn register_submit_native_task(module: &mut RpcModule<RpcContext>) {
 					Ok::<String, ErrorObject>(hex_encode(response.as_slice()))
 				},
 				Err(e) => {
-					log::error!("Failed to receive response from native call handler: {:?}", e);
+					error!("Failed to receive response from native call handler: {:?}", e);
 					Err(ErrorCode::InternalError.into())
 				},
 			}

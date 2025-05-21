@@ -5,6 +5,7 @@ use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use pumpx::PumpxApi;
 use std::{env, net::SocketAddr, sync::Arc};
+use tracing::info;
 
 pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
@@ -81,7 +82,7 @@ pub async fn start_server(
 	register_methods(&mut module);
 
 	let handle = server.start(module);
-	log::info!("Server listening on port {}", port);
+	info!("Server listening on port {}", port);
 	tokio::spawn(handle.stopped());
 
 	Ok(())

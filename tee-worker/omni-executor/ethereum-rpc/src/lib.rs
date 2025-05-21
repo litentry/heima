@@ -24,7 +24,7 @@ use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
 use executor_core::wallet_metrics::WalletBalanceFetcher;
-use log::error;
+use tracing::log::error;
 
 pub trait RpcProviderFactory {
 	type Provider;
@@ -80,8 +80,9 @@ impl RpcProvider for AlloyRpcProvider {
 	type Transaction = TransactionRequest;
 
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()> {
-		let provider = ProviderBuilder::new()
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 		provider
 			.get_balance(address)
 			.await
@@ -89,8 +90,9 @@ impl RpcProvider for AlloyRpcProvider {
 	}
 
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()> {
-		let provider = ProviderBuilder::new()
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 		provider
 			.get_transaction_count(address)
 			.await
@@ -103,9 +105,9 @@ impl RpcProvider for AlloyRpcProvider {
 			return Err(());
 		};
 
-		let provider = ProviderBuilder::new()
-			.wallet(wallet.clone())
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().wallet(wallet.clone()).connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 
 		let signer_address = wallet.default_signer().address();
 		let mut tx = raw_tx.from(signer_address);
@@ -125,8 +127,9 @@ impl RpcProvider for AlloyRpcProvider {
 	}
 
 	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()> {
-		let provider = ProviderBuilder::new()
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 
 		provider
 			.estimate_gas(tx.clone())
@@ -135,8 +138,9 @@ impl RpcProvider for AlloyRpcProvider {
 	}
 
 	async fn get_gas_price(&self) -> Result<u128, ()> {
-		let provider = ProviderBuilder::new()
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 
 		provider
 			.get_gas_price()
@@ -145,8 +149,9 @@ impl RpcProvider for AlloyRpcProvider {
 	}
 
 	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, ()> {
-		let provider = ProviderBuilder::new()
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 
 		let result = provider.call(tx).await.map_err(|e| error!("Could not call: {:?}", e))?;
 
@@ -157,8 +162,9 @@ impl RpcProvider for AlloyRpcProvider {
 #[async_trait]
 impl WalletBalanceFetcher for AlloyRpcProvider {
 	async fn fetch(&self, address: &str) -> Result<f64, ()> {
-		let provider = ProviderBuilder::new()
-			.on_http(self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?);
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
 		let address =
 			Address::from_str(address).map_err(|e| error!("Could not parse address: {:?}", e))?;
 		provider
