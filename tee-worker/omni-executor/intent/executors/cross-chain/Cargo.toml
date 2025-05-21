@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
+bincode = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 parity-scale-codec = { workspace = true }

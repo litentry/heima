@@ -2443,6 +2443,7 @@ dependencies = [
  "async-trait",
  "base58",
  "binance-api",
+ "bincode",
  "core-primitives",
  "ethereum-rpc",
  "executor-core",

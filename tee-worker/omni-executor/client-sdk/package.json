@@ -51,5 +51,11 @@
   "packageManager": "pnpm@9.15.2",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "elliptic": "6.6.1",
+      "path-to-regexp": ">=0.1.12"
+    }
   }
 }
