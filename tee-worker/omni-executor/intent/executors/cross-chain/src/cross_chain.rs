@@ -15,8 +15,10 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		swap_order: &SwapOrder,
 		pumpx_config: &PumpxConfig,
 	) -> Result<String, ()> {
-		// payout_amount
-		debug!("executing cross chain swap");
+		debug!(
+			"executing cross chain swap, intent_id: {}, omni_account: {:?}",
+			intent_id, omni_account
+		);
 
 		if pumpx_config.to_chain_id != BSC_CHAIN_ID {
 			error!("Only bsc payout supported");
@@ -84,10 +86,12 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			error!("Failed to parse payout address");
 		})?;
 
+		debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, from_token_ca, to_token_ca, from_amount, from_address, payout_address);
+
 		self.pumpx_create_cross_order(
 			intent_id,
-			from_token_ca,
-			to_token_ca,
+			from_token_ca.clone(),
+			to_token_ca.clone(),
 			from_amount.clone(),
 			usd_worth,
 			from_address.clone(),

@@ -17,7 +17,10 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		amount: String,
 		pumpx_config: &PumpxConfig,
 	) -> Result<Vec<u8>, ()> {
-		debug!("executing single chain swap");
+		debug!(
+			"executing single chain swap, intent_id: {}, omni_account: {:?}",
+			intent_id, omni_account
+		);
 
 		let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id) else {
 			error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
@@ -38,6 +41,11 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				error!("Failed to parse to_token_ca");
 			})
 			.map(|v| v.to_string())?;
+
+		debug!(
+			"single chain swap details: intent_id: {}, token_ca: {}, amount: {}, to_address: {}",
+			intent_id, token_ca, amount, to_address
+		);
 
 		match pumpx_config.order_type {
 			PumpxOrderType::Market => {
