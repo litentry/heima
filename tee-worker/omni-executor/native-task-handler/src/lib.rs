@@ -269,6 +269,8 @@ async fn handle_native_task<
 		NativeTask::RequestIntent(sender, intent_id, intent) => {
 			let omni_account = sender.to_omni_account();
 
+			debug!("Intent requested");
+
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
 			let stored_intent_id = match intent_id_storage.get(&omni_account) {
 				Ok(id) => id.unwrap_or_default(),
@@ -304,7 +306,6 @@ async fn handle_native_task<
 				return;
 			}
 
-			let omni_account = sender.to_omni_account();
 			let _ = notify_intent_accepted(
 				&mut rpc_client,
 				ctx.transaction_signer.clone(),
