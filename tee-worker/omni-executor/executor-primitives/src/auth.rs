@@ -1,10 +1,5 @@
-use crate::{
-	signature::{BitcoinSignature, EthereumSignature, HeimaMultiSignature},
-	utils::hex::decode_hex,
-	OmniAccountAuthType,
-};
+use crate::{signature::HeimaMultiSignature, utils::hex::decode_hex, OmniAccountAuthType};
 use base58::FromBase58;
-use executor_crypto::{ecdsa, ed25519, sr25519};
 use heima_primitives::{Address20, Address32, Address33, Identity, IdentityString};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
@@ -90,56 +85,6 @@ impl TryFrom<IdentitySerde> for Identity {
 	}
 }
 
-/// A serializable representation of HeimaMultiSignature for JSON interchange.
-/// ```json
-/// {
-///   "type": "Ed25519",
-///   "data": "hex-encoded-signature"
-/// }
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(tag = "type", content = "data")]
-pub enum HeimaMultiSignatureSerde {
-	Ed25519(String),  // hex-encoded
-	Sr25519(String),  // hex-encoded
-	Ecdsa(String),    // hex-encoded
-	Ethereum(String), // hex-encoded
-	Bitcoin(String),  // hex-encoded
-}
-
-impl TryFrom<HeimaMultiSignatureSerde> for HeimaMultiSignature {
-	type Error = &'static str;
-
-	fn try_from(value: HeimaMultiSignatureSerde) -> Result<Self, Self::Error> {
-		match value {
-			HeimaMultiSignatureSerde::Ed25519(s) => {
-				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
-				let arr: [u8; 64] = bytes.try_into().map_err(|_| "Invalid length")?;
-				Ok(HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(arr)))
-			},
-			HeimaMultiSignatureSerde::Sr25519(s) => {
-				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
-				let arr: [u8; 64] = bytes.try_into().map_err(|_| "Invalid length")?;
-				Ok(HeimaMultiSignature::Sr25519(sr25519::Signature::from_raw(arr)))
-			},
-			HeimaMultiSignatureSerde::Ecdsa(s) => {
-				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
-				let arr: [u8; 65] = bytes.try_into().map_err(|_| "Invalid length")?;
-				Ok(HeimaMultiSignature::Ecdsa(ecdsa::Signature::from_raw(arr)))
-			},
-			HeimaMultiSignatureSerde::Ethereum(s) => {
-				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
-				let arr: [u8; 65] = bytes.try_into().map_err(|_| "Invalid length")?;
-				Ok(HeimaMultiSignature::Ethereum(EthereumSignature(arr)))
-			},
-			HeimaMultiSignatureSerde::Bitcoin(s) => {
-				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
-				let arr: [u8; 65] = bytes.try_into().map_err(|_| "Invalid length")?;
-				Ok(HeimaMultiSignature::Bitcoin(BitcoinSignature(arr)))
-			},
-		}
-	}
-}
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum OmniAuth {
 	Web3(Identity, HeimaMultiSignature), // (Signer, Signature)
@@ -150,7 +95,7 @@ pub enum OmniAuth {
 
 #[derive(Deserialize)]
 pub enum OmniAuthSerde {
-	Web3(IdentitySerde, HeimaMultiSignatureSerde),
+	Web3(IdentitySerde, HeimaMultiSignature),
 	Email(Email, VerificationCode),
 	AuthToken(OmniAccount, JwtToken),
 	OAuth2(IdentitySerde, OAuth2Data),
@@ -183,7 +128,6 @@ pub struct OAuth2Data {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::utils::hex::hex_encode;
 
 	#[test]
 	fn test_identity_serde() {
@@ -192,25 +136,5 @@ mod tests {
 		let identity = Identity::try_from(deserialized).unwrap();
 
 		assert_eq!(identity, Identity::Twitter(IdentityString::new(b"handle".to_vec())));
-	}
-
-	#[test]
-	fn test_heima_multi_signature_serde() {
-		let raw_signature: [u8; 64] = [
-			62, 25, 148, 186, 53, 137, 248, 174, 149, 187, 225, 24, 186, 48, 24, 109, 100, 27, 149,
-			196, 66, 5, 222, 140, 22, 16, 136, 239, 154, 22, 133, 96, 79, 2, 180, 106, 150, 112,
-			116, 11, 6, 35, 32, 4, 145, 240, 54, 130, 206, 193, 200, 57, 241, 112, 35, 122, 226,
-			97, 174, 231, 221, 13, 98, 2,
-		];
-
-		let hex_signature = hex_encode(raw_signature.as_slice());
-		let json = format!(r#"{{"type":"Ed25519","data":"{}"}}"#, hex_signature);
-		let deserialized: HeimaMultiSignatureSerde = serde_json::from_str(&json).unwrap();
-		let heima_multi_signature = HeimaMultiSignature::try_from(deserialized).unwrap();
-
-		assert_eq!(
-			heima_multi_signature,
-			HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(raw_signature))
-		);
 	}
 }

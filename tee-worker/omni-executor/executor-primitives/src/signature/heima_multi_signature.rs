@@ -18,6 +18,7 @@ use tracing::log::error;
 #[derive(
 	Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, Serialize, Deserialize,
 )]
+#[serde(tag = "type", content = "data")]
 pub enum HeimaMultiSignature {
 	/// An Ed25519 signature.
 	#[codec(index = 0)]
@@ -174,6 +175,8 @@ fn evm_eip191_wrap(msg: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+	use crate::utils::hex::hex_encode;
+
 	use super::*;
 	use base64::{engine::general_purpose::STANDARD, Engine};
 
@@ -213,5 +216,24 @@ mod tests {
 		let result = HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(signature))
 			.verify(b"test message", &signer);
 		assert!(result);
+	}
+
+	#[test]
+	fn test_heima_multi_signature_serde() {
+		let raw_signature: [u8; 64] = [
+			62, 25, 148, 186, 53, 137, 248, 174, 149, 187, 225, 24, 186, 48, 24, 109, 100, 27, 149,
+			196, 66, 5, 222, 140, 22, 16, 136, 239, 154, 22, 133, 96, 79, 2, 180, 106, 150, 112,
+			116, 11, 6, 35, 32, 4, 145, 240, 54, 130, 206, 193, 200, 57, 241, 112, 35, 122, 226,
+			97, 174, 231, 221, 13, 98, 2,
+		];
+
+		let hex_signature = hex_encode(raw_signature.as_slice());
+		let json = format!(r#"{{"type":"Ed25519","data":"{}"}}"#, hex_signature);
+		let deserialized: HeimaMultiSignature = serde_json::from_str(&json).unwrap();
+
+		assert_eq!(
+			deserialized,
+			HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(raw_signature))
+		);
 	}
 }
