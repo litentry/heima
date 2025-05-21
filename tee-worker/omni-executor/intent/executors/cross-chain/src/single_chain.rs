@@ -40,6 +40,11 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			})
 			.map(|v| v.to_string())?;
 
+		debug!(
+			"single chain swap details: intent_id: {}, token_ca: {}, amount: {}, to_address: {}",
+			intent_id, token_ca, amount, to_address
+		);
+
 		match pumpx_config.order_type {
 			PumpxOrderType::Market => {
 				debug!("Doing market order");

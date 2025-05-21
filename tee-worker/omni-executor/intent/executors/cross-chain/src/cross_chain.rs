@@ -108,8 +108,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 
 		self.pumpx_create_cross_order(
 			intent_id,
-			from_token_ca,
-			to_token_ca,
+			from_token_ca.clone(),
+			to_token_ca.clone(),
 			from_amount.clone(),
 			usd_worth,
 			from_address.clone(),
@@ -183,6 +183,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			let payout_address = Address::from_str(&to_address).map_err(|_| {
 				error!("Failed to parse payout address");
 			})?;
+			debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, from_token_ca, to_token_ca, from_amount, from_address, payout_address);
 			self.do_payout(&payout_address, &payout_amount_u256).await?;
 			Ok((
 				self.apply_gas_fee(&payout_amount, access_token, pumpx_config).await?,
