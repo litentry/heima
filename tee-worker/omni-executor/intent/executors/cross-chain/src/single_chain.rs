@@ -349,6 +349,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			// Note: this is being done in the Go code as well, so although we technically have
 			// only one signature we are still filling all the required placeholder
 			// with the same signature
+			tx.signatures = Vec::with_capacity(num_required_signatures);
 			for i in 0_usize..num_required_signatures {
 				tx.signatures[i] = signature;
 			}
