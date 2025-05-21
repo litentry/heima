@@ -9,6 +9,7 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
+use tracing::{debug, error};
 
 #[async_trait]
 pub trait SolanaClient: Send + Sync {
@@ -52,9 +53,9 @@ impl SolanaClient for SolanaRpcClient {
 			.rpc_client
 			.get_latest_blockhash()
 			.await
-			.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
+			.map_err(|e| error!("Could not get block hash: {:?}", e))?;
 		let to_pubkey =
-			Pubkey::from_str(to).map_err(|e| log::error!("Could not parse to address: {:?}", e))?;
+			Pubkey::from_str(to).map_err(|e| error!("Could not parse to address: {:?}", e))?;
 		let transfer_instruction =
 			system_instruction::transfer(&signer.pubkey(), &to_pubkey, value);
 		let tx = Transaction::new_signed_with_payer(
@@ -67,15 +68,15 @@ impl SolanaClient for SolanaRpcClient {
 			.rpc_client
 			.send_and_confirm_transaction(&tx)
 			.await
-			.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
+			.map_err(|e| error!("Could not send transaction: {:?}", e))?;
 
-		log::debug!(
+		debug!(
 			"Successfully transferred {} tokens from sender {} to {}",
 			value,
 			signer.pubkey(),
 			to_pubkey
 		);
-		log::debug!("Transaction signature: {:?}", tx_signature);
+		debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(tx_signature.to_string())
 	}
@@ -88,9 +89,9 @@ impl SolanaClient for SolanaRpcClient {
 		signer: &Signer,
 	) -> Result<String, ()> {
 		let mint_pubkey = Pubkey::from_str(mint_address)
-			.map_err(|e| log::error!("Could not parse mint address: {:?}", e))?;
+			.map_err(|e| error!("Could not parse mint address: {:?}", e))?;
 		let to_pubkey =
-			Pubkey::from_str(to).map_err(|e| log::error!("Could not parse to address: {:?}", e))?;
+			Pubkey::from_str(to).map_err(|e| error!("Could not parse to address: {:?}", e))?;
 
 		let source_pubkey = get_associated_token_address(&signer.pubkey(), &mint_pubkey);
 		let destination_pubkey = get_associated_token_address(&to_pubkey, &mint_pubkey);
@@ -100,7 +101,7 @@ impl SolanaClient for SolanaRpcClient {
 		// if dest ATA doesn't exist, send one tx to create it, two ix in one tx didn't seem to work
 		// this should happen only once as the dest ATA would be initialized after one interaction
 		if !destination_exists {
-			log::debug!("Destination ATA {} doesn't exist, creating it now", destination_pubkey);
+			debug!("Destination ATA {} doesn't exist, creating it now", destination_pubkey);
 			let create_ata_ix =
 				spl_associated_token_account::instruction::create_associated_token_account(
 					&signer.pubkey(), // payer
@@ -112,7 +113,7 @@ impl SolanaClient for SolanaRpcClient {
 				.rpc_client
 				.get_latest_blockhash()
 				.await
-				.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
+				.map_err(|e| error!("Could not get block hash: {:?}", e))?;
 
 			let tx = Transaction::new_signed_with_payer(
 				&[create_ata_ix],
@@ -125,16 +126,16 @@ impl SolanaClient for SolanaRpcClient {
 				.rpc_client
 				.send_and_confirm_transaction(&tx)
 				.await
-				.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
+				.map_err(|e| error!("Could not send transaction: {:?}", e))?;
 
-			log::debug!("Successfully created destination ATA, tx signature {:?}", tx_signature);
+			debug!("Successfully created destination ATA, tx signature {:?}", tx_signature);
 		}
 
 		let block_hash = self
 			.rpc_client
 			.get_latest_blockhash()
 			.await
-			.map_err(|e| log::error!("Could not get block hash: {:?}", e))?;
+			.map_err(|e| error!("Could not get block hash: {:?}", e))?;
 
 		let transfer_ix = spl_token::instruction::transfer(
 			&spl_token::id(),
@@ -145,7 +146,7 @@ impl SolanaClient for SolanaRpcClient {
 			value,
 		)
 		.map_err(|e| {
-			log::error!("Could not create transfer instruction: {:?}", e);
+			error!("Could not create transfer instruction: {:?}", e);
 		})?;
 
 		let tx = Transaction::new_signed_with_payer(
@@ -158,15 +159,15 @@ impl SolanaClient for SolanaRpcClient {
 			.rpc_client
 			.send_and_confirm_transaction(&tx)
 			.await
-			.map_err(|e| log::error!("Could not send transaction: {:?}", e))?;
+			.map_err(|e| error!("Could not send transaction: {:?}", e))?;
 
-		log::debug!(
+		debug!(
 			"Successfully transferred {} tokens from sender {} to {}",
 			value,
 			signer.pubkey(),
 			to_pubkey
 		);
-		log::debug!("Transaction signature: {:?}", tx_signature);
+		debug!("Transaction signature: {:?}", tx_signature);
 
 		Ok(tx_signature.to_string())
 	}
@@ -175,12 +176,12 @@ impl SolanaClient for SolanaRpcClient {
 #[async_trait]
 impl WalletBalanceFetcher for SolanaRpcClient {
 	async fn fetch(&self, address: &str) -> Result<f64, ()> {
-		let pubkey = Pubkey::from_str(address)
-			.map_err(|e| log::error!("Could not parse pubkey: {:?}", e))?;
+		let pubkey =
+			Pubkey::from_str(address).map_err(|e| error!("Could not parse pubkey: {:?}", e))?;
 		self.rpc_client
 			.get_balance(&pubkey)
 			.await
-			.map_err(|e| log::error!("Could not fetch wallet balance: {:?}", e))
+			.map_err(|e| error!("Could not fetch wallet balance: {:?}", e))
 			.map(|b| b as f64)
 	}
 }

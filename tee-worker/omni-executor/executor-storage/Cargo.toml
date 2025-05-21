@@ -6,11 +6,11 @@ edition.workspace = true
 
 [dependencies]
 frame-support = { workspace = true, features = ["std"] }
-log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 rocksdb = "0.23.0"
 sp-state-machine = { workspace = true, features = ["std"] }
 subxt-core = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-crypto = { workspace = true }
@@ -19,7 +19,7 @@ parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 
 [dev-dependencies]
-env_logger = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use log::error;
 use std::fmt::Debug;
 use std::{marker::PhantomData, thread::sleep, time::Duration};
 use tokio::{runtime::Handle, sync::oneshot::Receiver};
+use tracing::log::{debug, error, info, trace};
 
 use crate::event_handler::{Error, EventHandler};
 use crate::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
@@ -80,7 +80,7 @@ impl<
 
 	/// Start syncing. It's a long-running blocking operation - should be started in dedicated thread.
 	pub fn sync(&mut self, start_block: u64) {
-		log::info!("Starting {} network sync, start block: {}", self.id, start_block);
+		info!("Starting {} network sync, start block: {}", self.id, start_block);
 		let mut block_number_to_sync = if let Some(ref checkpoint) =
 			self.checkpoint_repository.get().expect("Could not read checkpoint")
 		{
@@ -100,7 +100,7 @@ impl<
 			// Default to start_block if no checkpoint exists
 			start_block
 		};
-		log::debug!("Starting sync from {:?}", block_number_to_sync);
+		debug!("Starting sync from {:?}", block_number_to_sync);
 
 		'main: loop {
 			if self.stop_signal.try_recv().is_ok() {
@@ -111,7 +111,7 @@ impl<
 				match self.handle.block_on(self.fetcher.get_last_finalized_block_num()) {
 					Ok(maybe_block) => maybe_block,
 					Err(_) => {
-						log::info!("Could not get last finalized block number");
+						info!("Could not get last finalized block number");
 						sleep(Duration::from_secs(1));
 						continue;
 					},
@@ -120,16 +120,13 @@ impl<
 			let last_finalized_block = match maybe_last_finalized_block {
 				Some(v) => v,
 				None => {
-					log::info!(
-						"Waiting for finalized block, block to sync {}",
-						block_number_to_sync
-					);
+					info!("Waiting for finalized block, block to sync {}", block_number_to_sync);
 					sleep(Duration::from_secs(1));
 					continue;
 				},
 			};
 
-			log::trace!(
+			trace!(
 				"Last finalized block: {}, block to sync {}",
 				last_finalized_block,
 				block_number_to_sync
@@ -144,7 +141,7 @@ impl<
 			let mut sync_error = false;
 
 			if last_finalized_block >= block_number_to_sync {
-				log::debug!("Syncing block: {}", block_number_to_sync);
+				debug!("Syncing block: {}", block_number_to_sync);
 				match self.handle.block_on(self.fetcher.get_block_events(block_number_to_sync)) {
 					Ok(events) => {
 						for event in events {
@@ -155,13 +152,13 @@ impl<
 								.expect("Could not read checkpoint");
 							if let Some(ref checkpoint) = maybe_checkpoint {
 								if checkpoint.ge(&event.get_event_id().clone().into()) {
-									log::debug!("Skipping event");
+									debug!("Skipping event");
 									continue;
 								}
 							}
-							log::debug!("Handling event: {:?}", event_id);
+							debug!("Handling event: {:?}", event_id);
 							if let Err(e) = self.handle.block_on(self.event_handler.handle(event)) {
-								log::error!("Could not handle event: {:?}", e);
+								error!("Could not handle event: {:?}", e);
 								match e {
 									Error::NonRecoverableError => {
 										error!(
@@ -188,22 +185,22 @@ impl<
 							.save(CheckpointT::from(block_number_to_sync))
 							.expect("Could not save checkpoint");
 						gauge!(synced_block_gauge_name(&self.id)).set(block_number_to_sync as f64);
-						log::debug!("Finished syncing block: {}", block_number_to_sync);
+						debug!("Finished syncing block: {}", block_number_to_sync);
 						block_number_to_sync += 1;
 					},
 					Err(e) => {
-						log::error!("Could not get block {} events: {:?}", block_number_to_sync, e);
+						error!("Could not get block {} events: {:?}", block_number_to_sync, e);
 						sync_error = true;
 					},
 				}
 			} else {
-				log::trace!("Block: {} not yet finalized", block_number_to_sync);
+				trace!("Block: {} not yet finalized", block_number_to_sync);
 			}
 
 			if !fast || sync_error {
 				sleep(Duration::from_secs(1))
 			} else {
-				log::trace!("Fast sync skipping 1s wait");
+				trace!("Fast sync skipping 1s wait");
 			}
 		}
 	}

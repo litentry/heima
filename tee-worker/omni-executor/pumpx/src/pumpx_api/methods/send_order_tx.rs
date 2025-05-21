@@ -1,6 +1,7 @@
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use super::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
@@ -36,18 +37,18 @@ pub async fn send_order_tx_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			log::error!("Failed to send market order transaction: {:?}", e);
+			error!("Failed to send market order transaction: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("Market order transaction failed with status: {}, error: {:?}", status, e);
+		error!("Market order transaction failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse market order transaction response: {:?}", e);
+		error!("Failed to parse market order transaction response: {:?}", e);
 		e
 	})
 }

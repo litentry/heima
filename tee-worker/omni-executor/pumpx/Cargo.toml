@@ -11,7 +11,6 @@ ethers = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true, features = ["client"] }
 libsecp256k1 = { workspace = true }
-log = { workspace = true }
 mockall = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
@@ -23,6 +22,7 @@ serde_repr = { workspace = true }
 serde_with = { workspace = true }
 sha2 = { workspace = true }
 sp-core = { workspace = true }
+tracing = { workspace = true }
 url = { workspace = true }
 
 # Local dependencies

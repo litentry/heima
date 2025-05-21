@@ -23,7 +23,7 @@ use alloy::signers::local::PrivateKeySigner;
 use alloy::signers::Signer;
 use ethereum_rpc::RpcProvider;
 use ethereum_rpc::RpcProviderFactory;
-use log::error;
+use tracing::log::error;
 
 #[allow(dead_code)]
 pub enum Paymode {
