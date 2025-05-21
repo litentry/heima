@@ -106,6 +106,14 @@ pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	let db = Arc::new(StorageDB::open_default(STORAGE_DB_PATH).map_err(|e| {
 		error!("Could not open db: {:?}", e);
 	})?);
+
+	// Migration example: if version == 0, do migration, then set to 1
+	let current_version = get_storage_version(&db);
+	if current_version == 0 {
+		// ... perform migration logic here ...
+		// set_storage_version(&db, 1)?;
+	}
+
 	let client_factory: SubxtClientFactory<CustomConfig> = SubxtClientFactory::new(ws_rpc_endpoint);
 	let mut client = client_factory.new_client().await.map_err(|e| {
 		error!("Could not create client: {:?}", e);
@@ -256,4 +264,50 @@ mod tests {
 		fs::remove_dir_all(db_path).unwrap();
 	}
 
+	#[test]
+	fn test_struct_migration_v0_to_v1() {
+		use parity_scale_codec::{Decode, Encode};
+		use std::fs;
+		use std::path::Path;
+
+		#[derive(Debug, PartialEq, Encode, Decode)]
+		struct TestDataV0 {
+			a: u32,
+			b: String,
+		}
+
+		#[derive(Debug, PartialEq, Encode, Decode)]
+		struct TestDataV1 {
+			a: u32,
+			c: Option<u64>,
+		}
+
+		let db_path = "test_struct_migration_db_scale";
+		if Path::new(db_path).exists() {
+			fs::remove_dir_all(db_path).unwrap();
+		}
+		let db = StorageDB::open_default(db_path).unwrap();
+
+		// Simulate old data (version 0)
+		let old = TestDataV0 { a: 42, b: "hello".to_string() };
+		db.put(b"testkey", old.encode()).unwrap();
+		set_storage_version(&db, 0).unwrap();
+
+		// Migration: if version == 0, read old, convert, write new, set version = 1
+		if get_storage_version(&db) == 0 {
+			let bytes = db.get(b"testkey").unwrap().unwrap();
+			let old = TestDataV0::decode(&mut &bytes[..]).unwrap();
+			let new = TestDataV1 { a: old.a, c: None };
+			db.put(b"testkey", new.encode()).unwrap();
+			set_storage_version(&db, 1).unwrap();
+		}
+
+		// Check migrated data
+		let bytes = db.get(b"testkey").unwrap().unwrap();
+		let new = TestDataV1::decode(&mut &bytes[..]).unwrap();
+		assert_eq!(new, TestDataV1 { a: 42, c: None });
+		assert_eq!(get_storage_version(&db), 1);
+
+		fs::remove_dir_all(db_path).unwrap();
+	}
 }
