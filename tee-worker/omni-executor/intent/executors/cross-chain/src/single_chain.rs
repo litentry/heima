@@ -263,10 +263,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 					.map_err(|_| error!("Failed to decode legacy tx"))?;
 
 				unsigned_tx.chain_id = Some(ChainId::from(chain_id));
-				let mut rlp_encoded_tx = vec![];
-				unsigned_tx.rlp_encode(&mut rlp_encoded_tx);
-
-				Ok(keccak_256(&rlp_encoded_tx).to_vec())
+				Ok(unsigned_tx.signature_hash().to_vec())
 			})
 			.collect::<Result<Vec<Vec<u8>>, ()>>()?;
 
