@@ -8,8 +8,8 @@ edition.workspace = true
 alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
 async-trait = { workspace = true }
 executor-core = { workspace = true }
-log = { workspace = true }
 mockall = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

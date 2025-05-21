@@ -8,10 +8,10 @@ edition.workspace = true
 base64 = { workspace = true }
 bitcoin = { workspace = true, features = ["secp-recovery"] }
 hex = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
+tracing = { workspace = true }
 
 executor-crypto = { workspace = true }
 heima-primitives = { workspace = true }

@@ -11,6 +11,7 @@ use parentchain_signer::TxSigner;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
+use tracing::error;
 
 type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
@@ -35,11 +36,11 @@ pub async fn perform_attestation(
 	#[cfg(feature = "gramine-quote")]
 	{
 		use executor_primitives::DcapQuote;
-		use log::info;
 		use parity_scale_codec::Decode;
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;
+		use tracing::info;
 		let mut f = File::create("/dev/attestation/user_report_data").unwrap();
 		let content = signer.public_key().0;
 		f.write_all(&content).unwrap();
@@ -71,7 +72,7 @@ pub async fn perform_attestation(
 	let mut client = client_factory.new_client_until_connected().await;
 	let signed_call = transaction_signer.sign(registration_call).await;
 	client.submit_tx(&signed_call).await.map_err(|e| {
-		log::error!("Error while submitting tx: {:?}", e);
+		error!("Error while submitting tx: {:?}", e);
 	})?;
 
 	Ok(mrenclave)

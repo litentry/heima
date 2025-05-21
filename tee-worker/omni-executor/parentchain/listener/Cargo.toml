@@ -7,7 +7,6 @@ edition.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 hex = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-encode = { workspace = true }
 sp-core = { workspace = true }
@@ -15,6 +14,7 @@ subxt = { workspace = true, features = ["reconnecting-rpc-client"] }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
@@ -25,7 +25,7 @@ parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 
 [dev-dependencies]
-env_logger = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

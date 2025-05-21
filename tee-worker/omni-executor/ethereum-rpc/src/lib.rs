@@ -24,7 +24,7 @@ use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
 use executor_core::wallet_metrics::WalletBalanceFetcher;
-use log::error;
+use tracing::log::error;
 
 pub trait RpcProviderFactory {
 	type Provider;

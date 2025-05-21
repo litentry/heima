@@ -1,6 +1,7 @@
 // we should use -32000 to -32099 for implementation defined error codes,
 // see https://www.jsonrpc.org/specification#error_object
 use native_task_handler::{NativeTaskError, PumpxApiError, PumpxSignerError};
+use tracing::error;
 
 pub const INVALID_RAW_REQUEST_CODE: i32 = -32000;
 pub const DECRYPT_REQUEST_FAILED_CODE: i32 = -32001;
@@ -60,7 +61,7 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			PumpxSignerError::RequestSignatureFailed => PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE,
 		},
 		NativeTaskError::InternalError => {
-			log::error!("Internal error: {:?}", error);
+			error!("Internal error: {:?}", error);
 			// This should not happen, we return the generic interal error code already from the api
 			-32099
 		},

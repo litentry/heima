@@ -8,13 +8,13 @@ pub mod wallet_api;
 use async_trait::async_trait;
 use error::Error;
 use hmac::{Hmac, Mac};
-use log::{debug, error};
 use reqwest::{Client, Method};
 use sha2::Sha256;
 use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
 };
+use tracing::log::{debug, error};
 use url::Url;
 
 const MAX_RECV_WINDOW: u32 = 60000;

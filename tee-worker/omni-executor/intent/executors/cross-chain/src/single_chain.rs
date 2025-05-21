@@ -2,9 +2,9 @@ use super::*;
 use alloy::consensus::transaction::RlpEcdsaEncodableTx;
 use alloy::primitives::ChainId;
 use executor_primitives::PumpxConfig;
-use log::{debug, error};
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
 use sp_core::keccak_256;
+use tracing::{debug, error};
 
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	CrossChainIntentExecutor<BinanceClient, SolanaClient>
@@ -61,7 +61,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 					Some(ref token_cap) => Some(
 						std::str::from_utf8(token_cap)
 							.map_err(|_| {
-								log::error!("Failed to parse token_cap");
+								error!("Failed to parse token_cap");
 							})
 							.map(|v| v.to_string())?,
 					),
@@ -71,7 +71,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 					Some(ref price_usd) => Some(
 						std::str::from_utf8(price_usd)
 							.map_err(|_| {
-								log::error!("Failed to parse price_usd");
+								error!("Failed to parse price_usd");
 							})
 							.map(|v| v.to_string())?,
 					),
@@ -114,7 +114,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				1 => SwapType::Buy,
 				2 => SwapType::Sell,
 				_ => {
-					log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+					error!("Unsupported swap type: {}", pumpx_config.swap_type);
 					return Err(());
 				},
 			},
@@ -129,7 +129,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				2 => GasType::Medium,
 				3 => GasType::Fast,
 				_ => {
-					log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+					error!("Unsupported gas type: {}", pumpx_config.gas_type);
 					return Err(());
 				},
 			},
@@ -139,7 +139,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		debug!("Calling pumpx create_market_order_tx, body: {:?}", body);
 		let response =
 			self.pumpx_api.create_market_order_tx(access_token, body).await.map_err(|_| {
-				log::error!("Failed to create market order tx");
+				error!("Failed to create market order tx");
 			})?;
 
 		debug!("Response create_market_order_tx: {:?}", response);
@@ -168,7 +168,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				1 => SwapType::Buy,
 				2 => SwapType::Sell,
 				_ => {
-					log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+					error!("Unsupported swap type: {}", pumpx_config.swap_type);
 					return Err(());
 				},
 			},
@@ -183,7 +183,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				2 => GasType::Medium,
 				3 => GasType::Fast,
 				_ => {
-					log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+					error!("Unsupported gas type: {}", pumpx_config.gas_type);
 					return Err(());
 				},
 			},
@@ -196,18 +196,18 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.pumpx_api
 			.create_market_order_unsigned_tx(access_token, body)
 			.await
-			.map_err(|_| log::error!("Failed to get unsigned market order tx"))?;
+			.map_err(|_| error!("Failed to get unsigned market order tx"))?;
 
 		debug!("Response create_market_order_unsigned_tx: {:?}", response);
 
 		let unsigned_tx_string = response.data.tx_data.ok_or_else(|| {
-			log::error!("Failed to unwrap tx_data");
+			error!("Failed to unwrap tx_data");
 		})?;
 		let order_id = response.data.order_id.ok_or_else(|| {
-			log::error!("Failed to unwrap order_id");
+			error!("Failed to unwrap order_id");
 		})?;
 		let chain_id = response.data.chain_id.ok_or_else(|| {
-			log::error!("Failed to unwrap chain_id");
+			error!("Failed to unwrap chain_id");
 		})?;
 
 		match to_chain_id {
@@ -255,7 +255,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				let hex_str = s.trim_start_matches("0x");
 				let hex_decoded = hex::decode(hex_str).expect("Invalid hex string");
 				let mut unsigned_tx = TxLegacy::decode(&mut &hex_decoded[..])
-					.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+					.map_err(|_| error!("Failed to decode legacy tx"))?;
 
 				unsigned_tx.chain_id = Some(ChainId::from(chain_id));
 				let mut rlp_encoded_tx = vec![];
@@ -278,15 +278,15 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		let mut tx_data: Vec<String> = vec![];
 		for (x, y) in unsigned_tx_string.into_iter().zip(signatures.into_iter()) {
 			let bytes = hex::decode(x.trim_start_matches("0x"))
-				.map_err(|_| log::error!("invalid hex string"))?;
+				.map_err(|_| error!("invalid hex string"))?;
 			// We should be able to decode it to Legacy Transaction
 			// As it is RLP Encoded Bytes which adheres to string encoding rules
 			let mut unsigned_tx = TxLegacy::decode(&mut &bytes[..])
-				.map_err(|_| log::error!("Failed to decode legacy tx"))?;
+				.map_err(|_| error!("Failed to decode legacy tx"))?;
 			// We need to explicitly set the chain id
 			unsigned_tx.chain_id = Some(ChainId::from(chain_id));
 			let signature = Signature::try_from(y.as_ref())
-				.map_err(|_| log::error!("Failed to create Typed signature"))?;
+				.map_err(|_| error!("Failed to create Typed signature"))?;
 
 			let signed_tx = unsigned_tx.into_signed(signature);
 			let mut encoded_signed_tx = vec![];
@@ -298,7 +298,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.pumpx_api
 			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
 			.await
-			.map_err(|_| log::error!("Failed to send order tx"))?;
+			.map_err(|_| error!("Failed to send order tx"))?;
 
 		debug!("Response send_order_tx: {:?}", response);
 
@@ -320,7 +320,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.map(|tx| {
 				let unsigned_tx_bytes = hex::decode(tx.trim_start_matches("0x")).unwrap();
 				bincode::deserialize(&unsigned_tx_bytes[..])
-					.map_err(|e| log::error!("Failed to deserialize string: {:?}", e))
+					.map_err(|e| error!("Failed to deserialize string: {:?}", e))
 			})
 			.collect::<Result<Vec<solana_sdk::transaction::Transaction>, _>>()?;
 
@@ -340,7 +340,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		let mut tx_data: Vec<String> = vec![];
 		for (mut tx, sig) in unsigned_tx.into_iter().zip(signatures.into_iter()) {
 			let signature = solana_sdk::signature::Signature::try_from(sig.as_ref())
-				.map_err(|_| log::error!("Failed to convert to Solana Signature"))?;
+				.map_err(|_| error!("Failed to convert to Solana Signature"))?;
 			let num_required_signatures: usize = tx.message.header.num_required_signatures as usize;
 			// Note: this is being done in the Go code as well, so although we technically have
 			// only one signature we are still filling all the required placeholder
@@ -349,10 +349,10 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				tx.signatures[i] = signature;
 			}
 			tx.verify().map_err(|e| {
-				log::error!("Solana transaction verification failed: {:?}", e);
+				error!("Solana transaction verification failed: {:?}", e);
 			})?;
 			let encoded_tx = bincode::serialize(&tx).map_err(|e| {
-				log::error!("Failed to serialize Solana transaction: {:?}", e);
+				error!("Failed to serialize Solana transaction: {:?}", e);
 			})?;
 			tx_data.push(format!("0x{}", hex::encode(encoded_tx)));
 		}
@@ -361,7 +361,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.pumpx_api
 			.send_order_tx(access_token, SendOrderTxBody { order_id, chain_id, tx_data })
 			.await
-			.map_err(|_| log::error!("Failed to send order tx"))?;
+			.map_err(|_| error!("Failed to send order tx"))?;
 
 		debug!("Response send_order_tx: {:?}", response);
 
@@ -388,7 +388,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				1 => SwapType::Buy,
 				2 => SwapType::Sell,
 				_ => {
-					log::error!("Unsupported swap type: {}", pumpx_config.swap_type);
+					error!("Unsupported swap type: {}", pumpx_config.swap_type);
 					return Err(());
 				},
 			},
@@ -404,7 +404,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				2 => GasType::Medium,
 				3 => GasType::Fast,
 				_ => {
-					log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+					error!("Unsupported gas type: {}", pumpx_config.gas_type);
 					return Err(());
 				},
 			},
@@ -415,7 +415,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		let response =
 			self.pumpx_api.create_limit_order(access_token, new_limit_order).await.map_err(
 				|_| {
-					log::error!("Failed to create limit order");
+					error!("Failed to create limit order");
 				},
 			)?;
 
