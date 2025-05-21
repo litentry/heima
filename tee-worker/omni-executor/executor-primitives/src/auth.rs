@@ -94,46 +94,45 @@ impl TryFrom<IdentitySerde> for Identity {
 /// ```json
 /// {
 ///   "type": "Ed25519",
-///   "data": "base64-encoded-signature"
+///   "data": "hex-encoded-signature"
 /// }
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(tag = "type", content = "data")]
 pub enum HeimaMultiSignatureSerde {
-	Ed25519(String),  // base64-encoded
-	Sr25519(String),  // base64-encoded
-	Ecdsa(String),    // base64-encoded
-	Ethereum(String), // base64-encoded
-	Bitcoin(String),  // base64-encoded
+	Ed25519(String),  // hex-encoded
+	Sr25519(String),  // hex-encoded
+	Ecdsa(String),    // hex-encoded
+	Ethereum(String), // hex-encoded
+	Bitcoin(String),  // hex-encoded
 }
 
 impl TryFrom<HeimaMultiSignatureSerde> for HeimaMultiSignature {
 	type Error = &'static str;
 
 	fn try_from(value: HeimaMultiSignatureSerde) -> Result<Self, Self::Error> {
-		use base64::{engine::general_purpose::STANDARD, Engine};
 		match value {
 			HeimaMultiSignatureSerde::Ed25519(s) => {
-				let bytes = STANDARD.decode(s).map_err(|_| "Invalid base64")?;
+				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
 				let arr: [u8; 64] = bytes.try_into().map_err(|_| "Invalid length")?;
 				Ok(HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(arr)))
 			},
 			HeimaMultiSignatureSerde::Sr25519(s) => {
-				let bytes = STANDARD.decode(s).map_err(|_| "Invalid base64")?;
+				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
 				let arr: [u8; 64] = bytes.try_into().map_err(|_| "Invalid length")?;
 				Ok(HeimaMultiSignature::Sr25519(sr25519::Signature::from_raw(arr)))
 			},
 			HeimaMultiSignatureSerde::Ecdsa(s) => {
-				let bytes = STANDARD.decode(s).map_err(|_| "Invalid base64")?;
+				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
 				let arr: [u8; 65] = bytes.try_into().map_err(|_| "Invalid length")?;
 				Ok(HeimaMultiSignature::Ecdsa(ecdsa::Signature::from_raw(arr)))
 			},
 			HeimaMultiSignatureSerde::Ethereum(s) => {
-				let bytes = STANDARD.decode(s).map_err(|_| "Invalid base64")?;
+				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
 				let arr: [u8; 65] = bytes.try_into().map_err(|_| "Invalid length")?;
 				Ok(HeimaMultiSignature::Ethereum(EthereumSignature(arr)))
 			},
 			HeimaMultiSignatureSerde::Bitcoin(s) => {
-				let bytes = STANDARD.decode(s).map_err(|_| "Invalid base64")?;
+				let bytes = decode_hex(&s).map_err(|_| "Invalid hex encoding")?;
 				let arr: [u8; 65] = bytes.try_into().map_err(|_| "Invalid length")?;
 				Ok(HeimaMultiSignature::Bitcoin(BitcoinSignature(arr)))
 			},
@@ -184,7 +183,7 @@ pub struct OAuth2Data {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use base64::{engine::general_purpose::STANDARD, Engine};
+	use crate::utils::hex::hex_encode;
 
 	#[test]
 	fn test_identity_serde() {
@@ -204,8 +203,8 @@ mod tests {
 			97, 174, 231, 221, 13, 98, 2,
 		];
 
-		let base64_signature = STANDARD.encode(raw_signature);
-		let json = format!(r#"{{"type":"Ed25519","data":"{}"}}"#, base64_signature);
+		let hex_signature = hex_encode(raw_signature.as_slice());
+		let json = format!(r#"{{"type":"Ed25519","data":"{}"}}"#, hex_signature);
 		let deserialized: HeimaMultiSignatureSerde = serde_json::from_str(&json).unwrap();
 		let heima_multi_signature = HeimaMultiSignature::try_from(deserialized).unwrap();
 
