@@ -77,7 +77,7 @@ impl HeimaMultiSignature {
 	fn verify_evm(&self, msg: &[u8], signer: &Address20) -> bool {
 		match self {
 			Self::Ethereum(ref sig) => {
-				return verify_evm_signature(evm_eip191_wrap(msg).as_slice(), sig, signer)
+				verify_evm_signature(evm_eip191_wrap(msg).as_slice(), sig, signer)
 					|| verify_evm_signature(msg, sig, signer)
 			},
 			_ => false,
@@ -111,13 +111,13 @@ impl HeimaMultiSignature {
 
 pub fn verify_evm_signature(msg: &[u8], sig: &EthereumSignature, who: &Address20) -> bool {
 	let digest = keccak_256(msg);
-	return match recover_evm_address(&digest, sig.as_ref()) {
+	match recover_evm_address(&digest, sig.as_ref()) {
 		Ok(recovered_evm_address) => recovered_evm_address == who.as_ref().as_slice(),
 		Err(_e) => {
 			error!("Could not verify evm signature msg: {:?}, signer {:?}", msg, who);
 			false
 		},
-	};
+	}
 }
 
 pub fn verify_bitcoin_signature(msg: &str, sig: &BitcoinSignature, who: &Address33) -> bool {
