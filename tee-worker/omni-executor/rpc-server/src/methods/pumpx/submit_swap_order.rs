@@ -17,7 +17,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponse;
+use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use tracing::{debug, error};
 
@@ -104,7 +104,7 @@ pub struct PumpxSubmitSwapOrderResponse {
 #[derive(Serialize, Clone)]
 struct BackendResponse {
 	pub limit_order_response: Option<OrderInfoResponse>,
-	pub market_order_response: Option<CreateMarketOrderTxResponse>,
+	pub market_order_response: Option<SendOrderTxResponse>,
 }
 
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
@@ -272,7 +272,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::IntentSwapResponse(swap_response) => {
 					if params.order_type == PumpxOrderType::Market {
-						let market_order_response: CreateMarketOrderTxResponse =
+						let market_order_response: SendOrderTxResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 								error!("Failed to decode market order response: {:?}", e);
 								PumpxRpcError::from_error_code(ErrorCode::InternalError)
