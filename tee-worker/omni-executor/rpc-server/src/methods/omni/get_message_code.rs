@@ -7,6 +7,7 @@ use heima_primitives::{AccountId, Hashable};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::Deserialize;
 use std::str::FromStr;
+use tracing::error;
 
 #[derive(Deserialize)]
 pub struct GetMessageCodeParams {
@@ -18,7 +19,7 @@ pub fn register_get_message_code(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("omni_getMessageCode", |params, ctx, _| async move {
 			let params = params.parse::<GetMessageCodeParams>()?;
 			let omni_account = AccountId::from_str(&params.omni_account).map_err(|_| {
-				log::error!("Could not parse AccountId: {:?}", params.omni_account);
+				error!("Could not parse AccountId: {:?}", params.omni_account);
 				ErrorCode::InvalidParams
 			})?;
 			let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());

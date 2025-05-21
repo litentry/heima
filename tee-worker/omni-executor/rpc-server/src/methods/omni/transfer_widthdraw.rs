@@ -68,13 +68,13 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 
           	if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
-					log::error!("Missing auth token");
+					error!("Missing auth token");
 					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 						REQUIRE_AUTHENTICATION_CODE,
 					)));
 				};
 				verify_auth(ctx.clone(), auth).await.map_err(|_| {
-					log::error!("Failed to verify auth: {:?}", wrapper.auth);
+					error!("Failed to verify auth: {:?}", wrapper.auth);
 					PumpxRpcError::from_error_code(ErrorCode::ServerError(
 						AUTH_VERIFICATION_FAILED_CODE,
 					))

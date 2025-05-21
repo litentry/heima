@@ -51,11 +51,11 @@ type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>)
 
 async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult {
 	let Ok(hex_request) = params.one::<String>() else {
-		log::error!("Failed to parse params: {:?}", params);
+		error!("Failed to parse params: {:?}", params);
 		return Err(ErrorCode::ParseError.into());
 	};
 	let Ok(request) = RawTask::<NativeTask>::from_hex(&hex_request) else {
-		log::error!("Failed to parse request: {:?}", hex_request);
+		error!("Failed to parse request: {:?}", hex_request);
 		return Err(ErrorCode::ServerError(INVALID_RAW_REQUEST_CODE).into());
 	};
 
@@ -65,16 +65,16 @@ async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult {
 		RawTask::Plain(w) => (w, None),
 		RawTask::Aes(mut r) => {
 			let key = r.decrypt_aes_key(Box::new(ctx.shielding_key.clone())).map_err(|_| {
-				log::error!("Failed to decrypt AES key");
+				error!("Failed to decrypt AES key");
 				ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE)
 			})?;
 			let r = r.decrypt(Box::new(ctx.shielding_key.clone())).map_err(|_| {
-				log::error!("Failed to decrypt request");
+				error!("Failed to decrypt request");
 				ErrorCode::ServerError(DECRYPT_REQUEST_FAILED_CODE)
 			})?;
 			(
 				NativeTaskWrapper::<NativeTask>::decode(&mut r.as_slice()).map_err(|_| {
-					log::error!("Failed to decode request");
+					error!("Failed to decode request");
 					ErrorCode::ServerError(DECODE_REQUEST_FAILED_CODE)
 				})?,
 				Some(key),
@@ -83,17 +83,17 @@ async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult {
 	};
 
 	if wrapper.task.require_encrypt() && !request_is_encrypted {
-		log::error!("Request is not encrypted, but it is required");
+		error!("Request is not encrypted, but it is required");
 		return Err(ErrorCode::ServerError(REQUIRE_ENCRYPTED_REQUEST_CODE).into());
 	}
 
 	if wrapper.task.require_auth() {
 		let Some(ref auth) = wrapper.auth else {
-			log::error!("Request requires authentication, but no auth provided");
+			error!("Request requires authentication, but no auth provided");
 			return Err(ErrorCode::ServerError(REQUIRE_AUTHENTICATION_CODE).into());
 		};
 		verify_auth(ctx, auth).await.map_err(|_| {
-			log::error!("Failed to verify auth: {:?}", wrapper.auth);
+			error!("Failed to verify auth: {:?}", wrapper.auth);
 			ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
 		})?;
 	}
