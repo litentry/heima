@@ -9,6 +9,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
+use tracing::{debug, error};
 
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
@@ -30,17 +31,17 @@ pub struct RequestJwtResponse {
 
 impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: RequestJwtParams) -> Self {
-		Self {
-			task: NativeTask::PumpxRequestJwt(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxRequestJwt(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email), // actually unused
 				p.user_email.clone(),
 				p.invite_code,
 				p.google_code,
 				p.language,
 			),
-			nonce: None,
-			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
-		}
+			None,
+			Some(OmniAuth::Email(p.user_email, p.email_code)),
+		)
 	}
 }
 
@@ -48,16 +49,16 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_requestJwt", |params, ctx, _| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received pumpx_requestJwt, user_email: {}", params.user_email);
+			debug!("Received pumpx_requestJwt, user_email: {}", params.user_email);
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
 			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				log::error!("Failed to verify auth token");
+				error!("Failed to verify auth token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
 				)));
@@ -69,7 +70,7 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 					Ok(RequestJwtResponse { access_token, id_token, backend_response })
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

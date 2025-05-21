@@ -8,12 +8,12 @@ edition.workspace = true
 async-trait = { workspace = true }
 bincode = { workspace = true }
 hex = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rust_decimal = { workspace = true }
 solana-sdk = { workspace = true }
 sp-core = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 accounting-contract-client = { workspace = true }

@@ -47,7 +47,6 @@ use tokio::{
 // use intent_token_query::query_solana;
 // use intent_token_query::EthereumAddress;
 // use intent_token_query::SolanaPubkey;
-// use log::error;
 use accounting_contract_client::AccountingContractApi;
 use alloy::primitives::private::alloy_rlp::Decodable;
 use binance_api::spot_trading_api::SpotTradingApi;
@@ -77,7 +76,7 @@ use pumpx::PumpxApi;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use log::debug;
+use tracing::{debug, error};
 
 mod cross_chain;
 mod single_chain;
@@ -215,7 +214,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 
 				let mut amount = std::str::from_utf8(&pumpx_config.from_amount)
 					.map_err(|_| {
-						log::error!("Failed to parse from_amount");
+						error!("Failed to parse from_amount");
 					})
 					.map(|v| v.to_string())?;
 
@@ -223,7 +222,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 				let Ok(Some(access_token)) =
 					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 				else {
-					log::error!("Failed to get access token from storage");
+					error!("Failed to get access token from storage");
 					return Err(());
 				};
 
@@ -243,16 +242,13 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 					{
 						Ok(amount) => amount,
 						Err(_) => {
-							log::error!(
-								"Error executing cross chain swap for intent_id: {}",
-								intent_id
-							);
+							error!("Error executing cross chain swap for intent_id: {}", intent_id);
 							let body = CrossFailBody {
 								request_id: intent_id,
 								fail_reason: "".to_string(), // TODO: `execute_cross_chain_swap` should return concrete reasons
 							};
 							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								log::error!("Failed to notify pumpx-signer");
+								error!("Failed to notify pumpx-signer");
 							})?;
 							return Err(());
 						},
@@ -274,14 +270,14 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 				// 	account_id.clone(),
 				// 	swap_order.from_asset.clone(),
 				// 	AmountType::from_str_radix(&from_amount_string, 10).map_err(|_| {
-				// 		log::error!("Failed to parse from_amount_string");
+				// 		tracing::error!("Failed to parse from_amount_string");
 				// 	})?,
 				// )?;
 
 				Ok((Some(res), should_notify_parentchain))
 			},
 			_ => {
-				log::error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);
+				error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);
 				Err(())
 			},
 		}

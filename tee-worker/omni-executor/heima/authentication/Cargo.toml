@@ -5,10 +5,10 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rsa = { workspace = true }
 serde = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-crypto = { workspace = true }

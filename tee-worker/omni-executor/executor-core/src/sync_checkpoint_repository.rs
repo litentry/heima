@@ -20,6 +20,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{ErrorKind, Write};
 use std::path::Path;
+use tracing::{error, trace};
 
 /// Represents the point in chain. It can be a whole block or a more precise unit, for example
 /// in case of substrate chain it is BLOCK_NUM::EVENT_NUM
@@ -89,14 +90,14 @@ where
 			Ok(content) => {
 				let checkpoint: Checkpoint =
 					Checkpoint::decode(&mut content.as_slice()).map_err(|e| {
-						log::error!("Could not decode last processed log: {:?}", e);
+						error!("Could not decode last processed log: {:?}", e);
 					})?;
 				Ok(Some(checkpoint))
 			},
 			Err(e) => match e.kind() {
 				ErrorKind::NotFound => Ok(None),
 				_ => {
-					log::error!("Could not open file {:?}", e);
+					error!("Could not open file {:?}", e);
 					Err(())
 				},
 			},
@@ -104,7 +105,7 @@ where
 	}
 
 	fn save(&mut self, checkpoint: Checkpoint) -> Result<(), ()> {
-		log::trace!("Saving checkpoint: {:?}", checkpoint);
+		trace!("Saving checkpoint: {:?}", checkpoint);
 		let content = checkpoint.encode();
 		if let Ok(mut file) = File::create(&self.file_name) {
 			file.write(content.as_slice()).map_err(|_| ())?;
