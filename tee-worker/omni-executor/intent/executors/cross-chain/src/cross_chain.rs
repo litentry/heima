@@ -125,7 +125,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		if instant {
 			Ok((
 				self.apply_gas_fee(&payout_amount, access_token, pumpx_config).await?,
-				self.accounting_contract_client.get_address().await.to_string(),
+				self.accounting_contract_client.get_signer_address().await.to_string(),
 				Some(InstantFlowDetails {
 					omni_account,
 					from_asset: swap_order.from_asset.clone(),

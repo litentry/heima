@@ -16,7 +16,9 @@
 
 use std::str::FromStr;
 
+use alloy::network::Ethereum;
 use alloy::network::EthereumWallet;
+use alloy::network::NetworkWallet;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
 use alloy::providers::Provider;
@@ -57,6 +59,7 @@ pub trait RpcProvider: Send + Sync {
 	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()>;
 	async fn get_gas_price(&self) -> Result<u128, ()>;
 	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, ()>;
+	async fn get_wallet_address(&self) -> Result<Address, ()>;
 }
 
 pub struct AlloyRpcProvider {
@@ -157,6 +160,14 @@ impl RpcProvider for AlloyRpcProvider {
 
 		Ok(result.to_vec())
 	}
+
+	async fn get_wallet_address(&self) -> Result<Address, ()> {
+		if let Some(ref wallet) = self.wallet {
+			Ok(<EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(&wallet))
+		} else {
+			Err(())
+		}
+	}
 }
 
 #[async_trait]
@@ -203,6 +214,7 @@ pub mod mocks {
 			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;
 			async fn get_gas_price(&self) -> Result<u128, ()>;
 			async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, ()>;
+			async fn get_wallet_address(&self) -> Result<Address, ()>;
 		}
 
 

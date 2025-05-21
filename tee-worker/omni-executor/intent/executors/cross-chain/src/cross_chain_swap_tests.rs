@@ -573,7 +573,7 @@ async fn instant_payout_cross_chain_swap() {
 		accounting_contract_client::mocks::MockAccountingContractClient::new();
 
 	accounting_contract_client_mock
-		.expect_get_address()
+		.expect_get_signer_address()
 		.times(1)
 		.returning(|| Address::from_str(accounting_contract_client_address).unwrap());
 
