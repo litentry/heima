@@ -642,6 +642,8 @@ async fn instant_payout_cross_chain_swap() {
 		.unwrap();
 
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
+	// give a background task a chance to remove locks
+	tokio::task::yield_now().await;
 	assert_eq!(
 		account_assets_lock.get_locked_amount(
 			&account_id,

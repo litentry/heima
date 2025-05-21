@@ -155,7 +155,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 }
 
 #[async_trait]
-impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
+impl<BinanceClient: BinanceApi + 'static, SolanaClient: SolanaClientTrait + 'static> IntentExecutor
 	for CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
 	async fn execute(
@@ -253,21 +253,35 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
 
 				// depost here and unlock assets
 				if let Some(details) = instant_flow_details {
-					self.do_binance_deposit(
-						details.omni_account,
-						details.from_asset,
-						details.from_amount,
-						details.from_address,
-						details.wallet_index,
-						false,
-					)
-					.await?;
-
-					self.account_asset_lock.release(
-						account_id.clone(),
-						swap_order.from_asset.clone(),
-						details.locked_amount,
-					)?;
+					let binance_api = self.binance_api.clone();
+					let pumpx_signer = self.pumpx_signer_client.clone();
+					let solana_client = self.solana_client.clone();
+					let account_asset_lock = self.account_asset_lock.clone();
+					let from_asset = swap_order.from_asset.clone();
+					let account_id = account_id.clone();
+					tokio::spawn(async move {
+						if let Err(e) = Self::do_binance_deposit(
+							details.omni_account,
+							details.from_asset,
+							details.from_amount,
+							details.from_address,
+							details.wallet_index,
+							false,
+							binance_api,
+							pumpx_signer,
+							solana_client,
+						)
+						.await
+						{
+							error!("Could not deposit to binance: {:?}", e);
+						} else if let Err(e) = account_asset_lock.release(
+							account_id,
+							from_asset,
+							details.locked_amount,
+						) {
+							error!("Could not release asset lock: {:?}", e);
+						}
+					});
 				}
 
 				Ok((Some(res), should_notify_parentchain))
@@ -297,18 +311,18 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	CrossChainIntentExecutor<BinanceClient, SolanaClient>
 {
 	async fn do_binance_deposit(
-		&self,
 		omni_account: [u8; 32],
 		from_asset: ChainAsset,
 		from_amount: Decimal,
 		from_address: String,
 		wallet_index: u32,
 		should_wait_for_deposit_confirm: bool,
+		binance_api: Arc<BinanceClient>,
+		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+		solana_client: Arc<SolanaClient>,
 	) -> Result<(), ()> {
-		let coins_info = WalletApi::new(self.binance_api.as_ref())
-			.get_all_coins_info()
-			.await
-			.map_err(|e| {
+		let coins_info =
+			WalletApi::new(binance_api.as_ref()).get_all_coins_info().await.map_err(|e| {
 				error!("Failed to get all coins info, {:?}", e);
 			})?;
 
@@ -355,7 +369,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			return Err(());
 		};
 
-		let deposit_address = WalletApi::new(self.binance_api.as_ref())
+		let deposit_address = WalletApi::new(binance_api.as_ref())
 			.get_deposit_address(&binance_coin_name, &binance_network_info.network)
 			.await
 			.map_err(|_| {
@@ -372,7 +386,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 
 		let remote_signer: Box<dyn solana_sdk::signer::Signer + Send + Sync> =
 			Box::new(RemoteSigner::new(
-				self.pumpx_signer_client.clone(),
+				pumpx_signer_client.clone(),
 				wallet_index,
 				omni_account,
 				Handle::current(),
@@ -383,8 +397,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		if binance_coin_name == "SOL" {
 			// Native transfer
 			debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
-			let signature = self
-				.solana_client
+			let signature = solana_client
 				.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
 				.await
 				.map_err(|_| {
@@ -397,8 +410,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				amount_to_transfer, token_address, deposit_address
 			);
 			// SPL transfer
-			let signature = self
-				.solana_client
+			let signature = solana_client
 				.transfer_spl(&deposit_address, amount_to_transfer, &token_address, &remote_signer)
 				.await
 				.map_err(|_| {
@@ -416,7 +428,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			let timeout = Duration::from_secs(300); // 5 minute timeout
 
 			while !deposit_confirmed && start_time.elapsed() < timeout {
-				let Ok(deposit_history) = WalletApi::new(self.binance_api.as_ref())
+				let Ok(deposit_history) = WalletApi::new(binance_api.as_ref())
 					.get_deposit_history(Some(binance_coin_name.clone()), tx_id.clone())
 					.await
 				else {
@@ -433,9 +445,9 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 						return Err(());
 					}
 					if deposit.status == 1 && // 1 = success
-							   deposit.coin == binance_coin_name &&
-							   deposit.network == binance_network_info.network &&
-                               deposit.source_address == Some(from_address.clone())
+						   deposit.coin == binance_coin_name &&
+						   deposit.network == binance_network_info.network &&
+						   deposit.source_address == Some(from_address.clone())
 					{
 						deposit_confirmed = true;
 						debug!(
@@ -460,6 +472,29 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		}
 
 		Ok(())
+	}
+
+	async fn binance_deposit(
+		&self,
+		omni_account: [u8; 32],
+		from_asset: ChainAsset,
+		from_amount: Decimal,
+		from_address: String,
+		wallet_index: u32,
+		should_wait_for_deposit_confirm: bool,
+	) -> Result<(), ()> {
+		Self::do_binance_deposit(
+			omni_account,
+			from_asset,
+			from_amount,
+			from_address,
+			wallet_index,
+			should_wait_for_deposit_confirm,
+			self.binance_api.clone(),
+			self.pumpx_signer_client.clone(),
+			self.solana_client.clone(),
+		)
+		.await
 	}
 
 	fn calculate_amount_decimal(

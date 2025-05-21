@@ -141,7 +141,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			// TODO: move `should_wait_for_deposit_confirm` to provider config
 			let should_wait_for_deposit_confirm = false;
 
-			self.do_binance_deposit(
+			self.binance_deposit(
 				omni_account,
 				swap_order.from_asset.clone(),
 				from_amount_decimal,
