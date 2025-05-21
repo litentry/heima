@@ -1,9 +1,7 @@
 use super::*;
-use alloy::consensus::transaction::RlpEcdsaEncodableTx;
 use alloy::primitives::ChainId;
 use executor_primitives::PumpxConfig;
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
-use sp_core::keccak_256;
 use tracing::{debug, error};
 
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
