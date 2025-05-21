@@ -1,9 +1,7 @@
 use super::*;
-use alloy::consensus::transaction::RlpEcdsaEncodableTx;
 use alloy::primitives::ChainId;
 use executor_primitives::PumpxConfig;
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
-use sp_core::keccak_256;
 use tracing::{debug, error};
 
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
@@ -263,10 +261,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 					.map_err(|_| error!("Failed to decode legacy tx"))?;
 
 				unsigned_tx.chain_id = Some(ChainId::from(chain_id));
-				let mut rlp_encoded_tx = vec![];
-				unsigned_tx.rlp_encode(&mut rlp_encoded_tx);
-
-				Ok(keccak_256(&rlp_encoded_tx).to_vec())
+				Ok(unsigned_tx.signature_hash().to_vec())
 			})
 			.collect::<Result<Vec<Vec<u8>>, ()>>()?;
 
