@@ -30,7 +30,12 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 impl<T: NativeTaskTrait + Debug> NativeTaskWrapper<T> {
 	pub fn new(task: T, nonce: Option<Nonce>, auth: Option<OmniAuth>) -> Self {
 		let id: String = Uuid::new_v4().into();
-		info!("Assigning id: {} to task: {:?}", id, task);
+		info!(
+			"Assigning id: {} to omni_account: {:?}, task: {:?}",
+			id,
+			task.sender().to_omni_account(),
+			task
+		);
 		Self { id, task, nonce, auth }
 	}
 }
