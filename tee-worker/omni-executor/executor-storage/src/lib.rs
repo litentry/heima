@@ -27,6 +27,7 @@ pub use intent_id::IntentIdStorage;
 use tracing::error;
 
 const STORAGE_DB_PATH: &str = "storage_db";
+const STORAGE_VERSION_KEY: &[u8] = b"__storage_version__";
 
 pub type StorageDB = DB;
 
@@ -80,6 +81,25 @@ pub fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
 		.chain(blake2_128(key).iter().chain(key.iter())) // blake2_128_concat
 		.cloned()
 		.collect()
+}
+
+pub fn get_storage_version(db: &StorageDB) -> u32 {
+	match db.get(STORAGE_VERSION_KEY) {
+		Ok(Some(v)) => u32::decode(&mut &v[..]).unwrap_or(0),
+		Ok(None) => 0,
+		Err(e) => {
+			error!("Error getting storage version: {:?}", e);
+			0
+		},
+	}
+}
+
+pub fn set_storage_version(db: &StorageDB, version: u32) -> Result<(), ()> {
+	let mut opts = WriteOptions::default();
+	opts.set_sync(true);
+	db.put_opt(STORAGE_VERSION_KEY, version.encode(), &opts).map_err(|e| {
+		error!("Error setting storage version: {:?}", e);
+	})
 }
 
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
@@ -206,4 +226,34 @@ fn extract_account_id_from_storage_key<K: Decode>(raw_storage_key: &[u8]) -> Res
 	K::decode(&mut raw_key).map_err(|e| {
 		error!("Error decoding account id: {:?}", e);
 	})
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::fs;
+	use std::path::Path;
+
+	#[test]
+	fn test_storage_version_helpers() {
+		let db_path = "test_storage_db";
+		if Path::new(db_path).exists() {
+			fs::remove_dir_all(db_path).unwrap();
+		}
+		let db = StorageDB::open_default(db_path).unwrap();
+
+		// Initially, version should be 0
+		assert_eq!(get_storage_version(&db), 0);
+
+		// Set version to 1
+		set_storage_version(&db, 1).unwrap();
+		assert_eq!(get_storage_version(&db), 1);
+
+		// Set version to 42
+		set_storage_version(&db, 42).unwrap();
+		assert_eq!(get_storage_version(&db), 42);
+
+		fs::remove_dir_all(db_path).unwrap();
+	}
+
 }
