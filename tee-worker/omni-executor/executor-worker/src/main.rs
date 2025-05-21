@@ -90,11 +90,11 @@ async fn main() -> Result<(), ()> {
 		Commands::Run(args) => {
 			// Log the full command with all arguments
 			info!("Executing: omni-executor run --parentchain_url {} --ethereum_url {} --solana_url {} --pumpx_signer_url {} --worker_url {} --bsc_url {} {} --start_block {} --local_directory_path {} --delegation_contract_address {} --accounting_contract_address {} {} --metrics_port {}", 
-				args.parentchain_url, 
-				args.ethereum_url, 
-				args.solana_url, 
-				args.pumpx_signer_url, 
-				args.worker_url, 
+				args.parentchain_url,
+				args.ethereum_url,
+				args.solana_url,
+				args.pumpx_signer_url,
+				args.worker_url,
 				args.bsc_url,
 				args.bsc_testnet_url.as_ref().map_or("".to_string(), |url| format!("--bsc-testnet-url {}", url)),
 				args.start_block,
