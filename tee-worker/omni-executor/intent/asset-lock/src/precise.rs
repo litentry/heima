@@ -21,7 +21,7 @@ use crate::{AmountType, AssetsLock};
 // Manages asset locks per account. Used for precise tracking of currently locked assets.
 #[derive(Encode, Decode)]
 pub struct PreciseAssetsLock {
-	amount: AmountType, // locked_assets: HashMap<AssetId, u64>,
+	amount: AmountType,
 }
 
 impl AssetsLock for PreciseAssetsLock {
