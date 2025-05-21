@@ -350,8 +350,9 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			// Note: this is being done in the Go code as well, so although we technically have
 			// only one signature we are still filling all the required placeholder
 			// with the same signature
-			for i in 0_usize..num_required_signatures {
-				tx.signatures[i] = signature;
+			tx.signatures = Vec::with_capacity(num_required_signatures);
+			for _ in 0_usize..num_required_signatures {
+				tx.signatures.push(signature);
 			}
 			tx.verify().map_err(|e| {
 				error!("Solana transaction verification failed: {:?}", e);
