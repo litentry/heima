@@ -7,6 +7,7 @@ export default {
       },
     },
     NativeTaskWrapper: {
+      id: "String",
       task: "NativeTask",
       nonce: "Option<Nonce>",
       auth: "Option<OmniAuth>",
