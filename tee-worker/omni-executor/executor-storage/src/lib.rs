@@ -83,7 +83,7 @@ pub fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
 		.collect()
 }
 
-pub fn get_storage_version(db: &StorageDB) -> u32 {
+fn get_storage_version(db: &StorageDB) -> u32 {
 	match db.get(STORAGE_VERSION_KEY) {
 		Ok(Some(v)) => u32::decode(&mut &v[..]).unwrap_or(0),
 		Ok(None) => 0,
@@ -94,7 +94,8 @@ pub fn get_storage_version(db: &StorageDB) -> u32 {
 	}
 }
 
-pub fn set_storage_version(db: &StorageDB, version: u32) -> Result<(), ()> {
+#[allow(dead_code)] // TODO: remove this when adding the first migration
+fn set_storage_version(db: &StorageDB, version: u32) -> Result<(), ()> {
 	let mut opts = WriteOptions::default();
 	opts.set_sync(true);
 	db.put_opt(STORAGE_VERSION_KEY, version.encode(), &opts).map_err(|e| {
