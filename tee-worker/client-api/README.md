@@ -34,6 +34,7 @@ Generate types:`pnpm generate`
 ## Usage
 
 ```
+pnpm run load:metadata
 pnpm run generate
 pnpm run build
 ```
