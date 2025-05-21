@@ -5,9 +5,9 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 ruint = { workspace = true, features = ["parity-scale-codec"] }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }

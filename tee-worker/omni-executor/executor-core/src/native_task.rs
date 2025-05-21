@@ -2,7 +2,10 @@ use executor_primitives::{
 	Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
+use std::fmt::Debug;
 use std::vec::Vec;
+use tracing::info;
+use uuid::Uuid;
 
 pub trait NativeTaskTrait: Codec {
 	fn sender(&self) -> &Identity;
@@ -18,9 +21,18 @@ pub trait NativeTaskTrait: Codec {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct NativeTaskWrapper<T: NativeTaskTrait> {
+	pub id: String,
 	pub task: T,
 	pub nonce: Option<Nonce>,
 	pub auth: Option<OmniAuth>,
+}
+
+impl<T: NativeTaskTrait + Debug> NativeTaskWrapper<T> {
+	pub fn new(task: T, nonce: Option<Nonce>, auth: Option<OmniAuth>) -> Self {
+		let id: String = Uuid::new_v4().into();
+		info!("Assigning id: {} to task: {:?}", id, task);
+		Self { id, task, nonce, auth }
+	}
 }
 
 pub type GoogleCode = String;

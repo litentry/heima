@@ -73,6 +73,7 @@ export async function createNativeTaskWrapper(
     api: ApiPromise,
     task: NativeTask,
     signer: Signer,
+    taskId: String,
     nonce: Codec,
     mrenclave: string,
     withWrappedBytes = false,
@@ -105,6 +106,7 @@ export async function createNativeTaskWrapper(
     let a = api.createType('Option<OmniAuth>', auth);
 
     return api.createType('NativeTaskWrapper', {
+        id: taskId,
         task: task,
         nonce: n,
         auth: a,

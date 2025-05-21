@@ -1,5 +1,6 @@
 use reqwest::Error;
 use serde::Serialize;
+use tracing::error;
 
 use crate::pumpx_api::PumpxApiClient;
 
@@ -29,12 +30,12 @@ pub async fn cross_fail_impl(
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("Cross order failed with status: {}, error: {:?}", status, e);
+		error!("Cross order failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse cross order failed response: {:?}", e);
+		error!("Failed to parse cross order failed response: {:?}", e);
 		e
 	})
 }

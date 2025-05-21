@@ -9,11 +9,11 @@ use executor_crypto::{
 	sr25519, ByteArray, PairTrait,
 };
 use heima_primitives::{Address20, Address32, Address33, Identity};
-use log::error;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use tracing::log::error;
 
 #[derive(
 	Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, Serialize, Deserialize,

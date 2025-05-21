@@ -27,8 +27,8 @@ pub use pumpx_api::*;
 use base58::ToBase58;
 use ethers::core::utils::to_checksum;
 use executor_primitives::ChainAsset;
-use log::error;
 use sp_core::keccak_256;
+use tracing::log::error;
 
 use crate::signer_client::ChainType;
 
@@ -70,7 +70,7 @@ pub fn pubkey_to_address(chain_type: ChainType, pubkey: &[u8]) -> Result<String,
 		ChainType::Evm => pubkey_to_evm_address(pubkey),
 		ChainType::Solana => pubkey_to_solana_address(pubkey),
 		_ => {
-			log::error!("Unsupported {:?} wallet address", chain_type);
+			error!("Unsupported {:?} wallet address", chain_type);
 			Err(())
 		},
 	}

@@ -20,12 +20,12 @@ use alloy::rpc::types::TransactionRequest;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use ethereum_rpc::RpcProvider;
-use log::error;
 use solana::SolanaClient;
 use solana_account_decoder_client_types::UiAccountData;
 use solana_client::rpc_request::TokenAccountsFilter;
 use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
+use tracing::log::error;
 
 use executor_primitives::{EthereumToken, SolanaToken};
 

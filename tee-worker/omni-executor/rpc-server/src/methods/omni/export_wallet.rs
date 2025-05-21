@@ -11,6 +11,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use rsa::Oaep;
 use sha2::Sha256;
+use tracing::{debug, error};
 
 use super::common::handle_omni_native_task;
 
@@ -27,17 +28,17 @@ pub struct ExportWalletParams {
 
 impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: ExportWalletParams) -> Self {
-		Self {
-			task: NativeTask::PumpxExportWallet(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxExportWallet(
 				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Pumpx),
 				p.google_code,
 				p.chain_id,
 				p.wallet_index,
 				p.wallet_address,
 			),
-			nonce: None,
-			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
-		}
+			None,
+			Some(OmniAuth::Email(p.user_email, p.email_code)),
+		)
 	}
 }
 
@@ -45,25 +46,25 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_exportWallet", |params, ctx, _| async move {
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received omni_exportWallet, user_email: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_email, params.chain_id, params.wallet_index, params.wallet_address);
+			debug!("Received omni_exportWallet, user_email: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_email, params.chain_id, params.wallet_index, params.wallet_address);
 
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|e| {
-					log::error!("Failed to decrypt shielded value: {:?}", e);
+					error!("Failed to decrypt shielded value: {:?}", e);
 					PumpxRpcError::from_code_and_message(
 						DECRYPT_REQUEST_FAILED_CODE,
 						"Shielded value decryption failed".into(),
 					)
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				log::error!("Failed to convert AesKey");
+				error!("Failed to convert AesKey");
 				PumpxRpcError::from_code_and_message(
 					AES_KEY_CONVERT_FAILED_CODE,
 					"AesKey convert failed".into(),
@@ -85,7 +86,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 					Ok(encrypted_wallet)
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

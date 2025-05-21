@@ -17,6 +17,7 @@
 use metrics::{describe_gauge, gauge};
 use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 use tokio::{runtime::Handle, task::JoinHandle};
+use tracing::error;
 
 pub type WalletName = String;
 pub type WalletAddress = String;
@@ -81,14 +82,13 @@ impl WalletMetrics {
 			if let Some(fetcher) = self.balance_fetchers.get(&metric.wallet_id.network_type) {
 				match fetcher.fetch(&metric.wallet_id.address).await {
 					Ok(balance) => metric.update(balance),
-					Err(e) => log::error!(
+					Err(e) => error!(
 						"Error while fetching balance for: {:?}, reason: {:?}",
-						metric.wallet_id,
-						e
+						metric.wallet_id, e
 					),
 				};
 			} else {
-				log::error!("There is not fetcher for {:?}", metric.wallet_id);
+				error!("There is not fetcher for {:?}", metric.wallet_id);
 			}
 		}
 	}

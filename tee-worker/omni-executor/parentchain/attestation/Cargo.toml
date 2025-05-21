@@ -6,10 +6,10 @@ edition.workspace = true
 
 [dependencies]
 hex = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 subxt-core = { workspace = true }
 subxt-signer = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }
@@ -18,7 +18,7 @@ parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 
 [dev-dependencies]
-env_logger = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

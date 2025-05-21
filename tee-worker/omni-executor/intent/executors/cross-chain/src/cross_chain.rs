@@ -7,8 +7,8 @@ use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
 use intent_token_query::EthereumAddress;
 use intent_token_query::SolanaPubkey;
-use log::{debug, error, info};
 use std::ops::Deref;
+use tracing::{debug, error, info};
 
 impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 	CrossChainIntentExecutor<BinanceClient, SolanaClient>
@@ -372,11 +372,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		if let Ok(commission_rates) =
 			spot_trading_api.get_commission_rates(&binance_order_params.symbol).await
 		{
-			log::info!(
-				"Commission rates for {}: {:?}",
-				binance_order_params.symbol,
-				commission_rates
-			);
+			info!("Commission rates for {}: {:?}", binance_order_params.symbol, commission_rates);
 		}
 
 		let Ok(binance_order) = SpotTradingApi::new(self.binance_api.as_ref())
@@ -491,12 +487,12 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				let rpc_url = self
 					.rpc_endpoint_registry
 					.get(&Chain::Ethereum(*chain_id))
-					.ok_or(log::error!("No RPC endpoint in registry for Ethereum chain"))?;
+					.ok_or(error!("No RPC endpoint in registry for Ethereum chain"))?;
 				query_ethereum(rpc_url, EthereumAddress::from_slice(&address), token).await
 			},
 			ChainAsset::Solana(token) => {
 				let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
-					log::error!("Could not create solana pubkey from wallet address: {:?}", e)
+					error!("Could not create solana pubkey from wallet address: {:?}", e)
 				})?;
 				query_solana(self.solana_client.deref(), &pubkey, token)
 					.await
@@ -509,7 +505,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		debug!("Getting {:?} nonce for payout request", payout_address);
 		let user_nonce =
 			self.accounting_contract_client.get_nonce(*payout_address).await.map_err(|_| {
-				log::error!("Failed to get nonce");
+				error!("Failed to get nonce");
 			})?;
 
 		debug!("Received {:?} nonce", user_nonce);
@@ -523,7 +519,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.execute_pay_out_request(*payout_address, user_nonce, *payout_amount)
 			.await
 			.map_err(|_| {
-				log::error!("Failed to execute pay out request");
+				error!("Failed to execute pay out request");
 			})
 	}
 
@@ -539,21 +535,18 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			.get_gas_info(access_token, pumpx_config.to_chain_id)
 			.await
 			.map_err(|_| {
-				log::error!("Failed to get gas info");
+				error!("Failed to get gas info");
 			})?;
 		debug!("Response get_gas_info: {:?}", res);
 
 		let Some(gas_info_vec) = res.data.gas_info else {
-			log::error!("Response data.gas_info of call get gas info is none");
+			error!("Response data.gas_info of call get gas info is none");
 			return Err(());
 		};
 		let Some(gas_info) =
 			gas_info_vec.iter().find(|g| g.chain_id == pumpx_config.to_chain_id.to_string())
 		else {
-			log::error!(
-				"Could not find matching gas_info with chain_id {}",
-				pumpx_config.to_chain_id
-			);
+			error!("Could not find matching gas_info with chain_id {}", pumpx_config.to_chain_id);
 			return Err(());
 		};
 
@@ -562,7 +555,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			2 => &gas_info.fast,
 			3 => &gas_info.super_fast,
 			_ => {
-				log::error!("Unsupported gas type: {}", pumpx_config.gas_type);
+				error!("Unsupported gas type: {}", pumpx_config.gas_type);
 				return Err(());
 			},
 		};
@@ -582,21 +575,21 @@ async fn estimate_bnb_amount<BinanceClient: BinanceApi>(
 		.get_symbol_price(trade_symbol)
 		.await
 		.map_err(|_| {
-			log::error!("Failed to get symbol price for {}", trade_symbol);
+			error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 
 	let price = if binance_coin_name == "SOL" {
 		// For SOL, we sell SOL to get BNB, so get SOLBNB price
 		Decimal::from_str(&price_str).map_err(|_| {
-			log::error!("Failed to parse symbol price {}", price_str);
+			error!("Failed to parse symbol price {}", price_str);
 		})?
 	} else {
 		// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
 		let price = Decimal::from_str(&price_str).map_err(|_| {
-			log::error!("Failed to parse symbol price {}", price_str);
+			error!("Failed to parse symbol price {}", price_str);
 		})?;
 		if price.is_zero() {
-			log::error!("Symbol price is zero for {}", trade_symbol);
+			error!("Symbol price is zero for {}", trade_symbol);
 			return Err(());
 		}
 		Decimal::ONE / price
@@ -623,21 +616,21 @@ async fn estimate_asset_value_in_usdt<BinanceClient: BinanceApi>(
 		.get_symbol_price(trade_symbol)
 		.await
 		.map_err(|_| {
-			log::error!("Failed to get symbol price for {}", trade_symbol);
+			error!("Failed to get symbol price for {}", trade_symbol);
 		})?;
 
 	let price = if binance_coin_name == "SOL" {
 		// For SOL, we sell SOL to get BNB, so get SOLBNB price
 		Decimal::from_str(&price_str).map_err(|_| {
-			log::error!("Failed to parse symbol price {}", price_str);
+			error!("Failed to parse symbol price {}", price_str);
 		})?
 	} else {
 		// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
 		let price = Decimal::from_str(&price_str).map_err(|_| {
-			log::error!("Failed to parse symbol price {}", price_str);
+			error!("Failed to parse symbol price {}", price_str);
 		})?;
 		if price.is_zero() {
-			log::error!("Symbol price is zero for {}", trade_symbol);
+			error!("Symbol price is zero for {}", trade_symbol);
 			return Err(());
 		}
 		Decimal::ONE / price

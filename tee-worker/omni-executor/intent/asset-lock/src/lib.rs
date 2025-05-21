@@ -18,12 +18,12 @@ use executor_primitives::AccountId;
 use executor_storage::{AssetLockStorage, Key};
 use executor_storage::{Storage, StorageDB};
 use heima_primitives::ChainAsset;
-use log::error;
 use parity_scale_codec::Decode;
 use parity_scale_codec::Encode;
 use ruint::Uint;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use tracing::error;
 
 pub type AssetId = ChainAsset;
 pub type AmountType = Uint<256, 4>;
