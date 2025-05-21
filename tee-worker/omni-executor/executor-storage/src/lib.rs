@@ -26,7 +26,7 @@ mod intent_id;
 pub use intent_id::IntentIdStorage;
 mod asset_lock;
 pub use asset_lock::AssetLockStorage;
-pub use asset_lock::Key;
+pub use asset_lock::Key as AssetLockStorageKey;
 use tracing::error;
 
 const STORAGE_DB_PATH: &str = "storage_db";

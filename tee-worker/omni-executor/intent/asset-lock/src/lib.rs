@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use executor_primitives::AccountId;
-use executor_storage::{AssetLockStorage, Key};
+use executor_storage::{AssetLockStorage, AssetLockStorageKey};
 use executor_storage::{Storage, StorageDB};
 use heima_primitives::ChainAsset;
 use parity_scale_codec::Decode;
@@ -52,7 +52,8 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		amount_to_lock: AmountType,
 		available_amount: AmountType,
 	) -> Result<(), ()> {
-		let key = Key { account_id: account_id.clone(), asset_id: asset_id.clone() };
+		let key =
+			AssetLockStorageKey { account_id: account_id.clone(), asset_id: asset_id.clone() };
 		if let Some(account_lock) = self
 			.storage
 			.get(&key)
@@ -80,7 +81,8 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		asset_id: AssetId,
 		amount_to_release: AmountType,
 	) -> Result<(), ()> {
-		let key = Key { account_id: account_id.clone(), asset_id: asset_id.clone() };
+		let key =
+			AssetLockStorageKey { account_id: account_id.clone(), asset_id: asset_id.clone() };
 		if let Some(account_lock) = self
 			.storage
 			.get(&key)
@@ -105,7 +107,8 @@ impl<AL: AssetsLock> AccountAssetLocks<AL> {
 		account_id: &AccountId,
 		asset_id: AssetId,
 	) -> Result<AmountType, ()> {
-		let key = Key { account_id: account_id.clone(), asset_id: asset_id.clone() };
+		let key =
+			AssetLockStorageKey { account_id: account_id.clone(), asset_id: asset_id.clone() };
 		if let Some(account_lock) = self
 			.storage
 			.get(&key)

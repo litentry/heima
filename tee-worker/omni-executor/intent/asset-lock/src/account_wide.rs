@@ -68,7 +68,7 @@ pub mod tests {
 
 	use super::AccountWideAssetsLock;
 	use crate::AccountAssetLocks;
-	use executor_storage::Key;
+	use executor_storage::AssetLockStorageKey;
 	use executor_storage::Storage;
 	use executor_storage::StorageDB;
 	use heima_primitives::AccountId;
@@ -120,7 +120,7 @@ pub mod tests {
 
 		assert!(account_assets_locks
 			.storage
-			.get(&Key { account_id: account_id.clone(), asset_id })
+			.get(&AssetLockStorageKey { account_id: account_id.clone(), asset_id })
 			.unwrap()
 			.is_none());
 	}
