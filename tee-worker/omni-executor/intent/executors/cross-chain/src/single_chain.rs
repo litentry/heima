@@ -351,8 +351,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			// only one signature we are still filling all the required placeholder
 			// with the same signature
 			tx.signatures = Vec::with_capacity(num_required_signatures);
-			for i in 0_usize..num_required_signatures {
-				tx.signatures[i] = signature;
+			for _ in 0_usize..num_required_signatures {
+				tx.signatures.push(signature);
 			}
 			tx.verify().map_err(|e| {
 				error!("Solana transaction verification failed: {:?}", e);
