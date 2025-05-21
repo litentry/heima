@@ -3,7 +3,7 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
+use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
@@ -26,13 +26,11 @@ pub struct RPCAddWalletResponse {
 
 impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: AddWalletParams) -> Self {
+		let sender = Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email);
 		NativeTaskWrapper::new(
-			NativeTask::PumpxAddWallet(Identity::from_web2_account(
-				p.user_email.as_str(),
-				Web2IdentityType::Email,
-			)),
+			NativeTask::PumpxAddWallet(sender.clone()),
 			None,
-			Some(OmniAuth::AuthToken(p.auth_token)),
+			Some(OmniAuth::AuthToken(sender.to_omni_account().to_hex(), p.auth_token)),
 		)
 	}
 }
@@ -49,10 +47,19 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
+			if wrapper.task.require_auth() {
+				let Some(ref auth) = wrapper.auth else {
+					error!("Missing auth token");
+					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						REQUIRE_AUTHENTICATION_CODE,
+					)));
+				};
+				verify_auth(ctx.clone(), auth).await.map_err(|_| {
+					error!("Failed to verify auth: {:?}", wrapper.auth);
+					PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						AUTH_VERIFICATION_FAILED_CODE,
+					))
+				})?;
 			}
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {

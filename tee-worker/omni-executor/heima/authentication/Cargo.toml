@@ -15,8 +15,8 @@ executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 
 [dev-dependencies]
-rand = { workspace = true }
 chrono = { workspace = true }
+rand = { workspace = true }
 
 [lints]
 workspace = true

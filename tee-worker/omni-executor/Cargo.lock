@@ -3702,6 +3702,7 @@ dependencies = [
 name = "executor-primitives"
 version = "0.1.0"
 dependencies = [
+ "base58",
  "base64 0.22.1",
  "bitcoin",
  "core-primitives",
@@ -3710,6 +3711,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "serde_json",
  "sp-core 35.0.0",
  "tracing",
 ]

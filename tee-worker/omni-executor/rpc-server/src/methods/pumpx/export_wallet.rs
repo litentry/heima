@@ -101,10 +101,19 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
+           	if wrapper.task.require_auth() {
+				let Some(ref auth) = wrapper.auth else {
+					error!("Missing auth token");
+					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						REQUIRE_AUTHENTICATION_CODE,
+					)));
+				};
+				verify_auth(ctx.clone(), auth).await.map_err(|_| {
+					error!("Failed to verify auth: {:?}", wrapper.auth);
+					PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						AUTH_VERIFICATION_FAILED_CODE,
+					))
+				})?;
 			}
 
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
