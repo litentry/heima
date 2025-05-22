@@ -49,7 +49,7 @@ pub fn register_submit_native_task(module: &mut RpcModule<RpcContext>) {
 
 type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>), ErrorObject<'a>>;
 
-async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult {
+async fn parse(params: Params<'static>, ctx: Arc<RpcContext>) -> ParseResult<'static> {
 	let Ok(hex_request) = params.one::<String>() else {
 		error!("Failed to parse params: {:?}", params);
 		return Err(ErrorCode::ParseError.into());

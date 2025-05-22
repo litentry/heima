@@ -246,8 +246,7 @@ pub mod tests {
 		let sponsor = prepare_sponsor_signer();
 		let delegation_contract_address =
 			Address::from_hex("0xc07cb79754cf3b252038e2713a138363d55df9e0").unwrap();
-		let paymode =
-			Paymode::Delegated(delegation_contract_address.clone(), prepare_sponsor_signer());
+		let paymode = Paymode::Delegated(delegation_contract_address, prepare_sponsor_signer());
 
 		let mut sponsor_rpc_provider = MockRpcProvider::new();
 
@@ -260,9 +259,10 @@ pub mod tests {
 			.expect_send_transaction()
 			.times(1)
 			.with(predicate::function(move |t: &TransactionRequest| {
-				matches!(t.authorization_list, Some(ref authorization_list) if authorization_list.len() == 1 
-				&& authorization_list.get(0).unwrap().nonce == 10 && authorization_list.get(0).unwrap().address == delegation_contract_address)
-			} ))
+				matches!(t.authorization_list, Some(ref authorization_list) if authorization_list.len() == 1
+					&& authorization_list.first().unwrap().nonce == 10
+					&& authorization_list.first().unwrap().address == delegation_contract_address)
+			}))
 			.returning(|_| Ok(()));
 
 		let mut providers = HashMap::new();
