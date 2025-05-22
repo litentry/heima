@@ -20,7 +20,7 @@ import {
     Getter,
     ApiPromise as ParachainApiPromise,
     WorkerRpcReturnValue,
-    LitentryValidationData,
+    HeimaValidationData,
     Assertion,
     CorePrimitivesIdentity,
     TrustedCallSigned,
@@ -85,10 +85,10 @@ export async function buildValidation(
     identity: CorePrimitivesIdentity,
     startingSidechainNonce: number,
     signer: Wallet
-): Promise<LitentryValidationData> {
+): Promise<HeimaValidationData> {
     const message = generateVerificationMessage(parachainApi, signerIdentity, identity, startingSidechainNonce);
 
-    return parachainApi.createType('LitentryValidationData', {
+    return parachainApi.createType('HeimaValidationData', {
         Web3Validation:
             signer.type === 'substrate'
                 ? {
@@ -237,7 +237,7 @@ export const createSignedTrustedGetter = (
         [variant]: parachainApi.createType(argType, params),
     });
     const payload = getter.toU8a();
-    const signature = parachainApi.createType('LitentryMultiSignature', {
+    const signature = parachainApi.createType('HeimaMultiSignature', {
         [signer.type]: signer.sign(payload),
     });
     return parachainApi.createType('TrustedGetterSigned', {
@@ -253,7 +253,7 @@ export function createSignedTrustedGetterUserShieldingKey(
 ) {
     const getterSigned = createSignedTrustedGetter(
         parachainApi,
-        ['user_shielding_key', '(LitentryIdentity)'],
+        ['user_shielding_key', '(HeimaIdentity)'],
         signer,
         subject.toHuman()
     );
@@ -331,7 +331,7 @@ export const getSidechainNonce = async (
     subject: CorePrimitivesIdentity,
     log: WritableStream<string>
 ): Promise<Index> => {
-    const getterPublic = createPublicGetter(parachainApi, ['nonce', '(LitentryIdentity)'], subject.toHuman());
+    const getterPublic = createPublicGetter(parachainApi, ['nonce', '(HeimaIdentity)'], subject.toHuman());
     const getter = parachainApi.createType('Getter', { public: getterPublic });
     const nonce = await sendRequestFromGetter(teeWorker, parachainApi, mrenclave, teeShieldingKey, getter, log);
     const nonceValue = decodeNonce(nonce.value.toHex());
@@ -393,10 +393,10 @@ const createSignedTrustedCall = async (
     }
     const signature =
         signer.type === 'substrate'
-            ? parachainApi.createType('LitentryMultiSignature', {
+            ? parachainApi.createType('HeimaMultiSignature', {
                   [signer.keyringPair.type]: u8aToHex(signer.keyringPair.sign(payload)),
               })
-            : parachainApi.createType('LitentryMultiSignature', {
+            : parachainApi.createType('HeimaMultiSignature', {
                   ['ethereum']: await signer.wallet.signMessage(payload),
               });
     return parachainApi.createType('TrustedCallSigned', {
@@ -489,7 +489,7 @@ export function createSignedTrustedCallSetUserShieldingKey(
 ) {
     return createSignedTrustedCall(
         parachainApi,
-        ['set_user_shielding_key', '(LitentryIdentity, LitentryIdentity, RequestAesKey, H256)'],
+        ['set_user_shielding_key', '(HeimaIdentity, HeimaIdentity, RequestAesKey, H256)'],
         signer,
         mrenclave,
         nonce,
@@ -514,7 +514,7 @@ export function createSignedTrustedCallLinkIdentity(
         parachainApi,
         [
             'link_identity',
-            '(LitentryIdentity, LitentryIdentity, LitentryIdentity, LitentryValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)',
+            '(HeimaIdentity, HeimaIdentity, HeimaIdentity, HeimaValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)',
         ],
         signer,
         mrenclave,
@@ -534,7 +534,7 @@ export function createSignedTrustedCallDeactivateIdentity(
 ) {
     return createSignedTrustedCall(
         parachainApi,
-        ['deactivate_identity', '(LitentryIdentity, LitentryIdentity, LitentryIdentity, H256)'],
+        ['deactivate_identity', '(HeimaIdentity, HeimaIdentity, HeimaIdentity, H256)'],
         signer,
         mrenclave,
         nonce,
@@ -553,7 +553,7 @@ export function createSignedTrustedCallActivateIdentity(
 ) {
     return createSignedTrustedCall(
         parachainApi,
-        ['activate_identity', '(LitentryIdentity, LitentryIdentity, LitentryIdentity, H256)'],
+        ['activate_identity', '(HeimaIdentity, HeimaIdentity, HeimaIdentity, H256)'],
         signer,
         mrenclave,
         nonce,
@@ -573,7 +573,7 @@ export function createSignedTrustedCallRequestVc(
 ) {
     return createSignedTrustedCall(
         parachainApi,
-        ['request_vc', '(LitentryIdentity,LitentryIdentity,Assertion,Option<RequestAesKey>,H256)'],
+        ['request_vc', '(HeimaIdentity,HeimaIdentity,Assertion,Option<RequestAesKey>,H256)'],
         signer,
         mrenclave,
         nonce,

@@ -4,8 +4,11 @@ use executor_primitives::PumpxConfig;
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
 use tracing::{debug, error};
 
-impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
-	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+impl<
+		BinanceClient: BinanceApi,
+		EthereumClient: EthereumClientTrait,
+		SolanaClient: SolanaClientTrait,
+	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
 	pub async fn execute_single_chain_swap(
 		&self,

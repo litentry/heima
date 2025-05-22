@@ -17,37 +17,46 @@
 #![allow(unused_assignments)]
 #![allow(clippy::too_many_arguments)]
 
+mod types;
+
 use alloy::consensus::{SignableTransaction, TxLegacy};
+use alloy::network::TxSigner as AlloyTxSigner;
 use alloy::primitives::{Address, Signature, U256};
 use async_trait::async_trait;
-use base58::ToBase58;
 use binance_api::spot_trading_api::types::{
 	CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
 	OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
+};
+use ethereum_rpc::{
+	client::EthereumClient as EthereumClientTrait, signer::RemoteSigner as RemoteEvmSigner,
 };
 use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
-use executor_primitives::SolanaToken;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
-use solana::{signer::RemoteSigner, SolanaClient as SolanaClientTrait};
+use solana::{signer::RemoteSigner as RemoteSolanaSigner, SolanaClient as SolanaClientTrait};
+use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use tokio::{
 	runtime::Handle,
 	time::{sleep, Duration},
 };
+pub use types::*;
 // use intent_asset_lock::AmountType;
 // use intent_token_query::query_ethereum;
 // use intent_token_query::query_solana;
 // use intent_token_query::EthereumAddress;
 // use intent_token_query::SolanaPubkey;
-use accounting_contract_client::AccountingContractApi;
+use accounting_contract_client::{
+	solana::AccountingContractApi as SolanaAccountingContractApi,
+	AccountingContractApi as EvmAccountingContractApi,
+};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use binance_api::spot_trading_api::SpotTradingApi;
 use binance_api::wallet_api::WalletApi;
@@ -61,7 +70,6 @@ use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_signer::TxSigner;
 use parity_scale_codec::Encode;
-use pumpx::constants::*;
 use pumpx::methods::common::{GasType, SwapType};
 use pumpx::methods::create_cross_order::CreateCrossOrderBody;
 use pumpx::methods::create_cross_order::CrossOrderInfo;
@@ -70,10 +78,9 @@ use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTx
 use pumpx::methods::cross_fail::CrossFailBody;
 use pumpx::methods::send_order_tx::SendOrderTxBody;
 use pumpx::pubkey_to_address;
-use pumpx::signer_client::ChainType;
-use pumpx::signer_client::SignerClient;
+use pumpx::signer_client::PumpxChainId;
 use pumpx::PumpxApi;
-use std::collections::HashMap;
+use signer_client::{ChainType, SignerClient};
 use std::sync::Arc;
 
 use tracing::{debug, error};
@@ -89,14 +96,6 @@ mod single_chain_swap_tests;
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
 
-#[derive(PartialEq, Hash, Eq)]
-pub enum Chain {
-	Ethereum(u32),
-	Solana,
-}
-
-pub type RpcEndpointRegistry = HashMap<Chain, String>;
-
 pub type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
@@ -105,24 +104,29 @@ pub type ParentchainTxSigner = TxSigner<
 	SubxtMetadataProvider<CustomConfig>,
 >;
 
-// TODO: temporary solution
-const SOLANA_USDC_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-const SOLANA_USDT_MINT_ADDRESS: &str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
-
 // TODO: should we rename this to something like MultiChainIntentExecutor?
-pub struct CrossChainIntentExecutor<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> {
+pub struct CrossChainIntentExecutor<
+	BinanceClient: BinanceApi,
+	EthereumClient: EthereumClientTrait,
+	SolanaClient: SolanaClientTrait,
+> {
 	// account_asset_lock: AccountAssetLocks<AlwaysUnlockedAssetsLock>,
 	// rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceClient>,
+	bsc_client: Arc<EthereumClient>,
 	solana_client: Arc<SolanaClient>,
-	accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
+	evm_accounting_contract_client: Arc<Box<dyn EvmAccountingContractApi>>,
+	solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>>,
 }
 
-impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
-	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+impl<
+		BinanceClient: BinanceApi,
+		EthereumClient: EthereumClientTrait,
+		SolanaClient: SolanaClientTrait,
+	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -131,8 +135,10 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceClient>,
+		bsc_client: Arc<EthereumClient>,
 		solana_client: Arc<SolanaClient>,
-		accounting_contract_client: Arc<Box<dyn AccountingContractApi>>,
+		evm_accounting_contract_client: Arc<Box<dyn EvmAccountingContractApi>>,
+		solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>>,
 	) -> Result<Self, ()> {
 		// there is no need for account/assets locks if we guarantee the dest-chain payout happens after the source chain finalisation
 		// let account_asset_lock = AccountAssetLocks::<AlwaysUnlockedAssetsLock>::empty();
@@ -143,15 +149,20 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			pumpx_api,
 			storage_db,
 			binance_api,
+			bsc_client,
 			solana_client,
-			accounting_contract_client,
+			evm_accounting_contract_client,
+			solana_accounting_contract_client,
 		})
 	}
 }
 
 #[async_trait]
-impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait> IntentExecutor
-	for CrossChainIntentExecutor<BinanceClient, SolanaClient>
+impl<
+		BinanceClient: BinanceApi,
+		EthereumClient: EthereumClientTrait,
+		SolanaClient: SolanaClientTrait,
+	> IntentExecutor for CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
 	async fn execute(
 		&self,

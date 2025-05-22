@@ -39,6 +39,36 @@ export async function sendRawTaskPlain(
     return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
 }
 
+type GetMessageCodeResponse = {
+    message_code: string;
+};
+
+export async function getMessageCode(
+    context: IntegrationTestContext,
+    omniAccount: string
+): Promise<GetMessageCodeResponse> {
+    const request = createJsonRpcRequest('omni_getMessageCode', { omni_account: omniAccount }, nextRequestId(context));
+
+    const response = new Promise<GetMessageCodeResponse>((resolve, reject) =>
+        context.teeWsClient.onMessage.addListener((data) => {
+            const parsed = JSON.parse(data);
+            if (parsed.id !== request.id) {
+                return;
+            }
+            if ('error' in parsed) {
+                const transaction = { request, response: parsed };
+                console.log('Request failed: ' + JSON.stringify(transaction, null, 2));
+                reject(new Error(parsed.error.message, { cause: transaction }));
+            }
+            const response = parsed.result;
+            context.teeWsClient.onMessage.removeAllListeners();
+            resolve(response);
+        })
+    );
+    context.teeWsClient.sendRequest(request);
+    return response;
+}
+
 async function sendRequest(
     wsClient: WebSocketAsPromised,
     request: JsonRpcRequest,

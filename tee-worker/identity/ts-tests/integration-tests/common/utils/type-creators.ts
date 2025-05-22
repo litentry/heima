@@ -1,12 +1,12 @@
 import { u8aToHex, hexToU8a, stringToU8a } from '@polkadot/util';
 import type { ApiPromise } from '@polkadot/api';
-import type { LitentryMultiSignature } from '@heima-network/api-argument/identity';
+import type { HeimaMultiSignature } from '@heima-network/api-argument/identity';
 import type { Signer } from './crypto';
 
-export async function createLitentryMultiSignature(
+export async function createHeimaMultiSignature(
     api: ApiPromise,
     args: { signer: Signer; payload: Uint8Array | string }
-): Promise<LitentryMultiSignature> {
+): Promise<HeimaMultiSignature> {
     const { signer, payload } = args;
     const signerType = signer.type();
 
@@ -15,7 +15,7 @@ export async function createLitentryMultiSignature(
     if (payload instanceof Uint8Array) {
         const signature = await signer.sign(signerType === 'bitcoin' ? u8aToHex(payload).substring(2) : payload);
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType('HeimaMultiSignature', {
             [signerType]: signature,
         });
     }
@@ -25,7 +25,7 @@ export async function createLitentryMultiSignature(
     if (payload.startsWith('0x')) {
         const signature = await signer.sign(signerType === 'bitcoin' ? payload.substring(2) : hexToU8a(payload));
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType('HeimaMultiSignature', {
             [signerType]: signature,
         });
     }
@@ -34,7 +34,7 @@ export async function createLitentryMultiSignature(
     // For Bitcoin, pass it as it is, for other types, convert it to raw bytes
     const signature = await signer.sign(signerType === 'bitcoin' ? payload : stringToU8a(payload));
 
-    return api.createType('LitentryMultiSignature', {
+    return api.createType('HeimaMultiSignature', {
         [signerType]: signature,
     });
 }

@@ -44,12 +44,22 @@ pub use constants::*;
 pub use litentry_proc_macros::*;
 pub use opaque::*;
 pub use sp_runtime::BoundedVec;
+pub use traits::*;
 pub use types::*;
 
 pub type ParameterString = BoundedVec<u8, ConstU32<64>>;
 
+mod traits {
+    use crate::types;
+
+    pub trait Hashable {
+        fn hash(&self) -> types::Hash;
+    }
+}
+
 /// Common types of parachains.
 mod types {
+    use parity_scale_codec::Encode;
     use sp_core::H256;
     use sp_runtime::{
         traits::{IdentifyAccount, Verify},
@@ -62,6 +72,12 @@ mod types {
     /// Some way of identifying an account on the chain. We intentionally make it equivalent
     /// to the public key of our transaction signing scheme.
     pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+
+    impl crate::traits::Hashable for AccountId {
+        fn hash(&self) -> Hash {
+            self.using_encoded(sp_core::hashing::blake2_256).into()
+        }
+    }
 
     /// Signed version of Balance
     pub type Amount = i128;
