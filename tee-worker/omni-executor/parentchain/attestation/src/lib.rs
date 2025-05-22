@@ -48,7 +48,7 @@ pub async fn perform_attestation(
 
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
-		info!("Attestation dcap_quote {:?}", dcap_quote);
+		debug!("Attestation dcap_quote {:?}", dcap_quote);
 
 		mrenclave = dcap_quote.body.mr_enclave;
 		info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
