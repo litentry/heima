@@ -46,6 +46,7 @@ bitcoin = "0.32.5"
 bs58 = "0.5"
 chrono = "0.4.40"
 clap = "4.5.17"
+env_logger = "0.11.5"
 ethers = "2.0"
 frame-metadata = { version = "23.0.0", features = ["decode"], default-features = false }
 frame-support = { version = "39.0.0", features = ["std"] }
@@ -56,6 +57,7 @@ hmac = "0.12.1"
 jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 libsecp256k1 = "0.7.1"
+log = "0.4.22"
 metrics = "0.24.1"
 metrics-exporter-prometheus = "0.16.2"
 mockall = "0.13.1"
