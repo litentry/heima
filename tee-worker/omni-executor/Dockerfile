@@ -2,8 +2,8 @@
 
 ### Builder Stage - Without Gramine
 ##################################################
-# rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
-FROM rust:1.82-bookworm AS plain-builder
+# rust:1.83 is a Debian GNU/Linux 12 (bookworm) image
+FROM rust:1.83-bookworm AS plain-builder
 
 RUN apt-get update && apt-get install -y clang
 

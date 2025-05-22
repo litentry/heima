@@ -33,10 +33,9 @@ use parentchain_rpc_client::{
 use parentchain_signer::TxSigner;
 use parity_scale_codec::{Decode, Encode};
 use pumpx::{
-	methods::create_transfer_tx::CreateTransferTxBody,
-	signer_client::{ChainType, SignerClient},
-	PumpxApi,
+	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
 };
+use signer_client::{ChainType, SignerClient};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot, Semaphore};
 use tracing::{debug, error, info, span, Instrument, Level};

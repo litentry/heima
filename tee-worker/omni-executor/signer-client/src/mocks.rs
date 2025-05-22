@@ -1,5 +1,5 @@
-use crate::signer_client::ChainType;
-use crate::signer_client::SignerClient as SignerClientTrait;
+use crate::ChainType;
+use crate::SignerClient as SignerClientTrait;
 use async_trait::async_trait;
 use mockall::mock;
 

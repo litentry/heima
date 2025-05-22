@@ -5,7 +5,7 @@ import { createIntegrationTestContext, IntegrationTestContext } from './utils/co
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
 import { createNativeTask, createNativeTaskWrapper, createOmniAccountPermission } from './utils/type_creators';
-import { sendRawTaskPlain } from './utils/requests';
+import { getMessageCode, sendRawTaskPlain } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -29,6 +29,8 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
+        let msgCode = await getMessageCode(context, omniAccount);
+        console.log('msgCode:', msgCode);
         const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'HeimaIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
@@ -36,8 +38,9 @@ describe('OmniAccount', function () {
             aliceWallet,
             "00000",            
             context.api.createType('Index', currentNonce),
-            context.mrEnclave
+            msgCode.message_code
         );
+        console.log('nativeTaskWrapper:', nativeTaskWrapper.toHuman());
         await sendRawTaskPlain(context, nativeTaskWrapper);
 
         accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
@@ -80,13 +83,14 @@ describe('OmniAccount', function () {
                 [createOmniAccountPermission(context.api, 'All')],
             ]
         );
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
             aliceWallet,
             "00001",
             context.api.createType('Index', currentNonce),
-            context.mrEnclave
+            msgCode.message_code
         );
         await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
@@ -112,13 +116,14 @@ describe('OmniAccount', function () {
             ['PublicizeAccount', '(HeimaIdentity, HeimaIdentity)'],
             [aliceIdentity, bobIdentity]
         );
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
             aliceWallet,
             "00002",
             context.api.createType('Index', currentNonce),
-            context.mrEnclave
+            msgCode.message_code
         );
         await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
@@ -163,13 +168,14 @@ describe('OmniAccount', function () {
             ['SetPermissions', '(HeimaIdentity, HeimaIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
             aliceWallet,
             "00003",            
             context.api.createType('Index', currentNonce),
-            context.mrEnclave
+            msgCode.message_code
         );
         await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
@@ -202,13 +208,14 @@ describe('OmniAccount', function () {
             ['RemoveAccounts', '(HeimaIdentity, Vec<HeimaIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
             aliceWallet,
             "000004",            
             context.api.createType('Index', currentNonce),
-            context.mrEnclave
+            msgCode.message_code
         );
         await sendRawTaskPlain(context, nativeTaskWrapper);
         currentNonce++;
@@ -239,13 +246,14 @@ describe('OmniAccount', function () {
             ['RequestIntent', '(HeimaIdentity, u32, Intent)'],
             [aliceIdentity, intentId, intent]
         );
+        const msgCode = await getMessageCode(context, omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
             aliceWallet,
             "00005",
             context.api.createType('Index', currentNonce),
-            context.mrEnclave
+            msgCode.message_code
         );
         const response = await sendRawTaskPlain(context, nativeTaskWrapper);
         console.log('response:', response.toHuman());

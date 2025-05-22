@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use base_signer_client::{ChainType, SignerClient};
 use executor_crypto::ecdsa;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::core::params::ArrayParams;
@@ -99,56 +100,18 @@ struct AesOutput {
 	pub nonce: Aes256KeyNonce,
 }
 
-#[derive(Debug, Copy, Serialize, Deserialize, Clone, PartialEq)]
-pub enum ChainType {
-	Evm,
-	Solana,
-	Tron,
+pub trait PumpxChainId {
+	fn from_pumpx_chain_id(id: u32) -> Option<ChainType>;
 }
 
-impl ChainType {
-	pub fn from_pumpx_chain_id(id: u32) -> Option<Self> {
+impl PumpxChainId for ChainType {
+	fn from_pumpx_chain_id(id: u32) -> Option<ChainType> {
 		match id {
 			SOLANA_CHAIN_ID => Some(Self::Solana),
 			ETHEREUM_CHAIN_ID | BSC_CHAIN_ID | BASE_CHAIN_ID => Some(Self::Evm),
 			_ => None,
 		}
 	}
-}
-
-#[async_trait]
-pub trait SignerClient: Send + Sync {
-	async fn request_wallet(
-		&self,
-		chain_type: ChainType,
-		index: u32,
-		omni_account: [u8; 32],
-	) -> Result<Vec<u8>, ()>;
-
-	async fn request_signature(
-		&self,
-		chain_type: ChainType,
-		index: u32,
-		omni_account: [u8; 32],
-		message_to_sign: Vec<u8>,
-	) -> Result<Vec<u8>, ()>;
-
-	async fn request_signatures(
-		&self,
-		chain_type: ChainType,
-		index: u32,
-		omni_account: [u8; 32],
-		messages_to_sign: Vec<Vec<u8>>,
-	) -> Result<Vec<Vec<u8>>, ()>;
-
-	async fn export_wallet(
-		&self,
-		chain_type: ChainType,
-		index: u32,
-		omni_account: [u8; 32],
-		aes_key: Vec<u8>,
-		wallet_address: String,
-	) -> Result<executor_crypto::aes256::AesOutput, ()>;
 }
 
 pub struct PumpxSignerClient {

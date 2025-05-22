@@ -22,6 +22,9 @@ use request_email_verification_code::*;
 mod submit_native_task;
 use submit_native_task::*;
 
+mod get_message_code;
+use get_message_code::*;
+
 mod add_wallet;
 use add_wallet::*;
 
@@ -53,6 +56,7 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_submit_native_task(module);
 	register_request_email_verification_code(module);
 	register_get_oauth2_google_authorization_url(module);
+	register_get_message_code(module);
 
 	register_request_jwt(module);
 	register_export_wallet(module);
