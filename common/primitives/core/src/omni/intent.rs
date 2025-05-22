@@ -1,4 +1,5 @@
 use crate::{AccountId, Address20, Address32, Address33, Balance, BoundedVec, ChainAsset};
+use alloc::string::String;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::Deserialize;
