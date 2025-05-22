@@ -8,7 +8,7 @@
 //
 // Litentry is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR a PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -66,7 +66,8 @@ use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
-use tracing::log::{error, info};
+use tracing::info;
+use tracing::log::error;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
 
@@ -86,22 +87,28 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			// Log the full command with all arguments
-			info!("Executing: omni-executor run --parentchain_url {} --ethereum_url {} --solana_url {} --pumpx_signer_url {} --worker_url {} --bsc_url {} {} --start_block {} --local_directory_path {} --delegation_contract_address {} --accounting_contract_address {} {} --metrics_port {}", 
+			// Log the full command with all arguments, including parameter names
+			let binary_name = std::env::args().next().expect("Failed to get binary name");
+
+			let args_with_names = format!(
+				"run --parentchain_url {} --ethereum_url {} --solana_url {} --pumpx_signer_url {} --worker_url {} --bsc_url {} {} --start_block {} --local_directory_path {} --delegation_contract_address {} --accounting_contract_address {} --solana_accounting_contract_address {} {} --metrics_port {}",
 				args.parentchain_url,
 				args.ethereum_url,
 				args.solana_url,
 				args.pumpx_signer_url,
 				args.worker_url,
 				args.bsc_url,
-				args.bsc_testnet_url.as_ref().map_or("".to_string(), |url| format!("--bsc-testnet-url {}", url)),
+				args.bsc_testnet_url.as_ref().map_or("".to_string(), |url| format!("--bsc_testnet_url {}", url)),
 				args.start_block,
 				args.local_directory_path,
 				args.delegation_contract_address,
 				args.accounting_contract_address,
+				args.solana_accounting_contract_address,
 				if args.parentchain_sync { "--parentchain_sync" } else { "" },
 				args.metrics_port
 			);
+
+			info!("Executing: {} {}", binary_name, args_with_names);
 
 			let builder = PrometheusBuilder::new();
 

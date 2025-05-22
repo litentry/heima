@@ -11,7 +11,7 @@ use parentchain_signer::TxSigner;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
-use tracing::error;
+use tracing::{debug, error};
 
 type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
