@@ -322,7 +322,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	let single_chain_swap_provider =
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(from_chain_id, to_chain_id));
 
-	let intent = Intent::Swap(order, None, single_chain_swap_provider);
+	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
 	let executor = CrossChainIntentExecutor::new(
 		rpc_endpoint_registry,
@@ -493,7 +493,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 			mockall::predicate::eq("test_token"),
 			mockall::predicate::eq(SendOrderTxBody {
 				chain_id: to_chain_id,
-				order_id: order_id,
+				order_id,
 				tx_data: vec!["0x01af865d0f942a8b8ed4309407c839ffedf902a0cd532ba94624100e31d0eec93c4fff60499f1e4784161b0464f104caafe660b3346a4101803582ca090d5e690e010001031faf636aea762c1a1fdc1e067cdae804c8990d13ab425fb7d6f49751ef0eacd50000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000102020001080000000000000000".to_string()]
 			}),
 		)
@@ -605,7 +605,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	let single_chain_swap_provider =
 		SingleChainSwapProvider::Pumpx(prepare_pumpx_config(from_chain_id, to_chain_id));
 
-	let intent = Intent::Swap(order, None, single_chain_swap_provider);
+	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
 	let executor = CrossChainIntentExecutor::new(
 		rpc_endpoint_registry,
@@ -681,10 +681,10 @@ fn prepare_pumpx_config(from_chain_id: u32, to_chain_id: u32) -> PumpxConfig {
 		order_type: PumpxOrderType::Market,
 		swap_type: 1,
 		from_chain_id,
-		from_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		from_token_ca: String::from_utf8([0u8; 128].to_vec()).unwrap(),
 		to_chain_id,
-		to_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
-		from_amount: BoundedVec::truncate_from("100".as_bytes().to_vec()),
+		to_token_ca: String::from_utf8([0u8; 128].to_vec()).unwrap(),
+		from_amount: "100".to_string(),
 		double_out: false,
 		is_one_click: false,
 		is_anti_mev: false,
@@ -694,7 +694,7 @@ fn prepare_pumpx_config(from_chain_id: u32, to_chain_id: u32) -> PumpxConfig {
 		wallet_index: 1,
 		token_cap: None,
 		price_usd: None,
-		usd_worth: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		usd_worth: String::from_utf8([0u8; 128].to_vec()).unwrap(),
 		trailing_percent: None,
 	}
 }

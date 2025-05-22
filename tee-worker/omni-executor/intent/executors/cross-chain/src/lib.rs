@@ -221,13 +221,9 @@ impl<
 				//
 
 				// TODO: update this when we have more providers
-				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
+				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp.to_owned().try_into()?;
 
-				let mut amount = std::str::from_utf8(&pumpx_config.from_amount)
-					.map_err(|_| {
-						error!("Failed to parse from_amount");
-					})
-					.map(|v| v.to_string())?;
+				let mut amount = pumpx_config.from_amount.clone();
 
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
 				let Ok(Some(access_token)) =
@@ -247,7 +243,7 @@ impl<
 							intent_id,
 							&access_token,
 							swap_order,
-							pumpx_config,
+							&pumpx_config,
 						)
 						.await
 					{
@@ -273,7 +269,7 @@ impl<
 						intent_id,
 						&access_token,
 						amount,
-						pumpx_config,
+						&pumpx_config,
 					)
 					.await?;
 
