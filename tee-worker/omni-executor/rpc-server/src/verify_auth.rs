@@ -1,26 +1,28 @@
-use crate::{server::RpcContext, Encode};
-use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
+use crate::server::RpcContext;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature,
-	utils::hex::{hex_encode, ToHexPrefixed},
-	Identity, MrEnclave, OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature, Hashable, Identity, OAuth2Data, OAuth2Provider, OmniAuth,
+	VerificationCode, Web2IdentityType,
 };
-use executor_storage::{OAuth2StateVerifierStorage, Storage, VerificationCodeStorage};
-use heima_authentication::auth_token::{AuthTokenValidator, Error as AuthTokenError, Validation};
+use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
+use heima_authentication::{
+	auth_token::{
+		AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation,
+		AUTH_TOKEN_ID_TYPE,
+	},
+	web3::HeimaMessagePayload,
+};
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
 use std::{fmt::Display, sync::Arc};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AuthenticationError {
 	Web3InvalidSignature,
-	EmailVerificationCodeNotFound,
-	EmailInvalidVerificationCode,
+	VerificationCodeNotFound,
+	InvalidVerificationCode,
 	OAuth2Error(String),
 	AuthTokenError(AuthTokenError),
-	InvalidNonce,
-	AuthNotExist,
 }
 
 impl Display for AuthenticationError {
@@ -29,10 +31,10 @@ impl Display for AuthenticationError {
 			AuthenticationError::Web3InvalidSignature => {
 				write!(f, "Invalid Web3 signature")
 			},
-			AuthenticationError::EmailVerificationCodeNotFound => {
-				write!(f, "Email verification code not found")
+			AuthenticationError::VerificationCodeNotFound => {
+				write!(f, "Verification code not found")
 			},
-			AuthenticationError::EmailInvalidVerificationCode => {
+			AuthenticationError::InvalidVerificationCode => {
 				write!(f, "Invalid email verification code")
 			},
 			AuthenticationError::OAuth2Error(msg) => {
@@ -41,62 +43,51 @@ impl Display for AuthenticationError {
 			AuthenticationError::AuthTokenError(err) => {
 				write!(f, "Auth token error: {:?}", err)
 			},
-			AuthenticationError::InvalidNonce => {
-				write!(f, "Invalid nonce")
-			},
-			AuthenticationError::AuthNotExist => {
-				write!(f, "Auth not exist")
-			},
 		}
 	}
 }
 
-pub async fn verify_auth(
-	ctx: Arc<RpcContext>,
-	wrapper: &NativeTaskWrapper<NativeTask>,
-) -> Result<(), AuthenticationError> {
-	match wrapper.auth {
-		None => Err(AuthenticationError::AuthNotExist),
-		Some(OmniAuth::Web3(ref signature)) => {
-			verify_web3_authentication(signature, &wrapper.task, wrapper.nonce, ctx.mrenclave)
+pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), AuthenticationError> {
+	match auth {
+		OmniAuth::Web3(ref signer, ref signature) => {
+			verify_web3_authentication(ctx.storage_db.clone(), signer, signature)
 		},
-		Some(OmniAuth::Email(ref email, ref verification_code)) => {
+		OmniAuth::Email(ref email, ref verification_code) => {
 			verify_email_authentication(ctx, email, verification_code)
 		},
-		Some(OmniAuth::OAuth2(ref oauth2_data)) => {
-			verify_oauth2_authentication(ctx, wrapper.task.sender(), oauth2_data).await
+		OmniAuth::OAuth2(ref sender, ref oauth2_data) => {
+			verify_oauth2_authentication(ctx, sender, oauth2_data).await
 		},
-		Some(OmniAuth::AuthToken(ref auth_token)) => {
-			verify_auth_token_authentication(ctx, wrapper.task.sender(), auth_token)
-		},
+		OmniAuth::AuthToken(omni_account, ref auth_token) => verify_auth_token_authentication(
+			ctx,
+			omni_account.to_string(),
+			auth_token,
+			AUTH_TOKEN_ID_TYPE,
+			false,
+		)
+		.map(|_| ()),
 	}
 }
 
-pub fn verify_web3_authentication<T: NativeTaskTrait>(
+pub fn verify_web3_authentication(
+	storage_db: Arc<StorageDB>,
+	signer: &Identity,
 	signature: &HeimaMultiSignature,
-	task: &T,
-	nonce: Option<u32>,
-	mrenclave: MrEnclave,
 ) -> Result<(), AuthenticationError> {
-	let nonce = nonce.ok_or(AuthenticationError::InvalidNonce)?;
-
-	let mut payload = task.encode();
-	payload.append(&mut nonce.encode());
-	payload.append(&mut mrenclave.encode());
-
-	// The signature should be valid in either case:
-	// 1. blake2_256(payload)
-	// 2. Signature Prefix + blake2_256(payload)
-
-	let hashed = blake2_256(&payload);
-
-	let prettified_msg_hash = task.signature_message_prefix() + &hex_encode(&hashed);
-	let prettified_msg_hash = prettified_msg_hash.as_bytes();
+	let storage_key = signer.to_omni_account().hash();
+	let verification_code_storage = VerificationCodeStorage::new(storage_db);
+	let Ok(Some(message_code)) = verification_code_storage.get(&storage_key) else {
+		return Err(AuthenticationError::VerificationCodeNotFound);
+	};
+	verification_code_storage
+		.remove(&storage_key)
+		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
+	let message = HeimaMessagePayload { message_code };
+	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
+	let hashed = blake2_256(payload.as_bytes());
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(prettified_msg_hash, task.sender())
-		|| signature.verify(&hashed, task.sender())
-	{
+	match signature.verify(&hashed, signer) {
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
@@ -110,10 +101,10 @@ pub fn verify_email_authentication(
 	let storage_key = Identity::from_web2_account(email, Web2IdentityType::Email).hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
-		return Err(AuthenticationError::EmailVerificationCodeNotFound);
+		return Err(AuthenticationError::VerificationCodeNotFound);
 	};
 	if code != *verification_code {
-		return Err(AuthenticationError::EmailInvalidVerificationCode);
+		return Err(AuthenticationError::InvalidVerificationCode);
 	}
 	let _ = verification_code_storage.remove(&storage_key);
 
@@ -122,11 +113,12 @@ pub fn verify_email_authentication(
 
 pub fn verify_auth_token_authentication(
 	ctx: Arc<RpcContext>,
-	sender: &Identity,
+	omni_account: String,
 	auth_token: &str,
-) -> Result<(), AuthenticationError> {
-	// TODO: once we start using the AccountStore, we should get the omni account from storage
-	let validation = Validation::new(sender.to_omni_account().to_hex());
+	token_typ: &str,
+	skip_exp_check: bool,
+) -> Result<AuthTokenClaims, AuthenticationError> {
+	let validation = Validation::new(omni_account, token_typ.to_string(), skip_exp_check);
 	auth_token
 		.validate(&ctx.jwt_rsa_private_key, validation)
 		.map_err(AuthenticationError::AuthTokenError)
@@ -168,5 +160,43 @@ async fn verify_google_oauth2(
 	match sender.hash() == google_identity.hash() {
 		true => Ok(()),
 		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use executor_crypto::{hashing::blake2_256, sr25519::Pair, PairTrait};
+	use executor_primitives::{Hashable, Identity};
+	use heima_identity_verification::helpers::generate_otp;
+	use tempfile::tempdir;
+
+	#[test]
+	fn test_verify_web3_authentication() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let alice = Pair::from_string("//Alice", None).unwrap();
+		let public_key: [u8; 32] = alice.public().into();
+		let alice_identity = Identity::from(public_key);
+		let alice_omni_account = alice_identity.to_omni_account();
+
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&alice_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload { message_code };
+		let payload = serde_json::to_string(&message).expect("serialize");
+		let hashed = blake2_256(payload.as_bytes());
+
+		let signature = alice.sign(&hashed);
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		let result = verify_web3_authentication(storage_db, &alice_identity, &multi_signature);
+		assert!(result.is_ok());
 	}
 }

@@ -6,17 +6,18 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-log = { workspace = true }
 mockall = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
 pumpx = { workspace = true }
+signer-client = { workspace = true }
 
 [lints]
 workspace = true

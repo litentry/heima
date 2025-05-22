@@ -9,4 +9,3 @@ import "./interfaces/registry.js";
 import "./interfaces/augment-api.js";
 
 export * from "./interfaces";
-

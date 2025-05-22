@@ -16,7 +16,9 @@
 
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
-use accounting_contract_client::AccountingContractApi;
+use accounting_contract_client::{
+	solana::AccountingContractApi as SolanaAccountingContractApi, AccountingContractApi,
+};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
@@ -37,8 +39,8 @@ use pumpx::methods::common::OrderInfoResponse;
 use pumpx::methods::common::OrderInfoResponseData;
 use pumpx::methods::common::SwapType;
 use pumpx::methods::create_limit_order::CreateLimitOrderBody;
-use pumpx::signer_client::{ChainType, SignerClient};
 use pumpx::PumpxApi;
+use signer_client::{ChainType, SignerClient};
 use std::sync::Arc;
 use tempfile::tempdir;
 
@@ -81,7 +83,7 @@ async fn simple_single_chain_swap() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider);
 
-	let mut pumpx_signer_client_mock = pumpx::signer_client_mocks::MockSignerClient::new();
+	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
@@ -135,9 +137,13 @@ async fn simple_single_chain_swap() {
 	let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(pumpx_api_mock));
 	let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 	let binance_api = Arc::new(binance_api::mocks::MockBinanceApiClient::new());
+	let bsc_client = Arc::new(ethereum_rpc::client::mocks::MockEthereumRpcClient::new());
 	let solana_client = Arc::new(solana::mocks::MockSolanaRpcClient::new());
 	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
 		Arc::new(Box::new(accounting_contract_client::mocks::MockAccountingContractClient::new()));
+	let solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>> = Arc::new(
+		Box::new(accounting_contract_client::solana::mocks::MockAccountingContractClient::new()),
+	);
 
 	let executor = CrossChainIntentExecutor::new(
 		rpc_endpoint_registry,
@@ -145,8 +151,10 @@ async fn simple_single_chain_swap() {
 		pumpx_api,
 		storage_db.clone(),
 		binance_api,
+		bsc_client,
 		solana_client,
 		accounting_contract_client,
+		solana_accounting_contract_client,
 	)
 	.unwrap();
 

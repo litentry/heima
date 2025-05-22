@@ -7,11 +7,11 @@ edition.workspace = true
 [dependencies]
 chrono = { workspace = true }
 hex = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 subxt = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
@@ -24,6 +24,7 @@ parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
+signer-client = { workspace = true }
 
 [lints]
 workspace = true

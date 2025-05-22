@@ -14,6 +14,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use rsa::Oaep;
 use sha2::Sha256;
+use tracing::{debug, error};
 
 use super::common::handle_pumpx_native_task;
 
@@ -31,17 +32,17 @@ pub struct ExportWalletParams {
 
 impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 	fn from(p: ExportWalletParams) -> Self {
-		Self {
-			task: NativeTask::PumpxExportWallet(
+		NativeTaskWrapper::new(
+			NativeTask::PumpxExportWallet(
 				Identity::from_web2_account(p.user_id.as_str(), Web2IdentityType::Pumpx),
 				p.google_code,
 				p.chain_id,
 				p.wallet_index,
 				p.wallet_address,
 			),
-			nonce: None,
-			auth: Some(OmniAuth::Email(p.user_email, p.email_code)),
-		}
+			None,
+			Some(OmniAuth::Email(p.user_email, p.email_code)),
+		)
 	}
 }
 
@@ -49,25 +50,25 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("pumpx_exportWallet", |params, ctx, _| async move {
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
-				log::error!("Failed to parse params: {:?}", e);
+				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			log::debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
+			debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
 
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|e| {
-					log::error!("Failed to decrypt shielded value: {:?}", e);
+					error!("Failed to decrypt shielded value: {:?}", e);
 					PumpxRpcError::from_code_and_message(
 						DECRYPT_REQUEST_FAILED_CODE,
 						"Shielded value decryption failed".into(),
 					)
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				log::error!("Failed to convert AesKey");
+				error!("Failed to convert AesKey");
 				PumpxRpcError::from_code_and_message(
 					AES_KEY_CONVERT_FAILED_CODE,
 					"AesKey convert failed".into(),
@@ -75,19 +76,19 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 			})?;
 
 			// verify user_id and user_email matches
-			log::debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
+			debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
 			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
-				log::error!("Failed to call get_account_user_id");
+				error!("Failed to call get_account_user_id");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
 				)));
 			};
-			log::debug!("Response pumpx get_account_user_id: {:?}", res);
+			debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
 
 			if user_id != params.user_id {
-				log::error!(
+				error!(
 					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
 					params.user_id,
 					params.user_email,
@@ -100,10 +101,19 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 
 			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
 
-			if wrapper.task.require_auth() && verify_auth(ctx.clone(), &wrapper).await.is_err() {
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
+           	if wrapper.task.require_auth() {
+				let Some(ref auth) = wrapper.auth else {
+					error!("Missing auth token");
+					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						REQUIRE_AUTHENTICATION_CODE,
+					)));
+				};
+				verify_auth(ctx.clone(), auth).await.map_err(|_| {
+					error!("Failed to verify auth: {:?}", wrapper.auth);
+					PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						AUTH_VERIFICATION_FAILED_CODE,
+					))
+				})?;
 			}
 
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
@@ -113,7 +123,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 					Ok(encrypted_wallet)
 				},
 				_ => {
-					log::error!("Unexpected response type");
+					error!("Unexpected response type");
 					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
 				},
 			})

@@ -31,7 +31,7 @@ export default {
         Email: "IdentityString",
       },
     },
-    LitentryIdentity: "Identity",
+    HeimaIdentity: "Identity",
     Address32: "[u8;32]",
     Address20: "[u8;20]",
     Address33: "[u8;33]",
@@ -64,7 +64,7 @@ export default {
         Web3Validation: "Web3ValidationData",
       },
     },
-    LitentryValidationData: "ValidationData",
+    HeimaValidationData: "ValidationData",
     Web2ValidationData: {
       _enum: {
         Twitter: "TwitterValidationData",
@@ -115,7 +115,7 @@ export default {
     },
     Web3CommonValidationData: {
       message: "Vec<u8>",
-      signature: "LitentryMultiSignature",
+      signature: "HeimaMultiSignature",
     },
 
     MultiSignature: {
@@ -127,7 +127,7 @@ export default {
         Bitcoin: "BitcoinSignature",
       },
     },
-    LitentryMultiSignature: "MultiSignature",
+    HeimaMultiSignature: "MultiSignature",
     Ed25519Signature: "([u8; 64])",
     Sr25519Signature: "([u8; 64])",
     EcdsaSignature: "([u8; 65])",
@@ -136,8 +136,8 @@ export default {
 
     IdentityGenericEvent: {
       who: "AccountId",
-      identity: "LitentryIdentity",
-      id_graph: "Vec<(LitentryIdentity, IdentityContext)>",
+      identity: "HeimaIdentity",
+      id_graph: "Vec<(HeimaIdentity, IdentityContext)>",
     },
 
     IdentityStatus: {

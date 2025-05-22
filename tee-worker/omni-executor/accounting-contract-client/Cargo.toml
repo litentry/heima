@@ -4,11 +4,14 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
+accounting-contract = { workspace = true }
 alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
+anchor-client = { workspace = true }
 async-trait = { workspace = true }
 ethereum-rpc = { workspace = true }
-log = { workspace = true }
 mockall = { workspace = true }
+sp-core = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true

@@ -34,9 +34,11 @@ Generate types:`pnpm generate`
 ## Usage
 
 ```
+pnpm run load:metadata
 pnpm run generate
 pnpm run build
 ```
+
 - `import '@heima-network/api-augment/identity'` - applies Identity types and endpoint augmentation
 - `import '@heima-network/api-augment/omni'` - applies Omni types and endpoint augmentation
 - `import '@heima-network/api-augment/sidechain'` - applies Sidechain types and endpoint augmentation
