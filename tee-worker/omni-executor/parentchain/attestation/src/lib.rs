@@ -11,7 +11,7 @@ use parentchain_signer::TxSigner;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
-use tracing::{debug, error};
+use tracing::error;
 
 type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
@@ -40,7 +40,7 @@ pub async fn perform_attestation(
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;
-		use tracing::info;
+		use tracing::{debug, info};
 		let mut f = File::create("/dev/attestation/user_report_data").unwrap();
 		let content = signer.public_key().0;
 		f.write_all(&content).unwrap();
