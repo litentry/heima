@@ -1,13 +1,14 @@
 use super::*;
-use alloy::consensus::transaction::RlpEcdsaEncodableTx;
 use alloy::primitives::ChainId;
 use executor_primitives::PumpxConfig;
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
-use sp_core::keccak_256;
 use tracing::{debug, error};
 
-impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
-	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+impl<
+		BinanceClient: BinanceApi,
+		EthereumClient: EthereumClientTrait,
+		SolanaClient: SolanaClientTrait,
+	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
 	pub(crate) async fn execute_single_chain_swap(
 		&self,
@@ -48,40 +49,18 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		match pumpx_config.order_type {
 			PumpxOrderType::Market => {
 				debug!("Doing market order");
-
-				// evm market order => worker constructs, signs and sends it
-				// solana market order => pumpx (backend) constructs, signs and sends it => TODO
-				match to_chain_type {
-					ChainType::Evm => {
-						self.worker_do_market_order(
-							omni_account,
-							intent_id,
-							from_address,
-							amount,
-							token_ca,
-							to_address,
-							access_token,
-							pumpx_config,
-							to_chain_type,
-						)
-						.await
-					},
-					ChainType::Solana => {
-						self.pumpx_do_market_order(
-							intent_id,
-							amount,
-							token_ca,
-							to_address,
-							access_token,
-							pumpx_config,
-						)
-						.await
-					},
-					_ => {
-						error!("Unsupported chain_type");
-						Err(())
-					},
-				}
+				self.worker_do_market_order(
+					omni_account,
+					intent_id,
+					from_address,
+					amount,
+					token_ca,
+					to_address,
+					access_token,
+					pumpx_config,
+					to_chain_type,
+				)
+				.await
 			},
 			PumpxOrderType::Limit => {
 				debug!("Doing limit order");
@@ -121,7 +100,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		}
 	}
 
-	// call backend API in one step - it requires backend has signing access to signer, which will be gradually deprecated
+	// call backend API in one step
+	// currently unused, will be deleted once we remove the signer signing access for backend
 	#[allow(unused)]
 	async fn pumpx_do_market_order(
 		&self,
@@ -285,10 +265,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 					.map_err(|_| error!("Failed to decode legacy tx"))?;
 
 				unsigned_tx.chain_id = Some(ChainId::from(chain_id));
-				let mut rlp_encoded_tx = vec![];
-				unsigned_tx.rlp_encode(&mut rlp_encoded_tx);
-
-				Ok(keccak_256(&rlp_encoded_tx).to_vec())
+				Ok(unsigned_tx.signature_hash().to_vec())
 			})
 			.collect::<Result<Vec<Vec<u8>>, ()>>()?;
 
@@ -372,8 +349,9 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			// Note: this is being done in the Go code as well, so although we technically have
 			// only one signature we are still filling all the required placeholder
 			// with the same signature
-			for i in 0_usize..num_required_signatures {
-				tx.signatures[i] = signature;
+			tx.signatures = Vec::with_capacity(num_required_signatures);
+			for _ in 0_usize..num_required_signatures {
+				tx.signatures.push(signature);
 			}
 			tx.verify().map_err(|e| {
 				error!("Solana transaction verification failed: {:?}", e);

@@ -42,10 +42,10 @@ export default {
     },
     OmniAuth: {
       _enum: {
-        Web3: "(HeimaMultiSignature)",
+        Web3: "(Identity, HeimaMultiSignature)",
         Email: "(Text, Text)",
-        AuthToken: "(Text)",
-        OAuth2: "(OAuth2Data)",
+        AuthToken: "(Text, Text)",
+        OAuth2: "(Identity, OAuth2Data)",
       },
     },
     OAuth2Data: {
@@ -129,15 +129,6 @@ export default {
         UnsupportedIdentityType: "Null",
         PumpxApiError: "Null",
         IntentNonceMismatch: "Null",
-      },
-    },
-    HeimaMultiSignature: {
-      _enum: {
-        Ed25519: "Ed25519Signature",
-        Sr25519: "Sr25519Signature",
-        Ecdsa: "EcdsaSignature",
-        Ethereum: "EthereumSignature",
-        Bitcoin: "BitcoinSignature",
       },
     },
     Nonce: "u32",

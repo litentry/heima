@@ -4,9 +4,9 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
+use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
 use executor_storage::{PumpxJwtStorage, Storage};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::auth_token::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
 	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
@@ -17,7 +17,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
-use pumpx::methods::create_market_order_tx::CreateMarketOrderTxResponse;
+use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use tracing::{debug, error};
 
@@ -102,7 +102,7 @@ pub struct PumpxSubmitSwapOrderResponse {
 #[derive(Serialize, Clone)]
 struct BackendResponse {
 	pub limit_order_response: Option<OrderInfoResponse>,
-	pub market_order_response: Option<CreateMarketOrderTxResponse>,
+	pub market_order_response: Option<SendOrderTxResponse>,
 }
 
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
@@ -118,7 +118,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let user_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
-			if verify_auth_token_authentication(ctx.clone(), &user_identity, &params.auth_token)
+			if verify_auth_token_authentication(ctx.clone(), user_identity.to_omni_account().to_hex(), &params.auth_token, AUTH_TOKEN_ID_TYPE, false)
 				.is_err()
 			{
 				error!("Failed to verify auth token");
@@ -263,15 +263,15 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
 			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
-				None,
-				Some(OmniAuth::AuthToken(params.auth_token)),
+				NativeTask::RequestIntent(user_identity.clone(), params.intent_id, intent),
+				 None,
+				 Some(OmniAuth::AuthToken(user_identity.to_omni_account().to_hex(), params.auth_token)),
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::IntentSwapResponse(swap_response) => {
 					if params.order_type == PumpxOrderType::Market {
-						let market_order_response: CreateMarketOrderTxResponse =
+						let market_order_response: SendOrderTxResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 								error!("Failed to decode market order response: {:?}", e);
 								PumpxRpcError::from_error_code(ErrorCode::InternalError)
