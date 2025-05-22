@@ -24,7 +24,6 @@ pub use subxt_core::utils::AccountId32;
 
 use async_trait::async_trait;
 use executor_primitives::{AccountId, BlockEvent, BlockNumber, EventId, Hash};
-use log::{debug, error};
 use parity_scale_codec::{Decode, Encode};
 use scale_encode::EncodeAsType;
 use std::marker::PhantomData;
@@ -42,6 +41,7 @@ use subxt::{
 	Config, OnlineClient,
 };
 use tokio::time::{sleep, Duration};
+use tracing::log::{debug, error};
 
 pub type RpcClientHeader = SubstrateHeader<BlockNumber, BlakeTwo256>;
 
@@ -414,13 +414,13 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 			.build(self.url.clone())
 			.await
 			.map_err(|e| {
-				log::error!("Could not create RpcClient: {:?}", e);
+				error!("Could not create RpcClient: {:?}", e);
 			})?;
 		let legacy = LegacyRpcMethods::new(rpc_client.into());
 
 		let online_client =
 			OnlineClient::from_insecure_url(self.url.clone()).await.map_err(|e| {
-				log::error!("Could not create OnlineClient: {:?}", e);
+				error!("Could not create OnlineClient: {:?}", e);
 			})?;
 
 		let events = online_client.events();

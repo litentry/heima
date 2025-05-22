@@ -3,11 +3,11 @@ mod tx_signer;
 pub use tx_signer::TxSigner;
 
 use executor_core::key_store::KeyStore;
-use log::{error, info};
 use std::sync::Arc;
 use subxt_core::utils::AccountId32;
 use subxt_signer::sr25519::Keypair;
 use subxt_signer::sr25519::SecretKeyBytes;
+use tracing::log::{error, info};
 
 pub fn get_signer(substrate_key_store: Arc<impl KeyStore<SecretKeyBytes>>) -> Keypair {
 	let secret_key_bytes = substrate_key_store

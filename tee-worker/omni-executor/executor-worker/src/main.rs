@@ -15,7 +15,10 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::cli::Cli;
-use accounting_contract_client::AccountingContractClient;
+use accounting_contract_client::{
+	solana::AccountingContractClient as SolanaAccountingContractClient,
+	AccountingContractClient as EthereumAccountingContractClient,
+};
 use alloy::network::EthereumWallet;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
@@ -23,7 +26,9 @@ use clap::Parser;
 use cli::*;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
+use ethereum_rpc::client::EthereumRpcClient;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
+use executor_core::ed25519_key_store::Ed25519KeyStore;
 use executor_core::key_store::KeyStore;
 use executor_core::shielding_key_store::ShieldingKeyStore;
 use executor_core::wallet_metrics::Wallet;
@@ -31,10 +36,9 @@ use executor_core::wallet_metrics::{
 	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
 };
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
-use executor_crypto::{ecdsa, PairTrait};
+use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
-use log::{error, info};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::{
 	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
@@ -46,15 +50,13 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
-use pumpx::pubkey_to_evm_address;
-use pumpx::signer_client::SignerClient;
+use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
 use std::env;
-use std::io::Write;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
@@ -64,25 +66,21 @@ use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
+use tracing::log::{error, info};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::FmtSubscriber;
 
 mod cli;
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
-	env_logger::builder()
-		.format(|buf, record| {
-			let ts = buf.timestamp_micros();
-			writeln!(
-				buf,
-				"{} [{}][{}][{}]: {}",
-				ts,
-				record.level(),
-				std::thread::current().name().unwrap_or("none"),
-				record.target(),
-				record.args(),
-			)
-		})
-		.init();
+	let subscriber = FmtSubscriber::builder()
+		.with_env_filter(
+			EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+		)
+		.finish();
+
+	tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
 	let cli = Cli::parse();
 
@@ -119,7 +117,7 @@ async fn main() -> Result<(), ()> {
 			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
 			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
 
-			let accounting_ecdsa_signer_key = EcdsaKeyStore::new(
+			let evm_accounting_ecdsa_signer_key = EcdsaKeyStore::new(
 				Path::new(&args.local_directory_path)
 					.join("keystore/accounting_ecdsa_signer_key.bin")
 					.into_os_string()
@@ -127,14 +125,38 @@ async fn main() -> Result<(), ()> {
 					.unwrap(),
 			);
 
-			let accounting_ecdsa_signer_key =
-				accounting_ecdsa_signer_key.read().expect("Could not read accounting ecsa key");
-			let accounting_ecdsa_signer_key_pair =
-				ecdsa::Pair::from_seed_slice(&accounting_ecdsa_signer_key).unwrap();
+			let evm_accounting_ecdsa_signer_key = evm_accounting_ecdsa_signer_key
+				.read()
+				.expect("Could not read accounting ecsa key");
+			let evm_accounting_ecdsa_signer_key_pair =
+				ecdsa::Pair::from_seed_slice(&evm_accounting_ecdsa_signer_key).unwrap();
+
+			let bsc_accounting_signer =
+				pubkey_to_evm_address(evm_accounting_ecdsa_signer_key_pair.public().as_ref())
+					.unwrap();
+
+			info!("Accounting ecdsa signer address: {:?}", bsc_accounting_signer);
+
+			let solana_accounting_ed25519_signer_key = Ed25519KeyStore::new(
+				Path::new(&args.local_directory_path)
+					.join("keystore/solana_accounting_ed25519_signer_key.bin")
+					.into_os_string()
+					.into_string()
+					.unwrap(),
+			);
+
+			let solana_accounting_ed25519_signer_key = solana_accounting_ed25519_signer_key
+				.read()
+				.expect("Could not read solana accounting ed25519 key");
+			let solana_accounting_ed25519_signer_key_pair =
+				ed25519::Pair::from_seed_slice(&solana_accounting_ed25519_signer_key).unwrap();
 
 			info!(
-				"Accounting ecdsa signer address: {:?}",
-				pubkey_to_evm_address(accounting_ecdsa_signer_key_pair.public().as_ref()).unwrap()
+				"Solana accounting ed25519 signer address: {:?}",
+				pubkey_to_solana_address(
+					solana_accounting_ed25519_signer_key_pair.public().as_ref()
+				)
+				.unwrap()
 			);
 
 			let storage_db =
@@ -178,7 +200,7 @@ async fn main() -> Result<(), ()> {
 			);
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let pumpx_signer_client: Arc<Box<dyn SignerClient>> =
+			let pumpx_signer_client: Arc<Box<dyn signer_client::SignerClient>> =
 				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
 					args.pumpx_signer_url.clone(),
 					pumpx_signer_pair,
@@ -213,7 +235,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(SolanaRpcClient::new(&args.solana_url));
 
 			let accounting_contract_signer =
-				PrivateKeySigner::from_slice(&accounting_ecdsa_signer_key_pair.seed())
+				PrivateKeySigner::from_slice(&evm_accounting_ecdsa_signer_key_pair.seed())
 					.expect("Could not create accounting contract signer");
 			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
 
@@ -221,10 +243,17 @@ async fn main() -> Result<(), ()> {
 				&args.bsc_url,
 				accounting_contract_wallet,
 			);
-			let accounting_contract_client = AccountingContractClient::new(
+			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
 				bsc_rpc_provider,
 				args.accounting_contract_address.parse().unwrap(),
 			);
+			let solana_accounting_contract_client = SolanaAccountingContractClient::new(
+				solana_accounting_ed25519_signer_key_pair,
+				args.solana_accounting_contract_address.parse().unwrap(),
+			);
+
+			let bsc_client: Arc<EthereumRpcClient> =
+				Arc::new(EthereumRpcClient::new(&args.bsc_url));
 
 			// wallet monitoring setup start
 			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
@@ -244,10 +273,10 @@ async fn main() -> Result<(), ()> {
 
 			wallet_metrics.register(Wallet {
 				id: WalletId {
-					address: args.accounting_contract_address.to_string(),
+					address: bsc_accounting_signer,
 					network_type: WalletNetworkType::Ethereum(56),
 				},
-				name: "bsc_accounting_contract".to_string(),
+				name: "bsc_accounting_signer".to_string(),
 			});
 
 			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
@@ -259,8 +288,10 @@ async fn main() -> Result<(), ()> {
 				pumpx_api.clone(),
 				storage_db.clone(),
 				binance_api,
+				bsc_client,
 				solana_client,
-				Arc::new(Box::new(accounting_contract_client)),
+				Arc::new(Box::new(evm_accounting_contract_client)),
+				Arc::new(Box::new(solana_accounting_contract_client)),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(
@@ -279,7 +310,7 @@ async fn main() -> Result<(), ()> {
 			let native_task_sender =
 				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
-			log::info!("worker url: {:?}", args.worker_url);
+			info!("worker url: {:?}", args.worker_url);
 			let worker_url = url::Url::parse(&args.worker_url).expect("Invalid worker url");
 
 			let shielding_key_store = ShieldingKeyStore::new(
@@ -298,7 +329,7 @@ async fn main() -> Result<(), ()> {
 			})
 			.expect("Could not serialize shielding public key");
 
-			let mrenclave = perform_attestation(
+			let _ = perform_attestation(
 				parentchain_rpc_client_factory,
 				parentchain_signer,
 				tx_signer.clone(),
@@ -316,7 +347,6 @@ async fn main() -> Result<(), ()> {
 				Arc::new(native_task_sender),
 				pumpx_api,
 				storage_db.clone(),
-				mrenclave,
 				jwt_rsa_private_key,
 			)
 			.await

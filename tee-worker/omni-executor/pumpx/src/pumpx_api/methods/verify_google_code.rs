@@ -1,6 +1,7 @@
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use crate::methods::common::ApiResponse;
 use crate::pumpx_api::PumpxApiClient;
@@ -34,16 +35,16 @@ pub async fn verify_google_code_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			log::error!("Failed to send Google code verification request: {:?}", e);
+			error!("Failed to send Google code verification request: {:?}", e);
 			e
 		})?;
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		log::error!("Google code verification failed with status: {}, error: {:?}", status, e);
+		error!("Google code verification failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 	response.json().await.map_err(|e| {
-		log::error!("Failed to parse Google code verification response: {:?}", e);
+		error!("Failed to parse Google code verification response: {:?}", e);
 		e
 	})
 }

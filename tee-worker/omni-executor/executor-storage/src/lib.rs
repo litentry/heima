@@ -24,6 +24,7 @@ mod pumpx_jwt;
 pub use pumpx_jwt::PumpxJwtStorage;
 mod intent_id;
 pub use intent_id::IntentIdStorage;
+use tracing::error;
 
 const STORAGE_DB_PATH: &str = "storage_db";
 
@@ -37,13 +38,13 @@ pub trait Storage<K: Encode, V: Codec> {
 		match self.db().get(storage_key(self.name(), &key.encode())) {
 			Ok(Some(v)) => {
 				let decoded_v = V::decode(&mut &v[..]).map_err(|e| {
-					log::error!("Error decoding value from storage: {:?}", e);
+					error!("Error decoding value from storage: {:?}", e);
 				})?;
 				Ok(Some(decoded_v))
 			},
 			Ok(None) => Ok(None),
 			Err(e) => {
-				log::error!("Error getting value from storage: {:?}", e);
+				error!("Error getting value from storage: {:?}", e);
 				Err(())
 			},
 		}
@@ -58,7 +59,7 @@ pub trait Storage<K: Encode, V: Codec> {
 		self.db()
 			.put_opt(storage_key(self.name(), &key.encode()), value.encode(), &opts)
 			.map_err(|e| {
-				log::error!("Error inserting value into storage: {:?}", e);
+				error!("Error inserting value into storage: {:?}", e);
 			})
 	}
 
@@ -68,7 +69,7 @@ pub trait Storage<K: Encode, V: Codec> {
 		self.db()
 			.delete_opt(storage_key(self.name(), &key.encode()), &opts)
 			.map_err(|e| {
-				log::error!("Error removing value from storage: {:?}", e);
+				error!("Error removing value from storage: {:?}", e);
 			})
 	}
 }
@@ -83,11 +84,11 @@ pub fn storage_key(storage_name: &str, key: &[u8]) -> Vec<u8> {
 
 pub async fn init_storage(ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	let db = Arc::new(StorageDB::open_default(STORAGE_DB_PATH).map_err(|e| {
-		log::error!("Could not open db: {:?}", e);
+		error!("Could not open db: {:?}", e);
 	})?);
 	let client_factory: SubxtClientFactory<CustomConfig> = SubxtClientFactory::new(ws_rpc_endpoint);
 	let mut client = client_factory.new_client().await.map_err(|e| {
-		log::error!("Could not create client: {:?}", e);
+		error!("Could not create client: {:?}", e);
 	})?;
 
 	init_omni_account_storages(&mut client, db.clone()).await?;
@@ -115,7 +116,7 @@ async fn init_omni_account_storages(
 			)
 			.await
 			.map_err(|e| {
-				log::error!("Could not get storage keys paged: {:?}", e);
+				error!("Could not get storage keys paged: {:?}", e);
 			})?;
 		if storage_keys_paged.is_empty() || storage_keys_paged.last().cloned() == start_key {
 			break;
@@ -126,12 +127,12 @@ async fn init_omni_account_storages(
 				.get_storage_proof_by_keys(storage_keys_paged.clone())
 				.await
 				.map_err(|e| {
-					log::error!("Could not get storage proof by keys: {:?}", e);
+					error!("Could not get storage proof by keys: {:?}", e);
 				})?;
 		let header = match client.get_last_finalized_header().await {
 			Ok(header) => header,
 			_ => {
-				log::error!("Could not get last finalized header");
+				error!("Could not get last finalized header");
 				return Err(());
 			},
 		};
@@ -142,7 +143,7 @@ async fn init_omni_account_storages(
 			&storage_keys_paged,
 		)
 		.map_err(|e| {
-			log::error!("Could not read proof check: {:?}", e);
+			error!("Could not read proof check: {:?}", e);
 		})?;
 
 		for key in storage_keys_paged.iter() {
@@ -154,24 +155,24 @@ async fn init_omni_account_storages(
 						.at_latest()
 						.await
 						.map_err(|e| {
-							log::error!("Could not get storage at latest block: {:?}", e);
+							error!("Could not get storage at latest block: {:?}", e);
 						})?
 						.fetch_raw(key.clone())
 						.await
 						.map_err(|e| {
-							log::error!("Could not fetch storage value: {:?}", e);
+							error!("Could not fetch storage value: {:?}", e);
 						})?;
 					let Some(storage_value) = maybe_storage_value else {
-						log::error!("Storage value not found for account_id: {:?}", omni_account);
+						error!("Storage value not found for account_id: {:?}", omni_account);
 						return Err(());
 					};
 					if storage_value != *value {
-						log::error!("Storage value mismatch for account_id: {:?}", omni_account);
+						error!("Storage value mismatch for account_id: {:?}", omni_account);
 						return Err(());
 					}
 					let account_store: AccountStore =
 						Decode::decode(&mut &value[..]).map_err(|e| {
-							log::error!("Error decoding account store: {:?}", e);
+							error!("Error decoding account store: {:?}", e);
 						})?;
 					let mut member_accounts: Vec<MemberAccount> = Vec::new();
 					for member in account_store.0.iter() {
@@ -179,16 +180,16 @@ async fn init_omni_account_storages(
 						member_omni_account_storage
 							.insert(&member_account.hash(), omni_account.clone())
 							.map_err(|e| {
-								log::error!("Error inserting member account hash: {:?}", e);
+								error!("Error inserting member account hash: {:?}", e);
 							})?;
 						member_accounts.push(member_account);
 					}
 					account_store_storage.insert(&omni_account, member_accounts).map_err(|e| {
-						log::error!("Error inserting account store: {:?}", e);
+						error!("Error inserting account store: {:?}", e);
 					})?;
 				},
 				_ => {
-					log::error!("No value found for key: {:?}", key);
+					error!("No value found for key: {:?}", key);
 				},
 			}
 		}
@@ -203,6 +204,6 @@ fn extract_account_id_from_storage_key<K: Decode>(raw_storage_key: &[u8]) -> Res
 	}
 	let mut raw_key = &raw_storage_key[raw_storage_key.len() - 32..];
 	K::decode(&mut raw_key).map_err(|e| {
-		log::error!("Error decoding account id: {:?}", e);
+		error!("Error decoding account id: {:?}", e);
 	})
 }

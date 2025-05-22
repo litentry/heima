@@ -1,3 +1,5 @@
+pub mod solana;
+
 use alloy::{
 	primitives::{Address, TxKind, U256},
 	rpc::types::{TransactionInput, TransactionRequest},

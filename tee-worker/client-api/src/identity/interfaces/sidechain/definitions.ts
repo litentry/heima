@@ -36,8 +36,8 @@ export default {
     PublicGetter: {
       _enum: {
         some_value: "u32",
-        nonce: "(LitentryIdentity)",
-        id_graph_hash: "(LitentryIdentity)",
+        nonce: "(HeimaIdentity)",
+        id_graph_hash: "(HeimaIdentity)",
       },
     },
 
@@ -63,7 +63,7 @@ export default {
         __Unused17: "Null",
         __Unused18: "Null",
         __Unused19: "Null",
-        MissingPrivileges: "(LitentryIdentity)",
+        MissingPrivileges: "(HeimaIdentity)",
         RequireEnclaveSignerAccount: "Null",
         Dispatch: "(String)",
         MissingFunds: "Null",

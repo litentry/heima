@@ -14,13 +14,14 @@ serde_json = { workspace = true }
 subxt = { workspace = true, features = ["reconnecting-rpc-client"] }
 subxt-core = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }
 parentchain-api-interface = { workspace = true }
 
 [dev-dependencies]
-env_logger = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

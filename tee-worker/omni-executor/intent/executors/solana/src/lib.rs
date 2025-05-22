@@ -19,7 +19,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::Intent;
 use executor_primitives::IntentId;
-use log::{error, info};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
 	commitment_config::CommitmentConfig,
@@ -28,6 +27,7 @@ use solana_sdk::{
 	system_instruction,
 	transaction::Transaction,
 };
+use tracing::log::{error, info};
 
 // Executes intents on Solana network.
 pub struct SolanaIntentExecutor {

@@ -2,8 +2,8 @@ mod types;
 
 use crate::BinanceApi;
 use crate::{error::Error, traits::TryIntoParams, types::AssetSymbol, Method};
-use log::error;
 use std::collections::HashMap;
+use tracing::log::error;
 use types::{
 	AssetInfo, CancelOrderLimit, ConvertOrder, ConvertOrderStatus, ConvertTradeHistory, LimitOrder,
 	OpenOrders, PlaceLimitOrderParams, Quote, RequestQuoteParams, TokenPair,

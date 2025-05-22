@@ -16,7 +16,7 @@ pub(crate) fn generate_alphanumeric_otp(length: usize) -> String {
 	random_string
 }
 
-pub(crate) fn generate_otp(length: usize) -> String {
+pub fn generate_otp(length: usize) -> String {
 	let mut rng = rand::thread_rng();
 	let otp: String = (0..length).map(|_| rng.gen_range(0..10).to_string()).collect();
 	otp

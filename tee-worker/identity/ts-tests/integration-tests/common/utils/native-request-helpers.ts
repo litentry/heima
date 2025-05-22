@@ -11,9 +11,9 @@ import {
     TrustedCallAuthenticated,
     TCAuthentication,
     Intent,
-    LitentryValidationData,
+    HeimaValidationData,
 } from '@heima-network/api-argument/identity';
-import { Signer, createLitentryMultiSignature } from '../utils';
+import { Signer, createHeimaMultiSignature } from '../utils';
 import { aesKey } from '../call';
 import { KeyObject } from 'crypto';
 import { Index } from '@polkadot/types/interfaces';
@@ -59,13 +59,13 @@ export const createAuthenticatedTrustedCall = async (
         console.log('Signing message: ', payload);
     }
 
-    const signature = await createLitentryMultiSignature(parachainApi, {
+    const signature = await createHeimaMultiSignature(parachainApi, {
         signer,
         payload,
     });
 
     const authentication: TCAuthentication = parachainApi.createType('TCAuthentication', {
-        Web3: parachainApi.createType('(LitentryMultiSignature)', signature),
+        Web3: parachainApi.createType('(HeimaMultiSignature)', signature),
     });
 
     return parachainApi.createType('TrustedCallAuthenticated', {
@@ -84,7 +84,7 @@ export function createAuthenticatedTrustedCallCreateAccountStore(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['create_account_store', '(LitentryIdentity)'],
+        ['create_account_store', '(HeimaIdentity)'],
         signer,
         mrenclave,
         nonce,
@@ -109,7 +109,7 @@ export function createAuthenticatedTrustedCallTransferNativeIntent(
     });
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['request_intent', '(LitentryIdentity, Intent)'],
+        ['request_intent', '(HeimaIdentity, Intent)'],
         signer,
         mrenclave,
         nonce,
@@ -129,7 +129,7 @@ export async function createAuthenticatedTrustedCallAddAccount(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['add_account', '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)'],
+        ['add_account', '(HeimaIdentity, HeimaIdentity, HeimaValidationData, bool)'],
         sender,
         mrenclave,
         nonce,
@@ -147,7 +147,7 @@ export async function createAuthenticatedTrustedCallRemoveAccounts(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['remove_accounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+        ['remove_accounts', '(HeimaIdentity, Vec<HeimaIdentity>)'],
         sender,
         mrenclave,
         nonce,
@@ -165,7 +165,7 @@ export async function createAuthenticatedTrustedCallPublicizeAccount(
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
-        ['publicize_account', '(LitentryIdentity, LitentryIdentity)'],
+        ['publicize_account', '(HeimaIdentity, HeimaIdentity)'],
         sender,
         mrenclave,
         nonce,
@@ -187,7 +187,7 @@ export async function createAuthenticatedTrustedCallRequestBatchVc(
         parachainApi,
         [
             'request_batch_vc',
-            '(LitentryIdentity, LitentryIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
+            '(HeimaIdentity, HeimaIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
         ],
         sender,
         mrenclave,
@@ -283,7 +283,7 @@ export async function buildWeb3ValidationData(
     nonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer: Signer
-): Promise<LitentryValidationData> {
+): Promise<HeimaValidationData> {
     const msg = generateVerificationMessage(context, sender, accountToAdd, nonce);
 
     if (network === 'evm') {
@@ -303,7 +303,7 @@ export async function buildWeb3ValidationData(
 
         evmValidationData!.Web3Validation.Evm.signature.Ethereum = evmSignature;
 
-        return context.api.createType('LitentryValidationData', evmValidationData);
+        return context.api.createType('HeimaValidationData', evmValidationData);
     }
 
     if (network === 'substrate') {
@@ -322,7 +322,7 @@ export async function buildWeb3ValidationData(
         const substrateSignature = await signer.sign(msg);
         substrateValidationData!.Web3Validation.Substrate.signature.Sr25519 = u8aToHex(substrateSignature);
 
-        return context.api.createType('LitentryValidationData', substrateValidationData);
+        return context.api.createType('HeimaValidationData', substrateValidationData);
     }
 
     if (network === 'bitcoin') {
@@ -341,7 +341,7 @@ export async function buildWeb3ValidationData(
         const bitcoinSignature = await signer.sign(msg.substring(2));
         bitcoinValidationData!.Web3Validation.Bitcoin.signature.Bitcoin = u8aToHex(bitcoinSignature);
 
-        return context.api.createType('LitentryValidationData', bitcoinValidationData);
+        return context.api.createType('HeimaValidationData', bitcoinValidationData);
     }
 
     if (network === 'solana') {
@@ -360,7 +360,7 @@ export async function buildWeb3ValidationData(
         const solanaSignature = await signer.sign(msg);
         solanaValidationData!.Web3Validation.Solana.signature.Ed25519 = u8aToHex(solanaSignature);
 
-        return context.api.createType('LitentryValidationData', solanaValidationData);
+        return context.api.createType('HeimaValidationData', solanaValidationData);
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);

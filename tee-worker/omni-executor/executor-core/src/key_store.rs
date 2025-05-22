@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use log::error;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
+use tracing::log::error;
 
 /// Used for persisting Relayer's keys.
 pub trait KeyStore<K> {

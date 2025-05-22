@@ -14,6 +14,7 @@ use subxt_core::tx::payload::Payload;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_core::{tx, Config, Metadata};
 use subxt_signer::sr25519::Keypair;
+use tracing::info;
 
 pub struct TxSigner<
 	RpcClient: SubstrateRpcClient<ChainConfig::Header>,
@@ -48,7 +49,7 @@ impl<
 		signer: Keypair,
 		nonce: u64,
 	) -> Self {
-		log::info!("Initializing TxSigner nonce with {}", nonce);
+		info!("Initializing TxSigner nonce with {}", nonce);
 		let nonce = AtomicU64::new(nonce);
 		Self { metadata_provider, rpc_client_factory, signer, nonce, phantom_data: PhantomData }
 	}
@@ -72,14 +73,12 @@ impl<
 		};
 		let nonce = self.nonce.fetch_add(1, Ordering::SeqCst);
 		if let Some(details) = call.validation_details() {
-			log::info!(
+			info!(
 				"Signing call {}::{} with nonce {}",
-				details.pallet_name,
-				details.call_name,
-				nonce
+				details.pallet_name, details.call_name, nonce
 			);
 		} else {
-			log::info!("Signing call with nonce {}", nonce);
+			info!("Signing call with nonce {}", nonce);
 		}
 		let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
 		let signed_call = tx::create_v4_signed(&call, &state, params).unwrap().sign(&self.signer);
@@ -99,7 +98,7 @@ impl<
 			.get_account_nonce(&account_id)
 			.await
 			.expect("Failed to get account nonce");
-		log::info!("Updating nonce to {}", nonce);
+		info!("Updating nonce to {}", nonce);
 		self.nonce.store(nonce, Ordering::SeqCst);
 	}
 }

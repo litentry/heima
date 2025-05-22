@@ -88,8 +88,8 @@ syn = { version = "2" }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
 parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
 paste = { version = "1.0" }
-serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
-serde_json = { version = "=1.0.133", default-features = false }
+serde = { version = "=1.0.214", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "=1.0.138", default-features = false }
 slices = { version = "0.2.0" }
 hex = { version = "0.4", default-features = false }
 hex-literal = { version = "0.4.1", default-features = false }
