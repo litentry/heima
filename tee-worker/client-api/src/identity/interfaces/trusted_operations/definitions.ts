@@ -49,16 +49,16 @@ export default {
     TrustedCallSigned: {
       call: "TrustedCall",
       index: "Index",
-      signature: "LitentryMultiSignature",
+      signature: "HeimaMultiSignature",
     },
     TrustedGetterSigned: {
       getter: "TrustedGetter",
-      signature: "LitentryMultiSignature",
+      signature: "HeimaMultiSignature",
     },
 
     TCAuthentication: {
       _enum: {
-        Web3: "LitentryMultiSignature",
+        Web3: "HeimaMultiSignature",
         Email: "Text",
         AuthToken: "Text",
       },
@@ -72,30 +72,30 @@ export default {
     //important
     TrustedGetter: {
       _enum: {
-        free_balance: "(LitentryIdentity)",
-        reserved_balance: "(LitentryIdentity)",
+        free_balance: "(HeimaIdentity)",
+        reserved_balance: "(HeimaIdentity)",
         __Unused_evm_nonce: "Null",
         __Unused_evm_account_codes: "Null",
         __Unused_evm_account_storages: "Null",
-        id_graph: "(LitentryIdentity)",
+        id_graph: "(HeimaIdentity)",
       },
     },
 
     TrustedCall: {
       _enum: {
         link_identity:
-          "(LitentryIdentity, LitentryIdentity, LitentryIdentity, LitentryValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, HeimaIdentity, HeimaValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)",
         deactivate_identity:
-          "(LitentryIdentity, LitentryIdentity, LitentryIdentity, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, HeimaIdentity, Option<RequestAesKey>, H256)",
         activate_identity:
-          "(LitentryIdentity, LitentryIdentity, LitentryIdentity, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, HeimaIdentity, Option<RequestAesKey>, H256)",
         request_vc:
-          "(LitentryIdentity, LitentryIdentity, Assertion, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, Assertion, Option<RequestAesKey>, H256)",
         set_identity_networks:
-          "(LitentryIdentity, LitentryIdentity, LitentryIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, HeimaIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)",
         __Unused_remove_identity: "Null",
         request_batch_vc:
-          "(LitentryIdentity, LitentryIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)",
 
         __Unused_7: "Null",
         __Unused_8: "Null",
@@ -113,21 +113,21 @@ export default {
 
         // this trusted call can only be requested directly by root or enclave_signer_account
         link_identity_callback:
-          "(LitentryIdentity, LitentryIdentity, LitentryIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)",
+          "(HeimaIdentity, HeimaIdentity, HeimaIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)",
 
         __Unused_21: "Null",
         __Unused_22: "Null",
         __Unused_23: "Null",
         __Unused_24: "Null",
 
-        clean_id_graphs: "(LitentryIdentity)",
-        request_intent: "(LitentryIdentity, Intent)",
-        create_account_store: "(LitentryIdentity)",
+        clean_id_graphs: "(HeimaIdentity)",
+        request_intent: "(HeimaIdentity, Intent)",
+        create_account_store: "(HeimaIdentity)",
         add_account:
-          "(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool)",
-        remove_accounts: "(LitentryIdentity, Vec<LitentryIdentity>)",
-        publicize_account: "(LitentryIdentity, LitentryIdentity)",
-        request_auth_token: "(LitentryIdentity, AuthOptions)",
+          "(HeimaIdentity, HeimaIdentity, HeimaValidationData, bool)",
+        remove_accounts: "(HeimaIdentity, Vec<HeimaIdentity>)",
+        publicize_account: "(HeimaIdentity, HeimaIdentity)",
+        request_auth_token: "(HeimaIdentity, AuthOptions)",
       },
     },
     TrustedOperationStatus: {

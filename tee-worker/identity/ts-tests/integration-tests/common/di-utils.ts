@@ -17,7 +17,7 @@ import {
     Signer,
     encryptWithAes,
     sleep,
-    createLitentryMultiSignature,
+    createHeimaMultiSignature,
     decryptWithAes,
 } from './utils';
 import { aesKey, decodeRpcBytesAsString, keyNonce } from './call';
@@ -131,7 +131,7 @@ export const createSignedTrustedCall = async (
         console.log('Signing message: ', payload);
     }
 
-    const signature = await createLitentryMultiSignature(parachainApi, {
+    const signature = await createHeimaMultiSignature(parachainApi, {
         signer,
         payload,
     });
@@ -173,7 +173,7 @@ export const createSignedTrustedGetter = async (
     });
     const payload = blake2AsU8a(getter.toU8a(), 256);
 
-    const signature = await createLitentryMultiSignature(parachainApi, {
+    const signature = await createHeimaMultiSignature(parachainApi, {
         signer,
         payload,
     });
@@ -210,7 +210,7 @@ export async function createSignedTrustedCallLinkIdentity(
         parachainApi,
         [
             'link_identity',
-            '(LitentryIdentity, LitentryIdentity, LitentryIdentity, LitentryValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)',
+            '(HeimaIdentity, HeimaIdentity, HeimaIdentity, HeimaValidationData, Vec<Web3Network>, Option<RequestAesKey>, H256)',
         ],
         signer,
         mrenclave,
@@ -236,7 +236,7 @@ export async function createSignedTrustedCallSetIdentityNetworks(
         parachainApi,
         [
             'set_identity_networks',
-            '(LitentryIdentity, LitentryIdentity, LitentryIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)',
+            '(HeimaIdentity, HeimaIdentity, HeimaIdentity, Vec<Web3Network>, Option<RequestAesKey>, H256)',
         ],
         signer,
         mrenclave,
@@ -258,7 +258,7 @@ export async function createSignedTrustedCallRequestVc(
 ) {
     return await createSignedTrustedCall(
         parachainApi,
-        ['request_vc', '(LitentryIdentity, LitentryIdentity, Assertion, Option<RequestAesKey>, H256)'],
+        ['request_vc', '(HeimaIdentity, HeimaIdentity, Assertion, Option<RequestAesKey>, H256)'],
         signer,
         mrenclave,
         nonce,
@@ -283,7 +283,7 @@ export async function createSignedTrustedCallRequestBatchVc(
         parachainApi,
         [
             'request_batch_vc',
-            '(LitentryIdentity, LitentryIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
+            '(HeimaIdentity, HeimaIdentity, BoundedVec<Assertion, ConstU32<32>>, Option<RequestAesKey>, H256)',
         ],
         signer,
         mrenclave,
@@ -306,7 +306,7 @@ export async function createSignedTrustedCallDeactivateIdentity(
 ) {
     return createSignedTrustedCall(
         parachainApi,
-        ['deactivate_identity', '(LitentryIdentity, LitentryIdentity, LitentryIdentity, Option<RequestAesKey>, H256)'],
+        ['deactivate_identity', '(HeimaIdentity, HeimaIdentity, HeimaIdentity, Option<RequestAesKey>, H256)'],
         signer,
         mrenclave,
         nonce,
@@ -325,7 +325,7 @@ export async function createSignedTrustedCallActivateIdentity(
 ) {
     return createSignedTrustedCall(
         parachainApi,
-        ['activate_identity', '(LitentryIdentity, LitentryIdentity, LitentryIdentity, Option<RequestAesKey>, H256)'],
+        ['activate_identity', '(HeimaIdentity, HeimaIdentity, HeimaIdentity, Option<RequestAesKey>, H256)'],
         signer,
         mrenclave,
         nonce,
@@ -340,7 +340,7 @@ export async function createSignedTrustedGetterIdGraph(
 ): Promise<Getter> {
     const getterSigned = await createSignedTrustedGetter(
         parachainApi,
-        ['id_graph', '(LitentryIdentity)'],
+        ['id_graph', '(HeimaIdentity)'],
         signer,
         primeIdentity.toHuman()
     );
@@ -372,11 +372,7 @@ export const getIdGraphHash = async (
     teeShieldingKey: KeyObject,
     primeIdentity: CorePrimitivesIdentity
 ): Promise<H256> => {
-    const getterPublic = createPublicGetter(
-        context.api,
-        ['id_graph_hash', '(LitentryIdentity)'],
-        primeIdentity.toHuman()
-    );
+    const getterPublic = createPublicGetter(context.api, ['id_graph_hash', '(HeimaIdentity)'], primeIdentity.toHuman());
     const getter = context.api.createType('Getter', { public: getterPublic });
     const res = await sendRsaRequestFromGetter(context, teeShieldingKey, getter);
     const hash = context.api.createType('Option<Bytes>', hexToU8a(res.value.toHex())).unwrap();

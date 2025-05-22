@@ -16,7 +16,7 @@ import { aesKey } from './common/call';
 import type {
     CorePrimitivesIdentity,
     WorkerRpcReturnValue,
-    LitentryValidationData,
+    HeimaValidationData,
     Web3Network,
 } from '@heima-network/api-argument/identity';
 import { mockBatchAssertion } from './common/utils/vc-helper';
@@ -38,7 +38,7 @@ describe('Test Vc (direct request)', function () {
     const linkIdentityRequestParams: {
         nonce: number;
         identity: CorePrimitivesIdentity;
-        validation: LitentryValidationData;
+        validation: HeimaValidationData;
         networks: Bytes | Vec<Web3Network>;
     }[] = [];
     this.timeout(6000000);

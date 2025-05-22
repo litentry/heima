@@ -131,15 +131,6 @@ export default {
         IntentNonceMismatch: "Null",
       },
     },
-    HeimaMultiSignature: {
-      _enum: {
-        Ed25519: "Ed25519Signature",
-        Sr25519: "Sr25519Signature",
-        Ecdsa: "EcdsaSignature",
-        Ethereum: "EthereumSignature",
-        Bitcoin: "BitcoinSignature",
-      },
-    },
     Nonce: "u32",
     AesTask: {
       key: "Vec<u8>",
