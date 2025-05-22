@@ -43,7 +43,7 @@ export const heimaStaging: ChainSpec = {
   isTestnet: true,
   isDefault: false,
   rpcs: [{ url: 'wss://tee-staging.heima.network' }],
-  enclaveRpcs: [{ url: 'wss://enclave-staging.heima.network' }],
+  enclaveRpcs: [{ url: 'wss://staging-dex-worker.heima.network' }],
 };
 
 export const heimaProd: ChainSpec = {
