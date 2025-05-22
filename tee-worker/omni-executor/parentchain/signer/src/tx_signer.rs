@@ -9,7 +9,7 @@ use std::{
 	marker::PhantomData,
 	sync::atomic::{AtomicU64, Ordering},
 };
-use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder};
+use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder, HashFor};
 use subxt_core::tx::payload::Payload;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_core::{tx, Config, Metadata};
@@ -64,7 +64,7 @@ impl<
 
 		let state = tx::ClientState::<ChainConfig> {
 			metadata: { metadata },
-			genesis_hash: ChainConfig::Hash::decode(&mut genesis_hash.as_slice()).unwrap(),
+			genesis_hash: HashFor::<ChainConfig>::decode(&mut genesis_hash.as_slice()).unwrap(),
 			runtime_version: tx::RuntimeVersion {
 				spec_version: runtime_version.spec_version,
 				transaction_version: runtime_version.transaction_version,

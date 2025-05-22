@@ -52,7 +52,6 @@ pub enum CustomConfig {}
 
 //todo: adjust if needed
 impl Config for CustomConfig {
-	type Hash = subxt::utils::H256;
 	type AccountId = subxt::utils::AccountId32;
 	type Address = subxt::utils::MultiAddress<Self::AccountId, u32>;
 	type Signature = subxt::utils::MultiSignature;
@@ -202,7 +201,20 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 		extrinsic: &[u8],
 		until_status: XtStatus,
 	) -> Result<ExtrinsicReport<Hash>, ()> {
-		let tx_hash_bytes = ChainConfig::Hasher::hash(extrinsic).encode();
+		let raw_metadata = self.get_raw_metadata(None).await?;
+		let runtime_metadata = frame_metadata::RuntimeMetadataPrefixed::decode(
+			&mut raw_metadata.as_slice(),
+		)
+		.map_err(|e| {
+			error!("Failed to decode metadata: {:?}", e);
+			()
+		})?;
+		let metadata = subxt::Metadata::try_from(runtime_metadata).map_err(|e| {
+			error!("Failed to convert metadata: {:?}", e);
+			()
+		})?;
+		let hasher = ChainConfig::Hasher::new(&metadata);
+		let tx_hash_bytes = hasher.hash(extrinsic).encode();
 		let result = self.legacy.author_submit_and_watch_extrinsic(extrinsic).await;
 		match result {
 			Ok(mut subscription) => {
