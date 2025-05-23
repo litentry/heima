@@ -40,7 +40,7 @@ pub async fn perform_attestation(
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;
-		use tracing::info;
+		use tracing::{debug, info};
 		let mut f = File::create("/dev/attestation/user_report_data").unwrap();
 		let content = signer.public_key().0;
 		f.write_all(&content).unwrap();
@@ -49,7 +49,7 @@ pub async fn perform_attestation(
 
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
-		info!("Attestation dcap_quote {:?}", dcap_quote);
+		debug!("Attestation dcap_quote {:?}", dcap_quote);
 
 		mrenclave = dcap_quote.body.mr_enclave;
 		info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
