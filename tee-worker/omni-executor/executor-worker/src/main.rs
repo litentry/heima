@@ -303,7 +303,7 @@ async fn main() -> Result<(), ()> {
 				solana_client,
 				Arc::new(Box::new(evm_accounting_contract_client)),
 				Arc::new(Box::new(solana_accounting_contract_client)),
-				Decimal::from_str("200").unwrap(),
+				Decimal::from_str(&args.instant_payout_threshold).unwrap(),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(
