@@ -113,7 +113,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		.times(2)
+		.times(1)
 		.returning(|_, _, _| {
 			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
 				.unwrap()
@@ -415,7 +415,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		.times(2)
+		.times(1)
 		.returning(|_, _, _| {
 			Ok([
 				150, 221, 47, 78, 207, 124, 147, 48, 228, 240, 229, 138, 142, 98, 114, 103, 47,
@@ -719,7 +719,7 @@ async fn instant_payout_cross_chain_swap() {
 				116, 52, 128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
 			]),
 		)
-		.times(2)
+		.times(1)
 		.returning(|_, _, _| {
 			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
 				.unwrap()
@@ -840,6 +840,7 @@ async fn instant_payout_cross_chain_swap() {
 			mockall::predicate::eq(None),
 			mockall::predicate::eq(None),
 		)
+		// second call is done in separate thread when doing deposit asynchronously in case of instant swap
 		.times(2)
 		.returning(|_, _, _, _| {
 			Ok(vec![prepare_coin_info(solana_coin_ticker, solana_coin_name, "SOL")])
@@ -853,6 +854,7 @@ async fn instant_payout_cross_chain_swap() {
 			mockall::predicate::always(),
 			mockall::predicate::eq(None),
 		)
+		// second call is done in separate thread when doing deposit asynchronously in case of instant swap
 		.times(2)
 		.returning(|_, _, _, _| {
 			Ok(DepositAddress {
@@ -882,6 +884,7 @@ async fn instant_payout_cross_chain_swap() {
 			mockall::predicate::eq("/api/v3/ticker/price"),
 			mockall::predicate::eq(Some(sol_bnb_price_params)),
 		)
+		// second call is done in separate thread when doing deposit asynchronously in case of instant swap
 		.times(2)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 

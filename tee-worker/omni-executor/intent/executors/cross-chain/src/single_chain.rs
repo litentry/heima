@@ -18,6 +18,7 @@ impl<
 		amount: String,
 		pumpx_config: &PumpxConfig,
 		from_address: String,
+		to_address: String,
 	) -> Result<Vec<u8>, ()> {
 		debug!("executing single chain swap");
 
@@ -25,14 +26,6 @@ impl<
 			error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
 			return Err(());
 		};
-
-		let to_wallet = self
-			.pumpx_signer_client
-			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
-			.await
-			.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
-
-		let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
 
 		// always use `to_token_ca` from RPC
 		let token_ca = std::str::from_utf8(&pumpx_config.to_token_ca)

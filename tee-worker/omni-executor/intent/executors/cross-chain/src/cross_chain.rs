@@ -25,6 +25,7 @@ impl<
 		from_address: String,
 		from_wallet: Vec<u8>,
 		pumpx_config: &PumpxConfig,
+		to_address: String,
 	) -> Result<(String, String, Option<InstantFlowDetails>), ()> {
 		debug!("executing cross chain swap");
 
@@ -57,11 +58,6 @@ impl<
 				error!("Failed to parse from_amount");
 			})
 			.map(|v| v.to_string())?;
-
-		let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id) else {
-			error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
-			return Err(());
-		};
 
 		let from_asset_binance_coin_name =
 			BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin.name();
@@ -107,14 +103,6 @@ impl<
 				available_amount,
 			)?;
 		}
-
-		let to_wallet = self
-			.pumpx_signer_client
-			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
-			.await
-			.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
-
-		let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
 
 		self.pumpx_create_cross_order(
 			intent_id,
