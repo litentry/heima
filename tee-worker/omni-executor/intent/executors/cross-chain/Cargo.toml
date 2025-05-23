@@ -41,6 +41,7 @@ solana = { workspace = true }
 accounting-contract-client = { workspace = true, features = ["mocks"] }
 pumpx = { workspace = true, features = ["mocks"] }
 binance-api = { workspace = true, features = ["mocks"] }
+ethereum-rpc = { workspace = true, features = ["mocks"] }
 signer-client = { workspace = true, features = ["mocks"] }
 solana = { workspace = true, features = ["mocks"] }
 tempfile = { workspace = true }
@@ -49,6 +50,7 @@ serde_json = { workspace = true }
 heima-primitives = { workspace = true }
 reqwest = { workspace = true }
 alloy-rlp = { workspace = true }
+test-log = { workspace = true }
 
 [lints]
 workspace = true

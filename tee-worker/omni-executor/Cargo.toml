@@ -64,6 +64,7 @@ regex = "1.7"
 reqwest = { version = "0.12", features = ["json"] }
 ring = "0.16.20"
 rsa = "0.9.7"
+ruint = "1.13.1"
 rust_decimal = "1.37.1"
 scale-encode = "0.10.0"
 scale-info = "2.11.6"
@@ -83,11 +84,13 @@ subxt = "0.40.0"
 subxt-core = "0.40.0"
 subxt-signer = { version = "0.40.0", features = ["subxt"] }
 tempfile = "3.19.1"
+test-log = { version = "0.2.17", features = ["trace"] }
 tokio = "1.43.0"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 url = "2.5.4"
 uuid = "1.16.0"
+
 
 # Local dependencies
 accounting-contract = { path = "accounting-contract/solana/programs/accounting-contract", features = ["no-entrypoint"] }
