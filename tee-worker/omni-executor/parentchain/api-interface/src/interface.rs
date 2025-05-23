@@ -1306,9 +1306,9 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							68u8, 196u8, 29u8, 90u8, 179u8, 124u8, 1u8, 95u8, 149u8, 71u8, 111u8,
-							69u8, 244u8, 55u8, 239u8, 184u8, 76u8, 64u8, 97u8, 178u8, 246u8, 177u8,
-							101u8, 239u8, 223u8, 191u8, 215u8, 36u8, 151u8, 149u8, 191u8, 167u8,
+							30u8, 243u8, 57u8, 57u8, 118u8, 103u8, 60u8, 28u8, 244u8, 196u8, 35u8,
+							214u8, 64u8, 202u8, 24u8, 152u8, 49u8, 155u8, 121u8, 251u8, 247u8,
+							79u8, 11u8, 70u8, 121u8, 183u8, 77u8, 175u8, 58u8, 239u8, 223u8, 155u8,
 						],
 					)
 				}
@@ -1326,9 +1326,10 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							207u8, 11u8, 204u8, 193u8, 117u8, 133u8, 98u8, 138u8, 149u8, 40u8,
-							159u8, 60u8, 184u8, 139u8, 17u8, 156u8, 218u8, 65u8, 115u8, 19u8, 18u8,
-							82u8, 90u8, 179u8, 166u8, 192u8, 18u8, 72u8, 55u8, 6u8, 163u8, 76u8,
+							33u8, 228u8, 94u8, 13u8, 225u8, 248u8, 139u8, 156u8, 54u8, 130u8,
+							125u8, 206u8, 182u8, 49u8, 22u8, 99u8, 119u8, 7u8, 18u8, 84u8, 164u8,
+							110u8, 116u8, 168u8, 138u8, 114u8, 207u8, 163u8, 52u8, 39u8, 241u8,
+							100u8,
 						],
 					)
 				}
@@ -3073,9 +3074,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				80u8, 74u8, 185u8, 27u8, 170u8, 31u8, 7u8, 58u8, 153u8, 100u8, 68u8, 246u8, 240u8,
-				8u8, 234u8, 135u8, 32u8, 238u8, 53u8, 50u8, 176u8, 92u8, 238u8, 19u8, 131u8, 11u8,
-				88u8, 254u8, 132u8, 255u8, 187u8, 120u8,
+				181u8, 202u8, 12u8, 215u8, 221u8, 252u8, 133u8, 194u8, 223u8, 157u8, 114u8, 8u8,
+				146u8, 254u8, 228u8, 55u8, 253u8, 3u8, 51u8, 233u8, 213u8, 66u8, 94u8, 12u8, 244u8,
+				8u8, 29u8, 226u8, 19u8, 163u8, 0u8, 178u8,
 			]
 	}
 	pub mod system {
@@ -4228,10 +4229,10 @@ pub mod api {
 						"Events",
 						(),
 						[
-							174u8, 111u8, 120u8, 135u8, 75u8, 225u8, 199u8, 172u8, 249u8, 48u8,
-							110u8, 215u8, 163u8, 246u8, 240u8, 47u8, 102u8, 204u8, 236u8, 117u8,
-							16u8, 90u8, 24u8, 253u8, 91u8, 161u8, 253u8, 156u8, 94u8, 224u8, 160u8,
-							189u8,
+							65u8, 104u8, 48u8, 155u8, 49u8, 177u8, 50u8, 55u8, 69u8, 58u8, 235u8,
+							250u8, 161u8, 115u8, 108u8, 1u8, 120u8, 187u8, 87u8, 132u8, 191u8,
+							246u8, 248u8, 55u8, 93u8, 247u8, 198u8, 198u8, 141u8, 162u8, 40u8,
+							228u8,
 						],
 					)
 				}
@@ -6964,10 +6965,9 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							71u8, 23u8, 108u8, 151u8, 235u8, 207u8, 94u8, 88u8, 121u8, 14u8, 180u8,
-							41u8, 11u8, 113u8, 134u8, 43u8, 230u8, 211u8, 25u8, 198u8, 255u8,
-							108u8, 106u8, 191u8, 33u8, 243u8, 123u8, 175u8, 161u8, 27u8, 142u8,
-							179u8,
+							119u8, 128u8, 198u8, 183u8, 61u8, 91u8, 33u8, 163u8, 225u8, 166u8,
+							49u8, 246u8, 230u8, 14u8, 79u8, 68u8, 32u8, 45u8, 119u8, 180u8, 161u8,
+							76u8, 209u8, 183u8, 58u8, 166u8, 40u8, 17u8, 245u8, 5u8, 163u8, 2u8,
 						],
 					)
 				}
@@ -8161,9 +8161,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							124u8, 137u8, 41u8, 163u8, 77u8, 112u8, 0u8, 231u8, 211u8, 248u8, 70u8,
-							233u8, 109u8, 65u8, 29u8, 0u8, 101u8, 150u8, 102u8, 54u8, 151u8, 29u8,
-							36u8, 227u8, 244u8, 74u8, 226u8, 12u8, 229u8, 160u8, 238u8, 174u8,
+							137u8, 8u8, 161u8, 126u8, 140u8, 24u8, 207u8, 180u8, 115u8, 118u8,
+							147u8, 139u8, 186u8, 13u8, 77u8, 225u8, 89u8, 202u8, 8u8, 142u8, 218u8,
+							17u8, 99u8, 172u8, 129u8, 137u8, 77u8, 144u8, 224u8, 15u8, 151u8, 42u8,
 						],
 					)
 				}
@@ -8183,9 +8183,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							200u8, 220u8, 210u8, 194u8, 32u8, 142u8, 149u8, 63u8, 61u8, 209u8,
-							218u8, 146u8, 198u8, 1u8, 102u8, 171u8, 130u8, 0u8, 90u8, 205u8, 141u8,
-							164u8, 2u8, 14u8, 156u8, 143u8, 123u8, 31u8, 50u8, 23u8, 240u8, 170u8,
+							95u8, 64u8, 100u8, 192u8, 29u8, 172u8, 9u8, 7u8, 113u8, 48u8, 128u8,
+							69u8, 168u8, 10u8, 79u8, 21u8, 235u8, 144u8, 248u8, 254u8, 31u8, 137u8,
+							1u8, 11u8, 94u8, 186u8, 37u8, 201u8, 52u8, 47u8, 121u8, 174u8,
 						],
 					)
 				}
@@ -25374,16 +25374,16 @@ pub mod api {
 						Polkadot,
 						#[codec(index = 3)]
 						Kusama,
-						#[codec(index = 4)]
+						#[codec(index = 7)]
 						Ethereum {
 							#[codec(compact)]
 							chain_id: ::core::primitive::u64,
 						},
-						#[codec(index = 5)]
+						#[codec(index = 8)]
 						BitcoinCore,
-						#[codec(index = 6)]
+						#[codec(index = 9)]
 						BitcoinCash,
-						#[codec(index = 7)]
+						#[codec(index = 10)]
 						PolkadotBulletin,
 					}
 				}
@@ -25727,7 +25727,7 @@ pub mod api {
 							runtime_types::staging_xcm::v5::asset::AssetTransferFilter,
 						>,
 						preserve_origin: ::core::primitive::bool,
-						assets: ::subxt::ext::subxt_core::alloc::vec::Vec<
+						assets: runtime_types::bounded_collections::bounded_vec::BoundedVec<
 							runtime_types::staging_xcm::v5::asset::AssetTransferFilter,
 						>,
 						remote_xcm: runtime_types::staging_xcm::v5::Xcm,
