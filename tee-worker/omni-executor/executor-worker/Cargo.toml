@@ -9,6 +9,7 @@ alloy = { workspace = true, features = ["signer-local"] }
 clap = { workspace = true, features = ["derive"] }
 hex = { workspace = true }
 metrics-exporter-prometheus = { workspace = true }
+rust_decimal = { workspace = true }
 scale-encode = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
@@ -26,6 +27,7 @@ executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
+intent-asset-lock = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-attestation = { workspace = true }
 parentchain-listener = { workspace = true }

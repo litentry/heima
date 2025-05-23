@@ -1,4 +1,5 @@
 use crate::{AccountId, Address20, Address32, Address33, Balance, BoundedVec, ChainAsset};
+use alloc::string::String;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::Deserialize;
@@ -28,7 +29,7 @@ pub enum Intent {
     Swap(
         SwapOrder,
         Option<CrossChainSwapProvider>,
-        SingleChainSwapProvider,
+        OnChainSingleChainSwapProvider,
     ),
 }
 
@@ -83,14 +84,72 @@ pub struct BinanceConfig {
     // placeholder
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
-pub enum SingleChainSwapProvider {
-    Pumpx(PumpxConfig),
+#[derive(Deserialize, Debug, Clone)]
+pub struct PumpxConfig {
+    pub order_type: PumpxOrderType,
+    pub swap_type: u32, // 1：buy 2：sell
+    pub from_chain_id: u32,
+    pub from_token_ca: String,
+    pub to_chain_id: u32,
+    pub to_token_ca: String,
+    pub from_amount: String,
+    pub double_out: bool,
+    pub is_one_click: bool,
+    pub is_anti_mev: bool,
+    pub is_auto_slippage: bool,
+    pub gas_type: u32, // 1: slow, 2: medium, 3: fast
+    pub slippage: u32,
+    pub wallet_index: u32,
+
+    // below is only relevant to limit order, thus `Option<>`
+    pub token_cap: Option<String>,
+    pub price_usd: Option<String>,
+    pub usd_worth: String,
+    pub trailing_percent: Option<u32>,
+}
+
+impl PumpxConfig {
+    pub fn is_cross_chain(&self) -> bool {
+        self.from_chain_id != self.to_chain_id
+    }
+}
+
+impl TryFrom<OnChainPumpxConfig> for PumpxConfig {
+    type Error = ();
+
+    fn try_from(config: OnChainPumpxConfig) -> Result<Self, Self::Error> {
+        Ok(PumpxConfig {
+            order_type: config.order_type,
+            swap_type: config.swap_type,
+            from_chain_id: config.from_chain_id,
+            from_token_ca: String::from_utf8(config.from_token_ca.to_vec()).map_err(|_| ())?,
+            to_chain_id: config.to_chain_id,
+            to_token_ca: String::from_utf8(config.to_token_ca.to_vec()).map_err(|_| ())?,
+            from_amount: String::from_utf8(config.from_amount.to_vec()).map_err(|_| ())?,
+            double_out: config.double_out,
+            is_one_click: config.is_one_click,
+            is_anti_mev: config.is_anti_mev,
+            is_auto_slippage: config.is_auto_slippage,
+            gas_type: config.gas_type,
+            slippage: config.slippage,
+            wallet_index: config.wallet_index,
+            token_cap: config
+                .token_cap
+                .map(|v| String::from_utf8(v.to_vec()).map_err(|_| ()))
+                .transpose()?,
+            price_usd: config
+                .price_usd
+                .map(|v| String::from_utf8(v.to_vec()).map_err(|_| ()))
+                .transpose()?,
+            usd_worth: String::from_utf8(config.usd_worth.to_vec()).map_err(|_| ())?,
+            trailing_percent: config.trailing_percent,
+        })
+    }
 }
 
 // basically copied from pumpx API
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
-pub struct PumpxConfig {
+pub struct OnChainPumpxConfig {
     pub order_type: PumpxOrderType,
     pub swap_type: u32, // 1：buy 2：sell
     pub from_chain_id: u32,
@@ -113,9 +172,40 @@ pub struct PumpxConfig {
     pub trailing_percent: Option<u32>,
 }
 
-impl PumpxConfig {
-    pub fn is_cross_chain(&self) -> bool {
-        self.from_chain_id != self.to_chain_id
+impl TryFrom<PumpxConfig> for OnChainPumpxConfig {
+    type Error = ();
+
+    fn try_from(config: PumpxConfig) -> Result<Self, Self::Error> {
+        Ok(OnChainPumpxConfig {
+            order_type: config.order_type,
+            swap_type: config.swap_type,
+            from_chain_id: config.from_chain_id,
+            from_token_ca: BoundedVec::try_from(config.from_token_ca.as_bytes().to_vec())
+                .map_err(|_| ())?,
+            to_chain_id: config.to_chain_id,
+            to_token_ca: BoundedVec::try_from(config.to_token_ca.as_bytes().to_vec())
+                .map_err(|_| ())?,
+            from_amount: BoundedVec::try_from(config.from_amount.as_bytes().to_vec())
+                .map_err(|_| ())?,
+            double_out: config.double_out,
+            is_one_click: config.is_one_click,
+            is_anti_mev: config.is_anti_mev,
+            is_auto_slippage: config.is_auto_slippage,
+            gas_type: config.gas_type,
+            slippage: config.slippage,
+            wallet_index: config.wallet_index,
+            token_cap: config
+                .token_cap
+                .map(|v| BoundedVec::try_from(v.as_bytes().to_vec()).map_err(|_| ()))
+                .transpose()?,
+            price_usd: config
+                .price_usd
+                .map(|v| BoundedVec::try_from(v.as_bytes().to_vec()).map_err(|_| ()))
+                .transpose()?,
+            usd_worth: BoundedVec::try_from(config.usd_worth.as_bytes().to_vec())
+                .map_err(|_| ())?,
+            trailing_percent: config.trailing_percent,
+        })
     }
 }
 
@@ -124,4 +214,40 @@ impl PumpxConfig {
 pub enum PumpxOrderType {
     Market,
     Limit,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub enum SingleChainSwapProvider {
+    Pumpx(PumpxConfig),
+}
+
+impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
+    type Error = ();
+
+    fn try_from(scsp: OnChainSingleChainSwapProvider) -> Result<Self, Self::Error> {
+        match scsp {
+            OnChainSingleChainSwapProvider::Pumpx(pumpx_config) => {
+                let pumpx_config = PumpxConfig::try_from(pumpx_config)?;
+                Ok(SingleChainSwapProvider::Pumpx(pumpx_config))
+            }
+        }
+    }
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub enum OnChainSingleChainSwapProvider {
+    Pumpx(OnChainPumpxConfig),
+}
+
+impl TryFrom<SingleChainSwapProvider> for OnChainSingleChainSwapProvider {
+    type Error = ();
+
+    fn try_from(scsp: SingleChainSwapProvider) -> Result<Self, Self::Error> {
+        match scsp {
+            SingleChainSwapProvider::Pumpx(pumpx_config) => {
+                let on_chain_config = OnChainPumpxConfig::try_from(pumpx_config)?;
+                Ok(OnChainSingleChainSwapProvider::Pumpx(on_chain_config))
+            }
+        }
+    }
 }

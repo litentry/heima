@@ -2,7 +2,8 @@ pub mod signer;
 
 use async_trait::async_trait;
 use executor_core::wallet_metrics::WalletBalanceFetcher;
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_response::RpcKeyedAccount;
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
 use solana_sdk::{
 	commitment_config::CommitmentConfig, pubkey::Pubkey, signer::Signer as SignerTrait,
 	system_instruction, transaction::Transaction,
@@ -27,6 +28,14 @@ pub trait SolanaClient: Send + Sync {
 		mint_address: &str,
 		signer: &Signer,
 	) -> Result<String, ()>;
+
+	async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, ()>;
+
+	async fn get_token_accounts_by_owner(
+		&self,
+		owner: &Pubkey,
+		token_account_filter: TokenAccountsFilter,
+	) -> Result<Vec<RpcKeyedAccount>, ()>;
 }
 
 pub struct SolanaRpcClient {
@@ -171,6 +180,24 @@ impl SolanaClient for SolanaRpcClient {
 
 		Ok(tx_signature.to_string())
 	}
+
+	async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, ()> {
+		self.rpc_client
+			.get_balance(pubkey)
+			.await
+			.map_err(|e| error!("Could not get balance: {:?}", e))
+	}
+
+	async fn get_token_accounts_by_owner(
+		&self,
+		owner: &Pubkey,
+		token_account_filter: TokenAccountsFilter,
+	) -> Result<Vec<RpcKeyedAccount>, ()> {
+		self.rpc_client
+			.get_token_accounts_by_owner(owner, token_account_filter)
+			.await
+			.map_err(|e| error!("Could not get token accounts by owner: {:?}", e))
+	}
 }
 
 #[async_trait]
@@ -193,6 +220,9 @@ pub mod mocks {
 	use crate::SolanaClient;
 	use async_trait::async_trait;
 	use mockall::mock;
+	use solana_client::rpc_request::TokenAccountsFilter;
+	use solana_client::rpc_response::RpcKeyedAccount;
+	use solana_sdk::pubkey::Pubkey;
 
 	mock! {
 		pub SolanaRpcClient {}
@@ -216,6 +246,9 @@ pub mod mocks {
 				mint_address: &str,
 				signer: &Signer,
 			) -> Result<String, ()>;
+
+			async fn get_token_accounts_by_owner(&self, owner: &Pubkey, token_account_filter: TokenAccountsFilter) -> Result<Vec<RpcKeyedAccount>, ()>;
+			async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64, ()>;
 		}
 
 	}

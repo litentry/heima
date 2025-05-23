@@ -1,6 +1,6 @@
 {
   "name": "@heima-network/chaindata",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "dependencies": {
     "tslib": "^2.5.3",
     "tsup": "^8.4.0"

@@ -39,6 +39,8 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use intent_asset_lock::precise::PreciseAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::{
 	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
@@ -53,6 +55,7 @@ use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
+use rust_decimal::Decimal;
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
@@ -66,7 +69,8 @@ use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
-use tracing::log::{error, info};
+use tracing::info;
+use tracing::log::error;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
 
@@ -86,6 +90,9 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			let args_string = std::env::args().collect::<Vec<String>>().join(" ");
+			info!("Executing: {}", args_string);
+
 			let builder = PrometheusBuilder::new();
 
 			let address = SocketAddr::from_str(&format!("0.0.0.0:{}", args.metrics_port)).unwrap();
@@ -282,7 +289,11 @@ async fn main() -> Result<(), ()> {
 			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
 			// wallet monitoring setup end
 
+			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
+				Arc::new(AccountAssetLocks::new(storage_db.clone()));
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
+				account_assets_lock,
 				rpc_endpoint_registry,
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
@@ -292,6 +303,7 @@ async fn main() -> Result<(), ()> {
 				solana_client,
 				Arc::new(Box::new(evm_accounting_contract_client)),
 				Arc::new(Box::new(solana_accounting_contract_client)),
+				Decimal::from_str("200").unwrap(),
 			)?;
 
 			let task_handler_context = TaskHandlerContext::new(

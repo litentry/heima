@@ -20,9 +20,9 @@ use alloy::rpc::types::TransactionRequest;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use ethereum_rpc::RpcProvider;
+use solana::SolanaClient;
 use solana_account_decoder_client_types::UiAccountData;
-use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_client::rpc_request::TokenAccountsFilter;
 use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use tracing::log::error;
@@ -34,9 +34,11 @@ sol!("artifacts/IERC20.sol");
 pub type SolanaPubkey = solana_sdk::pubkey::Pubkey;
 pub type EthereumAddress = alloy::primitives::Address;
 
-pub async fn query_solana(rpc_url: &str, key: &Pubkey, token: &SolanaToken) -> Result<u64, ()> {
-	let client = RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::finalized());
-
+pub async fn query_solana<Client: SolanaClient>(
+	client: &Client,
+	key: &Pubkey,
+	token: &SolanaToken,
+) -> Result<u64, ()> {
 	match token {
 		SolanaToken::Native => client
 			.get_balance(key)
@@ -101,6 +103,7 @@ pub async fn query_ethereum(
 #[cfg(test)]
 pub mod tests {
 	use hex_literal::hex;
+	use solana::SolanaRpcClient;
 	use solana_sdk::pubkey::Pubkey;
 	use std::str::FromStr;
 
@@ -133,6 +136,7 @@ pub mod tests {
 		// mint: HHSfQJEhWkXQZbxuNzmtCwZGNYwAX2VNezdXuVYJbrgE
 
 		let rpc_url = "<solana rpc endpoint>";
+		let client = SolanaRpcClient::new(rpc_url);
 
 		// key with solana on devnet
 		// let key = Pubkey::from_str("GKEXWhTFSt48dSN9tZzY5H3qcLL9HZsiQTk9yX8gjDZW").unwrap();
@@ -141,7 +145,7 @@ pub mod tests {
 		let key = Pubkey::from_str("J9DZj7dzbBYEVfaaBwQ7kBzGkKVTZssBPiatKyfxE3ZL").unwrap();
 		let mint_key = Pubkey::from_str("HHSfQJEhWkXQZbxuNzmtCwZGNYwAX2VNezdXuVYJbrgE").unwrap();
 		let balance =
-			query_solana(rpc_url, &key, &crate::SolanaToken::SPL(mint_key.to_bytes().into()))
+			query_solana(&client, &key, &crate::SolanaToken::SPL(mint_key.to_bytes().into()))
 				.await
 				.unwrap();
 
