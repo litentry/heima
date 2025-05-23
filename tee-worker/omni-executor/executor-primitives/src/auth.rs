@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 pub type VerificationCode = String;
 type Email = String;
-type OmniAccount = String;
 type JwtToken = String;
 
 /// A serializable representation of Identity for JSON interchange.
@@ -89,7 +88,7 @@ impl TryFrom<IdentitySerde> for Identity {
 pub enum OmniAuth {
 	Web3(Identity, HeimaMultiSignature), // (Signer, Signature)
 	Email(Email, VerificationCode),
-	AuthToken(OmniAccount, JwtToken),
+	AuthToken(JwtToken),
 	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
 }
 
@@ -97,7 +96,7 @@ pub enum OmniAuth {
 pub enum OmniAuthSerde {
 	Web3(IdentitySerde, HeimaMultiSignature),
 	Email(Email, VerificationCode),
-	AuthToken(OmniAccount, JwtToken),
+	AuthToken(JwtToken),
 	OAuth2(IdentitySerde, OAuth2Data),
 }
 

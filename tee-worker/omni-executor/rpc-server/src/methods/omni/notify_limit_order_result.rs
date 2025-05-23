@@ -74,7 +74,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 					params.message,
 				),
 				None,
-				Some(OmniAuth::AuthToken(omni_account, params.auth_token)),
+				Some(OmniAuth::AuthToken(params.auth_token)),
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
