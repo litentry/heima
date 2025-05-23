@@ -118,7 +118,7 @@ pub fn verify_auth_token_authentication(
 	token_typ: &str,
 	skip_exp_check: bool,
 ) -> Result<AuthTokenClaims, AuthenticationError> {
-	let validation = Validation::new(omni_account, token_typ.to_string(), skip_exp_check);
+	let validation = Validation::new(token_typ.to_string(), skip_exp_check);
 	auth_token
 		.validate(&ctx.jwt_rsa_private_key, validation)
 		.map_err(AuthenticationError::AuthTokenError)
