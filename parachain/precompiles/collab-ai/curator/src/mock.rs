@@ -15,10 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use frame_support::{
-	construct_runtime, derive_impl, parameter_types,
-	traits::{ ConstU64},
-};
+use frame_support::{construct_runtime, derive_impl, parameter_types, traits::ConstU64};
 use pallet_evm::{EnsureAddressNever, EnsureAddressRoot};
 use precompile_utils::precompile_set::{AddressU64, PrecompileAt, PrecompileSetBuilder};
 use sp_core::H160;
