@@ -207,11 +207,9 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 		)
 		.map_err(|e| {
 			error!("Failed to decode metadata: {:?}", e);
-			()
 		})?;
 		let metadata = subxt::Metadata::try_from(runtime_metadata).map_err(|e| {
 			error!("Failed to convert metadata: {:?}", e);
-			()
 		})?;
 		let hasher = ChainConfig::Hasher::new(&metadata);
 		let tx_hash_bytes = hasher.hash(extrinsic).encode();

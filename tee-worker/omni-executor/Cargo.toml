@@ -127,3 +127,9 @@ solana-intent-executor = { path = "intent/executors/solana" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
+
+[patch."https://github.com/rust-ethereum/evm"]
+evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-core = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-gasometer = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-runtime = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
