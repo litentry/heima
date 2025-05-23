@@ -1,6 +1,5 @@
 export type ChainId =
   | 'heima-local'
-  | 'heima-test'
   | 'heima-staging'
   | 'heima-prod';
 
@@ -27,16 +26,6 @@ export const heimaLocal: ChainSpec = {
   enclaveRpcs: [{ url: 'ws://localhost:2100' }],
 };
 
-export const heimaTest: ChainSpec = {
-  id: 'heima-test',
-  name: 'Heima Test Network',
-  isTestnet: true,
-  isDefault: false,
-  // TODO update url below
-  rpcs: [{ url: 'wss://tee-dev.heima.network' }],
-  enclaveRpcs: [{ url: 'wss://test-dex-worker.heima.network' }],
-};
-
 export const heimaStaging: ChainSpec = {
   id: 'heima-staging',
   name: 'Heima Staging Network',
@@ -56,7 +45,7 @@ export const heimaProd: ChainSpec = {
   enclaveRpcs: [{ url: 'wss://dex-worker.heima.network' }],
 };
 
-export const all = [heimaProd, heimaTest, heimaLocal, heimaStaging];
+export const all = [heimaProd, heimaLocal, heimaStaging];
 
 export const byId = all.reduce((acc, spec) => {
   acc[spec.id] = spec;
