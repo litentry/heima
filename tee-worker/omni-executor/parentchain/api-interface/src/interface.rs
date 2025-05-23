@@ -1306,9 +1306,9 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							248u8, 15u8, 73u8, 67u8, 45u8, 156u8, 204u8, 198u8, 245u8, 8u8, 195u8,
-							142u8, 34u8, 132u8, 212u8, 36u8, 249u8, 234u8, 48u8, 205u8, 105u8,
-							179u8, 32u8, 99u8, 66u8, 188u8, 46u8, 45u8, 95u8, 224u8, 236u8, 226u8,
+							218u8, 203u8, 144u8, 55u8, 171u8, 135u8, 139u8, 115u8, 129u8, 148u8,
+							236u8, 91u8, 227u8, 180u8, 120u8, 23u8, 202u8, 152u8, 192u8, 0u8, 8u8,
+							86u8, 211u8, 65u8, 64u8, 132u8, 83u8, 51u8, 161u8, 165u8, 178u8, 20u8,
 						],
 					)
 				}
@@ -1326,9 +1326,10 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							175u8, 170u8, 86u8, 53u8, 199u8, 52u8, 167u8, 68u8, 250u8, 88u8, 72u8,
-							163u8, 28u8, 45u8, 30u8, 115u8, 214u8, 103u8, 167u8, 37u8, 86u8, 118u8,
-							178u8, 235u8, 53u8, 132u8, 43u8, 95u8, 55u8, 250u8, 36u8, 231u8,
+							113u8, 32u8, 3u8, 179u8, 112u8, 139u8, 175u8, 239u8, 163u8, 175u8,
+							133u8, 168u8, 141u8, 77u8, 230u8, 150u8, 186u8, 49u8, 167u8, 246u8,
+							111u8, 0u8, 88u8, 204u8, 135u8, 34u8, 88u8, 29u8, 149u8, 217u8, 71u8,
+							90u8,
 						],
 					)
 				}
@@ -3069,9 +3070,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				55u8, 231u8, 61u8, 12u8, 174u8, 33u8, 144u8, 82u8, 146u8, 214u8, 98u8, 186u8,
-				149u8, 53u8, 137u8, 246u8, 101u8, 219u8, 95u8, 185u8, 233u8, 223u8, 201u8, 109u8,
-				184u8, 122u8, 129u8, 46u8, 43u8, 214u8, 125u8, 232u8,
+				47u8, 48u8, 169u8, 203u8, 174u8, 122u8, 193u8, 174u8, 104u8, 255u8, 173u8, 154u8,
+				138u8, 103u8, 97u8, 128u8, 85u8, 206u8, 62u8, 76u8, 207u8, 138u8, 171u8, 255u8,
+				255u8, 125u8, 114u8, 196u8, 174u8, 211u8, 105u8, 93u8,
 			]
 	}
 	pub mod system {
@@ -6961,10 +6962,9 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							82u8, 165u8, 205u8, 19u8, 66u8, 25u8, 85u8, 206u8, 51u8, 79u8, 9u8,
-							52u8, 160u8, 253u8, 111u8, 149u8, 125u8, 40u8, 73u8, 94u8, 150u8,
-							252u8, 122u8, 230u8, 104u8, 97u8, 192u8, 197u8, 119u8, 209u8, 232u8,
-							48u8,
+							119u8, 102u8, 82u8, 125u8, 105u8, 243u8, 188u8, 48u8, 236u8, 34u8,
+							39u8, 26u8, 58u8, 244u8, 124u8, 78u8, 9u8, 191u8, 231u8, 99u8, 122u8,
+							201u8, 45u8, 230u8, 45u8, 237u8, 173u8, 61u8, 2u8, 139u8, 113u8, 196u8,
 						],
 					)
 				}
@@ -8158,9 +8158,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							52u8, 136u8, 169u8, 135u8, 53u8, 247u8, 129u8, 253u8, 82u8, 237u8,
-							161u8, 249u8, 140u8, 1u8, 60u8, 2u8, 83u8, 234u8, 84u8, 61u8, 63u8,
-							255u8, 121u8, 95u8, 92u8, 70u8, 47u8, 38u8, 220u8, 113u8, 199u8, 171u8,
+							121u8, 64u8, 214u8, 124u8, 54u8, 69u8, 101u8, 245u8, 99u8, 9u8, 248u8,
+							33u8, 53u8, 243u8, 122u8, 41u8, 238u8, 133u8, 240u8, 217u8, 229u8,
+							39u8, 225u8, 245u8, 7u8, 195u8, 122u8, 215u8, 35u8, 224u8, 255u8, 1u8,
 						],
 					)
 				}
@@ -8180,9 +8180,10 @@ pub mod api {
 							auth_type,
 						},
 						[
-							127u8, 80u8, 37u8, 228u8, 18u8, 204u8, 253u8, 251u8, 8u8, 68u8, 103u8,
-							87u8, 240u8, 68u8, 137u8, 51u8, 244u8, 67u8, 84u8, 200u8, 134u8, 65u8,
-							219u8, 47u8, 202u8, 214u8, 150u8, 1u8, 213u8, 187u8, 78u8, 75u8,
+							16u8, 148u8, 2u8, 157u8, 70u8, 180u8, 253u8, 46u8, 195u8, 174u8, 99u8,
+							55u8, 113u8, 146u8, 193u8, 249u8, 254u8, 121u8, 185u8, 158u8, 39u8,
+							247u8, 241u8, 175u8, 98u8, 160u8, 37u8, 150u8, 253u8, 232u8, 9u8,
+							238u8,
 						],
 					)
 				}
@@ -10317,7 +10318,7 @@ pub mod api {
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
 					pub enum Intent {
-						# [codec (index = 0)] TransferEthereum (runtime_types :: core_primitives :: omni :: intent :: TransferEthereum ,) , # [codec (index = 1)] CallEthereum (runtime_types :: core_primitives :: omni :: intent :: CallEthereum ,) , # [codec (index = 2)] SystemRemark (runtime_types :: bounded_collections :: bounded_vec :: BoundedVec < :: core :: primitive :: u8 > ,) , # [codec (index = 3)] TransferNative (runtime_types :: core_primitives :: omni :: intent :: TransferNative ,) , # [codec (index = 4)] TransferSolana (runtime_types :: core_primitives :: omni :: intent :: TransferSolana ,) , # [codec (index = 5)] Swap (runtime_types :: core_primitives :: omni :: intent :: SwapOrder , :: core :: option :: Option < runtime_types :: core_primitives :: omni :: intent :: CrossChainSwapProvider > , runtime_types :: core_primitives :: omni :: intent :: SingleChainSwapProvider ,) , }
+						# [codec (index = 0)] TransferEthereum (runtime_types :: core_primitives :: omni :: intent :: TransferEthereum ,) , # [codec (index = 1)] CallEthereum (runtime_types :: core_primitives :: omni :: intent :: CallEthereum ,) , # [codec (index = 2)] SystemRemark (runtime_types :: bounded_collections :: bounded_vec :: BoundedVec < :: core :: primitive :: u8 > ,) , # [codec (index = 3)] TransferNative (runtime_types :: core_primitives :: omni :: intent :: TransferNative ,) , # [codec (index = 4)] TransferSolana (runtime_types :: core_primitives :: omni :: intent :: TransferSolana ,) , # [codec (index = 5)] Swap (runtime_types :: core_primitives :: omni :: intent :: SwapOrder , :: core :: option :: Option < runtime_types :: core_primitives :: omni :: intent :: CrossChainSwapProvider > , runtime_types :: core_primitives :: omni :: intent :: OnChainSingleChainSwapProvider ,) , }
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
@@ -10333,7 +10334,7 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub struct PumpxConfig {
+					pub struct OnChainPumpxConfig {
 						pub order_type:
 							runtime_types::core_primitives::omni::intent::PumpxOrderType,
 						pub swap_type: ::core::primitive::u32,
@@ -10388,11 +10389,9 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub enum PumpxOrderType {
+					pub enum OnChainSingleChainSwapProvider {
 						#[codec(index = 0)]
-						Market,
-						#[codec(index = 1)]
-						Limit,
+						Pumpx(runtime_types::core_primitives::omni::intent::OnChainPumpxConfig),
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -10409,9 +10408,11 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub enum SingleChainSwapProvider {
+					pub enum PumpxOrderType {
 						#[codec(index = 0)]
-						Pumpx(runtime_types::core_primitives::omni::intent::PumpxConfig),
+						Market,
+						#[codec(index = 1)]
+						Limit,
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -22359,7 +22360,7 @@ pub mod api {
 			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
 			pub enum OriginCaller {
-				# [codec (index = 0)] system (runtime_types :: frame_support :: dispatch :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 22)] Council (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 24)] TechnicalCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 51)] PolkadotXcm (runtime_types :: pallet_xcm :: pallet :: Origin ,) , # [codec (index = 52)] CumulusXcm (runtime_types :: cumulus_pallet_xcm :: pallet :: Origin ,) , # [codec (index = 73)] DeveloperCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 84)] OmniAccount (runtime_types :: pallet_omni_account :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 121)] Ethereum (runtime_types :: pallet_ethereum :: RawOrigin ,) , # [codec (index = 172)] Origins (runtime_types :: paseo_runtime :: governance_v2 :: origins :: pallet_custom_origins :: Origin ,) , # [codec (index = 9)] Void (runtime_types :: sp_core :: Void ,) , }
+				# [codec (index = 0)] system (runtime_types :: frame_support :: dispatch :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 22)] Council (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 24)] TechnicalCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 51)] PolkadotXcm (runtime_types :: pallet_xcm :: pallet :: Origin ,) , # [codec (index = 52)] CumulusXcm (runtime_types :: cumulus_pallet_xcm :: pallet :: Origin ,) , # [codec (index = 73)] DeveloperCommittee (runtime_types :: pallet_collective :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 84)] OmniAccount (runtime_types :: pallet_omni_account :: RawOrigin < :: subxt :: ext :: subxt_core :: utils :: AccountId32 > ,) , # [codec (index = 121)] Ethereum (runtime_types :: pallet_ethereum :: RawOrigin ,) , # [codec (index = 172)] Origins (runtime_types :: paseo_runtime :: governance_v2 :: origins :: pallet_custom_origins :: Origin ,) , }
 			#[derive(
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
@@ -23011,18 +23012,6 @@ pub mod api {
 			pub struct OpaqueMetadata(
 				pub ::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
 			);
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			pub enum Void {}
 		}
 		pub mod sp_inherents {
 			use super::runtime_types;
