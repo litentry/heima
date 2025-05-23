@@ -121,13 +121,12 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/polkadot-
 cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 
 # evm-tracing, use the astar version to use "standard" substrate frame to avoid any conflicts
-moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2", default-features = false }
-moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2" }
-moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2", default-features = false }
-moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2", default-features = false }
-moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2", default-features = false }
-moonbeam-rpc-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2", default-features = false }
-moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "1b55dcf2", default-features = false }
+moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "5e5b9797", default-features = false }
+moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "5e5b9797" }
+moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "5e5b9797", default-features = false }
+moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "5e5b9797", default-features = false }
+moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "5e5b9797", default-features = false }
+moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "5e5b9797", default-features = false }
 
 # polkadot client
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
@@ -319,8 +318,10 @@ pallet-pool-proposal = { path = "pallets/collab-ai/pool-proposal", default-featu
 pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-features = false }
 
 [patch.crates-io]
-evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
 
 [patch."https://github.com/rust-ethereum/evm"]
 evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-core = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-gasometer = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-runtime = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }

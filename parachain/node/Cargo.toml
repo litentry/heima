@@ -81,7 +81,6 @@ moonbeam-rpc-debug = { workspace = true }
 moonbeam-rpc-primitives-debug = { workspace = true, features = ["std"] }
 moonbeam-rpc-primitives-txpool = { workspace = true, features = ["std"] }
 moonbeam-rpc-trace = { workspace = true }
-moonbeam-rpc-txpool = { workspace = true }
 
 cumulus-client-cli = { workspace = true }
 cumulus-client-collator = { workspace = true }

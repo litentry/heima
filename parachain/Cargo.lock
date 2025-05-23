@@ -3159,9 +3159,9 @@ dependencies = [
  "auto_impl",
  "environmental",
  "ethereum",
- "evm-core 0.42.0 (git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361)",
- "evm-gasometer 0.42.0 (git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361)",
- "evm-runtime 0.42.0 (git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361)",
+ "evm-core",
+ "evm-gasometer",
+ "evm-runtime",
  "log",
  "parity-scale-codec",
  "primitive-types 0.13.1",
@@ -3174,17 +3174,6 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.42.0"
-source = "git+https://github.com/rust-ethereum/evm?branch=v0.x#6ca5a72bc8942f4860137155dd9033526fd362a5"
-dependencies = [
- "parity-scale-codec",
- "primitive-types 0.13.1",
- "scale-info",
- "serde",
-]
-
-[[package]]
-name = "evm-core"
-version = "0.42.0"
 source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "parity-scale-codec",
@@ -3196,35 +3185,12 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.42.0"
-source = "git+https://github.com/rust-ethereum/evm?branch=v0.x#6ca5a72bc8942f4860137155dd9033526fd362a5"
-dependencies = [
- "environmental",
- "evm-core 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
- "evm-runtime 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
- "primitive-types 0.13.1",
-]
-
-[[package]]
-name = "evm-gasometer"
-version = "0.42.0"
 source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "environmental",
- "evm-core 0.42.0 (git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361)",
- "evm-runtime 0.42.0 (git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361)",
+ "evm-core",
+ "evm-runtime",
  "primitive-types 0.13.1",
-]
-
-[[package]]
-name = "evm-runtime"
-version = "0.42.0"
-source = "git+https://github.com/rust-ethereum/evm?branch=v0.x#6ca5a72bc8942f4860137155dd9033526fd362a5"
-dependencies = [
- "auto_impl",
- "environmental",
- "evm-core 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
- "primitive-types 0.13.1",
- "sha3",
 ]
 
 [[package]]
@@ -3234,7 +3200,7 @@ source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c
 dependencies = [
  "auto_impl",
  "environmental",
- "evm-core 0.42.0 (git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361)",
+ "evm-core",
  "primitive-types 0.13.1",
  "sha3",
 ]
@@ -3242,14 +3208,14 @@ dependencies = [
 [[package]]
 name = "evm-tracing-events"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "environmental",
  "ethereum",
  "ethereum-types",
  "evm",
- "evm-gasometer 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
- "evm-runtime 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
+ "evm-gasometer",
+ "evm-runtime",
  "parity-scale-codec",
  "sp-runtime-interface",
 ]
@@ -4607,7 +4573,6 @@ dependencies = [
  "moonbeam-rpc-primitives-debug",
  "moonbeam-rpc-primitives-txpool",
  "moonbeam-rpc-trace",
- "moonbeam-rpc-txpool",
  "pallet-ethereum",
  "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
  "pallet-omni-account-runtime-api",
@@ -5042,11 +5007,10 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.27.5"
+version = "0.27.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d191583f3da1305256f22463b9bb0471acad48a4e534a5218b9963e9c1f59b2"
+checksum = "03a01595e11bdcec50946522c32dde3fc6914743000a68b93000965f2f02406d"
 dependencies = [
- "futures-util",
  "http 1.3.1",
  "hyper 1.6.0",
  "hyper-util",
@@ -7038,7 +7002,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-client-evm-tracing"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7054,12 +7018,12 @@ dependencies = [
 [[package]]
 name = "moonbeam-evm-tracer"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum-types",
  "evm",
- "evm-gasometer 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
- "evm-runtime 0.42.0 (git+https://github.com/rust-ethereum/evm?branch=v0.x)",
+ "evm-gasometer",
+ "evm-runtime",
  "evm-tracing-events",
  "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
  "moonbeam-primitives-ext",
@@ -7074,7 +7038,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-primitives-ext"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7087,7 +7051,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-debug"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7104,7 +7068,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-trace"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum-types",
  "futures 0.3.31",
@@ -7116,22 +7080,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "moonbeam-rpc-core-txpool"
-version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
-dependencies = [
- "ethereum",
- "ethereum-types",
- "fc-rpc-core",
- "jsonrpsee 0.24.9",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "moonbeam-rpc-core-types"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum-types",
  "serde",
@@ -7141,7 +7092,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-debug"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7173,7 +7124,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-debug"
 version = "0.1.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "environmental",
  "ethereum",
@@ -7191,7 +7142,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-txpool"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -7205,7 +7156,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-trace"
 version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
+source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=5e5b9797#5e5b9797a576136af42ae81264638865e9cc195a"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7236,29 +7187,6 @@ dependencies = [
  "substrate-prometheus-endpoint",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "moonbeam-rpc-txpool"
-version = "0.6.0"
-source = "git+https://github.com/litentry/moonbeam-vendor-rpc?rev=1b55dcf2#1b55dcf2c36932b14b2cc162427e905cedfac1e7"
-dependencies = [
- "ethereum-types",
- "fc-rpc",
- "frame-system",
- "jsonrpsee 0.24.9",
- "moonbeam-rpc-core-txpool",
- "moonbeam-rpc-primitives-txpool",
- "rlp",
- "sc-transaction-pool",
- "sc-transaction-pool-api",
- "serde",
- "sha3",
- "sp-api",
- "sp-blockchain",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -13848,7 +13776,7 @@ dependencies = [
  "futures-timer",
  "http-body-util",
  "hyper 1.6.0",
- "hyper-rustls 0.27.5",
+ "hyper-rustls 0.27.6",
  "hyper-util",
  "log",
  "num_cpus",

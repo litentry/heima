@@ -23,13 +23,12 @@ use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use fc_rpc::{
 	pending::ConsensusDataProvider, Eth, EthApiServer, EthBlockDataCacheTask, EthFilter,
-	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, Web3, Web3ApiServer,
+	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, TxPool, TxPoolApiServer, Web3, Web3ApiServer,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::StorageOverride;
 use moonbeam_rpc_debug::{Debug, DebugServer};
 use moonbeam_rpc_trace::{Trace, TraceServer};
-use moonbeam_rpc_txpool::{TxPool as MoonbeamTxPool, TxPoolServer};
 use polkadot_primitives::PersistedValidationData;
 use sc_client_api::{
 	AuxStore, Backend, BlockchainEvents, StateBackend, StorageProvider, UsageProvider,
@@ -284,7 +283,7 @@ where
 		)?;
 
 		if tracing_config.enable_txpool {
-			module.merge(MoonbeamTxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
+			module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
 		}
 
 		if let Some(trace_filter_requester) = tracing_config.tracing_requesters.trace {

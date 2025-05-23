@@ -17,7 +17,7 @@
 use crate::*;
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
-	traits::{ConstU32, ConstU64},
+	traits::{ ConstU64},
 };
 use pallet_evm::{EnsureAddressNever, EnsureAddressRoot};
 use precompile_utils::precompile_set::{AddressU64, PrecompileAt, PrecompileSetBuilder};
