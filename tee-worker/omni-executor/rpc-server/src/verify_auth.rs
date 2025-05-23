@@ -58,14 +58,9 @@ pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), Au
 		OmniAuth::OAuth2(ref sender, ref oauth2_data) => {
 			verify_oauth2_authentication(ctx, sender, oauth2_data).await
 		},
-		OmniAuth::AuthToken(omni_account, ref auth_token) => verify_auth_token_authentication(
-			ctx,
-			omni_account.to_string(),
-			auth_token,
-			AUTH_TOKEN_ID_TYPE,
-			false,
-		)
-		.map(|_| ()),
+		OmniAuth::AuthToken(ref auth_token) => {
+			verify_auth_token_authentication(ctx, auth_token, AUTH_TOKEN_ID_TYPE, false).map(|_| ())
+		},
 	}
 }
 
@@ -113,7 +108,6 @@ pub fn verify_email_authentication(
 
 pub fn verify_auth_token_authentication(
 	ctx: Arc<RpcContext>,
-	omni_account: String,
 	auth_token: &str,
 	token_typ: &str,
 	skip_exp_check: bool,

@@ -4,12 +4,12 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
+use executor_primitives::OmniAuth;
 use executor_storage::{PumpxJwtStorage, Storage};
 use heima_authentication::auth_token::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_hex_utils::decode_hex;
 use heima_primitives::{
-	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
+	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
 	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
 	SolanaToken, SwapOrder, Web2IdentityType,
 };
@@ -19,6 +19,7 @@ use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
+use std::str::FromStr;
 use tracing::{debug, error};
 
 use super::common::{check_omni_api_response, handle_omni_native_task};
@@ -116,16 +117,20 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			debug!("Received omni_submitSwapOrder, user_email: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}",
 			params.user_email, params.intent_id, params.order_type, params.swap_type, params.from_chain_id, params.from_token_ca, params.from_amount, params.to_chain_id, params.to_token_ca, params.wallet_index);
 
-			let user_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
-			if verify_auth_token_authentication(ctx.clone(), user_identity.to_omni_account().to_hex(), &params.auth_token, AUTH_TOKEN_ID_TYPE, false)
-				.is_err()
-			{
-				error!("Failed to verify auth token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
-			}
+            let omni_account = match verify_auth_token_authentication(ctx.clone(), &params.auth_token, AUTH_TOKEN_ID_TYPE, false) {
+                Ok(claims) => {
+                    AccountId::from_str(&claims.sub).map_err(|_| {
+                        error!("Failed to parse account id from auth token");
+                        PumpxRpcError::from_error_code(ErrorCode::InternalError)
+                    })?
+                },
+                Err(_) => {
+                    error!("Failed to verify auth token");
+                    return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+                        AUTH_VERIFICATION_FAILED_CODE,
+                    )));
+                }
+            };
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				error!("Failed to get from chain asset");
@@ -151,7 +156,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(user_identity.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
@@ -262,8 +267,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			}
 
 			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
+           	let user_identity =
+				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
 			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(user_identity.clone(), params.intent_id, intent),
+				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				 None,
 				 Some(OmniAuth::AuthToken(params.auth_token)),
 			);
