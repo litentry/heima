@@ -14,28 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use executor_primitives::utils::hex::FromHexPrefixed;
-use heima_primitives::Address32;
-use heima_primitives::IntentId;
-use rsa::pkcs1::DecodeRsaPrivateKey;
-use rsa::pkcs1::EncodeRsaPublicKey;
-
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::pumpx::PumpxRpcError;
 use crate::server::RpcContext;
+use crate::verify_auth::verify_auth_token_authentication;
 use crate::ErrorCode;
 use ethers::types::Bytes;
 use executor_core::native_task::NativeTask;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
 use executor_core::native_task::PumxWalletIndex;
-use executor_crypto::jwt;
+use executor_primitives::utils::hex::FromHexPrefixed;
 use executor_primitives::OmniAuth;
-use heima_authentication::auth_token::AuthTokenClaims;
+use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_primitives::Address32;
 use heima_primitives::Identity;
+use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use rsa::RsaPrivateKey;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -70,32 +66,21 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received pumpx_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
 
-			let private_key =
-				RsaPrivateKey::from_pkcs1_der(&ctx.jwt_rsa_private_key).map_err(|e| {
-					error!("Failed to parse private key: {:?}", e);
-					PumpxRpcError::from_error_code(ErrorCode::InternalError)
-				})?;
-
-			let public_key = private_key.to_public_key().to_pkcs1_der().map_err(|e| {
-				error!("Failed to generate public key: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::InternalError)
-			})?;
-
-			// this validates jwt - we skip exp check for this call
-			let Ok(token) =
-				jwt::decode::<AuthTokenClaims>(&params.auth_token, public_key.as_bytes(), true)
-			else {
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
+           	let omni_account = match verify_auth_token_authentication(
+				ctx.clone(),
+				&params.auth_token,
+				AUTH_TOKEN_ACCESS_TYPE,
+				true,
+			) {
+				Ok(claims) => claims.sub,
+				Err(_) => {
+					error!("Failed to verify auth token");
+					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+						AUTH_VERIFICATION_FAILED_CODE,
+					)));
+				},
 			};
-			if token.typ != "access" {
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				)));
-			}
 
-			let omni_account = token.sub;
 			let Ok(address) = Address32::from_hex(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
