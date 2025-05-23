@@ -10320,7 +10320,7 @@ pub mod api {
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
 					pub enum Intent {
-						# [codec (index = 0)] TransferEthereum (runtime_types :: core_primitives :: omni :: intent :: TransferEthereum ,) , # [codec (index = 1)] CallEthereum (runtime_types :: core_primitives :: omni :: intent :: CallEthereum ,) , # [codec (index = 2)] SystemRemark (runtime_types :: bounded_collections :: bounded_vec :: BoundedVec < :: core :: primitive :: u8 > ,) , # [codec (index = 3)] TransferNative (runtime_types :: core_primitives :: omni :: intent :: TransferNative ,) , # [codec (index = 4)] TransferSolana (runtime_types :: core_primitives :: omni :: intent :: TransferSolana ,) , # [codec (index = 5)] Swap (runtime_types :: core_primitives :: omni :: intent :: SwapOrder , :: core :: option :: Option < runtime_types :: core_primitives :: omni :: intent :: CrossChainSwapProvider > , runtime_types :: core_primitives :: omni :: intent :: SingleChainSwapProvider ,) , }
+						# [codec (index = 0)] TransferEthereum (runtime_types :: core_primitives :: omni :: intent :: TransferEthereum ,) , # [codec (index = 1)] CallEthereum (runtime_types :: core_primitives :: omni :: intent :: CallEthereum ,) , # [codec (index = 2)] SystemRemark (runtime_types :: bounded_collections :: bounded_vec :: BoundedVec < :: core :: primitive :: u8 > ,) , # [codec (index = 3)] TransferNative (runtime_types :: core_primitives :: omni :: intent :: TransferNative ,) , # [codec (index = 4)] TransferSolana (runtime_types :: core_primitives :: omni :: intent :: TransferSolana ,) , # [codec (index = 5)] Swap (runtime_types :: core_primitives :: omni :: intent :: SwapOrder , :: core :: option :: Option < runtime_types :: core_primitives :: omni :: intent :: CrossChainSwapProvider > , runtime_types :: core_primitives :: omni :: intent :: OnChainSingleChainSwapProvider ,) , }
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
@@ -10336,7 +10336,7 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub struct PumpxConfig {
+					pub struct OnChainPumpxConfig {
 						pub order_type:
 							runtime_types::core_primitives::omni::intent::PumpxOrderType,
 						pub swap_type: ::core::primitive::u32,
@@ -10391,11 +10391,9 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub enum PumpxOrderType {
+					pub enum OnChainSingleChainSwapProvider {
 						#[codec(index = 0)]
-						Market,
-						#[codec(index = 1)]
-						Limit,
+						Pumpx(runtime_types::core_primitives::omni::intent::OnChainPumpxConfig),
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -10412,9 +10410,11 @@ pub mod api {
 					#[encode_as_type(
 						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 					)]
-					pub enum SingleChainSwapProvider {
+					pub enum PumpxOrderType {
 						#[codec(index = 0)]
-						Pumpx(runtime_types::core_primitives::omni::intent::PumpxConfig),
+						Market,
+						#[codec(index = 1)]
+						Limit,
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
