@@ -197,55 +197,15 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
 				},
 			};
-			let token_cap = params
-				.token_cap
-				.map(|token_ca| {
-					BoundedVec::try_from(token_ca.as_bytes().to_vec()).map_err(|_| {
-						error!("Failed to convert token_cap");
-						PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-					})
-				})
-				.transpose()?;
-			let price_usd = params
-				.price_usd
-				.map(|price_usd| {
-					BoundedVec::try_from(price_usd.as_bytes().to_vec()).map_err(|_| {
-						error!("Failed to convert price_usd");
-						PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-					})
-				})
-				.transpose()?;
-			let usd_worth =
-				BoundedVec::try_from(params.usd_worth.as_bytes().to_vec()).map_err(|_| {
-					error!("Failed to convert usd_worth");
-					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-				})?;
 
 			let omni_config = PumpxConfig {
 				order_type: params.order_type.clone(),
 				swap_type: params.swap_type.to_number() as u32,
 				from_chain_id: params.from_chain_id,
-				from_token_ca: BoundedVec::try_from(
-					params.from_token_ca.unwrap_or("".to_string()).as_bytes().to_vec(),
-				)
-				.map_err(|_| {
-					error!("Failed to convert from_token_ca");
-					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-				})?,
+				from_token_ca: params.from_token_ca.unwrap_or("".to_string()),
 				to_chain_id: params.to_chain_id,
-				to_token_ca: BoundedVec::try_from(
-					params.to_token_ca.unwrap_or("".to_string()).as_bytes().to_vec(),
-				)
-				.map_err(|_| {
-					error!("Failed to convert to_token_ca");
-					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-				})?,
-				from_amount: BoundedVec::try_from(params.from_amount.as_bytes().to_vec()).map_err(
-					|_| {
-						error!("Failed to convert from_amount");
-						PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-					},
-				)?,
+				to_token_ca: params.to_token_ca.unwrap_or("".to_string()),
+				from_amount: params.from_amount,
 				double_out: params.double_out,
 				is_one_click: params.is_one_click,
 				is_anti_mev,
@@ -253,9 +213,9 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				gas_type,
 				slippage,
 				wallet_index: params.wallet_index,
-				token_cap,
-				price_usd,
-				usd_worth,
+				token_cap: params.token_cap,
+				price_usd: params.price_usd,
+				usd_worth: params.usd_worth,
 				trailing_percent: params.trailing_percent,
 			};
 			let scs_provider = SingleChainSwapProvider::Pumpx(omni_config);
@@ -266,9 +226,12 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
 			}
 
-			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider);
+			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider.try_into().map_err(|_| {
+                error!("Failed to convert single chain swap provider");
+                PumpxRpcError::from_error_code(ErrorCode::InternalError)
+            })?);
            	let user_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
+				Identity::from_web2_account(&params.user_email, Web2IdentityType::Pumpx);
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				 None,
