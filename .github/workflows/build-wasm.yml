@@ -37,7 +37,7 @@ jobs:
           AUTHORIZE_UPGRADE_PREFIX: "0x02"
         with:
           chain: ${{ github.event.inputs.chain }}
-          runtime_dir: runtime/${{ github.event.inputs.chain }}
+          runtime_dir: parachain/runtime/${{ github.event.inputs.chain }}
           profile: production
 
       - name: Summary
