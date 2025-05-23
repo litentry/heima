@@ -319,8 +319,8 @@ pallet-pool-proposal = { path = "pallets/collab-ai/pool-proposal", default-featu
 pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-features = false }
 
 [patch.crates-io]
+evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
-evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361"}
 
 [patch."https://github.com/rust-ethereum/evm"]
-evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361"}
+evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
