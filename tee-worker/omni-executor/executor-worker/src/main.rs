@@ -66,7 +66,8 @@ use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
-use tracing::log::{error, info};
+use tracing::info;
+use tracing::log::error;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
 
@@ -86,6 +87,9 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			let args_string = std::env::args().collect::<Vec<String>>().join(" ");
+			info!("Executing: {}", args_string);
+
 			let builder = PrometheusBuilder::new();
 
 			let address = SocketAddr::from_str(&format!("0.0.0.0:{}", args.metrics_port)).unwrap();
