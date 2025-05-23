@@ -943,7 +943,7 @@ async fn instant_payout_cross_chain_swap() {
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
 		Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
-	let intent = Intent::Swap(order, None, single_chain_swap_provider);
+	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
