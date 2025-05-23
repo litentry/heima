@@ -10,13 +10,14 @@ impl<
 		SolanaClient: SolanaClientTrait,
 	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
-	pub async fn execute_single_chain_swap(
+	pub(crate) async fn execute_single_chain_swap(
 		&self,
 		omni_account: [u8; 32],
 		intent_id: IntentId,
 		access_token: &str,
 		amount: String,
 		pumpx_config: &PumpxConfig,
+		from_address: String,
 	) -> Result<Vec<u8>, ()> {
 		debug!("executing single chain swap");
 
@@ -51,7 +52,7 @@ impl<
 				self.worker_do_market_order(
 					omni_account,
 					intent_id,
-					to_address.clone(),
+					from_address,
 					amount,
 					token_ca,
 					to_address,

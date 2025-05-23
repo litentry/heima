@@ -34,13 +34,19 @@ use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
+use intent_asset_lock::precise::PreciseAssetsLock;
+use intent_asset_lock::AccountAssetLocks;
+use intent_asset_lock::AmountType;
+use intent_asset_lock::AssetId;
 use pumpx::methods::common::GasType;
 use pumpx::methods::common::OrderInfoResponse;
 use pumpx::methods::common::OrderInfoResponseData;
 use pumpx::methods::common::SwapType;
 use pumpx::methods::create_limit_order::CreateLimitOrderBody;
 use pumpx::PumpxApi;
+use rust_decimal::Decimal;
 use signer_client::{ChainType, SignerClient};
+use std::str::FromStr;
 use std::sync::Arc;
 use tempfile::tempdir;
 
@@ -51,6 +57,16 @@ async fn simple_single_chain_swap() {
 	let account_id: AccountId =
 		Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec())).to_omni_account();
 	let intent_id = 0;
+	let pumpx_wallet_omni_account: [u8; 32] =
+		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
+			.unwrap()
+			.try_into()
+			.unwrap();
+	let solana_wallet_pub_key: [u8; 32] =
+		hex::decode("96dd2f4ecf7c9330e4f0e58a8e6272672fefee208857cd772e8aa1327b39dbfa")
+			.unwrap()
+			.try_into()
+			.unwrap();
 
 	let order = SwapOrder {
 		//value below is ignored ?
@@ -89,19 +105,11 @@ async fn simple_single_chain_swap() {
 		.with(
 			mockall::predicate::eq(ChainType::Solana),
 			mockall::predicate::eq(1),
-			mockall::predicate::eq([
-				127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171,
-				116, 52, 128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
-			]),
+			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		.times(1)
-		.returning(|_, _, _| {
-			Ok([
-				150, 221, 47, 78, 207, 124, 147, 48, 228, 240, 229, 138, 142, 98, 114, 103, 47,
-				239, 238, 32, 136, 87, 205, 119, 46, 138, 161, 50, 123, 57, 219, 250,
-			]
-			.to_vec())
-		});
+		//from and to wallet - both are the same
+		.times(2)
+		.returning(move |_, _, _| Ok(solana_wallet_pub_key.to_vec()));
 
 	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_limit_order()
@@ -145,7 +153,11 @@ async fn simple_single_chain_swap() {
 		Box::new(accounting_contract_client::solana::mocks::MockAccountingContractClient::new()),
 	);
 
+	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
+		Arc::new(AccountAssetLocks::new(storage_db.clone()));
+
 	let executor = CrossChainIntentExecutor::new(
+		account_assets_lock.clone(),
 		rpc_endpoint_registry,
 		pumpx_signer_client.clone(),
 		pumpx_api,
@@ -155,6 +167,7 @@ async fn simple_single_chain_swap() {
 		solana_client,
 		accounting_contract_client,
 		solana_accounting_contract_client,
+		Decimal::from_str("1").unwrap(),
 	)
 	.unwrap();
 
@@ -165,4 +178,8 @@ async fn simple_single_chain_swap() {
 		.unwrap();
 
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
+	assert_eq!(
+		account_assets_lock.get_locked_amount(&account_id, AssetId::Solana(SolanaToken::Native)),
+		Ok(AmountType::from(0))
+	);
 }
