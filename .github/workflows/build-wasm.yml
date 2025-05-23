@@ -29,7 +29,7 @@ jobs:
 
       - name: Build ${{ github.event.inputs.chain }} wasm with srtool
         id: srtool_build
-        uses: chevdor/srtool-actions@v0.9.2
+        uses: paritytech/srtool-actions@v0.9.3
         env:
           # optional: will override the parachain pallet ID and authorize_upgrade call ID,
           #           which will result in a different parachain_authorize_upgrade_hash
