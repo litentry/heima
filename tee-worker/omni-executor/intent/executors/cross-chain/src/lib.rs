@@ -175,13 +175,9 @@ impl<
 				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
 
 				// TODO: update this when we have more providers
-				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp;
+				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp.to_owned().try_into()?;
 
-				let mut amount = std::str::from_utf8(&pumpx_config.from_amount)
-					.map_err(|_| {
-						error!("Failed to parse from_amount");
-					})
-					.map(|v| v.to_string())?;
+				let mut amount = pumpx_config.from_amount.clone();
 
 				let Some(from_chain_type) =
 					ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
@@ -224,7 +220,7 @@ impl<
 							swap_order,
 							from_address,
 							from_wallet,
-							pumpx_config,
+							&pumpx_config,
 						)
 						.await
 					{
@@ -252,7 +248,7 @@ impl<
 						intent_id,
 						&access_token,
 						amount,
-						pumpx_config,
+						&pumpx_config,
 						from_address,
 					)
 					.await?;
