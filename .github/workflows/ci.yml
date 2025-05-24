@@ -284,9 +284,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
           echo 'deb [signed-by=/etc/apt/keyrings/intel-sgx-keyring.asc arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
           wget https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key && cat intel-sgx-deb.key | sudo tee /etc/apt/keyrings/intel-sgx-keyring.asc > /dev/null
+          sudo apt-get update
           sudo apt-get install -yq \
             openssl clang libclang-dev cmake protobuf-compiler \
             libsgx-uae-service libsgx-epid libsgx-quote-ex libsgx-dcap-ql \
