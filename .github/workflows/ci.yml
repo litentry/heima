@@ -300,7 +300,7 @@ jobs:
 
       - name: Set env
         run: |
-          echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:/opt/sgxsdk/lib64:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "/opt/sgxsdk/bin" >> $GITHUB_PATH
           echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
 
