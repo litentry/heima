@@ -285,7 +285,22 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+          sudo apt-get install -yq \
+            openssl clang libclang-dev cmake protobuf-compiler \
+            libsgx-dcap-default-qpl libsgx-dcap-quote-verify libsgx-dcap-quote-verify-dev \
+            libsgx-enclave-common-dev libsgx-dcap-ql-dev libsgx-dcap-default-qpl-dev
+
+      - name: Install intel sgx libs
+        run: |
+          wget https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.18.101.1.bin
+          chmod +x ./sgx_linux_x64_sdk_2.18.101.1.bin
+          ./sgx_linux_x64_sdk_2.18.101.1.bin --prefix /opt/
+
+      - name: Set env
+        run: |
+          echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "/opt/sgxsdk/bin" >> $GITHUB_PATH
+          echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
 
       - name: Cargo test
         working-directory: ./tee-worker
