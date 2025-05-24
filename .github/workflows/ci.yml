@@ -290,7 +290,8 @@ jobs:
           sudo apt-get install -yq \
             openssl clang libclang-dev cmake protobuf-compiler \
             libsgx-uae-service libsgx-epid libsgx-quote-ex libsgx-dcap-ql \
-            libsgx-dcap-default-qpl libsgx-dcap-quote-verify libsgx-dcap-quote-verify-dev \
+            libsgx-urts-dbgsym libsgx-enclave-common-dbgsym libsgx-dcap-ql-dbgsym libsgx-dcap-default-qpl-dbgsym \
+            libsgx-dcap-default-qpl libsgx-dcap-quote-verify libsgx-dcap-quote-verify-dev libsgx-dcap-quote-verify-dbgsym \
             libsgx-enclave-common-dev libsgx-dcap-ql-dev libsgx-dcap-default-qpl-dev
 
       - name: Install intel sgx libs
@@ -302,6 +303,7 @@ jobs:
       - name: Set env
         run: |
           echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:/opt/sgxsdk/lib64:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "SGX_SDK=/opt/sgxsdk" >> >> $GITHUB_ENV
           echo "/opt/sgxsdk/bin" >> $GITHUB_PATH
           echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
 
