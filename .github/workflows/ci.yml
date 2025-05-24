@@ -268,15 +268,19 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  tee-check:
+  identity-worker-check:
     runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
       - sequentialise
-    container: "litentry/litentry-tee-dev:latest"
+    # if: needs.set-condition.outputs.rebuild_identity == 'true'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
 
       - name: Install dependencies
         run: |
@@ -286,7 +290,7 @@ jobs:
       - name: Cargo test
         working-directory: ./tee-worker
         run: |
-          cargo test --release
+          cargo test
 
       - name: Check clippy
         working-directory: ./tee-worker
@@ -295,15 +299,15 @@ jobs:
           for d in . identity/enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
-            cargo clippy --release -- -D warnings
+            cargo clippy -- -D warnings
             echo "::endgroup::"
             echo "::group::cargo clippy development"
-            cargo clippy --release --features development -- -D warnings
+            cargo clippy --features development -- -D warnings
             echo "::endgroup::"
             echo "::group::cargo clippy offchain-worker"
-            cargo clippy --release --features offchain-worker -- -D warnings
+            cargo clippy --features offchain-worker -- -D warnings
             echo "::group::cargo clippy offchain-worker,development"
-            cargo clippy --release --features offchain-worker,development -- -D warnings
+            cargo clippy --features offchain-worker,development -- -D warnings
             echo "::endgroup::"
             popd
           done
@@ -313,16 +317,16 @@ jobs:
         shell: bash
         run: |
           echo "::group::cargo clippy sidechain"
-          cargo clippy --release --features sidechain -- -D warnings
+          cargo clippy --features sidechain -- -D warnings
           echo "::endgroup::"
           echo "::group::cargo clippy evm"
-          cargo clippy --release --features evm -- -D warnings
+          cargo clippy --features evm -- -D warnings
           echo "::endgroup::"
           echo "::group::cargo clippy sidechain development"
-          cargo clippy --release --features sidechain,development -- -D warnings
+          cargo clippy --features sidechain,development -- -D warnings
           echo "::endgroup::"
           echo "::group::cargo clippy evm development"
-          cargo clippy --release --features evm,development -- -D warnings
+          cargo clippy --features evm,development -- -D warnings
           echo "::endgroup::"
 
       - name: Fail early
