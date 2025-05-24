@@ -296,13 +296,14 @@ jobs:
 
       - name: Install intel sgx libs
         run: |
-          wget https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.25.100.3.bin
-          chmod +x ./sgx_linux_x64_sdk_2.25.100.3.bin
-          sudo ./sgx_linux_x64_sdk_2.25.100.3.bin --prefix /opt/
+          wget https://download.01.org/intel-sgx/sgx-linux/2.18.1/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.18.101.1.bin
+          chmod +x ./sgx_linux_x64_sdk_2.18.101.1.bin
+          ./sgx_linux_x64_sdk_2.18.101.1.bin --prefix /opt/
 
       - name: Set env
         run: |
           echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:/opt/sgxsdk/lib64:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/opt/sgxsdk/pkgconfig:\$PKG_CONFIG_PATH" >> $GITHUB_ENV
           echo "SGX_SDK=/opt/sgxsdk" >> $GITHUB_ENV
           echo "/opt/sgxsdk/bin" >> $GITHUB_PATH
           echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
