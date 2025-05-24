@@ -21,7 +21,7 @@ name: General CI
 # - fmt
 # - set-condition
 # - parachain-build-dev
-# - identity-build
+# - identity-worker-build
 #
 # [4] please note that job-level if `env` is not supported:
 # https://github.com/actions/runner/issues/1189
@@ -285,18 +285,18 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          echo 'deb [signed-by=/etc/apt/keyrings/intel-sgx-keyring.asc arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | tee /etc/apt/sources.list.d/intel-sgx.list
-          wget https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key && cat intel-sgx-deb.key | tee /etc/apt/keyrings/intel-sgx-keyring.asc > /dev/null
+          # echo 'deb [signed-by=/etc/apt/keyrings/intel-sgx-keyring.asc arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | tee /etc/apt/sources.list.d/intel-sgx.list
+          # wget https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key && cat intel-sgx-deb.key | tee /etc/apt/keyrings/intel-sgx-keyring.asc > /dev/null
           sudo apt-get install -yq \
-            openssl clang libclang-dev cmake protobuf-compiler \
-            libsgx-dcap-default-qpl libsgx-dcap-quote-verify libsgx-dcap-quote-verify-dev \
-            libsgx-enclave-common-dev libsgx-dcap-ql-dev libsgx-dcap-default-qpl-dev
+            openssl clang libclang-dev cmake protobuf-compiler
+            # libsgx-dcap-default-qpl libsgx-dcap-quote-verify libsgx-dcap-quote-verify-dev \
+            # libsgx-enclave-common-dev libsgx-dcap-ql-dev libsgx-dcap-default-qpl-dev
 
       - name: Install intel sgx libs
         run: |
           wget https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.18.101.1.bin
           chmod +x ./sgx_linux_x64_sdk_2.18.101.1.bin
-          ./sgx_linux_x64_sdk_2.18.101.1.bin --prefix /opt/
+          sudo ./sgx_linux_x64_sdk_2.18.101.1.bin --prefix /opt/
 
       - name: Set env
         run: |
@@ -426,7 +426,7 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  identity-build:
+  identity-worker-build:
     runs-on: ubuntu-22.04
     needs:
       - fmt
@@ -782,7 +782,7 @@ jobs:
     needs:
       - set-condition
       - parachain-build-dev
-      - identity-build
+      - identity-worker-build
     strategy:
       fail-fast: false
       matrix:
@@ -880,7 +880,7 @@ jobs:
     needs:
       - set-condition
       - parachain-build-dev
-      - identity-build
+      - identity-worker-build
     strategy:
       fail-fast: false
       matrix:
