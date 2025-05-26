@@ -11,12 +11,10 @@ type JwtToken = String;
 /// A serializable representation of Identity for JSON interchange.
 /// ```json
 /// {
-///  "type": "Email",
-///  "data": "test@test.com"
+///  "Email": "test@test.com",
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(tag = "type", content = "data")]
 pub enum IdentitySerde {
 	Twitter(String),
 	Discord(String),
@@ -127,13 +125,45 @@ pub struct OAuth2Data {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use executor_crypto::ed25519;
 
 	#[test]
 	fn test_identity_serde() {
-		let json = r#"{"type":"Twitter","data":"handle"}"#;
+		let json = r#"{"Twitter":"handle"}"#;
 		let deserialized: IdentitySerde = serde_json::from_str(json).unwrap();
 		let identity = Identity::try_from(deserialized).unwrap();
 
 		assert_eq!(identity, Identity::Twitter(IdentityString::new(b"handle".to_vec())));
+	}
+
+	#[test]
+	fn test_omni_auth_serde() {
+		let raw_signature: [u8; 64] = [
+			62, 25, 148, 186, 53, 137, 248, 174, 149, 187, 225, 24, 186, 48, 24, 109, 100, 27, 149,
+			196, 66, 5, 222, 140, 22, 16, 136, 239, 154, 22, 133, 96, 79, 2, 180, 106, 150, 112,
+			116, 11, 6, 35, 32, 4, 145, 240, 54, 130, 206, 193, 200, 57, 241, 112, 35, 122, 226,
+			97, 174, 231, 221, 13, 98, 2,
+		];
+		let address = "E9SegbpSr21FPLbUhoTNH6C2ja7KDkptybqSaT84wMH6";
+		let json = format!(
+			r#"{{
+		       "Web3":[
+		            {{"Solana": "{}"}},
+		            {{"Ed25519":"{}"}}
+		        ]
+		    }}"#,
+			address,
+			hex::encode(raw_signature)
+		);
+		let deserialized: OmniAuthSerde = serde_json::from_str(&json).unwrap();
+		let omni_auth = OmniAuth::try_from(deserialized).unwrap();
+
+		assert_eq!(
+			omni_auth,
+			OmniAuth::Web3(
+				Identity::Solana(Address32::try_from(address).unwrap()),
+				HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(raw_signature))
+			)
+		);
 	}
 }

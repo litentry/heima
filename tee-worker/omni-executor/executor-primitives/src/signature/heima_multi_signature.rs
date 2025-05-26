@@ -18,7 +18,6 @@ use tracing::log::error;
 #[derive(
 	Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, Serialize, Deserialize,
 )]
-#[serde(tag = "type", content = "data")]
 pub enum HeimaMultiSignature {
 	/// An Ed25519 signature.
 	#[codec(index = 0)]
@@ -228,7 +227,7 @@ mod tests {
 		];
 
 		let hex_signature = hex_encode(raw_signature.as_slice());
-		let json = format!(r#"{{"type":"Ed25519","data":"{}"}}"#, hex_signature);
+		let json = format!(r#"{{"Ed25519":"{}"}}"#, hex_signature);
 		let deserialized: HeimaMultiSignature = serde_json::from_str(&json).unwrap();
 
 		assert_eq!(
