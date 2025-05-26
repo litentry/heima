@@ -90,7 +90,20 @@ pub enum OmniAuth {
 	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
 }
 
-#[derive(Deserialize)]
+impl TryFrom<OmniAuthSerde> for OmniAuth {
+	type Error = &'static str;
+
+	fn try_from(value: OmniAuthSerde) -> Result<Self, Self::Error> {
+		match value {
+			OmniAuthSerde::Web3(id, sig) => Ok(OmniAuth::Web3(id.try_into()?, sig)),
+			OmniAuthSerde::Email(email, code) => Ok(OmniAuth::Email(email, code)),
+			OmniAuthSerde::AuthToken(account, token) => Ok(OmniAuth::AuthToken(account, token)),
+			OmniAuthSerde::OAuth2(id, data) => Ok(OmniAuth::OAuth2(id.try_into()?, data)),
+		}
+	}
+}
+
+#[derive(Deserialize, Debug)]
 pub enum OmniAuthSerde {
 	Web3(IdentitySerde, HeimaMultiSignature),
 	Email(Email, VerificationCode),
