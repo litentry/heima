@@ -52,6 +52,8 @@ pub struct RunArgs {
 	pub parentchain_sync: bool,
 	#[arg(short, long, default_value = "9090", value_name = "metrics port")]
 	pub metrics_port: String,
+	#[arg(long, default_value = "0", value_name = "threshold value in usdt")]
+	pub instant_payout_threshold: String,
 }
 
 #[derive(Args)]

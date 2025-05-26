@@ -80,7 +80,6 @@ pub struct EthApiOptions {
 	/// Maximum number of trace entries a single request of `trace_filter` is allowed to return.
 	/// A request asking for more or an unbounded one going over this limit will both return an
 	/// error.
-
 	#[clap(long, default_value = "500")]
 	pub ethapi_trace_max_count: u32,
 
