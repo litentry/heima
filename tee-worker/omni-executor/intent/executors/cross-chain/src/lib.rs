@@ -197,6 +197,20 @@ impl<
 
 				let mut from_address = pubkey_to_address(from_chain_type, &from_wallet)?;
 
+				let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
+				else {
+					error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+					return Err(());
+				};
+
+				let to_wallet = self
+					.pumpx_signer_client
+					.request_wallet(to_chain_type, pumpx_config.wallet_index, *account_id.as_ref())
+					.await
+					.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
+
+				let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
+
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
 				let Ok(Some(access_token)) =
 					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
@@ -221,6 +235,7 @@ impl<
 							from_address,
 							from_wallet,
 							&pumpx_config,
+							to_address.clone(),
 						)
 						.await
 					{
@@ -250,6 +265,7 @@ impl<
 						amount,
 						&pumpx_config,
 						from_address,
+						to_address,
 					)
 					.await?;
 
