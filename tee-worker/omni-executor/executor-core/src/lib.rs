@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod ecdsa_key_store;
+pub mod ed25519_key_store;
 pub mod event_handler;
 pub mod fetcher;
 pub mod intent_executor;

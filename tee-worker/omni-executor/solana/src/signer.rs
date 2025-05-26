@@ -1,5 +1,4 @@
-use pumpx::signer_client::ChainType;
-use pumpx::signer_client::SignerClient;
+use signer_client::{ChainType, SignerClient};
 use solana_sdk::{
 	pubkey::Pubkey,
 	signature::Signature,

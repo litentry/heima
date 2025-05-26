@@ -16,33 +16,31 @@
 
 // Manages whether any asset is locked for particular account or not.
 
+use parity_scale_codec::{Decode, Encode};
+
 use crate::{AmountType, AssetsLock};
 
+#[derive(Encode, Decode)]
 pub struct AlwaysUnlockedAssetsLock {}
 
 impl AssetsLock for AlwaysUnlockedAssetsLock {
-	fn with_lock(
-		_asset_id: crate::AssetId,
-		_amount_to_lock: AmountType,
-		_available_amount: AmountType,
-	) -> Result<Self, ()> {
+	fn with_lock(_amount_to_lock: AmountType, _available_amount: AmountType) -> Result<Self, ()> {
 		Ok(Self {})
 	}
 
 	fn lock(
 		&mut self,
-		_asset_id: crate::AssetId,
 		_amount_to_lock: AmountType,
 		_available_amount: AmountType,
 	) -> Result<(), ()> {
 		Ok(())
 	}
 
-	fn release(
-		&mut self,
-		_asset_id: crate::AssetId,
-		_amount_to_release: AmountType,
-	) -> Result<(), ()> {
+	fn release(&mut self, _amount_to_release: AmountType) -> Result<(), ()> {
 		Ok(())
+	}
+
+	fn get(&self) -> AmountType {
+		AmountType::from(0)
 	}
 }

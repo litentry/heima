@@ -31,7 +31,7 @@ describe('OmniAccount', function () {
 
         let msgCode = await getMessageCode(context, omniAccount);
         console.log('msgCode:', msgCode);
-        const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'LitentryIdentity'], aliceIdentity);
+        const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'HeimaIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -73,7 +73,7 @@ describe('OmniAccount', function () {
             context.api,
             [
                 'AddAccount',
-                '(LitentryIdentity, LitentryIdentity, LitentryValidationData, bool, Option<Vec<OmniAccountPermission>>)',
+                '(HeimaIdentity, HeimaIdentity, HeimaValidationData, bool, Option<Vec<OmniAccountPermission>>)',
             ],
             [
                 aliceIdentity,
@@ -113,7 +113,7 @@ describe('OmniAccount', function () {
         const bobIdentity = await bob.getIdentity(context.api);
         const nativeTask = createNativeTask(
             context.api,
-            ['PublicizeAccount', '(LitentryIdentity, LitentryIdentity)'],
+            ['PublicizeAccount', '(HeimaIdentity, HeimaIdentity)'],
             [aliceIdentity, bobIdentity]
         );
         const msgCode = await getMessageCode(context, omniAccount);
@@ -165,7 +165,7 @@ describe('OmniAccount', function () {
         ];
         const nativeTask = createNativeTask(
             context.api,
-            ['SetPermissions', '(LitentryIdentity, LitentryIdentity, Vec<OmniAccountPermission>)'],
+            ['SetPermissions', '(HeimaIdentity, HeimaIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
         const msgCode = await getMessageCode(context, omniAccount);
@@ -205,7 +205,7 @@ describe('OmniAccount', function () {
 
         const nativeTask = createNativeTask(
             context.api,
-            ['RemoveAccounts', '(LitentryIdentity, Vec<LitentryIdentity>)'],
+            ['RemoveAccounts', '(HeimaIdentity, Vec<HeimaIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
         const msgCode = await getMessageCode(context, omniAccount);
@@ -243,7 +243,7 @@ describe('OmniAccount', function () {
 
         const nativeTask = createNativeTask(
             context.api,
-            ['RequestIntent', '(LitentryIdentity, u32, Intent)'],
+            ['RequestIntent', '(HeimaIdentity, u32, Intent)'],
             [aliceIdentity, intentId, intent]
         );
         const msgCode = await getMessageCode(context, omniAccount);

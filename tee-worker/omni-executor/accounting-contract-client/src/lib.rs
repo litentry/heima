@@ -1,3 +1,5 @@
+pub mod solana;
+
 use alloy::{
 	primitives::{Address, TxKind, U256},
 	rpc::types::{TransactionInput, TransactionRequest},
@@ -27,6 +29,10 @@ pub trait AccountingContractApi: Send + Sync {
 	async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
 
 	async fn get_balance(&self) -> Result<U256, ()>;
+
+	async fn get_address(&self) -> Address;
+
+	async fn get_signer_address(&self) -> Address;
 }
 
 pub struct AccountingContractClient<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
@@ -91,6 +97,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 			Ok(balance)
 		})
 	}
+
+	async fn get_address(&self) -> Address {
+		self.contract_address
+	}
+
+	async fn get_signer_address(&self) -> Address {
+		self.provider.get_wallet_address().await.expect("No signer address")
+	}
 }
 
 #[cfg(feature = "mocks")]
@@ -118,6 +132,14 @@ pub mod mocks {
 			async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
 
 			async fn get_balance(&self) -> Result<U256, ()>;
+
+			async fn get_address(&self) -> Address {
+				Address::default();
+			}
+
+			async fn get_signer_address(&self) -> Address {
+				Address::default();
+			}
 		}
 	}
 }
