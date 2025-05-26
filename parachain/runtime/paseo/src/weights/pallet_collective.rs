@@ -301,6 +301,12 @@ impl<T: frame_system::Config> pallet_collective::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(3))
 			.saturating_add(Weight::from_parts(0, 32).saturating_mul(p.into()))
 	}
-	fn kill(_: u32, _: u32) -> sp_runtime::Weight { todo!() }
-	fn release_proposal_cost() -> sp_runtime::Weight { todo!() }
+	fn kill(_: u32, _: u32) -> Weight {
+		Weight::from_parts(14_290_000, 4278)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+	}
+	fn release_proposal_cost() -> Weight {
+		Weight::from_parts(14_290_000, 4278)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+	}
 }
