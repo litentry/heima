@@ -3,7 +3,7 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
+use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
@@ -30,7 +30,7 @@ impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
 		NativeTaskWrapper::new(
 			NativeTask::PumpxAddWallet(sender.clone()),
 			None,
-			Some(OmniAuth::AuthToken(sender.to_omni_account().to_hex(), p.auth_token)),
+			Some(OmniAuth::AuthToken(p.auth_token)),
 		)
 	}
 }
