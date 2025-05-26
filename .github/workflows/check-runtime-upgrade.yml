@@ -16,7 +16,8 @@ on:
         required: false
 
 env:
-  SUBWASM_VERSION: 0.19.1
+  SUBWASM_VERSION: 0.21.3
+  TRYRUNTIME_VERSION: 0.8.0
   RELEASE_TAG: ${{ github.event.inputs.release_tag || github.event.release.tag_name }}
 
 jobs:
@@ -107,7 +108,7 @@ jobs:
 
       - name: Download try-runtime-cli
         run: |
-          curl -sL https://github.com/paritytech/try-runtime-cli/releases/download/v0.8.0/try-runtime-x86_64-unknown-linux-musl -o try-runtime
+          curl -sL https://github.com/paritytech/try-runtime-cli/releases/download/v${{ env.TRYRUNTIME_VERSION }}/try-runtime-x86_64-unknown-linux-musl -o try-runtime
           chmod +x ./try-runtime
           mv try-runtime parachain
         shell: bash
