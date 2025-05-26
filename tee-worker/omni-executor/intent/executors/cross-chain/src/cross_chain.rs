@@ -1,7 +1,8 @@
 // TODO: put it into a mod for potential different providers (other than binance)
 
 use super::*;
-use executor_primitives::{PumpxConfig, SwapOrder};
+use executor_primitives::SwapOrder;
+use heima_primitives::PumpxConfig;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
 use intent_token_query::EthereumAddress;
@@ -34,35 +35,10 @@ impl<
 			return Err(());
 		}
 
-		// extract values from pumpx_config
-		let usd_worth = std::str::from_utf8(&pumpx_config.usd_worth)
-			.map_err(|_| {
-				error!("Failed to parse usd_worth");
-			})
-			.map(|v| v.to_string())?;
-
-		let from_token_ca = std::str::from_utf8(&pumpx_config.from_token_ca)
-			.map_err(|_| {
-				error!("Failed to parse from_token_ca");
-			})
-			.map(|v| v.to_string())?;
-
-		let to_token_ca = std::str::from_utf8(&pumpx_config.to_token_ca)
-			.map_err(|_| {
-				error!("Failed to parse to_token_ca");
-			})
-			.map(|v| v.to_string())?;
-
-		let from_amount = std::str::from_utf8(&pumpx_config.from_amount)
-			.map_err(|_| {
-				error!("Failed to parse from_amount");
-			})
-			.map(|v| v.to_string())?;
-
 		let from_asset_binance_coin_name =
 			BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin.name();
 
-		let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
+		let from_amount_decimal = Decimal::from_str(&pumpx_config.from_amount).map_err(|_| {
 			error!("Failed to parse from_amount_string");
 		})?;
 
@@ -106,10 +82,10 @@ impl<
 
 		self.pumpx_create_cross_order(
 			intent_id,
-			from_token_ca.clone(),
-			to_token_ca.clone(),
-			from_amount.clone(),
-			usd_worth,
+			pumpx_config.from_token_ca.clone(),
+			pumpx_config.to_token_ca.clone(),
+			pumpx_config.from_amount.clone(),
+			pumpx_config.usd_worth.clone(),
 			from_address.clone(),
 			access_token,
 			pumpx_config,
@@ -122,7 +98,7 @@ impl<
 				let payout_address = Address::from_str(&to_address).map_err(|_| {
 					error!("Failed to parse payout address");
 				})?;
-				debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, from_token_ca, to_token_ca, from_amount, from_address, payout_address);
+				debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, pumpx_config.from_token_ca, pumpx_config.to_token_ca, pumpx_config.from_amount, from_address, payout_address);
 
 				if instant {
 					// todo: can we reuse existing code ?
@@ -131,7 +107,7 @@ impl<
 						Self::get_binance_deposit_info(
 							self.binance_api.clone(),
 							&swap_order.from_asset,
-							&from_amount,
+							&pumpx_config.from_amount,
 						)
 						.await?;
 
@@ -177,7 +153,7 @@ impl<
 						.do_binance_swap_sol_to_bsc(
 							omni_account,
 							swap_order.from_asset.clone(),
-							from_amount,
+							pumpx_config.from_amount.clone(),
 							from_address,
 							pumpx_config.wallet_index,
 							false,
@@ -204,14 +180,14 @@ impl<
 				let payout_address = Pubkey::from_str(&to_address).map_err(|_| {
 					error!("Failed to parse payout address");
 				})?;
-				debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, from_token_ca, to_token_ca, from_amount, from_address, payout_address);
+				debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, pumpx_config.from_token_ca, pumpx_config.to_token_ca, pumpx_config.from_amount, from_address, payout_address);
 
 				// TODO: this should be abstracted away
 				let (payout_amount, payout_amount_u256) = self
 					.do_binance_swap_bsc_to_sol(
 						omni_account,
 						swap_order.from_asset.clone(),
-						from_amount,
+						pumpx_config.from_amount.clone(),
 						from_address,
 						pumpx_config.wallet_index,
 						false,

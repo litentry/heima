@@ -80,10 +80,10 @@ async fn simple_single_chain_swap() {
 		order_type: PumpxOrderType::Limit,
 		swap_type: 1,
 		from_chain_id: 100000,
-		from_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		from_token_ca: String::from_utf8([0u8; 128].to_vec()).unwrap(),
 		to_chain_id: 100000,
-		to_token_ca: BoundedVec::truncate_from([0u8; 128].to_vec()),
-		from_amount: BoundedVec::truncate_from("100".as_bytes().to_vec()),
+		to_token_ca: String::from_utf8([0u8; 128].to_vec()).unwrap(),
+		from_amount: "100".to_string(),
 		double_out: false,
 		is_one_click: false,
 		is_anti_mev: false,
@@ -93,11 +93,11 @@ async fn simple_single_chain_swap() {
 		wallet_index: 1,
 		token_cap: None,
 		price_usd: None,
-		usd_worth: BoundedVec::truncate_from([0u8; 128].to_vec()),
+		usd_worth: String::from_utf8(vec![0u8; 128]).unwrap(),
 		trailing_percent: None,
 	});
 
-	let intent = Intent::Swap(order, None, single_chain_swap_provider);
+	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
 	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
 	pumpx_signer_client_mock
