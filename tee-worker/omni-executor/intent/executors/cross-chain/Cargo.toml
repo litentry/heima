@@ -25,6 +25,7 @@ executor-core = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
+heima-primitives = { workspace = true }
 intent-asset-lock = { workspace = true }
 intent-token-query = { workspace = true }
 parentchain-api-interface = { workspace = true }
@@ -32,6 +33,7 @@ parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 rand = { workspace = true }
+signer-client = { workspace = true }
 solana = { workspace = true }
 
 
@@ -39,6 +41,8 @@ solana = { workspace = true }
 accounting-contract-client = { workspace = true, features = ["mocks"] }
 pumpx = { workspace = true, features = ["mocks"] }
 binance-api = { workspace = true, features = ["mocks"] }
+ethereum-rpc = { workspace = true, features = ["mocks"] }
+signer-client = { workspace = true, features = ["mocks"] }
 solana = { workspace = true, features = ["mocks"] }
 tempfile = { workspace = true }
 mockall = { workspace = true }
@@ -46,6 +50,7 @@ serde_json = { workspace = true }
 heima-primitives = { workspace = true }
 reqwest = { workspace = true }
 alloy-rlp = { workspace = true }
+test-log = { workspace = true }
 
 [lints]
 workspace = true

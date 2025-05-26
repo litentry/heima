@@ -18,7 +18,7 @@ export { identity, vc, trusted_operations, sidechain };
 
 // Export handy types
 import type {
-  LitentryIdentity,
+  HeimaIdentity,
   Web3Network,
 } from "./interfaces/identity/types.js";
 
@@ -46,7 +46,7 @@ export type BitcoinNetwork = Exclude<
 >;
 
 export type Web2Network = Exclude<
-  LitentryIdentity["type"],
+  HeimaIdentity["type"],
   "Substrate" | "Evm" | "Bitcoin" | "Solana"
 >;
 
@@ -54,6 +54,6 @@ export type Web2Network = Exclude<
  * Identities that can be used as prime identity to own an idGraph.
  */
 export type PrimeIdentity = Extract<
-  LitentryIdentity["type"],
+  HeimaIdentity["type"],
   "Substrate" | "Evm" | "Bitcoin" | "Solana"
 >;

@@ -41,10 +41,19 @@ pub struct RunArgs {
 		value_name = "accounting contract address"
 	)]
 	pub accounting_contract_address: String,
+	#[arg(
+		short,
+		long,
+		default_value = "31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub",
+		value_name = "solana accounting contract address"
+	)]
+	pub solana_accounting_contract_address: String,
 	#[arg(long, value_name = "should sync with parentchain")]
 	pub parentchain_sync: bool,
 	#[arg(short, long, default_value = "9090", value_name = "metrics port")]
 	pub metrics_port: String,
+	#[arg(long, default_value = "0", value_name = "threshold value in usdt")]
+	pub instant_payout_threshold: String,
 }
 
 #[derive(Args)]

@@ -18,9 +18,6 @@ pub mod auth_key_store;
 pub mod constants;
 pub mod signer_client;
 
-#[cfg(feature = "mocks")]
-pub mod signer_client_mocks;
-
 mod pumpx_api;
 pub use pumpx_api::*;
 
@@ -30,7 +27,7 @@ use executor_primitives::ChainAsset;
 use sp_core::keccak_256;
 use tracing::log::error;
 
-use crate::signer_client::ChainType;
+use base_signer_client::ChainType;
 
 pub fn chain_asset_to_pumpx_chain_id(asset: &ChainAsset) -> u32 {
 	match asset {

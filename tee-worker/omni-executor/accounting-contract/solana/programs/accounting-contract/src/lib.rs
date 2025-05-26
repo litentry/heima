@@ -13,8 +13,10 @@ pub mod accounting_contract {
 			Some(address) => address,
 			None => return Err(ErrorCode::UpgradeAuthorityNotFound.into()),
 		};
+
 		#[cfg(not(feature = "test-skip-auth"))]
 		require!(ctx.accounts.signer.key() == upgrade_authority, ErrorCode::Unauthorized);
+
 		let admin = &mut ctx.accounts.admin_account.admin;
 		*admin = new_admin;
 		Ok(())

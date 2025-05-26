@@ -4,16 +4,20 @@ use executor_primitives::PumpxConfig;
 use pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
 use tracing::{debug, error};
 
-impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
-	CrossChainIntentExecutor<BinanceClient, SolanaClient>
+impl<
+		BinanceClient: BinanceApi,
+		EthereumClient: EthereumClientTrait,
+		SolanaClient: SolanaClientTrait,
+	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
-	pub async fn execute_single_chain_swap(
+	pub(crate) async fn execute_single_chain_swap(
 		&self,
 		omni_account: [u8; 32],
 		intent_id: IntentId,
 		access_token: &str,
 		amount: String,
 		pumpx_config: &PumpxConfig,
+		from_address: String,
 	) -> Result<Vec<u8>, ()> {
 		debug!("executing single chain swap");
 
@@ -31,11 +35,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
 
 		// always use `to_token_ca` from RPC
-		let token_ca = std::str::from_utf8(&pumpx_config.to_token_ca)
-			.map_err(|_| {
-				error!("Failed to parse to_token_ca");
-			})
-			.map(|v| v.to_string())?;
+		let token_ca = pumpx_config.to_token_ca.clone();
 
 		debug!(
 			"single chain swap details: intent_id: {}, token_ca: {}, amount: {}, to_address: {}",
@@ -48,7 +48,7 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				self.worker_do_market_order(
 					omni_account,
 					intent_id,
-					to_address.clone(),
+					from_address,
 					amount,
 					token_ca,
 					to_address,
@@ -60,34 +60,11 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 			},
 			PumpxOrderType::Limit => {
 				debug!("Doing limit order");
-				let token_cap = match pumpx_config.token_cap {
-					Some(ref token_cap) => Some(
-						std::str::from_utf8(token_cap)
-							.map_err(|_| {
-								error!("Failed to parse token_cap");
-							})
-							.map(|v| v.to_string())?,
-					),
-					None => None,
-				};
-				let price_usd = match pumpx_config.price_usd {
-					Some(ref price_usd) => Some(
-						std::str::from_utf8(price_usd)
-							.map_err(|_| {
-								error!("Failed to parse price_usd");
-							})
-							.map(|v| v.to_string())?,
-					),
-					None => None,
-				};
-
 				self.do_limit_order(
 					intent_id,
 					amount,
 					token_ca,
 					to_address,
-					token_cap,
-					price_usd,
 					access_token,
 					pumpx_config,
 				)
@@ -375,8 +352,6 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 		amount: String,
 		token_ca: String,
 		recipient_address: String,
-		token_cap: Option<String>,
-		price_usd: Option<String>,
 		access_token: &str,
 		pumpx_config: &PumpxConfig,
 	) -> Result<Vec<u8>, ()> {
@@ -394,8 +369,8 @@ impl<BinanceClient: BinanceApi, SolanaClient: SolanaClientTrait>
 				},
 			},
 			double_out: pumpx_config.double_out,
-			token_cap,
-			price_usd,
+			token_cap: pumpx_config.token_cap.clone(),
+			price_usd: pumpx_config.price_usd.clone(),
 			trailing_percent: pumpx_config.trailing_percent.map(|v| v.to_string()),
 			address: recipient_address,
 			is_anti_mev: pumpx_config.is_anti_mev,
