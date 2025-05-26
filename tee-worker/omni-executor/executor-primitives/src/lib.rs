@@ -75,6 +75,6 @@ impl GetEventId<EventId> for BlockEvent {
 }
 
 #[derive(Encode, Decode)]
-pub struct OmniAccountProfile {
+pub struct PumpxAccountProfile {
 	pub wallet_exported: bool,
 }

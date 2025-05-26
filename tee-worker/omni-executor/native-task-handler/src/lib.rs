@@ -12,10 +12,10 @@ use executor_crypto::{
 };
 use executor_primitives::{
 	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, MemberAccount,
-	OmniAccountAuthType, OmniAccountProfile, ValidationData, Web2IdentityType,
+	OmniAccountAuthType, PumpxAccountProfile, ValidationData, Web2IdentityType,
 };
 use executor_storage::{
-	IntentIdStorage, MemberOmniAccountStorage, OmniAccountProfileStorage, PumpxJwtStorage, Storage,
+	IntentIdStorage, MemberOmniAccountStorage, PumpxJwtStorage, PumpxProfileStorage, Storage,
 	StorageDB,
 };
 use heima_authentication::auth_token::*;
@@ -767,19 +767,18 @@ async fn handle_native_task<
 				return;
 			};
 
-			let omni_account_profile_storage =
-				OmniAccountProfileStorage::new(ctx.storage_db.clone());
+			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
 			if let Ok(maybe_profile) = omni_account_profile_storage.get(&sender.to_omni_account()) {
 				let profile = maybe_profile
 					.map(|mut p| {
 						p.wallet_exported = true;
 						p
 					})
-					.unwrap_or_else(|| OmniAccountProfile { wallet_exported: true });
+					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
 				if let Err(e) =
 					omni_account_profile_storage.insert(&sender.to_omni_account(), profile)
 				{
-					error!("Failed to update omni account profile: {:?}", e);
+					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
 						"Failed to update omni account profile".to_string(),
 						response_sender,
@@ -789,7 +788,7 @@ async fn handle_native_task<
 				};
 			} else {
 				send_error(
-					"Failed to get omni account profile".to_string(),
+					"Failed to get pumpx account profile".to_string(),
 					response_sender,
 					NativeTaskError::InternalError,
 				);

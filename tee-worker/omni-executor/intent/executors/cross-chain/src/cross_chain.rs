@@ -2,7 +2,7 @@
 
 use super::*;
 use executor_primitives::SwapOrder;
-use executor_storage::OmniAccountProfileStorage;
+use executor_storage::PumpxProfileStorage;
 use heima_primitives::PumpxConfig;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
@@ -52,12 +52,12 @@ impl<
 			ChainAsset::Ethereum(_, _) => "BNBUSDT",
 		};
 
-		let profile_storage = OmniAccountProfileStorage::new(self.storage_db.clone());
+		let profile_storage = PumpxProfileStorage::new(self.storage_db.clone());
 		let has_exported_wallet = if let Ok(maybe_profile) = profile_storage.get(account_id) {
 			maybe_profile.map(|p| p.wallet_exported).unwrap_or(false)
 		} else {
 			// let's continue but pessimistically assume user has exported his wallet
-			error!("Could not get omni account profile, assuming wallet has been exported");
+			error!("Could not get pumpx account profile, assuming wallet has been exported");
 			true
 		};
 

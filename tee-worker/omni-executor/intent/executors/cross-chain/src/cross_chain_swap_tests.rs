@@ -31,11 +31,11 @@ use executor_primitives::Intent;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_primitives::SolanaToken;
-use executor_primitives::{AccountId, OmniAccountProfile};
+use executor_primitives::{AccountId, PumpxAccountProfile};
 use executor_primitives::{EthereumToken, PumpxConfig, SwapOrder};
 use executor_storage::Storage;
 use executor_storage::StorageDB;
-use executor_storage::{OmniAccountProfileStorage, PumpxJwtStorage};
+use executor_storage::{PumpxJwtStorage, PumpxProfileStorage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
@@ -1280,9 +1280,9 @@ async fn no_instant_payout_if_exported_wallet() {
 		.unwrap();
 
 	// store wallet exported information so it should skip instant payout
-	let omni_account_profile_storage = OmniAccountProfileStorage::new(storage_db.clone());
-	omni_account_profile_storage
-		.insert(&account_id.clone(), OmniAccountProfile { wallet_exported: true })
+	let pumpx_account_profile_storage = PumpxProfileStorage::new(storage_db.clone());
+	pumpx_account_profile_storage
+		.insert(&account_id.clone(), PumpxAccountProfile { wallet_exported: true })
 		.unwrap();
 
 	executor.execute(&account_id, intent_id, intent).await.unwrap();
