@@ -25,6 +25,9 @@ pub use pumpx_jwt::PumpxJwtStorage;
 mod intent_id;
 pub use intent_id::IntentIdStorage;
 mod asset_lock;
+mod omni_account_profile;
+pub use omni_account_profile::OmniAccountProfileStorage;
+
 pub use asset_lock::AssetLockStorage;
 pub use asset_lock::Key as AssetLockStorageKey;
 use tracing::error;

@@ -2,6 +2,7 @@
 
 use super::*;
 use executor_primitives::SwapOrder;
+use executor_storage::OmniAccountProfileStorage;
 use heima_primitives::PumpxConfig;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
@@ -51,20 +52,34 @@ impl<
 			ChainAsset::Ethereum(_, _) => "BNBUSDT",
 		};
 
-		let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
-			&self.binance_api,
-			usdt_trade_symbol,
-			from_asset_binance_coin_name,
-			from_amount_decimal,
-		)
-		.await?;
+		let profile_storage = OmniAccountProfileStorage::new(self.storage_db.clone());
+		let has_exported_wallet = if let Ok(maybe_profile) = profile_storage.get(account_id) {
+			maybe_profile.map(|p| p.wallet_exported).unwrap_or(false)
+		} else {
+			// let's continue but pessimistically assume user has exported his wallet
+			error!("Could not get omni account profile, assuming wallet has been exported");
+			true
+		};
 
-		let instant = estimated_from_amount_in_usdt <= self.instant_payout_threshold;
-
-		debug!(
-			"Instant: {}, threshold: {:?}, estimated usdt amount: {:?}",
-			instant, self.instant_payout_threshold, estimated_from_amount_in_usdt
-		);
+		let instant = if has_exported_wallet {
+			debug!("Wallet has been exported, skipping instant payout flow");
+			false
+		} else {
+			let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
+				&self.binance_api,
+				usdt_trade_symbol,
+				from_asset_binance_coin_name,
+				from_amount_decimal,
+			)
+			.await?;
+			debug!(
+				"Checking instant payout :threshold: {:?}, estimated usdt amount: {:?}",
+				self.instant_payout_threshold, estimated_from_amount_in_usdt
+			);
+			let instant = estimated_from_amount_in_usdt <= self.instant_payout_threshold;
+			debug!("Instant: {:?}", instant);
+			instant
+		};
 
 		let amount_to_lock = AmountType::from_str(
 			&Self::calculate_amount_decimal(from_amount_decimal, from_asset_binance_coin_name)?
