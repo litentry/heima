@@ -36,35 +36,35 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    #[command(about = "Deposit funds into the treasury account")]
-    DepositFunds,
+	#[command(about = "Deposit funds into the treasury account")]
+	DepositFunds,
 
-    #[command(about = "Withdraw funds from the treasury account to the payer")]
-    WithdrawFunds,
+	#[command(about = "Withdraw funds from the treasury account to the payer")]
+	WithdrawFunds,
 
-    #[command(about = "Set a new admin public key")]
-    SetAdmin,
+	#[command(about = "Set a new admin public key")]
+	SetAdmin,
 
-    #[command(about = "Set a new worker public key")]
-    SetWorker,
+	#[command(about = "Set a new worker public key")]
+	SetWorker,
 
-    #[command(about = "Create a payout request for a beneficiary")]
-    CreatePayRequest,
+	#[command(about = "Create a payout request for a beneficiary")]
+	CreatePayRequest,
 
-    #[command(about = "Check the current balance of the treasury account")]
-    ProgramBalance,
+	#[command(about = "Check the current balance of the treasury account")]
+	ProgramBalance,
 
-    #[command(about = "List all payout requests made for a beneficiary")]
-    UserPayouts,
+	#[command(about = "List all payout requests made for a beneficiary")]
+	UserPayouts,
 
-    #[command(about = "Check the current nonce for a beneficiary")]
-    UserNonce,
+	#[command(about = "Check the current nonce for a beneficiary")]
+	UserNonce,
 
-    #[command(about = "Verify if the provided admin pubkey is set")]
-    IsAdmin,
+	#[command(about = "Verify if the provided admin pubkey is set")]
+	IsAdmin,
 
-    #[command(about = "Verify if the provided worker pubkey is set")]
-    IsWorker,
+	#[command(about = "Verify if the provided worker pubkey is set")]
+	IsWorker,
 }
 
 fn main() {
@@ -84,7 +84,9 @@ fn main() {
 
 	match cli.cmd {
 		Commands::SetAdmin => {
-			let admin = Pubkey::from_str(cli.admin.as_ref().expect("admin must be passed as argument")).unwrap();
+			let admin =
+				Pubkey::from_str(cli.admin.as_ref().expect("admin must be passed as argument"))
+					.unwrap();
 
 			let program_pubkey = program.id();
 			// Fetch program_data address
@@ -119,7 +121,9 @@ fn main() {
 			println!("Transaction confirmed, Signature: {}", tx);
 		},
 		Commands::SetWorker => {
-			let worker = Pubkey::from_str(cli.worker.as_ref().expect("worker must be passed as argument")).unwrap();
+			let worker =
+				Pubkey::from_str(cli.worker.as_ref().expect("worker must be passed as argument"))
+					.unwrap();
 
 			let tx = program
 				.request()
@@ -136,7 +140,9 @@ fn main() {
 			println!("Transaction is confirmed, signature: {}", tx);
 		},
 		Commands::IsWorker => {
-			let worker = Pubkey::from_str(cli.worker.as_ref().expect("worker must be passed as argument")).unwrap();
+			let worker =
+				Pubkey::from_str(cli.worker.as_ref().expect("worker must be passed as argument"))
+					.unwrap();
 
 			let worker_account =
 				get_account_data::<accounting_contract::WorkerAccount>(&program, &[b"worker"]);
@@ -146,7 +152,9 @@ fn main() {
 			println!("It is not the worker, the worker is: {}", worker_account.worker);
 		},
 		Commands::IsAdmin => {
-			let admin = Pubkey::from_str(cli.admin.as_ref().expect("admin must be passed as argument")).unwrap();
+			let admin =
+				Pubkey::from_str(cli.admin.as_ref().expect("admin must be passed as argument"))
+					.unwrap();
 
 			let admin_account =
 				get_account_data::<accounting_contract::AdminAccount>(&program, &[b"admin"]);
@@ -206,7 +214,10 @@ fn main() {
 		},
 		Commands::CreatePayRequest => {
 			let amount: u64 = cli.amount.expect("amount must be passed as argument");
-			let beneficiary = Pubkey::from_str(cli.beneficiary.as_ref().expect("beneficiary must be passed as argument")).unwrap();
+			let beneficiary = Pubkey::from_str(
+				cli.beneficiary.as_ref().expect("beneficiary must be passed as argument"),
+			)
+			.unwrap();
 
 			let nonce_account = get_account_data::<accounting_contract::Nonce>(
 				&program,
@@ -240,7 +251,10 @@ fn main() {
 			println!("Transaction has been confirmed, signature: {}", tx);
 		},
 		Commands::UserNonce => {
-			let beneficiary = Pubkey::from_str(cli.beneficiary.as_ref().expect("beneficiary must be passed as argument")).unwrap();
+			let beneficiary = Pubkey::from_str(
+				cli.beneficiary.as_ref().expect("beneficiary must be passed as argument"),
+			)
+			.unwrap();
 
 			let nonce_account = get_account_data::<accounting_contract::Nonce>(
 				&program,
@@ -251,7 +265,10 @@ fn main() {
 			println!("The stored nonce is: {}", nonce);
 		},
 		Commands::UserPayouts => {
-			let beneficiary = Pubkey::from_str(cli.beneficiary.as_ref().expect("beneficiary must be passed as argument")).unwrap();
+			let beneficiary = Pubkey::from_str(
+				cli.beneficiary.as_ref().expect("beneficiary must be passed as argument"),
+			)
+			.unwrap();
 
 			let nonce_account = get_account_data::<accounting_contract::Nonce>(
 				&program,
