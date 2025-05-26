@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use serde::{Deserialize, Serialize};
 
-declare_id!("31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub");
+declare_id!("D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV");
 
 #[program]
 pub mod accounting_contract {
@@ -106,7 +106,7 @@ pub struct WorkerAccount {
 pub struct TreasuryAccount {}
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Serialize, Deserialize, Debug)]
 pub struct PayoutRequest {
 	pub beneficiary: Pubkey,
 	pub nonce: u64,

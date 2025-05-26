@@ -3,22 +3,26 @@ use std::str::FromStr;
 
 use accounting_contract::accounting_contract::set_worker;
 use anchor_client::anchor_lang::AnchorDeserialize;
-use anchor_client::{anchor_lang::{AccountDeserialize, ProgramData}, solana_sdk::{
-	bpf_loader_upgradeable::{UpgradeableLoaderState, ID as BPF_LOADER_UPGRADEABLE_ID},
-	commitment_config::CommitmentConfig,
-	pubkey::Pubkey,
-	signature::{read_keypair_file, Keypair, Signer},
-}, Client, ClientError, Cluster, Program};
-use anchor_client::ClientError::SolanaClientError;
 use anchor_client::solana_sdk::instruction::InstructionError::Custom;
 use anchor_client::solana_sdk::program_error::ProgramError;
 use anchor_client::solana_sdk::signature::SeedDerivable;
 use anchor_client::solana_sdk::transaction::TransactionError;
 use anchor_client::solana_sdk::transaction::TransactionError::InstructionError;
+use anchor_client::ClientError::SolanaClientError;
+use anchor_client::{
+	anchor_lang::{AccountDeserialize, ProgramData},
+	solana_sdk::{
+		bpf_loader_upgradeable::{UpgradeableLoaderState, ID as BPF_LOADER_UPGRADEABLE_ID},
+		commitment_config::CommitmentConfig,
+		pubkey::Pubkey,
+		signature::{read_keypair_file, Keypair, Signer},
+	},
+	Client, ClientError, Cluster, Program,
+};
 
 // PK - 8QQds7P14EL1ZFjPLsTg2AHZaQHfNGH1EDW8wMhJmxaX
 pub fn setup_program<'a>(payer: &'a Keypair) -> Program<&'a Keypair> {
-	let program_id = "31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub";
+	let program_id = "D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV";
 	let client = setup_client(program_id, payer);
 
 	// Ensure the payer has tokens
@@ -222,12 +226,12 @@ fn test_create_pay_request() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -240,7 +244,6 @@ fn test_create_pay_request() {
 		})
 		.send()
 		.expect("Failed to send transaction");
-
 }
 
 #[test]
@@ -272,12 +275,12 @@ fn test_create_pay_request_invalid_nonce() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -290,7 +293,7 @@ fn test_create_pay_request_invalid_nonce() {
 		});
 
 	tx.send().unwrap();
-	let nonce: u64  = 3;
+	let nonce: u64 = 3;
 	let tx = program
 		.request()
 		.accounts(accounting_contract::accounts::CreatePayRequest {
@@ -298,12 +301,12 @@ fn test_create_pay_request_invalid_nonce() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -319,11 +322,10 @@ fn test_create_pay_request_invalid_nonce() {
 	if let Err(SolanaClientError(e)) = tx {
 		assert_eq!(e.get_transaction_error(), Some(InstructionError(0, Custom(6004))));
 	}
-
 }
 
 #[test]
-fn create_pay_request_out_of_balance(){
+fn create_pay_request_out_of_balance() {
 	let payer = read_keypair_file("../test-account.json").expect("Failed to read keypair file");
 	let program = setup_program(&payer);
 	request_airdrop(&program, &payer);
@@ -350,12 +352,12 @@ fn create_pay_request_out_of_balance(){
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -410,12 +412,12 @@ fn create_pay_request_unauthorized() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -453,7 +455,6 @@ fn test_withdraw() {
 		.send()
 		.expect("Failed to send transaction");
 
-
 	let tx = program
 		.request()
 		.accounts(accounting_contract::accounts::WithdrawFunds {
@@ -487,7 +488,6 @@ fn test_withdraw_out_of_funds() {
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
 		.expect("Failed to send transaction");
-
 
 	let tx = program
 		.request()
@@ -532,7 +532,6 @@ fn test_withdraw_unauthorized() {
 
 	let payer = Keypair::from_seed(secret.as_ref()).unwrap();
 	let program = setup_program(&payer);
-
 
 	let tx = program
 		.request()
