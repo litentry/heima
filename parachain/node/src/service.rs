@@ -719,12 +719,6 @@ pub async fn start_standalone_node(
 	let select_chain = maybe_select_chain
 		.expect("In `standalone` mode, `new_partial` will return some `select_chain`; qed");
 
-	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
-	//       presumably in stable2412
-	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
-	// let custom_txpool =
-	// 	std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
-
 	if role.is_authority() {
 		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
 			task_manager.spawn_handle(),
@@ -1006,12 +1000,6 @@ fn start_lookahead_aura_consensus(
 	announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 	backend: Arc<ParachainBackend>,
 ) -> Result<(), sc_service::Error> {
-	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
-	//       presumably in stable2412
-	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
-	// let custom_txpool =
-	// 	std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
-
 	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 		task_manager.spawn_handle(),
 		client.clone(),
