@@ -1,6 +1,6 @@
 export type ChainId =
   | 'heima-local'
-  | 'heima-dev'
+  | 'heima-staging'
   | 'heima-prod';
 
 export type ChainSpec = {
@@ -26,14 +26,13 @@ export const heimaLocal: ChainSpec = {
   enclaveRpcs: [{ url: 'ws://localhost:2100' }],
 };
 
-export const heimaDev: ChainSpec = {
-  id: 'heima-dev',
-  name: 'Heima Development Network',
+export const heimaStaging: ChainSpec = {
+  id: 'heima-staging',
+  name: 'Heima Staging Network',
   isTestnet: true,
   isDefault: false,
-  // TODO update url below
-  rpcs: [{ url: 'wss://tee-dev.litentry.io' }],
-  enclaveRpcs: [{ url: 'wss://enclave-dev.litentry.io' }],
+  rpcs: [{ url: 'wss://tee-staging.heima.network' }],
+  enclaveRpcs: [{ url: 'wss://staging-dex-worker.heima.network' }],
 };
 
 export const heimaProd: ChainSpec = {
@@ -41,15 +40,12 @@ export const heimaProd: ChainSpec = {
   name: 'Heima Production Network',
   isTestnet: false,
   isDefault: true,
-  rpcs: [
-    { url: 'wss://litentry-rpc.dwellir.com' },
-    { url: 'wss://rpc.litentry-parachain.litentry.io' },
-  ],
+  rpcs: [{ url: 'wss://heima-rpc.n.dwellir.com' }, { url: 'wss://rpc.heima-parachain.heima.network' }],
   // TODO update url below
-  enclaveRpcs: [{ url: 'wss://enclave-prod.litentry.io' }],
+  enclaveRpcs: [{ url: 'wss://dex-worker.heima.network' }],
 };
 
-export const all = [heimaProd, heimaDev, heimaLocal];
+export const all = [heimaProd, heimaLocal, heimaStaging];
 
 export const byId = all.reduce((acc, spec) => {
   acc[spec.id] = spec;

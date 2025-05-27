@@ -1,29 +1,36 @@
 {
-	"name": "@heima/client-sdk",
-	"description": "This package provides helpers for dApps to interact with the Heima Protocol.",
-	"version": "1.0.0-next.0",
-	"license": "GPL-3.0-or-later",
-	"dependencies": {},
-	"devDependencies": {
-		"@polkadot/keyring": "^13.4.3",
-		"@polkadot/rpc-provider": "^15.0.2",
-		"@types/ws": "^8.5.13"
-	},
-	"peerDependencies": {
-		"@heima/chaindata": "*",
-		"@heima/parachain-api": "0.9.23-next.0",
-		"@polkadot/api": "^15.0.2",
-		"@polkadot/types": "^15.0.2",
-		"@polkadot/types-codec": "^15.0.2",
-		"@polkadot/util": "^13.4.3",
-		"@polkadot/util-crypto": "^13.4.3",
-		"@scure/base": "^1.2.4",
-		"isomorphic-ws": "^5.0.0",
-		"tslib": "^2.5.3",
-		"ws": "^8.18.0"
-	},
-	"type": "module",
-	"module": "./src/index.js",
-	"main": "./src/index.js",
-	"typings": "./src/index.d.ts"
+  "name": "@heima-network/client-sdk",
+  "description": "This package provides helpers for dApps to interact with the Heima Protocol.",
+  "version": "1.0.0-next.6",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "dependencies": {},
+  "devDependencies": {
+    "@polkadot/keyring": "^13.4.3",
+    "@polkadot/rpc-provider": "^15.0.2",
+    "@types/ws": "^8.5.13"
+  },
+  "peerDependencies": {
+    "@heima-network/chaindata": "0.0.5",
+    "@heima-network/parachain-api": "0.9.24-next.7",
+    "@polkadot/api": "^15.0.2",
+    "@polkadot/types": "^15.0.2",
+    "@polkadot/types-codec": "^15.0.2",
+    "@polkadot/util": "^13.4.3",
+    "@polkadot/util-crypto": "^13.4.3",
+    "@scure/base": "^1.2.4",
+    "isomorphic-ws": "^5.0.0",
+    "tslib": "^2.5.3",
+    "ws": "^8.18.0",
+    "tsup": "^8.4.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  }
 }

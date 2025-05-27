@@ -1,4 +1,4 @@
-import { LitentryIdentity } from '@litentry/parachain-api';
+import { LitentryIdentity } from '@heima-network/parachain-api';
 import { hexToU8a, isHex } from '@polkadot/util';
 import { base58Decode, base64Decode } from '@polkadot/util-crypto';
 

@@ -112,11 +112,11 @@ pub mod sgx {
 		fn create_sealed_if_absent_or_provided(&self, seed: Option<[u8; 32]>) -> Result<()> {
 			if !self.exists() {
 				info!("Keyfile not found, creating new! {}", self.path().display());
-				return self.create_sealed(seed)
+				return self.create_sealed(seed);
 			}
 			if seed.is_some() {
 				info!("Seed provided, creating new! {}", self.path().display());
-				return self.create_sealed(seed)
+				return self.create_sealed(seed);
 			}
 
 			Ok(())

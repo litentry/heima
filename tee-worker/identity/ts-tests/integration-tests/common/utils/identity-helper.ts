@@ -1,12 +1,11 @@
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import type { IntegrationTestContext } from '../common-types';
-import { AesOutput } from 'parachain-api';
+import { AesOutput, HeimaValidationData, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
 import { decryptWithAes, Signer } from './crypto';
 import { ethers } from 'ethers';
 import type { TypeRegistry } from '@polkadot/types';
-import type { PalletIdentityManagementTeeIdentityContext } from 'sidechain-api';
-import type { LitentryValidationData, CorePrimitivesIdentity } from 'parachain-api';
+import type { PalletIdentityManagementTeeIdentityContext } from '@heima-network/api-argument/sidechain';
 import type { HexString } from '@polkadot/util/types';
 
 // blake2_256(<sidechain nonce> + <primary AccountId> + <identity-to-be-linked>)
@@ -17,14 +16,14 @@ export function generateVerificationMessage(
     sidechainNonce: number,
     options?: { prettifiedMessage?: boolean }
 ): string {
-    const _options = { prettifiedMessage: false, ...options };
+    const optionsParam = { prettifiedMessage: false, ...options };
     const encodedIdentity = context.api.createType('CorePrimitivesIdentity', identity).toU8a();
     const encodedWho = context.api.createType('CorePrimitivesIdentity', signer).toU8a();
     const encodedSidechainNonce = context.api.createType('Index', sidechainNonce);
     const msg = Buffer.concat([encodedSidechainNonce.toU8a(), encodedWho, encodedIdentity]);
     const hash = blake2AsHex(msg, 256);
 
-    if (_options.prettifiedMessage) {
+    if (optionsParam.prettifiedMessage) {
         return `Token: ${hash}`;
     }
 
@@ -84,7 +83,7 @@ export type Web2ValidationConfig =
           oauthState: string;
       };
 
-export async function buildWeb2Validation(config: Web2ValidationConfig): Promise<LitentryValidationData> {
+export async function buildWeb2Validation(config: Web2ValidationConfig): Promise<HeimaValidationData> {
     const { context, signerIdentitity, linkIdentity, validationNonce } = config;
     const msg = generateVerificationMessage(context, signerIdentitity, linkIdentity, validationNonce);
     console.log(`post verification msg to ${config.identityType}:`, msg);
@@ -113,7 +112,7 @@ export async function buildWeb2Validation(config: Web2ValidationConfig): Promise
             };
         }
 
-        return context.api.createType('LitentryValidationData', discordValidationData);
+        return context.api.createType('HeimaValidationData', discordValidationData);
     } else {
         const twitterValidationData = {
             Web2Validation: {
@@ -137,7 +136,7 @@ export async function buildWeb2Validation(config: Web2ValidationConfig): Promise
             };
         }
 
-        return context.api.createType('LitentryValidationData', twitterValidationData);
+        return context.api.createType('HeimaValidationData', twitterValidationData);
     }
 }
 
@@ -149,8 +148,8 @@ export async function buildValidations(
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer?: Signer,
     options?: { prettifiedMessage?: boolean }
-): Promise<LitentryValidationData> {
-    const _options = { prettifiedMessage: false, ...options };
+): Promise<HeimaValidationData> {
+    const optionsParam = { prettifiedMessage: false, ...options };
     const validationNonce = startingSidechainNonce++;
 
     const msg = generateVerificationMessage(context, signerIdentitity, linkIdentity, validationNonce);
@@ -171,7 +170,7 @@ export async function buildValidations(
 
         evmValidationData!.Web3Validation.Evm.signature.Ethereum = evmSignature;
 
-        return context.api.createType('LitentryValidationData', evmValidationData);
+        return context.api.createType('HeimaValidationData', evmValidationData);
     }
 
     if (network === 'substrate') {
@@ -190,7 +189,7 @@ export async function buildValidations(
         const substrateSignature = await signer!.sign(msg);
         substrateValidationData!.Web3Validation.Substrate.signature.Sr25519 = u8aToHex(substrateSignature);
 
-        return context.api.createType('LitentryValidationData', substrateValidationData);
+        return context.api.createType('HeimaValidationData', substrateValidationData);
     }
 
     if (network === 'bitcoin') {
@@ -209,7 +208,7 @@ export async function buildValidations(
         const bitcoinSignature = await signer!.sign(msg.substring(2));
         bitcoinValidationData!.Web3Validation.Bitcoin.signature.Bitcoin = u8aToHex(bitcoinSignature);
 
-        return context.api.createType('LitentryValidationData', bitcoinValidationData);
+        return context.api.createType('HeimaValidationData', bitcoinValidationData);
     }
 
     if (network === 'solana') {
@@ -228,7 +227,7 @@ export async function buildValidations(
         const solanaSignature = await signer!.sign(msg);
         solanaValidationData!.Web3Validation.Solana.signature.Ed25519 = u8aToHex(solanaSignature);
 
-        return context.api.createType('LitentryValidationData', solanaValidationData);
+        return context.api.createType('HeimaValidationData', solanaValidationData);
     }
 
     throw new Error(`[buildValidation]: Unsupported network ${network}.`);

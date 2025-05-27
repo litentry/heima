@@ -20,7 +20,7 @@ import {
     fundAccount,
     createAuthenticatedTrustedCallTransferNativeIntent,
 } from './common/utils/native-request-helpers';
-import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from 'parachain-api';
+import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from '@heima-network/api-argument/identity';
 import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('Omni Account', function () {

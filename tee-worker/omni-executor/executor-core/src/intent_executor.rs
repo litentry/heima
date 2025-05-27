@@ -17,12 +17,29 @@
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use executor_primitives::intent::Intent;
+use executor_primitives::AccountId;
+use executor_primitives::Intent;
+use executor_primitives::IntentId;
+use metrics::describe_gauge;
+
+pub type IntentExecutionResult = (Option<Vec<u8>>, bool);
 
 /// Used to perform intent on destination chain
 #[async_trait]
 pub trait IntentExecutor: Send {
-	async fn execute(&self, intent: Intent) -> Result<(), ()>;
+	async fn execute(
+		&self,
+		account_id: &AccountId,
+		intent_id: IntentId,
+		intent: Intent,
+	) -> Result<IntentExecutionResult, ()>;
+
+	async fn name(&self) -> &'static str;
+
+	async fn on_execution_error(&self) {
+		let name = self.name().await;
+		describe_gauge!(executor_gauge_name(name), executor_gauge_desc(name));
+	}
 }
 
 pub struct MockedIntentExecutor {
@@ -38,7 +55,24 @@ impl MockedIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for MockedIntentExecutor {
-	async fn execute(&self, _intent: Intent) -> Result<(), ()> {
-		self.sender.send(()).map_err(|_| ())
+	async fn execute(
+		&self,
+		_account_id: &AccountId,
+		_intent_id: IntentId,
+		_intent: Intent,
+	) -> Result<IntentExecutionResult, ()> {
+		self.sender.send(()).map(|_| (None, false)).map_err(|_| ())
 	}
+
+	async fn name(&self) -> &'static str {
+		"mocked"
+	}
+}
+
+fn executor_gauge_name(name: &str) -> String {
+	format!("{}_intent_execution_failures", name)
+}
+
+fn executor_gauge_desc(name: &str) -> String {
+	format!("Number of {} intent executor failures", name)
 }

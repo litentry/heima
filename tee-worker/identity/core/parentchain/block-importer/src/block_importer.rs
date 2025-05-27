@@ -155,7 +155,7 @@ impl<
 			{
 				error!("[{:?}] Header submission to light client failed for block number {} and hash {:?}: {:?}", id, signed_block.block.header().number(), signed_block.block.hash(), e);
 
-				return Err(e.into())
+				return Err(e.into());
 			}
 
 			// check if we can fast-sync
@@ -165,7 +165,7 @@ impl<
 						"fast-syncing block import, ignoring any invocations before block {:}",
 						creation_block.number
 					);
-					continue
+					continue;
 				}
 			}
 
@@ -176,7 +176,7 @@ impl<
 				.update_states(block.header(), &self.validator_accessor.parentchain_id())
 			{
 				error!("[{:?}] Error performing state updates upon block import", id);
-				return Err(e.into())
+				return Err(e.into());
 			}
 
 			// Execute indirect calls that were found in the extrinsics of the block,

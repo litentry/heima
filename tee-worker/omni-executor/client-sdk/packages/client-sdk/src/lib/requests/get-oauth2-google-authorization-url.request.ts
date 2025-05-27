@@ -1,8 +1,8 @@
 import { assert, compactStripLength, hexToU8a, u8aToString } from '@polkadot/util';
 
-import { JsonRpcRequest } from '@lib/utils/types';
+import { JsonRpcRequest } from '@utils/types';
 
-import { enclave } from '@lib/enclave';
+import { enclave, Enclave } from '@lib/enclave';
 
 /**
  * Generates an OAuth2 authorization URL for Google authentication.
@@ -10,13 +10,14 @@ import { enclave } from '@lib/enclave';
  * @param args - The arguments object
  * @param args.googleAccount - The Google account email address
  * @param args.redirectUri - The URI where Google will redirect after authentication
+ * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns A Promise that resolves to the Google OAuth2 authorization URL
  * @throws {Error} If googleAccount or redirectUri is empty or undefined
  */
 export async function getOAuth2GoogleAuthorizationUrl(args: {
   googleAccount: string;
   redirectUri: string;
-}): Promise<string> {
+}, enclaveInstance: Enclave = enclave): Promise<string> {
   const { googleAccount, redirectUri } = args;
 
   assert(googleAccount.length > 0, 'Google account is required');
@@ -29,7 +30,7 @@ export async function getOAuth2GoogleAuthorizationUrl(args: {
     params: [googleAccount, redirectUri],
   };
 
-  const hexString = await enclave.send(rpcRequest);
+  const hexString = await enclaveInstance.send(rpcRequest);
 
   const [, data] = compactStripLength(hexToU8a(hexString));
 

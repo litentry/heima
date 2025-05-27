@@ -1,4 +1,4 @@
-import type { LitentryIdentity } from '@litentry/parachain-api';
+import type { LitentryIdentity } from '@heima-network/parachain-api';
 import type { JsonRpcRequest } from '../util/types';
 
 import type { ApiPromise } from '@polkadot/api';

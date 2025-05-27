@@ -38,9 +38,11 @@ pub fn is_user(
 ) -> Result<bool, Error> {
 	match platform_user_type {
 		PlatformUserType::KaratDao => karat_dao_user::is_user(addresses, data_provider_config),
-		PlatformUserType::MagicCraftStaking =>
-			magic_craft_staking_user::is_user(addresses, data_provider_config),
-		PlatformUserType::DarenMarket =>
-			daren_market_user::is_user(addresses, data_provider_config),
+		PlatformUserType::MagicCraftStaking => {
+			magic_craft_staking_user::is_user(addresses, data_provider_config)
+		},
+		PlatformUserType::DarenMarket => {
+			daren_market_user::is_user(addresses, data_provider_config)
+		},
 	}
 }

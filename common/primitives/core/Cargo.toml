@@ -14,7 +14,7 @@ hex-literal = { version = "0.4.1", default-features = false }
 parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
 ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
-serde_json = { version = "=1.0.133", default-features = false }
+serde_json = { version = "=1.0.138", default-features = false }
 strum = { version = "0.26", default-features = false }
 strum_macros = { version = "0.26", default-features = false }
 webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"], optional = true }

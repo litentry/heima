@@ -40,7 +40,7 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 		Ok(l) => l,
 		Err(e) => {
 			error!("error starting MU-RA server on {}: {}", addr, e);
-			return
+			return;
 		},
 	};
 	loop {

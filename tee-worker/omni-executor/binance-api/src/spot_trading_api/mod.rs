@@ -1,21 +1,23 @@
-mod types;
+pub mod types;
 
-use crate::{error::Error, traits::TryIntoParams, BinanceApi, Method};
+use crate::BinanceApi;
+use crate::{error::Error, traits::TryIntoParams, Method};
 use std::collections::HashMap;
+use tracing::error;
 use types::{
-	AccountInfo, CancelOrderRestrictions, CreateOrderParams, EmptyResponse, ExchangeInfo,
-	Permission, ServerTime, SymbolPrice, TestTradeOrder, TradeOrder,
+	AccountInfo, CancelOrderRestrictions, ComissionRates, CreateOrderParams, EmptyResponse,
+	ExchangeInfo, Permission, ServerTime, SymbolPrice, TestTradeOrder, TradeOrder,
 };
 
 /// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/general-api-information
 const SPOT_TRADING_API: &str = "/api/v3";
 
-pub struct SpotTradingApi<'a> {
-	base_api: &'a BinanceApi,
+pub struct SpotTradingApi<'a, BinanceClient: BinanceApi> {
+	base_api: &'a BinanceClient,
 }
 
-impl<'a> SpotTradingApi<'a> {
-	pub fn new(binance_api: &BinanceApi) -> SpotTradingApi {
+impl<'a, BinanceClient: BinanceApi> SpotTradingApi<'a, BinanceClient> {
+	pub fn new(binance_api: &BinanceClient) -> SpotTradingApi<BinanceClient> {
 		SpotTradingApi { base_api: binance_api }
 	}
 
@@ -59,6 +61,17 @@ impl<'a> SpotTradingApi<'a> {
 		self.base_api.make_public_get_request(&endpoint, Some(params)).await
 	}
 
+	/// Get commission rates
+	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints#query-commission-rates-user_data
+	pub async fn get_commission_rates(&self, symbol: &str) -> Result<ComissionRates, Error> {
+		let endpoint = format!("{}/account/commission", SPOT_TRADING_API);
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), symbol.to_string());
+		self.base_api
+			.make_signed_request(&endpoint, Method::GET, Some(params), None)
+			.await
+	}
+
 	/// Create a new order
 	/// https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#new-order-trade
 	pub async fn create_order(
@@ -68,7 +81,7 @@ impl<'a> SpotTradingApi<'a> {
 		let endpoint = format!("{}/order", SPOT_TRADING_API);
 		let recv_window = create_order_params.recv_window;
 		let params = create_order_params.try_into_params().map_err(|e| {
-			log::error!("Error converting create order params: {}", e);
+			error!("Error converting create order params: {}", e);
 			Error::InvalidParams
 		})?;
 		self.base_api
@@ -85,7 +98,7 @@ impl<'a> SpotTradingApi<'a> {
 		let endpoint = format!("{}/order/test", SPOT_TRADING_API);
 		let recv_window = create_order_params.recv_window;
 		let mut params = create_order_params.try_into_params().map_err(|e| {
-			log::error!("Error converting create order params: {}", e);
+			error!("Error converting create order params: {}", e);
 			Error::InvalidParams
 		})?;
 		params

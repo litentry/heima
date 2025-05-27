@@ -7,13 +7,13 @@ use parentchain_rpc_client::{
 	metadata::SubxtMetadataProvider, CustomConfig, SubstrateRpcClient, SubxtClient,
 	SubxtClientFactory,
 };
-use parentchain_signer::{key_store::SubstrateKeyStore, TransactionSigner};
+use parentchain_signer::TxSigner;
 use std::sync::Arc;
 use subxt_core::Metadata;
 use subxt_signer::sr25519::Keypair;
+use tracing::error;
 
-type TxSigner = TransactionSigner<
-	SubstrateKeyStore,
+type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
 	CustomConfig,
@@ -25,7 +25,7 @@ type TxSigner = TransactionSigner<
 pub async fn perform_attestation(
 	client_factory: Arc<SubxtClientFactory<CustomConfig>>,
 	signer: Keypair,
-	transaction_signer: Arc<TxSigner>,
+	transaction_signer: Arc<ParentchainTxSigner>,
 	worker_url: &str,
 	shielding_pubkey: Vec<u8>,
 ) -> Result<MrEnclave, ()> {
@@ -36,23 +36,23 @@ pub async fn perform_attestation(
 	#[cfg(feature = "gramine-quote")]
 	{
 		use executor_primitives::DcapQuote;
-		use log::info;
 		use parity_scale_codec::Decode;
 		use std::fs;
 		use std::fs::File;
 		use std::io::Write;
+		use tracing::{debug, info};
 		let mut f = File::create("/dev/attestation/user_report_data").unwrap();
 		let content = signer.public_key().0;
 		f.write_all(&content).unwrap();
 
 		quote = fs::read("/dev/attestation/quote").unwrap();
-		info!("Attestation quote {:?}", quote);
 
 		let dcap_quote: DcapQuote =
 			DcapQuote::decode(&mut quote.as_slice()).expect("Failed to decode quote");
+		debug!("Attestation dcap_quote {:?}", dcap_quote);
 
 		mrenclave = dcap_quote.body.mr_enclave;
-		info!("MRENCLAVE {:?}", mrenclave);
+		info!("MRENCLAVE in hex {:?}", hex::encode(mrenclave));
 	}
 	#[cfg(not(feature = "gramine-quote"))]
 	{
@@ -70,9 +70,9 @@ pub async fn perform_attestation(
 	);
 
 	let mut client = client_factory.new_client_until_connected().await;
-	let signed_call = transaction_signer.sign(registration_call, None).await;
+	let signed_call = transaction_signer.sign(registration_call).await;
 	client.submit_tx(&signed_call).await.map_err(|e| {
-		log::error!("Error while submitting tx: {:?}", e);
+		error!("Error while submitting tx: {:?}", e);
 	})?;
 
 	Ok(mrenclave)

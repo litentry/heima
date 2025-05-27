@@ -15,15 +15,15 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::delegate_call::prepare_delegate_call_data;
-use crate::rpc::RpcProvider;
-use crate::rpc::RpcProviderFactory;
 use alloy::eips::eip7702::Authorization;
 use alloy::network::{EthereumWallet, NetworkWallet, TransactionBuilder, TransactionBuilder7702};
 use alloy::primitives::{Address, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::signers::local::PrivateKeySigner;
 use alloy::signers::Signer;
-use log::error;
+use ethereum_rpc::RpcProvider;
+use ethereum_rpc::RpcProviderFactory;
+use tracing::log::error;
 
 #[allow(dead_code)]
 pub enum Paymode {
@@ -145,10 +145,8 @@ pub mod tests {
 	use mockall::predicate;
 
 	use crate::tx::Paymode;
-	use crate::{
-		rpc::tests::MockedRpcProviderFactory,
-		rpc::{AlloyRpcProviderFactory, MockRpcProvider},
-	};
+	use ethereum_rpc::mocks::{MockRpcProvider, MockedRpcProviderFactory};
+	use ethereum_rpc::AlloyRpcProviderFactory;
 
 	use super::submit;
 
@@ -188,24 +186,15 @@ pub mod tests {
 		let paymode = Paymode::Prefunded(prepare_sponsor_signer());
 		let mut signer_rpc_provider = MockRpcProvider::new();
 
-		signer_rpc_provider
-			.expect_estimate_gas()
-			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(10))));
-		signer_rpc_provider
-			.expect_get_gas_price()
-			.times(1)
-			.returning(|| Box::pin(futures::future::ready(Ok(10))));
+		signer_rpc_provider.expect_estimate_gas().times(1).returning(|_| Ok(10));
+		signer_rpc_provider.expect_get_gas_price().times(1).returning(|| Ok(10));
 
 		signer_rpc_provider
 			.expect_get_balance()
 			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(U256::from(1000)))));
+			.returning(|_| Ok(U256::from(1000)));
 
-		signer_rpc_provider
-			.expect_send_transaction()
-			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+		signer_rpc_provider.expect_send_transaction().times(1).returning(|_| Ok(()));
 
 		let mut providers = HashMap::new();
 		providers.insert(signer.address(), signer_rpc_provider);
@@ -225,31 +214,19 @@ pub mod tests {
 		let paymode = Paymode::Prefunded(prepare_sponsor_signer());
 		let mut signer_rpc_provider = MockRpcProvider::new();
 
-		signer_rpc_provider
-			.expect_estimate_gas()
-			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(10))));
-		signer_rpc_provider
-			.expect_get_gas_price()
-			.times(1)
-			.returning(|| Box::pin(futures::future::ready(Ok(10))));
+		signer_rpc_provider.expect_estimate_gas().times(1).returning(|_| Ok(10));
+		signer_rpc_provider.expect_get_gas_price().times(1).returning(|| Ok(10));
 
 		signer_rpc_provider
 			.expect_get_balance()
 			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(U256::from(0)))));
+			.returning(|_| Ok(U256::from(0)));
 
-		signer_rpc_provider
-			.expect_send_transaction()
-			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+		signer_rpc_provider.expect_send_transaction().times(1).returning(|_| Ok(()));
 
 		let mut sponsor_rpc_provider = MockRpcProvider::new();
 
-		sponsor_rpc_provider
-			.expect_send_transaction()
-			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+		sponsor_rpc_provider.expect_send_transaction().times(1).returning(|_| Ok(()));
 
 		let mut providers = HashMap::new();
 		providers.insert(signer.address(), signer_rpc_provider);
@@ -269,24 +246,24 @@ pub mod tests {
 		let sponsor = prepare_sponsor_signer();
 		let delegation_contract_address =
 			Address::from_hex("0xc07cb79754cf3b252038e2713a138363d55df9e0").unwrap();
-		let paymode =
-			Paymode::Delegated(delegation_contract_address.clone(), prepare_sponsor_signer());
+		let paymode = Paymode::Delegated(delegation_contract_address, prepare_sponsor_signer());
 
 		let mut sponsor_rpc_provider = MockRpcProvider::new();
 
 		sponsor_rpc_provider
 			.expect_get_transaction_count()
 			.times(1)
-			.returning(|_| Box::pin(futures::future::ready(Ok(10))));
+			.returning(|_| Ok(10));
 
 		sponsor_rpc_provider
 			.expect_send_transaction()
 			.times(1)
 			.with(predicate::function(move |t: &TransactionRequest| {
-				matches!(t.authorization_list, Some(ref authorization_list) if authorization_list.len() == 1 
-				&& authorization_list.get(0).unwrap().nonce == 10 && authorization_list.get(0).unwrap().address == delegation_contract_address)
-			} ))
-			.returning(|_| Box::pin(futures::future::ready(Ok(()))));
+				matches!(t.authorization_list, Some(ref authorization_list) if authorization_list.len() == 1
+					&& authorization_list.first().unwrap().nonce == 10
+					&& authorization_list.first().unwrap().address == delegation_contract_address)
+			}))
+			.returning(|_| Ok(()));
 
 		let mut providers = HashMap::new();
 		providers.insert(sponsor.address(), sponsor_rpc_provider);

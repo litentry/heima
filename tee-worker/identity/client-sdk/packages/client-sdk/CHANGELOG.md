@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Add OmniAccount requestors for `createAccountStore`, `remark`, `transferNative`, `transferEthereum`, and `callEthereum`.
 -   Add `requestVerificationCode` requestor.
 -   Add `requestAuthToken` requestor.
+-   Use `@heima-network/parachain-api` instead of `@litentry/parachain-api`.
 
 ## 2024-10-14
 

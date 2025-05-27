@@ -18,15 +18,17 @@ use std::str::FromStr;
 
 use alloy::primitives::Address;
 use async_trait::async_trait;
+use ethereum_rpc::AlloyRpcProviderFactory;
+use executor_core::intent_executor::IntentExecutionResult;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::intent::Intent;
-use log::{error, info};
-use rpc::AlloyRpcProviderFactory;
+use executor_primitives::AccountId;
+use executor_primitives::Intent;
+use executor_primitives::IntentId;
 use signer::get_omni_account_signer;
+use tracing::log::{error, info};
 use tx::submit;
 
 mod delegate_call;
-mod rpc;
 mod signer;
 mod tx;
 
@@ -46,7 +48,12 @@ impl EthereumIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for EthereumIntentExecutor {
-	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+	async fn execute(
+		&self,
+		_account_id: &AccountId,
+		_intent_id: IntentId,
+		intent: Intent,
+	) -> Result<IntentExecutionResult, ()> {
 		info!("Executing intent: {:?}", intent);
 
 		let omni_account_signer = get_omni_account_signer();
@@ -82,7 +89,11 @@ impl IntentExecutor for EthereumIntentExecutor {
 				return Err(());
 			},
 		}
-		Ok(())
+		Ok((None, false))
+	}
+
+	async fn name(&self) -> &'static str {
+		"ethereum"
 	}
 }
 
@@ -95,8 +106,8 @@ pub mod test {
 	use alloy::providers::{Provider, ProviderBuilder, WalletProvider};
 	use alloy::rpc::types::{TransactionInput, TransactionRequest};
 	use alloy::signers::local::PrivateKeySigner;
-	use log::error;
 	use std::str::FromStr;
+	use tracing::log::error;
 
 	// #[tokio::test]
 	pub async fn test() {
@@ -109,9 +120,9 @@ pub mod test {
 		.unwrap();
 		let wallet = EthereumWallet::from(signer);
 
-		let provider = ProviderBuilder::new()
-			.wallet(wallet)
-			.on_http(url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e)).unwrap());
+		let provider = ProviderBuilder::new().wallet(wallet).connect_http(
+			url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e)).unwrap(),
+		);
 		let nonce = provider
 			.get_transaction_count(provider.signer_addresses().next().unwrap())
 			.await

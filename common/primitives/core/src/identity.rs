@@ -95,7 +95,18 @@ impl Debug for IdentityString {
 }
 
 #[derive(
-    Encode, Decode, Copy, Clone, Default, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd,
+    Encode,
+    Decode,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    TypeInfo,
+    MaxEncodedLen,
+    Ord,
+    PartialOrd,
+    Hash,
 )]
 pub struct Address20([u8; 20]);
 
@@ -134,7 +145,18 @@ impl Debug for Address20 {
 }
 
 #[derive(
-    Encode, Decode, Copy, Clone, Default, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd,
+    Encode,
+    Decode,
+    Copy,
+    Clone,
+    Default,
+    PartialEq,
+    Eq,
+    TypeInfo,
+    MaxEncodedLen,
+    Ord,
+    PartialOrd,
+    Hash,
 )]
 pub struct Address32([u8; 32]);
 impl AsRef<[u8; 32]> for Address32 {
@@ -166,6 +188,18 @@ impl<'a> TryFrom<&'a [u8]> for Address32 {
         } else {
             Err(())
         }
+    }
+}
+
+impl TryFrom<&str> for Address32 {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value
+            .from_base58()
+            .map_err(|_| ())?
+            .as_slice()
+            .try_into()
+            .map_err(|_| ())
     }
 }
 
@@ -204,7 +238,9 @@ impl Debug for Address32 {
 }
 
 // TODO: maybe use macros to reduce verbosity
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, PartialOrd, Ord)]
+#[derive(
+    Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, PartialOrd, Ord, Hash,
+)]
 pub struct Address33([u8; 33]);
 impl AsRef<[u8; 33]> for Address33 {
     fn as_ref(&self) -> &[u8; 33] {
@@ -541,6 +577,9 @@ impl Identity {
             Web2IdentityType::Google => {
                 Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
             }
+            Web2IdentityType::Pumpx => {
+                Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
+            }
         }
     }
 }
@@ -552,6 +591,7 @@ pub enum Web2IdentityType {
     Github,
     Email,
     Google,
+    Pumpx,
 }
 
 impl From<ed25519::Public> for Identity {

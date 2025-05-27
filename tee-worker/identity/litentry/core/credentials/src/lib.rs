@@ -290,17 +290,17 @@ impl Credential {
 
 	pub fn validate_unsigned(&self) -> Result<(), Error> {
 		if !self.types.contains(&CredentialType::VerifiableCredential) {
-			return Err(Error::EmptyCredentialType)
+			return Err(Error::EmptyCredentialType);
 		}
 
 		if self.credential_subject.id.is_empty() {
-			return Err(Error::EmptyCredentialSubject)
+			return Err(Error::EmptyCredentialSubject);
 		}
 
 		from_iso8601(&self.issuance_date).ok_or(Error::EmptyIssuanceTimestamp)?;
 
 		if self.id.is_empty() {
-			return Err(Error::InvalidCredential)
+			return Err(Error::InvalidCredential);
 		}
 
 		Ok(())
@@ -312,12 +312,12 @@ impl Credential {
 		vc.validate_unsigned()?;
 
 		if vc.credential_subject.is_empty() {
-			return Err(Error::EmptyCredentialSubject)
+			return Err(Error::EmptyCredentialSubject);
 		}
 
 		// ToDo: validate issuer
 		if vc.issuer.is_empty() {
-			return Err(Error::EmptyCredentialIssuer)
+			return Err(Error::EmptyCredentialIssuer);
 		}
 
 		// TODO: Do we need to set size restrictions
@@ -327,7 +327,7 @@ impl Credential {
 		// }
 
 		if vc.proof.is_none() {
-			return Err(Error::InvalidProof)
+			return Err(Error::InvalidProof);
 		}
 
 		Ok(())

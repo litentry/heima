@@ -1,4 +1,11 @@
-import { WsProvider, ApiPromise, CorePrimitivesTeebagTypesEnclave } from 'parachain-api';
+import {
+    CorePrimitivesTeebagTypesEnclave,
+    identity,
+    vc,
+    trusted_operations,
+    sidechain,
+} from '@heima-network/api-argument/identity';
+import { ApiPromise, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';
@@ -8,7 +15,7 @@ import { KeyObject } from 'crypto';
 import { getSidechainMetadata } from '../call';
 import { createWeb3Wallets } from '../helpers';
 import type { IntegrationTestContext } from '../common-types';
-import { identity, vc, trusted_operations, sidechain, omniAccount } from 'parachain-api';
+import { omniAccount } from '@heima-network/api-argument/omni';
 import crypto from 'crypto';
 import type { HexString } from '@polkadot/util/types';
 // maximum block number that we wait in listening events before we timeout

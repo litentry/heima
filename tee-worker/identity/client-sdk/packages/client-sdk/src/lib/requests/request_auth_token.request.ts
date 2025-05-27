@@ -2,7 +2,7 @@ import type { ApiPromise } from '@polkadot/api';
 import type {
   LitentryIdentity,
   TrustedCallResult,
-} from '@litentry/parachain-api';
+} from '@heima-network/parachain-api';
 import type { JsonRpcRequest } from '../util/types';
 
 import { codecToString } from '../util/codec-to-string';

@@ -1,14 +1,10 @@
 import { u8aToHex } from '@polkadot/util';
-import {
-    ApiPromise,
-    NativeCallAuthenticatedOperation,
-    NativeOperationResponse,
-    NativeQueryAuthenticatedOperation,
-} from 'parachain-api';
+import { ApiPromise } from '@polkadot/api';
+import { NativeTaskWrapper, NativeTaskResponse } from '@heima-network/api-argument/omni';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';
-import { createPlainRequest } from './type_creators';
+import { createRawTaskPlain } from './type_creators';
 import WebSocketAsPromised from 'websocket-as-promised';
 
 type JsonRpcRequest = {
@@ -27,45 +23,59 @@ function createJsonRpcRequest(method: string, params: unknown, id: number): Json
     };
 }
 
-export async function sendPlainRequestFromNativeCall(
+export async function sendRawTaskPlain(
     context: IntegrationTestContext,
-    operation: NativeCallAuthenticatedOperation,
-    onMessageReceived?: (response: NativeOperationResponse) => void
+    nativeTaskWrapper: NativeTaskWrapper,
+    onMessageReceived?: (response: NativeTaskResponse) => void
 ) {
-    const plainRequest = createPlainRequest(context.api, context.mrEnclave, operation);
+    const plainTask = createRawTaskPlain(context.api, nativeTaskWrapper);
 
     const request = createJsonRpcRequest(
-        'native_submitCallPlainRequest',
-        [u8aToHex(plainRequest.toU8a())],
+        'omni_submitNativeTask',
+        [u8aToHex(plainTask.toU8a())],
         nextRequestId(context)
     );
 
     return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
 }
 
-export async function sendPlainRequestFromNativeQuery(
+type GetMessageCodeResponse = {
+    message_code: string;
+};
+
+export async function getMessageCode(
     context: IntegrationTestContext,
-    operation: NativeQueryAuthenticatedOperation,
-    onMessageReceived?: (response: NativeOperationResponse) => void
-) {
-    const plainRequest = createPlainRequest(context.api, context.mrEnclave, operation);
+    omniAccount: string
+): Promise<GetMessageCodeResponse> {
+    const request = createJsonRpcRequest('omni_getMessageCode', { omni_account: omniAccount }, nextRequestId(context));
 
-    const request = createJsonRpcRequest(
-        'native_submitQueryPlainRequest',
-        [u8aToHex(plainRequest.toU8a())],
-        nextRequestId(context)
+    const response = new Promise<GetMessageCodeResponse>((resolve, reject) =>
+        context.teeWsClient.onMessage.addListener((data) => {
+            const parsed = JSON.parse(data);
+            if (parsed.id !== request.id) {
+                return;
+            }
+            if ('error' in parsed) {
+                const transaction = { request, response: parsed };
+                console.log('Request failed: ' + JSON.stringify(transaction, null, 2));
+                reject(new Error(parsed.error.message, { cause: transaction }));
+            }
+            const response = parsed.result;
+            context.teeWsClient.onMessage.removeAllListeners();
+            resolve(response);
+        })
     );
-
-    return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
+    context.teeWsClient.sendRequest(request);
+    return response;
 }
 
 async function sendRequest(
     wsClient: WebSocketAsPromised,
     request: JsonRpcRequest,
     api: ApiPromise,
-    onMessageReceived?: (response: NativeOperationResponse) => void
-): Promise<NativeOperationResponse> {
-    const p = new Promise<NativeOperationResponse>((resolve, reject) =>
+    onMessageReceived?: (response: NativeTaskResponse) => void
+): Promise<NativeTaskResponse> {
+    const p = new Promise<NativeTaskResponse>((resolve, reject) =>
         wsClient.onMessage.addListener((data) => {
             const parsed = JSON.parse(data);
             console.log('parsed:', JSON.stringify(parsed, null, 2));
@@ -77,7 +87,7 @@ async function sendRequest(
                 console.log('Request failed: ' + JSON.stringify(transaction, null, 2));
                 reject(new Error(parsed.error.message, { cause: transaction }));
             }
-            const response = api.createType('NativeOperationResponse', parsed.result);
+            const response = api.createType('NativeTaskResponse', parsed.result);
             if (onMessageReceived) onMessageReceived(response);
             wsClient.onMessage.removeAllListeners();
             resolve(response);
@@ -88,7 +98,7 @@ async function sendRequest(
 }
 
 export const getTeeShieldingKey = async (context: IntegrationTestContext) => {
-    const request = createJsonRpcRequest('native_getShieldingKey', Uint8Array.from([]), nextRequestId(context));
+    const request = createJsonRpcRequest('omni_getShieldingKey', Uint8Array.from([]), nextRequestId(context));
     const response = new Promise<string>((resolve, reject) =>
         context.teeWsClient.onMessage.addListener((data) => {
             const parsed = JSON.parse(data);

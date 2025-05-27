@@ -1,37 +1,35 @@
-import type { Enum } from '@polkadot/types-codec';
+import { ApiPromise } from '@polkadot/api';
 import { HexString } from '@polkadot/util/types';
-import { u8aToHex, hexToU8a, stringToU8a, u8aConcat, compactAddLength } from '@polkadot/util';
+import { u8aToHex, hexToU8a, stringToU8a, u8aConcat } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import { Codec } from '@polkadot/types-codec/types';
 import {
-    ApiPromise,
-    Authentication,
-    CorePrimitivesIdentity,
-    LitentryMultiSignature,
-    NativeCall,
-    NativeCallAuthenticatedOperation,
-    NativeQuery,
-    NativeQueryAuthenticatedOperation,
+    OmniAuth,
+    Identity,
+    HeimaMultiSignature,
+    NativeTask,
     OmniAccountPermission,
-    PlainRequest,
-} from 'parachain-api';
+    RawTask,
+    NativeTaskWrapper,
+} from '@heima-network/api-argument/omni';
 import { Signer } from './signer';
+import { getMessageCode } from './requests';
 
 export async function createIdentityType(
     api: ApiPromise,
     address: HexString | string,
-    type: CorePrimitivesIdentity['type']
-): Promise<CorePrimitivesIdentity> {
+    type: Identity['type']
+): Promise<Identity> {
     const identity = {
         [type]: address,
     };
-    return api.createType('CorePrimitivesIdentity', identity);
+    return api.createType('Identity', identity);
 }
 
-export async function createLitentryMultiSignature(
+export async function createHeimaMultiSignature(
     api: ApiPromise,
     args: { signer: Signer; payload: Uint8Array | string }
-): Promise<LitentryMultiSignature> {
+): Promise<HeimaMultiSignature> {
     const { signer, payload } = args;
     const signerType = signer.type();
 
@@ -40,7 +38,7 @@ export async function createLitentryMultiSignature(
     if (payload instanceof Uint8Array) {
         const signature = await signer.sign(signerType === 'bitcoin' ? u8aToHex(payload).substring(2) : payload);
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType('HeimaMultiSignature', {
             [signerType]: signature,
         });
     }
@@ -50,7 +48,7 @@ export async function createLitentryMultiSignature(
     if (payload.startsWith('0x')) {
         const signature = await signer.sign(signerType === 'bitcoin' ? payload.substring(2) : hexToU8a(payload));
 
-        return api.createType('LitentryMultiSignature', {
+        return api.createType('HeimaMultiSignature', {
             [signerType]: signature,
         });
     }
@@ -59,80 +57,53 @@ export async function createLitentryMultiSignature(
     // For Bitcoin, pass it as it is, for other types, convert it to raw bytes
     const signature = await signer.sign(signerType === 'bitcoin' ? payload : stringToU8a(payload));
 
-    return api.createType('LitentryMultiSignature', {
+    return api.createType('HeimaMultiSignature', {
         [signerType]: signature,
     });
 }
 
-export function createNativeCall(api: ApiPromise, call: [string, string], params: unknown): NativeCall {
+export function createNativeTask(api: ApiPromise, call: [string, string], params: unknown): NativeTask {
     const [variant, argType] = call;
-    return api.createType('NativeCall', {
-        [variant]: api.createType(argType, params),
-    });
-}
-
-export function createNativeQuery(api: ApiPromise, query: [string, string], params: unknown): NativeQuery {
-    const [variant, argType] = query;
-    return api.createType('NativeQuery', {
+    return api.createType('NativeTask', {
         [variant]: api.createType(argType, params),
     });
 }
 
 // We only support web3 authentication in these tests
-export async function createNativeAuthenticatedOperation<OP extends Enum>(
+export async function createNativeTaskWrapper(
     api: ApiPromise,
-    operation: OP,
+    task: NativeTask,
     signer: Signer,
+    taskId: String,
     nonce: Codec,
-    mrenclave: string,
-    withWrappedBytes = false,
-    withPrefix = false
-): Promise<OP extends NativeCall ? NativeCallAuthenticatedOperation : NativeQueryAuthenticatedOperation> {
-    let payload: string = blake2AsHex(u8aConcat(operation.toU8a(), nonce.toU8a(), hexToU8a(mrenclave)), 256);
+    msgCode: string
+): Promise<NativeTaskWrapper> {
+    const payload = JSON.stringify({ message_code: msgCode });
+    const hashedPayload = blake2AsHex(payload, 256);
+    const signerIdentity = await signer.getIdentity(api);
 
-    if (withWrappedBytes) {
-        payload = `<Bytes>${payload}</Bytes>`;
-    }
-
-    if (withPrefix) {
-        const prefix = 'Token: ';
-        const msg = prefix + payload;
-        payload = msg;
-        console.log('Signing message: ', payload);
-    }
-
-    const signature = await createLitentryMultiSignature(api, {
+    const signature = await createHeimaMultiSignature(api, {
         signer,
-        payload,
+        payload: hashedPayload,
     });
 
-    const authentication: Authentication = api.createType('Authentication', {
-        Web3: api.createType('(LitentryMultiSignature)', signature),
+    const auth: OmniAuth = api.createType('OmniAuth', {
+        Web3: api.createType('(Identity, HeimaMultiSignature)', [signerIdentity, signature]),
     });
+    let n = api.createType('Option<Nonce>', nonce);
+    let a = api.createType('Option<OmniAuth>', auth);
 
-    if ('isGetAccountStore' in operation) {
-        return api.createType('NativeQueryAuthenticatedOperation', {
-            operation: operation,
-            nonce,
-            authentication,
-        });
-    }
-
-    return api.createType('NativeCallAuthenticatedOperation', {
-        operation: operation,
-        nonce,
-        authentication,
+    return api.createType('NativeTaskWrapper', {
+        id: taskId,
+        task: task,
+        nonce: n,
+        auth: a,
     });
 }
 
-export function createPlainRequest(
-    api: ApiPromise,
-    mrenclave: string,
-    authenticated_operation: NativeCallAuthenticatedOperation | NativeQueryAuthenticatedOperation
-): PlainRequest {
-    return api.createType('PlainRequest', {
-        mrenclave: hexToU8a(mrenclave),
-        payload: compactAddLength(authenticated_operation.toU8a()),
+export function createRawTaskPlain(api: ApiPromise, nativeTaskWrapper: NativeTaskWrapper): RawTask {
+    return api.createType('RawTask', {
+        ['Plain']: nativeTaskWrapper,
     });
 }
 

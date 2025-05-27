@@ -274,7 +274,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 		shard: ShardIdentifier,
 	) -> error::Result<Imported<Ex>> {
 		if self.is_imported(&tx.hash, shard) {
-			return Err(error::Error::AlreadyImported)
+			return Err(error::Error::AlreadyImported);
 		}
 
 		let tx = WaitingTrustedOperations::new(
@@ -293,12 +293,12 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 		// If all tags are not satisfied import to future.
 		if !tx.is_ready() {
 			if self.reject_future_operations {
-				return Err(error::Error::RejectedFutureTrustedOperation)
+				return Err(error::Error::RejectedFutureTrustedOperation);
 			}
 
 			let hash = tx.operation.hash;
 			self.future.import(tx, shard);
-			return Ok(Imported::Future { hash })
+			return Ok(Imported::Future { hash });
 		}
 
 		self.import_to_ready(tx, shard)
@@ -335,13 +335,14 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 					removed.append(&mut replaced);
 				},
 				// operation failed to be imported.
-				Err(e) =>
+				Err(e) => {
 					if first {
 						debug!(target: "txpool", "[{:?}] Error importing", current_hash,);
-						return Err(e)
+						return Err(e);
 					} else {
 						failed.push(current_hash);
-					},
+					}
+				},
 			}
 			first = false;
 		}
@@ -357,7 +358,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 			self.ready.remove_subtree(&promoted, shard);
 
 			debug!(target: "txpool", "[{:?}] Cycle detected, bailing.", hash);
-			return Err(error::Error::CycleDetected)
+			return Err(error::Error::CycleDetected);
 		}
 
 		Ok(Imported::Ready { hash, promoted, failed, removed })
@@ -422,8 +423,9 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 					let operation = &current.operation;
 					match minimal {
 						None => Some(operation.clone()),
-						Some(ref tx) if tx.insertion_id > operation.insertion_id =>
-							Some(operation.clone()),
+						Some(ref tx) if tx.insertion_id > operation.insertion_id => {
+							Some(operation.clone())
+						},
 						other => other,
 					}
 				},
@@ -433,7 +435,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 			if let Some(minimal) = minimal {
 				removed.append(&mut self.remove_subtree(&[minimal.operation.hash], shard))
 			} else {
-				break
+				break;
 			}
 		}
 
@@ -455,7 +457,7 @@ impl<Ex: fmt::Debug> BasePool<Ex> {
 			if let Some(minimal) = minimal {
 				removed.append(&mut self.remove_subtree(&[minimal.operation.hash], shard))
 			} else {
-				break
+				break;
 			}
 		}
 

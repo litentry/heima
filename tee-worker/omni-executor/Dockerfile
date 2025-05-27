@@ -2,8 +2,8 @@
 
 ### Builder Stage - Without Gramine
 ##################################################
-# rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
-FROM rust:1.82-bookworm AS plain-builder
+# rust:1.83 is a Debian GNU/Linux 12 (bookworm) image
+FROM rust:1.83-bookworm AS plain-builder
 
 RUN apt-get update && apt-get install -y clang
 
@@ -36,58 +36,75 @@ RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
 CMD ["$BIN_DIR/executor-worker"]
 
 
+### Builder Stage - With Gramine (SGX Hardware)
+##################################################
+FROM gramineproject/gramine:stable-jammy AS sgx-builder
 
-# ### Builder Stage - With Gramine (SGX Hardware)
-# ##################################################
-# # rust:1.82 is a Debian GNU/Linux 12 (bookworm) image
-# FROM rust:1.82-bookworm AS sgx-builder
+RUN apt-get update
 
-# # It's easier to install gramine rather than to install cargo.
-# RUN curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-# RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ bookworm main" \
-# | tee /etc/apt/sources.list.d/gramine.list
+RUN apt-get install -y \
+    build-essential \
+    curl \
+    libssl-dev \
+    clang \
+    pkg-config \
+    ca-certificates
 
-# RUN curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
-# RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
-# | tee /etc/apt/sources.list.d/intel-sgx.list
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 
-# RUN apt update && apt install -y gramine
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-# # Build
-# ENV HOME=/home/ubuntu
-# ENV BUILD_DIR=$HOME/tee-worker/omni-executor
+RUN cargo --version
 
-# COPY . $HOME
-# WORKDIR $BUILD_DIR
+ENV HOME=/home/ubuntu
+ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 
-# RUN make
+COPY . $HOME
+WORKDIR $BUILD_DIR
 
-
-# ### Release image (with SGX Hardware)
-# ##################################################
-# FROM gramineproject/gramine:1.8-jammy AS omni-release
-# LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
-
-# ENV HOME=/home/ubuntu
-# ENV BUILD_DIR=$HOME/tee-worker/omni-executor
-# ENV EXECUT_DIR=/usr/local/bin
-# WORKDIR $EXECUT_DIR
-
-# RUN apt update && apt install -y gramine ca-certificates && apt clean
+RUN make SGX=1 SGX_DEBUG=0 SOURCE_DATE_EPOCH=1700000000 CARGO_PROFILE_RELEASE_DEBUG=false
 
 
-# COPY --from=sgx-builder $BUILD_DIR/omni-executor-worker $EXECUT_DIR/omni-executor-worker
-# COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest $EXECUT_DIR/omni-executor.manifest
-# COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $EXECUT_DIR/omni-executor.manifest.sgx
-# COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $EXECUT_DIR/omni-executor.sig
+### Release image (with SGX Hardware)
+##################################################
+FROM gramineproject/gramine:stable-jammy AS release
+LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
-# RUN groupadd -g 1000 appgroup && \
-#     useradd -r -u 1000 -g appgroup appuser && \
-#     mkdir -p /dev/attestation && \
-#     chown -R appuser:appgroup /dev/attestation
-# USER appuser
+ENV HOME=/home/ubuntu
+ENV BUILD_DIR=$HOME/tee-worker/omni-executor
+ENV BIN_DIR=/wkdir
+WORKDIR $BIN_DIR
 
-# RUN chmod +x $EXECUT_DIR/omni-executor-worker
-# RUN ls -al $EXECUT_DIR
-# RUN ldd $EXECUT_DIR/omni-executor-worker && $EXECUT_DIR/omni-executor-worker --version
-# CMD ["$EXECUT_DIR/omni-executor-worker"]
+# Update default packages
+RUN apt-get update
+
+# Get Ubuntu packages
+RUN apt-get install -y \
+    build-essential \
+    curl \
+    libssl-dev \
+    clang \
+    pkg-config \
+    ca-certificates
+
+RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db 
+
+COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
+COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx
+COPY --from=sgx-builder $BUILD_DIR/omni-executor.sig $BIN_DIR/omni-executor.sig
+
+RUN groupadd -g 1000 ubuntu && \
+    useradd -r -u 1000 -g ubuntu ubuntu && \
+    mkdir -p /dev/attestation && \
+    chown -R ubuntu:ubuntu /dev/attestation /wkdir
+
+RUN chmod +x $BIN_DIR/omni-executor && \
+    chown ubuntu:ubuntu * && \
+    ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version && \
+    ls -al $BIN_DIR
+
+USER ubuntu
+
+ENTRYPOINT [ "/usr/bin/gramine-sgx" ]
+
+CMD ["$BIN_DIR/omni-executor"]

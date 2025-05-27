@@ -84,8 +84,9 @@ impl PrecompileSet for Precompiles {
 			a if a == hash(1053) => Some(hex_to_number(handle.input().to_vec())),
 			a if a == hash(1054) => Some(parse_decimal(handle.input().to_vec())),
 			a if a == hash(1055) => Some(parse_int(handle.input().to_vec())),
-			a if a == hash(1100) =>
-				Some(json_utils::json_get_string(handle.input().to_vec(), self)),
+			a if a == hash(1100) => {
+				Some(json_utils::json_get_string(handle.input().to_vec(), self))
+			},
 			a if a == hash(1101) => Some(json_utils::json_get_i64(handle.input().to_vec(), self)),
 			a if a == hash(1102) => Some(json_utils::json_get_bool(handle.input().to_vec(), self)),
 			a if a == hash(1103) => Some(json_utils::get_array_len(handle.input().to_vec(), self)),
@@ -95,42 +96,60 @@ impl PrecompileSet for Precompiles {
 
 	fn is_precompile(&self, address: H160, _remaining_gas: u64) -> IsPrecompileResult {
 		match address {
-			a if a == hash(1000) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1001) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1002) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1003) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1004) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1005) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1006) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1007) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1050) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1051) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1052) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1053) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1054) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1055) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1100) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1101) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1102) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
-			a if a == hash(1103) =>
-				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 },
+			a if a == hash(1000) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1001) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1002) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1003) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1004) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1005) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1006) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1007) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1050) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1051) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1052) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1053) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1054) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1055) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1100) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1101) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1102) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
+			a if a == hash(1103) => {
+				IsPrecompileResult::Answer { is_precompile: true, extra_cost: 0 }
+			},
 			_ => IsPrecompileResult::Answer { is_precompile: false, extra_cost: 0 },
 		}
 	}

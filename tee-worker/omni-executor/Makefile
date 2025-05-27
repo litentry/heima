@@ -4,23 +4,23 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX ?= 1
 
-SELF_EXE = omni-executor-worker
+BIN_NAME = omni-executor
 COMPILATION_FEATURES =
 
 ROOTDIR := $(shell git rev-parse --show-toplevel)
 OMNI_DIR := $(ROOTDIR)/tee-worker/omni-executor
 
 .PHONY: all
-all: $(SELF_EXE) omni-executor.manifest
+all: $(BIN_NAME) $(BIN_NAME).manifest
 ifeq ($(SGX), 1)
 COMPILATION_FEATURES := $(COMPILATION_FEATURES),gramine-quote
-all: omni-executor.manifest.sgx omni-executor.sig
+all: $(BIN_NAME).manifest.sgx $(BIN_NAME).sig
 endif
 
-.PHONY: $(SELF_EXE)
-$(SELF_EXE):
-	cargo build --release --features=$(COMPILATION_FEATURES)
-	cp target/release/executor-worker $(SELF_EXE)
+.PHONY: $(BIN_NAME)
+$(BIN_NAME):
+	cargo build --release --locked --features=$(COMPILATION_FEATURES)
+	cp target/release/executor-worker $(BIN_NAME)
 
 
 ifeq ($(DEBUG),1)
@@ -29,20 +29,20 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
-omni-executor.manifest: omni-executor.manifest.template $(SELF_EXE)
+$(BIN_NAME).manifest: $(BIN_NAME).manifest.template $(BIN_NAME)
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dself_exe=$(SELF_EXE) \
+		-Dself_exe=$(BIN_NAME) \
 		$< $@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
 # see the helloworld example for details on this workaround.
-omni-executor.manifest.sgx omni-executor.sig: sgx_sign
+$(BIN_NAME).manifest.sgx $(BIN_NAME).sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: omni-executor.manifest $(SELF_EXE)
+sgx_sign: $(BIN_NAME).manifest $(BIN_NAME)
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx \
@@ -56,11 +56,11 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) omni-executor -- ${ARGS}
+	$(GRAMINE) $(BIN_NAME) -- ${ARGS}
 
 .PHONY: clean
 clean:
-	$(RM) -rf $(SELF_EXE) *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
+	$(RM) -rf $(BIN_NAME) *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
 
 .PHONY: distclean
 distclean: clean
@@ -72,10 +72,15 @@ clean-data:
 
 .PHONY: build-docker
 build-docker:
-	docker build --target executor-worker -t litentry/omni-executor:latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
+	# Create .env file if it doesn't exist
+	@if [ ! -f "$(OMNI_DIR)/.env" ]; then \
+		touch $(OMNI_DIR)/.env; \
+		chown "$$SUDO_USER":"$$(id -gn $$SUDO_USER)" $(OMNI_DIR)/.env; \
+	fi
 	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml up
 
 .PHONY: stop-local

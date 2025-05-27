@@ -13,11 +13,12 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
-
 use async_trait::async_trait;
+use executor_core::intent_executor::IntentExecutionResult;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::intent::Intent;
-use log::{error, info};
+use executor_primitives::AccountId;
+use executor_primitives::Intent;
+use executor_primitives::IntentId;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
 	commitment_config::CommitmentConfig,
@@ -26,6 +27,7 @@ use solana_sdk::{
 	system_instruction,
 	transaction::Transaction,
 };
+use tracing::log::{error, info};
 
 // Executes intents on Solana network.
 pub struct SolanaIntentExecutor {
@@ -42,7 +44,12 @@ impl SolanaIntentExecutor {
 
 #[async_trait]
 impl IntentExecutor for SolanaIntentExecutor {
-	async fn execute(&self, intent: Intent) -> Result<(), ()> {
+	async fn execute(
+		&self,
+		_account_id: &AccountId,
+		_intent_id: IntentId,
+		intent: Intent,
+	) -> Result<IntentExecutionResult, ()> {
 		info!("Executing intent: {:?}", intent);
 		// TODO: get key from key store
 		let signer_key_pair = Keypair::read_from_file("dev-key.json")
@@ -76,6 +83,10 @@ impl IntentExecutor for SolanaIntentExecutor {
 			},
 		}
 
-		Ok(())
+		Ok((None, false))
+	}
+
+	async fn name(&self) -> &'static str {
+		"solana"
 	}
 }

@@ -55,13 +55,9 @@ pub enum RawOrigin<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::*;
+	use core_primitives::{ChainAsset, IntentId};
 
-	#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, TypeInfo)]
-	pub enum IntentExecutionResult {
-		Success,
-		Failure,
-	}
+	use super::*;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -169,6 +165,31 @@ pub mod pallet {
 		OnEmpty = DefaultPermissions<T>,
 	>;
 
+	// For now we keep all intents online for easy query, it's concerning if it would bloat the data space
+	#[pallet::storage]
+	#[pallet::getter(fn intents)]
+	pub type Intents<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		T::AccountId,
+		Twox64Concat,
+		IntentId,
+		Intent,
+		OptionQuery,
+	>;
+
+	/// The hightest intent_id that has been accepted for a given AccountId
+	#[pallet::storage]
+	#[pallet::getter(fn accepted_intent_ids)]
+	pub type AcceptedIntentIds<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, IntentId, ValueQuery>;
+
+	/// The hightest intent_id that has been completed for a given AccountId
+	#[pallet::storage]
+	#[pallet::getter(fn completed_intent_ids)]
+	pub type CompletedIntentIds<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, IntentId, ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -185,23 +206,51 @@ pub mod pallet {
 		/// Some call is dispatched as omni-account origin
 		DispatchedAsOmniAccount {
 			who: T::AccountId,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 			result: DispatchResult,
 		},
 		/// Some call is dispatched as signed origin
 		DispatchedAsSigned {
 			who: T::AccountId,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 			result: DispatchResult,
 		},
-		/// Intent is requested
-		IntentRequested { who: T::AccountId, intent: Intent },
-		/// Intent is executed
-		IntentExecuted { who: T::AccountId, intent: Intent, result: IntentExecutionResult },
 		/// Member permission set
 		AccountPermissionsSet { who: T::AccountId, member_account_hash: H256 },
 		/// An auth token is requested
-		AuthTokenRequested { who: T::AccountId, expires_at: BlockNumberFor<T> },
+		AuthTokenRequested { who: T::AccountId, expires_at: i64 },
+		/// Intent is requested by some user
+		IntentRequested { who: T::AccountId, intent: Intent },
+		/// Intent is accepted - we record the Intent detail (once)
+		IntentAccepted { who: T::AccountId, intent_id: IntentId, intent: Intent },
+		/// Intent is in-process
+		IntentInProcessUpdated {
+			who: T::AccountId,
+			intent_id: IntentId,
+			detail: IntentInProcessDetail,
+		},
+		/// Intent is completed
+		IntentCompleted { who: T::AccountId, intent_id: IntentId, detail: IntentCompletedDetail },
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum IntentInProcessDetail {
+		Swap(SwapInProcessDetail),
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum IntentCompletedDetail {
+		// TODO - we might want to add more details except for just OK/NOK
+		//        and maybe also per-intent case
+		Success,
+		Failure,
+	}
+
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	pub enum SwapInProcessDetail {
+		SourceChainBalanceDeducted { asset: ChainAsset, amount: u64 },
+		DestChainBalanceAdded { asset: ChainAsset, amount: u64 },
+		SingleChainSwapSubmitted { tx_hash: Vec<u8> },
 	}
 
 	#[pallet::error]
@@ -216,6 +265,7 @@ pub mod pallet {
 		PermissionsLenLimitReached,
 		AccountStoreAlreadyExists,
 		AccountStoreHasOneMember,
+		IntentAlreadyExists,
 	}
 
 	#[pallet::call]
@@ -227,7 +277,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
@@ -251,7 +301,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			member_account_hash: H256,
 			call: Box<<T as Config>::RuntimeCall>,
-			auth_type: OmniAccountAuthType,
+			auth_type: Option<OmniAccountAuthType>,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
@@ -385,6 +435,8 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// to allow any user to submit intent directly onto chain
+		// this extrinsic is currently **unused**, meaning it will do nothing except emitting events
 		#[pallet::call_index(6)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn request_intent(origin: OriginFor<T>, intent: Intent) -> DispatchResult {
@@ -432,19 +484,6 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
-		#[pallet::weight((195_000_000, DispatchClass::Normal,  Pays::No))]
-		pub fn intent_executed(
-			origin: OriginFor<T>,
-			who: T::AccountId,
-			intent: Intent,
-			result: IntentExecutionResult,
-		) -> DispatchResult {
-			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
-			Self::deposit_event(Event::IntentExecuted { who, intent, result });
-			Ok(())
-		}
-
-		#[pallet::call_index(9)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn set_permissions(
 			origin: OriginFor<T>,
@@ -459,16 +498,58 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::call_index(10)]
+		#[pallet::call_index(9)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn auth_token_requested(
 			origin: OriginFor<T>,
 			who: T::AccountId,
-			expires_at: BlockNumberFor<T>,
+			expires_at: i64,
 		) -> DispatchResult {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
 			Self::deposit_event(Event::AuthTokenRequested { who, expires_at });
 			Ok(())
+		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn intent_accepted(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent_id: IntentId,
+			intent: Intent,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::do_accept_intent(who, intent_id, intent)?;
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(11)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn intent_in_process_updated(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent_id: IntentId,
+			detail: IntentInProcessDetail,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			Self::deposit_event(Event::IntentInProcessUpdated { who, intent_id, detail });
+			Ok(Pays::No.into())
+		}
+
+		#[pallet::call_index(12)]
+		#[pallet::weight((195_000_000, DispatchClass::Normal))]
+		pub fn intent_completed(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			intent_id: IntentId,
+			detail: IntentCompletedDetail,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::TEECallOrigin::ensure_origin(origin)?;
+			if intent_id > Self::completed_intent_ids(&who) {
+				CompletedIntentIds::<T>::insert(&who, intent_id);
+			}
+			Self::deposit_event(Event::IntentCompleted { who, intent_id, detail });
+			Ok(Pays::No.into())
 		}
 	}
 
@@ -585,6 +666,20 @@ pub mod pallet {
 				_ => return Ok(()),
 			}
 
+			Ok(())
+		}
+
+		fn do_accept_intent(
+			who: T::AccountId,
+			intent_id: IntentId,
+			intent: Intent,
+		) -> DispatchResult {
+			ensure!(!Intents::<T>::contains_key(&who, intent_id), Error::<T>::IntentAlreadyExists);
+			if intent_id > Self::accepted_intent_ids(&who) {
+				AcceptedIntentIds::<T>::insert(&who, intent_id);
+			}
+			Intents::<T>::insert(&who, intent_id, intent.clone());
+			Self::deposit_event(Event::IntentAccepted { who, intent_id, intent });
 			Ok(())
 		}
 	}

@@ -35,12 +35,15 @@ pub trait OneBlockAssertionUpdate {
 impl OneBlockAssertionUpdate for Credential {
 	fn update_notion_assertion(&mut self, course_type: &OneBlockCourseType, value: bool) {
 		let (assertion_content, info) = match course_type {
-			OneBlockCourseType::CourseCompletion =>
-				("$course_completed", VC_ONEBLOCK_COURSE_INFOS[0]),
-			OneBlockCourseType::CourseOutstanding =>
-				("$outstanding_student", VC_ONEBLOCK_COURSE_INFOS[1]),
-			OneBlockCourseType::CourseParticipation =>
-				("$course_participated", VC_ONEBLOCK_COURSE_INFOS[2]),
+			OneBlockCourseType::CourseCompletion => {
+				("$course_completed", VC_ONEBLOCK_COURSE_INFOS[0])
+			},
+			OneBlockCourseType::CourseOutstanding => {
+				("$outstanding_student", VC_ONEBLOCK_COURSE_INFOS[1])
+			},
+			OneBlockCourseType::CourseParticipation => {
+				("$course_participated", VC_ONEBLOCK_COURSE_INFOS[2])
+			},
 		};
 
 		let assertion = AssertionLogic::new_item(assertion_content, Op::Equal, "true");

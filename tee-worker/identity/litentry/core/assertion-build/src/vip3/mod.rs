@@ -65,13 +65,14 @@ impl VIP3SBTLogicInterface for VIP3SBTInfo {
 		loop_with_abort_strategy(
 			addresses,
 			|address| match self.client.sbt_info(address) {
-				Ok(info) =>
+				Ok(info) => {
 					if info.data.level == level.to_level() {
 						result = true;
 						Ok(LoopControls::Break)
 					} else {
 						Ok(LoopControls::Continue)
-					},
+					}
+				},
 				Err(e) => Err(e.into_error_detail()),
 			},
 			AbortStrategy::FailFast::<fn(&_) -> bool>,

@@ -20,7 +20,7 @@ pub fn http_post<T: SendHttpRequest>(input: Vec<u8>, client: T) -> PrecompileRes
 		Ok(d) => d,
 		Err(e) => {
 			log::debug!("Could not decode bytes {:?}, reason: {:?}", input, e);
-			return Ok(failure_precompile_output(Token::String(Default::default())))
+			return Ok(failure_precompile_output(Token::String(Default::default())));
 		},
 	};
 	let value: serde_json::Value = match do_post(client, &decoded, 0, 2, 1) {

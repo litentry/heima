@@ -222,7 +222,7 @@ pub(crate) fn init_enclave(
 	if let Ok(data_provider_config) = DataProviderConfig::new() {
 		GLOBAL_DATA_PROVIDER_CONFIG.initialize(data_provider_config.into());
 	} else {
-		return Err(Error::Other("data provider initialize error".into()))
+		return Err(Error::Other("data provider initialize error".into()));
 	}
 
 	let data_provider_config = GLOBAL_DATA_PROVIDER_CONFIG.get()?;
@@ -558,8 +558,9 @@ pub(crate) fn upload_id_graph() -> EnclaveResult<()> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 
 	let shard = match state_handler.list_shards()? {
-		shards if shards.len() == 1 =>
-			*shards.get(0).ok_or_else(|| Error::Other("Shard len unexpected".into()))?,
+		shards if shards.len() == 1 => {
+			*shards.get(0).ok_or_else(|| Error::Other("Shard len unexpected".into()))?
+		},
 		_ => return Err(Error::Other("Cannot get shard".into())),
 	};
 

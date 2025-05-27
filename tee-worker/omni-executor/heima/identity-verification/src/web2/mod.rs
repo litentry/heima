@@ -4,6 +4,7 @@ pub mod google;
 use executor_primitives::{Identity, Web2IdentityType, Web2ValidationData};
 use executor_storage::{Storage, StorageDB, VerificationCodeStorage};
 use std::sync::Arc;
+use tracing::{error, warn};
 
 pub fn verify_identity(
 	identity: &Identity,
@@ -13,11 +14,11 @@ pub fn verify_identity(
 ) -> Result<(), ()> {
 	let username = match validation_data {
 		Web2ValidationData::Twitter(_) => {
-			log::warn!("Twitter validation data is not implemented yet");
+			warn!("Twitter validation data is not implemented yet");
 			Err(())
 		},
 		Web2ValidationData::Discord(_) => {
-			log::warn!("Discord validation data is not implemented yet");
+			warn!("Discord validation data is not implemented yet");
 			Err(())
 		},
 		Web2ValidationData::Email(email_validation_data) => {
@@ -26,7 +27,7 @@ pub fn verify_identity(
 				vec_to_string(email_validation_data.verification_code.to_vec())?;
 			let email_identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
 			let verification_code_storage = VerificationCodeStorage::new(storage_db);
-			let Some(code) = verification_code_storage.get(&email_identity.hash()) else {
+			let Ok(Some(code)) = verification_code_storage.get(&email_identity.hash()) else {
 				return Err(());
 			};
 			if verification_code.ne(&code) {
@@ -52,7 +53,7 @@ pub fn verify_identity(
 			}
 		},
 		_ => {
-			log::error!("Invalid identity type {:?}", identity);
+			error!("Invalid identity type {:?}", identity);
 			return Err(());
 		},
 	}

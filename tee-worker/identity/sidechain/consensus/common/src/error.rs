@@ -89,8 +89,9 @@ impl From<sgx_status_t> for Error {
 impl From<VerificationError> for Error {
 	fn from(e: VerificationError) -> Self {
 		match e {
-			VerificationError::BlockAncestryMismatch(a, b, c) =>
-				Error::BlockAncestryMismatch(a, b, c),
+			VerificationError::BlockAncestryMismatch(a, b, c) => {
+				Error::BlockAncestryMismatch(a, b, c)
+			},
 			VerificationError::InvalidFirstBlock(a, b) => Error::InvalidFirstBlock(a, b),
 			VerificationError::BlockAlreadyImported(a, b) => Error::BlockAlreadyImported(a, b),
 			_ => Error::VerificationError(e),

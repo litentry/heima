@@ -1,7 +1,7 @@
 import { TypeRegistry } from '@polkadot/types';
 import { base58Encode, cryptoWaitReady, base64Decode } from '@polkadot/util-crypto';
 
-import { identity } from '@heima/parachain-api';
+import { identity } from '@heima-network/parachain-api';
 
 import { createValidationDataType } from '@type-creators/validation-data';
 

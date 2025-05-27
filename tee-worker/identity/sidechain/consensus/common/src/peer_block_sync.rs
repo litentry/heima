@@ -138,7 +138,7 @@ impl<
 			{
 				Err(e) => {
 					error!("Failed to import sidechain block that was fetched from peer: {:?}", e);
-					return Err(e)
+					return Err(e);
 				},
 				Ok(h) => {
 					info!(

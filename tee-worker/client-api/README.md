@@ -1,20 +1,24 @@
 ## Description
 
-Client-api of tee-worker
-
-## Purpose
-
-In order to enable the use of our parachain and sidechain types in client and other projects.
+Heima types augment for @polkadot/api
 
 ## Environment setup
 
--   Install [nvm](https://github.com/nvm-sh/nvm)
--   Inside the repository, run `nvm use` to set the correct Node version.
-    -   If the version is not installed, run `nvm install`.
+- Install [nvm](https://github.com/nvm-sh/nvm)
+
+- Inside the repository, run
+
+  ```
+  nvm use
+  ```
+
+  to set the correct Node version.
+
+  - If the version is not installed, run `nvm install`.
 
 ## Installation
 
-```cd tee-worker/ts-tests
+```
 cd tee-worker/client-api
 nvm use
 corepack enable pnpm
@@ -23,21 +27,26 @@ pnpm install
 
 ## Type Generated
 
-Update parachain metadata: `pnpm --filter parachain-api run update-metadata` (requires the parachain is running)
+Update metadata: `pnpm load:metadata` or `pnpm load:metadata:identity` for specific directory
 
-Update sidechain metadata: `pnpm --filter sidechain-api run update-metadata` (requires the worker is running)
+Generate types:`pnpm generate`
 
-Generate parachain type: `pnpm --filter parachain-api run build`
+## Usage
 
-Generate sidechain type: `pnpm --filter sidechain-api run build`
+```
+pnpm run load:metadata
+pnpm run generate
+pnpm run build
+```
 
-Alternatively, you can run `pnpm --run update-build` to do all things above in one go.
-
-## Test
-
-Once update the `client-api/parachain-api` or `client-api/sidechain-api`, all you need to do in the tee-worker/ts-tests is to re-install(run `pnpm install` in tee-worker/ts-tests) and then you can test directly.
+- `import '@heima-network/api-augment/identity'` - applies Identity types and endpoint augmentation
+- `import '@heima-network/api-augment/omni'` - applies Omni types and endpoint augmentation
+- `import '@heima-network/api-augment/sidechain'` - applies Sidechain types and endpoint augmentation
 
 ## Publish
 
-1. [parachain-api](https://github.com/litentry/heima/blob/dev/tee-worker/identity/client-api/parachain-api/README.md#publish-new-versions)
-2. [sidechain-api](https://github.com/litentry/heima/blob/dev/tee-worker/identity/client-api/sidechain-api/README.md#publish-new-versions)
+```
+pnpm run generate
+pnpm run build
+pnpm run publish
+```

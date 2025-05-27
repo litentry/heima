@@ -96,16 +96,19 @@ macro_rules! http_get_precompile_fn {
 				Ok(d) => d,
 				Err(e) => {
 					log::debug!("Could not decode bytes {:?}, reason: {:?}", input, e);
-					return Ok(failure_precompile_output(ethabi::Token::$token(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::$token(Default::default()),
+					));
 				},
 			};
 			let value: serde_json::Value =
 				match $crate::precompiles::macros::do_get(client, &decoded, 0, 2) {
 					Ok(v) => v,
-					Err(_) =>
+					Err(_) => {
 						return Ok(failure_precompile_output(ethabi::Token::$token(
 							Default::default(),
-						))),
+						)))
+					},
 				};
 
 			// safe to unwrap
@@ -114,7 +117,9 @@ macro_rules! http_get_precompile_fn {
 				Some(v) => v,
 				None => {
 					log::debug!("No value under given pointer: :{:?}", pointer);
-					return Ok(failure_precompile_output(ethabi::Token::$token(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::$token(Default::default()),
+					));
 				},
 			};
 
@@ -125,7 +130,9 @@ macro_rules! http_get_precompile_fn {
 						"There is no value or it might be of different type, pointer: ${:?}",
 						pointer
 					);
-					return Ok(failure_precompile_output(ethabi::Token::$token(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::$token(Default::default()),
+					));
 				},
 			};
 			Ok(success_precompile_output(encoded))
@@ -158,16 +165,19 @@ macro_rules! http_post_precompile_fn {
 				Ok(d) => d,
 				Err(e) => {
 					log::debug!("Could not decode bytes {:?}, reason: {:?}", input, e);
-					return Ok(failure_precompile_output(ethabi::Token::$token(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::$token(Default::default()),
+					));
 				},
 			};
 			let value: serde_json::Value =
 				match $crate::precompiles::macros::do_post(client, &decoded, 0, 3, 2) {
 					Ok(v) => v,
-					Err(_) =>
+					Err(_) => {
 						return Ok(failure_precompile_output(ethabi::Token::$token(
 							Default::default(),
-						))),
+						)))
+					},
 				};
 
 			// safe to unwrap
@@ -176,7 +186,9 @@ macro_rules! http_post_precompile_fn {
 				Some(v) => v,
 				None => {
 					log::debug!("No value under given pointer: :{:?}", pointer);
-					return Ok(failure_precompile_output(ethabi::Token::$token(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::$token(Default::default()),
+					));
 				},
 			};
 
@@ -187,7 +199,9 @@ macro_rules! http_post_precompile_fn {
 						"There is no value or it might be of different type, pointer: ${:?}",
 						pointer
 					);
-					return Ok(failure_precompile_output(ethabi::Token::$token(Default::default())))
+					return Ok(failure_precompile_output(
+						ethabi::Token::$token(Default::default()),
+					));
 				},
 			};
 			Ok(success_precompile_output(encoded))
@@ -239,7 +253,7 @@ pub fn do_get<T: SendHttpRequest>(
 		Ok(resp) => resp,
 		Err(e) => {
 			log::debug!("Error while performing http call: {:?}", e);
-			return Err(())
+			return Err(());
 		},
 	};
 	match serde_json::from_slice(&resp.1) {
@@ -275,7 +289,7 @@ pub fn do_post<T: SendHttpRequest>(
 		Ok(resp) => resp,
 		Err(e) => {
 			log::debug!("Error while performing http call: {:?}", e);
-			return Err(())
+			return Err(());
 		},
 	};
 	match serde_json::from_slice(&resp.1) {

@@ -5,14 +5,19 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+base58 = { workspace = true }
+ethers = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true }
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
+rsa = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_with = { workspace = true }
+sha2 = { workspace = true }
 tokio = { workspace = true }
+tracing = { workspace = true }
 
 # Local dependencies
 executor-core = { workspace = true }
@@ -20,10 +25,17 @@ executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
+heima-hex-utils = { workspace = true }
 heima-identity-verification = { workspace = true }
+heima-primitives = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
+pumpx = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+pumpx = { workspace = true, features = ["mocks"] }
 
 [lints]
 workspace = true

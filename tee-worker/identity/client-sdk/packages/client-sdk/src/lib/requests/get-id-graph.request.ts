@@ -4,7 +4,7 @@ import { blake2AsHex } from '@polkadot/util-crypto';
 import type {
   LitentryIdentity,
   WorkerRpcReturnValue,
-} from '@litentry/parachain-api';
+} from '@heima-network/parachain-api';
 import type { JsonRpcRequest } from '../util/types';
 import type { ApiPromise } from '@polkadot/api';
 import { type IdGraph, ID_GRAPH_STRUCT } from '../type-creators/id-graph';

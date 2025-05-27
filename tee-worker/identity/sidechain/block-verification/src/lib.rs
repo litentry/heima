@@ -79,8 +79,9 @@ where
 	// We need to check the ancestry first to ensure that an already imported block does not result
 	// in an author verification error, but rather a `BlockAlreadyImported` error.
 	match last_block {
-		Some(last_block) =>
-			verify_block_ancestry::<SignedSidechainBlock::Block>(signed_block.block(), last_block)?,
+		Some(last_block) => {
+			verify_block_ancestry::<SignedSidechainBlock::Block>(signed_block.block(), last_block)?
+		},
 		None => ensure_first_block(signed_block.block())?,
 	}
 
@@ -94,7 +95,7 @@ where
 			"Author verification for block (number: {}) failed, block will be discarded",
 			signed_block.block().header().block_number()
 		);
-		return Err(e)
+		return Err(e);
 	}
 
 	Ok(signed_block)

@@ -95,7 +95,7 @@ where
 		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice())?;
 		if requests.is_empty() {
 			debug!("requests is empty, returning empty vector");
-			return Ok(Vec::<u8>::new().encode())
+			return Ok(Vec::<u8>::new().encode());
 		}
 
 		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;

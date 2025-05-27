@@ -24,7 +24,7 @@ use std::time::Duration;
 pub fn slot_author<P: Pair>(slot: Slot, authorities: &[AuthorityId<P>]) -> Option<&AuthorityId<P>> {
 	if authorities.is_empty() {
 		log::warn!("Authorities list is empty, cannot determine slot author");
-		return None
+		return None;
 	}
 
 	let idx = *slot % (authorities.len() as u64);

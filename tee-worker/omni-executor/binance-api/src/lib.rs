@@ -1,54 +1,76 @@
-mod convert_api;
+pub mod convert_api;
 mod error;
-mod spot_trading_api;
+pub mod spot_trading_api;
 mod traits;
 mod types;
+pub mod wallet_api;
 
-use convert_api::ConvertApi;
+use async_trait::async_trait;
 use error::Error;
 use hmac::{Hmac, Mac};
-use log::error;
 use reqwest::{Client, Method};
 use sha2::Sha256;
-use spot_trading_api::SpotTradingApi;
 use std::{
 	collections::HashMap,
 	time::{SystemTime, UNIX_EPOCH},
 };
+use tracing::log::{debug, error};
 use url::Url;
 
 const MAX_RECV_WINDOW: u32 = 60000;
 
+#[async_trait]
+pub trait BinanceApi: Send + Sync {
+	fn sign_request(&self, query_string: &str) -> String;
+	async fn make_public_get_request<T>(
+		&self,
+		endpoint: &str,
+		parameters: Option<HashMap<String, String>>,
+	) -> Result<T, Error>
+	where
+		T: 'static + serde::de::DeserializeOwned;
+
+	async fn make_signed_request<T>(
+		&self,
+		endpoint: &str,
+		method: Method,
+		parameters: Option<HashMap<String, String>>,
+		recv_window: Option<u32>,
+	) -> Result<T, Error>
+	where
+		T: 'static + serde::de::DeserializeOwned;
+}
+
 #[derive(Debug, Clone)]
-pub struct BinanceApi {
+pub struct BinanceApiClient {
 	client: Client,
 	base_url: Url,
 	api_key: String,
 	api_secret: String,
 }
 
-impl BinanceApi {
-	pub fn new(api_key: String, api_secret: String, base_url: Option<String>) -> BinanceApi {
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+pub enum BinanceApiResponse<T> {
+	Success(T),
+	Error { code: i32, msg: String },
+}
+
+impl BinanceApiClient {
+	pub fn new(api_key: String, api_secret: String, base_url: Option<String>) -> BinanceApiClient {
 		let base_url = match base_url {
 			Some(url) => Url::parse(&url).expect("Invalid base URL"),
 			None => Url::parse("https://api.binance.com").unwrap(),
 		};
 		let client = Client::new();
-		BinanceApi { client, base_url, api_key, api_secret }
+		BinanceApiClient { client, base_url, api_key, api_secret }
 	}
+}
 
-	/// Create a new ConvertApi instance
-	pub fn convert(&self) -> ConvertApi {
-		ConvertApi::new(self)
-	}
-
-	/// Create a new SpotTradingApi instance
-	pub fn spot_trading(&self) -> SpotTradingApi {
-		SpotTradingApi::new(self)
-	}
-
+#[async_trait]
+impl BinanceApi for BinanceApiClient {
 	/// Create HMAC SHA256 signature for request parameters
-	pub fn sign_request(&self, query_string: &str) -> String {
+	fn sign_request(&self, query_string: &str) -> String {
 		let mut mac = Hmac::<Sha256>::new_from_slice(self.api_secret.as_bytes())
 			.expect("HMAC can take key of any size");
 		mac.update(query_string.as_bytes());
@@ -58,13 +80,13 @@ impl BinanceApi {
 	}
 
 	/// Helper for making public API requests
-	pub async fn make_public_get_request<T>(
+	async fn make_public_get_request<T>(
 		&self,
 		endpoint: &str,
 		parameters: Option<HashMap<String, String>>,
 	) -> Result<T, Error>
 	where
-		T: serde::de::DeserializeOwned,
+		T: 'static + serde::de::DeserializeOwned,
 	{
 		let mut url = self.base_url.join(endpoint).unwrap();
 		if let Some(p) = parameters {
@@ -76,14 +98,26 @@ impl BinanceApi {
 			Error::RequestFailed
 		})?;
 
-		response.json::<T>().await.map_err(|e| {
-			error!("Error parsing response: {}", e);
-			Error::ParseResponseFailed
-		})
+		debug!("Binance-api make_public_get_request response: {:?}", response);
+
+		response
+			.json::<BinanceApiResponse<T>>()
+			.await
+			.map_err(|e| {
+				error!("Error parsing response: {}", e);
+				Error::ParseResponseFailed
+			})
+			.and_then(|res| match res {
+				BinanceApiResponse::Success(data) => Ok(data),
+				BinanceApiResponse::Error { code, msg } => {
+					error!("Binance API Error: {} - {}", code, msg);
+					Err(Error::RequestFailed)
+				},
+			})
 	}
 
 	/// Helper for making signed API requests
-	pub async fn make_signed_request<T>(
+	async fn make_signed_request<T>(
 		&self,
 		endpoint: &str,
 		method: Method,
@@ -91,7 +125,7 @@ impl BinanceApi {
 		recv_window: Option<u32>,
 	) -> Result<T, Error>
 	where
-		T: serde::de::DeserializeOwned,
+		T: 'static + serde::de::DeserializeOwned,
 	{
 		let mut url = self.base_url.join(endpoint).unwrap();
 		let mut params = HashMap::new();
@@ -138,15 +172,66 @@ impl BinanceApi {
 			},
 		};
 
+		debug!("Binance-api make_signed_request: {:?}", request);
 		let response = request.send().await.map_err(|e| {
 			error!("API request failed: {}", e);
 			Error::RequestFailed
 		})?;
 
-		response.json::<T>().await.map_err(|e| {
-			error!("Error parsing response: {}", e);
-			Error::ParseResponseFailed
-		})
+		debug!("Binance-api make_signed_request response: {:?}", response);
+
+		response
+			.json::<BinanceApiResponse<T>>()
+			.await
+			.map_err(|e| {
+				error!("Error parsing response: {}", e);
+				Error::ParseResponseFailed
+			})
+			.and_then(|res| match res {
+				BinanceApiResponse::Success(data) => Ok(data),
+				BinanceApiResponse::Error { code, msg } => {
+					error!("Binance API Error: {} - {}", code, msg);
+					Err(Error::RequestFailed)
+				},
+			})
+	}
+}
+
+#[cfg(feature = "mocks")]
+pub mod mocks {
+	use crate::BinanceApi;
+	use crate::Error;
+	use crate::HashMap;
+	use crate::Method;
+	use async_trait::async_trait;
+	use mockall::mock;
+
+	mock! {
+
+		pub BinanceApiClient {}
+
+		#[async_trait]
+		impl BinanceApi for BinanceApiClient {
+
+			fn sign_request(&self, query_string: &str) -> String;
+			async fn make_public_get_request<T>(
+				&self,
+				endpoint: &str,
+				parameters: Option<HashMap<String, String>>,
+			) -> Result<T, Error>
+			where
+				T: 'static + serde::de::DeserializeOwned;
+
+			async fn make_signed_request<T>(
+				&self,
+				endpoint: &str,
+				method: Method,
+				parameters: Option<HashMap<String, String>>,
+				recv_window: Option<u32>,
+			) -> Result<T, Error>
+			where
+				T: 'static + serde::de::DeserializeOwned;
+		}
 	}
 }
 
@@ -161,7 +246,7 @@ mod tests {
 		let api_secret =
 			"NhqPtmdSJYdKjVHjA7PZj4Mge3R5YNiP1e3UZjInClVN65XAbvqqM6A7H5fATj0j".to_string();
 		let query_string = "symbol=LTCBTC&side=BUY&type=LIMIT&timeInForce=GTC&quantity=1&price=0.1&recvWindow=5000&timestamp=1499827319559".to_string();
-		let binance_api = BinanceApi::new(api_key, api_secret, None);
+		let binance_api = BinanceApiClient::new(api_key, api_secret, None);
 		let signature = binance_api.sign_request(&query_string);
 
 		assert_eq!(signature, "c8db56825ae71d6d79447849e617115f4a920fa2acdcab2b053c4b2838bd6b71");

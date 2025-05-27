@@ -14,15 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use log::error;
 use std::fmt::Debug;
 use std::{marker::PhantomData, thread::sleep, time::Duration};
 use tokio::{runtime::Handle, sync::oneshot::Receiver};
+use tracing::log::{debug, error, info, trace};
 
 use crate::event_handler::{Error, EventHandler};
 use crate::fetcher::{EventsFetcher, LastFinalizedBlockNumFetcher};
 use crate::sync_checkpoint_repository::{Checkpoint, CheckpointRepository};
 use executor_primitives::GetEventId;
+use metrics::{describe_gauge, gauge};
 
 /// Component, used to listen to chain and execute requested intents
 /// Requires specific implementations of:
@@ -65,6 +66,7 @@ impl<
 		stop_signal: Receiver<()>,
 		last_processed_log_repository: CheckpointRepositoryT,
 	) -> Result<Self, ()> {
+		describe_gauge!(synced_block_gauge_name(id), "Last synced block");
 		Ok(Self {
 			id: id.to_string(),
 			handle,
@@ -78,22 +80,27 @@ impl<
 
 	/// Start syncing. It's a long-running blocking operation - should be started in dedicated thread.
 	pub fn sync(&mut self, start_block: u64) {
-		log::info!("Starting {} network sync, start block: {}", self.id, start_block);
+		info!("Starting {} network sync, start block: {}", self.id, start_block);
 		let mut block_number_to_sync = if let Some(ref checkpoint) =
 			self.checkpoint_repository.get().expect("Could not read checkpoint")
 		{
-			if checkpoint.just_block_num() {
-				// let's start syncing from next block as we processed previous fully
-				checkpoint.get_block_num() + 1
+			let last_block_num = checkpoint.get_block_num();
+
+			// Ensure `start_block` overrides only if it's valid
+			if start_block > last_block_num {
+				start_block
+			} else if checkpoint.just_block_num() {
+				// Start syncing from the next block as we processed the previous one fully
+				last_block_num + 1
 			} else {
-				// block processing was interrupted, so we have to process last block again
-				// but currently processed logs will be skipped
-				checkpoint.get_block_num()
+				// Reprocess the last block if interrupted
+				last_block_num
 			}
 		} else {
+			// Default to start_block if no checkpoint exists
 			start_block
 		};
-		log::debug!("Starting sync from {:?}", block_number_to_sync);
+		debug!("Starting sync from {:?}", block_number_to_sync);
 
 		'main: loop {
 			if self.stop_signal.try_recv().is_ok() {
@@ -104,7 +111,7 @@ impl<
 				match self.handle.block_on(self.fetcher.get_last_finalized_block_num()) {
 					Ok(maybe_block) => maybe_block,
 					Err(_) => {
-						log::info!("Could not get last finalized block number");
+						info!("Could not get last finalized block number");
 						sleep(Duration::from_secs(1));
 						continue;
 					},
@@ -113,16 +120,13 @@ impl<
 			let last_finalized_block = match maybe_last_finalized_block {
 				Some(v) => v,
 				None => {
-					log::info!(
-						"Waiting for finalized block, block to sync {}",
-						block_number_to_sync
-					);
+					info!("Waiting for finalized block, block to sync {}", block_number_to_sync);
 					sleep(Duration::from_secs(1));
 					continue;
 				},
 			};
 
-			log::trace!(
+			trace!(
 				"Last finalized block: {}, block to sync {}",
 				last_finalized_block,
 				block_number_to_sync
@@ -137,7 +141,7 @@ impl<
 			let mut sync_error = false;
 
 			if last_finalized_block >= block_number_to_sync {
-				log::info!("Syncing block: {}", block_number_to_sync);
+				debug!("Syncing block: {}", block_number_to_sync);
 				match self.handle.block_on(self.fetcher.get_block_events(block_number_to_sync)) {
 					Ok(events) => {
 						for event in events {
@@ -148,13 +152,13 @@ impl<
 								.expect("Could not read checkpoint");
 							if let Some(ref checkpoint) = maybe_checkpoint {
 								if checkpoint.ge(&event.get_event_id().clone().into()) {
-									log::debug!("Skipping event");
+									debug!("Skipping event");
 									continue;
 								}
 							}
-							log::info!("Handling event: {:?}", event_id);
+							debug!("Handling event: {:?}", event_id);
 							if let Err(e) = self.handle.block_on(self.event_handler.handle(event)) {
-								log::error!("Could not handle event: {:?}", e);
+								error!("Could not handle event: {:?}", e);
 								match e {
 									Error::NonRecoverableError => {
 										error!(
@@ -180,23 +184,28 @@ impl<
 						self.checkpoint_repository
 							.save(CheckpointT::from(block_number_to_sync))
 							.expect("Could not save checkpoint");
-						log::info!("Finished syncing block: {}", block_number_to_sync);
+						gauge!(synced_block_gauge_name(&self.id)).set(block_number_to_sync as f64);
+						debug!("Finished syncing block: {}", block_number_to_sync);
 						block_number_to_sync += 1;
 					},
 					Err(e) => {
-						log::error!("Could not get block {} events: {:?}", block_number_to_sync, e);
+						error!("Could not get block {} events: {:?}", block_number_to_sync, e);
 						sync_error = true;
 					},
 				}
 			} else {
-				log::trace!("Block: {} not yet finalized", block_number_to_sync);
+				trace!("Block: {} not yet finalized", block_number_to_sync);
 			}
 
 			if !fast || sync_error {
 				sleep(Duration::from_secs(1))
 			} else {
-				log::trace!("Fast sync skipping 1s wait");
+				trace!("Fast sync skipping 1s wait");
 			}
 		}
 	}
+}
+
+fn synced_block_gauge_name(listener_id: &str) -> String {
+	format!("{}_synced_block", listener_id)
 }

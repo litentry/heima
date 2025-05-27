@@ -61,11 +61,11 @@ where
 		// This call will automatically verify cert is properly signed
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
-			return Ok(rustls::ClientCertVerified::assertion())
+			return Ok(rustls::ClientCertVerified::assertion());
 		}
 
 		if certs.is_empty() {
-			return Err(rustls::TLSError::NoCertificatesPresented)
+			return Err(rustls::TLSError::NoCertificatesPresented);
 		}
 
 		#[cfg(feature = "dcap")]
@@ -76,15 +76,17 @@ where
 			Some(cert) => {
 				match cert::verify_mra_cert(&cert.0, true, is_dcap, &self.attestation_ocall) {
 					Ok(()) => Ok(rustls::ClientCertVerified::assertion()),
-					Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
+					Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 						if self.outdated_ok {
 							warn!("outdated_ok is set, overriding outdated error");
 							Ok(rustls::ClientCertVerified::assertion())
 						} else {
 							Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
-						},
-					Err(_) =>
-						Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid)),
+						}
+					},
+					Err(_) => {
+						Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
+					},
 				}
 			},
 			None => Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid)),
@@ -125,11 +127,11 @@ where
 
 		if self.skip_ra {
 			warn!("Skip verifying ra-report");
-			return Ok(rustls::ServerCertVerified::assertion())
+			return Ok(rustls::ServerCertVerified::assertion());
 		}
 
 		if certs.is_empty() {
-			return Err(rustls::TLSError::NoCertificatesPresented)
+			return Err(rustls::TLSError::NoCertificatesPresented);
 		}
 
 		#[cfg(feature = "dcap")]
@@ -141,15 +143,17 @@ where
 			Some(cert) => {
 				match cert::verify_mra_cert(&cert.0, true, is_dcap, &self.attestation_ocall) {
 					Ok(()) => Ok(rustls::ServerCertVerified::assertion()),
-					Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) =>
+					Err(sgx_status_t::SGX_ERROR_UPDATE_NEEDED) => {
 						if self.outdated_ok {
 							warn!("outdated_ok is set, overriding outdated error");
 							Ok(rustls::ServerCertVerified::assertion())
 						} else {
 							Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
-						},
-					Err(_) =>
-						Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid)),
+						}
+					},
+					Err(_) => {
+						Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid))
+					},
 				}
 			},
 			None => Err(rustls::TLSError::WebPKIError(webpki::Error::ExtensionValueInvalid)),
