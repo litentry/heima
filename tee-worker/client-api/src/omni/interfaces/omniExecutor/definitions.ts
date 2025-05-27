@@ -44,7 +44,7 @@ export default {
       _enum: {
         Web3: "(Identity, HeimaMultiSignature)",
         Email: "(Text, Text)",
-        AuthToken: "(Text, Text)",
+        AuthToken: "(Text)",
         OAuth2: "(Identity, OAuth2Data)",
       },
     },
