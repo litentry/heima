@@ -145,11 +145,13 @@ fn main() {
 					.unwrap();
 
 			let worker_account =
-				get_account_data::<accounting_contract::WorkerAccount>(&program, &[b"worker"]);
+				get_account_data::<accounting_contract::WorkerAccount>(&program, &[b"worker"])
+					.unwrap();
 			if worker_account.worker == worker {
-				println!("Is Worker");
+				println!("{} is Worker", worker);
+			} else {
+				println!("{} is not the worker, the worker is: {}", worker, worker_account.worker);
 			}
-			println!("It is not the worker, the worker is: {}", worker_account.worker);
 		},
 		Commands::IsAdmin => {
 			let admin =
@@ -157,11 +159,13 @@ fn main() {
 					.unwrap();
 
 			let admin_account =
-				get_account_data::<accounting_contract::AdminAccount>(&program, &[b"admin"]);
+				get_account_data::<accounting_contract::AdminAccount>(&program, &[b"admin"])
+					.unwrap();
 			if admin_account.admin == admin {
-				println!("Is Admin");
+				println!("{} Is Admin", admin);
+			} else {
+				println!("{} is not the admin, the admin is: {}", admin, admin_account.admin);
 			}
-			println!("It is not the admin, the admin is: {}", admin_account.admin);
 		},
 		Commands::DepositFunds => {
 			let amount: u64 = cli.amount.expect("amount must be passed as argument");
@@ -222,8 +226,9 @@ fn main() {
 			let nonce_account = get_account_data::<accounting_contract::Nonce>(
 				&program,
 				&[beneficiary.to_bytes().as_ref(), b"nonce"],
-			);
-			let nonce = nonce_account.nonce;
+			)
+			.unwrap_or_else(|e| accounting_contract::Nonce { nonce: 0 });
+			let nonce = nonce_account.nonce + 1;
 
 			let tx = program
 				.request()
@@ -259,7 +264,8 @@ fn main() {
 			let nonce_account = get_account_data::<accounting_contract::Nonce>(
 				&program,
 				&[beneficiary.to_bytes().as_ref(), b"nonce"],
-			);
+			)
+			.unwrap();
 			let nonce = nonce_account.nonce;
 
 			println!("The stored nonce is: {}", nonce);
@@ -273,10 +279,11 @@ fn main() {
 			let nonce_account = get_account_data::<accounting_contract::Nonce>(
 				&program,
 				&[beneficiary.to_bytes().as_ref(), b"nonce"],
-			);
+			)
+			.unwrap();
 			let nonce = nonce_account.nonce;
 
-			for x in 1..nonce as usize {
+			for x in 1..nonce as usize + 1 {
 				let current_nonce = x as u64;
 				let payout = get_account_data::<accounting_contract::PayoutRequest>(
 					&program,
@@ -285,7 +292,8 @@ fn main() {
 						current_nonce.to_le_bytes().as_ref(),
 						b"payout_request",
 					],
-				);
+				)
+				.unwrap();
 				println!("Payout Request No. {}, Amount: {}", payout.nonce, payout.amount);
 			}
 
@@ -299,11 +307,11 @@ fn main() {
 pub fn get_account_data<T: AccountDeserialize + AnchorDeserialize + serde::de::DeserializeOwned>(
 	program: &Program<&Keypair>,
 	seeds: &[&[u8]],
-) -> T {
+) -> Result<T, ()> {
 	let account_admin = program
 		.rpc()
 		.get_account(&Pubkey::find_program_address(seeds, &program.id()).0)
-		.unwrap();
+		.map_err(|_| ())?;
 
-	bincode::deserialize::<T>(&account_admin.data[8..]).unwrap()
+	bincode::deserialize::<T>(&account_admin.data[8..]).map_err(|_| ())
 }
