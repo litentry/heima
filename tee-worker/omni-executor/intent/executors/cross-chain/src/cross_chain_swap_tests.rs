@@ -1025,7 +1025,7 @@ async fn no_instant_payout_if_exported_wallet() {
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
-		.times(2)
+		.times(1)
 		.returning(|_, _, _| {
 			Ok(hex::decode("0365db18229197e1ff835e0faaec9a9a9900b0aeb5f18e3faa5a4ca60c80213d7c")
 				.unwrap()
