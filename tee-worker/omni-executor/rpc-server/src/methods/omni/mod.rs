@@ -49,6 +49,9 @@ use transfer_widthdraw::*;
 mod get_omni_account;
 use get_omni_account::*;
 
+mod user_login;
+use user_login::*;
+
 pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
@@ -57,6 +60,7 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_request_email_verification_code(module);
 	register_get_oauth2_google_authorization_url(module);
 	register_get_message_code(module);
+	register_user_login(module);
 
 	register_request_jwt(module);
 	register_export_wallet(module);
