@@ -57,17 +57,25 @@ pub trait AccountingContractApi: Send + Sync {
 
 pub struct AccountingContractClient {
 	pub payer: Keypair,
+	pub solana_url: String,
 	pub program_id: Pubkey,
 }
 
 impl AccountingContractClient {
-	pub fn new(pair: ed25519::Pair, program_id: String) -> Self {
+	pub fn new(pair: ed25519::Pair, solana_url: String, program_id: String) -> Self {
 		let payer =
 			Keypair::from_seed(pair.seed().as_slice()).expect("Failed to create keypair from seed");
 		let program_id =
 			Pubkey::from_str(program_id.as_str()).expect("Failed to parse program ID from string");
 
-		Self { payer, program_id }
+		Self { payer, solana_url, program_id }
+	}
+
+	fn create_client(&self) -> Result<Client<&Keypair>, ()> {
+		let cluster = Cluster::from_str(&self.solana_url).map_err(|err| {
+			error!("Failed to create solana cluster: {:?}", err);
+		})?;
+		Ok(Client::new_with_options(cluster, &self.payer, CommitmentConfig::confirmed()))
 	}
 }
 
@@ -78,8 +86,7 @@ impl AccountingContractApi for AccountingContractClient {
 		nonce: u64,
 		amount: U256,
 	) -> Result<(), ()> {
-		let client =
-			Client::new_with_options(Cluster::Mainnet, &self.payer, CommitmentConfig::confirmed());
+		let client = self.create_client()?;
 		let program = client.program(self.program_id).expect("Failed to create program client");
 
 		program
@@ -115,8 +122,7 @@ impl AccountingContractApi for AccountingContractClient {
 	}
 
 	fn get_nonce(&self, user: Pubkey) -> Result<u64, ()> {
-		let client =
-			Client::new_with_options(Cluster::Mainnet, &self.payer, CommitmentConfig::confirmed());
+		let client = self.create_client()?;
 
 		let (account_nonce, _bump) =
 			Pubkey::find_program_address(&[user.to_bytes().as_ref(), b"nonce"], &self.program_id);
@@ -135,8 +141,7 @@ impl AccountingContractApi for AccountingContractClient {
 	}
 
 	fn get_balance(&self) -> Result<U256, ()> {
-		let client =
-			Client::new_with_options(Cluster::Mainnet, &self.payer, CommitmentConfig::confirmed());
+		let client = self.create_client()?;
 		let program = client.program(self.program_id).expect("Failed to create program client");
 		match program.rpc().get_balance(&self.payer.pubkey()) {
 			Ok(v) => {
