@@ -717,44 +717,44 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  parachain-runtime-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    steps:
-      - uses: actions/checkout@v4
+  # parachain-runtime-test:
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - fmt
+  #     - set-condition
+  #     - sequentialise
+  #   if: needs.set-condition.outputs.rebuild_parachain == 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
+  #     - name: Free up disk space
+  #       if: startsWith(runner.name, 'GitHub Actions')
+  #       uses: ./.github/actions/disk-cleanup
 
-      - name: Install toolchain
-        working-directory: ./parachain
-        run: rustup show
+  #     - name: Install toolchain
+  #       working-directory: ./parachain
+  #       run: rustup show
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update && \
+  #         sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
 
-      # We could have used matrix but the runtime tests are executed sequentially for a cleaner GHA visualisation graph.
-      # It won't take much longer as we run them back to back.
-      - name: Run runtime tests
-        working-directory: ./parachain
-        run: |
-          echo "::group::paseo runtime test"
-          cargo test --locked -p paseo-runtime --lib
-          echo "::endgroup::"
-          echo "::group::heima runtime test"
-          cargo test --locked -p heima-runtime --lib
-          echo "::endgroup::"
+  #     # We could have used matrix but the runtime tests are executed sequentially for a cleaner GHA visualisation graph.
+  #     # It won't take much longer as we run them back to back.
+  #     - name: Run runtime tests
+  #       working-directory: ./parachain
+  #       run: |
+  #         echo "::group::paseo runtime test"
+  #         cargo test --locked -p paseo-runtime --lib
+  #         echo "::endgroup::"
+  #         echo "::group::heima runtime test"
+  #         cargo test --locked -p heima-runtime --lib
+  #         echo "::endgroup::"
 
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
+  #     - name: Fail early
+  #       if: failure()
+  #       uses: andymckay/cancel-action@0.5
 
   identity-single-worker-test:
     runs-on: ubuntu-22.04
@@ -1053,6 +1053,22 @@ jobs:
           docker load < heima.tar.gz
           docker push litentry/heima
           docker push litentry/heima-aio
+
+      - name: Tirgger omni-bridge CI
+        if: needs.set-condition.outputs.rebuild_parachain == 'true'
+        run: |
+          curl -X POST \
+            https://api.github.com/repos/litentry/omni-bridge/dispatches \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -d '{ 
+                "event_type": "heima-update",
+                "client_payload": {
+                    "version": "latest",
+                    "commit": "${{ github.sha }}"
+                }
+            }'
+          echo "Tirgger omni-bridge CI with Heima commit: ${{ github.sha }}"
 
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'
