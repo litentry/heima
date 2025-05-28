@@ -1,5 +1,9 @@
-use crate::{signature::HeimaMultiSignature, utils::hex::decode_hex, OmniAccountAuthType};
-use base58::FromBase58;
+use crate::{
+	signature::HeimaMultiSignature,
+	utils::hex::{decode_hex, ToHexPrefixed},
+	OmniAccountAuthType,
+};
+use base58::{FromBase58, ToBase58};
 use heima_primitives::{Address20, Address32, Address33, Identity, IdentityString};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
@@ -14,7 +18,7 @@ type JwtToken = String;
 ///  "Email": "test@test.com",
 /// }
 /// ```
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Encode, Decode)]
 pub enum IdentitySerde {
 	Twitter(String),
 	Discord(String),
@@ -26,6 +30,12 @@ pub enum IdentitySerde {
 	Email(String),
 	Google(String),
 	Pumpx(String),
+}
+
+impl IdentitySerde {
+	pub fn is_pumpx_id(&self) -> bool {
+		matches!(self, IdentitySerde::Pumpx(_))
+	}
 }
 
 impl TryFrom<IdentitySerde> for Identity {
@@ -90,25 +100,66 @@ pub enum OmniAuth {
 	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
 }
 
-impl TryFrom<OmniAuthSerde> for OmniAuth {
+impl From<IdentitySerde> for &Identity {
+	fn from(value: IdentitySerde) -> Self {
+		value.try_into().expect("Failed to convert IdentitySerde to Identity")
+	}
+}
+
+impl TryFrom<Identity> for IdentitySerde {
 	type Error = &'static str;
 
-	fn try_from(value: OmniAuthSerde) -> Result<Self, Self::Error> {
+	fn try_from(value: Identity) -> Result<Self, Self::Error> {
 		match value {
-			OmniAuthSerde::Web3(id, sig) => Ok(OmniAuth::Web3(id.try_into()?, sig)),
-			OmniAuthSerde::Email(email, code) => Ok(OmniAuth::Email(email, code)),
-			OmniAuthSerde::AuthToken(account, token) => Ok(OmniAuth::AuthToken(account, token)),
-			OmniAuthSerde::OAuth2(id, data) => Ok(OmniAuth::OAuth2(id.try_into()?, data)),
+			Identity::Twitter(handle) => Ok(IdentitySerde::Twitter(
+				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
+			)),
+			Identity::Discord(handle) => Ok(IdentitySerde::Discord(
+				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
+			)),
+			Identity::Github(handle) => Ok(IdentitySerde::Github(
+				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
+			)),
+			Identity::Substrate(address) => Ok(IdentitySerde::Substrate(address.to_hex())),
+			Identity::Evm(address) => Ok(IdentitySerde::Evm(address.to_hex())),
+			Identity::Bitcoin(address) => Ok(IdentitySerde::Bitcoin(address.to_hex())),
+			Identity::Solana(address) => Ok(IdentitySerde::Solana(address.as_ref().to_base58())),
+			Identity::Email(handle) => Ok(IdentitySerde::Email(
+				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
+			)),
+			Identity::Google(handle) => Ok(IdentitySerde::Google(
+				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
+			)),
+			Identity::Pumpx(handle) => Ok(IdentitySerde::Pumpx(
+				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
+			)),
 		}
 	}
 }
 
-#[derive(Deserialize, Debug)]
+// impl TryFrom<OmniAuthSerde> for OmniAuth {
+// 	type Error = &'static str;
+//
+// 	fn try_from(value: OmniAuthSerde) -> Result<Self, Self::Error> {
+// 		match value {
+// 			OmniAuthSerde::Web3(id, sig) => Ok(OmniAuth::Web3(id.try_into()?, sig)),
+// 			OmniAuthSerde::Email(email, code) => Ok(OmniAuth::Email(email, code)),
+// 			OmniAuthSerde::AuthToken(account, token) => Ok(OmniAuth::AuthToken(account, token)),
+// 			OmniAuthSerde::OAuth2(id, data) => Ok(OmniAuth::OAuth2(id.try_into()?, data)),
+// 			OmniAuthSerde::Pumpx { email_code, invite_code, google_code } => {
+// 				todo!("Pumpx authentication not implemented yet")
+// 			},
+// 		}
+// 	}
+// }
+
+#[derive(Deserialize, Encode, Decode, Clone, PartialEq, Eq, Debug)]
 pub enum OmniAuthSerde {
-	Web3(IdentitySerde, HeimaMultiSignature),
-	Email(Email, VerificationCode),
+	Web3(HeimaMultiSignature),
+	Email(VerificationCode),
 	AuthToken(JwtToken),
-	OAuth2(IdentitySerde, OAuth2Data),
+	OAuth2(OAuth2Data),
+	Pumpx { invite_code: Option<String>, google_code: String },
 }
 
 impl From<OmniAuth> for OmniAccountAuthType {
@@ -155,34 +206,34 @@ mod tests {
 		assert_eq!(identity, Identity::Twitter(IdentityString::new(b"handle".to_vec())));
 	}
 
-	#[test]
-	fn test_omni_auth_serde() {
-		let raw_signature: [u8; 64] = [
-			62, 25, 148, 186, 53, 137, 248, 174, 149, 187, 225, 24, 186, 48, 24, 109, 100, 27, 149,
-			196, 66, 5, 222, 140, 22, 16, 136, 239, 154, 22, 133, 96, 79, 2, 180, 106, 150, 112,
-			116, 11, 6, 35, 32, 4, 145, 240, 54, 130, 206, 193, 200, 57, 241, 112, 35, 122, 226,
-			97, 174, 231, 221, 13, 98, 2,
-		];
-		let address = "E9SegbpSr21FPLbUhoTNH6C2ja7KDkptybqSaT84wMH6";
-		let json = format!(
-			r#"{{
-		       "Web3":[
-		            {{"Solana": "{}"}},
-		            {{"Ed25519":"{}"}}
-		        ]
-		    }}"#,
-			address,
-			hex::encode(raw_signature)
-		);
-		let deserialized: OmniAuthSerde = serde_json::from_str(&json).unwrap();
-		let omni_auth = OmniAuth::try_from(deserialized).unwrap();
-
-		assert_eq!(
-			omni_auth,
-			OmniAuth::Web3(
-				Identity::Solana(Address32::try_from(address).unwrap()),
-				HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(raw_signature))
-			)
-		);
-	}
+	// #[test]
+	// fn test_omni_auth_serde() {
+	// 	let raw_signature: [u8; 64] = [
+	// 		62, 25, 148, 186, 53, 137, 248, 174, 149, 187, 225, 24, 186, 48, 24, 109, 100, 27, 149,
+	// 		196, 66, 5, 222, 140, 22, 16, 136, 239, 154, 22, 133, 96, 79, 2, 180, 106, 150, 112,
+	// 		116, 11, 6, 35, 32, 4, 145, 240, 54, 130, 206, 193, 200, 57, 241, 112, 35, 122, 226,
+	// 		97, 174, 231, 221, 13, 98, 2,
+	// 	];
+	// 	let address = "E9SegbpSr21FPLbUhoTNH6C2ja7KDkptybqSaT84wMH6";
+	// 	let json = format!(
+	// 		r#"{{
+	// 	       "Web3":[
+	// 	            {{"Solana": "{}"}},
+	// 	            {{"Ed25519":"{}"}}
+	// 	        ]
+	// 	    }}"#,
+	// 		address,
+	// 		hex::encode(raw_signature)
+	// 	);
+	// 	let deserialized: OmniAuthSerde = serde_json::from_str(&json).unwrap();
+	// 	let omni_auth = OmniAuth::try_from(deserialized).unwrap();
+	//
+	// 	assert_eq!(
+	// 		omni_auth,
+	// 		OmniAuth::Web3(
+	// 			Identity::Solana(Address32::try_from(address).unwrap()),
+	// 			HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(raw_signature))
+	// 		)
+	// 	);
+	// }
 }
