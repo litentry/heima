@@ -135,6 +135,12 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
+#[derive(Encode, Decode, Deserialize, Clone, PartialEq, Eq, Debug)]
+pub struct UserInfo {
+	pub id: IdentitySerde,
+	pub auth: OmniAuthSerde,
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
