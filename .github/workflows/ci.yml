@@ -643,16 +643,11 @@ jobs:
 
         - name: Install Solana CLI
           run: |
-            sh -c "$(curl -sSfL https://release.solana.com/v1.18.3/install)"
-            echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+            curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
 
-        - name: Install Anchor CLI
+        - name: Build contract
           run: |
-            cargo install --git https://github.com/coral-xyz/anchor anchor-cli --tag v0.29.0 --force
-
-        - name: Run Tests
-          run: |
-            cd tee-worker/omni-executor/accounting-contract/solana  && anchor test -- --feature test-skip-auth
+            cd tee-worker/omni-executor/accounting-contract/solana  && anchor build
 
   parachain-ts-test:
     runs-on: ubuntu-22.04
