@@ -13,6 +13,11 @@ type HttpServiceBuilder = ServiceBuilder<
 	Stack<AuthorizationHeaderExtractorLayer, Stack<SetSensitiveRequestHeadersLayer, Identity>>,
 >;
 
+#[derive(Debug, Clone)]
+pub struct HttpExtensions {
+	pub authorization_header: String,
+}
+
 pub struct HttpMiddleware;
 
 impl HttpMiddleware {
@@ -59,7 +64,7 @@ where
 			.map(|value_str| value_str.to_string());
 
 		if let Some(value) = header_value {
-			req.extensions_mut().insert(value);
+			req.extensions_mut().insert(HttpExtensions { authorization_header: value });
 		}
 
 		self.inner.call(req)
@@ -90,9 +95,9 @@ mod tests {
 
 		fn call(&mut self, req: Request<HttpBody>) -> Self::Future {
 			// Extract the authorization header from request extensions
-			let auth_header = req.extensions().get::<String>().cloned();
-			let response = match auth_header {
-				Some(value) => format!("Auth: {}", value),
+			let http_extensions = req.extensions().get::<HttpExtensions>().cloned();
+			let response = match http_extensions {
+				Some(ext) => format!("Auth: {}", ext.authorization_header),
 				None => "No auth".to_string(),
 			};
 			ready(Ok(response))

@@ -1,3 +1,3 @@
 mod http_middleware;
 
-pub use http_middleware::HttpMiddleware;
+pub(crate) use http_middleware::*;
