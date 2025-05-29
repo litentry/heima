@@ -18,5 +18,5 @@ no-log-ix-name = []
 test-skip-auth = []
 
 [dependencies]
-anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }
-serde = { version = "1.0", features = ["derive"] }
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+serde = { version = "1.0.217", features = ["derive"] }
