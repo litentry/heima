@@ -65,3 +65,103 @@ where
 		self.inner.call(req)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use http::{HeaderValue, Method};
+	use jsonrpsee::server::HttpBody;
+	use std::convert::Infallible;
+	use std::future::{ready, Ready};
+	use tower::{Service, ServiceExt};
+
+	// Mock service for testing
+	#[derive(Clone)]
+	struct MockService;
+
+	impl Service<Request<HttpBody>> for MockService {
+		type Response = String;
+		type Error = Infallible;
+		type Future = Ready<Result<Self::Response, Self::Error>>;
+
+		fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+			Poll::Ready(Ok(()))
+		}
+
+		fn call(&mut self, req: Request<HttpBody>) -> Self::Future {
+			// Extract the authorization header from request extensions
+			let auth_header = req.extensions().get::<String>().cloned();
+			let response = match auth_header {
+				Some(value) => format!("Auth: {}", value),
+				None => "No auth".to_string(),
+			};
+			ready(Ok(response))
+		}
+	}
+
+	#[tokio::test]
+	async fn test_authorization_header_extractor_with_valid_header() {
+		let layer = AuthorizationHeaderExtractorLayer;
+		let mut service = layer.layer(MockService);
+
+		let req = Request::builder()
+			.method(Method::POST)
+			.uri("http://example.com")
+			.header(AUTHORIZATION, "Bearer token123")
+			.body(HttpBody::empty())
+			.unwrap();
+
+		let response = service.ready().await.unwrap().call(req).await.unwrap();
+		assert_eq!(response, "Auth: Bearer token123");
+	}
+
+	#[tokio::test]
+	async fn test_authorization_header_extractor_without_header() {
+		let layer = AuthorizationHeaderExtractorLayer;
+		let mut service = layer.layer(MockService);
+
+		let req = Request::builder()
+			.method(Method::POST)
+			.uri("http://example.com")
+			.body(HttpBody::empty())
+			.unwrap();
+
+		let response = service.ready().await.unwrap().call(req).await.unwrap();
+		assert_eq!(response, "No auth");
+	}
+
+	#[tokio::test]
+	async fn test_authorization_header_extractor_with_invalid_utf8() {
+		let layer = AuthorizationHeaderExtractorLayer;
+		let mut service = layer.layer(MockService);
+
+		let mut req = Request::builder()
+			.method(Method::POST)
+			.uri("http://example.com")
+			.body(HttpBody::empty())
+			.unwrap();
+
+		// Insert invalid UTF-8 header value
+		req.headers_mut()
+			.insert(AUTHORIZATION, HeaderValue::from_bytes(&[0xFF, 0xFE]).unwrap());
+
+		let response = service.ready().await.unwrap().call(req).await.unwrap();
+		assert_eq!(response, "No auth");
+	}
+
+	#[tokio::test]
+	async fn test_authorization_header_extractor_with_empty_header() {
+		let layer = AuthorizationHeaderExtractorLayer;
+		let mut service = layer.layer(MockService);
+
+		let req = Request::builder()
+			.method(Method::POST)
+			.uri("http://example.com")
+			.header(AUTHORIZATION, "")
+			.body(HttpBody::empty())
+			.unwrap();
+
+		let response = service.ready().await.unwrap().call(req).await.unwrap();
+		assert_eq!(response, "Auth: ");
+	}
+}
