@@ -651,6 +651,11 @@ jobs:
             export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
             cd tee-worker/omni-executor/accounting-contract/solana  && anchor build
 
+        - name: Test contract
+          run: |
+            cd tee-worker/omni-executor/accounting-contract/solana  && anchor test -- --features test-skip-auth
+        
+
   parachain-ts-test:
     runs-on: ubuntu-22.04
     needs:
