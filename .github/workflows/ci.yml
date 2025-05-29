@@ -629,7 +629,7 @@ jobs:
           cd tee-worker/omni-executor/accounting-contract/bsc && forge test
 
   solana-contracts-build-test:
-      runs-on: ubuntu-22.04
+      runs-on: ubuntu-24.04
       needs:
         - fmt
         - set-condition
