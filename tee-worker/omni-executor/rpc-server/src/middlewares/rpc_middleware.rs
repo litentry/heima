@@ -13,6 +13,7 @@ use jsonrpsee::{
 use tower::layer::util::{Identity, Stack};
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // TODO: remove this once the extensions are used in the methods
 pub struct RpcExtensions {
 	pub sender: String,
 }
@@ -20,7 +21,9 @@ pub struct RpcExtensions {
 pub struct RpcMiddleware;
 
 impl RpcMiddleware {
-	pub fn new(rsa_private_key: Vec<u8>) -> RpcServiceBuilder<Stack<AuthRpcLayer, Identity>> {
+	pub fn create_builder(
+		rsa_private_key: Vec<u8>,
+	) -> RpcServiceBuilder<Stack<AuthRpcLayer, Identity>> {
 		RpcServiceBuilder::new().layer(AuthRpcLayer { rsa_private_key })
 	}
 }

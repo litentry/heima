@@ -82,8 +82,8 @@ pub async fn start_server(
 		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
 	let server = Server::builder()
 		.max_connections(max_connections)
-		.set_http_middleware(HttpMiddleware::new())
-		.set_rpc_middleware(RpcMiddleware::new(jwt_rsa_private_key))
+		.set_http_middleware(HttpMiddleware::create_builder())
+		.set_rpc_middleware(RpcMiddleware::create_builder(jwt_rsa_private_key))
 		.build(address.parse::<SocketAddr>()?)
 		.await?;
 

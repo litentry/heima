@@ -21,7 +21,7 @@ pub struct HttpExtensions {
 pub struct HttpMiddleware;
 
 impl HttpMiddleware {
-	pub fn new() -> HttpServiceBuilder {
+	pub fn create_builder() -> HttpServiceBuilder {
 		tower::ServiceBuilder::new()
 			.layer(SetSensitiveRequestHeadersLayer::new(once(AUTHORIZATION)))
 			.layer(AuthorizationHeaderExtractorLayer)
