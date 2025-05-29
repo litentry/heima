@@ -8334,6 +8334,7 @@ name = "rpc-server"
 version = "0.1.0"
 dependencies = [
  "base58",
+ "chrono",
  "core-primitives",
  "ethers",
  "executor-core",
