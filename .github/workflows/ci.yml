@@ -653,6 +653,7 @@ jobs:
 
         - name: Test contract
           run: |
+            export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
             cd tee-worker/omni-executor/accounting-contract/solana  && anchor test -- --features test-skip-auth
         
 
