@@ -67,7 +67,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 			debug!("Received pumpx_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
 
            	let omni_account = match verify_auth_token_authentication(
-				ctx.clone(),
+				&ctx.jwt_rsa_private_key,
 				&params.auth_token,
 				AUTH_TOKEN_ACCESS_TYPE,
 				true,
