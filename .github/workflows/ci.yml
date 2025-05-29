@@ -644,9 +644,11 @@ jobs:
         - name: Install Solana CLI
           run: |
             curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
+  
 
         - name: Build contract
           run: |
+            export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
             cd tee-worker/omni-executor/accounting-contract/solana  && anchor build
 
   parachain-ts-test:
