@@ -256,6 +256,7 @@ async fn main() -> Result<(), ()> {
 			);
 			let solana_accounting_contract_client = SolanaAccountingContractClient::new(
 				solana_accounting_ed25519_signer_key_pair,
+				args.solana_url.clone(),
 				args.solana_accounting_contract_address.parse().unwrap(),
 			);
 

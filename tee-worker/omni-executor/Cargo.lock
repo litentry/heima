@@ -5635,6 +5635,7 @@ dependencies = [
  "executor-storage",
  "parity-scale-codec",
  "ruint",
+ "rust_decimal",
  "tempfile",
  "tracing",
 ]
