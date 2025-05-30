@@ -97,6 +97,8 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 			// TOOD:
 			// - Call client specific api ?
 			// - Generate access token
+			// - Store tokens
+			// - include client's api response in our response?
 
 			Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {
 				access_token: id_token,
