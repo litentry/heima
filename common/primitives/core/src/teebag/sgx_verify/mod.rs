@@ -234,7 +234,6 @@ pub fn verify_certificate_chain<'a>(
             time,
             webpki::KeyUsage::client_auth(),
             None,
-            None,
         )
         .map_err(|_| "Invalid certificate chain")?;
     Ok(())
@@ -512,7 +511,6 @@ pub fn verify_server_cert(
             &chain,
             timestamp_valid_until,
             webpki::KeyUsage::server_auth(),
-            None,
             None,
         )
         .map_err(|_| "CA verification failed")?;
