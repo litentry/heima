@@ -133,3 +133,26 @@ pub trait AssetsLock: Encode + Decode {
 
 	fn get(&self) -> AmountType;
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use rust_decimal::Decimal;
+	use std::str::FromStr;
+
+	#[test]
+	fn test_amount_conversion_should_fail_with_decimal_point() {
+		let amount = Decimal::from_str("0.005").unwrap()
+			* Decimal::from_str("1_000_000_000_000_000_000").unwrap();
+		let err = AmountType::from_str(amount.to_string().as_str()).unwrap_err();
+		assert_eq!(err.to_string(), "invalid digit: .");
+	}
+
+	#[test]
+	fn test_amount_conversion_should_succeed_with_normalization() {
+		let amount = Decimal::from_str("0.005").unwrap()
+			* Decimal::from_str("1_000_000_000_000_000_000").unwrap();
+		let amount_type = AmountType::from_str(amount.normalize().to_string().as_str()).unwrap();
+		assert_eq!(amount_type, AmountType::from_str("5_000_000_000_000_000").unwrap());
+	}
+}
