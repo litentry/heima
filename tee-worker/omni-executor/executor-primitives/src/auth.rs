@@ -164,12 +164,6 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
-#[derive(Encode, Decode, Deserialize, Clone, PartialEq, Eq, Debug)]
-pub struct UserInfo {
-	pub id: UserId,
-	pub auth: UserAuth,
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
