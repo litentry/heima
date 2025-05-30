@@ -12,14 +12,14 @@ pub type VerificationCode = String;
 type Email = String;
 type JwtToken = String;
 
-/// A serializable representation of Identity for JSON interchange.
+/// A serializable representation of User Identity for JSON interchange.
 /// ```json
 /// {
 ///  "Email": "test@test.com",
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Encode, Decode)]
-pub enum IdentitySerde {
+pub enum UserId {
 	Twitter(String),
 	Discord(String),
 	Github(String),
@@ -32,45 +32,45 @@ pub enum IdentitySerde {
 	Pumpx(String),
 }
 
-impl IdentitySerde {
+impl UserId {
 	pub fn is_pumpx_id(&self) -> bool {
-		matches!(self, IdentitySerde::Pumpx(_))
+		matches!(self, UserId::Pumpx(_))
 	}
 }
 
-impl TryFrom<IdentitySerde> for Identity {
+impl TryFrom<UserId> for Identity {
 	type Error = &'static str;
 
-	fn try_from(value: IdentitySerde) -> Result<Self, Self::Error> {
+	fn try_from(value: UserId) -> Result<Self, Self::Error> {
 		match value {
-			IdentitySerde::Twitter(handle) => {
+			UserId::Twitter(handle) => {
 				Ok(Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			IdentitySerde::Discord(handle) => {
+			UserId::Discord(handle) => {
 				Ok(Identity::Discord(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			IdentitySerde::Github(handle) => {
+			UserId::Github(handle) => {
 				Ok(Identity::Github(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			IdentitySerde::Substrate(hex_address) => {
+			UserId::Substrate(hex_address) => {
 				let bytes = decode_hex(&hex_address).map_err(|_| "Invalid hex encoding")?;
 				let address =
 					Address32::try_from(bytes.as_slice()).map_err(|_| "Invalid address")?;
 				Ok(Identity::Substrate(address))
 			},
-			IdentitySerde::Evm(hex_address) => {
+			UserId::Evm(hex_address) => {
 				let bytes = decode_hex(&hex_address).map_err(|_| "Invalid hex encoding")?;
 				let address =
 					Address20::try_from(bytes.as_slice()).map_err(|_| "Invalid address")?;
 				Ok(Identity::Evm(address))
 			},
-			IdentitySerde::Bitcoin(hex_address) => {
+			UserId::Bitcoin(hex_address) => {
 				let bytes = decode_hex(&hex_address).map_err(|_| "Invalid hex encoding")?;
 				let address =
 					Address33::try_from(bytes.as_slice()).map_err(|_| "Invalid address")?;
 				Ok(Identity::Bitcoin(address))
 			},
-			IdentitySerde::Solana(base58_address) => {
+			UserId::Solana(base58_address) => {
 				let address: Address32 = base58_address
 					.from_base58()
 					.map_err(|_| "Invalid base58 encoding")?
@@ -79,13 +79,13 @@ impl TryFrom<IdentitySerde> for Identity {
 					.map_err(|_| "Invalid address")?;
 				Ok(Identity::Solana(address))
 			},
-			IdentitySerde::Email(handle) => {
+			UserId::Email(handle) => {
 				Ok(Identity::Email(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			IdentitySerde::Google(handle) => {
+			UserId::Google(handle) => {
 				Ok(Identity::Google(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			IdentitySerde::Pumpx(handle) => {
+			UserId::Pumpx(handle) => {
 				Ok(Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec())))
 			},
 		}
@@ -100,66 +100,44 @@ pub enum OmniAuth {
 	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
 }
 
-impl From<IdentitySerde> for &Identity {
-	fn from(value: IdentitySerde) -> Self {
-		value.try_into().expect("Failed to convert IdentitySerde to Identity")
-	}
-}
-
-impl TryFrom<Identity> for IdentitySerde {
+impl TryFrom<Identity> for UserId {
 	type Error = &'static str;
 
 	fn try_from(value: Identity) -> Result<Self, Self::Error> {
 		match value {
-			Identity::Twitter(handle) => Ok(IdentitySerde::Twitter(
+			Identity::Twitter(handle) => Ok(UserId::Twitter(
 				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
 			)),
-			Identity::Discord(handle) => Ok(IdentitySerde::Discord(
+			Identity::Discord(handle) => Ok(UserId::Discord(
 				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
 			)),
-			Identity::Github(handle) => Ok(IdentitySerde::Github(
+			Identity::Github(handle) => Ok(UserId::Github(
 				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
 			)),
-			Identity::Substrate(address) => Ok(IdentitySerde::Substrate(address.to_hex())),
-			Identity::Evm(address) => Ok(IdentitySerde::Evm(address.to_hex())),
-			Identity::Bitcoin(address) => Ok(IdentitySerde::Bitcoin(address.to_hex())),
-			Identity::Solana(address) => Ok(IdentitySerde::Solana(address.as_ref().to_base58())),
-			Identity::Email(handle) => Ok(IdentitySerde::Email(
+			Identity::Substrate(address) => Ok(UserId::Substrate(address.to_hex())),
+			Identity::Evm(address) => Ok(UserId::Evm(address.to_hex())),
+			Identity::Bitcoin(address) => Ok(UserId::Bitcoin(address.to_hex())),
+			Identity::Solana(address) => Ok(UserId::Solana(address.as_ref().to_base58())),
+			Identity::Email(handle) => Ok(UserId::Email(
 				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
 			)),
-			Identity::Google(handle) => Ok(IdentitySerde::Google(
+			Identity::Google(handle) => Ok(UserId::Google(
 				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
 			)),
-			Identity::Pumpx(handle) => Ok(IdentitySerde::Pumpx(
+			Identity::Pumpx(handle) => Ok(UserId::Pumpx(
 				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
 			)),
 		}
 	}
 }
 
-// impl TryFrom<OmniAuthSerde> for OmniAuth {
-// 	type Error = &'static str;
-//
-// 	fn try_from(value: OmniAuthSerde) -> Result<Self, Self::Error> {
-// 		match value {
-// 			OmniAuthSerde::Web3(id, sig) => Ok(OmniAuth::Web3(id.try_into()?, sig)),
-// 			OmniAuthSerde::Email(email, code) => Ok(OmniAuth::Email(email, code)),
-// 			OmniAuthSerde::AuthToken(account, token) => Ok(OmniAuth::AuthToken(account, token)),
-// 			OmniAuthSerde::OAuth2(id, data) => Ok(OmniAuth::OAuth2(id.try_into()?, data)),
-// 			OmniAuthSerde::Pumpx { email_code, invite_code, google_code } => {
-// 				todo!("Pumpx authentication not implemented yet")
-// 			},
-// 		}
-// 	}
-// }
-
 #[derive(Deserialize, Encode, Decode, Clone, PartialEq, Eq, Debug)]
-pub enum OmniAuthSerde {
+pub enum UserAuth {
 	Web3(HeimaMultiSignature),
 	Email(VerificationCode),
 	AuthToken(JwtToken),
 	OAuth2(OAuth2Data),
-	Pumpx { invite_code: Option<String>, google_code: String },
+	Pumpx { email_code: String, google_code: String, invite_code: Option<String> },
 }
 
 impl From<OmniAuth> for OmniAccountAuthType {
@@ -188,52 +166,20 @@ pub struct OAuth2Data {
 
 #[derive(Encode, Decode, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct UserInfo {
-	pub id: IdentitySerde,
-	pub auth: OmniAuthSerde,
+	pub id: UserId,
+	pub auth: UserAuth,
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_crypto::ed25519;
 
 	#[test]
 	fn test_identity_serde() {
 		let json = r#"{"Twitter":"handle"}"#;
-		let deserialized: IdentitySerde = serde_json::from_str(json).unwrap();
+		let deserialized: UserId = serde_json::from_str(json).unwrap();
 		let identity = Identity::try_from(deserialized).unwrap();
 
 		assert_eq!(identity, Identity::Twitter(IdentityString::new(b"handle".to_vec())));
 	}
-
-	// #[test]
-	// fn test_omni_auth_serde() {
-	// 	let raw_signature: [u8; 64] = [
-	// 		62, 25, 148, 186, 53, 137, 248, 174, 149, 187, 225, 24, 186, 48, 24, 109, 100, 27, 149,
-	// 		196, 66, 5, 222, 140, 22, 16, 136, 239, 154, 22, 133, 96, 79, 2, 180, 106, 150, 112,
-	// 		116, 11, 6, 35, 32, 4, 145, 240, 54, 130, 206, 193, 200, 57, 241, 112, 35, 122, 226,
-	// 		97, 174, 231, 221, 13, 98, 2,
-	// 	];
-	// 	let address = "E9SegbpSr21FPLbUhoTNH6C2ja7KDkptybqSaT84wMH6";
-	// 	let json = format!(
-	// 		r#"{{
-	// 	       "Web3":[
-	// 	            {{"Solana": "{}"}},
-	// 	            {{"Ed25519":"{}"}}
-	// 	        ]
-	// 	    }}"#,
-	// 		address,
-	// 		hex::encode(raw_signature)
-	// 	);
-	// 	let deserialized: OmniAuthSerde = serde_json::from_str(&json).unwrap();
-	// 	let omni_auth = OmniAuth::try_from(deserialized).unwrap();
-	//
-	// 	assert_eq!(
-	// 		omni_auth,
-	// 		OmniAuth::Web3(
-	// 			Identity::Solana(Address32::try_from(address).unwrap()),
-	// 			HeimaMultiSignature::Ed25519(ed25519::Signature::from_raw(raw_signature))
-	// 		)
-	// 	);
-	// }
 }
