@@ -101,32 +101,32 @@ pub enum OmniAuth {
 }
 
 impl TryFrom<Identity> for UserId {
-	type Error = &'static str;
+	type Error = ();
 
 	fn try_from(value: Identity) -> Result<Self, Self::Error> {
 		match value {
-			Identity::Twitter(handle) => Ok(UserId::Twitter(
-				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
-			)),
-			Identity::Discord(handle) => Ok(UserId::Discord(
-				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
-			)),
-			Identity::Github(handle) => Ok(UserId::Github(
-				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
-			)),
+			Identity::Twitter(handle) => {
+				Ok(UserId::Twitter(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
+			Identity::Discord(handle) => {
+				Ok(UserId::Discord(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
+			Identity::Github(handle) => {
+				Ok(UserId::Github(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
 			Identity::Substrate(address) => Ok(UserId::Substrate(address.to_hex())),
 			Identity::Evm(address) => Ok(UserId::Evm(address.to_hex())),
 			Identity::Bitcoin(address) => Ok(UserId::Bitcoin(address.to_hex())),
 			Identity::Solana(address) => Ok(UserId::Solana(address.as_ref().to_base58())),
-			Identity::Email(handle) => Ok(UserId::Email(
-				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
-			)),
-			Identity::Google(handle) => Ok(UserId::Google(
-				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
-			)),
-			Identity::Pumpx(handle) => Ok(UserId::Pumpx(
-				String::from_utf8(handle.inner.to_vec()).map_err(|_| "Invalid UTF-8")?,
-			)),
+			Identity::Email(handle) => {
+				Ok(UserId::Email(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
+			Identity::Google(handle) => {
+				Ok(UserId::Google(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
+			Identity::Pumpx(handle) => {
+				Ok(UserId::Pumpx(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
 		}
 	}
 }
