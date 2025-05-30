@@ -46,7 +46,9 @@ bitcoin = "0.32.5"
 bs58 = "0.5"
 chrono = "0.4.40"
 clap = "4.5.17"
+env_logger = "0.11.5"
 ethers = "2.0"
+frame-metadata = { version = "23.0.0", features = ["decode"], default-features = false }
 frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
 hex = "0.4"
@@ -55,6 +57,7 @@ hmac = "0.12.1"
 jsonrpsee = { version = "0.24", features = ["server"] }
 jsonwebtoken = "9.3.0"
 libsecp256k1 = "0.7.1"
+log = "0.4.22"
 metrics = "0.24.1"
 metrics-exporter-prometheus = "0.16.2"
 mockall = "0.13.1"
@@ -80,9 +83,9 @@ sp-core = "35.0.0"
 sp-state-machine = { version = "0.44.0", features = ["std"] }
 spl-associated-token-account = "6.0.0"
 spl-token = "7.0.0"
-subxt = "0.40.0"
-subxt-core = "0.40.0"
-subxt-signer = { version = "0.40.0", features = ["subxt"] }
+subxt = "0.42.0"
+subxt-core = "0.42.0"
+subxt-signer = { version = "0.42.0", features = ["subxt"] }
 tempfile = "3.19.1"
 test-log = { version = "0.2.17", features = ["trace"] }
 tokio = "1.43.0"
@@ -124,3 +127,9 @@ solana-intent-executor = { path = "intent/executors/solana" }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
+
+[patch."https://github.com/rust-ethereum/evm"]
+evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-core = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-gasometer = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
+evm-runtime = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }

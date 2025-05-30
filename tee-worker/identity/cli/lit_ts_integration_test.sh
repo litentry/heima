@@ -67,7 +67,11 @@ cd /client-api
 pnpm install
 pnpm run build
 
+echo "pnpm install for ts-tests"
 cd /ts-tests
 pnpm install
 
+echo "start ts-tests"
 NODE_ENV=staging pnpm --filter integration-tests run test $TEST
+
+echo "finish ts-tests"

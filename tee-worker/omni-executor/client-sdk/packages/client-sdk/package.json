@@ -10,15 +10,15 @@
   "dependencies": {},
   "devDependencies": {
     "@polkadot/keyring": "^13.4.3",
-    "@polkadot/rpc-provider": "^15.0.2",
+    "@polkadot/rpc-provider": "*",
     "@types/ws": "^8.5.13"
   },
   "peerDependencies": {
     "@heima-network/chaindata": "0.0.5",
     "@heima-network/parachain-api": "0.9.24-next.7",
-    "@polkadot/api": "^15.0.2",
-    "@polkadot/types": "^15.0.2",
-    "@polkadot/types-codec": "^15.0.2",
+    "@polkadot/api": "*",
+    "@polkadot/types": "*",
+    "@polkadot/types-codec": "*",
     "@polkadot/util": "^13.4.3",
     "@polkadot/util-crypto": "^13.4.3",
     "@scure/base": "^1.2.4",

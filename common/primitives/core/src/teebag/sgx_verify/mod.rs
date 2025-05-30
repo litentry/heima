@@ -234,6 +234,7 @@ pub fn verify_certificate_chain<'a>(
             time,
             webpki::KeyUsage::client_auth(),
             None,
+            None,
         )
         .map_err(|_| "Invalid certificate chain")?;
     Ok(())
@@ -504,17 +505,19 @@ pub fn verify_server_cert(
     timestamp_valid_until: webpki::types::UnixTime,
 ) -> Result<(), &'static str> {
     let chain: Vec<webpki::types::CertificateDer> = Vec::new();
-    match sig_cert.verify_for_usage(
-        SUPPORTED_SIG_ALGS,
-        IAS_SERVER_ROOTS,
-        &chain,
-        timestamp_valid_until,
-        webpki::KeyUsage::server_auth(),
-        None,
-    ) {
-        Ok(()) => Ok(()),
-        Err(_e) => Err("CA verification failed"),
-    }
+    sig_cert
+        .verify_for_usage(
+            SUPPORTED_SIG_ALGS,
+            IAS_SERVER_ROOTS,
+            &chain,
+            timestamp_valid_until,
+            webpki::KeyUsage::server_auth(),
+            None,
+            None,
+        )
+        .map_err(|_| "CA verification failed")?;
+
+    Ok(())
 }
 
 /// See document "Intel® Software Guard Extensions: PCK Certificate and Certificate Revocation List
