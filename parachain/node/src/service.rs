@@ -66,7 +66,6 @@ use sc_service::{
 	Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager, WarpSyncConfig,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sc_transaction_pool::{BasicPool, FullChainApi};
 use sp_keystore::KeystorePtr;
 use sp_runtime::{
 	app_crypto::AppCrypto,
@@ -115,7 +114,7 @@ pub fn new_partial<BIQ>(
 		ParachainBackend,
 		MaybeSelectChain,
 		sc_consensus::DefaultImportQueue<Block>,
-		BasicPool<FullChainApi<ParachainClient, Block>, Block>,
+		sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>,
 		(
 			ParachainBlockImport,
 			Option<Telemetry>,
@@ -177,13 +176,14 @@ where
 		telemetry
 	});
 
-	let transaction_pool = Arc::new(BasicPool::new_full(
-		Default::default(),
-		config.role.is_authority().into(),
-		config.prometheus_registry(),
+	let transaction_pool = sc_transaction_pool::Builder::new(
 		task_manager.spawn_essential_handle(),
 		client.clone(),
-	));
+		config.role.is_authority().into(),
+	)
+	.with_options(config.transaction_pool.clone())
+	.with_prometheus(config.prometheus_registry())
+	.build();
 
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
@@ -222,7 +222,7 @@ where
 		import_queue,
 		keystore_container,
 		task_manager,
-		transaction_pool,
+		transaction_pool: transaction_pool.into(),
 		select_chain,
 		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
 	})
@@ -260,7 +260,7 @@ where
 			sc_rpc::DenyUnsafe,
 			Arc<ParachainClient>,
 			Arc<ParachainBackend>,
-			Arc<BasicPool<FullChainApi<ParachainClient, Block>, Block>>,
+			Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 		) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>
 		+ 'static,
 	BIQ: FnOnce(
@@ -278,7 +278,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
-		Arc<BasicPool<FullChainApi<ParachainClient, Block>, Block>>,
+		Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -407,7 +407,7 @@ where
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.pool().clone(),
+				graph: transaction_pool.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: validator,
@@ -825,7 +825,7 @@ pub async fn start_standalone_node(
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.pool().clone(),
+				graph: transaction_pool.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: role.is_authority(),
@@ -991,7 +991,7 @@ fn start_lookahead_aura_consensus(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<BasicPool<FullChainApi<ParachainClient, Block>, Block>>,
+	transaction_pool: Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
