@@ -3545,7 +3545,7 @@ dependencies = [
 [[package]]
 name = "ethereum"
 version = "0.15.0"
-source = "git+https://github.com/rust-ethereum/ethereum.git?rev=3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba#3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba"
+source = "git+https://github.com/rust-ethereum/ethereum?rev=3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba#3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba"
 dependencies = [
  "bytes",
  "ethereum-types 0.15.1",
@@ -3900,7 +3900,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "auto_impl",
  "environmental",
@@ -3920,7 +3920,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "parity-scale-codec",
  "primitive-types 0.13.1",
@@ -3931,7 +3931,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "environmental",
  "evm-core",
@@ -3942,7 +3942,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "auto_impl",
  "environmental",
@@ -4254,7 +4254,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "hex",
  "impl-serde 0.5.0",
@@ -4273,7 +4273,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "environmental",
  "evm",
@@ -7006,7 +7006,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "environmental",
  "evm",
