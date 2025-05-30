@@ -1,5 +1,5 @@
 use executor_primitives::{
-	Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, UserInfo, ValidationData,
+	Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::fmt::Debug;
@@ -53,7 +53,6 @@ pub enum NativeTask {
 	RemoveAccounts(Identity, Vec<Identity>),
 	PublicizeAccount(Identity, Identity),
 	SetPermissions(Identity, Identity, Vec<OmniAccountPermission>),
-	UserLogin(UserInfo),
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
@@ -96,11 +95,6 @@ impl NativeTaskTrait for NativeTask {
 			Self::PumpxSignLimitOrder(sender, ..) => sender,
 			Self::PumpxTransferWidthdraw(sender, ..) => sender,
 			Self::PumpxNotifyLimitOrderResult(sender, ..) => sender,
-			Self::UserLogin(user_info) => user_info
-				.id
-				.clone()
-				.try_into()
-				.expect("UserInfo should always have a valid Identity"),
 		}
 	}
 
