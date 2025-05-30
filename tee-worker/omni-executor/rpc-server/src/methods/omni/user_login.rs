@@ -1,13 +1,17 @@
 use crate::{
-	error_code::*, methods::omni::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
-	Deserialize, ErrorCode, Serialize,
+	error_code::*, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
 };
-use executor_primitives::{OmniAuth, UserAuth, UserId};
+use chrono::{Days, Utc};
+use executor_crypto::jwt;
+use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth, UserAuth, UserId};
+use heima_authentication::auth_token::{
+	AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE,
+};
 use heima_primitives::Identity;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::error;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct UserLoginParams {
 	pub user_id: UserId,
 	pub user_auth: UserAuth,
@@ -21,25 +25,25 @@ pub struct UserLoginResponse {
 }
 
 impl TryFrom<UserLoginParams> for OmniAuth {
-	type Error = PumpxRpcError;
+	type Error = ErrorCode;
 
 	fn try_from(p: UserLoginParams) -> Result<Self, Self::Error> {
 		let omni_auth = match p.user_auth {
 			UserAuth::Email(code) => {
 				let UserId::Email(email) = p.user_id else {
 					error!("User ID must be an email for Email authentication");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ParseError));
+					return Err(ErrorCode::ParseError);
 				};
 				OmniAuth::Email(email, code)
 			},
 			UserAuth::Web3(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
 					error!("Invalid user ID format");
-					PumpxRpcError::from_error_code(ErrorCode::ParseError)
+					ErrorCode::ParseError
 				})?;
 				if !identity.is_web3() {
 					error!("User ID must be a Web3 identity for Web3 authentication");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ParseError));
+					return Err(ErrorCode::ParseError);
 				}
 				OmniAuth::Web3(identity, signature)
 			},
@@ -47,14 +51,14 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 			UserAuth::OAuth2(data) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
 					error!("Invalid user ID format");
-					PumpxRpcError::from_error_code(ErrorCode::ParseError)
+					ErrorCode::ParseError
 				})?;
 				OmniAuth::OAuth2(identity, data)
 			},
 			UserAuth::Pumpx { email_code, .. } => {
 				let UserId::Pumpx(handle) = p.user_id else {
 					error!("User ID must be a Pumpx handle for Pumpx authentication");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ParseError));
+					return Err(ErrorCode::ParseError);
 				};
 				OmniAuth::Email(handle, email_code)
 			},
@@ -69,27 +73,53 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {
 			let params = params.parse::<UserLoginParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				ErrorCode::ParseError
 			})?;
-			let auth = OmniAuth::try_from(params).map_err(|e| {
+			let auth = OmniAuth::try_from(params.clone()).map_err(|e| {
 				error!("Failed to convert params to OmniAuth: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				ErrorCode::ParseError
 			})?;
 			verify_auth(ctx.clone(), &auth).await.map_err(|_| {
 				error!("Failed to verify auth: {:?}", auth);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
+				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
 			})?;
+			let identity = Identity::try_from(params.user_id).map_err(|_| {
+				error!("Invalid user ID format");
+				ErrorCode::ParseError
+			})?;
+			let id_token =
+				create_jwt_for_user(identity, AUTH_TOKEN_ID_TYPE, &ctx.jwt_rsa_private_key)
+					.map_err(|_| {
+						error!("Failed to create access token for user");
+						ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
+					})?;
 
 			// TOOD:
-			// - Generate access token and ID token
 			// - Call client specific api ?
+			// - Generate access token
 
-			Ok::<UserLoginResponse, PumpxRpcError>(UserLoginResponse {
-				access_token: "mock_access".to_string(),
+			Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {
+				access_token: id_token,
 				id_token: "mock_id_token".to_string(),
 			})
 		})
 		.expect("Failed to register omni_requestJwt method");
+}
+
+fn create_jwt_for_user(
+	identity: Identity,
+	token_type: &str,
+	jwt_rsa_private_key: &[u8],
+) -> Result<String, ()> {
+	let expires_at = Utc::now()
+		.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+		.expect("Failed to calculate expiration")
+		.timestamp();
+	let auth_options = AuthOptions { expires_at };
+	let omni_account = identity.to_omni_account();
+	let token_claims =
+		AuthTokenClaims::new(omni_account.to_hex(), token_type.to_string(), auth_options.clone());
+	jwt::create(&token_claims, jwt_rsa_private_key).map_err(|e| {
+		error!("Failed to create JWT token: {:?}", e);
+	})
 }
