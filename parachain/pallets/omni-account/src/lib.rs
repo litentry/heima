@@ -21,10 +21,10 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub use core_primitives::{
+pub use frame_system::{self as system, pallet_prelude::BlockNumberFor};
+pub use heima_primitives::{
 	Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountConverter,
 };
-pub use frame_system::{self as system, pallet_prelude::BlockNumberFor};
 pub use pallet::*;
 
 use frame_support::{
@@ -54,7 +54,7 @@ pub enum RawOrigin<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use core_primitives::{ChainAsset, IntentId};
+	use heima_primitives::{ChainAsset, IntentId};
 
 	use super::*;
 

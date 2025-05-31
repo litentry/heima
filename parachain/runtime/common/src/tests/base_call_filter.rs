@@ -23,7 +23,7 @@ use frame_system::RawOrigin;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::traits::Dispatchable;
 
-use core_primitives::AccountId;
+use heima_primitives::AccountId;
 
 use crate::{
 	currency::UNIT,

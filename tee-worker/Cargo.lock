@@ -899,37 +899,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
-name = "core-primitives"
-version = "0.1.0"
-dependencies = [
- "base58",
- "base64 0.13.1",
- "chrono 0.4.26",
- "der 0.6.1",
- "frame-support",
- "hex",
- "hex-literal",
- "litentry-hex-utils",
- "litentry-macros",
- "litentry-proc-macros",
- "pallet-evm",
- "parity-scale-codec",
- "ring 0.16.20",
- "rustls-webpki",
- "scale-info",
- "serde 1.0.210",
- "serde_json 1.0.138",
- "sp-consensus-aura",
- "sp-core",
- "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-runtime",
- "sp-std",
- "strum 0.26.1",
- "strum_macros 0.26.1",
- "x509-cert",
-]
-
-[[package]]
 name = "core2"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1809,7 +1778,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/polkadot-evm/frontier?branch=bar/polkadot-v0.9.42#a5a5e1e6ec08cd542a6084c310863150fb8841b1"
+source = "git+https://github.com/paritytech/frontier?branch=bar/polkadot-v0.9.42#a5a5e1e6ec08cd542a6084c310863150fb8841b1"
 dependencies = [
  "hex",
  "impl-serde",
@@ -1827,7 +1796,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/polkadot-evm/frontier?branch=bar/polkadot-v0.9.42#a5a5e1e6ec08cd542a6084c310863150fb8841b1"
+source = "git+https://github.com/paritytech/frontier?branch=bar/polkadot-v0.9.42#a5a5e1e6ec08cd542a6084c310863150fb8841b1"
 dependencies = [
  "evm 0.39.1",
  "frame-support",
@@ -2445,6 +2414,53 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
+name = "heima-primitives"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "base64 0.13.1",
+ "chrono 0.4.26",
+ "der 0.6.1",
+ "frame-support",
+ "heima-utils",
+ "heima-utils-proc-macros",
+ "hex",
+ "hex-literal",
+ "pallet-evm",
+ "parity-scale-codec",
+ "ring 0.16.20",
+ "rustls-webpki",
+ "scale-info",
+ "serde 1.0.210",
+ "serde_json 1.0.138",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
+ "sp-runtime",
+ "sp-std",
+ "strum 0.26.1",
+ "strum_macros 0.26.1",
+ "x509-cert",
+]
+
+[[package]]
+name = "heima-utils"
+version = "0.1.0"
+dependencies = [
+ "hex",
+]
+
+[[package]]
+name = "heima-utils-proc-macros"
+version = "0.1.0"
+dependencies = [
+ "cargo_toml",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.82",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2777,8 +2793,6 @@ dependencies = [
  "itp-utils",
  "lc-authentication",
  "lc-stf-task-sender",
- "litentry-hex-utils",
- "litentry-macros",
  "litentry-primitives",
  "log 0.4.20",
  "pallet-balances",
@@ -3856,8 +3870,8 @@ dependencies = [
 name = "itp-utils"
 version = "0.1.0"
 dependencies = [
+ "heima-utils",
  "hex",
- "litentry-hex-utils",
  "parity-scale-codec",
 ]
 
@@ -3912,6 +3926,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger 0.10.2",
  "finality-grandpa",
+ "heima-utils",
  "id-ita-stf",
  "id-itc-parentchain-block-import-dispatcher",
  "id-itp-stf-executor",
@@ -3937,7 +3952,6 @@ dependencies = [
  "its-state",
  "its-test",
  "its-validateer-fetch",
- "litentry-hex-utils",
  "log 0.4.20",
  "parity-scale-codec",
  "sgx_tstd",
@@ -3951,6 +3965,7 @@ name = "its-consensus-common"
 version = "0.1.0"
 dependencies = [
  "fork-tree",
+ "heima-utils",
  "itc-parentchain-light-client",
  "itc-parentchain-test",
  "itertools 0.10.5",
@@ -3970,7 +3985,6 @@ dependencies = [
  "its-primitives",
  "its-state",
  "its-test",
- "litentry-hex-utils",
  "log 0.4.20",
  "parity-scale-codec",
  "sgx_tstd",
@@ -4426,7 +4440,6 @@ dependencies = [
  "lc-dynamic-assertion",
  "lc-evm-dynamic-assertions",
  "lc-mock-server",
- "litentry-hex-utils",
  "litentry-primitives",
  "log 0.4.20",
  "parity-scale-codec",
@@ -4457,7 +4470,6 @@ dependencies = [
  "lc-credentials-v2",
  "lc-mock-server",
  "lc-service",
- "litentry-hex-utils",
  "litentry-primitives",
  "log 0.4.20",
  "parity-scale-codec",
@@ -4471,7 +4483,7 @@ name = "lc-authentication"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
- "core-primitives",
+ "litentry-primitives",
  "parity-scale-codec",
  "ring 0.16.20",
  "serde 1.0.210",
@@ -4583,7 +4595,6 @@ dependencies = [
  "itp-sgx-temp-dir",
  "lc-dynamic-assertion",
  "lc-mock-server",
- "litentry-hex-utils",
  "litentry-primitives",
  "log 0.4.20",
  "parity-scale-codec",
@@ -4674,8 +4685,6 @@ dependencies = [
  "lc-native-task-sender",
  "lc-omni-account",
  "lc-stf-task-receiver",
- "litentry-hex-utils",
- "litentry-macros",
  "litentry-primitives",
  "log 0.4.20",
  "parity-scale-codec",
@@ -4838,7 +4847,6 @@ dependencies = [
  "lc-stf-task-receiver",
  "lc-stf-task-sender",
  "lc-vc-task-sender",
- "litentry-macros",
  "litentry-primitives",
  "log 0.4.20",
  "pallet-identity-management-tee",
@@ -5017,7 +5025,6 @@ dependencies = [
  "itp-stf-primitives",
  "itp-types",
  "itp-utils",
- "litentry-hex-utils",
  "litentry-primitives",
  "log 0.4.20",
  "pallet-evm",
@@ -5042,23 +5049,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "litentry-hex-utils"
-version = "0.1.0"
-dependencies = [
- "hex",
-]
-
-[[package]]
-name = "litentry-macros"
-version = "0.1.0"
-
-[[package]]
 name = "litentry-primitives"
 version = "0.1.0"
 dependencies = [
  "base64 0.13.1",
  "bitcoin",
- "core-primitives",
+ "heima-primitives",
+ "heima-utils",
  "hex",
  "itp-sgx-crypto",
  "itp-sgx-runtime-primitives",
@@ -5075,16 +5072,6 @@ dependencies = [
  "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "litentry-proc-macros"
-version = "0.1.0"
-dependencies = [
- "cargo_toml",
- "proc-macro2",
- "quote",
- "syn 2.0.82",
 ]
 
 [[package]]
@@ -5128,7 +5115,6 @@ dependencies = [
  "lazy_static",
  "lc-data-providers",
  "lc-mock-server",
- "litentry-macros",
  "litentry-primitives",
  "log 0.4.20",
  "mockall",
@@ -5979,7 +5965,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/polkadot-evm/frontier?branch=bar/polkadot-v0.9.42#a5a5e1e6ec08cd542a6084c310863150fb8841b1"
+source = "git+https://github.com/paritytech/frontier?branch=bar/polkadot-v0.9.42#a5a5e1e6ec08cd542a6084c310863150fb8841b1"
 dependencies = [
  "environmental 1.1.4",
  "evm 0.39.1",

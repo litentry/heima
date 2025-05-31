@@ -26,7 +26,6 @@ use crate::{
 	standalone_block_import::StandaloneBlockImport,
 	tracing::{self, RpcRequesters},
 };
-pub use core_primitives::{AuraId, Block, Hash};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params as AuraParams};
@@ -50,6 +49,7 @@ use fc_rpc::EthBlockDataCacheTask;
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::{StorageOverride, StorageOverrideHandler};
 use futures::StreamExt;
+pub use heima_primitives::{AuraId, Block, Hash};
 use jsonrpsee::RpcModule;
 use parity_scale_codec::{Decode, Encode};
 use polkadot_primitives::OccupiedCoreAssumption;
@@ -565,12 +565,12 @@ pub fn build_import_queue(
 				client,
 				create_inherent_data_providers: move |block: Hash, ()| {
 					let current_para_head = client_for_cidp
-					.header(block)
-					.expect("Header lookup should succeed")
-					.expect("Header passed in as parent should be present in backend.");
-				let current_para_block_head =
-					Some(polkadot_primitives::HeadData(current_para_head.encode()));
-				let client_for_xcm = client_for_cidp.clone();
+						.header(block)
+						.expect("Header lookup should succeed")
+						.expect("Header passed in as parent should be present in backend.");
+					let current_para_block_head =
+						Some(polkadot_primitives::HeadData(current_para_head.encode()));
+					let client_for_xcm = client_for_cidp.clone();
 
 					async move {
 						use sp_runtime::traits::UniqueSaturatedInto;

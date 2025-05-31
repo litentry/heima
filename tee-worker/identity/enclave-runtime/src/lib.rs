@@ -74,7 +74,7 @@ use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{parentchain::ParentchainId, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
-use litentry_macros::if_development_or;
+use litentry_primitives::if_development_or;
 use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;

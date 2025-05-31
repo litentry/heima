@@ -91,10 +91,9 @@ pub mod assertion_test {
 	use itp_test::mock::metrics_ocall_mock::MetricsOCallMock;
 	use itp_types::Assertion;
 	use lc_mock_server::run;
-	use litentry_hex_utils::decode_hex;
 	use litentry_primitives::{
-		AssertionBuildRequest, DynamicContractParams, DynamicParams, Identity, IdentityString,
-		Web3Network,
+		decode_hex, AssertionBuildRequest, DynamicContractParams, DynamicParams, Identity,
+		IdentityString, Web3Network,
 	};
 	use sp_core::{crypto::AccountId32, H160};
 	use std::sync::Arc;

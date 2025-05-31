@@ -50,10 +50,9 @@ use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_omni_account::InMemoryStore as OmniAccountStore;
 use lc_stf_task_receiver::handler::assertion::create_credential_str;
-use litentry_macros::if_development_or;
 use litentry_primitives::{
-	Assertion, AssertionBuildRequest, Identity, IdentityNetworkTuple, MemberAccount,
-	ParentchainBlockNumber, RequestAesKey,
+	if_development_or, Assertion, AssertionBuildRequest, Identity, IdentityNetworkTuple,
+	MemberAccount, ParentchainBlockNumber, RequestAesKey,
 };
 use sp_core::{H160, H256 as Hash};
 use sp_runtime::generic::Era;

@@ -107,9 +107,7 @@ executor-crypto = { path = "executor-crypto" }
 executor-primitives = { path = "executor-primitives" }
 executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
-heima-hex-utils = { package = "litentry-hex-utils", path = "../../common/utils/hex", default-features = false, features = ["std"] }
 heima-identity-verification = { path = "heima/identity-verification" }
-heima-primitives = { package = "core-primitives", path = "../../common/primitives/core", default-features = false, features = ["std"] }
 intent-asset-lock = { path = "intent/asset-lock" }
 intent-token-query = { path = "intent/token-query" }
 native-task-handler = { path = "native-task-handler" }
@@ -124,6 +122,9 @@ rpc-server = { path = "rpc-server" }
 signer-client = { path = "signer-client" }
 solana = { path = "solana" }
 solana-intent-executor = { path = "intent/executors/solana" }
+
+heima-primitives = { path = "../../parachain/primitives", default-features = false, features = ["std"] }
+heima-utils = { path = "../../parachain/utils", default-features = false, features = ["std"] }
 
 [workspace.lints.clippy]
 result_unit_err = "allow"

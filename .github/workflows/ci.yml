@@ -725,8 +725,8 @@ jobs:
       - name: Run all unittests
         working-directory: ./parachain
         run: |
-          echo "::group::core-primitives unittest"
-          cargo test --locked -p core-primitives --lib
+          echo "::group::heima-primitives unittest"
+          cargo test --locked -p heima-primitives --lib
           echo "::endgroup::"
           echo "::group::all pallets unittest"
           cargo test --locked -p pallet-* --lib

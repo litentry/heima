@@ -1522,37 +1522,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
-name = "core-primitives"
-version = "0.1.0"
-dependencies = [
- "base58",
- "base64 0.13.1",
- "chrono",
- "der 0.6.1",
- "frame-support",
- "hex",
- "hex-literal",
- "litentry-hex-utils",
- "litentry-macros",
- "litentry-proc-macros",
- "pallet-evm 6.0.0-dev (git+https://github.com/paritytech/frontier?branch=stable2412)",
- "parity-scale-codec",
- "ring 0.16.20",
- "rustls-webpki 0.102.0-alpha.3",
- "scale-info",
- "serde",
- "serde_json",
- "sp-consensus-aura",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "strum 0.26.3",
- "strum_macros 0.26.4",
- "x509-cert",
-]
-
-[[package]]
 name = "core2"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3392,7 +3361,7 @@ dependencies = [
  "fc-mapping-sync",
  "fc-rpc-core",
  "fc-storage",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "fp-rpc",
  "fp-storage",
  "futures 0.3.31",
@@ -3400,7 +3369,7 @@ dependencies = [
  "jsonrpsee 0.24.9",
  "libsecp256k1",
  "log",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "parity-scale-codec",
  "prometheus",
  "rand 0.8.5",
@@ -3631,25 +3600,6 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
-dependencies = [
- "hex",
- "impl-serde 0.5.0",
- "libsecp256k1",
- "log",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-runtime-interface",
- "staging-xcm",
-]
-
-[[package]]
-name = "fp-account"
-version = "1.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "hex",
@@ -3684,25 +3634,9 @@ source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "parity-scale-codec",
-]
-
-[[package]]
-name = "fp-evm"
-version = "3.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
-dependencies = [
- "environmental",
- "evm",
- "frame-support",
- "num_enum",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-runtime",
 ]
 
 [[package]]
@@ -3728,7 +3662,7 @@ source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
@@ -4563,7 +4497,6 @@ version = "0.9.24"
 dependencies = [
  "async-trait",
  "clap",
- "core-primitives",
  "cumulus-client-cli",
  "cumulus-client-collator",
  "cumulus-client-consensus-aura",
@@ -4592,6 +4525,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "futures 0.3.31",
+ "heima-primitives",
  "heima-runtime",
  "jsonrpsee 0.24.9",
  "log",
@@ -4601,7 +4535,7 @@ dependencies = [
  "moonbeam-rpc-primitives-txpool",
  "moonbeam-rpc-trace",
  "pallet-ethereum",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-omni-account-runtime-api",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
@@ -4654,10 +4588,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "heima-primitives"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "base64 0.13.1",
+ "chrono",
+ "der 0.6.1",
+ "frame-support",
+ "heima-utils",
+ "heima-utils-proc-macros",
+ "hex",
+ "hex-literal",
+ "pallet-evm",
+ "parity-scale-codec",
+ "ring 0.16.20",
+ "rustls-webpki 0.102.0-alpha.3",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
+ "x509-cert",
+]
+
+[[package]]
 name = "heima-runtime"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -4669,7 +4632,7 @@ dependencies = [
  "cumulus-primitives-parachain-inherent",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "fp-rpc",
  "fp-self-contained",
  "frame-benchmarking",
@@ -4680,6 +4643,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "heima-primitives",
  "hex",
  "hex-literal",
  "log",
@@ -4700,7 +4664,7 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-ethereum",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-evm-assertions",
  "pallet-evm-precompile-assets-erc20",
  "pallet-evm-precompile-blake2",
@@ -4771,6 +4735,24 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "xcm-simulator",
+]
+
+[[package]]
+name = "heima-utils"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "heima-utils-proc-macros"
+version = "0.1.0"
+dependencies = [
+ "cargo_toml",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
 ]
 
 [[package]]
@@ -6589,27 +6571,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
-name = "litentry-hex-utils"
-version = "0.1.0"
-dependencies = [
- "hex",
-]
-
-[[package]]
-name = "litentry-macros"
-version = "0.1.0"
-
-[[package]]
-name = "litentry-proc-macros"
-version = "0.1.0"
-dependencies = [
- "cargo_toml",
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
-
-[[package]]
 name = "litep2p"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7079,9 +7040,9 @@ dependencies = [
  "evm-gasometer",
  "evm-runtime",
  "evm-tracing-events",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "moonbeam-primitives-ext",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -8107,10 +8068,10 @@ dependencies = [
 name = "pallet-bitacross"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8397,12 +8358,12 @@ dependencies = [
  "evm",
  "fp-consensus",
  "fp-ethereum",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "fp-rpc",
  "fp-storage",
  "frame-support",
  "frame-system",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "parity-scale-codec",
  "scale-info",
  "sp-io",
@@ -8413,35 +8374,12 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
-dependencies = [
- "environmental",
- "evm",
- "fp-account 1.0.0-dev (git+https://github.com/paritytech/frontier?branch=stable2412)",
- "fp-evm 3.0.0-dev (git+https://github.com/paritytech/frontier?branch=stable2412)",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hash-db",
- "hex-literal",
- "impl-trait-for-tuples",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "pallet-evm"
-version = "6.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "environmental",
  "evm",
- "fp-account 1.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-account",
+ "fp-evm",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -8460,13 +8398,13 @@ dependencies = [
 name = "pallet-evm-address"
 version = "0.1.0"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
  "pallet-balances",
  "pallet-ethereum",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -8496,7 +8434,7 @@ name = "pallet-evm-precompile-aiusd-convertor"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -8504,7 +8442,7 @@ dependencies = [
  "pallet-aiusd-convertor",
  "pallet-assets",
  "pallet-balances",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8522,12 +8460,12 @@ name = "pallet-evm-precompile-assets-erc20"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "pallet-assets",
  "pallet-balances",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8545,7 +8483,7 @@ name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
 ]
 
 [[package]]
@@ -8553,7 +8491,7 @@ name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "sp-core",
  "substrate-bn",
 ]
@@ -8563,13 +8501,13 @@ name = "pallet-evm-precompile-bridge-transfer"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-bridge-transfer",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8586,7 +8524,7 @@ name = "pallet-evm-precompile-curator"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -8594,7 +8532,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collab-ai-common",
  "pallet-curator",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8612,9 +8550,9 @@ name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "parity-scale-codec",
  "sp-runtime",
 ]
@@ -8625,7 +8563,7 @@ version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "ed25519-dalek",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
 ]
 
 [[package]]
@@ -8633,14 +8571,14 @@ name = "pallet-evm-precompile-guardian"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-balances",
  "pallet-collab-ai-common",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-guardian",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8659,13 +8597,13 @@ name = "pallet-evm-precompile-investing-pool"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-collab-ai-common",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-investing-pool",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8683,7 +8621,7 @@ name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "num",
 ]
 
@@ -8691,14 +8629,14 @@ dependencies = [
 name = "pallet-evm-precompile-omni-bridge"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "hex-literal",
  "libsecp256k1",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-omni-bridge",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8716,11 +8654,11 @@ name = "pallet-evm-precompile-parachain-staking"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-parachain-staking",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8739,13 +8677,13 @@ name = "pallet-evm-precompile-pool-proposal"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-collab-ai-common",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-pool-proposal",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8762,13 +8700,13 @@ dependencies = [
 name = "pallet-evm-precompile-score-staking"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-parachain-staking",
  "pallet-score-staking",
  "pallet-timestamp",
@@ -8788,7 +8726,7 @@ name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "tiny-keccak",
 ]
 
@@ -8797,7 +8735,7 @@ name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
 source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "ripemd",
  "sp-io",
 ]
@@ -8807,12 +8745,12 @@ name = "pallet-evm-precompile-vesting"
 version = "0.1.0"
 dependencies = [
  "derive_more 0.99.20",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-timestamp",
  "pallet-vesting",
  "parity-scale-codec",
@@ -8952,10 +8890,10 @@ dependencies = [
 name = "pallet-identity-management"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-group",
  "pallet-teebag",
@@ -9210,9 +9148,9 @@ dependencies = [
 name = "pallet-omni-account"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-teebag",
  "pallet-timestamp",
@@ -9230,7 +9168,7 @@ dependencies = [
 name = "pallet-omni-account-runtime-api"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
+ "heima-primitives",
  "pallet-omni-account",
  "parity-scale-codec",
  "sp-api",
@@ -9240,9 +9178,9 @@ dependencies = [
 name = "pallet-omni-bridge"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "hex",
  "pallet-assets",
  "pallet-balances",
@@ -9260,10 +9198,10 @@ dependencies = [
 name = "pallet-parachain-staking"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "log",
  "pallet-authorship",
  "pallet-balances",
@@ -9427,10 +9365,10 @@ dependencies = [
 name = "pallet-score-staking"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "num-integer",
  "pallet-balances",
  "pallet-parachain-staking",
@@ -9576,12 +9514,12 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.1",
  "chrono",
- "core-primitives",
  "der 0.6.1",
  "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "hex",
  "hex-literal",
  "log",
@@ -9720,10 +9658,10 @@ dependencies = [
 name = "pallet-vc-management"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-group",
  "pallet-teebag",
@@ -9968,7 +9906,6 @@ checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
 name = "paseo-runtime"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -9980,7 +9917,7 @@ dependencies = [
  "cumulus-primitives-parachain-inherent",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "fp-rpc",
  "fp-self-contained",
  "frame-benchmarking",
@@ -9991,6 +9928,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "heima-primitives",
  "hex-literal",
  "log",
  "moonbeam-evm-tracer",
@@ -10015,7 +9953,7 @@ dependencies = [
  "pallet-curator",
  "pallet-democracy",
  "pallet-ethereum",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "pallet-evm-assertions",
  "pallet-evm-precompile-aiusd-convertor",
  "pallet-evm-precompile-assets-erc20",
@@ -11563,7 +11501,7 @@ dependencies = [
  "derive_more 1.0.0",
  "environmental",
  "evm",
- "fp-evm 3.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "fp-evm",
  "frame-support",
  "frame-system",
  "hex",
@@ -11571,7 +11509,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "num_enum",
- "pallet-evm 6.0.0-dev (git+https://github.com/polkadot-evm/frontier?branch=stable2412)",
+ "pallet-evm",
  "parity-scale-codec",
  "precompile-utils-macro",
  "scale-info",
@@ -12651,12 +12589,12 @@ dependencies = [
 name = "runtime-common"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
  "cumulus-test-relay-sproof-builder",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "log",
  "pallet-asset-manager",
  "pallet-assets",

@@ -265,9 +265,8 @@ pallet-identity-management-tee = { path = "common/litentry/pallets/identity-mana
 lc-teebag-storage = { path = "common/litentry/core/teebag-storage", default-features = false }
 lc-parachain-extrinsic-task-sender = { path = "common/litentry/core/parachain-extrinsic-task/sender", default-features = false }
 lc-parachain-extrinsic-task-receiver = { path = "common/litentry/core/parachain-extrinsic-task/receiver", default-features = false }
-litentry-hex-utils = { path = "../common/utils/hex", default-features = false }
-litentry-macros = { path = "../common/primitives/core/macros" }
-parentchain-primitives = { package = "core-primitives", path = "../common/primitives/core", default-features = false }
+heima-utils = { path = "../parachain/utils", default-features = false }
+heima-primitives = { path = "../parachain/primitives", default-features = false }
 
 # identity
 lc-assertion-build = { path = "identity/litentry/core/assertion-build", default-features = false }
@@ -317,8 +316,8 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 
-[patch."https://github.com/paritytech/frontier"]
-pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "bar/polkadot-v0.9.42" }
+[patch."https://github.com/polkadot-evm/frontier"]
+pallet-evm = { git = "https://github.com/paritytech/frontier", branch = "bar/polkadot-v0.9.42" }
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_alloc = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }

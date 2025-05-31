@@ -17,7 +17,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
-use core_primitives::omni::ChainType;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -28,6 +27,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
+use heima_primitives::omni::ChainType;
 use sp_core::H256;
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::AccountIdConversion;

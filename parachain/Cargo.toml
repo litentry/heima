@@ -39,9 +39,12 @@ members = [
     'precompiles/parachain-staking',
     'precompiles/score-staking',
     'precompiles/vesting',
+    'primitives',
     'runtime/heima',
     'runtime/paseo',
     'runtime/common',
+    'utils',
+    'utils/proc-macros',
 ]
 exclude = []
 
@@ -105,6 +108,7 @@ num_enum = { version = "0.7.3", default-features = false }
 num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
+ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
 webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
 
 # cumulus client
@@ -268,10 +272,9 @@ cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/pol
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", features = ["metadata-hash"] }
 
 # local
-core-primitives = { path = "../common/primitives/core", default-features = false }
-heima-macros = { path = "../common/primitives/core/macros" }
-heima-proc-macros = { path = "../common/primitives/core/proc-macros" }
-heima-hex-utils = { path = "../common/utils/hex", default-features = false }
+heima-primitives = { path = "primitives", default-features = false }
+heima-utils = { path = "utils", default-features = false }
+heima-utils-proc-macros = { path = "utils/proc-macros" }
 runtime-common = { path = "runtime/common", default-features = false }
 heima-runtime = { path = "runtime/heima", default-features = false }
 paseo-runtime = { path = "runtime/paseo", default-features = false }

@@ -27,7 +27,7 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 pub mod jwt;
 
 use codec::{Decode, Encode};
-use parentchain_primitives::BlockNumber;
+use litentry_primitives::BlockNumber;
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {

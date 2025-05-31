@@ -84,8 +84,7 @@ mod tests {
 	use lc_common::web3_nft::{NftAddress, NftName};
 	use lc_credentials_v2::assertion_logic::{AssertionLogic, Op};
 	use lc_mock_server::run;
-	use litentry_hex_utils::decode_hex;
-	use litentry_primitives::{Identity, IdentityNetworkTuple};
+	use litentry_primitives::{decode_hex, Identity, IdentityNetworkTuple};
 
 	fn crate_assertion_build_request(
 		nft_type: Web3NftType,

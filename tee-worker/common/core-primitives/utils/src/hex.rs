@@ -22,7 +22,7 @@
 use crate::error::{Error, Result};
 use alloc::string::String;
 use codec::{Decode, Encode};
-use litentry_hex_utils::{decode_hex, hex_encode};
+use heima_utils::{decode_hex, hex_encode};
 
 /// Trait to encode a given value to a hex string, prefixed with "0x".
 pub trait ToHexPrefixed {

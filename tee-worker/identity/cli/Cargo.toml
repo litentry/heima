@@ -48,7 +48,6 @@ itp-types = { workspace = true, features = ["std"] }
 itp-utils = { workspace = true, features = ["std"] }
 
 frame-metadata = "15.0.0"
-litentry-hex-utils = { workspace = true }
 litentry-primitives = { workspace = true, features = ["std"] }
 scale-value = "0.6.0"
 
@@ -61,6 +60,7 @@ offchain-worker = []
 development = [
     "ita-sgx-runtime/development",
     "ita-stf/development",
+    "litentry-primitives/development",
 ]
 # dcap feature flag is not used in this crate, but for easier build purposes only it present here as well
 dcap = []

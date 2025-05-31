@@ -17,8 +17,8 @@
 #![allow(dead_code, unused_imports)]
 
 use crate::{mock::*, Error, Event, PoolState, RoundInfo, RoundSetting, ScorePayment, Scores};
-use core_primitives::{Identity, DAYS, YEARS};
 use frame_support::{assert_err, assert_ok};
+use heima_primitives::{Identity, DAYS, YEARS};
 use pallet_parachain_staking::{Delegator, OnAllDelegationRemoved};
 use sp_runtime::Perbill;
 

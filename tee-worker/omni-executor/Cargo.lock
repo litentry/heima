@@ -2603,37 +2603,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
-name = "core-primitives"
-version = "0.1.0"
-dependencies = [
- "base58",
- "base64 0.13.1",
- "chrono",
- "der 0.6.1",
- "frame-support 39.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
- "hex",
- "hex-literal",
- "litentry-hex-utils",
- "litentry-macros",
- "litentry-proc-macros",
- "pallet-evm",
- "parity-scale-codec",
- "ring 0.16.20",
- "rustls-webpki 0.102.0-alpha.3",
- "scale-info",
- "serde",
- "serde_json",
- "sp-consensus-aura",
- "sp-core 35.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
- "sp-io 39.0.1 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
- "sp-runtime 40.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
- "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
- "strum 0.26.3",
- "strum_macros 0.26.4",
- "x509-cert",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2677,12 +2646,12 @@ dependencies = [
  "base58",
  "binance-api",
  "bincode",
- "core-primitives",
  "ethereum-rpc",
  "executor-core",
  "executor-primitives",
  "executor-storage",
  "heima-authentication",
+ "heima-primitives",
  "hex",
  "intent-asset-lock",
  "intent-token-query",
@@ -3994,8 +3963,8 @@ dependencies = [
  "base58",
  "base64 0.22.1",
  "bitcoin",
- "core-primitives",
  "executor-crypto",
+ "heima-primitives",
  "hex",
  "parity-scale-codec",
  "scale-info",
@@ -4254,7 +4223,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "hex",
  "impl-serde 0.5.0",
@@ -4273,7 +4242,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "environmental",
  "evm",
@@ -5037,6 +5006,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "heima-primitives"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "base64 0.13.1",
+ "chrono",
+ "der 0.6.1",
+ "frame-support 39.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
+ "heima-utils",
+ "heima-utils-proc-macros",
+ "hex",
+ "hex-literal",
+ "pallet-evm",
+ "parity-scale-codec",
+ "ring 0.16.20",
+ "rustls-webpki 0.102.0-alpha.3",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-consensus-aura",
+ "sp-core 35.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
+ "sp-io 39.0.1 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
+ "sp-runtime 40.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
+ "x509-cert",
+]
+
+[[package]]
+name = "heima-utils"
+version = "0.1.0"
+dependencies = [
+ "hex",
+]
+
+[[package]]
+name = "heima-utils-proc-macros"
+version = "0.1.0"
+dependencies = [
+ "cargo_toml",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5629,10 +5645,10 @@ dependencies = [
 name = "intent-asset-lock"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "executor-core",
  "executor-primitives",
  "executor-storage",
+ "heima-primitives",
  "parity-scale-codec",
  "ruint",
  "rust_decimal",
@@ -6232,27 +6248,6 @@ name = "litemap"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
-
-[[package]]
-name = "litentry-hex-utils"
-version = "0.1.0"
-dependencies = [
- "hex",
-]
-
-[[package]]
-name = "litentry-macros"
-version = "0.1.0"
-
-[[package]]
-name = "litentry-proc-macros"
-version = "0.1.0"
-dependencies = [
- "cargo_toml",
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
 
 [[package]]
 name = "lock_api"
@@ -7006,7 +7001,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
 dependencies = [
  "environmental",
  "evm",
@@ -8394,7 +8389,6 @@ name = "rpc-server"
 version = "0.1.0"
 dependencies = [
  "base58",
- "core-primitives",
  "ethers",
  "executor-core",
  "executor-crypto",
@@ -8402,9 +8396,9 @@ dependencies = [
  "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
+ "heima-primitives",
  "hex",
  "jsonrpsee",
- "litentry-hex-utils",
  "native-task-handler",
  "oauth-providers",
  "parentchain-rpc-client",

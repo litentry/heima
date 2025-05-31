@@ -1,0 +1,14 @@
+[package]
+authors = ['Trust Computing GmbH <info@litentry.com>']
+name = "heima-utils-proc-macros"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+cargo_toml = "0.19"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full", "visit-mut"] }

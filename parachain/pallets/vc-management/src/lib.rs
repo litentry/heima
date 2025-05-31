@@ -47,12 +47,12 @@ pub type VCIndex = H256;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use core_primitives::{
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
+	use heima_primitives::{
 		Assertion, ErrorDetail, Identity, SchemaIndex, ShardIdentifier, VCMPError,
 		SCHEMA_CONTENT_LEN, SCHEMA_ID_LEN,
 	};
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);

@@ -31,7 +31,7 @@ use sp_core::{ed25519::Public as Ed25519Public, H256};
 use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{prelude::*, str};
 
-use core_primitives::*;
+use heima_primitives::*;
 
 pub use pallet::*;
 
