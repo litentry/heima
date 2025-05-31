@@ -5,7 +5,6 @@ name = 'heima-runtime'
 version = '0.1.0'
 
 [dependencies]
-getrandom = { version = "0.2.15", default-features = false, features = ["js"] }
 hex = { workspace = true, optional = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
