@@ -29,6 +29,7 @@ command = "heima-node"
 args = [
   "--no-hardware-benchmarks",
   "--force-authoring",
+  "--pool-type=fork-aware",
   "--enable-evm-rpc",
   "--state-pruning=archive",
   "-l=parachain=debug,txpool=trace"
