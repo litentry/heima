@@ -185,7 +185,7 @@ jobs:
       - name: Parachain fmt check
         working-directory: ./parachain
         run: |
-          cargo fmt-- --check
+          cargo fmt -- --check
           taplo fmt --check
 
       - name: tee-worker fmt check
