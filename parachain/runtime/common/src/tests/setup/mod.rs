@@ -43,7 +43,7 @@ pub const PARA_B_USER_INITIAL_BALANCE: u128 = 600_000_000_000 * UNIT;
 /// create a transaction info struct from weight. Handy to avoid building the whole struct.
 pub fn info_from_weight(w: Weight) -> DispatchInfo {
 	// pays_fee: Pays::Yes -- class: DispatchClass::Normal
-	DispatchInfo { weight: w, ..Default::default() }
+	DispatchInfo { call_weight: w, ..Default::default() }
 }
 
 pub fn post_info_from_weight(w: Weight) -> PostDispatchInfo {

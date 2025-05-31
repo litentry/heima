@@ -189,6 +189,7 @@ fn generate_genesis(
 					)
 				})
 				.collect(),
+			non_authority_keys: vec![],
 		},
 		democracy: Default::default(),
 		council: Default::default(),

@@ -177,6 +177,7 @@ parameter_types! {
 }
 
 impl pallet_evm::Config for Test {
+	type AccountProvider = pallet_evm::FrameSystemAccountProvider<Self>;
 	type FeeCalculator = ();
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
@@ -197,7 +198,7 @@ impl pallet_evm::Config for Test {
 	type OnCreate = ();
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
-	type SuicideQuickClearLimit = ConstU32<0>;
+	type GasLimitStorageGrowthRatio = ConstU64<4>;
 }
 
 parameter_types! {

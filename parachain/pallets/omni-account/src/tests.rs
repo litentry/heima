@@ -17,8 +17,7 @@
 use crate::{mock::*, AccountStore, MemberAccountHash, *};
 use core_primitives::{CallEthereum, Identity};
 use frame_support::{assert_noop, assert_ok};
-use sp_core::hashing::blake2_256;
-use sp_core::H160;
+use sp_core::{hashing::blake2_256, H160};
 use sp_runtime::{traits::BadOrigin, ModuleError};
 use sp_std::vec;
 

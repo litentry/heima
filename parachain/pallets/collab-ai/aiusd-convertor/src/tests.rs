@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::mock::*;
-use crate::*;
+use crate::{mock::*, *};
 use frame_support::{assert_err, assert_ok};
 use sp_runtime::{AccountId32, TokenError};
 

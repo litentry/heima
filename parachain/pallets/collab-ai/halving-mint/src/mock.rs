@@ -15,10 +15,15 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_halving_mint, Config, Instance1, OnTokenMinted};
-use frame_support::pallet_prelude::*;
-use frame_support::traits::tokens::{fungibles::Mutate, Preservation};
 use frame_support::{
-	construct_runtime, derive_impl, parameter_types, traits::AsEnsureOriginWithArg, PalletId,
+	construct_runtime, derive_impl,
+	pallet_prelude::*,
+	parameter_types,
+	traits::{
+		tokens::{fungibles::Mutate, Preservation},
+		AsEnsureOriginWithArg,
+	},
+	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned};
 use sp_core::{ConstU32, ConstU64};

@@ -47,8 +47,7 @@ use precompile_utils::{
 };
 
 use sp_core::{ConstU32, ConstU64, H160};
-use sp_runtime::traits::IdentityLookup;
-use sp_runtime::BuildStorage;
+use sp_runtime::{traits::IdentityLookup, BuildStorage};
 
 pub type AccountId = MockAccount;
 pub type AssetId = u128;
@@ -119,6 +118,7 @@ parameter_types! {
 pub type PrecompileCall = Erc20AssetsPrecompileSetCall<Runtime, ()>;
 
 impl pallet_evm::Config for Runtime {
+	type AccountProvider = pallet_evm::FrameSystemAccountProvider<Self>;
 	type FeeCalculator = ();
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
@@ -139,7 +139,7 @@ impl pallet_evm::Config for Runtime {
 	type OnCreate = ();
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
-	type SuicideQuickClearLimit = ConstU32<0>;
+	type GasLimitStorageGrowthRatio = ConstU64<4>;
 }
 
 // These parameters dont matter much as this will only be called by root with the forced arguments
