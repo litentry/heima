@@ -3514,7 +3514,7 @@ dependencies = [
 [[package]]
 name = "ethereum"
 version = "0.15.0"
-source = "git+https://github.com/rust-ethereum/ethereum.git?rev=3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba#3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba"
+source = "git+https://github.com/rust-ethereum/ethereum?rev=3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba#3be0d8fd4c2ad1ba216b69ef65b9382612efc8ba"
 dependencies = [
  "bytes",
  "ethereum-types 0.15.1",
@@ -3869,7 +3869,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "auto_impl",
  "environmental",
@@ -3889,7 +3889,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "parity-scale-codec",
  "primitive-types 0.13.1",
@@ -3900,7 +3900,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "environmental",
  "evm-core",
@@ -3911,7 +3911,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.42.0"
-source = "git+https://github.com/litentry/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
+source = "git+https://github.com/rust-ethereum/evm?rev=e81732d6bb47e3d3d68d233e43919c4522598361#e81732d6bb47e3d3d68d233e43919c4522598361"
 dependencies = [
  "auto_impl",
  "environmental",

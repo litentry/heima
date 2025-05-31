@@ -82,7 +82,6 @@ der = { version = "0.6.0", default-features = false }
 derive_more = { version = "0.99" }
 env_logger = { version = "0.10.2" }
 environmental = { version = "1.1.2", default-features = false }
-evm = { version = "0.41.1", default-features = false }
 impl-trait-for-tuples = { version = "0.2.2" }
 log = { version = "0.4", default-features = false }
 proc-macro2 = { version = "1" }
@@ -110,6 +109,8 @@ rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.1.0", default-features = false, features = ["alloc"] }
 ring = { version = "0.16.20", default-features = false, features = ["alloc"] }
 webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
+# to be compatible with astar-frontier
+evm = { git = "https://github.com/rust-ethereum/evm", rev = "e81732d", default-features = false }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
@@ -124,38 +125,38 @@ cumulus-relay-chain-interface = { git = "https://github.com/paritytech/polkadot-
 cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 
 # evm-tracing, use the astar version to use "standard" substrate frame to avoid any conflicts
-moonbeam-primitives-ext = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "883e0d94", default-features = false }
-moonbeam-rpc-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "883e0d94" }
-moonbeam-rpc-primitives-debug = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "883e0d94", default-features = false }
-moonbeam-rpc-primitives-txpool = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "883e0d94", default-features = false }
-moonbeam-rpc-trace = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "883e0d94", default-features = false }
-moonbeam-evm-tracer = { git = "https://github.com/litentry/moonbeam-vendor-rpc", rev = "883e0d94", default-features = false }
+moonbeam-primitives-ext = { git = "https://github.com/AstarNetwork/Astar", default-features = false }
+moonbeam-rpc-debug = { git = "https://github.com/AstarNetwork/Astar" }
+moonbeam-rpc-primitives-debug = { git = "https://github.com/AstarNetwork/Astar", default-features = false }
+moonbeam-rpc-primitives-txpool = { git = "https://github.com/AstarNetwork/Astar", default-features = false }
+moonbeam-rpc-trace = { git = "https://github.com/AstarNetwork/Astar", default-features = false }
+moonbeam-evm-tracer = { git = "https://github.com/AstarNetwork/Astar", default-features = false }
 
 # polkadot client
 polkadot-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
 
 # frontier
-fc-api = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fc-consensus = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fc-db = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fc-mapping-sync = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fc-rpc = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false, features = ["rpc-binary-search-estimate", "txpool"] }
-fc-rpc-core = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fc-storage = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fp-rpc = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fp-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fp-self-contained = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false, features = ["serde"] }
-pallet-ethereum = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false, features = ["forbid-evm-reentrancy"] }
-pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false, features = ["forbid-evm-reentrancy"] }
-pallet-evm-precompile-blake2 = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-bn128 = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-dispatch = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-ed25519 = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-modexp = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-pallet-evm-precompile-simple = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-precompile-utils = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
+fc-api = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fc-consensus = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fc-db = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fc-mapping-sync = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fc-rpc = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false, features = ["rpc-binary-search-estimate", "txpool"] }
+fc-rpc-core = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fc-storage = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fp-rpc = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fp-evm = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+fp-self-contained = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false, features = ["serde"] }
+pallet-ethereum = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false, features = ["forbid-evm-reentrancy"] }
+pallet-evm = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false, features = ["forbid-evm-reentrancy"] }
+pallet-evm-precompile-blake2 = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+pallet-evm-precompile-bn128 = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+pallet-evm-precompile-dispatch = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+pallet-evm-precompile-ed25519 = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+pallet-evm-precompile-modexp = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+pallet-evm-precompile-sha3fips = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+pallet-evm-precompile-simple = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
+precompile-utils = { git = "https://github.com/AstarNetwork/frontier", branch = "stable2412-txpoolwrapper", default-features = false }
 
 # substrate client
 sc-basic-authorship = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412" }
@@ -321,9 +322,3 @@ pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-fea
 
 [patch.crates-io]
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }
-
-[patch."https://github.com/rust-ethereum/evm"]
-evm = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
-evm-core = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
-evm-gasometer = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
-evm-runtime = { git = "https://github.com/litentry/evm", rev = "e81732d6bb47e3d3d68d233e43919c4522598361" }
