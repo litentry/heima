@@ -306,13 +306,13 @@ pallet-evm-precompile-pool-proposal = { path = "precompiles/collab-ai/pool-propo
 pallet-evm-precompile-investing-pool = { path = "precompiles/collab-ai/investing-pool", default-features = false }
 
 pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = false }
-pallet-halving-mint = { path = "pallets/halving-mint", default-features = false }
 
-# CollabAI local
+# CollabAI local - TODO: will remove unused deps later
 pallet-aiusd-convertor = { path = "pallets/collab-ai/aiusd-convertor", default-features = false }
 pallet-collab-ai-common = { path = "pallets/collab-ai/common", default-features = false }
 pallet-curator = { path = "pallets/collab-ai/curator", default-features = false }
 pallet-guardian = { path = "pallets/collab-ai/guardian", default-features = false }
+pallet-halving-mint = { path = "pallets/collab-ai/halving-mint", default-features = false }
 pallet-pool-proposal = { path = "pallets/collab-ai/pool-proposal", default-features = false }
 pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-features = false }
 
