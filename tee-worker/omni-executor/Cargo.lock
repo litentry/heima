@@ -4223,7 +4223,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "hex",
  "impl-serde 0.5.0",
@@ -4242,7 +4242,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "environmental",
  "evm",
@@ -7001,7 +7001,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/polkadot-evm/frontier?branch=stable2412#4dddde8766dc23337ade83fbd5836dd9e4d7326d"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "environmental",
  "evm",

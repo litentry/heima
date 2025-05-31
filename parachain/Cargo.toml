@@ -191,7 +191,7 @@ sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable
 sp-debug-derive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 sp-genesis-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false, features = ["improved_panic_error_reporting"] }
+sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 sp-keystore = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2412", default-features = false }

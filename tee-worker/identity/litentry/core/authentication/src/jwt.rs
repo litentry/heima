@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AuthOptions, BlockNumber};
+use crate::{AuthOptions, ParentchainBlockNumber};
 use alloc::{
 	string::{String, ToString},
 	vec::Vec,
@@ -48,7 +48,7 @@ pub struct Header {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Payload {
 	sub: String,
-	pub exp: BlockNumber,
+	pub exp: ParentchainBlockNumber,
 }
 
 impl Payload {
@@ -59,11 +59,11 @@ impl Payload {
 
 pub struct Validation {
 	pub sub: String,
-	pub current_block: BlockNumber,
+	pub current_block: ParentchainBlockNumber,
 }
 
 impl Validation {
-	pub fn new(sub: String, current_block: BlockNumber) -> Self {
+	pub fn new(sub: String, current_block: ParentchainBlockNumber) -> Self {
 		Self { sub, current_block }
 	}
 

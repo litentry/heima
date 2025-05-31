@@ -153,6 +153,7 @@ lc-parachain-extrinsic-task-receiver = { path = "../../common/litentry/core/para
 lc-parachain-extrinsic-task-sender = { path = "../../common/litentry/core/parachain-extrinsic-task/sender", default-features = false, features = ["sgx"] }
 lc-stf-task-receiver = { path = "../litentry/core/stf-task/receiver", default-features = false, features = ["sgx"] }
 lc-vc-task-receiver = { path = "../litentry/core/vc-task/receiver", default-features = false, features = ["sgx"] }
+
 litentry-primitives = { path = "../../common/litentry/primitives", default-features = false, features = ["sgx"] }
 pallet-identity-management-tee = { path = "../../common/litentry/pallets/identity-management", default-features = false }
 
