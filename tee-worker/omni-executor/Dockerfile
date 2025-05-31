@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y clang
 
 ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
 COPY tee-worker/omni-executor $SRC_DIR
-COPY common /home/ubuntu/common
+COPY parachain/primitives /home/ubuntu/parachain/primitives
+COPY parachain/utils /home/ubuntu/parachain/utils
 WORKDIR $SRC_DIR
 
 RUN cargo build --release
