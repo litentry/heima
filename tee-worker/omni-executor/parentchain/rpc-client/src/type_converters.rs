@@ -2,7 +2,7 @@ use executor_primitives::{
 	AccountId, Hash, Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountPermission,
 };
 use parentchain_api_interface::runtime_types::{
-	core_primitives::{
+	heima_primitives::{
 		identity::Identity as SubxtIdentity,
 		omni::account::{
 			MemberAccount as SubxtMemberAccount, OmniAccountAuthType as SubxtOmniAccountAuthType,

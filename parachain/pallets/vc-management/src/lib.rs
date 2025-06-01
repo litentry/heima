@@ -148,7 +148,7 @@ pub mod pallet {
 			index: SchemaIndex,
 		},
 		// event errors caused by processing in TEE
-		// copied from core_primitives::VCMPError, we use events instead of pallet::errors,
+		// copied from heima_primitives::VCMPError, we use events instead of pallet::errors,
 		// see https://github.com/litentry/heima/issues/1275
 		RequestVCFailed {
 			identity: Option<Identity>,

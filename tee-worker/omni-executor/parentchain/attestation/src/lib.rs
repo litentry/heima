@@ -1,6 +1,6 @@
 use executor_primitives::MrEnclave;
 use parentchain_api_interface::{
-	runtime_types::core_primitives::teebag::types::DcapProvider,
+	runtime_types::heima_primitives::teebag::types::DcapProvider,
 	teebag::calls::types::register_enclave::{AttestationType, WorkerMode, WorkerType},
 };
 use parentchain_rpc_client::{

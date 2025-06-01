@@ -143,7 +143,7 @@ pub mod pallet {
 			req_ext_hash: H256,
 		},
 		// event errors caused by processing in TEE
-		// copied from core_primitives::IMPError, we use events instead of pallet::errors,
+		// copied from heima_primitives::IMPError, we use events instead of pallet::errors,
 		// see https://github.com/litentry/heima/issues/1275
 		//
 		// why is the `prime_identity` in the error event an Option?
