@@ -19,7 +19,6 @@ members = [
     "common/litentry/core/parachain-extrinsic-task/sender",
     "common/litentry/core/parachain-extrinsic-task/receiver",
     "common/litentry/core/teebag-storage",
-    "common/litentry/macros",
     "common/litentry/pallets/*",
     "common/litentry/primitives",
 
@@ -259,7 +258,6 @@ itp-test = { path = "common/core-primitives/test", default-features = false }
 
 # litentry
 litentry-primitives = { path = "common/litentry/primitives", default-features = false }
-litentry-worker-macros = { path = "common/litentry/macros" }
 pallet-parentchain = { path = "common/litentry/pallets/parentchain", default-features = false }
 pallet-identity-management-tee = { path = "common/litentry/pallets/identity-management", default-features = false }
 lc-teebag-storage = { path = "common/litentry/core/teebag-storage", default-features = false }

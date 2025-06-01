@@ -5231,14 +5231,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "litentry-worker-macros"
-version = "0.1.0"
-dependencies = [
- "cargo_toml",
- "quote",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
