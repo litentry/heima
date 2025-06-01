@@ -28,6 +28,7 @@ pub use heima_primitives::{
 	identity::Address32, omni::*, teebag::DcapQuote, AccountId, BlockNumber, ChainAsset, Hash,
 	Hashable, Identity, IntentId, MrEnclave, Nonce, ShardIdentifier, Web2IdentityType,
 };
+use parity_scale_codec::{Decode, Encode};
 use std::fmt::Debug;
 
 pub trait GetEventId<Id> {
@@ -71,4 +72,9 @@ impl GetEventId<EventId> for BlockEvent {
 	fn get_event_id(&self) -> EventId {
 		self.id.clone()
 	}
+}
+
+#[derive(Encode, Decode)]
+pub struct PumpxAccountProfile {
+	pub wallet_exported: bool,
 }
