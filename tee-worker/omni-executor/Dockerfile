@@ -2,17 +2,15 @@
 
 ### Builder Stage - Without Gramine
 ##################################################
-# rust:1.83 is a Debian GNU/Linux 12 (bookworm) image
-FROM rust:1.83-bookworm AS plain-builder
+FROM rust:1.87-bookworm AS plain-builder
 
 RUN apt-get update && apt-get install -y clang
 
+ENV HOME=/home/ubuntu
+ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 
-ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
-COPY tee-worker/omni-executor $SRC_DIR
-COPY parachain/primitives /home/ubuntu/parachain/primitives
-COPY parachain/utils /home/ubuntu/parachain/utils
-WORKDIR $SRC_DIR
+COPY . $HOME
+WORKDIR $BUILD_DIR
 
 RUN cargo build --release
 
