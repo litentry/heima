@@ -17,6 +17,7 @@ heima-primitives = { workspace = true }
 
 
 [dev-dependencies]
+rust_decimal = { workspace = true }
 tempfile = { workspace = true }
 
 [lints]

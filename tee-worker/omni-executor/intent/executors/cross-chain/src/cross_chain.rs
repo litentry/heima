@@ -79,6 +79,7 @@ impl<
 
 		let amount_to_lock = AmountType::from_str(
 			&Self::calculate_amount_decimal(from_amount_decimal, from_asset_binance_coin_name)?
+				.normalize()
 				.to_string(),
 		)
 		.unwrap();

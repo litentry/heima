@@ -28,8 +28,7 @@ use crate::{
 };
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite};
 use frame_support::traits::{Currency, Get, OnFinalize, OnInitialize, ReservableCurrency};
-use frame_system::pallet_prelude::*;
-use frame_system::RawOrigin;
+use frame_system::{pallet_prelude::*, RawOrigin};
 use pallet_authorship::EventHandler;
 use sp_runtime::{Perbill, Percent, Saturating};
 use sp_std::{collections::btree_map::BTreeMap, vec, vec::Vec};
