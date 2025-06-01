@@ -15,7 +15,7 @@ export function isWeb3(identity: Identity): boolean {
 /**
  * Converts the given identity to hash.
  *
- * @reference https://github.com/litentry/heima/blob/dev/common/primitives/core/src/identity.rs#L547
+ * @reference https://github.com/litentry/heima/blob/dev/parachain/primitives/src/identity.rs#L547
  *
  * @param identity - The identity object to convert
  * @returns A hash hex string of the identity

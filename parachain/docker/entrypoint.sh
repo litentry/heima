@@ -22,7 +22,7 @@ check(){
 }
 
 init(){
-    export PARA_ID=$(grep -i "${CHAIN}_para_id" ${REPO_DIR}/common/primitives/core/src/lib.rs | sed 's/.* = //;s/\;.*//')
+    export PARA_ID=$(grep -i "${CHAIN}_para_id" ${REPO_DIR}/parachain/primitives/src/lib.rs | sed 's/.* = //;s/\;.*//')
     export PARA_CHAIN_SPEC=${CHAIN}-dev
     export COLLATOR_WS_PORT=${CollatorWSPort:-9944}
 }

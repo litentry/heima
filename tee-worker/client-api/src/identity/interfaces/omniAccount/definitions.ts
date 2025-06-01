@@ -6,7 +6,7 @@ export default {
   types: {
     /**
      * AccountStore
-     * @see common/primitives/core/src/omni_account.rs
+     * @see parachain/primitives/src/omni_account.rs
      */
     MemberAccount: {
       _enum: {
