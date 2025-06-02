@@ -16,7 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core_primitives::Identity;
 use frame_support::{
 	dispatch::{DispatchResult, DispatchResultWithPostInfo},
 	ensure,
@@ -24,6 +23,7 @@ use frame_support::{
 	traits::Get,
 };
 use frame_system::pallet_prelude::*;
+use heima_primitives::Identity;
 
 pub use pallet::*;
 

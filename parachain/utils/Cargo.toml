@@ -1,0 +1,19 @@
+[package]
+authors = ['Trust Computing GmbH <info@litentry.com>']
+name = "heima-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hex = { workspace = true }
+
+[dev-dependencies]
+parity-scale-codec = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "parity-scale-codec/std",
+    "hex/std",
+]
+development = []

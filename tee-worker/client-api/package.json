@@ -57,7 +57,7 @@
     "load:metadata": "pnpm load:metadata:identity && pnpm load:metadata:omni && pnpm load:metadata:sidechain",
     "load:metadata:identity": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
     "load:metadata:omni": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
-    "load:metadata:sidechain": "../../identity/bin/litentry-cli print-sgx-metadata-raw > metadata-sidechain.json",
+    "load:metadata:sidechain": "../identity/bin/litentry-cli print-sgx-metadata-raw > metadata-sidechain.json",
     "generate:defs": "pnpm run generate:defs:identity && pnpm generate:defs:omni && pnpm generate:defs:sidechain",
     "generate:defs:identity": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/identity/interfaces --input ./src/identity/interfaces --endpoint ./metadata-parachain.json",
     "generate:defs:omni": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/omni/interfaces --input ./src/omni/interfaces --endpoint ./metadata-parachain.json",

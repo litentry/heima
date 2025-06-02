@@ -89,8 +89,7 @@ mod tests {
 	use lc_common::platform_user::PlatformName;
 	use lc_credentials_v2::assertion_logic::{AssertionLogic, Op};
 	use lc_mock_server::run;
-	use litentry_hex_utils::decode_hex;
-	use litentry_primitives::{Identity, IdentityNetworkTuple};
+	use litentry_primitives::{decode_hex, Identity, IdentityNetworkTuple};
 
 	fn init(platform_user_type: PlatformUserType) -> DataProviderConfig {
 		let _ = env_logger::builder().is_test(true).try_init();

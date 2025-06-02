@@ -18,7 +18,7 @@ mod parachain;
 mod relay_chain;
 
 use crate::{self as runtime_common, currency::UNIT, BaseRuntimeRequirements};
-use core_primitives::AccountId;
+use heima_primitives::AccountId;
 
 use frame_support::dispatch::{DispatchInfo, PostDispatchInfo};
 use sp_runtime::BuildStorage;

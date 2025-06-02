@@ -18,7 +18,7 @@
 // According to https://w3c-ccg.github.io/vc-json-schemas/, it defines JSON Schema for W3C Verifiable Credential.
 
 use crate::Config;
-use core_primitives::{SchemaContentString, SchemaIdString};
+use heima_primitives::{SchemaContentString, SchemaIdString};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;

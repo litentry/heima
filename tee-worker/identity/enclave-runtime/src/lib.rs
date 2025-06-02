@@ -74,7 +74,7 @@ use itp_sgx_crypto::key_repository::AccessPubkey;
 use itp_storage::{StorageProof, StorageProofChecker};
 use itp_types::{parentchain::ParentchainId, ShardIdentifier, SignedBlock};
 use itp_utils::write_slice_and_whitespace_pad;
-use litentry_macros::if_development_or;
+use litentry_primitives::if_development_or;
 use log::*;
 use once_cell::sync::OnceCell;
 use sgx_types::sgx_status_t;
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn init(
 			.format_timestamp(Some(env_logger::TimestampPrecision::Micros))
 			.init(),
 		{
-			let module_names = litentry_proc_macros::local_modules!();
+			let module_names = heima_utils_proc_macros::local_modules!();
 			println!(
 				"Initializing logger to filter only following local modules: {:?}",
 				module_names

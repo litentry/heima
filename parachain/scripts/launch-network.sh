@@ -27,7 +27,7 @@ ROOTDIR=$(git rev-parse --show-toplevel)
 PARACHAIN_BIN="$ROOTDIR/parachain/target/release/heima-node"
 cd "$ROOTDIR"
 
-export PARA_ID=$(grep -i "${CHAIN}_para_id" common/primitives/core/src/lib.rs | sed 's/.* = //;s/\;.*//')
+export PARA_ID=$(grep -i "${CHAIN}_para_id" parachain/primitives/src/lib.rs | sed 's/.* = //;s/\;.*//')
 export PARA_CHAIN_SPEC=${CHAIN}-dev
 export COLLATOR_WS_PORT=${CollatorWSPort:-9944}
 

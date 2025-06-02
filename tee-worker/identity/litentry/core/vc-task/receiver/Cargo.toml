@@ -34,7 +34,6 @@ lc-evm-dynamic-assertions = { workspace = true }
 lc-stf-task-receiver = { workspace = true }
 lc-stf-task-sender = { workspace = true }
 lc-vc-task-sender = { workspace = true }
-litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }
 pallet-identity-management-tee = { workspace = true }
 
@@ -84,6 +83,6 @@ std = [
 ]
 development = [
     "ita-stf/development",
-    "litentry-macros/development",
+    "litentry-primitives/development",
     "pallet-identity-management-tee/development",
 ]

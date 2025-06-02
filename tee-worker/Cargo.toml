@@ -19,7 +19,6 @@ members = [
     "common/litentry/core/parachain-extrinsic-task/sender",
     "common/litentry/core/parachain-extrinsic-task/receiver",
     "common/litentry/core/teebag-storage",
-    "common/litentry/macros",
     "common/litentry/pallets/*",
     "common/litentry/primitives",
 
@@ -259,15 +258,13 @@ itp-test = { path = "common/core-primitives/test", default-features = false }
 
 # litentry
 litentry-primitives = { path = "common/litentry/primitives", default-features = false }
-litentry-worker-macros = { path = "common/litentry/macros" }
 pallet-parentchain = { path = "common/litentry/pallets/parentchain", default-features = false }
 pallet-identity-management-tee = { path = "common/litentry/pallets/identity-management", default-features = false }
 lc-teebag-storage = { path = "common/litentry/core/teebag-storage", default-features = false }
 lc-parachain-extrinsic-task-sender = { path = "common/litentry/core/parachain-extrinsic-task/sender", default-features = false }
 lc-parachain-extrinsic-task-receiver = { path = "common/litentry/core/parachain-extrinsic-task/receiver", default-features = false }
-litentry-hex-utils = { path = "../common/utils/hex", default-features = false }
-litentry-macros = { path = "../common/primitives/core/macros" }
-parentchain-primitives = { package = "core-primitives", path = "../common/primitives/core", default-features = false }
+heima-utils = { path = "../parachain/utils", default-features = false }
+heima-primitives = { path = "../parachain/primitives", default-features = false }
 
 # identity
 lc-assertion-build = { path = "identity/litentry/core/assertion-build", default-features = false }
@@ -316,9 +313,6 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
-
-[patch."https://github.com/paritytech/frontier"]
-pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v0.9.42" }
 
 [patch."https://github.com/AstarNetwork/frontier"]
 pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v0.9.42" }

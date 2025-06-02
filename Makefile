@@ -102,10 +102,10 @@ fmt: fmt-cargo fmt-taplo fmt-ts
 
 .PHONY: fmt-cargo ## cargo fmt
 fmt-cargo:
-	@cd parachain && cargo fmt --all
-	@cd tee-worker && cargo fmt --all
-	@cd tee-worker/identity/enclave-runtime && cargo fmt --all
-	@cd tee-worker/omni-executor && cargo fmt --all
+	@cd parachain && cargo fmt
+	@cd tee-worker && cargo fmt
+	@cd tee-worker/identity/enclave-runtime && cargo fmt
+	@cd tee-worker/omni-executor && cargo fmt
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:

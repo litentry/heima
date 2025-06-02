@@ -6,7 +6,7 @@ import { encodeAddress } from '@polkadot/util-crypto';
 import { IntegrationTestContext, JsonRpcRequest } from '../common-types';
 import {
     WorkerRpcReturnValue,
-    CorePrimitivesIdentity,
+    HeimaPrimitivesIdentity,
     TrustedCall,
     TrustedCallAuthenticated,
     TCAuthentication,
@@ -80,7 +80,7 @@ export function createAuthenticatedTrustedCallCreateAccountStore(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    identity: CorePrimitivesIdentity
+    identity: HeimaPrimitivesIdentity
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
@@ -97,7 +97,7 @@ export function createAuthenticatedTrustedCallTransferNativeIntent(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    sender: CorePrimitivesIdentity,
+    sender: HeimaPrimitivesIdentity,
     dest: string,
     amount: bigint
 ) {
@@ -122,8 +122,8 @@ export async function createAuthenticatedTrustedCallAddAccount(
     mrenclave: string,
     nonce: Codec,
     sender: Signer,
-    senderIdentity: CorePrimitivesIdentity,
-    identity: CorePrimitivesIdentity,
+    senderIdentity: HeimaPrimitivesIdentity,
+    identity: HeimaPrimitivesIdentity,
     validationData: string,
     publicAccount = false
 ) {
@@ -142,8 +142,8 @@ export async function createAuthenticatedTrustedCallRemoveAccounts(
     mrenclave: string,
     nonce: Codec,
     sender: Signer,
-    senderIdentity: CorePrimitivesIdentity,
-    identities: CorePrimitivesIdentity[]
+    senderIdentity: HeimaPrimitivesIdentity,
+    identities: HeimaPrimitivesIdentity[]
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
@@ -160,8 +160,8 @@ export async function createAuthenticatedTrustedCallPublicizeAccount(
     mrenclave: string,
     nonce: Codec,
     sender: Signer,
-    senderIdentity: CorePrimitivesIdentity,
-    identity: CorePrimitivesIdentity
+    senderIdentity: HeimaPrimitivesIdentity,
+    identity: HeimaPrimitivesIdentity
 ) {
     return createAuthenticatedTrustedCall(
         parachainApi,
@@ -178,7 +178,7 @@ export async function createAuthenticatedTrustedCallRequestBatchVc(
     mrenclave: string,
     nonce: Codec,
     sender: Signer,
-    senderIdentity: CorePrimitivesIdentity,
+    senderIdentity: HeimaPrimitivesIdentity,
     assertions: string,
     aesKey: string,
     hash: string
@@ -201,7 +201,7 @@ export async function createAuthenticatedTrustedCallRequestVc(
     mrenclave: string,
     nonce: Codec,
     sender: Signer,
-    senderIdentity: CorePrimitivesIdentity,
+    senderIdentity: HeimaPrimitivesIdentity,
     assertion: string,
     aesKey: string,
     hash: string
@@ -216,7 +216,7 @@ export async function createAuthenticatedTrustedCallRequestVc(
     );
 }
 
-export const getOmniAccount = async (parachainApi: ApiPromise, identity: CorePrimitivesIdentity): Promise<string> => {
+export const getOmniAccount = async (parachainApi: ApiPromise, identity: HeimaPrimitivesIdentity): Promise<string> => {
     const omniAccount = await parachainApi.rpc.state.call('OmniAccountApi_omni_account', identity.toHex());
 
     return encodeAddress(omniAccount.toHex());
@@ -224,7 +224,7 @@ export const getOmniAccount = async (parachainApi: ApiPromise, identity: CorePri
 
 export const getOmniAccountNonce = async (
     parachainApi: ApiPromise,
-    memberIdentity: CorePrimitivesIdentity
+    memberIdentity: HeimaPrimitivesIdentity
 ): Promise<Index> => {
     const omniAccount = await getOmniAccount(parachainApi, memberIdentity);
     const nonce = await parachainApi.rpc.system.accountNextIndex(omniAccount);
@@ -278,8 +278,8 @@ export async function fundAccount(api: ApiPromise, account: string, amount: bigi
 
 export async function buildWeb3ValidationData(
     context: IntegrationTestContext,
-    sender: CorePrimitivesIdentity,
-    accountToAdd: CorePrimitivesIdentity,
+    sender: HeimaPrimitivesIdentity,
+    accountToAdd: HeimaPrimitivesIdentity,
     nonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer: Signer

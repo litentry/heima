@@ -21,7 +21,6 @@ use super::{
 	AllPalletsWithSystem, AssetId, Assets, Balance, Balances, MessageQueue, ParachainInfo,
 	ParachainSystem, PolkadotXcm, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, XcmpQueue,
 };
-use core_primitives::{AccountId, Weight};
 use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
 	pallet_prelude::ConstU32,
@@ -30,6 +29,7 @@ use frame_support::{
 	weights::IdentityFee,
 };
 use frame_system::EnsureRoot;
+use heima_primitives::{AccountId, Weight};
 use pallet_xcm::XcmPassthrough;
 use parachains_common::message_queue::ParaIdToSibling;
 use polkadot_parachain_primitives::primitives::Sibling;

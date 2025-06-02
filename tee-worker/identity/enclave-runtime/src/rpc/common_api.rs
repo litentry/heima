@@ -35,9 +35,9 @@ use lc_identity_verification::{
 	generate_verification_code,
 	web2::{email, google, twitter},
 };
-use litentry_macros::{if_development, if_development_or};
 use litentry_primitives::{
-	aes_decrypt, AesRequest, DecryptableRequest, Identity, Web2IdentityType,
+	aes_decrypt, decode_hex, if_development, if_development_or, AesRequest, DecryptableRequest,
+	Identity, Web2IdentityType,
 };
 use log::debug;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -584,8 +584,7 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 	}
 
 	let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
-	let encoded_quote_to_forward: Vec<u8> =
-		litentry_hex_utils::decode_hex(param).map_err(|e| format!("{:?}", e))?;
+	let encoded_quote_to_forward: Vec<u8> = decode_hex(param).map_err(|e| format!("{:?}", e))?;
 
 	let url = String::new();
 	let ext = generate_dcap_ra_extrinsic_from_quote_internal(
@@ -617,8 +616,7 @@ fn attesteer_forward_ias_attestation_report_inner(
 	}
 
 	let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
-	let ias_attestation_report =
-		litentry_hex_utils::decode_hex(param).map_err(|e| format!("{:?}", e))?;
+	let ias_attestation_report = decode_hex(param).map_err(|e| format!("{:?}", e))?;
 
 	let url = String::new();
 	let ext = generate_ias_ra_extrinsic_from_der_cert_internal(

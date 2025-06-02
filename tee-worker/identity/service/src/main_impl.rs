@@ -47,8 +47,9 @@ use its_peer_fetch::{
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, BlockPruner, SidechainStorageLock};
 use lc_data_providers::DataProviderConfig;
-use litentry_macros::if_development_or;
-use litentry_primitives::{Enclave as TeebagEnclave, ShardIdentifier, WorkerType};
+use litentry_primitives::{
+	if_development_or, Enclave as TeebagEnclave, ShardIdentifier, WorkerType,
+};
 use log::*;
 use regex::Regex;
 use serde_json::Value;

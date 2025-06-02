@@ -15,12 +15,12 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core_primitives::{AssetId, ChainType};
 use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::fungible::NativeOrWithId,
 };
+use heima_primitives::{AssetId, ChainType};
 use pallet_evm::AddressMapping;
 use pallet_omni_bridge::PayInRequest;
 use precompile_utils::prelude::*;

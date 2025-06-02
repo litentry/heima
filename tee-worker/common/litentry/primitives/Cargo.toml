@@ -23,9 +23,10 @@ sp-std = { workspace = true }
 
 sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
 
+heima-primitives = { workspace = true, features = ["webpki"] }
+heima-utils = { workspace = true }
 itp-sgx-crypto = { workspace = true }
 itp-sgx-runtime-primitives = { workspace = true }
-parentchain-primitives = { workspace = true, features = ["webpki"] }
 
 [dev-dependencies]
 base64 = { workspace = true }
@@ -33,7 +34,8 @@ base64 = { workspace = true }
 [features]
 default = ["std"]
 development = [
-    "parentchain-primitives/development",
+    "heima-primitives/development",
+    "heima-utils/development",
 ]
 sgx = [
     "sgx_tstd",
@@ -52,7 +54,7 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "ring/std",
-    "parentchain-primitives/std",
+    "heima-primitives/std",
     "rand",
     "log/std",
     "bitcoin/std",

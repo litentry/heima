@@ -15,8 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, Error, Status};
-use core_primitives::{Assertion, Identity, ShardIdentifier};
 use frame_support::{assert_noop, assert_ok};
+use heima_primitives::{Assertion, Identity, ShardIdentifier};
 use sp_core::H256;
 use sp_std::{vec, vec::Vec};
 

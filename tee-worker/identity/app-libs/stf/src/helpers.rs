@@ -24,8 +24,7 @@ use itp_stf_primitives::error::{StfError, StfResult};
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
 use itp_types::Index;
 use itp_utils::stringify::account_id_to_string;
-use litentry_hex_utils::hex_encode;
-use litentry_primitives::{ErrorDetail, Identity, Web3ValidationData};
+use litentry_primitives::{hex_encode, ErrorDetail, Identity, Web3ValidationData};
 use log::*;
 use sp_core::blake2_256;
 

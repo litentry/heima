@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", workspace = true }
+heima-utils = { workspace = true }
 hex = { workspace = true }
-litentry-hex-utils = { workspace = true }
 
 [features]
 default = ["std"]

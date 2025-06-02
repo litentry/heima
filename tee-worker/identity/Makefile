@@ -255,8 +255,8 @@ clean:
 .PHONY: fmt
 fmt:
 	@echo "Cargo format all ..."
-	@cargo fmt --all
-	@cd enclave-runtime && cargo fmt --all
+	@cargo fmt
+	@cd enclave-runtime && cargo fmt
 
 .PHONY: pin-sgx
 pin-sgx:
