@@ -1,6 +1,7 @@
 mod auth_token_key_store;
 mod error_code;
 mod methods;
+mod middlewares;
 mod server;
 mod task;
 mod verify_auth;
