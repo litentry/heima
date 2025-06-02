@@ -28,7 +28,7 @@ function print_divider() {
 
 echo "Starting heima-node in standalone mode ..."
 
-$PARACHAIN_BIN --dev --rpc-external --port "${CollatorPort:-30333}" --rpc-port "${CollatorWSPort:-9944}" \
+$PARACHAIN_BIN --dev --rpc-external --pool-type=fork-aware --port "${CollatorPort:-30333}" --rpc-port "${CollatorWSPort:-9944}" \
   &> "$HEIMA_DIR/para.alice.log" &
 
 sleep 10

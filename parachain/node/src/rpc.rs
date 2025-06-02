@@ -23,21 +23,20 @@ use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use fc_rpc::{
 	pending::ConsensusDataProvider, Eth, EthApiServer, EthBlockDataCacheTask, EthFilter,
-	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, Web3, Web3ApiServer,
+	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, TxPool, TxPoolApiServer,
+	Web3, Web3ApiServer,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::StorageOverride;
 use moonbeam_rpc_debug::{Debug, DebugServer};
 use moonbeam_rpc_trace::{Trace, TraceServer};
-use moonbeam_rpc_txpool::{TxPool as MoonbeamTxPool, TxPoolServer};
 use polkadot_primitives::PersistedValidationData;
 use sc_client_api::{
 	AuxStore, Backend, BlockchainEvents, StateBackend, StorageProvider, UsageProvider,
 };
 use sc_network::service::traits::NetworkService;
 use sc_network_sync::SyncingService;
-pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
-use sc_transaction_pool::{ChainApi, Pool};
+pub use sc_rpc::SubscriptionTaskExecutor;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::{CallApiAt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder;
@@ -45,10 +44,12 @@ use sp_blockchain::{
 	Backend as BlockchainBackend, Error as BlockChainError, HeaderBackend, HeaderMetadata,
 };
 use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
-use sp_runtime::traits::BlakeTwo256;
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
 use std::sync::Arc;
 
 use crate::tracing;
+
+type HashFor<Block> = <Block as BlockT>::Hash;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
@@ -96,19 +97,17 @@ where
 }
 
 /// Full client dependencies
-pub struct FullDeps<C, P, A: ChainApi> {
+pub struct FullDeps<C, P> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
 	pub pool: Arc<P>,
 	/// Graph pool instance.
-	pub graph: Arc<Pool<A>>,
+	pub graph: Arc<P>,
 	/// Network service
 	pub network: Arc<dyn NetworkService>,
 	/// Chain syncing service
 	pub sync: Arc<SyncingService<Block>>,
-	/// Whether to deny unsafe calls
-	pub deny_unsafe: DenyUnsafe,
 	/// The Node authority flag
 	pub is_authority: bool,
 	/// Frontier Backend.
@@ -128,8 +127,8 @@ pub struct FullDeps<C, P, A: ChainApi> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full<C, P, BE, A>(
-	deps: FullDeps<C, P, A>,
+pub fn create_full<C, P, BE>(
+	deps: FullDeps<C, P>,
 	subscription_task_executor: SubscriptionTaskExecutor,
 	pubsub_notification_sinks: Arc<
 		fc_mapping_sync::EthereumBlockNotificationSinks<
@@ -160,11 +159,10 @@ where
 		+ AuraApi<Block, AuraId>
 		+ moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block>
 		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>,
-	P: TransactionPool<Block = Block> + Sync + Send + 'static,
+	P: TransactionPool<Block = Block, Hash = HashFor<Block>> + Sync + Send + 'static,
 	BE: Backend<Block> + 'static,
 	BE::State: StateBackend<BlakeTwo256>,
 	BE::Blockchain: BlockchainBackend<Block>,
-	A: ChainApi<Block = Block> + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
@@ -176,7 +174,6 @@ where
 		graph,
 		network,
 		sync,
-		deny_unsafe,
 		is_authority,
 		frontier_backend,
 		filter_pool,
@@ -188,7 +185,7 @@ where
 	} = deps;
 
 	let cloned = (client.clone(), pool.clone());
-	module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+	module.merge(System::new(client.clone(), pool).into_rpc())?;
 	module.merge(TransactionPayment::new(client).into_rpc())?;
 
 	{
@@ -232,7 +229,7 @@ where
 		};
 
 		module.merge(
-			Eth::<_, _, _, _, _, _, _, ()>::new(
+			Eth::<_, _, _, _, _, _, ()>::new(
 				client.clone(),
 				pool.clone(),
 				graph.clone(),
@@ -287,7 +284,7 @@ where
 		)?;
 
 		if tracing_config.enable_txpool {
-			module.merge(MoonbeamTxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
+			module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
 		}
 
 		if let Some(trace_filter_requester) = tracing_config.tracing_requesters.trace {
