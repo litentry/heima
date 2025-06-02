@@ -20,7 +20,7 @@ on:
         default: true
       omni_executor:
         type: boolean
-        description: omni_executor
+        description: omni-executor
         required: true
         default: true
       release_tag:

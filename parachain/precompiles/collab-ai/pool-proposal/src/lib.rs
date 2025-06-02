@@ -16,7 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{PrecompileFailure, PrecompileHandle};
+use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::Currency,
@@ -45,6 +45,9 @@ type BalanceOf<T> = <<T as pallet_pool_proposal::Config>::Currency as Currency<
 impl<Runtime> PoolProposalPrecompile<Runtime>
 where
 	Runtime: pallet_pool_proposal::Config + pallet_evm::Config,
+	Runtime::RuntimeOrigin: From<
+		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
+	>,
 	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	<Runtime as frame_system::Config>::RuntimeCall:
 		Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
@@ -93,7 +96,7 @@ where
 			estimated_pool_reward,
 			pool_info_hash,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -118,7 +121,7 @@ where
 			pool_proposal_index,
 			amount,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -143,7 +146,7 @@ where
 			pool_proposal_index,
 			amount,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}
@@ -162,7 +165,7 @@ where
 		let call = pallet_pool_proposal::Call::<Runtime>::guardian_participate_proposal {
 			pool_proposal_index,
 		};
-		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call, 0)?;
 
 		Ok(())
 	}

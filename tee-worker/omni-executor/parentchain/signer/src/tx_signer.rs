@@ -9,7 +9,7 @@ use std::{
 	marker::PhantomData,
 	sync::atomic::{AtomicU64, Ordering},
 };
-use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder};
+use subxt_core::config::{DefaultExtrinsicParams, DefaultExtrinsicParamsBuilder, HashFor};
 use subxt_core::tx::payload::Payload;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use subxt_core::{tx, Config, Metadata};
@@ -65,7 +65,7 @@ impl<
 
 		let state = tx::ClientState::<ChainConfig> {
 			metadata: { metadata },
-			genesis_hash: ChainConfig::Hash::decode(&mut genesis_hash.as_slice()).unwrap(),
+			genesis_hash: HashFor::<ChainConfig>::decode(&mut genesis_hash.as_slice()).unwrap(),
 			runtime_version: tx::RuntimeVersion {
 				spec_version: runtime_version.spec_version,
 				transaction_version: runtime_version.transaction_version,
@@ -81,7 +81,7 @@ impl<
 			info!("Signing call with nonce {}", nonce);
 		}
 		let params = DefaultExtrinsicParamsBuilder::<ChainConfig>::new().nonce(nonce).build();
-		let signed_call = tx::create_signed(&call, &state, &self.signer, params).unwrap();
+		let signed_call = tx::create_v4_signed(&call, &state, params).unwrap().sign(&self.signer);
 
 		signed_call.encoded().to_vec()
 	}

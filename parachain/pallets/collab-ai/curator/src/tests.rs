@@ -14,8 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::mock::*;
-use crate::{CandidateStatus, CuratorIndexToInfo, Error, PublicCuratorCount, PublicCuratorToIndex};
+use crate::{
+	mock::*, CandidateStatus, CuratorIndexToInfo, Error, PublicCuratorCount, PublicCuratorToIndex,
+};
 use frame_support::{assert_noop, assert_ok};
 use pallet_balances::Error as BalanceError;
 use sp_core::crypto::AccountId32;
