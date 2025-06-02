@@ -161,7 +161,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test_identity_serde() {
+	fn test_user_id_to_identity() {
 		let json = r#"{"Twitter":"handle"}"#;
 		let deserialized: UserId = serde_json::from_str(json).unwrap();
 		let identity = Identity::try_from(deserialized).unwrap();
