@@ -435,10 +435,9 @@ impl<
 		let binance_coin = binance_asset.coin;
 		let binance_address = binance_asset.address;
 
-		let amount_to_transfer = U256::from_str_radix(&amount_to_transfer_decimal.to_string(), 10)
-			.map_err(|err| {
-				error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
-			})?;
+		let amount_to_transfer = decimal_to_u256(amount_to_transfer_decimal).map_err(|err| {
+			error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
+		})?;
 
 		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
 			binance_network.clone(),
