@@ -8,6 +8,7 @@ edition.workspace = true
 base58 = { workspace = true }
 ethers = { workspace = true }
 hex = { workspace = true }
+http = { workspace = true }
 jsonrpsee = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
@@ -17,6 +18,8 @@ serde_json = { workspace = true }
 serde_with = { workspace = true }
 sha2 = { workspace = true }
 tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
@@ -36,6 +39,7 @@ pumpx = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
+chrono = { workspace = true }
 
 [lints]
 workspace = true
