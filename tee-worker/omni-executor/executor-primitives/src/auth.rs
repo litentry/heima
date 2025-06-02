@@ -7,6 +7,7 @@ use base58::{FromBase58, ToBase58};
 use heima_primitives::{Address20, Address32, Address33, Identity, IdentityString};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 pub type VerificationCode = String;
 type Email = String;
@@ -29,13 +30,6 @@ pub enum UserId {
 	Solana(String),    // base58-encoded
 	Email(String),
 	Google(String),
-	Pumpx(String),
-}
-
-impl UserId {
-	pub fn is_pumpx_id(&self) -> bool {
-		matches!(self, UserId::Pumpx(_))
-	}
 }
 
 impl TryFrom<UserId> for Identity {
@@ -85,9 +79,6 @@ impl TryFrom<UserId> for Identity {
 			UserId::Google(handle) => {
 				Ok(Identity::Google(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			UserId::Pumpx(handle) => {
-				Ok(Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec())))
-			},
 		}
 	}
 }
@@ -124,8 +115,10 @@ impl TryFrom<Identity> for UserId {
 			Identity::Google(handle) => {
 				Ok(UserId::Google(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
-			Identity::Pumpx(handle) => {
-				Ok(UserId::Pumpx(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			Identity::Pumpx(_) => {
+				// TODO: should we remove this identity type?
+				error!("Pumpx identity is not supported in UserId conversion");
+				Err(())
 			},
 		}
 	}
@@ -137,7 +130,6 @@ pub enum UserAuth {
 	Email(VerificationCode),
 	AuthToken(JwtToken),
 	OAuth2(OAuth2Data),
-	Pumpx { email_code: String, google_code: String, invite_code: Option<String> },
 }
 
 impl From<OmniAuth> for OmniAccountAuthType {
