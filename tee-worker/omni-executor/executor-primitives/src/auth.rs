@@ -1,5 +1,8 @@
 use crate::{
-	signature::HeimaMultiSignature,
+	signature::{
+		BitcoinSignature, EthereumSignature, HeimaMultiSignature, SolanaSignature,
+		SubstrateSignature,
+	},
 	utils::hex::{decode_hex, ToHexPrefixed},
 	OmniAccountAuthType,
 };
@@ -125,11 +128,15 @@ impl TryFrom<Identity> for UserId {
 	}
 }
 
-#[derive(Deserialize, Encode, Decode, Clone, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum UserAuth {
-	Web3(HeimaMultiSignature),
 	Email(VerificationCode),
 	AuthToken(JwtToken),
+	Substrate(SubstrateSignature),
+	Evm(EthereumSignature),
+	Bitcoin(BitcoinSignature),
+	Solana(SolanaSignature),
 	OAuth2(OAuth2Data),
 }
 

@@ -39,16 +39,49 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 				};
 				OmniAuth::Email(email, code)
 			},
-			UserAuth::Web3(signature) => {
+			UserAuth::Substrate(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
 					error!("Invalid user ID format");
 					ErrorCode::ParseError
 				})?;
-				if !identity.is_web3() {
-					error!("User ID must be a Web3 identity for Web3 authentication");
+				if !identity.is_substrate() {
+					error!("User ID must be a Substrate identity for Substrate authentication");
 					return Err(ErrorCode::ParseError);
 				}
-				OmniAuth::Web3(identity, signature)
+				OmniAuth::Web3(identity, signature.into())
+			},
+			UserAuth::Evm(signature) => {
+				let identity = Identity::try_from(p.user_id).map_err(|_| {
+					error!("Invalid user ID format");
+					ErrorCode::ParseError
+				})?;
+				if !identity.is_evm() {
+					error!("User ID must be an EVM identity for EVM authentication");
+					return Err(ErrorCode::ParseError);
+				}
+				OmniAuth::Web3(identity, signature.into())
+			},
+			UserAuth::Solana(signature) => {
+				let identity = Identity::try_from(p.user_id).map_err(|_| {
+					error!("Invalid user ID format");
+					ErrorCode::ParseError
+				})?;
+				if !identity.is_solana() {
+					error!("User ID must be a Solana identity for Solana authentication");
+					return Err(ErrorCode::ParseError);
+				}
+				OmniAuth::Web3(identity, signature.into())
+			},
+			UserAuth::Bitcoin(signature) => {
+				let identity = Identity::try_from(p.user_id).map_err(|_| {
+					error!("Invalid user ID format");
+					ErrorCode::ParseError
+				})?;
+				if !identity.is_bitcoin() {
+					error!("User ID must be a Bitcoin identity for Bitcoin authentication");
+					return Err(ErrorCode::ParseError);
+				}
+				OmniAuth::Web3(identity, signature.into())
 			},
 			UserAuth::AuthToken(token) => OmniAuth::AuthToken(token),
 			UserAuth::OAuth2(data) => {
