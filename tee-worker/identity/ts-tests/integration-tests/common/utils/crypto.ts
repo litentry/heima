@@ -1,7 +1,7 @@
 import type { HexString } from '@polkadot/util/types';
 import { bufferToU8a, hexToU8a, isString, stringToU8a, u8aToHex } from '@polkadot/util';
 import { KeyObject } from 'crypto';
-import { AesOutput, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
+import { AesOutput, HeimaPrimitivesIdentity } from '@heima-network/api-argument/identity';
 import crypto from 'crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { ethers } from 'ethers';
@@ -93,7 +93,7 @@ export interface Signer {
     sign(message: HexString | string | Uint8Array): Promise<Uint8Array>;
     type(): KeypairType;
     getAddressInSubstrateFormat(): Uint8Array;
-    getIdentity(api: IntegrationTestContext): Promise<CorePrimitivesIdentity>;
+    getIdentity(api: IntegrationTestContext): Promise<HeimaPrimitivesIdentity>;
 }
 
 export class PolkadotSigner implements Signer {
@@ -119,7 +119,7 @@ export class PolkadotSigner implements Signer {
         return this.getAddressRaw();
     }
 
-    getIdentity(context: IntegrationTestContext): Promise<CorePrimitivesIdentity> {
+    getIdentity(context: IntegrationTestContext): Promise<HeimaPrimitivesIdentity> {
         return buildIdentityHelper(u8aToHex(this.getAddressRaw()), 'Substrate', context);
     }
 }
@@ -154,7 +154,7 @@ export class EthersSigner implements Signer {
         return blake2AsU8a(merged, 256);
     }
 
-    getIdentity(context: IntegrationTestContext): Promise<CorePrimitivesIdentity> {
+    getIdentity(context: IntegrationTestContext): Promise<HeimaPrimitivesIdentity> {
         return buildIdentityHelper(u8aToHex(this.getAddressRaw()), 'Evm', context);
     }
 }
@@ -190,7 +190,7 @@ export class BitcoinSigner implements Signer {
         return blake2AsU8a(this.getAddressRaw(), 256);
     }
 
-    getIdentity(context: IntegrationTestContext): Promise<CorePrimitivesIdentity> {
+    getIdentity(context: IntegrationTestContext): Promise<HeimaPrimitivesIdentity> {
         return buildIdentityHelper(u8aToHex(this.getAddressRaw()), 'Bitcoin', context);
     }
 }
@@ -229,7 +229,7 @@ export class SolanaSigner implements Signer {
         return this.getAddressRaw();
     }
 
-    getIdentity(context: IntegrationTestContext): Promise<CorePrimitivesIdentity> {
+    getIdentity(context: IntegrationTestContext): Promise<HeimaPrimitivesIdentity> {
         return buildIdentityHelper(u8aToHex(this.getAddressRaw()), 'Solana', context);
     }
 }

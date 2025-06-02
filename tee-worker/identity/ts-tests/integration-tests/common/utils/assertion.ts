@@ -2,7 +2,7 @@ import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { assert } from 'chai';
 import * as ed from '@noble/ed25519';
 import { parseIdGraph } from './identity-helper';
-import { CorePrimitivesIdentity, WorkerRpcReturnValue, StfError } from '@heima-network/api-argument/identity';
+import { HeimaPrimitivesIdentity, WorkerRpcReturnValue, StfError } from '@heima-network/api-argument/identity';
 import type { IntegrationTestContext } from '../common-types';
 import { getIdGraphHash } from '../di-utils';
 import type { HexString } from '@polkadot/util/types';
@@ -17,8 +17,8 @@ import { PalletIdentityManagementTeeIdentityContext } from '@heima-network/api-a
 import { KeyObject } from 'crypto';
 
 export function assertIdGraph(
-    actual: [CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][],
-    expected: [CorePrimitivesIdentity, boolean][]
+    actual: [HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][],
+    expected: [HeimaPrimitivesIdentity, boolean][]
 ) {
     assert.equal(actual.length, expected.length);
     expected.forEach((expected, i) => {
@@ -62,14 +62,14 @@ export function assertWorkerError(
 export async function assertIdGraphMutationResult(
     context: IntegrationTestContext,
     teeShieldingKey: KeyObject,
-    identity: CorePrimitivesIdentity,
+    identity: HeimaPrimitivesIdentity,
     returnValue: WorkerRpcReturnValue,
     resultType:
         | 'LinkIdentityResult'
         | 'DeactivateIdentityResult'
         | 'ActivateIdentityResult'
         | 'SetIdentityNetworksResult',
-    expectedIdGraph: [CorePrimitivesIdentity, boolean][]
+    expectedIdGraph: [HeimaPrimitivesIdentity, boolean][]
 ): Promise<HexString> {
     const decodedResult = context.api.createType(resultType, returnValue.value);
     assert.isNotNull(decodedResult.mutated_id_graph);
@@ -82,7 +82,7 @@ export async function assertIdGraphMutationResult(
     return u8aToHex(decodedResult.id_graph_hash);
 }
 
-export async function assertVc(context: IntegrationTestContext, subject: CorePrimitivesIdentity, data: Bytes) {
+export async function assertVc(context: IntegrationTestContext, subject: HeimaPrimitivesIdentity, data: Bytes) {
     const results = context.api.createType('RequestVCResult', data);
     // step 1
     // decryptWithAes function added 0x prefix
@@ -191,11 +191,11 @@ export async function assertVc(context: IntegrationTestContext, subject: CorePri
 export async function assertIdGraphHash(
     context: IntegrationTestContext,
     teeShieldingKey: KeyObject,
-    identity: CorePrimitivesIdentity,
-    idGraph: [CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][]
+    identity: HeimaPrimitivesIdentity,
+    idGraph: [HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][]
 ) {
     const idGraphType = context.sidechainRegistry.createType(
-        'Vec<(CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext)>',
+        'Vec<(HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext)>',
         idGraph
     );
     const computedIdGraphHash = blake2AsHex(idGraphType.toU8a());

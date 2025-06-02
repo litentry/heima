@@ -26,7 +26,7 @@ import {
 import type { IntegrationTestContext, WalletType } from './common/common-types';
 import { aesKey } from './common/call';
 import { createWeb3Wallet } from './common/helpers';
-import type { Web3Network, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
+import type { Web3Network, HeimaPrimitivesIdentity } from '@heima-network/api-argument/identity';
 import { Vec, Bytes } from '@polkadot/types';
 import type { HexString } from '@polkadot/util/types';
 import { hexToU8a } from '@polkadot/util';
@@ -73,11 +73,11 @@ describe('Test Identity', function () {
     for (const identityName of identityNames) {
         describe(`(${identityName} direct invocation)`, function () {
             const linkedIdentityNetworks: {
-                identity: CorePrimitivesIdentity;
+                identity: HeimaPrimitivesIdentity;
                 networks: Bytes | Vec<Web3Network>;
             }[] = [];
 
-            let mainIdentity: CorePrimitivesIdentity = undefined as any;
+            let mainIdentity: HeimaPrimitivesIdentity = undefined as any;
             let mainSigner: Signer = undefined as any;
             let currentNonce = 0;
             const isSubstrate = identityName === 'substrate';
@@ -107,8 +107,8 @@ describe('Test Identity', function () {
 
                 const linkAndAssert = async (
                     identityName: string,
-                    identity: CorePrimitivesIdentity,
-                    expectedIdGraph: [CorePrimitivesIdentity, boolean][],
+                    identity: HeimaPrimitivesIdentity,
+                    expectedIdGraph: [HeimaPrimitivesIdentity, boolean][],
                     signer?: Signer,
                     identityType?: string,
                     verificationType?: string
@@ -171,7 +171,7 @@ describe('Test Identity', function () {
                     const signer = createWeb3Wallet(identityName, randomBytes(32).toString('base64'));
                     const identity = await signer.getIdentity(context);
 
-                    const expectedIdGraph: [CorePrimitivesIdentity, boolean][] =
+                    const expectedIdGraph: [HeimaPrimitivesIdentity, boolean][] =
                         i === 0
                             ? [
                                   [mainIdentity, true],
@@ -253,7 +253,7 @@ describe('Test Identity', function () {
                         requestIdentifier
                     );
 
-                    const expectedIdGraph: [CorePrimitivesIdentity, boolean][] = [[identity, false]];
+                    const expectedIdGraph: [HeimaPrimitivesIdentity, boolean][] = [[identity, false]];
 
                     const res = await sendRequestFromTrustedCall(context, teeShieldingKey, deactivateIdentityCall);
                     idGraphHashResults.push(
@@ -311,7 +311,7 @@ describe('Test Identity', function () {
                         requestIdentifier
                     );
 
-                    const expectedIdGraph: [CorePrimitivesIdentity, boolean][] = [[identity, true]];
+                    const expectedIdGraph: [HeimaPrimitivesIdentity, boolean][] = [[identity, true]];
 
                     const res = await sendRequestFromTrustedCall(context, teeShieldingKey, activateIdentityCall);
                     idGraphHashResults.push(

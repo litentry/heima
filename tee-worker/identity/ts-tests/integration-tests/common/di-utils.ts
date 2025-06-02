@@ -8,7 +8,7 @@ import type {
     WorkerRpcReturnValue,
     TrustedCallSigned,
     Getter,
-    CorePrimitivesIdentity,
+    HeimaPrimitivesIdentity,
     TrustedGetterSigned,
     TrustedCall,
 } from '@heima-network/api-argument/identity';
@@ -198,7 +198,7 @@ export async function createSignedTrustedCallLinkIdentity(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
+    primeIdentity: HeimaPrimitivesIdentity,
     identity: string,
     validationData: string,
     web3networks: string,
@@ -226,7 +226,7 @@ export async function createSignedTrustedCallSetIdentityNetworks(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
+    primeIdentity: HeimaPrimitivesIdentity,
     identity: string,
     web3networks: string,
     aesKey: string,
@@ -250,7 +250,7 @@ export async function createSignedTrustedCallRequestVc(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
+    primeIdentity: HeimaPrimitivesIdentity,
     assertion: string,
     aesKey: string,
     hash: string,
@@ -273,7 +273,7 @@ export async function createSignedTrustedCallRequestBatchVc(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
+    primeIdentity: HeimaPrimitivesIdentity,
     assertion: string,
     aesKey: string,
     hash: string,
@@ -299,7 +299,7 @@ export async function createSignedTrustedCallDeactivateIdentity(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
+    primeIdentity: HeimaPrimitivesIdentity,
     identity: string,
     aesKey: string,
     hash: string
@@ -318,7 +318,7 @@ export async function createSignedTrustedCallActivateIdentity(
     mrenclave: string,
     nonce: Codec,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity,
+    primeIdentity: HeimaPrimitivesIdentity,
     identity: string,
     aesKey: string,
     hash: string
@@ -336,7 +336,7 @@ export async function createSignedTrustedCallActivateIdentity(
 export async function createSignedTrustedGetterIdGraph(
     parachainApi: ApiPromise,
     signer: Signer,
-    primeIdentity: CorePrimitivesIdentity
+    primeIdentity: HeimaPrimitivesIdentity
 ): Promise<Getter> {
     const getterSigned = await createSignedTrustedGetter(
         parachainApi,
@@ -349,7 +349,7 @@ export async function createSignedTrustedGetterIdGraph(
 
 export const getSidechainNonce = async (
     context: IntegrationTestContext,
-    primeIdentity: CorePrimitivesIdentity
+    primeIdentity: HeimaPrimitivesIdentity
 ): Promise<Index> => {
     const request = createJsonRpcRequest(
         'author_getNextNonce',
@@ -370,7 +370,7 @@ export const getSidechainNonce = async (
 export const getIdGraphHash = async (
     context: IntegrationTestContext,
     teeShieldingKey: KeyObject,
-    primeIdentity: CorePrimitivesIdentity
+    primeIdentity: HeimaPrimitivesIdentity
 ): Promise<H256> => {
     const getterPublic = createPublicGetter(context.api, ['id_graph_hash', '(HeimaIdentity)'], primeIdentity.toHuman());
     const getter = context.api.createType('Getter', { public: getterPublic });
@@ -520,7 +520,7 @@ export const createAesRequest = async (
 export function decodeIdGraph(sidechainRegistry: TypeRegistry, value: Bytes) {
     const idgraphBytes = sidechainRegistry.createType('Option<Bytes>', hexToU8a(value.toHex()));
     return sidechainRegistry.createType(
-        'Vec<(CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext)>',
+        'Vec<(HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext)>',
         idgraphBytes.unwrap()
     );
 }
