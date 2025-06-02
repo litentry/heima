@@ -33,7 +33,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 			);
 
 			let omni_account = match verify_auth_token_authentication(
-				ctx.clone(),
+				&ctx.jwt_rsa_private_key,
 				&params.auth_token,
 				AUTH_TOKEN_ACCESS_TYPE,
 				true,

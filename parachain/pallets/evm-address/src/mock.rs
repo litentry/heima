@@ -18,7 +18,7 @@ use crate as pallet_evm_address;
 use fp_evm::GenesisAccount;
 use frame_support::{
 	derive_impl, parameter_types,
-	traits::{ConstU32, FindAuthor},
+	traits::{ConstU32, ConstU64, FindAuthor},
 	weights::Weight,
 	ConsensusEngineId,
 };
@@ -166,6 +166,7 @@ impl FeeCalculator for FixedGasPrice {
 }
 
 impl pallet_evm::Config for Test {
+	type AccountProvider = pallet_evm::FrameSystemAccountProvider<Self>;
 	type FeeCalculator = FixedGasPrice;
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
@@ -189,7 +190,7 @@ impl pallet_evm::Config for Test {
 	type FindAuthor = FindAuthorTruncated;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type WeightInfo = ();
-	type SuicideQuickClearLimit = ConstU32<0>;
+	type GasLimitStorageGrowthRatio = ConstU64<4>;
 }
 
 use pallet_ethereum::PostLogContent;
@@ -199,7 +200,8 @@ parameter_types! {
 
 impl pallet_ethereum::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
+	type StateRoot =
+		pallet_ethereum::IntermediateStateRoot<<Test as frame_system::Config>::Version>;
 	type PostLogContent = PostBlockAndTxnHashes;
 	// Maximum length (in bytes) of revert message to include in Executed event
 	type ExtraDataLength = ConstU32<256>;

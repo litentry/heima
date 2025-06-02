@@ -21,7 +21,7 @@ name: General CI
 # - fmt
 # - set-condition
 # - parachain-build-dev
-# - identity-build
+# - identity-worker-build
 #
 # [4] please note that job-level if `env` is not supported:
 # https://github.com/actions/runner/issues/1189
@@ -268,25 +268,47 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  tee-check:
+  identity-worker-check:
     runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
       - sequentialise
-    container: "litentry/litentry-tee-dev:latest"
+    if: needs.set-condition.outputs.rebuild_identity == 'true'
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
+
       - name: Install dependencies
         run: |
-          sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
+          echo 'deb [signed-by=/etc/apt/keyrings/intel-sgx-keyring.asc arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+          wget https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key && cat intel-sgx-deb.key | sudo tee /etc/apt/keyrings/intel-sgx-keyring.asc > /dev/null
+          sudo apt-get update
+          sudo apt-get install -yq \
+            openssl clang libclang-dev cmake protobuf-compiler \
+            libsgx-dcap-quote-verify-dev \
+            libsgx-enclave-common-dev libsgx-dcap-ql-dev libsgx-dcap-default-qpl-dev
+
+      - name: Install intel sgx libs
+        run: |
+          wget https://download.01.org/intel-sgx/sgx-linux/2.19/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.19.100.3.bin
+          chmod +x ./sgx_linux_x64_sdk_2.19.100.3.bin
+          ./sgx_linux_x64_sdk_2.19.100.3.bin --prefix /opt/
+
+      - name: Set env
+        run: |
+          echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:/opt/sgxsdk/lib64:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "SGX_SDK=/opt/sgxsdk" >> $GITHUB_ENV
+          echo "/opt/sgxsdk/bin" >> $GITHUB_PATH
+          echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
 
       - name: Cargo test
         working-directory: ./tee-worker
         run: |
-          cargo test --release
+          cargo test
 
       - name: Check clippy
         working-directory: ./tee-worker
@@ -295,15 +317,15 @@ jobs:
           for d in . identity/enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
-            cargo clippy --release -- -D warnings
+            cargo clippy -- -D warnings
             echo "::endgroup::"
             echo "::group::cargo clippy development"
-            cargo clippy --release --features development -- -D warnings
+            cargo clippy --features development -- -D warnings
             echo "::endgroup::"
             echo "::group::cargo clippy offchain-worker"
-            cargo clippy --release --features offchain-worker -- -D warnings
+            cargo clippy --features offchain-worker -- -D warnings
             echo "::group::cargo clippy offchain-worker,development"
-            cargo clippy --release --features offchain-worker,development -- -D warnings
+            cargo clippy --features offchain-worker,development -- -D warnings
             echo "::endgroup::"
             popd
           done
@@ -313,16 +335,16 @@ jobs:
         shell: bash
         run: |
           echo "::group::cargo clippy sidechain"
-          cargo clippy --release --features sidechain -- -D warnings
+          cargo clippy --features sidechain -- -D warnings
           echo "::endgroup::"
           echo "::group::cargo clippy evm"
-          cargo clippy --release --features evm -- -D warnings
+          cargo clippy --features evm -- -D warnings
           echo "::endgroup::"
           echo "::group::cargo clippy sidechain development"
-          cargo clippy --release --features sidechain,development -- -D warnings
+          cargo clippy --features sidechain,development -- -D warnings
           echo "::endgroup::"
           echo "::group::cargo clippy evm development"
-          cargo clippy --release --features evm,development -- -D warnings
+          cargo clippy --features evm,development -- -D warnings
           echo "::endgroup::"
 
       - name: Fail early
@@ -405,7 +427,7 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  identity-build:
+  identity-worker-build:
     runs-on: ubuntu-22.04
     needs:
       - fmt
@@ -761,7 +783,7 @@ jobs:
     needs:
       - set-condition
       - parachain-build-dev
-      - identity-build
+      - identity-worker-build
     strategy:
       fail-fast: false
       matrix:
@@ -859,7 +881,7 @@ jobs:
     needs:
       - set-condition
       - parachain-build-dev
-      - identity-build
+      - identity-worker-build
     strategy:
       fail-fast: false
       matrix:
@@ -1053,6 +1075,22 @@ jobs:
           docker load < heima.tar.gz
           docker push litentry/heima
           docker push litentry/heima-aio
+
+      - name: Tirgger omni-bridge CI
+        if: needs.set-condition.outputs.rebuild_parachain == 'true'
+        run: |
+          curl -X POST \
+            https://api.github.com/repos/litentry/omni-bridge/dispatches \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -d '{ 
+                "event_type": "heima-update",
+                "client_payload": {
+                    "version": "latest",
+                    "commit": "${{ github.sha }}"
+                }
+            }'
+          echo "Tirgger omni-bridge CI with Heima commit: ${{ github.sha }}"
 
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'

@@ -16,6 +16,7 @@
 
 use crate::{RpcClientHeader, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory};
 use async_trait::async_trait;
+use frame_metadata::RuntimeMetadataPrefixed;
 use parity_scale_codec::Decode;
 use subxt::Config;
 use subxt_core::utils::AccountId32;
@@ -45,6 +46,9 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 		let mut client = self.client_factory.new_client().await.unwrap();
 		let raw_metadata = client.get_raw_metadata(block_num).await.unwrap();
 
-		Metadata::decode(&mut raw_metadata.as_slice()).unwrap()
+		let runtime_metadata =
+			RuntimeMetadataPrefixed::decode(&mut raw_metadata.as_slice()).unwrap();
+
+		Metadata::try_from(runtime_metadata).unwrap()
 	}
 }

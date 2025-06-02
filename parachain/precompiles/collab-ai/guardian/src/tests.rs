@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::mock::RuntimeEvent;
-use crate::mock::*;
+use crate::mock::{RuntimeEvent, *};
 use pallet_collab_ai_common::GuardianVote;
 use pallet_evm::AddressMapping;
 use pallet_guardian::Event;

@@ -49,6 +49,9 @@ use transfer_widthdraw::*;
 mod get_omni_account;
 use get_omni_account::*;
 
+#[cfg(test)]
+mod test_protected_method;
+
 pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
@@ -66,4 +69,7 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_sign_limit_order_params(module);
 	register_notify_limit_order_result(module);
 	register_get_omni_account(module);
+
+	#[cfg(test)]
+	test_protected_method::register_test_protected_method(module);
 }
