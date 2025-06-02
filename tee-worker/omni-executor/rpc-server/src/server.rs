@@ -1,4 +1,8 @@
-use crate::{methods::register_methods, ShieldingKey};
+use crate::{
+	methods::register_methods,
+	middlewares::{HttpMiddleware, RpcMiddleware},
+	ShieldingKey,
+};
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
@@ -51,14 +55,6 @@ pub async fn start_server(
 	storage_db: Arc<StorageDB>,
 	jwt_rsa_private_key: Vec<u8>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	let address = format!("0.0.0.0:{}", port);
-	let max_connections: u32 =
-		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
-	let server = Server::builder()
-		.max_connections(max_connections)
-		.build(address.parse::<SocketAddr>()?)
-		.await?;
-
 	// TODO: move to config
 	let mailer_api_key = env::var("OE_SENDGRID_API_KEY").unwrap_or("".to_string());
 	let mailer_from_email = env::var("OE_SENDGRID_FROM_EMAIL").unwrap_or("".to_string());
@@ -73,13 +69,23 @@ pub async fn start_server(
 		native_task_sender,
 		storage_db,
 		mailer,
-		jwt_rsa_private_key,
+		jwt_rsa_private_key.clone(),
 		google_client_id,
 		google_client_secret,
 		pumpx_api,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);
+
+	let address = format!("0.0.0.0:{}", port);
+	let max_connections: u32 =
+		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
+	let server = Server::builder()
+		.max_connections(max_connections)
+		.set_http_middleware(HttpMiddleware::create_builder())
+		.set_rpc_middleware(RpcMiddleware::create_builder(jwt_rsa_private_key))
+		.build(address.parse::<SocketAddr>()?)
+		.await?;
 
 	let handle = server.start(module);
 	info!("Server listening on port {}", port);
