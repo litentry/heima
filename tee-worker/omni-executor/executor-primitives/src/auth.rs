@@ -156,6 +156,11 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub enum ClientAuth {
+	Pumpx { google_code: String, invite_code: Option<String> },
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
