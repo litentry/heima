@@ -20,6 +20,7 @@ type JwtToken = String;
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Encode, Decode)]
+#[serde(rename_all = "snake_case")]
 pub enum UserId {
 	Twitter(String),
 	Discord(String),
@@ -167,10 +168,10 @@ mod tests {
 
 	#[test]
 	fn test_user_id_to_identity() {
-		let json = r#"{"Twitter":"handle"}"#;
+		let json = r#"{"email":"test@test.com"}"#;
 		let deserialized: UserId = serde_json::from_str(json).unwrap();
 		let identity = Identity::try_from(deserialized).unwrap();
 
-		assert_eq!(identity, Identity::Twitter(IdentityString::new(b"handle".to_vec())));
+		assert_eq!(identity, Identity::Email(IdentityString::new(b"test@test.com".to_vec())));
 	}
 }
