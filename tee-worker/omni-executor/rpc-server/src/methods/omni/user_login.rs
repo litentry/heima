@@ -55,13 +55,6 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 				})?;
 				OmniAuth::OAuth2(identity, data)
 			},
-			UserAuth::Pumpx { email_code, .. } => {
-				let UserId::Pumpx(handle) = p.user_id else {
-					error!("User ID must be a Pumpx handle for Pumpx authentication");
-					return Err(ErrorCode::ParseError);
-				};
-				OmniAuth::Email(handle, email_code)
-			},
 		};
 
 		Ok(omni_auth)
