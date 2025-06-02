@@ -159,7 +159,8 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 					return Err(ErrorCode::ParseError.into());
 				};
 
-				// debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
+                // This line breaks code formatting
+				debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
 
 				let Ok(backend_response) = ctx
 					.pumpx_api
