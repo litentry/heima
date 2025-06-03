@@ -24,11 +24,12 @@ pub struct AuthTokenClaims {
 	pub sub: String,
 	pub typ: String,
 	pub exp: i64,
+	pub aud: String,
 }
 
 impl AuthTokenClaims {
-	pub fn new(sub: String, typ: String, options: AuthOptions) -> Self {
-		Self { sub, typ, exp: options.expires_at }
+	pub fn new(sub: String, typ: String, aud: String, options: AuthOptions) -> Self {
+		Self { sub, typ, exp: options.expires_at, aud }
 	}
 }
 
@@ -134,6 +135,7 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
@@ -157,6 +159,7 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
@@ -232,6 +235,7 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
