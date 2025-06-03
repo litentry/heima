@@ -128,7 +128,7 @@ impl TryFrom<Identity> for UserId {
 	}
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum UserAuth {
 	Email(VerificationCode),
@@ -151,12 +151,12 @@ impl From<OmniAuth> for OmniAccountAuthType {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OAuth2Provider {
 	Google,
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OAuth2Data {
 	pub provider: OAuth2Provider,
 	pub code: String,
@@ -166,7 +166,7 @@ pub struct OAuth2Data {
 
 #[derive(Debug, Deserialize, Clone)]
 pub enum ClientAuth {
-	Pumpx { google_code: String, invite_code: Option<String> },
+	Wildmeta { google_code: String, invite_code: Option<String> },
 }
 
 #[cfg(test)]

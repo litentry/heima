@@ -4,7 +4,7 @@ use crate::{
 use chrono::{Days, Utc};
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserAuth, UserId};
-use executor_storage::{PumpxJwtStorage, Storage};
+use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::auth_token::{
 	AuthOptions, AuthTokenClaims, AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS,
 	AUTH_TOKEN_ID_TYPE,
@@ -25,6 +25,15 @@ pub struct UserLoginParams {
 pub struct UserLoginResponse {
 	pub access_token: String,
 	pub id_token: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct HeimaPostLoginParams {
+	pub user_id: UserId,
+	pub client_id: String,
+	pub user_auth: UserAuth,
+	pub heima_login_success: bool,
+	pub access_token: String,
 }
 
 impl TryFrom<UserLoginParams> for OmniAuth {
@@ -133,78 +142,40 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 			})?;
 
 			// // TODO: create constants for client IDs
-			if params.client_id == "pumpx" {
-				let UserId::Email(email) = params.user_id else {
-					error!("User ID must be an email for Pumpx client authentication");
-					return Err(ErrorCode::ParseError.into());
-				};
-				let Ok(res) = ctx.pumpx_api.get_account_user_id(email.clone()).await else {
-					return Err(
-						ErrorCode::ServerError(PUMPX_API_USER_CONNECTION_FAILED_CODE).into()
-					);
-				};
-				debug!("Response pumpx get_account_user_id: {:?}", res);
-
-				let Some(user_id) = res.data.user_id else {
-					error!("Pumpx API did not return user_id for email: {}", email);
-					return Err(
-						ErrorCode::ServerError(PUMPX_API_USER_CONNECTION_FAILED_CODE).into()
-					);
-				};
-				debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
-
-				let Some(ClientAuth::Pumpx { google_code, invite_code }) = params.client_auth
+			if params.client_id == "wildmeta" {
+				let Some(ClientAuth::Wildmeta { google_code, invite_code }) = params.client_auth
 				else {
 					error!("Client authentication data is missing for Pumpx client");
 					return Err(ErrorCode::ParseError.into());
 				};
 
-                // This line breaks code formatting
-				debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
+				debug!("Wildmeta client login with Google code: {}", google_code);
 
-				let Ok(backend_response) = ctx
-					.pumpx_api
-					.user_connect(
-						&access_token,
-						user_id.clone(),
-						email.clone(),
-						invite_code,
-						google_code,
-						None,
-					)
-					.await
-				else {
-					return Err(
-						ErrorCode::ServerError(PUMPX_API_USER_CONNECTION_FAILED_CODE).into()
-					);
+				debug!("Invite code: {:?}", invite_code);
+
+				let _heima_post_login_params = HeimaPostLoginParams {
+					user_id: params.user_id,
+					client_id: params.client_id,
+					user_auth: params.user_auth,
+					heima_login_success: true,
+					access_token: access_token.clone(),
 				};
 
-				debug!("Response pumpx user_connect: {:?}", backend_response);
-
-				// check google auth value
-				if !backend_response.data.google_auth_check.unwrap_or(false) {
-					return Err(ErrorCode::ServerError(
-						PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
-					)
-					.into());
-				}
-
-				let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-				if storage
-					.insert(
-						&(identity.to_omni_account().clone(), AUTH_TOKEN_ACCESS_TYPE),
-						access_token.clone(),
-					)
-					.is_err()
-				{
-					error!(
-						"Failed to insert pumpx_{}_jwt_token into storage",
-						AUTH_TOKEN_ACCESS_TYPE
-					);
-				};
+				// TODO: call wildmeta post login endpoint
 			}
 
-			// TODO: include client auth response in the response
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			if storage
+				.insert(
+					&(identity.to_omni_account().clone(), AUTH_TOKEN_ACCESS_TYPE),
+					access_token.clone(),
+				)
+				.is_err()
+			{
+				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
+			};
+
+			// TODO: include clients post login response in the response
 
 			Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse { access_token, id_token })
 		})
