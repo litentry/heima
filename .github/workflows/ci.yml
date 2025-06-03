@@ -185,24 +185,24 @@ jobs:
       - name: Parachain fmt check
         working-directory: ./parachain
         run: |
-          cargo fmt --all -- --check
+          cargo fmt -- --check
           taplo fmt --check
 
       - name: tee-worker fmt check
         working-directory: ./tee-worker
         run: |
-          cargo fmt --all -- --check
+          cargo fmt -- --check
           taplo fmt --check
 
       - name: identity-worker enclave-runtime fmt check
         working-directory: ./tee-worker/identity/enclave-runtime
         run: |
-          cargo fmt --all -- --check
+          cargo fmt -- --check
 
       - name: omni-executor fmt check
         working-directory: ./tee-worker/omni-executor
         run: |
-          cargo fmt --all -- --check
+          cargo fmt -- --check
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -725,8 +725,8 @@ jobs:
       - name: Run all unittests
         working-directory: ./parachain
         run: |
-          echo "::group::core-primitives unittest"
-          cargo test --locked -p core-primitives --lib
+          echo "::group::heima-primitives unittest"
+          cargo test --locked -p heima-primitives --lib
           echo "::endgroup::"
           echo "::group::all pallets unittest"
           cargo test --locked -p pallet-* --lib

@@ -16,7 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core_primitives::Identity;
+use heima_primitives::Identity;
 use parity_scale_codec::Codec;
 
 sp_api::decl_runtime_apis! {

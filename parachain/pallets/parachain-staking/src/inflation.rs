@@ -31,7 +31,7 @@ use sp_core::RuntimeDebug;
 use sp_runtime::{PerThing, Perbill};
 use substrate_fixed::{transcendental::pow as floatpow, types::I64F64};
 
-use core_primitives::*;
+use heima_primitives::*;
 pub const BLOCKS_PER_YEAR: u32 = YEARS;
 
 fn rounds_per_year<T: Config>() -> u32 {

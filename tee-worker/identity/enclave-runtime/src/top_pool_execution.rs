@@ -68,7 +68,7 @@ use its_sidechain::{
 	slots::{yield_next_slot, LastSlot, PerShardSlotWorkerScheduler, SlotInfo},
 	validateer_fetch::ValidateerFetch,
 };
-use litentry_macros::if_development;
+use litentry_primitives::if_development;
 use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::{crypto::UncheckedFrom, Pair};

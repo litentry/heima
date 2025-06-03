@@ -21,9 +21,7 @@ use ita_sgx_runtime::{IdentityManagement, System};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{traits::GetterAuthorization, types::KeyPair};
 use itp_utils::stringify::account_id_to_string;
-use litentry_hex_utils::hex_encode;
-use litentry_macros::if_development_or;
-use litentry_primitives::{Identity, LitentryMultiSignature};
+use litentry_primitives::{hex_encode, if_development_or, Identity, LitentryMultiSignature};
 use log::*;
 use sp_core::blake2_256;
 

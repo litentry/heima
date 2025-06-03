@@ -3,13 +3,12 @@ use crate::{
 	CliError,
 };
 use ita_stf::Assertion;
-use litentry_hex_utils::decode_hex;
 use litentry_primitives::{
-	AchainableAmount, AchainableAmountHolding, AchainableAmountToken, AchainableAmounts,
-	AchainableBasic, AchainableBetweenPercents, AchainableClassOfYear, AchainableDate,
-	AchainableDateInterval, AchainableDatePercent, AchainableParams, AchainableToken,
-	BnbDigitDomainType, ContestType, DynamicContractParams, DynamicParams, EVMTokenType,
-	GenericDiscordRoleType, OneBlockCourseType, PlatformUserType, SoraQuizType,
+	decode_hex, AchainableAmount, AchainableAmountHolding, AchainableAmountToken,
+	AchainableAmounts, AchainableBasic, AchainableBetweenPercents, AchainableClassOfYear,
+	AchainableDate, AchainableDateInterval, AchainableDatePercent, AchainableParams,
+	AchainableToken, BnbDigitDomainType, ContestType, DynamicContractParams, DynamicParams,
+	EVMTokenType, GenericDiscordRoleType, OneBlockCourseType, PlatformUserType, SoraQuizType,
 	VIP3MembershipCardLevel, Web3NftType, Web3TokenType,
 };
 use sp_core::H160;

@@ -28,4 +28,4 @@ A hash hex string of the identity
 
 ## Reference
 
-https://github.com/litentry/heima/blob/dev/common/primitives/core/src/identity.rs#L547
+https://github.com/litentry/heima/blob/dev/parachain/primitives/src/identity.rs#L547

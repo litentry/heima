@@ -69,7 +69,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use constants::currency::*;
-pub use core_primitives::{
+pub use heima_primitives::{
 	opaque, teebag::OperationalMode as TeebagOperationalMode, AccountId, Amount, AssetId, Balance,
 	BlockNumber, DefaultOmniAccountConverter, Hash, Header, Identity, Nonce, Signature, DAYS,
 	HOURS, MINUTES, SLOT_DURATION,

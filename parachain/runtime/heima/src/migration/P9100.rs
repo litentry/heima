@@ -33,7 +33,7 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<(), &'static str> {
 		use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-		use core_primitives::AccountId;
+		use heima_primitives::AccountId;
 
 		log::info!("Pre check pallet CollatorSelection exists");
 		// Get Invulnerables address from CollatorSelection
@@ -234,7 +234,7 @@ where
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
 		use frame_support::traits::OnRuntimeUpgradeHelpersExt;
-		use core_primitives::AccountId;
+		use heima_primitives::AccountId;
 		use sp_io::KillStorageResult;
 
 		log::info!("Post check CollatorSelection");

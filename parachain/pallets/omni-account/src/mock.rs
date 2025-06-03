@@ -15,7 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{self as pallet_omni_account, Decode, Encode, EnsureOmniAccount, MaxEncodedLen};
-use core_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 use frame_support::{
 	assert_ok, derive_impl,
 	pallet_prelude::EnsureOrigin,
@@ -23,6 +22,7 @@ use frame_support::{
 	traits::{ConstU32, ConstU64, InstanceFilter},
 };
 use frame_system::EnsureRoot;
+use heima_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 pub use pallet_teebag::test_util::get_signer;
 use pallet_teebag::test_util::{TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL};
 use sp_core::RuntimeDebug;
@@ -61,7 +61,7 @@ where
 	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
 		use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE, TEST8_SIGNER_PUB};
 		let signer: <T as frame_system::Config>::AccountId = get_signer(TEST8_SIGNER_PUB);
-		let enclave = core_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
+		let enclave = heima_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
 		let _ = pallet_teebag::Pallet::<T>::add_enclave_identifier_internal(
 			enclave.worker_type,
 			&signer,
@@ -276,20 +276,20 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		assert_ok!(Teebag::set_admin(RuntimeOrigin::root(), signer.clone()));
 		assert_ok!(Teebag::set_mode(
 			RuntimeOrigin::signed(signer.clone()),
-			core_primitives::OperationalMode::Development
+			heima_primitives::OperationalMode::Development
 		));
 
 		Timestamp::set_timestamp(TEST8_TIMESTAMP);
 		if !pallet_teebag::EnclaveRegistry::<Test>::contains_key(signer.clone()) {
 			assert_ok!(Teebag::register_enclave(
 				RuntimeOrigin::signed(signer),
-				core_primitives::WorkerType::Identity,
-				core_primitives::WorkerMode::Sidechain,
+				heima_primitives::WorkerType::Identity,
+				heima_primitives::WorkerMode::Sidechain,
 				TEST8_CERT.to_vec(),
 				URL.to_vec(),
 				None,
 				None,
-				core_primitives::AttestationType::Ias,
+				heima_primitives::AttestationType::Ias,
 			));
 		}
 	});

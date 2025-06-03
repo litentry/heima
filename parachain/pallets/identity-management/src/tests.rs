@@ -15,8 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #[allow(unused)]
 use crate::{mock::*, Error, OIDCClients};
-use core_primitives::{ErrorDetail, IMPError, ShardIdentifier};
 use frame_support::{assert_noop, assert_ok};
+use heima_primitives::{ErrorDetail, IMPError, ShardIdentifier};
 use sp_core::H256;
 
 use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE};

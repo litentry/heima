@@ -36,9 +36,8 @@ use itp_stf_primitives::{
 use itp_types::{parentchain::ParentchainCall, OpaqueCall, H256};
 use itp_utils::stringify::account_id_to_string;
 use lc_stf_task_sender::{SendStfRequest, StfRequestSender};
-use litentry_macros::if_development_or;
 use litentry_primitives::{
-	ErrorDetail, Identity, RequestAesKey, RequestType, ValidationData,
+	if_development_or, ErrorDetail, Identity, RequestAesKey, RequestType, ValidationData,
 	Web2IdentityVerificationRequest, Web3Network,
 };
 use log::*;

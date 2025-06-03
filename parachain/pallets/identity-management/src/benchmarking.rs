@@ -19,11 +19,11 @@
 use super::*;
 
 use crate::Pallet as IdentityManagement;
-#[allow(unused)]
-use core_primitives::{AccountId, ErrorDetail, IMPError, Identity};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, BenchmarkError};
 use frame_support::traits::EnsureOrigin;
 use frame_system::RawOrigin;
+#[allow(unused)]
+use heima_primitives::{AccountId, ErrorDetail, IMPError, Identity};
 use sp_core::H256;
 use sp_std::vec;
 

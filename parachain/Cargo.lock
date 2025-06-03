@@ -1522,37 +1522,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
-name = "core-primitives"
-version = "0.1.0"
-dependencies = [
- "base58",
- "base64 0.13.1",
- "chrono",
- "der 0.6.1",
- "frame-support",
- "hex",
- "hex-literal",
- "litentry-hex-utils",
- "litentry-macros",
- "litentry-proc-macros",
- "pallet-evm",
- "parity-scale-codec",
- "ring 0.16.20",
- "rustls-webpki 0.102.0-alpha.3",
- "scale-info",
- "serde",
- "serde_json",
- "sp-consensus-aura",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "strum 0.26.3",
- "strum_macros 0.26.4",
- "x509-cert",
-]
-
-[[package]]
 name = "core2"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4527,7 +4496,6 @@ version = "0.9.24"
 dependencies = [
  "async-trait",
  "clap",
- "core-primitives",
  "cumulus-client-cli",
  "cumulus-client-collator",
  "cumulus-client-consensus-aura",
@@ -4556,6 +4524,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "futures 0.3.31",
+ "heima-primitives",
  "heima-runtime",
  "jsonrpsee 0.24.9",
  "log",
@@ -4618,10 +4587,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "heima-primitives"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "base64 0.13.1",
+ "chrono",
+ "der 0.6.1",
+ "frame-support",
+ "heima-utils",
+ "heima-utils-proc-macros",
+ "hex",
+ "hex-literal",
+ "pallet-evm",
+ "parity-scale-codec",
+ "ring 0.16.20",
+ "rustls-webpki 0.102.0-alpha.3",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
+ "x509-cert",
+]
+
+[[package]]
 name = "heima-runtime"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -4644,6 +4642,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "heima-primitives",
  "hex",
  "hex-literal",
  "log",
@@ -4735,6 +4734,24 @@ dependencies = [
  "staging-xcm-executor",
  "substrate-wasm-builder",
  "xcm-simulator",
+]
+
+[[package]]
+name = "heima-utils"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "parity-scale-codec",
+]
+
+[[package]]
+name = "heima-utils-proc-macros"
+version = "0.1.0"
+dependencies = [
+ "cargo_toml",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
 ]
 
 [[package]]
@@ -6553,27 +6570,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
-name = "litentry-hex-utils"
-version = "0.1.0"
-dependencies = [
- "hex",
-]
-
-[[package]]
-name = "litentry-macros"
-version = "0.1.0"
-
-[[package]]
-name = "litentry-proc-macros"
-version = "0.1.0"
-dependencies = [
- "cargo_toml",
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
-
-[[package]]
 name = "litep2p"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8071,10 +8067,10 @@ dependencies = [
 name = "pallet-bitacross"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8632,11 +8628,11 @@ dependencies = [
 name = "pallet-evm-precompile-omni-bridge"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "derive_more 0.99.20",
  "fp-evm",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "hex-literal",
  "libsecp256k1",
  "pallet-evm",
@@ -8703,11 +8699,11 @@ dependencies = [
 name = "pallet-evm-precompile-score-staking"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "derive_more 0.99.20",
  "fp-evm",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-evm",
  "pallet-parachain-staking",
@@ -8893,10 +8889,10 @@ dependencies = [
 name = "pallet-identity-management"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-group",
  "pallet-teebag",
@@ -9151,9 +9147,9 @@ dependencies = [
 name = "pallet-omni-account"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-teebag",
  "pallet-timestamp",
@@ -9171,7 +9167,7 @@ dependencies = [
 name = "pallet-omni-account-runtime-api"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
+ "heima-primitives",
  "pallet-omni-account",
  "parity-scale-codec",
  "sp-api",
@@ -9181,9 +9177,9 @@ dependencies = [
 name = "pallet-omni-bridge"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "hex",
  "pallet-assets",
  "pallet-balances",
@@ -9201,10 +9197,10 @@ dependencies = [
 name = "pallet-parachain-staking"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "log",
  "pallet-authorship",
  "pallet-balances",
@@ -9368,10 +9364,10 @@ dependencies = [
 name = "pallet-score-staking"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "num-integer",
  "pallet-balances",
  "pallet-parachain-staking",
@@ -9517,12 +9513,12 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.1",
  "chrono",
- "core-primitives",
  "der 0.6.1",
  "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "hex",
  "hex-literal",
  "log",
@@ -9661,10 +9657,10 @@ dependencies = [
 name = "pallet-vc-management"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "pallet-balances",
  "pallet-group",
  "pallet-teebag",
@@ -9909,7 +9905,6 @@ checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
 name = "paseo-runtime"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -9932,6 +9927,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "heima-primitives",
  "hex-literal",
  "log",
  "moonbeam-evm-tracer",
@@ -12592,12 +12588,12 @@ dependencies = [
 name = "runtime-common"
 version = "0.1.0"
 dependencies = [
- "core-primitives",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
  "cumulus-test-relay-sproof-builder",
  "frame-support",
  "frame-system",
+ "heima-primitives",
  "log",
  "pallet-asset-manager",
  "pallet-assets",

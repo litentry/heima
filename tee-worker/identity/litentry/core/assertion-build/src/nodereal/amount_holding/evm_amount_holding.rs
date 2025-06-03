@@ -140,7 +140,7 @@ mod tests {
 	use itp_stf_primitives::types::ShardIdentifier;
 	use lc_credentials::assertion_logic::{AssertionLogic, Op};
 	use lc_mock_server::run;
-	use litentry_hex_utils::decode_hex;
+	use litentry_primitives::decode_hex;
 
 	fn create_ton_token_assertion_logic() -> Box<AssertionLogic> {
 		Box::new(AssertionLogic::Item { src: "$token".into(), op: Op::Equal, dst: "TON".into() })

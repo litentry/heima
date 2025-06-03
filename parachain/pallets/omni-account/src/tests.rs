@@ -15,8 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{mock::*, AccountStore, MemberAccountHash, *};
-use core_primitives::{CallEthereum, Identity};
 use frame_support::{assert_noop, assert_ok};
+use heima_primitives::{CallEthereum, Identity};
 use sp_core::{hashing::blake2_256, H160};
 use sp_runtime::{traits::BadOrigin, ModuleError};
 use sp_std::vec;

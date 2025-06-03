@@ -41,8 +41,6 @@ lc-identity-verification = { workspace = true }
 lc-native-task-sender = { workspace = true }
 lc-omni-account = { workspace = true }
 lc-stf-task-receiver = { workspace = true }
-litentry-hex-utils = { workspace = true }
-litentry-macros = { workspace = true }
 litentry-primitives = { workspace = true }
 
 [features]
@@ -83,5 +81,5 @@ std = [
     "itp-storage/std",
 ]
 development = [
-    "litentry-macros/development",
+    "litentry-primitives/development",
 ]

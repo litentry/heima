@@ -82,7 +82,7 @@ cumulus-pallet-session-benchmarking = { workspace = true, optional = true }
 frame-benchmarking = { workspace = true, optional = true }
 frame-system-benchmarking = { workspace = true, optional = true }
 
-core-primitives = { workspace = true }
+heima-primitives = { workspace = true }
 pallet-account-fix = { workspace = true }
 pallet-asset-manager = { workspace = true }
 pallet-assets = { workspace = true }
@@ -227,7 +227,7 @@ runtime-benchmarks = [
     "pallet-omni-bridge/runtime-benchmarks",
 ]
 std = [
-    "core-primitives/std",
+    "heima-primitives/std",
     "cumulus-pallet-aura-ext/std",
     "cumulus-pallet-dmp-queue/std",
     "cumulus-pallet-parachain-system/std",

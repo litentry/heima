@@ -29,9 +29,9 @@ executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
-heima-hex-utils = { workspace = true }
 heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
+heima-utils = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }

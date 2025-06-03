@@ -20,7 +20,7 @@ import {
     fundAccount,
     createAuthenticatedTrustedCallTransferNativeIntent,
 } from './common/utils/native-request-helpers';
-import { CorePrimitivesIdentity, CorePrimitivesOmniAccountMemberAccount } from '@heima-network/api-argument/identity';
+import { HeimaPrimitivesIdentity, HeimaPrimitivesOmniAccountMemberAccount } from '@heima-network/api-argument/identity';
 import { encodeAddress } from '@polkadot/util-crypto';
 
 describe('Omni Account', function () {
@@ -28,7 +28,7 @@ describe('Omni Account', function () {
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
     let aliceWallet: SubstrateSigner;
-    let aliceIdentity: CorePrimitivesIdentity;
+    let aliceIdentity: HeimaPrimitivesIdentity;
     let omniAccount: string;
 
     before(async function () {
@@ -60,7 +60,7 @@ describe('Omni Account', function () {
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 1, 'account store members count should be 1');
 
-        const memberAccount: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        const memberAccount: HeimaPrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount.asPublic.asSubstrate.toHex(),
             aliceIdentity.asSubstrate.toHex(),
@@ -94,13 +94,13 @@ describe('Omni Account', function () {
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
-        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        const memberAccount1: HeimaPrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
             aliceIdentity.asSubstrate.toHex(),
             'account store member 1 is not the expected member'
         );
-        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        const memberAccount2: HeimaPrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
         assert.isTrue(memberAccount2.isPrivate);
     });
 
@@ -133,7 +133,7 @@ describe('Omni Account', function () {
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 3, 'account store members count should be 3');
-        const memberAccount3: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[2];
+        const memberAccount3: HeimaPrimitivesOmniAccountMemberAccount = accountStore.unwrap()[2];
         assert.equal(
             memberAccount3.asPublic.asTwitter.toString(),
             twitterIdentity.asTwitter.toString(),
@@ -181,13 +181,13 @@ describe('Omni Account', function () {
         const accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         const membersCount = accountStore.unwrap().length;
         assert.equal(membersCount, 2, 'account store members count should be 2');
-        const memberAccount1: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
+        const memberAccount1: HeimaPrimitivesOmniAccountMemberAccount = accountStore.unwrap()[0];
         assert.equal(
             memberAccount1.asPublic.asSubstrate.toHex(),
             aliceIdentity.asSubstrate.toHex(),
             'account store member 1 is not the expected member'
         );
-        const memberAccount2: CorePrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
+        const memberAccount2: HeimaPrimitivesOmniAccountMemberAccount = accountStore.unwrap()[1];
         assert.isTrue(memberAccount2.isPublic);
         assert.equal(
             memberAccount2.asPublic.asSubstrate.toHex(),

@@ -14,7 +14,7 @@ import {
     decodeIdGraph,
 } from './common/di-utils'; // @fixme move to a better place
 import type { IntegrationTestContext } from './common/common-types';
-import { CorePrimitivesIdentity, WorkerRpcReturnValue } from '@heima-network/api-argument/identity';
+import { HeimaPrimitivesIdentity, WorkerRpcReturnValue } from '@heima-network/api-argument/identity';
 import { aesKey } from './common/call';
 import { $ as zx } from 'zx';
 import { KeyringPair } from '@polkadot/keyring/types';
@@ -28,7 +28,7 @@ const chain = byId['litentry-dev'];
 describe('Test Vc (direct invocation)', function () {
     let context: IntegrationTestContext = undefined as any;
     let teeShieldingKey: KeyObject = undefined as any;
-    const substrateIdentities: CorePrimitivesIdentity[] = [];
+    const substrateIdentities: HeimaPrimitivesIdentity[] = [];
 
     const clientDir = process.env.LITENTRY_CLI_DIR;
 

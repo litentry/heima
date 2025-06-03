@@ -27,7 +27,7 @@ pub mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::assert_ok;
 
-use core_primitives::{AccountId, AssetId, Balance, BlockNumber};
+use heima_primitives::{AccountId, AssetId, Balance, BlockNumber};
 
 use frame_support::{
 	pallet_prelude::DispatchClass,
@@ -84,7 +84,7 @@ pub const BLOCK_PROCESSING_VELOCITY: u32 = 1;
 pub const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
 
 pub mod currency {
-	use core_primitives::Balance;
+	use heima_primitives::Balance;
 
 	pub const UNIT: Balance = 1_000_000_000_000_000_000;
 	pub const DOLLARS: Balance = UNIT; // 1_000_000_000_000_000_000
@@ -288,7 +288,7 @@ where
 	fn try_successful_origin() -> Result<T::RuntimeOrigin, ()> {
 		use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE, TEST8_SIGNER_PUB};
 		let signer: <T as frame_system::Config>::AccountId = get_signer(TEST8_SIGNER_PUB);
-		let enclave = core_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
+		let enclave = heima_primitives::Enclave::default().with_mrenclave(TEST8_MRENCLAVE);
 		if !pallet_teebag::EnclaveRegistry::<T>::contains_key(signer.clone()) {
 			assert_ok!(pallet_teebag::Pallet::<T>::add_enclave(&signer, &enclave));
 		}

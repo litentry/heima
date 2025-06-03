@@ -51,11 +51,10 @@ use itp_types::{
 };
 use itp_utils::stringify::account_id_to_string;
 use lc_authentication::AuthOptions;
-use litentry_hex_utils::hex_encode;
 pub use litentry_primitives::{
-	aes_encrypt_default, all_evm_web3networks, all_substrate_web3networks, AesOutput, Assertion,
-	ErrorDetail, IMPError, Identity, Intent, LitentryMultiSignature, ParentchainBlockNumber,
-	RequestAesKey, VCMPError, ValidationData, Web3Network,
+	aes_encrypt_default, all_evm_web3networks, all_substrate_web3networks, hex_encode, AesOutput,
+	Assertion, ErrorDetail, IMPError, Identity, Intent, LitentryMultiSignature,
+	ParentchainBlockNumber, RequestAesKey, VCMPError, ValidationData, Web3Network,
 };
 use log::*;
 use sp_core::{

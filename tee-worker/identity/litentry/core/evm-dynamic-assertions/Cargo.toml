@@ -38,7 +38,6 @@ litentry-primitives = { workspace = true }
 http_req = { workspace = true }
 lc-mock-server = { workspace = true }
 litentry-primitives = { workspace = true, features = ["std"] }
-litentry-hex-utils = { workspace = true }
 
 [features]
 default = ["std"]
