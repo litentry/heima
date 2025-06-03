@@ -14,10 +14,6 @@ pub enum Error {
 	JwtError(jwt::ErrorKind),
 }
 
-pub const AUTH_TOKEN_EXPIRATION_DAYS: u64 = 7; // 1 week
-pub const AUTH_TOKEN_ACCESS_TYPE: &str = "access";
-pub const AUTH_TOKEN_ID_TYPE: &str = "id";
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
 	pub expires_at: i64,
@@ -101,6 +97,8 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 
 #[cfg(test)]
 mod tests {
+	use crate::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
+
 	use super::*;
 	use chrono::{Days, Utc};
 	use executor_primitives::{utils::hex::ToHexPrefixed, Identity, Web2IdentityType};
