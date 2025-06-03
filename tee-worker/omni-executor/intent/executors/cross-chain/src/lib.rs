@@ -46,7 +46,7 @@ use executor_primitives::IntentId;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_storage::StorageDB;
-use executor_storage::{PumpxJwtStorage, Storage};
+use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
@@ -211,7 +211,7 @@ impl<
 
 				let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
 
-				let storage = PumpxJwtStorage::new(self.storage_db.clone());
+				let storage = HeimaJwtStorage::new(self.storage_db.clone());
 				let Ok(Some(access_token)) =
 					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 				else {

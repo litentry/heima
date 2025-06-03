@@ -3,21 +3,21 @@ use executor_primitives::AccountId;
 use rocksdb::DB;
 use std::sync::Arc;
 
-const STORAGE_NAME: &str = "pumpx_jwt_storage";
+const STORAGE_NAME: &str = "heima_jwt_storage";
 
-pub type PumpxJwtStorageKey = (AccountId, &'static str);
+pub type HeimaJwtStorageKey = (AccountId, &'static str);
 
-pub struct PumpxJwtStorage {
+pub struct HeimaJwtStorage {
 	db: Arc<DB>,
 }
 
-impl PumpxJwtStorage {
+impl HeimaJwtStorage {
 	pub fn new(db: Arc<DB>) -> Self {
 		Self { db }
 	}
 }
 
-impl Storage<PumpxJwtStorageKey, String> for PumpxJwtStorage {
+impl Storage<HeimaJwtStorageKey, String> for HeimaJwtStorage {
 	fn db(&self) -> Arc<crate::StorageDB> {
 		self.db.clone()
 	}

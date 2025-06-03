@@ -28,7 +28,7 @@ use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_primitives::SolanaToken;
 use executor_primitives::{EthereumToken, PumpxConfig, SwapOrder};
-use executor_storage::PumpxJwtStorage;
+use executor_storage::HeimaJwtStorage;
 use executor_storage::Storage;
 use executor_storage::StorageDB;
 use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
@@ -172,7 +172,7 @@ async fn simple_single_chain_swap() {
 	.unwrap();
 
 	// store jwt token
-	let pumpx_jwt_storage = PumpxJwtStorage::new(storage_db.clone());
+	let pumpx_jwt_storage = HeimaJwtStorage::new(storage_db.clone());
 	pumpx_jwt_storage
 		.insert(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE), "test_token".to_string())
 		.unwrap();

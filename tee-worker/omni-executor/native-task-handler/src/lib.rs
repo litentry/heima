@@ -15,7 +15,7 @@ use executor_primitives::{
 	OmniAccountAuthType, PumpxAccountProfile, ValidationData, Web2IdentityType,
 };
 use executor_storage::{
-	IntentIdStorage, MemberOmniAccountStorage, PumpxJwtStorage, PumpxProfileStorage, Storage,
+	HeimaJwtStorage, IntentIdStorage, MemberOmniAccountStorage, PumpxProfileStorage, Storage,
 	StorageDB,
 };
 use heima_authentication::auth_token::*;
@@ -676,7 +676,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			if storage
 				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
@@ -701,7 +701,7 @@ async fn handle_native_task<
 			pumpx_wallet_index,
 			expected_wallet_address,
 		) => {
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
 				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
@@ -798,7 +798,7 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxAddWallet(sender) => {
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
 				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
@@ -875,7 +875,7 @@ async fn handle_native_task<
 			language,
 		) => {
 			// 1. Verify we have a valid Pumpx "access" token for the user
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
 				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
