@@ -230,7 +230,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9242,
+	spec_version: 9243,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1128,7 +1128,6 @@ impl pallet_identity_management::Config for Runtime {
 	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
-	type ExtrinsicWhitelistOrigin = IMPExtrinsicWhitelist;
 	type MaxOIDCClientRedirectUris = ConstU32<10>;
 }
 
@@ -1251,7 +1250,6 @@ impl pallet_vc_management::Config for Runtime {
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
-	type ExtrinsicWhitelistOrigin = VCMPExtrinsicWhitelist;
 }
 
 parameter_types! {
