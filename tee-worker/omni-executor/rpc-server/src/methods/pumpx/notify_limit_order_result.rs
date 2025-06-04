@@ -3,7 +3,7 @@ use crate::verify_auth::verify_auth_token_authentication;
 use crate::{error_code::*, server::RpcContext, Deserialize, ErrorCode};
 use executor_core::native_task::*;
 use executor_primitives::{utils::hex::FromHexPrefixed, OmniAuth};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::{Address32, Identity};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
