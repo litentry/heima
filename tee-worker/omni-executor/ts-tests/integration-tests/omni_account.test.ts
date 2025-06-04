@@ -36,7 +36,7 @@ describe('OmniAccount', function () {
             context.api,
             nativeTask,
             aliceWallet,
-            "00000",            
+            '00000',
             context.api.createType('Index', currentNonce),
             msgToSign
         );
@@ -88,7 +88,7 @@ describe('OmniAccount', function () {
             context.api,
             nativeTask,
             aliceWallet,
-            "00001",
+            '00001',
             context.api.createType('Index', currentNonce),
             msgToSign
         );
@@ -121,7 +121,7 @@ describe('OmniAccount', function () {
             context.api,
             nativeTask,
             aliceWallet,
-            "00002",
+            '00002',
             context.api.createType('Index', currentNonce),
             msgToSign
         );
@@ -173,7 +173,7 @@ describe('OmniAccount', function () {
             context.api,
             nativeTask,
             aliceWallet,
-            "00003",            
+            '00003',
             context.api.createType('Index', currentNonce),
             msgToSign
         );
@@ -213,7 +213,7 @@ describe('OmniAccount', function () {
             context.api,
             nativeTask,
             aliceWallet,
-            "000004",            
+            '000004',
             context.api.createType('Index', currentNonce),
             msgToSign
         );
@@ -251,7 +251,7 @@ describe('OmniAccount', function () {
             context.api,
             nativeTask,
             aliceWallet,
-            "00005",
+            '00005',
             context.api.createType('Index', currentNonce),
             msgToSign
         );
