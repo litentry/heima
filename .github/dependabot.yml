@@ -31,12 +31,6 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     labels: ["automated-pr"]
-    ignore:
-      # Ignore all npm dependencies in identity-worker related directories
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
-        paths:
-          - "tee-worker/identity/**"
     groups:
       typescript-dependencies:
         patterns:
@@ -45,6 +39,16 @@ updates:
       - "litentry/parachain"
     schedule:
       interval: "weekly"
+
+  # Add configuration for tee-worker/identity
+  - package-ecosystem: "npm"
+    directory: "/tee-worker/identity"
+    labels: ["automated-pr"]
+    open-pull-requests-limit: 0
+    reviewers:
+      - "litentry/parachain"
+    schedule:
+      interval: "monthly"
 
   - package-ecosystem: github-actions
     directory: '/'
