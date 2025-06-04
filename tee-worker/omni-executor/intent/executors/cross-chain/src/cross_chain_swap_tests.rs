@@ -36,7 +36,7 @@ use executor_primitives::{EthereumToken, PumpxConfig, SwapOrder};
 use executor_storage::Storage;
 use executor_storage::StorageDB;
 use executor_storage::{HeimaJwtStorage, PumpxProfileStorage};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
 use intent_asset_lock::precise::PreciseAssetsLock;

@@ -1,3 +1,4 @@
+use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX};
 use executor_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use rsa::{
@@ -14,10 +15,6 @@ pub enum Error {
 	JwtError(jwt::ErrorKind),
 }
 
-pub const AUTH_TOKEN_EXPIRATION_DAYS: u64 = 7; // 1 week
-pub const AUTH_TOKEN_ACCESS_TYPE: &str = "access";
-pub const AUTH_TOKEN_ID_TYPE: &str = "id";
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
 	pub expires_at: i64,
@@ -28,11 +25,12 @@ pub struct AuthTokenClaims {
 	pub sub: String,
 	pub typ: String,
 	pub exp: i64,
+	pub aud: String,
 }
 
 impl AuthTokenClaims {
-	pub fn new(sub: String, typ: String, options: AuthOptions) -> Self {
-		Self { sub, typ, exp: options.expires_at }
+	pub fn new(sub: String, typ: String, aud: String, options: AuthOptions) -> Self {
+		Self { sub, typ, exp: options.expires_at, aud }
 	}
 }
 
@@ -71,9 +69,13 @@ impl AuthTokenValidator<AuthTokenClaims> for String {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		let claims =
-			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
-				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		let claims = jwt::decode::<AuthTokenClaims>(
+			self,
+			public_key.as_bytes(),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			validation.skip_exp_check,
+		)
+		.map_err(|e| Error::JwtError(e.kind().clone()))?;
 		validation.validate(&claims)?;
 		Ok(claims)
 	}
@@ -91,9 +93,13 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		let claims =
-			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
-				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		let claims = jwt::decode::<AuthTokenClaims>(
+			self,
+			public_key.as_bytes(),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			validation.skip_exp_check,
+		)
+		.map_err(|e| Error::JwtError(e.kind().clone()))?;
 		validation.validate(&claims)?;
 		Ok(claims)
 	}
@@ -101,6 +107,8 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 
 #[cfg(test)]
 mod tests {
+	use crate::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
+
 	use super::*;
 	use chrono::{Days, Utc};
 	use executor_primitives::{utils::hex::ToHexPrefixed, Identity, Web2IdentityType};
@@ -136,6 +144,7 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
@@ -159,6 +168,7 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
@@ -234,6 +244,7 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();

@@ -6,7 +6,7 @@ use crate::{
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::auth_token::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
+use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_primitives::{
 	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
 	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,

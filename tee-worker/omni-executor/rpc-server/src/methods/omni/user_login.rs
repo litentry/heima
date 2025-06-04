@@ -125,15 +125,20 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 				error!("Invalid user ID format");
 				ErrorCode::ParseError
 			})?;
-			let id_token =
-				create_jwt_for_user(identity.clone(), AUTH_TOKEN_ID_TYPE, &ctx.jwt_rsa_private_key)
-					.map_err(|_| {
-						error!("Failed to create access token for user");
-						ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-					})?;
+			let id_token = create_jwt_for_user(
+				identity.clone(),
+				AUTH_TOKEN_ID_TYPE,
+				&params.client_id,
+				&ctx.jwt_rsa_private_key,
+			)
+			.map_err(|_| {
+				error!("Failed to create access token for user");
+				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
+			})?;
 			let access_token = create_jwt_for_user(
 				identity.clone(),
 				AUTH_TOKEN_ACCESS_TYPE,
+				&params.client_id,
 				&ctx.jwt_rsa_private_key,
 			)
 			.map_err(|_| {
@@ -185,6 +190,7 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 fn create_jwt_for_user(
 	identity: Identity,
 	token_type: &str,
+	client_id: &str,
 	jwt_rsa_private_key: &[u8],
 ) -> Result<String, ()> {
 	let expires_at = Utc::now()
@@ -193,8 +199,12 @@ fn create_jwt_for_user(
 		.timestamp();
 	let auth_options = AuthOptions { expires_at };
 	let omni_account = identity.to_omni_account();
-	let token_claims =
-		AuthTokenClaims::new(omni_account.to_hex(), token_type.to_string(), auth_options.clone());
+	let token_claims = AuthTokenClaims::new(
+		omni_account.to_hex(),
+		token_type.to_string(),
+		client_id.to_string(),
+		auth_options.clone(),
+	);
 	jwt::create(&token_claims, jwt_rsa_private_key).map_err(|e| {
 		error!("Failed to create JWT token: {:?}", e);
 	})
