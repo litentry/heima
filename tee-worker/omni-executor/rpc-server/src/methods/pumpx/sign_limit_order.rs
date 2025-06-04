@@ -26,7 +26,7 @@ use executor_core::native_task::PumpxChainId;
 use executor_core::native_task::PumxWalletIndex;
 use executor_primitives::utils::hex::FromHexPrefixed;
 use executor_primitives::OmniAuth;
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::Address32;
 use heima_primitives::Identity;
 use heima_primitives::IntentId;

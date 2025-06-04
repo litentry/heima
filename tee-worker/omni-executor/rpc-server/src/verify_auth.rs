@@ -6,10 +6,8 @@ use executor_primitives::{
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
-	auth_token::{
-		AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation,
-		AUTH_TOKEN_ID_TYPE,
-	},
+	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
+	constants::AUTH_TOKEN_ID_TYPE,
 	web3::HeimaMessagePayload,
 };
 use heima_identity_verification::web2::google::decode_id_token;

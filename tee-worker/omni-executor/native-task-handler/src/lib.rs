@@ -18,7 +18,13 @@ use executor_storage::{
 	IntentIdStorage, MemberOmniAccountStorage, PumpxJwtStorage, PumpxProfileStorage, Storage,
 	StorageDB,
 };
-use heima_authentication::auth_token::*;
+use heima_authentication::{
+	auth_token::*,
+	constants::{
+		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA,
+		CLIENT_ID_PUMPX,
+	},
+};
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall,
@@ -230,12 +236,14 @@ async fn handle_native_task<
 					AuthTokenClaims::new(
 						email.to_string(),
 						AUTH_TOKEN_ID_TYPE.to_string(),
+						CLIENT_ID_HEIMA.to_string(),
 						auth_options,
 					)
 				},
 				_ => AuthTokenClaims::new(
 					sender.hash().to_string(),
 					AUTH_TOKEN_ID_TYPE.to_string(),
+					CLIENT_ID_HEIMA.to_string(),
 					auth_options,
 				),
 			};
@@ -618,6 +626,7 @@ async fn handle_native_task<
 			let access_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
+				CLIENT_ID_PUMPX.to_string(),
 				auth_options.clone(),
 			);
 			let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
@@ -665,6 +674,7 @@ async fn handle_native_task<
 			let id_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
 				AUTH_TOKEN_ID_TYPE.to_string(),
+				CLIENT_ID_PUMPX.to_string(),
 				auth_options,
 			);
 			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {

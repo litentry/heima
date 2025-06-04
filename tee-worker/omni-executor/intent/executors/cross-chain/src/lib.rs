@@ -47,7 +47,7 @@ use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
