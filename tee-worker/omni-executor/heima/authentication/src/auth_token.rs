@@ -1,3 +1,4 @@
+use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX};
 use executor_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use rsa::{
@@ -68,9 +69,13 @@ impl AuthTokenValidator<AuthTokenClaims> for String {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		let claims =
-			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
-				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		let claims = jwt::decode::<AuthTokenClaims>(
+			self,
+			public_key.as_bytes(),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			validation.skip_exp_check,
+		)
+		.map_err(|e| Error::JwtError(e.kind().clone()))?;
 		validation.validate(&claims)?;
 		Ok(claims)
 	}
@@ -88,9 +93,13 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		let claims =
-			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
-				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		let claims = jwt::decode::<AuthTokenClaims>(
+			self,
+			public_key.as_bytes(),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			validation.skip_exp_check,
+		)
+		.map_err(|e| Error::JwtError(e.kind().clone()))?;
 		validation.validate(&claims)?;
 		Ok(claims)
 	}

@@ -17,6 +17,7 @@ pub fn create<T: Serialize>(claims: &T, private_key: &[u8]) -> Result<String, St
 pub fn decode<T: DeserializeOwned>(
 	token: &str,
 	public_key: &[u8],
+	audiences: Option<&[&str]>,
 	skip_exp_check: bool,
 ) -> Result<T, Error> {
 	let mut validation = Validation::new(Algorithm::RS256);
@@ -24,6 +25,9 @@ pub fn decode<T: DeserializeOwned>(
 		validation.validate_exp = false;
 	}
 	validation.set_required_spec_claims(&["sub", "typ", "aud"]);
+	if let Some(audiences) = audiences {
+		validation.set_audience(audiences);
+	}
 	let decoding_key = DecodingKey::from_rsa_der(public_key);
 	decode_jwt::<T>(token, &decoding_key, &validation).map(|data| data.claims)
 }
@@ -41,6 +45,7 @@ mod tests {
 	struct JwtClaims {
 		pub sub: String,
 		pub exp: i64,
+		pub aud: String,
 	}
 
 	#[test]
@@ -55,10 +60,11 @@ mod tests {
 			.checked_add_days(Days::new(1))
 			.expect("Failed to calculate expiration")
 			.timestamp();
-		let claims = JwtClaims { sub: "test".to_string(), exp };
+		let claims = JwtClaims { sub: "test".to_string(), exp, aud: "test_aud".to_string() };
 
 		let token = create(&claims, private_key.as_bytes()).unwrap();
-		let decoded = decode::<JwtClaims>(&token, public_key.as_bytes(), false).unwrap();
+		let decoded =
+			decode::<JwtClaims>(&token, public_key.as_bytes(), Some(&["test_aud"]), false).unwrap();
 
 		assert_eq!(claims, decoded);
 	}
@@ -75,10 +81,11 @@ mod tests {
 			.checked_sub_days(Days::new(5)) // some time before now
 			.expect("Failed to calculate expiration")
 			.timestamp();
-		let claims = JwtClaims { sub: "test".to_string(), exp };
+		let claims = JwtClaims { sub: "test".to_string(), exp, aud: "test_aud".to_string() };
 
 		let token = create(&claims, private_key.as_bytes()).unwrap();
-		let decoded = decode::<JwtClaims>(&token, public_key.as_bytes(), true).unwrap();
+		let decoded =
+			decode::<JwtClaims>(&token, public_key.as_bytes(), Some(&["test_aud"]), true).unwrap();
 
 		assert_eq!(claims, decoded);
 	}
