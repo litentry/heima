@@ -88,7 +88,7 @@ export async function createNativeTaskWrapper(
     });
 
     const auth: OmniAuth = api.createType('OmniAuth', {
-        Web3: api.createType('(Identity, HeimaMultiSignature)', [signerIdentity, signature]),
+        Web3: api.createType('(Text, Identity, HeimaMultiSignature)', ['heima', signerIdentity, signature]),
     });
     let n = api.createType('Option<Nonce>', nonce);
     let a = api.createType('Option<OmniAuth>', auth);
