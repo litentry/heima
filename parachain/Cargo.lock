@@ -8394,26 +8394,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-evm-address"
-version = "0.1.0"
-dependencies = [
- "fp-evm",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-balances",
- "pallet-ethereum",
- "pallet-evm",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-evm-assertions"
 version = "0.1.0"
 dependencies = [
@@ -8894,7 +8874,6 @@ dependencies = [
  "frame-system",
  "heima-primitives",
  "pallet-balances",
- "pallet-group",
  "pallet-teebag",
  "pallet-timestamp",
  "pallet-utility",
@@ -9662,7 +9641,6 @@ dependencies = [
  "frame-system",
  "heima-primitives",
  "pallet-balances",
- "pallet-group",
  "pallet-teebag",
  "pallet-timestamp",
  "pallet-utility",

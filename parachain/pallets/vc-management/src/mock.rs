@@ -79,7 +79,6 @@ frame_support::construct_runtime!(
 		Timestamp: pallet_timestamp,
 		Utility: pallet_utility,
 		VCManagement: pallet_vc_management,
-		VCMPExtrinsicWhitelist: pallet_group,
 	}
 );
 
@@ -115,7 +114,6 @@ impl pallet_vc_management::Config for Test {
 	type TEECallOrigin = EnsureEnclaveSigner<Self>;
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
 	type DelegateeAdminOrigin = EnsureRoot<Self::AccountId>;
-	type ExtrinsicWhitelistOrigin = VCMPExtrinsicWhitelist;
 }
 
 parameter_types! {
@@ -129,11 +127,6 @@ impl pallet_teebag::Config for Test {
 	type MaxEnclaveIdentifier = ConstU32<3>;
 	type MaxAuthorizedEnclave = ConstU32<3>;
 	type WeightInfo = ();
-}
-
-impl pallet_group::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type GroupManagerOrigin = frame_system::EnsureRoot<Self::AccountId>;
 }
 
 impl pallet_utility::Config for Test {

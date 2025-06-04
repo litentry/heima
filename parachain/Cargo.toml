@@ -16,7 +16,6 @@ members = [
     'pallets/collab-ai/pool-proposal',
     'pallets/collab-ai/investing-pool',
     'pallets/extrinsic-filter',
-    'pallets/evm-address',
     'pallets/evm-assertions',
     'pallets/group',
     'pallets/identity-management',

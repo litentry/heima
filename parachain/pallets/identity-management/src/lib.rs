@@ -74,8 +74,6 @@ pub mod pallet {
 		type TEECallOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		// origin to manage authorized delegatee list
 		type DelegateeAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-		// origin that is allowed to call extrinsics
-		type ExtrinsicWhitelistOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 		// maximum number of OIDC client URIs
 		#[pallet::constant]
 		type MaxOIDCClientRedirectUris: Get<u32>;
@@ -261,7 +259,7 @@ pub mod pallet {
 			encrypted_validation_data: Vec<u8>,
 			encrypted_web3networks: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			ensure!(
 				who == user || Delegatee::<T>::contains_key(&who),
 				Error::<T>::UnauthorizedUser
@@ -284,7 +282,7 @@ pub mod pallet {
 			shard: ShardIdentifier,
 			encrypted_identity: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			Self::deposit_event(Event::DeactivateIdentityRequested {
 				shard,
 				account: who,
@@ -301,7 +299,7 @@ pub mod pallet {
 			shard: ShardIdentifier,
 			encrypted_identity: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			Self::deposit_event(Event::ActivateIdentityRequested {
 				shard,
 				account: who,
