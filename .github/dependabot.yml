@@ -22,6 +22,29 @@ updates:
       - dependency-name: "kusama-*"
       - dependency-name: "westend-*"
       - dependency-name: "heima-*"
+    groups:
+      parachain-dependencies:
+        patterns:
+          - "*"
+    reviewers:
+      - "litentry/parachain"
+    schedule:
+      interval: "weekly"
+
+  # Add configuration for all TypeScript files
+  - package-ecosystem: "npm"
+    directory: "/"
+    labels: ["automated-pr"]
+    ignore:
+      # Ignore all npm dependencies in identity-worker related directories
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
+        paths:
+          - "tee-worker/identity/**"
+    groups:
+      typescript-dependencies:
+        patterns:
+          - "*"
     reviewers:
       - "litentry/parachain"
     schedule:
@@ -30,10 +53,11 @@ updates:
   - package-ecosystem: github-actions
     directory: '/'
     labels: ["automated-pr"]
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     reviewers:
       - "litentry/parachain"
     schedule:
       interval: "weekly"
-
-    # handle ts-tests dependencies manually before we find a way to merge
-    # the dependabot PRs
