@@ -5,9 +5,9 @@ use chrono::{Days, Utc};
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserAuth, UserId};
 use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::auth_token::{
-	AuthOptions, AuthTokenClaims, AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS,
-	AUTH_TOKEN_ID_TYPE,
+use heima_authentication::{
+	auth_token::{AuthOptions, AuthTokenClaims},
+	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
