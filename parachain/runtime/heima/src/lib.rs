@@ -782,13 +782,6 @@ impl pallet_identity::Config for Runtime {
 	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
-impl pallet_account_fix::Config for Runtime {
-	type Currency = Balances;
-	type IncConsumerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
-	type AddBalanceOrigin = EnsureRoot<AccountId>;
-	type BurnOrigin = EnsureRoot<AccountId>;
-}
-
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -1364,7 +1357,6 @@ construct_runtime! {
 
 		// TMP
 		StateTrieMigration: pallet_state_trie_migration = 251,
-		AccountFix: pallet_account_fix = 254,
 	}
 }
 
@@ -1443,8 +1435,6 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			// Substrate EVM extrinsic not allowed
 			// So no EVM pallet
 			RuntimeCall::Ethereum(_) |
-			// AccountFix
-			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
