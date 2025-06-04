@@ -7,7 +7,9 @@ use executor_primitives::{utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserA
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
-	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
+	constants::{
+		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_WILDMETA,
+	},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -146,8 +148,7 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
 			})?;
 
-			// // TODO: create constants for client IDs
-			if params.client_id == "wildmeta" {
+			if params.client_id == CLIENT_ID_WILDMETA {
 				let Some(ClientAuth::Wildmeta { google_code, invite_code }) = params.client_auth
 				else {
 					error!("Client authentication data is missing for Pumpx client");
