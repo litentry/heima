@@ -22,14 +22,6 @@ updates:
       - dependency-name: "kusama-*"
       - dependency-name: "westend-*"
       - dependency-name: "heima-*"
-    groups:
-      parachain-dependencies:
-        patterns:
-          - "*"
-    reviewers:
-      - "litentry/parachain"
-    schedule:
-      interval: "weekly"
 
   # Add configuration for all TypeScript files
   - package-ecosystem: "npm"
