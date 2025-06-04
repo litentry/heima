@@ -22,8 +22,28 @@ updates:
       - dependency-name: "kusama-*"
       - dependency-name: "westend-*"
       - dependency-name: "heima-*"
+      # Exclude all identity-related dependencies
+      - dependency-name: "lc-*"
+      - dependency-name: "itc-*"
+      - dependency-name: "its-*"
     reviewers:
       - "litentry/parachain"
+    schedule:
+      interval: "weekly"
+
+  # Configure dependency checks specifically for the omni-executor.
+  - package-ecosystem: "cargo"
+    directory: "/tee-worker/omni-executor"
+    labels: ["automated-pr"]
+    reviewers:
+      - "litentry/parachain"
+    schedule:
+      interval: "weekly"
+
+  # Disable dependency checks for the identity directory
+  - package-ecosystem: "cargo"
+    directory: "/tee-worker/identity"
+    open-pull-requests-limit: 0
     schedule:
       interval: "weekly"
 
