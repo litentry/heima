@@ -19,11 +19,13 @@ type JwtToken = String;
 /// A serializable representation of User Identity for JSON interchange.
 /// ```json
 /// {
-///  "Email": "test@test.com",
+///  "type": "Email",
+///  "value": "test@test.com",
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Encode, Decode)]
 #[serde(rename_all = "snake_case")]
+#[serde(tag = "type", content = "value")]
 pub enum UserId {
 	Twitter(String),
 	Discord(String),
@@ -130,6 +132,7 @@ impl TryFrom<Identity> for UserId {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
+#[serde(tag = "type", content = "value")]
 pub enum UserAuth {
 	Email(VerificationCode),
 	AuthToken(JwtToken),
@@ -165,6 +168,8 @@ pub struct OAuth2Data {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
+#[serde(tag = "type", content = "value")]
 pub enum ClientAuth {
 	Wildmeta { google_code: String, invite_code: Option<String> },
 }
@@ -175,7 +180,7 @@ mod tests {
 
 	#[test]
 	fn test_user_id_to_identity() {
-		let json = r#"{"email":"test@test.com"}"#;
+		let json = r#"{"type": "email", "value": "test@test.com"}"#;
 		let deserialized: UserId = serde_json::from_str(json).unwrap();
 		let identity = Identity::try_from(deserialized).unwrap();
 

@@ -40,6 +40,7 @@ pub enum HeimaMultiSignature {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
+#[serde(tag = "type", content = "value")]
 pub enum SubstrateSignature {
 	Ed25519(ed25519::Signature),
 	Sr25519(sr25519::Signature),
