@@ -20,8 +20,9 @@ mod test {
 	use executor_crypto::jwt;
 	use executor_primitives::utils::hex::ToHexPrefixed;
 	use executor_storage::StorageDB;
-	use heima_authentication::auth_token::{
-		AuthOptions, AuthTokenClaims, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE,
+	use heima_authentication::{
+		auth_token::{AuthOptions, AuthTokenClaims},
+		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
 	};
 	use heima_primitives::{Identity, Web2IdentityType};
 	use jsonrpsee::core::client::ClientT;
@@ -73,9 +74,10 @@ mod test {
 		let access_token_claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			auth_options.clone(),
 		);
-		let token = jwt::create(&access_token_claims, &jwt_private_key.as_bytes().to_vec())
+		let token = jwt::create(&access_token_claims, jwt_private_key.as_bytes())
 			.expect("Failed to create access token");
 
 		headers.insert("Authorization", format!("Bearer {}", token).parse().unwrap());

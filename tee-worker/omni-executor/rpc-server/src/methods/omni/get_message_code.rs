@@ -11,6 +11,7 @@ use tracing::error;
 
 #[derive(Deserialize)]
 pub struct GetMessageCodeParams {
+	pub client_id: String,
 	pub omni_account: String,
 }
 
@@ -36,7 +37,11 @@ pub fn register_get_message_code(module: &mut RpcModule<RpcContext>) {
 				Err(_) => return Err(ErrorCode::InternalError.into()),
 			};
 
-			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload { message_code })
+			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload {
+				message_code,
+				omni_account: omni_account.to_string(),
+				client_id: params.client_id,
+			})
 		})
 		.expect("Failed to register omni_getMessageCode method");
 }

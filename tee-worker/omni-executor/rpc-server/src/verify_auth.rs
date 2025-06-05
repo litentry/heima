@@ -6,10 +6,8 @@ use executor_primitives::{
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
-	auth_token::{
-		AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation,
-		AUTH_TOKEN_ID_TYPE,
-	},
+	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
+	constants::AUTH_TOKEN_ID_TYPE,
 	web3::HeimaMessagePayload,
 };
 use heima_identity_verification::web2::google::decode_id_token;
@@ -49,8 +47,8 @@ impl Display for AuthenticationError {
 
 pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), AuthenticationError> {
 	match auth {
-		OmniAuth::Web3(ref signer, ref signature) => {
-			verify_web3_authentication(ctx.storage_db.clone(), signer, signature)
+		OmniAuth::Web3(ref client_id, ref signer, ref signature) => {
+			verify_web3_authentication(ctx.storage_db.clone(), client_id, signer, signature)
 		},
 		OmniAuth::Email(ref email, ref verification_code) => {
 			verify_email_authentication(ctx, email, verification_code)
@@ -70,6 +68,7 @@ pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), Au
 
 pub fn verify_web3_authentication(
 	storage_db: Arc<StorageDB>,
+	client_id: &str,
 	signer: &Identity,
 	signature: &HeimaMultiSignature,
 ) -> Result<(), AuthenticationError> {
@@ -81,7 +80,11 @@ pub fn verify_web3_authentication(
 	verification_code_storage
 		.remove(&storage_key)
 		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
-	let message = HeimaMessagePayload { message_code };
+	let message = HeimaMessagePayload {
+		client_id: client_id.to_string(),
+		omni_account: signer.to_omni_account().to_string(),
+		message_code,
+	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
 	let hashed = blake2_256(payload.as_bytes());
 
@@ -187,14 +190,23 @@ mod tests {
 			.insert(&alice_omni_account.hash(), message_code.clone())
 			.expect("insert");
 
-		let message = HeimaMessagePayload { message_code };
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: alice_omni_account.to_string(),
+			client_id: "test_client".to_string(),
+		};
 		let payload = serde_json::to_string(&message).expect("serialize");
 		let hashed = blake2_256(payload.as_bytes());
 
 		let signature = alice.sign(&hashed);
 		let multi_signature = HeimaMultiSignature::from(signature);
 
-		let result = verify_web3_authentication(storage_db, &alice_identity, &multi_signature);
+		let result = verify_web3_authentication(
+			storage_db,
+			"test_client",
+			&alice_identity,
+			&multi_signature,
+		);
 		assert!(result.is_ok());
 	}
 }
