@@ -1,5 +1,6 @@
 use crate::server::RpcContext;
 use crate::ErrorCode;
+use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_storage::{Storage, VerificationCodeStorage};
 use heima_authentication::web3::HeimaMessagePayload;
 use heima_identity_verification::helpers::generate_otp;
@@ -39,7 +40,7 @@ pub fn register_get_web3_sign_in_message(module: &mut RpcModule<RpcContext>) {
 
 			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload {
 				message_code,
-				omni_account: omni_account.to_string(),
+				omni_account: omni_account.to_hex(),
 				client_id: params.client_id,
 			})
 		})
