@@ -1850,6 +1850,7 @@ dependencies = [
  "scale-info",
  "serde 1.0.204",
  "serde_json 1.0.138",
+ "sha2 0.10.7",
  "sp-consensus-aura",
  "sp-core",
  "sp-io",
