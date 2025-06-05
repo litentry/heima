@@ -13,6 +13,7 @@ hex = { workspace = true }
 hex-literal = { workspace = true }
 parity-scale-codec = { workspace = true }
 ring = { workspace = true }
+sha2 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 strum = { workspace = true }
@@ -54,6 +55,7 @@ std = [
     "pallet-evm/std",
     "heima-utils/std",
     "webpki?/std",
+    "sha2/std",
 ]
 development = [
     "heima-utils/development",

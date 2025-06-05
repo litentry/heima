@@ -5035,6 +5035,7 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sp-consensus-aura",
  "sp-core 35.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
  "sp-io 39.0.1 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",

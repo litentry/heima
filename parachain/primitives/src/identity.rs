@@ -27,6 +27,7 @@ use heima_utils::{decode_hex, hex_encode, if_development_or};
 use pallet_evm::{AddressMapping, HashedAddressMapping as GenericHashedAddressMapping};
 use parity_scale_codec::{Decode, Encode, Error, Input, MaxEncodedLen};
 use scale_info::{meta_type, Type, TypeDefSequence, TypeInfo};
+use sha2::{Digest, Sha256};
 use sp_core::{
 	crypto::{AccountId32, ByteArray},
 	ecdsa, ed25519, sr25519, H160, H256,
@@ -428,6 +429,68 @@ impl Identity {
 	/// an `OmniAccount` has no private key and can only be controlled by its MemberAccount
 	pub fn to_omni_account(&self) -> AccountId {
 		self.hash().to_fixed_bytes().into()
+	}
+
+	/// derive an `OmniAccount` from `Identity` using SHA256 hash of client_id + user_id_type + user_id_value
+	pub fn to_omni_account_with_client_id(&self, client_id: &str) -> AccountId {
+		let mut hasher = Sha256::new();
+
+		hasher.update(client_id.as_bytes());
+
+		match self {
+			Identity::Substrate(address) => {
+				hasher.update(b"substrate");
+				hasher.update(address.as_ref());
+			},
+			Identity::Evm(address) => {
+				hasher.update(b"evm");
+				hasher.update(address.as_ref());
+			},
+			Identity::Bitcoin(address) => {
+				hasher.update(b"bitcoin");
+				hasher.update(address.as_ref());
+			},
+			Identity::Solana(address) => {
+				hasher.update(b"solana");
+				hasher.update(address.as_ref());
+			},
+			Identity::Twitter(handle) => {
+				hasher.update(b"twitter");
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+				);
+			},
+			Identity::Discord(handle) => {
+				hasher.update(b"discord");
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+				);
+			},
+			Identity::Github(handle) => {
+				hasher.update(b"github");
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+				);
+			},
+			Identity::Email(handle) => {
+				hasher.update(b"email");
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+				);
+			},
+			Identity::Google(handle) => {
+				hasher.update(b"google");
+				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+			},
+			Identity::Pumpx(handle) => {
+				// TODO: this type will be removed.
+				hasher.update(b"pumpx");
+				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+			},
+		}
+
+		let result = hasher.finalize();
+		AccountId::from(<[u8; 32]>::from(result))
 	}
 
 	pub fn from_did(s: &str) -> Result<Self, &'static str> {
@@ -1027,6 +1090,87 @@ mod tests {
 			identity.to_omni_account(),
 			AccountId::new(
 				hex::decode("d95f5a079ac8298c86505f6efbf8719e1e7e09f6b69e5f67d714b32dd65946b3")
+					.unwrap()
+					.try_into()
+					.unwrap()
+			)
+		);
+	}
+
+	#[test]
+	fn test_substrate_to_omni_account_with_client_id() {
+		let identity = Identity::Substrate([0; 32].into());
+		let client_id = "test_client";
+		let omni_account = identity.to_omni_account_with_client_id(client_id);
+		println!("Omni Account: {:?}", omni_account);
+		println!("Omni Account Hex: {:?}", hex::encode(omni_account.encode()));
+
+		let input = [client_id.as_bytes(), "substrate".as_bytes(), [0; 32].as_ref()].concat();
+
+		let expected = Sha256::digest(input);
+		let expected_omni_account = AccountId::new(expected.as_slice().try_into().unwrap());
+		println!("Expected Omni Account: {:?}", expected_omni_account);
+		println!("Expected Omni Account Hex: {:?}", hex::encode(expected_omni_account.encode()));
+
+		assert_eq!(
+			omni_account,
+			AccountId::new(
+				hex::decode("f3ecfc8a1f9a3b0f23e02a0a866d75c749bee1023a9a512f958df0ae1167248d")
+					.unwrap()
+					.try_into()
+					.unwrap()
+			)
+		);
+	}
+
+	#[test]
+	fn test_email_to_omni_account_with_client_id() {
+		let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+		let client_id = "test_client";
+		let omni_account = identity.to_omni_account_with_client_id(client_id);
+		assert_eq!(
+			omni_account,
+			AccountId::new(
+				hex::decode("8267cb415b1d1fdcd66852a367e933160b84cf3c8f90303d1e6dd5b9be2fc604")
+					.unwrap()
+					.try_into()
+					.unwrap()
+			)
+		);
+	}
+
+	#[test]
+	fn test_solana_to_omni_account_with_client_id() {
+		let identity = Identity::Solana(
+			"4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4"
+				.from_base58()
+				.unwrap()
+				.as_slice()
+				.try_into()
+				.unwrap(),
+		);
+		let client_id = "test_client";
+		let omni_account = identity.to_omni_account_with_client_id(client_id);
+		assert_eq!(
+			omni_account,
+			AccountId::new(
+				hex::decode("585b0ce756bd1f237a9e46c3feaf68b47fdffba898cd62c1d663986d25ecc313")
+					.unwrap()
+					.try_into()
+					.unwrap()
+			)
+		);
+	}
+
+	#[test]
+	fn test_evm_to_omni_account_with_client_id() {
+		let identity = Identity::Evm([0; 20].into());
+		let client_id = "test_client";
+		let omni_account = identity.to_omni_account_with_client_id(client_id);
+		assert_eq!(
+			omni_account,
+			AccountId::new(
+				hex::decode("e502d639feeb199ae332376b050307d76d11b32e93b9fd1310127d2af64923fe")
 					.unwrap()
 					.try_into()
 					.unwrap()
