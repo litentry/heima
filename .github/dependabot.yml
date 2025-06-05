@@ -26,14 +26,42 @@ updates:
       - "litentry/parachain"
     schedule:
       interval: "weekly"
-
-  - package-ecosystem: github-actions
-    directory: '/'
+      
+  # npm dependencies for parachain
+  - package-ecosystem: "npm"
+    directory: "/parachain"
     labels: ["automated-pr"]
+    groups:
+      typescript-dependencies:
+        patterns:
+          - "*"
     reviewers:
       - "litentry/parachain"
     schedule:
       interval: "weekly"
 
-    # handle ts-tests dependencies manually before we find a way to merge
-    # the dependabot PRs
+  # npm dependencies for omni-executor
+  - package-ecosystem: "npm"
+    directory: "/tee-worker/omni-executor"
+    labels: ["automated-pr"]
+    groups:
+      typescript-dependencies:
+        patterns:
+          - "*"
+    reviewers:
+      - "litentry/parachain"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: '/'
+    labels: ["automated-pr"]
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    reviewers:
+      - "litentry/parachain"
+    schedule:
+      interval: "weekly"
