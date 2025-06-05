@@ -15,7 +15,7 @@ use heima_authentication::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use pumpx::methods::heima_post_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
+use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -151,10 +151,10 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 					heima_login_success: true,
 				};
 				let Ok(backend_response) =
-					ctx.pumpx_api.heima_post_login(&access_token, body).await
+					ctx.pumpx_api.post_heima_login(&access_token, body).await
 				else {
 					error!("Post_heima_login failed for Wildmeta client");
-					return Err(ErrorCode::ServerError(HEIMA_POST_LOGIN_FAILED_CODE).into());
+					return Err(ErrorCode::ServerError(POST_HEIMA_LOGIN_FAILED_CODE).into());
 				};
 
 				check_omni_api_response(backend_response.clone(), "Post heima login".into())?;
