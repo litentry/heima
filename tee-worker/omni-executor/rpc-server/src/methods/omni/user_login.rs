@@ -1,6 +1,8 @@
+use super::common::check_omni_api_response;
 use crate::{
 	error_code::*, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
 };
+
 use chrono::{Days, Utc};
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserAuth, UserId};
@@ -8,12 +10,12 @@ use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
 	constants::{
-		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_PUMPX,
+		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_WILDMETA,
 	},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use pumpx::methods::heima_post_login::HeimaPostLoginBody;
+use pumpx::methods::heima_post_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -28,12 +30,7 @@ pub struct UserLoginParams {
 pub struct UserLoginResponse {
 	pub access_token: String,
 	pub id_token: String,
-	pub heima_post_login_response: Option<HeimaPostLoginResponse>,
-}
-
-#[derive(Serialize, Clone)]
-pub struct HeimaPostLoginResponse {
-	pub user_id: Option<String>,
+	pub backend_response: PostHeimaLoginResponse,
 }
 
 impl TryFrom<UserLoginParams> for OmniAuth {
@@ -146,40 +143,42 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
 			})?;
 
-			let mut post_login_response: Option<HeimaPostLoginResponse> = None;
-
-			if params.client_id == CLIENT_ID_PUMPX {
-				let heima_post_login_body = HeimaPostLoginBody {
+			if params.client_id == CLIENT_ID_WILDMETA {
+				let body = PostHeimaLoginBody {
 					user_id: params.user_id,
 					client_id: params.client_id.clone(),
-					user_auth: params.user_auth,
+					client_auth: params.client_auth,
 					heima_login_success: true,
-					access_token: access_token.clone(),
 				};
-				let Ok(pumpx_post_login_response) =
-					ctx.pumpx_api.heima_post_login(&access_token, heima_post_login_body).await
+				let Ok(backend_response) =
+					ctx.pumpx_api.heima_post_login(&access_token, body).await
 				else {
-					error!("Post login failed for Wildmeta client");
+					error!("Post_heima_login failed for Wildmeta client");
 					return Err(ErrorCode::ServerError(HEIMA_POST_LOGIN_FAILED_CODE).into());
 				};
-				post_login_response = Some(HeimaPostLoginResponse {
-					user_id: pumpx_post_login_response.data.user_id,
-				});
-			}
 
-			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let omni_account = identity.to_omni_account_with_client_id(&params.client_id);
-			if storage
-				.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
-				.is_err()
-			{
-				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
-			};
-			Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {
-				access_token,
-				id_token,
-				heima_post_login_response: post_login_response,
-			})
+				check_omni_api_response(backend_response.clone(), "Post heima login".into())?;
+
+				let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+				let omni_account = identity.to_omni_account_with_client_id(&params.client_id);
+				if storage
+					.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+					.is_err()
+				{
+					error!(
+						"Failed to insert pumpx_{}_jwt_token into storage",
+						AUTH_TOKEN_ACCESS_TYPE
+					);
+				};
+				Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {
+					access_token,
+					id_token,
+					backend_response,
+				})
+			} else {
+				error!("Unsupported client_id: {}", params.client_id);
+				Err(ErrorCode::InvalidParams.into())
+			}
 		})
 		.expect("Failed to register omni_requestJwt method");
 }

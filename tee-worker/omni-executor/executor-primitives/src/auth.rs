@@ -167,11 +167,11 @@ pub struct OAuth2Data {
 	pub redirect_uri: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type", content = "value")]
 pub enum ClientAuth {
-	Wildmeta { google_code: String, invite_code: Option<String> },
+	Wildmeta { google_code: Option<String>, invite_code: Option<String> },
 }
 
 #[cfg(test)]
@@ -185,5 +185,17 @@ mod tests {
 		let identity = Identity::try_from(deserialized).unwrap();
 
 		assert_eq!(identity, Identity::Email(IdentityString::new(b"test@test.com".to_vec())));
+	}
+
+	#[test]
+	fn test_wildmeta_client_auth_serde() {
+		let json =
+			r#"{"type": "wildmeta", "value": { "google_code": "123", "invite_code": "456" }}"#;
+		let deserialized: ClientAuth = serde_json::from_str(json).unwrap();
+		let expected = ClientAuth::Wildmeta {
+			google_code: Some("123".to_string()),
+			invite_code: Some("456".to_string()),
+		};
+		assert_eq!(deserialized, expected);
 	}
 }

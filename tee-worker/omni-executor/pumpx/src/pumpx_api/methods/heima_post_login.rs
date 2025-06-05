@@ -1,4 +1,4 @@
-use executor_primitives::{UserAuth, UserId};
+use executor_primitives::{ClientAuth, UserId};
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
@@ -7,26 +7,30 @@ use crate::methods::common::ApiResponse;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HeimaPostLoginBody {
+pub struct PostHeimaLoginBody {
 	pub user_id: UserId,
 	pub client_id: String,
-	pub user_auth: UserAuth,
+	pub client_auth: Option<ClientAuth>,
+	// TODO:
+	// here's a tricky part: if heima_login fails, we still call `post_heima_login` to notify backend
+	// to allow backend to handle it accordingly.
+	// Should backend return Ok or Error here? If backend returns Ok (that indicates the call itself is Ok),
+	// we'll still need to return error to F/E, as the whole login process failed.
 	pub heima_login_success: bool,
-	pub access_token: String,
 }
 
 #[derive(Serialize, Deserialize, Encode, Decode, Debug, PartialEq, Eq, Clone)]
-pub struct HeimaPostLoginResponseData {
+pub struct PostHeimaLoginResponseData {
 	pub user_id: Option<String>,
 }
 
-pub type HeimaPostLoginResponse = ApiResponse<HeimaPostLoginResponseData>;
+pub type PostHeimaLoginResponse = ApiResponse<PostHeimaLoginResponseData>;
 
 pub async fn heima_post_login_impl(
 	client: &crate::pumpx_api::PumpxApiClient,
 	access_token: &str,
-	body: HeimaPostLoginBody,
-) -> Result<HeimaPostLoginResponse, Error> {
+	body: PostHeimaLoginBody,
+) -> Result<PostHeimaLoginResponse, Error> {
 	let endpoint = client.base_url.join("/v3/account/post_heima_login").unwrap();
 
 	let response = client

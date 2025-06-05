@@ -15,7 +15,7 @@ use methods::create_transfer_unsigned_tx::{
 };
 use methods::cross_fail::{cross_fail_impl, CrossFailBody};
 use methods::get_user_trade_info::{get_user_trade_info_impl, UserTradeInfoResponse};
-use methods::heima_post_login::{heima_post_login_impl, HeimaPostLoginResponse};
+use methods::heima_post_login::{heima_post_login_impl, PostHeimaLoginResponse};
 use methods::send_order_tx::{send_order_tx_impl, SendOrderTxBody, SendOrderTxResponse};
 use methods::user_connect::{user_connect_impl, UserConnectResponse};
 use methods::verify_google_code::{verify_google_code_impl, VerifyGoogleCodeResponse};
@@ -37,7 +37,7 @@ use methods::get_gas_info::{get_gas_info_impl, GetGasInfoResponse};
 use methods::common::OrderInfoResponse;
 use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdResponse};
 
-use crate::methods::heima_post_login::HeimaPostLoginBody;
+use crate::methods::heima_post_login::PostHeimaLoginBody;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
@@ -139,8 +139,8 @@ pub trait PumpxApi: Send + Sync {
 	async fn heima_post_login(
 		&self,
 		access_token: &str,
-		body: HeimaPostLoginBody,
-	) -> Result<HeimaPostLoginResponse, Error>;
+		body: PostHeimaLoginBody,
+	) -> Result<PostHeimaLoginResponse, Error>;
 }
 
 pub struct PumpxApiClient {
@@ -295,8 +295,8 @@ impl PumpxApi for PumpxApiClient {
 	async fn heima_post_login(
 		&self,
 		access_token: &str,
-		body: HeimaPostLoginBody,
-	) -> Result<HeimaPostLoginResponse, Error> {
+		body: PostHeimaLoginBody,
+	) -> Result<PostHeimaLoginResponse, Error> {
 		heima_post_login_impl(self, access_token, body).await
 	}
 }
@@ -304,8 +304,8 @@ impl PumpxApi for PumpxApiClient {
 #[cfg(feature = "mocks")]
 pub mod mocks {
 
-	use crate::methods::heima_post_login::HeimaPostLoginBody;
-	use crate::methods::heima_post_login::HeimaPostLoginResponse;
+	use crate::methods::heima_post_login::PostHeimaLoginBody;
+	use crate::methods::heima_post_login::PostHeimaLoginResponse;
 	use crate::pumpx_api::AddWalletResponse;
 	use crate::pumpx_api::CreateCrossOrderBody;
 	use crate::pumpx_api::CreateLimitOrderBody;
@@ -435,8 +435,8 @@ pub mod mocks {
 			async fn heima_post_login(
 				&self,
 				access_token: &str,
-				body: HeimaPostLoginBody,
-			) -> Result<HeimaPostLoginResponse, Error>;
+				body: PostHeimaLoginBody,
+			) -> Result<PostHeimaLoginResponse, Error>;
 		}
 	}
 }
