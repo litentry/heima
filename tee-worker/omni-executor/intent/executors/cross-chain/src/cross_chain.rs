@@ -210,7 +210,7 @@ impl<
 					)
 					.await?;
 
-				self.do_payout_bsc_to_sol(payout_address, payout_amount_u256)?;
+				self.do_payout_bsc_to_sol(payout_address, payout_amount_u256).await?;
 
 				Ok((
 					self.apply_gas_fee(
@@ -435,10 +435,9 @@ impl<
 		let binance_coin = binance_asset.coin;
 		let binance_address = binance_asset.address;
 
-		let amount_to_transfer = U256::from_str_radix(&amount_to_transfer_decimal.to_string(), 10)
-			.map_err(|err| {
-				error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
-			})?;
+		let amount_to_transfer = decimal_to_u256(amount_to_transfer_decimal).map_err(|err| {
+			error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
+		})?;
 
 		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
 			binance_network.clone(),
@@ -458,7 +457,7 @@ impl<
 		let mut payout_amount_u256 = str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
 
 		// Fetch contract balance
-		let balance = self.solana_accounting_contract_client.get_balance()?;
+		let balance = self.solana_accounting_contract_client.get_balance().await?;
 		if balance < payout_amount_u256 {
 			error!(
 				"There is not enough balance in the accounting contract, {} < {}",
@@ -530,12 +529,18 @@ impl<
 		Ok((payout_amount, payout_amount_u256))
 	}
 
-	fn do_payout_bsc_to_sol(&self, payout_address: Pubkey, payout_amount: U256) -> Result<(), ()> {
+	async fn do_payout_bsc_to_sol(
+		&self,
+		payout_address: Pubkey,
+		payout_amount: U256,
+	) -> Result<(), ()> {
 		debug!("Getting {:?} nonce for payout request", payout_address);
 		let user_nonce =
-			self.solana_accounting_contract_client.get_nonce(payout_address).map_err(|_| {
-				error!("Failed to get nonce");
-			})?;
+			self.solana_accounting_contract_client.get_nonce(payout_address).await.map_err(
+				|_| {
+					error!("Failed to get nonce");
+				},
+			)?;
 
 		debug!("Received {:?} nonce", user_nonce);
 		let user_nonce = user_nonce + 1u64;
@@ -546,6 +551,7 @@ impl<
 
 		self.solana_accounting_contract_client
 			.execute_pay_out_request(payout_address, user_nonce, payout_amount)
+			.await
 			.map_err(|_| {
 				error!("Failed to execute pay out request");
 			})
