@@ -48,13 +48,13 @@ export type SignMessagePayload = {
 /**
  * Retrieves the message to sign for a given client ID and Omni account.
  */
-export async function getMessageToSign(
+export async function getWeb3SignInMessage(
     context: IntegrationTestContext,
     clientId: string,
     omniAccount: string
 ): Promise<SignMessagePayload> {
     const request = createJsonRpcRequest(
-        'omni_getMessageCode',
+        'omni_getWeb3SignInMessage',
         { client_id: clientId, omni_account: omniAccount },
         nextRequestId(context)
     );

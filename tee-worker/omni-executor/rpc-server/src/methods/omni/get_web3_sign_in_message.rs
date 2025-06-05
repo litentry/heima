@@ -10,15 +10,15 @@ use std::str::FromStr;
 use tracing::error;
 
 #[derive(Deserialize)]
-pub struct GetMessageCodeParams {
+pub struct GetWeb3SignInMessageParams {
 	pub client_id: String,
 	pub omni_account: String,
 }
 
-pub fn register_get_message_code(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_web3_sign_in_message(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_getMessageCode", |params, ctx, _| async move {
-			let params = params.parse::<GetMessageCodeParams>()?;
+		.register_async_method("omni_getWeb3SignInMessage", |params, ctx, _| async move {
+			let params = params.parse::<GetWeb3SignInMessageParams>()?;
 			let omni_account = AccountId::from_str(&params.omni_account).map_err(|_| {
 				error!("Could not parse AccountId: {:?}", params.omni_account);
 				ErrorCode::InvalidParams
@@ -43,5 +43,5 @@ pub fn register_get_message_code(module: &mut RpcModule<RpcContext>) {
 				client_id: params.client_id,
 			})
 		})
-		.expect("Failed to register omni_getMessageCode method");
+		.expect("Failed to register omni_getWeb3SignInMessage method");
 }

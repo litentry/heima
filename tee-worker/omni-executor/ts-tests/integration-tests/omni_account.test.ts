@@ -5,7 +5,7 @@ import { createIntegrationTestContext, IntegrationTestContext } from './utils/co
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
 import { createNativeTask, createNativeTaskWrapper, createOmniAccountPermission } from './utils/type_creators';
-import { getMessageToSign, sendRawTaskPlain } from './utils/requests';
+import { getWeb3SignInMessage, sendRawTaskPlain } from './utils/requests';
 import { buildWeb3ValidationData } from './utils/identity';
 import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
@@ -29,7 +29,7 @@ describe('OmniAccount', function () {
         let accountStore = await context.api.query.omniAccount.accountStore(omniAccount);
         assert.isTrue(accountStore.isNone, 'accountStore already exists');
 
-        let msgToSign = await getMessageToSign(context, 'heima', omniAccount);
+        let msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         console.log('msgCode:', msgToSign);
         const nativeTask = createNativeTask(context.api, ['CreateAccountStore', 'HeimaIdentity'], aliceIdentity);
         const nativeTaskWrapper = await createNativeTaskWrapper(
@@ -83,7 +83,7 @@ describe('OmniAccount', function () {
                 [createOmniAccountPermission(context.api, 'All')],
             ]
         );
-        const msgToSign = await getMessageToSign(context, 'heima', omniAccount);
+        const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -116,7 +116,7 @@ describe('OmniAccount', function () {
             ['PublicizeAccount', '(HeimaIdentity, HeimaIdentity)'],
             [aliceIdentity, bobIdentity]
         );
-        const msgToSign = await getMessageToSign(context, 'heima', omniAccount);
+        const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -168,7 +168,7 @@ describe('OmniAccount', function () {
             ['SetPermissions', '(HeimaIdentity, HeimaIdentity, Vec<OmniAccountPermission>)'],
             [aliceIdentity, bobIdentity, newPermissions]
         );
-        const msgToSign = await getMessageToSign(context, 'heima', omniAccount);
+        const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -208,7 +208,7 @@ describe('OmniAccount', function () {
             ['RemoveAccounts', '(HeimaIdentity, Vec<HeimaIdentity>)'],
             [aliceIdentity, [bobIdentity]]
         );
-        const msgToSign = await getMessageToSign(context, 'heima', omniAccount);
+        const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
@@ -246,7 +246,7 @@ describe('OmniAccount', function () {
             ['RequestIntent', '(HeimaIdentity, u32, Intent)'],
             [aliceIdentity, intentId, intent]
         );
-        const msgToSign = await getMessageToSign(context, 'heima', omniAccount);
+        const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         const nativeTaskWrapper = await createNativeTaskWrapper(
             context.api,
             nativeTask,
