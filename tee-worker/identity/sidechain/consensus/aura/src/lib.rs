@@ -31,6 +31,7 @@ extern crate sgx_tstd as std;
 
 use codec::Encode;
 use core::marker::PhantomData;
+use heima_utils::hex_encode;
 use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport;
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
@@ -42,7 +43,6 @@ use its_primitives::{
 	types::block::BlockHash,
 };
 use its_validateer_fetch::ValidateerFetch;
-use litentry_hex_utils::hex_encode;
 use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{
 	app_crypto::{sp_core::H256, Pair},

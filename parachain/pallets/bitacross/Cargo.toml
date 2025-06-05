@@ -15,7 +15,7 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 sp-runtime = { workspace = true }
 
-core-primitives = { workspace = true }
+heima-primitives = { workspace = true }
 
 [dev-dependencies]
 pallet-balances = { workspace = true, features = ["std"] }
@@ -31,7 +31,7 @@ runtime-benchmarks = [
     "pallet-timestamp/runtime-benchmarks",
 ]
 std = [
-    "core-primitives/std",
+    "heima-primitives/std",
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",

@@ -13,7 +13,7 @@ import {
     NativeTaskWrapper,
 } from '@heima-network/api-argument/omni';
 import { Signer } from './signer';
-import { getMessageCode } from './requests';
+import { SignMessagePayload } from './requests';
 
 export async function createIdentityType(
     api: ApiPromise,
@@ -76,9 +76,9 @@ export async function createNativeTaskWrapper(
     signer: Signer,
     taskId: String,
     nonce: Codec,
-    msgCode: string
+    msgToSign: SignMessagePayload
 ): Promise<NativeTaskWrapper> {
-    const payload = JSON.stringify({ message_code: msgCode });
+    const payload = JSON.stringify(msgToSign);
     const hashedPayload = blake2AsHex(payload, 256);
     const signerIdentity = await signer.getIdentity(api);
 
@@ -88,7 +88,7 @@ export async function createNativeTaskWrapper(
     });
 
     const auth: OmniAuth = api.createType('OmniAuth', {
-        Web3: api.createType('(Identity, HeimaMultiSignature)', [signerIdentity, signature]),
+        Web3: api.createType('(Text, Identity, HeimaMultiSignature)', ['heima', signerIdentity, signature]),
     });
     let n = api.createType('Option<Nonce>', nonce);
     let a = api.createType('Option<OmniAuth>', auth);

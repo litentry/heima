@@ -24,7 +24,7 @@
 #[macro_use]
 extern crate frame_benchmarking;
 
-use core_primitives::HEIMA_PARA_ID;
+extern crate alloc;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
@@ -33,8 +33,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		fungible::{self, Balanced, Credit, HoldConsideration, NativeFromLeft, NativeOrWithId},
-		tokens::imbalance::ResolveTo,
-		tokens::{PayFromAccount, UnityAssetBalanceConversion},
+		tokens::{imbalance::ResolveTo, PayFromAccount, UnityAssetBalanceConversion},
 		ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, ContainsLengthBound,
 		EnsureOrigin, Everything, FindAuthor, Imbalance, InstanceFilter, LinearStoragePrice,
 		OnFinalize, OnUnbalanced, SortedMembers, WithdrawReasons,
@@ -43,6 +42,7 @@ use frame_support::{
 	ConsensusEngineId, PalletId,
 };
 use frame_system::EnsureRoot;
+use heima_primitives::HEIMA_PARA_ID;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 // for TEE
@@ -57,7 +57,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, RuntimeDebug, H160, H256, U256}
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
+	generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto,
 		DispatchInfoOf, Dispatchable, PostDispatchInfoOf, UniqueSaturatedInto,
@@ -72,7 +72,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use constants::currency::*;
-pub use core_primitives::{
+pub use heima_primitives::{
 	opaque, teebag::OperationalMode as TeebagOperationalMode, AccountId, Amount, AssetId, Balance,
 	BlockNumber, DefaultOmniAccountConverter, Hash, Header, Identity, Nonce, Signature, DAYS,
 	HOURS, MINUTES, SLOT_DURATION,
@@ -86,12 +86,11 @@ use runtime_common::{
 	CouncilMembershipInstance, DeveloperCommitteeInstance, DeveloperCommitteeMembershipInstance,
 	EnsureEnclaveSigner, EnsureOmniAccount, EnsureRootOrAllCouncil,
 	EnsureRootOrAllTechnicalCommittee, EnsureRootOrHalfCouncil, EnsureRootOrHalfTechnicalCommittee,
-	EnsureRootOrTwoThirdsCouncil, EnsureRootOrTwoThirdsTechnicalCommittee,
-	IMPExtrinsicWhitelistInstance, RuntimeBlockWeights, SlowAdjustingFeeUpdate,
-	TechnicalCommitteeInstance, TechnicalCommitteeMembershipInstance,
-	VCMPExtrinsicWhitelistInstance, BLOCK_PROCESSING_VELOCITY, MAXIMUM_BLOCK_WEIGHT,
-	NORMAL_DISPATCH_RATIO, RELAY_CHAIN_SLOT_DURATION_MILLIS, UNINCLUDED_SEGMENT_CAPACITY,
-	WEIGHT_PER_GAS, WEIGHT_TO_FEE_FACTOR,
+	EnsureRootOrTwoThirdsCouncil, EnsureRootOrTwoThirdsTechnicalCommittee, RuntimeBlockWeights,
+	SlowAdjustingFeeUpdate, TechnicalCommitteeInstance, TechnicalCommitteeMembershipInstance,
+	BLOCK_PROCESSING_VELOCITY, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO,
+	RELAY_CHAIN_SLOT_DURATION_MILLIS, UNINCLUDED_SEGMENT_CAPACITY, WEIGHT_PER_GAS,
+	WEIGHT_TO_FEE_FACTOR,
 };
 
 #[cfg(feature = "std")]
@@ -229,16 +228,16 @@ impl_opaque_keys! {
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// has to match the on-chain registered spec-name, which is `paseo-parachain`
-	spec_name: create_runtime_str!("paseo-parachain"),
-	impl_name: create_runtime_str!("heima"),
+	spec_name: alloc::borrow::Cow::Borrowed("paseo-parachain"),
+	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9242,
+	spec_version: 9243,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
 	// https://hackmd.io/JagpUd8tTjuKf9HQtpvHIQ
-	state_version: 1,
+	system_version: 1,
 };
 
 /// A timestamp: milliseconds since the unix epoch.
@@ -277,6 +276,7 @@ impl frame_system::Config for Runtime {
 	type DbWeight = RocksDbWeight;
 	type BaseCallFilter = BaseCallFilter;
 	type SystemWeightInfo = ();
+	type ExtensionsWeightInfo = ();
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = BlockLength;
 	type SS58Prefix = SS58Prefix;
@@ -435,7 +435,7 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRootOrAllCouncil;
 	type MaxScheduledPerBlock = ConstU32<50>;
-	type WeightInfo = ();
+	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
 	type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
 	type Preimages = Preimage;
 }
@@ -477,6 +477,7 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeFreezeReason = ();
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
+	type DoneSlashHandler = ();
 }
 
 impl pallet_utility::Config for Runtime {
@@ -502,7 +503,7 @@ impl OnUnbalanced<Credit<AccountId, Balances>> for ToAuthor {
 
 pub struct DealWithFees;
 impl OnUnbalanced<Credit<AccountId, Balances>> for DealWithFees {
-	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = Credit<AccountId, Balances>>) {
+	fn on_unbalanceds(mut fees_then_tips: impl Iterator<Item = Credit<AccountId, Balances>>) {
 		if let Some(fees) = fees_then_tips.next() {
 			// for fees, (1) to treasury, (2) to author and (3) burned
 			let (unburned, to_burn) =
@@ -529,6 +530,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = ConstU8<5>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -601,6 +603,9 @@ impl pallet_collective::Config<CouncilInstance> for Runtime {
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 	type MaxProposalWeight = MaxProposalWeight;
+	type DisapproveOrigin = EnsureRoot<Self::AccountId>;
+	type KillOrigin = EnsureRoot<Self::AccountId>;
+	type Consideration = ();
 }
 
 impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
@@ -631,6 +636,9 @@ impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 	type MaxProposalWeight = MaxProposalWeight;
+	type DisapproveOrigin = EnsureRoot<Self::AccountId>;
+	type KillOrigin = EnsureRoot<Self::AccountId>;
+	type Consideration = ();
 }
 
 impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
@@ -657,6 +665,9 @@ impl pallet_collective::Config<DeveloperCommitteeInstance> for Runtime {
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<AccountId>;
 	type MaxProposalWeight = MaxProposalWeight;
+	type DisapproveOrigin = EnsureRoot<Self::AccountId>;
+	type KillOrigin = EnsureRoot<Self::AccountId>;
+	type Consideration = ();
 }
 
 impl pallet_membership::Config<DeveloperCommitteeMembershipInstance> for Runtime {
@@ -730,6 +741,7 @@ impl pallet_treasury::Config for Runtime {
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 	type WeightInfo = ();
+	type BlockNumberProvider = System;
 }
 
 pub struct CouncilProvider;
@@ -789,6 +801,7 @@ impl pallet_tips::Config for Runtime {
 parameter_types! {
 	pub const BasicDeposit: Balance = deposit(1, 258);  // 258 bytes on-chain
 	pub const ByteDeposit: Balance = deposit(0, 1);
+	pub const UsernameDeposit: Balance = deposit(0, 32);
 	pub const SubAccountDeposit: Balance = deposit(1, 53);  // 53 bytes on-chain
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
@@ -800,6 +813,7 @@ impl pallet_identity::Config for Runtime {
 	type Currency = Balances;
 	type BasicDeposit = BasicDeposit;
 	type ByteDeposit = ByteDeposit;
+	type UsernameDeposit = UsernameDeposit;
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
 	type IdentityInformation = pallet_identity::legacy::IdentityInfo<MaxAdditionalFields>;
@@ -811,6 +825,7 @@ impl pallet_identity::Config for Runtime {
 	type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
 	type UsernameAuthorityOrigin = EnsureRootOrHalfCouncil;
 	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
+	type UsernameGracePeriod = ConstU32<{ 30 * DAYS }>;
 	type MaxSuffixLength = ConstU32<7>;
 	type MaxUsernameLength = ConstU32<32>;
 	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
@@ -820,13 +835,6 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
-}
-
-impl pallet_account_fix::Config for Runtime {
-	type Currency = Balances;
-	type IncConsumerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
-	type AddBalanceOrigin = EnsureRoot<AccountId>;
-	type BurnOrigin = EnsureRoot<AccountId>;
 }
 
 parameter_types! {
@@ -857,6 +865,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	//
 	// Litentry parachain has a different(standard) setting
 	type ConsensusHook = cumulus_pallet_parachain_system::consensus_hook::ExpectParentIncluded;
+	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 	type WeightInfo = ();
 }
 
@@ -978,6 +987,7 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 }
 
 impl pallet_evm::Config for Runtime {
+	type AccountProvider = pallet_evm::FrameSystemAccountProvider<Self>;
 	type FeeCalculator = TransactionPaymentAsGasPrice;
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
@@ -997,7 +1007,7 @@ impl pallet_evm::Config for Runtime {
 	type OnCreate = ();
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
-	type SuicideQuickClearLimit = ConstU32<0>;
+	type GasLimitStorageGrowthRatio = ConstU64<4>;
 	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
 }
 
@@ -1007,7 +1017,8 @@ parameter_types! {
 
 impl pallet_ethereum::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
+	type StateRoot =
+		pallet_ethereum::IntermediateStateRoot<<Runtime as frame_system::Config>::Version>;
 	type PostLogContent = PostBlockAndTxnHashes;
 	// Maximum length (in bytes) of revert message to include in Executed event
 	type ExtraDataLength = ConstU32<256>;
@@ -1154,7 +1165,6 @@ impl pallet_identity_management::Config for Runtime {
 	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
-	type ExtrinsicWhitelistOrigin = IMPExtrinsicWhitelist;
 	type MaxOIDCClientRedirectUris = ConstU32<10>;
 }
 
@@ -1277,23 +1287,12 @@ impl pallet_evm_assertions::Config for Runtime {
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 }
 
-impl pallet_group::Config<IMPExtrinsicWhitelistInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type GroupManagerOrigin = EnsureRootOrAllCouncil;
-}
-
 impl pallet_vc_management::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_vc_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
-	type ExtrinsicWhitelistOrigin = VCMPExtrinsicWhitelist;
-}
-
-impl pallet_group::Config<VCMPExtrinsicWhitelistInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type GroupManagerOrigin = EnsureRootOrAllCouncil;
 }
 
 parameter_types! {
@@ -1478,8 +1477,8 @@ construct_runtime! {
 
 		IdentityManagement: pallet_identity_management = 80,
 		VCManagement: pallet_vc_management = 81,
-		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 82,
-		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 83,
+		// 82 was IMPExtrinsicWhitelist
+		// 83 was VCMPExtrinsicWhitelist
 		OmniAccount: pallet_omni_account = 84,
 		OmniBridge: pallet_omni_bridge = 85,
 
@@ -1503,7 +1502,6 @@ construct_runtime! {
 		// TMP
 		StateTrieMigration: pallet_state_trie_migration = 251,
 		Bitacross: pallet_bitacross = 252, // TODO: remove this
-		AccountFix: pallet_account_fix = 254,
 		Sudo: pallet_sudo = 255,
 	}
 }
@@ -1589,15 +1587,10 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::ParachainStaking(pallet_parachain_staking::Call::schedule_candidate_bond_less { .. }) |
 			RuntimeCall::ParachainStaking(pallet_parachain_staking::Call::execute_candidate_bond_less { .. }) |
 			RuntimeCall::ParachainStaking(pallet_parachain_staking::Call::cancel_candidate_bond_less { .. }) |
-			// Group
-			RuntimeCall::IMPExtrinsicWhitelist(_) |
-			RuntimeCall::VCMPExtrinsicWhitelist(_) |
 			// EVM
 			// Substrate EVM extrinsic not allowed
 			// So no EVM pallet
 			RuntimeCall::Ethereum(_) |
-			// AccountFix
-			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
 			RuntimeCall::Bitacross(_) |
 			RuntimeCall::EvmAssertions(_) |
@@ -1822,8 +1815,7 @@ impl_runtime_apis! {
 		}
 
 		fn storage_at(address: H160, index: U256) -> H256 {
-			let mut tmp = [0u8; 32];
-			index.to_big_endian(&mut tmp);
+			let tmp = index.to_big_endian();
 			pallet_evm::AccountStorages::<Runtime>::get(address, H256::from_slice(&tmp[..]))
 		}
 
@@ -2045,7 +2037,7 @@ impl_runtime_apis! {
 
 	impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
 		fn convert_transaction(transaction: pallet_ethereum::Transaction) -> <Block as BlockT>::Extrinsic {
-			UncheckedExtrinsic::new_unsigned(
+			UncheckedExtrinsic::new_bare(
 				pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
 			)
 		}

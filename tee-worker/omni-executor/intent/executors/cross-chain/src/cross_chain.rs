@@ -2,6 +2,7 @@
 
 use super::*;
 use executor_primitives::SwapOrder;
+use executor_storage::PumpxProfileStorage;
 use heima_primitives::PumpxConfig;
 use intent_token_query::query_ethereum;
 use intent_token_query::query_solana;
@@ -26,6 +27,7 @@ impl<
 		from_address: String,
 		from_wallet: Vec<u8>,
 		pumpx_config: &PumpxConfig,
+		to_address: String,
 	) -> Result<(String, String, Option<InstantFlowDetails>), ()> {
 		debug!("executing cross chain swap");
 
@@ -33,11 +35,6 @@ impl<
 			error!("Only market order supported");
 			return Err(());
 		}
-
-		let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id) else {
-			error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
-			return Err(());
-		};
 
 		let from_asset_binance_coin_name =
 			BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin.name();
@@ -51,23 +48,38 @@ impl<
 			ChainAsset::Ethereum(_, _) => "BNBUSDT",
 		};
 
-		let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
-			&self.binance_api,
-			usdt_trade_symbol,
-			from_asset_binance_coin_name,
-			from_amount_decimal,
-		)
-		.await?;
+		let profile_storage = PumpxProfileStorage::new(self.storage_db.clone());
+		let has_exported_wallet = if let Ok(maybe_profile) = profile_storage.get(account_id) {
+			maybe_profile.map(|p| p.wallet_exported).unwrap_or(false)
+		} else {
+			// let's continue but pessimistically assume user has exported his wallet
+			error!("Could not get pumpx account profile, assuming wallet has been exported");
+			true
+		};
 
-		let instant = estimated_from_amount_in_usdt <= self.instant_payout_threshold;
-
-		debug!(
-			"Instant: {}, threshold: {:?}, estimated usdt amount: {:?}",
-			instant, self.instant_payout_threshold, estimated_from_amount_in_usdt
-		);
+		let instant = if has_exported_wallet {
+			debug!("Wallet has been exported, skipping instant payout flow");
+			false
+		} else {
+			let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
+				&self.binance_api,
+				usdt_trade_symbol,
+				from_asset_binance_coin_name,
+				from_amount_decimal,
+			)
+			.await?;
+			debug!(
+				"Checking instant payout :threshold: {:?}, estimated usdt amount: {:?}",
+				self.instant_payout_threshold, estimated_from_amount_in_usdt
+			);
+			let instant = estimated_from_amount_in_usdt <= self.instant_payout_threshold;
+			debug!("Instant: {:?}", instant);
+			instant
+		};
 
 		let amount_to_lock = AmountType::from_str(
 			&Self::calculate_amount_decimal(from_amount_decimal, from_asset_binance_coin_name)?
+				.normalize()
 				.to_string(),
 		)
 		.unwrap();
@@ -83,14 +95,6 @@ impl<
 				available_amount,
 			)?;
 		}
-
-		let to_wallet = self
-			.pumpx_signer_client
-			.request_wallet(to_chain_type, pumpx_config.wallet_index, omni_account)
-			.await
-			.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
-
-		let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
 
 		self.pumpx_create_cross_order(
 			intent_id,
@@ -206,7 +210,7 @@ impl<
 					)
 					.await?;
 
-				self.do_payout_bsc_to_sol(payout_address, payout_amount_u256)?;
+				self.do_payout_bsc_to_sol(payout_address, payout_amount_u256).await?;
 
 				Ok((
 					self.apply_gas_fee(
@@ -431,10 +435,9 @@ impl<
 		let binance_coin = binance_asset.coin;
 		let binance_address = binance_asset.address;
 
-		let amount_to_transfer = U256::from_str_radix(&amount_to_transfer_decimal.to_string(), 10)
-			.map_err(|err| {
-				error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
-			})?;
+		let amount_to_transfer = decimal_to_u256(amount_to_transfer_decimal).map_err(|err| {
+			error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
+		})?;
 
 		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
 			binance_network.clone(),
@@ -454,7 +457,7 @@ impl<
 		let mut payout_amount_u256 = str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
 
 		// Fetch contract balance
-		let balance = self.solana_accounting_contract_client.get_balance()?;
+		let balance = self.solana_accounting_contract_client.get_balance().await?;
 		if balance < payout_amount_u256 {
 			error!(
 				"There is not enough balance in the accounting contract, {} < {}",
@@ -526,12 +529,18 @@ impl<
 		Ok((payout_amount, payout_amount_u256))
 	}
 
-	fn do_payout_bsc_to_sol(&self, payout_address: Pubkey, payout_amount: U256) -> Result<(), ()> {
+	async fn do_payout_bsc_to_sol(
+		&self,
+		payout_address: Pubkey,
+		payout_amount: U256,
+	) -> Result<(), ()> {
 		debug!("Getting {:?} nonce for payout request", payout_address);
 		let user_nonce =
-			self.solana_accounting_contract_client.get_nonce(payout_address).map_err(|_| {
-				error!("Failed to get nonce");
-			})?;
+			self.solana_accounting_contract_client.get_nonce(payout_address).await.map_err(
+				|_| {
+					error!("Failed to get nonce");
+				},
+			)?;
 
 		debug!("Received {:?} nonce", user_nonce);
 		let user_nonce = user_nonce + 1u64;
@@ -542,6 +551,7 @@ impl<
 
 		self.solana_accounting_contract_client
 			.execute_pay_out_request(payout_address, user_nonce, payout_amount)
+			.await
 			.map_err(|_| {
 				error!("Failed to execute pay out request");
 			})

@@ -18,7 +18,7 @@ mod parachain;
 mod relay_chain;
 
 use crate::{self as runtime_common, currency::UNIT, BaseRuntimeRequirements};
-use core_primitives::AccountId;
+use heima_primitives::AccountId;
 
 use frame_support::dispatch::{DispatchInfo, PostDispatchInfo};
 use sp_runtime::BuildStorage;
@@ -43,7 +43,7 @@ pub const PARA_B_USER_INITIAL_BALANCE: u128 = 600_000_000_000 * UNIT;
 /// create a transaction info struct from weight. Handy to avoid building the whole struct.
 pub fn info_from_weight(w: Weight) -> DispatchInfo {
 	// pays_fee: Pays::Yes -- class: DispatchClass::Normal
-	DispatchInfo { weight: w, ..Default::default() }
+	DispatchInfo { call_weight: w, ..Default::default() }
 }
 
 pub fn post_info_from_weight(w: Weight) -> PostDispatchInfo {

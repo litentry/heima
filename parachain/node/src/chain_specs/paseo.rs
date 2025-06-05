@@ -15,8 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use core_primitives::PASEO_PARA_ID;
 use cumulus_primitives_core::ParaId;
+use heima_primitives::PASEO_PARA_ID;
 use paseo_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BitacrossConfig, CouncilMembershipConfig,
 	DeveloperCommitteeMembershipConfig, OmniBridgeConfig, ParachainInfoConfig,
@@ -189,6 +189,7 @@ fn generate_genesis(
 					)
 				})
 				.collect(),
+			non_authority_keys: vec![],
 		},
 		democracy: Default::default(),
 		council: Default::default(),

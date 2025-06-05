@@ -6,7 +6,7 @@ import { base58Encode } from '@polkadot/util-crypto';
 import { hexToU8a } from '@polkadot/util';
 import { validateVcSchema } from '@litentry/vc-schema-validator';
 import {
-    CorePrimitivesIdentity,
+    HeimaPrimitivesIdentity,
     RequestVcResultOrError,
     RequestVcOk,
     TrustedCallResult,
@@ -41,7 +41,7 @@ describe('Test native vc_request', function () {
     let teeShieldingKey: KeyObject;
     let context: IntegrationTestContext;
     let aliceSubstrateWallet: SubstrateSigner;
-    let aliceSubstrateIdentity: CorePrimitivesIdentity;
+    let aliceSubstrateIdentity: HeimaPrimitivesIdentity;
     let omniAccount: string;
 
     before(async function () {
@@ -255,7 +255,7 @@ describe('Test native vc_request', function () {
     });
 });
 
-async function assertVc(context: IntegrationTestContext, subject: CorePrimitivesIdentity, result: RequestVcOk) {
+async function assertVc(context: IntegrationTestContext, subject: HeimaPrimitivesIdentity, result: RequestVcOk) {
     // step 1
     // decryptWithAes function added 0x prefix
     const decryptedVcPayload = decryptWithAes(aesKey, result.vc_payload, 'utf-8').replace('0x', '');

@@ -1,0 +1,61 @@
+[package]
+authors = ["Trust Computing GmbH <info@litentry.com>"]
+edition = '2021'
+name = 'heima-primitives'
+version = '0.1.0'
+
+[dependencies]
+base58 = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true }
+der = { workspace = true }
+hex = { workspace = true }
+hex-literal = { workspace = true }
+parity-scale-codec = { workspace = true }
+ring = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+webpki = { workspace = true, optional = true }
+x509-cert = { workspace = true }
+
+frame-support = { workspace = true }
+pallet-evm = { workspace = true }
+scale-info = { workspace = true }
+sp-consensus-aura = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+heima-utils = { workspace = true }
+heima-utils-proc-macros = { workspace = true }
+
+[features]
+default = ["std", "webpki"]
+std = [
+    "chrono/std",
+    "der/std",
+    "hex/std",
+    "ring/std",
+    "x509-cert/std",
+    "serde/std",
+    "serde_json/std",
+    "strum/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "frame-support/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "sp-io/std",
+    "sp-std/std",
+    "sp-consensus-aura/std",
+    "pallet-evm/std",
+    "heima-utils/std",
+    "webpki?/std",
+]
+development = [
+    "heima-utils/development",
+]
+webpki = ["dep:webpki"]

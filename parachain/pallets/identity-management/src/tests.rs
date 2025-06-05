@@ -15,8 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #[allow(unused)]
 use crate::{mock::*, Error, OIDCClients};
-use core_primitives::{ErrorDetail, IMPError, ShardIdentifier};
 use frame_support::{assert_noop, assert_ok};
+use heima_primitives::{ErrorDetail, IMPError, ShardIdentifier};
 use sp_core::H256;
 
 use pallet_teebag::test_util::{get_signer, TEST8_MRENCLAVE};
@@ -149,47 +149,6 @@ fn tee_callback_with_unregistered_enclave_fails() {
 			),
 			sp_runtime::DispatchError::BadOrigin,
 		);
-	});
-}
-
-#[test]
-fn extrinsic_whitelist_origin_works() {
-	new_test_ext().execute_with(|| {
-		let alice: SystemAccountId = get_signer(ALICE_PUBKEY);
-		// activate the whitelist which is empty at the beginning
-		assert_ok!(IMPExtrinsicWhitelist::switch_group_control_on(RuntimeOrigin::root()));
-		let shard: ShardIdentifier = H256::from_slice(&TEST8_MRENCLAVE);
-		assert_noop!(
-			IdentityManagement::link_identity(
-				RuntimeOrigin::signed(alice.clone()),
-				shard,
-				alice.clone(),
-				vec![1u8; 2048],
-				vec![1u8; 2048],
-				vec![1u8; 2048],
-			),
-			sp_runtime::DispatchError::BadOrigin
-		);
-
-		// add `alice` to whitelist group
-		assert_ok!(IMPExtrinsicWhitelist::add_group_member(RuntimeOrigin::root(), alice.clone()));
-		assert_ok!(IdentityManagement::link_identity(
-			RuntimeOrigin::signed(alice.clone()),
-			shard,
-			alice.clone(),
-			vec![1u8; 2048],
-			vec![1u8; 2048],
-			vec![1u8; 2048],
-		));
-		System::assert_last_event(RuntimeEvent::IdentityManagement(
-			crate::Event::LinkIdentityRequested {
-				shard,
-				account: alice,
-				encrypted_identity: vec![1u8; 2048],
-				encrypted_validation_data: vec![1u8; 2048],
-				encrypted_web3networks: vec![1u8; 2048],
-			},
-		));
 	});
 }
 

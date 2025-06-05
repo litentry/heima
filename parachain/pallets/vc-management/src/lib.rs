@@ -47,12 +47,12 @@ pub type VCIndex = H256;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use core_primitives::{
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
+	use heima_primitives::{
 		Assertion, ErrorDetail, Identity, SchemaIndex, ShardIdentifier, VCMPError,
 		SCHEMA_CONTENT_LEN, SCHEMA_ID_LEN,
 	};
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -67,8 +67,6 @@ pub mod pallet {
 		type SetAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		// origin to manage authorized delegatee list
 		type DelegateeAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-		// origin that is allowed to call extrinsics
-		type ExtrinsicWhitelistOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 	}
 
 	// the admin account
@@ -148,7 +146,7 @@ pub mod pallet {
 			index: SchemaIndex,
 		},
 		// event errors caused by processing in TEE
-		// copied from core_primitives::VCMPError, we use events instead of pallet::errors,
+		// copied from heima_primitives::VCMPError, we use events instead of pallet::errors,
 		// see https://github.com/litentry/heima/issues/1275
 		RequestVCFailed {
 			identity: Option<Identity>,
@@ -246,7 +244,7 @@ pub mod pallet {
 			shard: ShardIdentifier,
 			assertion: Assertion,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			// special handling for A13, where the origin is required to be one of the delegatees
 			if let Assertion::A13(_owner) = assertion.clone() {
 				ensure!(Delegatee::<T>::contains_key(&who), Error::<T>::UnauthorizedUser);

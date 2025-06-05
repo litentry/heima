@@ -14,13 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::traits::Currency;
-use frame_support::{assert_noop, assert_ok, pallet_prelude::Weight, traits::VestingSchedule};
+use frame_support::{
+	assert_noop, assert_ok,
+	pallet_prelude::Weight,
+	traits::{Currency, VestingSchedule},
+};
 use frame_system::RawOrigin;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::traits::Dispatchable;
 
-use core_primitives::AccountId;
+use heima_primitives::AccountId;
 
 use crate::{
 	currency::UNIT,

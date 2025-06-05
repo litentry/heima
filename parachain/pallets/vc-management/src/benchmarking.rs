@@ -19,10 +19,10 @@
 use super::*;
 
 use crate::Pallet as VCManagement;
-use core_primitives::{AccountId, Assertion, ErrorDetail, Identity, VCMPError};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, BenchmarkError};
 use frame_support::traits::EnsureOrigin;
 use frame_system::RawOrigin;
+use heima_primitives::{AccountId, Assertion, ErrorDetail, Identity, VCMPError};
 use sp_core::H256;
 use sp_std::vec;
 

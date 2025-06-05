@@ -31,7 +31,7 @@ use sp_core::{ed25519::Public as Ed25519Public, H256};
 use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{prelude::*, str};
 
-use core_primitives::*;
+use heima_primitives::*;
 
 pub use pallet::*;
 
@@ -664,7 +664,7 @@ pub mod pallet {
 			use pallet_utility::WeightInfo;
 			let dispatch_infos = calls.iter().map(|call| call.get_dispatch_info()).collect::<Vec<_>>();
 			let dispatch_weight = dispatch_infos.iter()
-				.map(|di| di.weight)
+				.map(|di| di.call_weight)
 				.fold(Weight::zero(), |total: Weight, weight: Weight| total.saturating_add(weight))
 				.saturating_add(<T as pallet_utility::Config>::WeightInfo::batch(calls.len() as u32));
 			let dispatch_class = {

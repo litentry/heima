@@ -16,8 +16,8 @@
 
 use crate::mock::*;
 use core::str::from_utf8;
-use core_primitives::YEARS;
 use frame_support::{assert_err, assert_ok};
+use heima_primitives::YEARS;
 use pallet_parachain_staking::Delegator;
 use pallet_score_staking::{Error, Event, ScorePayment};
 use precompile_utils::testing::*;

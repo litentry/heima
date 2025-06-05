@@ -1,3 +1,4 @@
+use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX};
 use executor_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use rsa::{
@@ -14,10 +15,6 @@ pub enum Error {
 	JwtError(jwt::ErrorKind),
 }
 
-pub const AUTH_TOKEN_EXPIRATION_DAYS: u64 = 7; // 1 week
-pub const AUTH_TOKEN_ACCESS_TYPE: &str = "access";
-pub const AUTH_TOKEN_ID_TYPE: &str = "id";
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct AuthOptions {
 	pub expires_at: i64,
@@ -28,29 +25,26 @@ pub struct AuthTokenClaims {
 	pub sub: String,
 	pub typ: String,
 	pub exp: i64,
+	pub aud: String,
 }
 
 impl AuthTokenClaims {
-	pub fn new(sub: String, typ: String, options: AuthOptions) -> Self {
-		Self { sub, typ, exp: options.expires_at }
+	pub fn new(sub: String, typ: String, aud: String, options: AuthOptions) -> Self {
+		Self { sub, typ, exp: options.expires_at, aud }
 	}
 }
 
 pub struct Validation {
-	pub sub: String,
 	pub typ: String,
 	pub skip_exp_check: bool,
 }
 
 impl Validation {
-	pub fn new(sub: String, typ: String, skip_exp_check: bool) -> Self {
-		Self { sub, typ, skip_exp_check }
+	pub fn new(typ: String, skip_exp_check: bool) -> Self {
+		Self { typ, skip_exp_check }
 	}
 
 	pub fn validate(&self, claims: &AuthTokenClaims) -> Result<(), Error> {
-		if self.sub != claims.sub {
-			return Err(Error::JwtError(jwt::ErrorKind::InvalidSubject));
-		}
 		if self.typ != claims.typ {
 			return Err(Error::JwtError(jwt::ErrorKind::InvalidToken));
 		}
@@ -75,9 +69,13 @@ impl AuthTokenValidator<AuthTokenClaims> for String {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		let claims =
-			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
-				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		let claims = jwt::decode::<AuthTokenClaims>(
+			self,
+			public_key.as_bytes(),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			validation.skip_exp_check,
+		)
+		.map_err(|e| Error::JwtError(e.kind().clone()))?;
 		validation.validate(&claims)?;
 		Ok(claims)
 	}
@@ -95,9 +93,13 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 			.to_public_key()
 			.to_pkcs1_der()
 			.map_err(|_| Error::InternalError)?;
-		let claims =
-			jwt::decode::<AuthTokenClaims>(self, public_key.as_bytes(), validation.skip_exp_check)
-				.map_err(|e| Error::JwtError(e.kind().clone()))?;
+		let claims = jwt::decode::<AuthTokenClaims>(
+			self,
+			public_key.as_bytes(),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			validation.skip_exp_check,
+		)
+		.map_err(|e| Error::JwtError(e.kind().clone()))?;
 		validation.validate(&claims)?;
 		Ok(claims)
 	}
@@ -105,6 +107,8 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 
 #[cfg(test)]
 mod tests {
+	use crate::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
+
 	use super::*;
 	use chrono::{Days, Utc};
 	use executor_primitives::{utils::hex::ToHexPrefixed, Identity, Web2IdentityType};
@@ -140,12 +144,12 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation =
-			Validation::new(omni_account.to_hex(), AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Ok(claims));
@@ -164,12 +168,12 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at: 100 },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation =
-			Validation::new(omni_account.to_hex(), AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::ExpiredSignature)));
@@ -191,39 +195,12 @@ mod tests {
 			TestAuthTokenNoSubClaims { typ: AUTH_TOKEN_ID_TYPE.to_string(), exp: expires_at };
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation =
-			Validation::new("test-subject".to_string(), AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 		let Err(Error::JwtError(jwt::ErrorKind::Json(e))) = result else {
 			panic!("Expected JsonError, got {:?}", result);
 		};
 		assert!(e.to_string().contains("missing field `sub`"));
-	}
-
-	#[test]
-	fn test_auth_token_invalid_subject() {
-		let mut rng = rand::thread_rng();
-		let rsa_private_key =
-			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
-		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
-
-		let expires_at = Utc::now()
-			.checked_add_days(Days::new(1))
-			.expect("Failed to calculate expiration")
-			.timestamp();
-
-		let claims = AuthTokenClaims {
-			sub: "test-sub".to_string(),
-			typ: AUTH_TOKEN_ID_TYPE.to_string(),
-			exp: expires_at,
-		};
-		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
-
-		let validation =
-			Validation::new("invalid-sub".to_string(), AUTH_TOKEN_ID_TYPE.to_string(), false);
-		let result = token.validate(private_key.as_bytes(), validation);
-
-		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidSubject)));
 	}
 
 	#[test]
@@ -241,8 +218,7 @@ mod tests {
 		let claims = TestAuthTokenNoTypClaims { sub: "test-sub".to_string(), exp: expires_at };
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation =
-			Validation::new("test-sub".to_string(), AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 		let Err(Error::JwtError(jwt::ErrorKind::Json(e))) = result else {
 			panic!("Expected JsonError, got {:?}", result);
@@ -268,12 +244,12 @@ mod tests {
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
 		);
 		let token = jwt::create(&claims, private_key.as_bytes()).unwrap();
 
-		let validation =
-			Validation::new(omni_account.to_hex(), AUTH_TOKEN_ID_TYPE.to_string(), false);
+		let validation = Validation::new(AUTH_TOKEN_ID_TYPE.to_string(), false);
 		let result = token.validate(private_key.as_bytes(), validation);
 
 		assert_eq!(result, Err(Error::JwtError(jwt::ErrorKind::InvalidToken)));

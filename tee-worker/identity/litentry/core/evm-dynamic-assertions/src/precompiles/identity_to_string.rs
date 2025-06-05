@@ -156,8 +156,7 @@ pub mod test {
 	};
 	use base58::FromBase58;
 	use ethabi::{encode, Token};
-	use litentry_hex_utils::decode_hex;
-	use litentry_primitives::Web3Network;
+	use litentry_primitives::{decode_hex, Web3Network};
 
 	#[test]
 	fn test_substrate_identity_to_string() {
@@ -291,8 +290,7 @@ pub mod integration_test {
 	use crate::{execute_smart_contract, prepare_function_call_input};
 	use base58::FromBase58;
 	use ethabi::{decode, encode, ParamType, Token};
-	use litentry_hex_utils::decode_hex;
-	use litentry_primitives::Web3Network;
+	use litentry_primitives::{decode_hex, Web3Network};
 
 	// https://github.com/litentry/DynamicAssertion/tree/dev/contracts/tests/IdentityToString.sol
 	const FUNCTION_HASH: &str = "10e6b834"; // callIdentityToString(uint32,bytes)

@@ -19,7 +19,6 @@ members = [
     "common/litentry/core/parachain-extrinsic-task/sender",
     "common/litentry/core/parachain-extrinsic-task/receiver",
     "common/litentry/core/teebag-storage",
-    "common/litentry/macros",
     "common/litentry/pallets/*",
     "common/litentry/primitives",
 
@@ -185,7 +184,6 @@ sgx_serialize = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", 
 sgx_serialize_derive = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_serialize_derive_internals = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 
-
 # SGX-ported crates
 base64_sgx = { package = "base64", git = "https://github.com/mesalock-linux/rust-base64-sgx", rev = "sgx_1.1.3" }
 chrono_sgx = { package = "chrono", git = "https://github.com/mesalock-linux/chrono-sgx" }
@@ -259,15 +257,13 @@ itp-test = { path = "common/core-primitives/test", default-features = false }
 
 # litentry
 litentry-primitives = { path = "common/litentry/primitives", default-features = false }
-litentry-worker-macros = { path = "common/litentry/macros" }
 pallet-parentchain = { path = "common/litentry/pallets/parentchain", default-features = false }
 pallet-identity-management-tee = { path = "common/litentry/pallets/identity-management", default-features = false }
 lc-teebag-storage = { path = "common/litentry/core/teebag-storage", default-features = false }
 lc-parachain-extrinsic-task-sender = { path = "common/litentry/core/parachain-extrinsic-task/sender", default-features = false }
 lc-parachain-extrinsic-task-receiver = { path = "common/litentry/core/parachain-extrinsic-task/receiver", default-features = false }
-litentry-hex-utils = { path = "../common/utils/hex", default-features = false }
-litentry-macros = { path = "../common/primitives/core/macros" }
-parentchain-primitives = { package = "core-primitives", path = "../common/primitives/core", default-features = false }
+heima-utils = { path = "../parachain/utils", default-features = false }
+heima-primitives = { path = "../parachain/primitives", default-features = false }
 
 # identity
 lc-assertion-build = { path = "identity/litentry/core/assertion-build", default-features = false }
@@ -317,8 +313,8 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 
-[patch."https://github.com/paritytech/frontier"]
-pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "bar/polkadot-v0.9.42" }
+[patch."https://github.com/AstarNetwork/frontier"]
+pallet-evm = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v0.9.42" }
 
 [patch."https://github.com/apache/teaclave-sgx-sdk.git"]
 sgx_alloc = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }

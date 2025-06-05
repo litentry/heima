@@ -46,7 +46,7 @@ where
 	}
 
 	async fn import_block(
-		&mut self,
+		&self,
 		mut block_import_params: sc_consensus::BlockImportParams<Block>,
 	) -> Result<sc_consensus::ImportResult, Self::Error> {
 		// immediately finalize the block

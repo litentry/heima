@@ -41,10 +41,7 @@ pub use validation_data::*;
 
 use bitcoin::sign_message::{signed_msg_hash, MessageSignature};
 use codec::{Decode, Encode, MaxEncodedLen};
-pub use itp_sgx_crypto::aes256::{Aes256Key as RequestAesKey, *};
-use itp_sgx_crypto::ShieldingCryptoDecrypt;
-use log::error;
-pub use parentchain_primitives::{
+pub use heima_primitives::{
 	assertion::{
 		achainable::{
 			AchainableAmount, AchainableAmountHolding, AchainableAmountToken, AchainableAmounts,
@@ -79,6 +76,10 @@ pub use parentchain_primitives::{
 	ParameterString, SchemaContentString, SchemaIdString, Signature as ParentchainSignature,
 	VCMPError, MINUTES,
 };
+pub use heima_utils::*;
+pub use itp_sgx_crypto::aes256::{Aes256Key as RequestAesKey, *};
+use itp_sgx_crypto::ShieldingCryptoDecrypt;
+use log::error;
 use scale_info::TypeInfo;
 use sp_core::{ecdsa, ed25519, sr25519, ByteArray};
 use sp_io::{

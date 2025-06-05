@@ -4,7 +4,7 @@
 parachain_src: &parachain_src
   - "parachain/node/**"
   - "parachain/pallets/**"
-  - "common/**"
+  - "parachain/primitives/**"
   - "parachain/runtime/**"
   - "parachain/docker/Dockerfile"
   - "parachain/Cargo.*"
@@ -23,7 +23,7 @@ coverage_src: &coverage_src
   - ".github/workflows/coverage.yml"
 
 identity_src: &identity_src
-  - "common/**"
+  - "parachain/primitives/**"
   - "tee-worker/Cargo.toml"
   - "tee-worker/Cargo.lock"
   - "tee-worker/identity/**/*.rs"
@@ -36,17 +36,17 @@ identity_test: &identity_test
   - "tee-worker/identity/ts-tests/**"
 
 omni_executor_src: &omni_executor_src
-  - 'tee-worker/omni-executor/Cargo.toml'
-  - 'tee-worker/omni-executor/Cargo.lock'
-  - 'tee-worker/omni-executor/**/*.rs'
-  - 'tee-worker/omni-executor/rust-toolchain.toml'
-  - 'tee-worker/omni-executor/**/*.scale'
+  - "tee-worker/omni-executor/Cargo.toml"
+  - "tee-worker/omni-executor/Cargo.lock"
+  - "tee-worker/omni-executor/**/*.rs"
+  - "tee-worker/omni-executor/rust-toolchain.toml"
+  - "tee-worker/omni-executor/**/*.scale"
 
 omni_executor_test: &omni_executor_test
-  - 'parachain/docker/**'
-  - 'tee-worker/omni-executor/docker/*.yml'
-  - 'tee-worker/omni-executor/client-sdk/**'
-  - 'tee-worker/omni-executor/ts-tests/**'
+  - "parachain/docker/**"
+  - "tee-worker/omni-executor/docker/*.yml"
+  - "tee-worker/omni-executor/client-sdk/**"
+  - "tee-worker/omni-executor/ts-tests/**"
 
 evm_contracts_src:
   - "tee-worker/omni-executor/accounting-contract/bsc/**"

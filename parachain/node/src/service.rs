@@ -26,7 +26,6 @@ use crate::{
 	standalone_block_import::StandaloneBlockImport,
 	tracing::{self, RpcRequesters},
 };
-pub use core_primitives::{AuraId, Block, Hash};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params as AuraParams};
@@ -34,10 +33,11 @@ use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params a
 use cumulus_client_consensus_aura::SlotProportion;
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
+use cumulus_client_network::{AssumeSybilResistance, RequireSecondedInBlockAnnounce};
 use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
 use cumulus_client_service::{
-	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
-	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
+	build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
+	CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{
 	relay_chain::{CollatorPair, ValidationCode},
@@ -49,19 +49,28 @@ use fc_rpc::EthBlockDataCacheTask;
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::{StorageOverride, StorageOverrideHandler};
 use futures::StreamExt;
+pub use heima_primitives::{AuraId, Block, Hash};
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Decode, Encode};
+use polkadot_primitives::OccupiedCoreAssumption;
 use sc_client_api::BlockchainEvents;
 use sc_consensus::{ImportQueue, LongestChain};
 use sc_consensus_aura::StartAuraParams;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
-use sc_network::{config::FullNetworkConfiguration, service::traits::NetworkBackend, NetworkBlock};
+use sc_network::{
+	config::FullNetworkConfiguration, config::SyncMode, service::traits::NetworkBackend,
+	NetworkBlock,
+};
 use sc_network_sync::SyncingService;
-use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
+use sc_service::{
+	Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager, WarpSyncConfig,
+};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_keystore::KeystorePtr;
-use sp_runtime::app_crypto::AppCrypto;
-use sp_runtime::traits::Header;
+use sp_runtime::{
+	app_crypto::AppCrypto,
+	traits::{Block as BlockT, Header},
+};
 use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 
@@ -105,7 +114,7 @@ pub fn new_partial<BIQ>(
 		ParachainBackend,
 		MaybeSelectChain,
 		sc_consensus::DefaultImportQueue<Block>,
-		sc_transaction_pool::FullPool<Block, ParachainClient>,
+		sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>,
 		(
 			ParachainBlockImport,
 			Option<Telemetry>,
@@ -136,14 +145,17 @@ where
 		})
 		.transpose()?;
 
-	let heap_pages = config.default_heap_pages.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h: u64| {
-		HeapAllocStrategy::Static { extra_pages: h as _ }
-	});
+	let heap_pages = config
+		.executor
+		.default_heap_pages
+		.map_or(DEFAULT_HEAP_ALLOC_STRATEGY, |h: u64| HeapAllocStrategy::Static {
+			extra_pages: h as _,
+		});
 
 	let executor = sc_executor::WasmExecutor::<HostFunctions>::builder()
-		.with_execution_method(config.wasm_method)
-		.with_max_runtime_instances(config.max_runtime_instances)
-		.with_runtime_cache_size(config.runtime_cache_size)
+		.with_execution_method(config.executor.wasm_method)
+		.with_max_runtime_instances(config.executor.max_runtime_instances)
+		.with_runtime_cache_size(config.executor.runtime_cache_size)
 		.with_onchain_heap_alloc_strategy(heap_pages)
 		.with_offchain_heap_alloc_strategy(heap_pages)
 		.build();
@@ -164,13 +176,14 @@ where
 		telemetry
 	});
 
-	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
-		config.transaction_pool.clone(),
-		config.role.is_authority().into(),
-		config.prometheus_registry(),
+	let transaction_pool = sc_transaction_pool::Builder::new(
 		task_manager.spawn_essential_handle(),
 		client.clone(),
-	);
+		config.role.is_authority().into(),
+	)
+	.with_options(config.transaction_pool.clone())
+	.with_prometheus(config.prometheus_registry())
+	.build();
 
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
@@ -209,7 +222,7 @@ where
 		import_queue,
 		keystore_container,
 		task_manager,
-		transaction_pool,
+		transaction_pool: transaction_pool.into(),
 		select_chain,
 		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
 	})
@@ -247,7 +260,7 @@ where
 			sc_rpc::DenyUnsafe,
 			Arc<ParachainClient>,
 			Arc<ParachainBackend>,
-			Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+			Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 		) -> Result<jsonrpsee::RpcModule<()>, sc_service::Error>
 		+ 'static,
 	BIQ: FnOnce(
@@ -265,7 +278,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 		Arc<dyn RelayChainInterface>,
-		Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+		Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 		KeystorePtr,
 		Duration,
 		ParaId,
@@ -301,21 +314,51 @@ where
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue_service = params.import_queue.service();
-	let net_config = FullNetworkConfiguration::<_, _, Net>::new(&parachain_config.network);
+	let net_config = FullNetworkConfiguration::<_, _, Net>::new(
+		&parachain_config.network,
+		prometheus_registry.clone(),
+	);
 
+	let warp_sync_config = match parachain_config.network.sync_mode {
+		SyncMode::Warp => {
+			log::debug!("waiting for announce block...");
+			let target_block =
+				wait_for_finalized_para_head::<Block, _>(para_id, relay_chain_interface.clone())
+					.await
+					.inspect_err(|e| {
+						log::error!("Unable to determine parachain target block {:?}", e);
+					})?;
+			Some(WarpSyncConfig::WithTarget(target_block))
+		},
+		_ => None,
+	};
+	let block_announce_validator = match sybil_resistance_level {
+		CollatorSybilResistance::Resistant => {
+			let block_announce_validator = AssumeSybilResistance::allow_seconded_messages();
+			Box::new(block_announce_validator) as Box<_>
+		},
+		CollatorSybilResistance::Unresistant => {
+			let block_announce_validator =
+				RequireSecondedInBlockAnnounce::new(relay_chain_interface.clone(), para_id);
+			Box::new(block_announce_validator) as Box<_>
+		},
+	};
+	let metrics = Net::register_notification_metrics(
+		parachain_config.prometheus_config.as_ref().map(|config| &config.registry),
+	);
 	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
-		build_network(BuildNetworkParams {
-			parachain_config: &parachain_config,
+		sc_service::build_network(sc_service::BuildNetworkParams {
+			config: &parachain_config,
 			net_config,
 			client: client.clone(),
 			transaction_pool: transaction_pool.clone(),
-			para_id,
 			spawn_handle: task_manager.spawn_handle(),
-			relay_chain_interface: relay_chain_interface.clone(),
 			import_queue: params.import_queue,
-			sybil_resistance_level,
-		})
-		.await?;
+			block_announce_validator_builder: Some(Box::new(move |_| block_announce_validator)),
+			warp_sync_config,
+			block_relay: None,
+			metrics,
+		})?;
 
 	// Sinks for pubsub notifications.
 	// Everytime a new subscription is created, a new mpsc channel is added to the sink pool.
@@ -360,15 +403,14 @@ where
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
 
-		let result = move |deny_unsafe, subscription| {
+		let result = move |subscription| {
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.pool().clone(),
+				graph: transaction_pool.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: validator,
-				deny_unsafe,
 				frontier_backend: frontier_backend.clone(),
 				filter_pool: filter_pool.clone(),
 				fee_history_limit,
@@ -523,12 +565,12 @@ pub fn build_import_queue(
 				client,
 				create_inherent_data_providers: move |block: Hash, ()| {
 					let current_para_head = client_for_cidp
-					.header(block)
-					.expect("Header lookup should succeed")
-					.expect("Header passed in as parent should be present in backend.");
-				let current_para_block_head =
-					Some(polkadot_primitives::HeadData(current_para_head.encode()));
-				let client_for_xcm = client_for_cidp.clone();
+						.header(block)
+						.expect("Header lookup should succeed")
+						.expect("Header passed in as parent should be present in backend.");
+					let current_para_block_head =
+						Some(polkadot_primitives::HeadData(current_para_head.encode()));
+					let client_for_xcm = client_for_cidp.clone();
 
 					async move {
 						use sp_runtime::traits::UniqueSaturatedInto;
@@ -540,13 +582,13 @@ pub fn build_import_queue(
 							);
 
 						let mocked_parachain = MockValidationDataInherentDataProvider {
-						// When using manual seal we start from block 0, and it's very unlikely to
-						// reach a block number > u32::MAX.
-						current_para_block: UniqueSaturatedInto::<u32>::unique_saturated_into(
-							*current_para_head.number(),
-						),
-						para_id: 2013.into(),
-						current_para_block_head,
+							// When using manual seal we start from block 0, and it's very unlikely to
+							// reach a block number > u32::MAX.
+							current_para_block: UniqueSaturatedInto::<u32>::unique_saturated_into(
+								*current_para_head.number(),
+							),
+							para_id: 2013.into(),
+							current_para_block_head,
 							relay_offset: 1000,
 							relay_blocks_per_para_block: 2,
 							para_blocks_per_relay_epoch: 0,
@@ -559,6 +601,7 @@ pub fn build_import_queue(
 							raw_downward_messages: vec![],
 							raw_horizontal_messages: vec![],
 							additional_key_values: None,
+							upgrade_go_ahead: None,
 						};
 
 						Ok((slot, timestamp, mocked_parachain))
@@ -631,8 +674,10 @@ pub async fn start_standalone_node(
 	> = Default::default();
 	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
 
-	let net_config =
-		FullNetworkConfiguration::<_, _, sc_network::NetworkWorker<_, _>>::new(&config.network);
+	let net_config = FullNetworkConfiguration::<_, _, sc_network::NetworkWorker<_, _>>::new(
+		&config.network,
+		None,
+	);
 
 	let (network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -643,12 +688,12 @@ pub async fn start_standalone_node(
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue,
 			block_announce_validator_builder: None,
-			warp_sync_params: None,
+			warp_sync_config: None,
 			block_relay: None,
 			metrics: sc_network::NotificationMetrics::new(None),
 		})?;
 
-	let role = config.role.clone();
+	let role = config.role;
 	let force_authoring = config.force_authoring;
 	let backoff_authoring_blocks: Option<()> = None;
 
@@ -674,17 +719,11 @@ pub async fn start_standalone_node(
 	let select_chain = maybe_select_chain
 		.expect("In `standalone` mode, `new_partial` will return some `select_chain`; qed");
 
-	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
-	//       presumably in stable2412
-	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
-	let custom_txpool =
-		std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
-
 	if role.is_authority() {
 		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
 			task_manager.spawn_handle(),
 			client.clone(),
-			custom_txpool,
+			transaction_pool.clone(),
 			None,
 			None,
 		);
@@ -744,6 +783,7 @@ pub async fn start_standalone_node(
 						raw_downward_messages: vec![],
 						raw_horizontal_messages: vec![],
 						additional_key_values: None,
+						upgrade_go_ahead: None,
 					};
 
 					Ok((slot, timestamp, mocked_parachain))
@@ -781,15 +821,14 @@ pub async fn start_standalone_node(
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks;
 
-		Box::new(move |deny_unsafe, subscription| {
+		Box::new(move |subscription| {
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.pool().clone(),
+				graph: transaction_pool.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: role.is_authority(),
-				deny_unsafe,
 				frontier_backend: frontier_backend.clone(),
 				filter_pool: filter_pool.clone(),
 				fee_history_limit,
@@ -952,7 +991,7 @@ fn start_lookahead_aura_consensus(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 	relay_chain_interface: Arc<dyn RelayChainInterface>,
-	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, ParachainClient>>,
+	transaction_pool: Arc<sc_transaction_pool::TransactionPoolHandle<Block, ParachainClient>>,
 	keystore: KeystorePtr,
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
@@ -961,16 +1000,10 @@ fn start_lookahead_aura_consensus(
 	announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 	backend: Arc<ParachainBackend>,
 ) -> Result<(), sc_service::Error> {
-	// TODO: use fork-aware txpool when paritytech/polkadot-sdk#4639 is included in a stable release
-	//       presumably in stable2412
-	//       This is a workaround mentioned in https://github.com/paritytech/polkadot-sdk/issues/1202
-	let custom_txpool =
-		std::sync::Arc::new(crate::custom_txpool::CustomPool::new(transaction_pool.clone()));
-
 	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 		task_manager.spawn_handle(),
 		client.clone(),
-		custom_txpool,
+		transaction_pool.clone(),
 		prometheus_registry,
 		telemetry.clone(),
 	);
@@ -1012,11 +1045,68 @@ fn start_lookahead_aura_consensus(
 fn warn_if_slow_hardware(hwbench: &sc_sysinfo::HwBench) {
 	// Polkadot para-chains should generally use these requirements to ensure that the relay-chain
 	// will not take longer than expected to import its blocks.
-	if let Err(err) = frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE.check_hardware(hwbench) {
+	if let Err(err) =
+		frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE.check_hardware(hwbench, false)
+	{
 		log::warn!(
 			"⚠️  The hardware does not meet the minimal requirements {} for role 'Authority' find out more at:\n\
 			https://wiki.polkadot.network/docs/maintain-guides-how-to-validate-polkadot#reference-hardware",
 			err
 		);
 	}
+}
+
+async fn wait_for_finalized_para_head<B, RCInterface>(
+	para_id: ParaId,
+	relay_chain_interface: RCInterface,
+) -> sc_service::error::Result<<B as BlockT>::Header>
+where
+	B: BlockT + 'static,
+	RCInterface: RelayChainInterface + Send + 'static,
+{
+	let mut imported_blocks = relay_chain_interface
+		.import_notification_stream()
+		.await
+		.map_err(|error| {
+			sc_service::Error::Other(format!(
+				"Relay chain import notification stream error when waiting for parachain head: \
+				{error}"
+			))
+		})?
+		.fuse();
+	while imported_blocks.next().await.is_some() {
+		let is_syncing = relay_chain_interface
+			.is_major_syncing()
+			.await
+			.map_err(|e| format!("Unable to determine sync status: {e}"))?;
+
+		if !is_syncing {
+			let relay_chain_best_hash = relay_chain_interface
+				.finalized_block_hash()
+				.await
+				.map_err(|e| Box::new(e) as Box<_>)?;
+
+			let validation_data = relay_chain_interface
+				.persisted_validation_data(
+					relay_chain_best_hash,
+					para_id,
+					OccupiedCoreAssumption::TimedOut,
+				)
+				.await
+				.map_err(|e| format!("{e:?}"))?
+				.ok_or("Could not find parachain head in relay chain")?;
+
+			let finalized_header = B::Header::decode(&mut &validation_data.parent_head.0[..])
+				.map_err(|e| format!("Failed to decode parachain head: {e}"))?;
+
+			log::info!(
+				"🎉 Received target parachain header #{} ({}) from the relay chain.",
+				finalized_header.number(),
+				finalized_header.hash()
+			);
+			return Ok(finalized_header);
+		}
+	}
+
+	Err("Stopping following imported blocks. Could not determine parachain target block".into())
 }

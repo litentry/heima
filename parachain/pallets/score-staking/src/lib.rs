@@ -39,12 +39,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
-use core_primitives::{DAYS, YEARS};
 use frame_support::{
 	dispatch::DispatchResultWithPostInfo,
 	pallet_prelude::*,
 	traits::{Currency, Imbalance, LockableCurrency, ReservableCurrency, StorageVersion},
 };
+use heima_primitives::{DAYS, YEARS};
 use pallet_parachain_staking as ParaStaking;
 use sp_core::crypto::AccountId32;
 use sp_runtime::{traits::CheckedSub, Perbill, SaturatedConversion};
@@ -72,8 +72,8 @@ pub trait AccountIdConvert<T: Config> {
 pub mod pallet {
 	use super::*;
 
-	use core_primitives::Identity;
 	use frame_system::pallet_prelude::*;
+	use heima_primitives::Identity;
 	use sp_runtime::traits::Zero;
 
 	/// The current storage version.

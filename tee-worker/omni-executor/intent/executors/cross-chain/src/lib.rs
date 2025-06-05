@@ -26,6 +26,7 @@ use accounting_contract_client::{
 use alloy::consensus::{SignableTransaction, TxLegacy};
 use alloy::network::TxSigner as AlloyTxSigner;
 use alloy::primitives::private::alloy_rlp::Decodable;
+use alloy::primitives::ruint::ParseError;
 use alloy::primitives::{Address, Signature, U256};
 use async_trait::async_trait;
 use binance_api::spot_trading_api::types::{
@@ -47,7 +48,7 @@ use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_storage::StorageDB;
 use executor_storage::{PumpxJwtStorage, Storage};
-use heima_authentication::auth_token::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
@@ -197,6 +198,20 @@ impl<
 
 				let mut from_address = pubkey_to_address(from_chain_type, &from_wallet)?;
 
+				let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
+				else {
+					error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+					return Err(());
+				};
+
+				let to_wallet = self
+					.pumpx_signer_client
+					.request_wallet(to_chain_type, pumpx_config.wallet_index, *account_id.as_ref())
+					.await
+					.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
+
+				let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
+
 				let storage = PumpxJwtStorage::new(self.storage_db.clone());
 				let Ok(Some(access_token)) =
 					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
@@ -221,6 +236,7 @@ impl<
 							from_address,
 							from_wallet,
 							&pumpx_config,
+							to_address.clone(),
 						)
 						.await
 					{
@@ -250,6 +266,7 @@ impl<
 						amount,
 						&pumpx_config,
 						from_address,
+						to_address,
 					)
 					.await?;
 
@@ -399,13 +416,10 @@ impl<
 				}
 			},
 			ChainAsset::Ethereum(_, _) => {
-				let amount_to_transfer = U256::from_str_radix(
-					&amount_to_transfer_decimal.to_string(),
-					10,
-				)
-				.map_err(|err| {
-					error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
-				})?;
+				let amount_to_transfer =
+					decimal_to_u256(amount_to_transfer_decimal).map_err(|err| {
+						error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
+					})?;
 
 				let remote_signer =
 					RemoteEvmSigner::new(pumpx_signer_client.clone(), wallet_index, omni_account)
@@ -461,5 +475,32 @@ impl<
 			},
 		};
 		Ok(from_amount * asset_decimal_multiplier)
+	}
+}
+
+fn decimal_to_u256(decimal: Decimal) -> Result<U256, ParseError> {
+	let decimal_str = decimal.normalize().to_string();
+	U256::from_str_radix(&decimal_str, 10).inspect_err(|err| {
+		error!("Failed to convert decimal {:?} to U256: {:?}", decimal_str, err);
+	})
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_decimal_to_u256() {
+		// with_decimal_point
+		let amount = Decimal::from_str("0.005").unwrap() * Decimal::from_str("100_000").unwrap();
+		assert_eq!(amount.to_string(), "500.000");
+		let value = decimal_to_u256(amount).unwrap();
+		assert_eq!(value, U256::from(500));
+
+		// without_decimal_point
+		let amount = Decimal::from_str("500").unwrap();
+		assert_eq!(amount.to_string(), "500");
+		let value = decimal_to_u256(amount).unwrap();
+		assert_eq!(value, U256::from(500));
 	}
 }

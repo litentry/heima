@@ -6,6 +6,8 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
+frame-metadata = { workspace = true }
+log = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-encode = { workspace = true }
 serde_json = { workspace = true }

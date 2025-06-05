@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use core_primitives::{AccountId, Balance};
 use frame_support::{
 	assert_ok,
 	dispatch::{DispatchClass, DispatchInfo, PostDispatchInfo, RawOrigin},
@@ -22,9 +21,10 @@ use frame_support::{
 	traits::{fungible::Credit, Currency},
 	weights::{constants::ExtrinsicBaseWeight, ConstantMultiplier, Weight, WeightToFee},
 };
+use heima_primitives::{AccountId, Balance};
 use pallet_balances::Call as BalancesCall;
 use pallet_transaction_payment::{Multiplier, OnChargeTransaction};
-use sp_runtime::traits::{Convert, Dispatchable, SignedExtension};
+use sp_runtime::traits::{Convert, Dispatchable, TransactionExtension};
 
 use crate::{
 	currency::UNIT,
@@ -90,15 +90,17 @@ where
 		let post_dispatch_info: u128 = 35;
 		let len = 10;
 
-		let tranfer_call: Call =
+		let transfer_call: Call =
 			BalancesCall::transfer_keep_alive { dest: bob().into(), value: 69 }.into();
 		let mut old_sender_balance = Balances::<R>::free_balance(&alice());
 		let mut old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
 		let fee: Balance = 0;
+		let val = pallet_transaction_payment::Val::Charge { tip: fee, who: alice(), fee };
 		let pre = pallet_transaction_payment::ChargeTransactionPayment::<R>::from(fee)
-			.pre_dispatch(
-				&alice(),
-				&tranfer_call,
+			.prepare(
+				val,
+				&Origin::signed(alice()),
+				&transfer_call,
 				&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
 				len as usize,
 			)
@@ -119,13 +121,15 @@ where
 
 		old_sender_balance = Balances::<R>::free_balance(&alice());
 		old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
-		assert_ok!(<pallet_transaction_payment::ChargeTransactionPayment::<R>>::post_dispatch(
-			Some(pre),
-			&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
-			&post_info_from_weight(Weight::from_parts(post_dispatch_info as u64, 0)),
-			len as usize,
-			&Ok(())
-		));
+		assert_ok!(
+			<pallet_transaction_payment::ChargeTransactionPayment::<R>>::post_dispatch_details(
+				pre,
+				&info_from_weight(Weight::from_parts(dispatch_info as u64, 0)),
+				&post_info_from_weight(Weight::from_parts(post_dispatch_info as u64, 0)),
+				len as usize,
+				&Ok(())
+			)
+		);
 		// (dispatch_info - post_dispatch_info) weights (toFee) are refunded
 		let refunded = (dispatch_info - post_dispatch_info) * WEIGHT_TO_FEE_FACTOR;
 		assert_eq!(Balances::<R>::free_balance(&alice()) - old_sender_balance, refunded);

@@ -21,22 +21,21 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub use core_primitives::{
+pub use frame_system::{self as system, pallet_prelude::BlockNumberFor};
+pub use heima_primitives::{
 	Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountConverter,
 };
-pub use frame_system::{self as system, pallet_prelude::BlockNumberFor};
 pub use pallet::*;
 
-use frame_support::pallet_prelude::*;
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
+	pallet_prelude::*,
 	traits::{InstanceFilter, IsSubType, UnfilteredDispatchable},
 };
 use frame_system::pallet_prelude::*;
 use sp_core::H256;
 use sp_runtime::traits::Dispatchable;
-use sp_std::boxed::Box;
-use sp_std::{vec, vec::Vec};
+use sp_std::{boxed::Box, vec, vec::Vec};
 
 pub type MemberCount = u32;
 
@@ -55,7 +54,7 @@ pub enum RawOrigin<AccountId> {
 
 #[frame_support::pallet]
 pub mod pallet {
-	use core_primitives::{ChainAsset, IntentId};
+	use heima_primitives::{ChainAsset, IntentId};
 
 	use super::*;
 

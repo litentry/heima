@@ -51,9 +51,9 @@ const MAX_REDIRECT_URL_LEN: u32 = 256;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::{Vec, WeightInfo, H256, MAX_REDIRECT_URL_LEN};
-	use core_primitives::{ErrorDetail, IMPError, Identity, ShardIdentifier};
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use heima_primitives::{ErrorDetail, IMPError, Identity, ShardIdentifier};
 
 	#[derive(
 		Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen,
@@ -74,8 +74,6 @@ pub mod pallet {
 		type TEECallOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		// origin to manage authorized delegatee list
 		type DelegateeAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-		// origin that is allowed to call extrinsics
-		type ExtrinsicWhitelistOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 		// maximum number of OIDC client URIs
 		#[pallet::constant]
 		type MaxOIDCClientRedirectUris: Get<u32>;
@@ -143,7 +141,7 @@ pub mod pallet {
 			req_ext_hash: H256,
 		},
 		// event errors caused by processing in TEE
-		// copied from core_primitives::IMPError, we use events instead of pallet::errors,
+		// copied from heima_primitives::IMPError, we use events instead of pallet::errors,
 		// see https://github.com/litentry/heima/issues/1275
 		//
 		// why is the `prime_identity` in the error event an Option?
@@ -261,7 +259,7 @@ pub mod pallet {
 			encrypted_validation_data: Vec<u8>,
 			encrypted_web3networks: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			ensure!(
 				who == user || Delegatee::<T>::contains_key(&who),
 				Error::<T>::UnauthorizedUser
@@ -284,7 +282,7 @@ pub mod pallet {
 			shard: ShardIdentifier,
 			encrypted_identity: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			Self::deposit_event(Event::DeactivateIdentityRequested {
 				shard,
 				account: who,
@@ -301,7 +299,7 @@ pub mod pallet {
 			shard: ShardIdentifier,
 			encrypted_identity: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			Self::deposit_event(Event::ActivateIdentityRequested {
 				shard,
 				account: who,

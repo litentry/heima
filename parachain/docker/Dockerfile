@@ -103,7 +103,6 @@ RUN chmod +x /usr/local/bin/heima-node && \
 
 COPY ./parachain /code/parachain
 COPY ./parachain/docker/entrypoint.sh /usr/local/bin/
-COPY ./common /code/common
 RUN chown -R heima:heima /code
 RUN chmod +x /usr/local/bin/entrypoint.sh
 

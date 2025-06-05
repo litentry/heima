@@ -31,7 +31,7 @@ thiserror_sgx = { workspace = true, optional = true }
 
 sp-runtime = { workspace = true }
 
-litentry-hex-utils = { workspace = true }
+heima-utils = { workspace = true }
 
 [dev-dependencies]
 itc-parentchain-test = { workspace = true, features = ["std"] }

@@ -36,7 +36,7 @@ its-primitives = { workspace = true }
 its-state = { workspace = true }
 its-validateer-fetch = { workspace = true }
 
-litentry-hex-utils = { workspace = true }
+heima-utils = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

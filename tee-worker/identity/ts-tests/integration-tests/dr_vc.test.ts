@@ -14,7 +14,7 @@ import { buildIdentityHelper, buildValidations } from './common/utils';
 import type { IntegrationTestContext } from './common/common-types';
 import { aesKey } from './common/call';
 import type {
-    CorePrimitivesIdentity,
+    HeimaPrimitivesIdentity,
     WorkerRpcReturnValue,
     HeimaValidationData,
     Web3Network,
@@ -27,7 +27,7 @@ import { assert } from 'chai';
 describe('Test Vc (direct request)', function () {
     let context: IntegrationTestContext = undefined as any;
     let teeShieldingKey: KeyObject = undefined as any;
-    let aliceSubstrateIdentity: CorePrimitivesIdentity = undefined as any;
+    let aliceSubstrateIdentity: HeimaPrimitivesIdentity = undefined as any;
 
     // Alice links:
     // - a `mock_user` twitter
@@ -37,7 +37,7 @@ describe('Test Vc (direct request)', function () {
     // We need this linking to not have empty eligible identities for any vc request
     const linkIdentityRequestParams: {
         nonce: number;
-        identity: CorePrimitivesIdentity;
+        identity: HeimaPrimitivesIdentity;
         validation: HeimaValidationData;
         networks: Bytes | Vec<Web3Network>;
     }[] = [];

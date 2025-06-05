@@ -61,9 +61,9 @@ use lc_dynamic_assertion::AssertionLogicRepository;
 use lc_evm_dynamic_assertions::AssertionRepositoryItem;
 use lc_stf_task_receiver::{handler::assertion::create_credential_str, StfTaskContext};
 use lc_vc_task_sender::init_vc_task_sender;
-use litentry_macros::if_development_or;
 use litentry_primitives::{
-	Assertion, AssertionBuildRequest, DecryptableRequest, Identity, ParentchainBlockNumber,
+	if_development_or, Assertion, AssertionBuildRequest, DecryptableRequest, Identity,
+	ParentchainBlockNumber,
 };
 use log::*;
 use pallet_identity_management_tee::{identity_context::sort_id_graph, IdentityContext};

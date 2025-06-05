@@ -1,7 +1,7 @@
 import { u8aToHex } from '@polkadot/util';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import type { IntegrationTestContext } from '../common-types';
-import { AesOutput, HeimaValidationData, CorePrimitivesIdentity } from '@heima-network/api-argument/identity';
+import { AesOutput, HeimaValidationData, HeimaPrimitivesIdentity } from '@heima-network/api-argument/identity';
 import { decryptWithAes, Signer } from './crypto';
 import { ethers } from 'ethers';
 import type { TypeRegistry } from '@polkadot/types';
@@ -11,14 +11,14 @@ import type { HexString } from '@polkadot/util/types';
 // blake2_256(<sidechain nonce> + <primary AccountId> + <identity-to-be-linked>)
 export function generateVerificationMessage(
     context: IntegrationTestContext,
-    signer: CorePrimitivesIdentity,
-    identity: CorePrimitivesIdentity,
+    signer: HeimaPrimitivesIdentity,
+    identity: HeimaPrimitivesIdentity,
     sidechainNonce: number,
     options?: { prettifiedMessage?: boolean }
 ): string {
     const optionsParam = { prettifiedMessage: false, ...options };
-    const encodedIdentity = context.api.createType('CorePrimitivesIdentity', identity).toU8a();
-    const encodedWho = context.api.createType('CorePrimitivesIdentity', signer).toU8a();
+    const encodedIdentity = context.api.createType('HeimaPrimitivesIdentity', identity).toU8a();
+    const encodedWho = context.api.createType('HeimaPrimitivesIdentity', signer).toU8a();
     const encodedSidechainNonce = context.api.createType('Index', sidechainNonce);
     const msg = Buffer.concat([encodedSidechainNonce.toU8a(), encodedWho, encodedIdentity]);
     const hash = blake2AsHex(msg, 256);
@@ -32,24 +32,24 @@ export function generateVerificationMessage(
 
 export async function buildIdentityHelper(
     address: HexString | string,
-    type: CorePrimitivesIdentity['type'],
+    type: HeimaPrimitivesIdentity['type'],
     context: IntegrationTestContext
-): Promise<CorePrimitivesIdentity> {
+): Promise<HeimaPrimitivesIdentity> {
     const identity = {
         [type]: address,
     };
-    return context.api.createType('CorePrimitivesIdentity', identity);
+    return context.api.createType('HeimaPrimitivesIdentity', identity);
 }
 
 export function parseIdGraph(
     sidechainRegistry: TypeRegistry,
     idGraphOutput: AesOutput,
     aesKey: HexString
-): [CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][] {
+): [HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][] {
     const decryptedIdGraph = decryptWithAes(aesKey, idGraphOutput, 'hex');
-    const idGraph: [CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][] =
+    const idGraph: [HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext][] =
         sidechainRegistry.createType(
-            'Vec<(CorePrimitivesIdentity, PalletIdentityManagementTeeIdentityContext)>',
+            'Vec<(HeimaPrimitivesIdentity, PalletIdentityManagementTeeIdentityContext)>',
             decryptedIdGraph
         );
 
@@ -60,24 +60,24 @@ export type Web2ValidationConfig =
     | {
           identityType: 'Discord';
           context: IntegrationTestContext;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: HeimaPrimitivesIdentity;
+          linkIdentity: HeimaPrimitivesIdentity;
           verificationType: 'PublicMessage' | 'OAuth2';
           validationNonce: number;
       }
     | {
           identityType: 'Twitter';
           context: IntegrationTestContext;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: HeimaPrimitivesIdentity;
+          linkIdentity: HeimaPrimitivesIdentity;
           verificationType: 'PublicTweet';
           validationNonce: number;
       }
     | {
           identityType: 'Twitter';
           context: IntegrationTestContext;
-          signerIdentitity: CorePrimitivesIdentity;
-          linkIdentity: CorePrimitivesIdentity;
+          signerIdentitity: HeimaPrimitivesIdentity;
+          linkIdentity: HeimaPrimitivesIdentity;
           verificationType: 'OAuth2';
           validationNonce: number;
           oauthState: string;
@@ -142,8 +142,8 @@ export async function buildWeb2Validation(config: Web2ValidationConfig): Promise
 
 export async function buildValidations(
     context: IntegrationTestContext,
-    signerIdentitity: CorePrimitivesIdentity,
-    linkIdentity: CorePrimitivesIdentity,
+    signerIdentitity: HeimaPrimitivesIdentity,
+    linkIdentity: HeimaPrimitivesIdentity,
     startingSidechainNonce: number,
     network: 'evm' | 'substrate' | 'bitcoin' | 'solana',
     signer?: Signer,
