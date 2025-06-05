@@ -11,6 +11,7 @@ async-trait = { workspace = true }
 ethereum-rpc = { workspace = true }
 mockall = { workspace = true }
 sp-core = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 
 [lints]
