@@ -26,10 +26,10 @@ updates:
       - "litentry/parachain"
     schedule:
       interval: "weekly"
-
-  # Add configuration for all TypeScript files
+      
+  # npm dependencies for parachain
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/parachain"
     labels: ["automated-pr"]
     groups:
       typescript-dependencies:
@@ -40,16 +40,20 @@ updates:
     schedule:
       interval: "weekly"
 
-  # Add configuration for tee-worker/identity
+  # npm dependencies for omni-executor
   - package-ecosystem: "npm"
-    directory: "/tee-worker/identity"
+    directory: "/tee-worker/omni-executor"
     labels: ["automated-pr"]
-    open-pull-requests-limit: 0
+    groups:
+      typescript-dependencies:
+        patterns:
+          - "*"
     reviewers:
       - "litentry/parachain"
     schedule:
-      interval: "monthly"
+      interval: "weekly"
 
+  # GitHub Actions
   - package-ecosystem: github-actions
     directory: '/'
     labels: ["automated-pr"]
