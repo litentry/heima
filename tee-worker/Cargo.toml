@@ -184,7 +184,6 @@ sgx_serialize = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", 
 sgx_serialize_derive = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 sgx_serialize_derive_internals = { git = "https://github.com/apache/incubator-teaclave-sgx-sdk", branch = "master" }
 
-
 # SGX-ported crates
 base64_sgx = { package = "base64", git = "https://github.com/mesalock-linux/rust-base64-sgx", rev = "sgx_1.1.3" }
 chrono_sgx = { package = "chrono", git = "https://github.com/mesalock-linux/chrono-sgx" }
