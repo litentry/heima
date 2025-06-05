@@ -27,8 +27,7 @@ pub async fn heima_post_login_impl(
 	access_token: &str,
 	body: HeimaPostLoginBody,
 ) -> Result<HeimaPostLoginResponse, Error> {
-	// TODO: figure out the path
-	let endpoint = client.base_url.join("/heima_post_login").unwrap();
+	let endpoint = client.base_url.join("/v3/account/post_heima_login").unwrap();
 
 	let response = client
 		.http_client
