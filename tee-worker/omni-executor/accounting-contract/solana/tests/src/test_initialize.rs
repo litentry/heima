@@ -1,3 +1,4 @@
+use anchor_client::anchor_lang::Space;
 use std::error::Error;
 use std::str::FromStr;
 
@@ -194,7 +195,10 @@ fn test_deposit_funds() {
 		.get_account(&Pubkey::find_program_address(&[b"treasury"], &program.id()).0)
 		.unwrap();
 
-	assert_eq!(treasury_account.lamports, 946560 + 1_000_000_000);
+	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
+	let rent_exempt_amount = program.rpc().get_minimum_balance_for_rent_exemption(size_of_treasury_account).unwrap();
+
+	assert_eq!(treasury_account.lamports, rent_exempt_amount + 1_000_000_000);
 }
 
 #[test]
@@ -642,9 +646,10 @@ fn test_full_workerflow() {
 	let treasury_struct: accounting_contract::TreasuryAccount =
 		bincode::deserialize(&treasury_account.data[8..]).unwrap();
 
-	// 1002240 is the initial balance of the treasury account
-	assert_eq!(treasury_account.lamports, 1000946560);
-	// assert_eq!(treasury_struct.balance, 1_000_000_000);
+	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
+	let rent_exempt_amount = program.rpc().get_minimum_balance_for_rent_exemption(size_of_treasury_account).unwrap();
+
+	assert_eq!(treasury_account.lamports, 1_000_000_000 + rent_exempt_amount);
 
 	let payer_account = program.rpc().get_account(&payer.pubkey()).unwrap();
 	let initial_balance = payer_account.lamports;
