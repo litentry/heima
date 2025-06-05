@@ -161,7 +161,7 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 
 				let _heima_post_login_params = HeimaPostLoginParams {
 					user_id: params.user_id,
-					client_id: params.client_id,
+					client_id: params.client_id.clone(),
 					user_auth: params.user_auth,
 					heima_login_success: true,
 					access_token: access_token.clone(),
@@ -171,11 +171,9 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 			}
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let omni_account = identity.to_omni_account_with_client_id(&params.client_id);
 			if storage
-				.insert(
-					&(identity.to_omni_account().clone(), AUTH_TOKEN_ACCESS_TYPE),
-					access_token.clone(),
-				)
+				.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
 			{
 				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
@@ -199,7 +197,7 @@ fn create_jwt_for_user(
 		.expect("Failed to calculate expiration")
 		.timestamp();
 	let auth_options = AuthOptions { expires_at };
-	let omni_account = identity.to_omni_account();
+	let omni_account = identity.to_omni_account_with_client_id(client_id);
 	let token_claims = AuthTokenClaims::new(
 		omni_account.to_hex(),
 		token_type.to_string(),
