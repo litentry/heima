@@ -5,7 +5,7 @@ use crate::{
 };
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
-use executor_storage::{PumpxJwtStorage, Storage};
+use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use heima_primitives::{
 	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
@@ -156,7 +156,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 				})?;
 
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
 				storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {

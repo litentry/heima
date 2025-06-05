@@ -15,6 +15,7 @@ parity-scale-codec = { workspace = true }
 ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 webpki = { workspace = true, optional = true }
@@ -54,6 +55,7 @@ std = [
     "pallet-evm/std",
     "heima-utils/std",
     "webpki?/std",
+    "sha2/std",
 ]
 development = [
     "heima-utils/development",
