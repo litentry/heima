@@ -67,8 +67,6 @@ pub mod pallet {
 		type SetAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		// origin to manage authorized delegatee list
 		type DelegateeAdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-		// origin that is allowed to call extrinsics
-		type ExtrinsicWhitelistOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 	}
 
 	// the admin account
@@ -246,7 +244,7 @@ pub mod pallet {
 			shard: ShardIdentifier,
 			assertion: Assertion,
 		) -> DispatchResultWithPostInfo {
-			let who = T::ExtrinsicWhitelistOrigin::ensure_origin(origin)?;
+			let who = ensure_signed(origin)?;
 			// special handling for A13, where the origin is required to be one of the delegatees
 			if let Assertion::A13(_owner) = assertion.clone() {
 				ensure!(Delegatee::<T>::contains_key(&who), Error::<T>::UnauthorizedUser);
