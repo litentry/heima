@@ -8,12 +8,13 @@ use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
 	constants::{
-		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_WILDMETA,
+		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_PUMPX,
 	},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use tracing::{debug, error};
+use pumpx::methods::heima_post_login::HeimaPostLoginBody;
+use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct UserLoginParams {
@@ -27,15 +28,12 @@ pub struct UserLoginParams {
 pub struct UserLoginResponse {
 	pub access_token: String,
 	pub id_token: String,
+	pub heima_post_login_response: Option<HeimaPostLoginResponse>,
 }
 
 #[derive(Serialize, Clone)]
-pub struct HeimaPostLoginParams {
-	pub user_id: UserId,
-	pub client_id: String,
-	pub user_auth: UserAuth,
-	pub heima_login_success: bool,
-	pub access_token: String,
+pub struct HeimaPostLoginResponse {
+	pub user_id: Option<String>,
 }
 
 impl TryFrom<UserLoginParams> for OmniAuth {
@@ -148,26 +146,25 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
 			})?;
 
-			if params.client_id == CLIENT_ID_WILDMETA {
-				let Some(ClientAuth::Wildmeta { google_code, invite_code }) = params.client_auth
-				else {
-					error!("Client authentication data is missing for Pumpx client");
-					return Err(ErrorCode::ParseError.into());
-				};
+			let mut post_login_response: Option<HeimaPostLoginResponse> = None;
 
-				debug!("Wildmeta client login with Google code: {}", google_code);
-
-				debug!("Invite code: {:?}", invite_code);
-
-				let _heima_post_login_params = HeimaPostLoginParams {
+			if params.client_id == CLIENT_ID_PUMPX {
+				let heima_post_login_body = HeimaPostLoginBody {
 					user_id: params.user_id,
 					client_id: params.client_id.clone(),
 					user_auth: params.user_auth,
 					heima_login_success: true,
 					access_token: access_token.clone(),
 				};
-
-				// TODO: call wildmeta post login endpoint
+				let Ok(pumpx_post_login_response) =
+					ctx.pumpx_api.heima_post_login(&access_token, heima_post_login_body).await
+				else {
+					error!("Post login failed for Wildmeta client");
+					return Err(ErrorCode::ServerError(HEIMA_POST_LOGIN_FAILED_CODE).into());
+				};
+				post_login_response = Some(HeimaPostLoginResponse {
+					user_id: pumpx_post_login_response.data.user_id,
+				});
 			}
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
@@ -178,10 +175,11 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 			{
 				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
 			};
-
-			// TODO: include clients post login response in the response
-
-			Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse { access_token, id_token })
+			Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {
+				access_token,
+				id_token,
+				heima_post_login_response: post_login_response,
+			})
 		})
 		.expect("Failed to register omni_requestJwt method");
 }
