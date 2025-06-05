@@ -7,7 +7,7 @@ homepage = 'https://www.heima.network'
 license = 'GPL-3.0'
 name = 'heima-node'
 repository = 'https://github.com/litentry/heima'
-version = '0.9.24'
+version = '0.9.25'
 
 [[bin]]
 name = 'heima-node'
