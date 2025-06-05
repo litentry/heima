@@ -15,6 +15,6 @@ This package is a refactor of [parachain-api](https://www.npmjs.com/package/@hei
 
 ## [0.0.1] - 2025-05-22
 ### Changed
-- Change `@heima-network/*` to `@heima-network/api-augment/*`
+- Change `@heima-network/*-api` to `@heima-network/api-augment/*`
 
 
