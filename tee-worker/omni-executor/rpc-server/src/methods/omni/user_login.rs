@@ -59,7 +59,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 					error!("User ID must be a Substrate identity for Substrate authentication");
 					return Err(ErrorCode::ParseError);
 				}
-				OmniAuth::Web3(identity, signature.into())
+				OmniAuth::Web3(p.client_id, identity, signature.into())
 			},
 			UserAuth::Evm(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
@@ -70,7 +70,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 					error!("User ID must be an EVM identity for EVM authentication");
 					return Err(ErrorCode::ParseError);
 				}
-				OmniAuth::Web3(identity, signature.into())
+				OmniAuth::Web3(p.client_id, identity, signature.into())
 			},
 			UserAuth::Solana(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
@@ -81,7 +81,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 					error!("User ID must be a Solana identity for Solana authentication");
 					return Err(ErrorCode::ParseError);
 				}
-				OmniAuth::Web3(identity, signature.into())
+				OmniAuth::Web3(p.client_id, identity, signature.into())
 			},
 			UserAuth::Bitcoin(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
@@ -92,7 +92,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 					error!("User ID must be a Bitcoin identity for Bitcoin authentication");
 					return Err(ErrorCode::ParseError);
 				}
-				OmniAuth::Web3(identity, signature.into())
+				OmniAuth::Web3(p.client_id, identity, signature.into())
 			},
 			UserAuth::AuthToken(token) => OmniAuth::AuthToken(token),
 			UserAuth::OAuth2(data) => {
