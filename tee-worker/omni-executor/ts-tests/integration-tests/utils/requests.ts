@@ -39,17 +39,27 @@ export async function sendRawTaskPlain(
     return sendRequest(context.teeWsClient, request, context.api, onMessageReceived);
 }
 
-type GetMessageCodeResponse = {
+export type SignMessagePayload = {
+    client_id: string;
+    omni_account: string;
     message_code: string;
 };
 
-export async function getMessageCode(
+/**
+ * Retrieves the message to sign for a given client ID and Omni account.
+ */
+export async function getMessageToSign(
     context: IntegrationTestContext,
+    clientId: string,
     omniAccount: string
-): Promise<GetMessageCodeResponse> {
-    const request = createJsonRpcRequest('omni_getMessageCode', { omni_account: omniAccount }, nextRequestId(context));
+): Promise<SignMessagePayload> {
+    const request = createJsonRpcRequest(
+        'omni_getMessageCode',
+        { client_id: clientId, omni_account: omniAccount },
+        nextRequestId(context)
+    );
 
-    const response = new Promise<GetMessageCodeResponse>((resolve, reject) =>
+    const response = new Promise<SignMessagePayload>((resolve, reject) =>
         context.teeWsClient.onMessage.addListener((data) => {
             const parsed = JSON.parse(data);
             if (parsed.id !== request.id) {

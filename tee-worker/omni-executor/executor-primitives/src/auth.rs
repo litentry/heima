@@ -91,7 +91,7 @@ impl TryFrom<UserId> for Identity {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum OmniAuth {
-	Web3(Identity, HeimaMultiSignature), // (Signer, Signature)
+	Web3(String, Identity, HeimaMultiSignature), // (client_id, Signer, Signature)
 	Email(Email, VerificationCode),
 	AuthToken(JwtToken),
 	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
