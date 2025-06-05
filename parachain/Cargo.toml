@@ -16,9 +16,7 @@ members = [
     'pallets/collab-ai/pool-proposal',
     'pallets/collab-ai/investing-pool',
     'pallets/extrinsic-filter',
-    'pallets/evm-address',
     'pallets/evm-assertions',
-    'pallets/group',
     'pallets/identity-management',
     'pallets/parachain-staking',
     'pallets/score-staking',
@@ -287,7 +285,6 @@ pallet-chain-bridge = { path = "pallets/bridge/chain-bridge", default-features =
 pallet-bridge-common = { path = "pallets/bridge/common", default-features = false }
 pallet-bridge-transfer = { path = "pallets/bridge/bridge-transfer", default-features = false }
 pallet-extrinsic-filter = { path = "pallets/extrinsic-filter", default-features = false }
-pallet-group = { path = "pallets/group", default-features = false }
 pallet-identity-management = { path = "pallets/identity-management", default-features = false }
 pallet-omni-account = { path = "pallets/omni-account", default-features = false }
 pallet-omni-account-runtime-api = { path = "pallets/omni-account/runtime-api", default-features = false }

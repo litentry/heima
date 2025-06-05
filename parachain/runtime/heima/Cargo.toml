@@ -88,7 +88,6 @@ pallet-bridge-transfer = { workspace = true }
 pallet-chain-bridge = { workspace = true }
 pallet-evm-assertions = { workspace = true }
 pallet-extrinsic-filter = { workspace = true }
-pallet-group = { workspace = true }
 pallet-identity-management = { workspace = true }
 pallet-omni-account = { workspace = true }
 pallet-omni-account-runtime-api = { workspace = true }
@@ -165,7 +164,6 @@ runtime-benchmarks = [
     "pallet-evm-precompile-assets-erc20/runtime-benchmarks",
     "pallet-evm/runtime-benchmarks",
     "pallet-extrinsic-filter/runtime-benchmarks",
-    "pallet-group/runtime-benchmarks",
     "pallet-identity-management/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
     "pallet-membership/runtime-benchmarks",
@@ -255,7 +253,6 @@ std = [
     "pallet-evm-precompile-vesting/std",
     "pallet-evm/std",
     "pallet-extrinsic-filter/std",
-    "pallet-group/std",
     "pallet-identity-management/std",
     "pallet-identity/std",
     "pallet-membership/std",
@@ -338,7 +335,6 @@ try-runtime = [
     "pallet-evm-assertions/try-runtime",
     "pallet-evm/try-runtime",
     "pallet-extrinsic-filter/try-runtime",
-    "pallet-group/try-runtime",
     "pallet-identity-management/try-runtime",
     "pallet-identity/try-runtime",
     "pallet-membership/try-runtime",

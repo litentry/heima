@@ -4679,7 +4679,6 @@ dependencies = [
  "pallet-evm-precompile-simple",
  "pallet-evm-precompile-vesting",
  "pallet-extrinsic-filter",
- "pallet-group",
  "pallet-identity",
  "pallet-identity-management",
  "pallet-membership",
@@ -8394,26 +8393,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-evm-address"
-version = "0.1.0"
-dependencies = [
- "fp-evm",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-balances",
- "pallet-ethereum",
- "pallet-evm",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-evm-assertions"
 version = "0.1.0"
 dependencies = [
@@ -8820,22 +8799,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-group"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-guardian"
 version = "0.1.0"
 dependencies = [
@@ -8894,7 +8857,6 @@ dependencies = [
  "frame-system",
  "heima-primitives",
  "pallet-balances",
- "pallet-group",
  "pallet-teebag",
  "pallet-timestamp",
  "pallet-utility",
@@ -9662,7 +9624,6 @@ dependencies = [
  "frame-system",
  "heima-primitives",
  "pallet-balances",
- "pallet-group",
  "pallet-teebag",
  "pallet-timestamp",
  "pallet-utility",
@@ -9973,7 +9934,6 @@ dependencies = [
  "pallet-evm-precompile-simple",
  "pallet-evm-precompile-vesting",
  "pallet-extrinsic-filter",
- "pallet-group",
  "pallet-guardian",
  "pallet-identity",
  "pallet-identity-management",
@@ -12601,7 +12561,6 @@ dependencies = [
  "pallet-balances",
  "pallet-collective",
  "pallet-extrinsic-filter",
- "pallet-group",
  "pallet-membership",
  "pallet-message-queue",
  "pallet-multisig",

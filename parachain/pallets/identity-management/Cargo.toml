@@ -25,7 +25,6 @@ pallet-balances = { workspace = true, features = ["std"] }
 pallet-timestamp = { workspace = true, features = ["std"] }
 sp-io = { workspace = true, features = ["std"] }
 pallet-teebag = { workspace = true, features = ["std", "test-util"] }
-pallet-group = { workspace = true, features = ["std"] }
 pallet-utility = { workspace = true, features = ["std"] }
 
 [features]
@@ -43,7 +42,6 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",
-    "pallet-group/std",
     "pallet-teebag/std",
     "pallet-timestamp/std",
     "pallet-utility/std",
