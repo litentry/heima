@@ -47,7 +47,6 @@ cumulus-test-relay-sproof-builder = { workspace = true, optional = true }
 heima-primitives = { workspace = true }
 pallet-asset-manager = { workspace = true }
 pallet-extrinsic-filter = { workspace = true }
-pallet-group = { workspace = true }
 pallet-omni-account = { workspace = true }
 pallet-omni-bridge = { workspace = true }
 pallet-teebag = { workspace = true }
@@ -68,7 +67,6 @@ std = [
     "pallet-balances/std",
     "pallet-collective/std",
     "pallet-extrinsic-filter/std",
-    "pallet-group/std",
     "pallet-membership/std",
     "pallet-message-queue/std",
     "pallet-multisig/std",
@@ -105,7 +103,6 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "pallet-extrinsic-filter/runtime-benchmarks",
-    "pallet-group/runtime-benchmarks",
     "pallet-membership/runtime-benchmarks",
     "pallet-message-queue/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
@@ -132,7 +129,6 @@ try-runtime = [
     "pallet-balances/try-runtime",
     "pallet-collective/try-runtime",
     "pallet-extrinsic-filter/try-runtime",
-    "pallet-group/try-runtime",
     "pallet-membership/try-runtime",
     "pallet-message-queue/try-runtime",
     "pallet-multisig/try-runtime",

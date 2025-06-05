@@ -79,7 +79,6 @@ frame_support::construct_runtime!(
 		Teebag: pallet_teebag,
 		Timestamp: pallet_timestamp,
 		IdentityManagement: pallet_identity_management,
-		IMPExtrinsicWhitelist: pallet_group,
 		Utility: pallet_utility,
 	}
 );
@@ -128,13 +127,7 @@ impl pallet_identity_management::Config for Test {
 	type WeightInfo = ();
 	type TEECallOrigin = EnsureEnclaveSigner<Self>;
 	type DelegateeAdminOrigin = EnsureRoot<Self::AccountId>;
-	type ExtrinsicWhitelistOrigin = IMPExtrinsicWhitelist;
 	type MaxOIDCClientRedirectUris = ConstU32<3>;
-}
-
-impl pallet_group::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type GroupManagerOrigin = frame_system::EnsureRoot<Self::AccountId>;
 }
 
 impl pallet_utility::Config for Test {

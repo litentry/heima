@@ -83,12 +83,11 @@ use runtime_common::{
 	CouncilMembershipInstance, DeveloperCommitteeInstance, DeveloperCommitteeMembershipInstance,
 	EnsureEnclaveSigner, EnsureOmniAccount, EnsureRootOrAllCouncil,
 	EnsureRootOrAllTechnicalCommittee, EnsureRootOrHalfCouncil, EnsureRootOrHalfTechnicalCommittee,
-	EnsureRootOrTwoThirdsCouncil, EnsureRootOrTwoThirdsTechnicalCommittee,
-	IMPExtrinsicWhitelistInstance, RuntimeBlockWeights, SlowAdjustingFeeUpdate,
-	TechnicalCommitteeInstance, TechnicalCommitteeMembershipInstance,
-	VCMPExtrinsicWhitelistInstance, BLOCK_PROCESSING_VELOCITY, MAXIMUM_BLOCK_WEIGHT,
-	NORMAL_DISPATCH_RATIO, RELAY_CHAIN_SLOT_DURATION_MILLIS, UNINCLUDED_SEGMENT_CAPACITY,
-	WEIGHT_PER_GAS, WEIGHT_TO_FEE_FACTOR,
+	EnsureRootOrTwoThirdsCouncil, EnsureRootOrTwoThirdsTechnicalCommittee, RuntimeBlockWeights,
+	SlowAdjustingFeeUpdate, TechnicalCommitteeInstance, TechnicalCommitteeMembershipInstance,
+	BLOCK_PROCESSING_VELOCITY, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO,
+	RELAY_CHAIN_SLOT_DURATION_MILLIS, UNINCLUDED_SEGMENT_CAPACITY, WEIGHT_PER_GAS,
+	WEIGHT_TO_FEE_FACTOR,
 };
 
 // Make the WASM binary available.
@@ -231,7 +230,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9242,
+	spec_version: 9243,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -783,13 +782,6 @@ impl pallet_identity::Config for Runtime {
 	type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
-impl pallet_account_fix::Config for Runtime {
-	type Currency = Balances;
-	type IncConsumerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
-	type AddBalanceOrigin = EnsureRoot<AccountId>;
-	type BurnOrigin = EnsureRoot<AccountId>;
-}
-
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -1129,7 +1121,6 @@ impl pallet_identity_management::Config for Runtime {
 	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
-	type ExtrinsicWhitelistOrigin = IMPExtrinsicWhitelist;
 	type MaxOIDCClientRedirectUris = ConstU32<10>;
 }
 
@@ -1246,23 +1237,12 @@ impl pallet_evm_assertions::Config for Runtime {
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 }
 
-impl pallet_group::Config<IMPExtrinsicWhitelistInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type GroupManagerOrigin = EnsureRootOrAllCouncil;
-}
-
 impl pallet_vc_management::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_vc_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
-	type ExtrinsicWhitelistOrigin = VCMPExtrinsicWhitelist;
-}
-
-impl pallet_group::Config<VCMPExtrinsicWhitelistInstance> for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type GroupManagerOrigin = EnsureRootOrAllCouncil;
 }
 
 parameter_types! {
@@ -1366,8 +1346,8 @@ construct_runtime! {
 
 		IdentityManagement: pallet_identity_management = 80,
 		VCManagement: pallet_vc_management = 81,
-		IMPExtrinsicWhitelist: pallet_group::<Instance1> = 82,
-		VCMPExtrinsicWhitelist: pallet_group::<Instance2> = 83,
+		// 82 was IMPExtrinsicWhitelist
+		// 83 was VCMPExtrinsicWhitelist
 		OmniAccount: pallet_omni_account = 84,
 		OmniBridge: pallet_omni_bridge = 85,
 
@@ -1377,7 +1357,6 @@ construct_runtime! {
 
 		// TMP
 		StateTrieMigration: pallet_state_trie_migration = 251,
-		AccountFix: pallet_account_fix = 254,
 	}
 }
 
@@ -1452,15 +1431,10 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::Teebag(_) |
 			// ParachainStaking
 			RuntimeCall::ParachainStaking(_) |
-			// Group
-			RuntimeCall::IMPExtrinsicWhitelist(_) |
-			RuntimeCall::VCMPExtrinsicWhitelist(_) |
 			// EVM
 			// Substrate EVM extrinsic not allowed
 			// So no EVM pallet
 			RuntimeCall::Ethereum(_) |
-			// AccountFix
-			RuntimeCall::AccountFix(_) |
 			RuntimeCall::AssetsHandler(_) |
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
