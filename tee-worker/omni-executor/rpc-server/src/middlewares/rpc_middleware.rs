@@ -13,7 +13,6 @@ use jsonrpsee::{
 use tower::layer::util::{Identity, Stack};
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)] // TODO: remove this once the extensions are used in the methods
 pub struct RpcExtensions {
 	pub sender: String,
 }
