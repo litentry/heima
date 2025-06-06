@@ -20,6 +20,7 @@ use anchor_client::{
 	},
 	Client, ClientError, Cluster, Program,
 };
+use anchor_client::solana_sdk::rent::Rent;
 
 // PK - 8QQds7P14EL1ZFjPLsTg2AHZaQHfNGH1EDW8wMhJmxaX
 pub fn setup_program<'a>(payer: &'a Keypair) -> Program<&'a Keypair> {
@@ -647,7 +648,7 @@ fn test_full_workerflow() {
 		bincode::deserialize(&treasury_account.data[8..]).unwrap();
 
 	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
-	let rent_exempt_amount = program.rpc().get_minimum_balance_for_rent_exemption(size_of_treasury_account).unwrap();
+	let rent_exempt_amount = Rent::default().minimum_balance(size_of_treasury_account);
 
 	assert_eq!(treasury_account.lamports, 1_000_000_000 + rent_exempt_amount);
 
