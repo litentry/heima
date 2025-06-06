@@ -2,7 +2,7 @@ use crate::{
 	error_code::AUTH_VERIFICATION_FAILED_CODE, methods::PROTECTED_METHODS,
 	middlewares::HttpExtensions, verify_auth::verify_auth_token_authentication,
 };
-use heima_authentication::constants::AUTH_TOKEN_ID_TYPE;
+use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use jsonrpsee::{
 	server::{
 		middleware::rpc::{ResponseFuture, RpcServiceT},
@@ -60,7 +60,7 @@ where
 				match verify_auth_token_authentication(
 					&self.rsa_private_key,
 					token,
-					AUTH_TOKEN_ID_TYPE, // TODO: conditionally set token type based on the method
+					auth_token_type_for_method(req.method_name()),
 					false,
 				) {
 					Ok(claims) => {
@@ -88,5 +88,16 @@ where
 		}
 
 		ResponseFuture::future(self.service.call(req))
+	}
+}
+
+// Defines the methods that require "access" auth token type
+const ACCESS_TOKEN_PROTECTED_METHODS: [&str; 1] = ["omni_notifyLimitOrderResult"];
+
+fn auth_token_type_for_method(method: &str) -> &'static str {
+	if ACCESS_TOKEN_PROTECTED_METHODS.contains(&method) {
+		AUTH_TOKEN_ACCESS_TYPE
+	} else {
+		AUTH_TOKEN_ID_TYPE
 	}
 }
