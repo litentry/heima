@@ -3976,6 +3976,7 @@ dependencies = [
  "bitcoin",
  "executor-crypto",
  "heima-primitives",
+ "heima-utils",
  "hex",
  "parity-scale-codec",
  "scale-info",
