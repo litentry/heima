@@ -92,7 +92,8 @@ where
 }
 
 // Defines the methods that require "access" auth token type
-const ACCESS_TOKEN_PROTECTED_METHODS: [&str; 1] = ["omni_notifyLimitOrderResult"];
+const ACCESS_TOKEN_PROTECTED_METHODS: [&str; 2] =
+	["omni_notifyLimitOrderResult", "omni_signLimitOrder"];
 
 fn auth_token_type_for_method(method: &str) -> &'static str {
 	if ACCESS_TOKEN_PROTECTED_METHODS.contains(&method) {
