@@ -1,5 +1,4 @@
 use crate::server::RpcContext;
-use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
@@ -89,7 +88,7 @@ pub fn verify_web3_authentication(
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(&payload.as_bytes(), signer) {
+	match signature.verify(payload.as_bytes(), signer) {
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
