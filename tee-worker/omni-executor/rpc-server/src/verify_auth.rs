@@ -176,13 +176,13 @@ mod tests {
 	use tempfile::tempdir;
 
 	#[test]
-	fn test_verify_web3_authentication() {
+	fn test_verify_substrate_authentication() {
 		let tmp_dir = tempdir().unwrap();
 		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
-		let alice = Pair::from_string("//Alice", None).unwrap();
+		let alice = sr25519::Pair::from_string("//Alice", None).unwrap();
 		let public_key: [u8; 32] = alice.public().into();
-		let alice_identity = Identity::from(public_key);
+		let alice_identity = Identity::Substrate(public_key.into());
 		let client_id = "test_client".to_string();
 		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
