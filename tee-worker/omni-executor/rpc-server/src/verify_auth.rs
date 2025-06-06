@@ -207,4 +207,39 @@ mod tests {
 			verify_web3_authentication(storage_db, &client_id, &alice_identity, &multi_signature);
 		assert!(result.is_ok());
 	}
+
+	#[test]
+	fn test_verify_solana_authentication() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		// Create Ed25519 keypair for Solana
+		let (keypair, _) = ed25519::Pair::generate();
+		let public_key: [u8; 32] = keypair.public().into();
+		let solana_identity = Identity::Solana(public_key.into());
+		let client_id = "test_client_solana".to_string();
+		let solana_omni_account = solana_identity.to_omni_account_with_client_id(&client_id);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&solana_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: solana_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+
+		let signature = keypair.sign(payload.as_bytes());
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &solana_identity, &multi_signature);
+		assert!(result.is_ok());
+	}
+
 }
