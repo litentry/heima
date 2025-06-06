@@ -242,4 +242,38 @@ mod tests {
 		assert!(result.is_ok());
 	}
 
+	#[test]
+	fn test_verify_evm_authentication() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let evm_signer = PrivateKeySigner::random();
+		let signer_address = evm_signer.address();
+		let evm_identity = Identity::Evm(signer_address.0.as_slice().try_into().unwrap());
+		let client_id = "test_client_evm".to_string();
+		let evm_omni_account = evm_identity.to_omni_account_with_client_id(&client_id);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&evm_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: evm_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+		let signature = evm_signer.sign_message_sync(payload.as_bytes()).expect("sign message");
+
+		let ethereum_signature = EthereumSignature(signature.into());
+		let multi_signature = HeimaMultiSignature::Ethereum(ethereum_signature);
+
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &evm_identity, &multi_signature);
+		assert!(result.is_ok());
+	}
+
 }
