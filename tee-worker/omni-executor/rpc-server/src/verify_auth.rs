@@ -87,10 +87,9 @@ pub fn verify_web3_authentication(
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
-	let hashed = blake2_256(payload.as_bytes());
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(&hashed, signer) {
+	match signature.verify(&payload.as_bytes(), signer) {
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
