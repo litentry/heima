@@ -689,6 +689,7 @@ impl From<[u8; 33]> for Identity {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use heima_utils::decode_hex;
 	use parity_scale_codec::DecodeAll;
 	use strum::IntoEnumIterator;
 
@@ -1115,7 +1116,7 @@ mod tests {
 		assert_eq!(
 			omni_account,
 			AccountId::new(
-				hex::decode("f3ecfc8a1f9a3b0f23e02a0a866d75c749bee1023a9a512f958df0ae1167248d")
+				decode_hex("0xf3ecfc8a1f9a3b0f23e02a0a866d75c749bee1023a9a512f958df0ae1167248d")
 					.unwrap()
 					.try_into()
 					.unwrap()
@@ -1131,7 +1132,7 @@ mod tests {
 		assert_eq!(
 			omni_account,
 			AccountId::new(
-				hex::decode("8267cb415b1d1fdcd66852a367e933160b84cf3c8f90303d1e6dd5b9be2fc604")
+				decode_hex("0x8267cb415b1d1fdcd66852a367e933160b84cf3c8f90303d1e6dd5b9be2fc604")
 					.unwrap()
 					.try_into()
 					.unwrap()
@@ -1154,7 +1155,7 @@ mod tests {
 		assert_eq!(
 			omni_account,
 			AccountId::new(
-				hex::decode("585b0ce756bd1f237a9e46c3feaf68b47fdffba898cd62c1d663986d25ecc313")
+				decode_hex("0x585b0ce756bd1f237a9e46c3feaf68b47fdffba898cd62c1d663986d25ecc313")
 					.unwrap()
 					.try_into()
 					.unwrap()
@@ -1170,7 +1171,7 @@ mod tests {
 		assert_eq!(
 			omni_account,
 			AccountId::new(
-				hex::decode("e502d639feeb199ae332376b050307d76d11b32e93b9fd1310127d2af64923fe")
+				decode_hex("0xe502d639feeb199ae332376b050307d76d11b32e93b9fd1310127d2af64923fe")
 					.unwrap()
 					.try_into()
 					.unwrap()
