@@ -166,8 +166,12 @@ async fn verify_google_oauth2(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_crypto::{sr25519::Pair, PairTrait};
-	use executor_primitives::{utils::hex::ToHexPrefixed, Hashable, Identity};
+	use alloy_signer::SignerSync;
+	use alloy_signer_local::PrivateKeySigner;
+	use executor_crypto::{ed25519, sr25519, PairTrait};
+	use executor_primitives::{
+		signature::EthereumSignature, utils::hex::ToHexPrefixed, Hashable, Identity,
+	};
 	use heima_identity_verification::helpers::generate_otp;
 	use tempfile::tempdir;
 
