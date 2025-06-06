@@ -24,6 +24,7 @@ use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
+	pub client_id: String,
 	pub user_email: String,
 }
 
@@ -38,7 +39,7 @@ pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 
 			let account =
 				Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)
-					.to_omni_account();
+					.to_omni_account_with_client_id(&params.client_id);
 			Ok::<String, ErrorObject>(account.to_hex())
 		})
 		.expect("Failed to register omni_getOmniAccount method");

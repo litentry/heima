@@ -6,3 +6,4 @@ pub const AUTH_TOKEN_ID_TYPE: &str = "id";
 // Client ID constants for JWT audience
 pub const CLIENT_ID_HEIMA: &str = "heima";
 pub const CLIENT_ID_PUMPX: &str = "pumpx";
+pub const CLIENT_ID_WILDMETA: &str = "wildmeta";

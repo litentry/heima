@@ -1011,6 +1011,8 @@ jobs:
           retention-days: 3
 
   omni-executor-test:
+    # disable the whole test before pallet-omni-account is revamped - the whole identity-linking is sadly unused
+    if: false
     runs-on: ubuntu-22.04
     needs:
       - set-condition

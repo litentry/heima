@@ -15,7 +15,7 @@ use executor_primitives::{
 	OmniAccountAuthType, PumpxAccountProfile, ValidationData, Web2IdentityType,
 };
 use executor_storage::{
-	IntentIdStorage, MemberOmniAccountStorage, PumpxJwtStorage, PumpxProfileStorage, Storage,
+	HeimaJwtStorage, IntentIdStorage, MemberOmniAccountStorage, PumpxProfileStorage, Storage,
 	StorageDB,
 };
 use heima_authentication::{
@@ -275,7 +275,8 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::RequestIntent(sender, intent_id, intent) => {
-			let omni_account = sender.to_omni_account();
+			// TODO: fix this as part of P-1560
+			let omni_account = sender.to_omni_account_with_client_id(CLIENT_ID_HEIMA);
 
 			debug!("Intent requested");
 
@@ -620,8 +621,8 @@ async fn handle_native_task<
 			};
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
-			let omni_account =
-				Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account();
+			let omni_account = Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx)
+				.to_omni_account_with_client_id(CLIENT_ID_PUMPX);
 
 			let access_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
@@ -686,7 +687,7 @@ async fn handle_native_task<
 				return;
 			};
 
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			if storage
 				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				.is_err()
@@ -711,10 +712,11 @@ async fn handle_native_task<
 			pumpx_wallet_index,
 			expected_wallet_address,
 		) => {
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let Ok(Some(access_token)) = storage.get(&(
+				sender.to_omni_account_with_client_id(CLIENT_ID_PUMPX),
+				AUTH_TOKEN_ACCESS_TYPE,
+			)) else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
 					response_sender,
@@ -753,7 +755,7 @@ async fn handle_native_task<
 				.export_wallet(
 					chain,
 					pumpx_wallet_index,
-					sender.to_omni_account().into(),
+					sender.to_omni_account_with_client_id(CLIENT_ID_PUMPX).into(),
 					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
 					//       we don't have to do double encryption/decryption
 					ctx.aes256_key.to_vec(),
@@ -778,15 +780,17 @@ async fn handle_native_task<
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
-			if let Ok(maybe_profile) = omni_account_profile_storage.get(&sender.to_omni_account()) {
+			if let Ok(maybe_profile) = omni_account_profile_storage
+				.get(&sender.to_omni_account_with_client_id(CLIENT_ID_PUMPX))
+			{
 				let profile = maybe_profile
 					.map(|mut p| {
 						p.wallet_exported = true;
 						p
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				if let Err(e) =
-					omni_account_profile_storage.insert(&sender.to_omni_account(), profile)
+				if let Err(e) = omni_account_profile_storage
+					.insert(&sender.to_omni_account_with_client_id(CLIENT_ID_PUMPX), profile)
 				{
 					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
@@ -808,10 +812,11 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxAddWallet(sender) => {
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let Ok(Some(access_token)) = storage.get(&(
+				sender.to_omni_account_with_client_id(CLIENT_ID_PUMPX),
+				AUTH_TOKEN_ACCESS_TYPE,
+			)) else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
 					response_sender,
@@ -885,10 +890,11 @@ async fn handle_native_task<
 			language,
 		) => {
 			// 1. Verify we have a valid Pumpx "access" token for the user
-			let storage = PumpxJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let Ok(Some(access_token)) = storage.get(&(
+				sender.to_omni_account_with_client_id(CLIENT_ID_PUMPX),
+				AUTH_TOKEN_ACCESS_TYPE,
+			)) else {
 				send_error(
 					"Failed to get access_token within NativeTask::PumpxTransferWidthdraw"
 						.to_string(),

@@ -17,6 +17,7 @@
 use crate::ErrorCode;
 use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
 use executor_storage::{IntentIdStorage, Storage};
+use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::Deserialize;
@@ -37,7 +38,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 
 			let account =
 				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
-					.to_omni_account();
+					.to_omni_account_with_client_id(CLIENT_ID_PUMPX);
 
 			let storage = IntentIdStorage::new(ctx.storage_db.clone());
 			let intent_id = storage

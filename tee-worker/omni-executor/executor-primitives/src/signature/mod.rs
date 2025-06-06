@@ -5,4 +5,4 @@ mod ethereum;
 pub use ethereum::EthereumSignature;
 
 mod heima_multi_signature;
-pub use heima_multi_signature::HeimaMultiSignature;
+pub use heima_multi_signature::{HeimaMultiSignature, SolanaSignature, SubstrateSignature};

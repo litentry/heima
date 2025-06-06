@@ -35,7 +35,7 @@ use executor_primitives::{AccountId, PumpxAccountProfile};
 use executor_primitives::{EthereumToken, PumpxConfig, SwapOrder};
 use executor_storage::Storage;
 use executor_storage::StorageDB;
-use executor_storage::{PumpxJwtStorage, PumpxProfileStorage};
+use executor_storage::{HeimaJwtStorage, PumpxProfileStorage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
@@ -361,7 +361,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	.unwrap();
 
 	// store jwt token
-	let pumpx_jwt_storage = PumpxJwtStorage::new(storage_db.clone());
+	let pumpx_jwt_storage = HeimaJwtStorage::new(storage_db.clone());
 	pumpx_jwt_storage
 		.insert(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE), "test_token".to_string())
 		.unwrap();
@@ -653,7 +653,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	.unwrap();
 
 	// store jwt token
-	let pumpx_jwt_storage = PumpxJwtStorage::new(storage_db.clone());
+	let pumpx_jwt_storage = HeimaJwtStorage::new(storage_db.clone());
 	pumpx_jwt_storage
 		.insert(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE), "test_token".to_string())
 		.unwrap();
@@ -963,7 +963,7 @@ async fn instant_payout_cross_chain_swap() {
 	.unwrap();
 
 	// store jwt token
-	let pumpx_jwt_storage = PumpxJwtStorage::new(storage_db.clone());
+	let pumpx_jwt_storage = HeimaJwtStorage::new(storage_db.clone());
 	pumpx_jwt_storage
 		.insert(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE), "test_token".to_string())
 		.unwrap();
@@ -1277,7 +1277,7 @@ async fn no_instant_payout_if_exported_wallet() {
 	.unwrap();
 
 	// store jwt token
-	let pumpx_jwt_storage = PumpxJwtStorage::new(storage_db.clone());
+	let pumpx_jwt_storage = HeimaJwtStorage::new(storage_db.clone());
 	pumpx_jwt_storage
 		.insert(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE), "test_token".to_string())
 		.unwrap();

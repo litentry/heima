@@ -9,16 +9,16 @@ use methods::create_market_order_unsigned_tx::{
 	create_market_order_unsigned_tx_impl, CreateMarketOrderUnsignedTxBody,
 	CreateMarketOrderUnsignedTxResponse,
 };
-use methods::cross_fail::{cross_fail_impl, CrossFailBody};
-use methods::get_user_trade_info::{get_user_trade_info_impl, UserTradeInfoResponse};
-use methods::send_order_tx::{send_order_tx_impl, SendOrderTxBody, SendOrderTxResponse};
-use methods::user_connect::{user_connect_impl, UserConnectResponse};
-use methods::verify_google_code::{verify_google_code_impl, VerifyGoogleCodeResponse};
-
 use methods::create_transfer_unsigned_tx::{
 	create_transfer_unsigned_tx_impl, CreateTransferUnsignedTxBody,
 	CreateTransferUnsignedTxResponse,
 };
+use methods::cross_fail::{cross_fail_impl, CrossFailBody};
+use methods::get_user_trade_info::{get_user_trade_info_impl, UserTradeInfoResponse};
+use methods::heima_post_login::{heima_post_login_impl, PostHeimaLoginResponse};
+use methods::send_order_tx::{send_order_tx_impl, SendOrderTxBody, SendOrderTxResponse};
+use methods::user_connect::{user_connect_impl, UserConnectResponse};
+use methods::verify_google_code::{verify_google_code_impl, VerifyGoogleCodeResponse};
 
 use methods::send_transfer_tx::{
 	send_transfer_tx_impl, SendTransferTxBody, SendTransferTxResponse,
@@ -36,6 +36,8 @@ use methods::get_gas_info::{get_gas_info_impl, GetGasInfoResponse};
 
 use methods::common::OrderInfoResponse;
 use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdResponse};
+
+use crate::methods::heima_post_login::PostHeimaLoginBody;
 
 const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
 
@@ -133,6 +135,12 @@ pub trait PumpxApi: Send + Sync {
 	) -> Result<GetGasInfoResponse, Error>;
 
 	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error>;
+
+	async fn heima_post_login(
+		&self,
+		access_token: &str,
+		body: PostHeimaLoginBody,
+	) -> Result<PostHeimaLoginResponse, Error>;
 }
 
 pub struct PumpxApiClient {
@@ -283,11 +291,21 @@ impl PumpxApi for PumpxApiClient {
 	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error> {
 		get_account_user_id_impl(self, email).await
 	}
+
+	async fn heima_post_login(
+		&self,
+		access_token: &str,
+		body: PostHeimaLoginBody,
+	) -> Result<PostHeimaLoginResponse, Error> {
+		heima_post_login_impl(self, access_token, body).await
+	}
 }
 
 #[cfg(feature = "mocks")]
 pub mod mocks {
 
+	use crate::methods::heima_post_login::PostHeimaLoginBody;
+	use crate::methods::heima_post_login::PostHeimaLoginResponse;
 	use crate::pumpx_api::AddWalletResponse;
 	use crate::pumpx_api::CreateCrossOrderBody;
 	use crate::pumpx_api::CreateLimitOrderBody;
@@ -413,6 +431,12 @@ pub mod mocks {
 			) -> Result<GetGasInfoResponse, Error>;
 
 			async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error>;
+
+			async fn heima_post_login(
+				&self,
+				access_token: &str,
+				body: PostHeimaLoginBody,
+			) -> Result<PostHeimaLoginResponse, Error>;
 		}
 	}
 }
