@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use super::common::handle_omni_native_task;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
@@ -33,8 +34,6 @@ use native_task_handler::NativeTaskOk;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};
-
-use super::common::handle_omni_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct SignLimitOrderParams {
@@ -56,7 +55,7 @@ pub struct SignLimitOrderResponse {
 pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
-           	let user = check_auth(&ext).map_err(|e| {
+			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
@@ -68,7 +67,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received omni_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
+			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
 			let Ok(address) = Address32::from_hex(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
@@ -82,7 +81,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 					params.wallet_index,
 					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
 				),
-		     	None,
+				None,
 				None,
 			);
 
