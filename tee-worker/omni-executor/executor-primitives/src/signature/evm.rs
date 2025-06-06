@@ -14,55 +14,56 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use heima_utils::{decode_hex, hex_encode};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Encode, Decode, MaxEncodedLen, TypeInfo, PartialEq, Eq, Clone, Debug)]
-pub struct BitcoinSignature(pub [u8; 65]);
+pub struct EthereumSignature(pub [u8; 65]);
 
-impl TryFrom<&[u8]> for BitcoinSignature {
+impl TryFrom<&[u8]> for EthereumSignature {
 	type Error = ();
 
 	fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
 		if data.len() == 65 {
 			let mut inner = [0u8; 65];
 			inner.copy_from_slice(data);
-			Ok(BitcoinSignature(inner))
+			Ok(EthereumSignature(inner))
 		} else {
 			Err(())
 		}
 	}
 }
 
-impl Serialize for BitcoinSignature {
+impl Serialize for EthereumSignature {
 	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 	where
 		S: Serializer,
 	{
-		serializer.serialize_str(&hex::encode(self))
+		serializer.serialize_str(&hex_encode(self.0.as_ref()))
 	}
 }
 
-impl<'de> Deserialize<'de> for BitcoinSignature {
+impl<'de> Deserialize<'de> for EthereumSignature {
 	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 	where
 		D: Deserializer<'de>,
 	{
-		let signature_hex = hex::decode(&String::deserialize(deserializer)?)
+		let signature_hex = decode_hex(&String::deserialize(deserializer)?)
 			.map_err(|e| de::Error::custom(format!("{:?}", e)))?;
-		BitcoinSignature::try_from(signature_hex.as_ref())
+		EthereumSignature::try_from(signature_hex.as_ref())
 			.map_err(|e| de::Error::custom(format!("{:?}", e)))
 	}
 }
 
-impl AsRef<[u8; 65]> for BitcoinSignature {
+impl AsRef<[u8; 65]> for EthereumSignature {
 	fn as_ref(&self) -> &[u8; 65] {
 		&self.0
 	}
 }
 
-impl AsRef<[u8]> for BitcoinSignature {
+impl AsRef<[u8]> for EthereumSignature {
 	fn as_ref(&self) -> &[u8] {
 		&self.0[..]
 	}
