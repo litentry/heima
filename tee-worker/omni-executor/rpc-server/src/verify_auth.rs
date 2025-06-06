@@ -1,5 +1,4 @@
 use crate::server::RpcContext;
-use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
@@ -87,10 +86,9 @@ pub fn verify_web3_authentication(
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
-	let hashed = blake2_256(payload.as_bytes());
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(&hashed, signer) {
+	match signature.verify(payload.as_bytes(), signer) {
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
@@ -168,7 +166,7 @@ async fn verify_google_oauth2(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_crypto::{hashing::blake2_256, sr25519::Pair, PairTrait};
+	use executor_crypto::{sr25519::Pair, PairTrait};
 	use executor_primitives::{utils::hex::ToHexPrefixed, Hashable, Identity};
 	use heima_identity_verification::helpers::generate_otp;
 	use tempfile::tempdir;
@@ -197,9 +195,8 @@ mod tests {
 		};
 
 		let payload = serde_json::to_string(&message).expect("serialize");
-		let hashed = blake2_256(payload.as_bytes());
 
-		let signature = alice.sign(&hashed);
+		let signature = alice.sign(payload.as_bytes());
 		let multi_signature = HeimaMultiSignature::from(signature);
 
 		let result =
