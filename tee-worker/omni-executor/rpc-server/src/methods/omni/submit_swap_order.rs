@@ -119,8 +119,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received omni_submitSwapOrder, user_email: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}",
-			params.user_email, params.intent_id, params.order_type, params.swap_type, params.from_chain_id, params.from_token_ca, params.from_amount, params.to_chain_id, params.to_token_ca, params.wallet_index);
+			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 
 			let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
