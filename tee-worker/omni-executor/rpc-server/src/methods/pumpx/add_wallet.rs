@@ -15,6 +15,7 @@ use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct AddWalletParams {
+	pub client_id: String,
 	pub user_id: String,
 	pub auth_token: String,
 }
@@ -24,20 +25,20 @@ pub struct RPCAddWalletResponse {
 	pub backend_response: AddWalletResponse,
 }
 
-impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: AddWalletParams) -> Self {
-		let sender = Identity::from_web2_account(p.user_id.as_str(), Web2IdentityType::Pumpx);
+impl AddWalletParams {
+	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
+		let sender = Identity::from_web2_account(self.user_id.as_str(), Web2IdentityType::Pumpx);
 		NativeTaskWrapper::new(
 			NativeTask::PumpxAddWallet(sender.clone()),
 			None,
-			Some(OmniAuth::AuthToken(p.auth_token)),
+			Some(OmniAuth::AuthToken(self.auth_token)),
+			self.client_id,
 		)
 	}
 }
 
 pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
-	module
-		.register_async_method("pumpx_addWallet", |params, ctx, _| async move {
+	module        .register_async_method("pumpx_addWallet", |params, ctx, _ext| async move {
 			let params = params.parse::<AddWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -45,7 +46,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
 
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+			let wrapper = params.into_native_task_wrapper();
 
 			if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {

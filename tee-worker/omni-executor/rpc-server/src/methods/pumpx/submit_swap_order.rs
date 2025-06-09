@@ -119,12 +119,13 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			debug!("Received pumpx_submitSwapOrder, user_id: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}",
 			params.user_id, params.intent_id, params.order_type, params.swap_type, params.from_chain_id, params.from_token_ca, params.from_amount, params.to_chain_id, params.to_token_ca, params.wallet_index);
 
-            let omni_account = match verify_auth_token_authentication(&ctx.jwt_rsa_private_key, &params.auth_token, AUTH_TOKEN_ID_TYPE, false) {
+            let (omni_account, client_id) = match verify_auth_token_authentication(&ctx.jwt_rsa_private_key, &params.auth_token, AUTH_TOKEN_ID_TYPE, false) {
                 Ok(claims) => {
-                    AccountId::from_str(&claims.sub).map_err(|_| {
+                    let account_id = AccountId::from_str(&claims.sub).map_err(|_| {
                         error!("Failed to parse account id from auth token");
                         PumpxRpcError::from_error_code(ErrorCode::InternalError)
-                    })?
+                    })?;
+                    (account_id, claims.aud)
                 },
                 Err(_) => {
                     error!("Failed to verify auth token");
@@ -238,6 +239,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				 None,
 				Some(OmniAuth::AuthToken(params.auth_token)),
+				client_id,
 			);
 
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {

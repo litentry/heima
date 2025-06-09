@@ -15,6 +15,7 @@ use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestJwtParams {
+	pub client_id: String,
 	pub user_email: String,
 	pub invite_code: Option<String>,
 	pub google_code: String,
@@ -29,33 +30,33 @@ pub struct RequestJwtResponse {
 	pub backend_response: UserConnectResponse,
 }
 
-impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: RequestJwtParams) -> Self {
+impl RequestJwtParams {
+	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
 		NativeTaskWrapper::new(
 			NativeTask::PumpxRequestJwt(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email), // actually unused
-				p.user_email.clone(),
-				p.invite_code,
-				p.google_code,
-				p.language,
+				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Email), // actually unused
+				self.user_email.clone(),
+				self.invite_code,
+				self.google_code,
+				self.language,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(self.user_email, self.email_code)),
+			self.client_id,
 		)
 	}
 }
 
 pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
-	module
-		.register_async_method("pumpx_requestJwt", |params, ctx, _| async move {
+	module        .register_async_method("pumpx_requestJwt", |params, ctx, _ext| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received pumpx_requestJwt, user_email: {}", params.user_email);
+			debug!("Received pumpx_requestJwt, user_email: {}, client_id: {}", params.user_email, params.client_id);
 
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+			let wrapper = params.into_native_task_wrapper();
 
 			if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
