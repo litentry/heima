@@ -83,6 +83,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				),
 				None,
 				None,
+				user.client_id,
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {

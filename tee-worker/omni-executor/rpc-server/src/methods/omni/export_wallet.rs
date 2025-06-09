@@ -17,6 +17,7 @@ use super::common::handle_omni_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
+	pub client_id: String,
 	pub user_email: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
@@ -26,25 +27,25 @@ pub struct ExportWalletParams {
 	pub email_code: String,
 }
 
-impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: ExportWalletParams) -> Self {
+impl ExportWalletParams {
+	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
 		NativeTaskWrapper::new(
 			NativeTask::PumpxExportWallet(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Pumpx),
-				p.google_code,
-				p.chain_id,
-				p.wallet_index,
-				p.wallet_address,
+				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Pumpx),
+				self.google_code,
+				self.chain_id,
+				self.wallet_index,
+				self.wallet_address,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(self.user_email, self.email_code)),
+			self.client_id,
 		)
 	}
 }
 
 pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
-	module
-		.register_async_method("omni_exportWallet", |params, ctx, _| async move {
+	module        .register_async_method("omni_exportWallet", |params, ctx, _ext| async move {
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -71,7 +72,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				)
 			})?;
 
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+			let wrapper = params.into_native_task_wrapper();
 
 			if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
