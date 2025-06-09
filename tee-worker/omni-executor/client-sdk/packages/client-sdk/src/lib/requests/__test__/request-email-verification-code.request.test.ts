@@ -4,6 +4,7 @@ describe.skip('request-email-verification-code', () => {
   it('should works', async () => {
     await requestEmailVerificationCode({
       email: 'test@google.com',
+      clientId: 'test-client-id',
     });
   });
 });
