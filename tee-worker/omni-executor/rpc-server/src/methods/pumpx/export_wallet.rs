@@ -22,6 +22,7 @@ use super::common::handle_pumpx_native_task;
 pub struct ExportWalletParams {
 	pub user_id: String,
 	pub user_email: String,
+	pub client_id: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
 	pub chain_id: PumpxChainId,
@@ -41,7 +42,7 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 				p.wallet_address,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(p.client_id.clone(), p.user_email, p.email_code)),
 		)
 	}
 }
@@ -103,7 +104,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 
            	if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
+					error!("Missing auth");
 					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 						REQUIRE_AUTHENTICATION_CODE,
 					)));

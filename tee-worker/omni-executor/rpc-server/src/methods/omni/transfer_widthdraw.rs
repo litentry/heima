@@ -16,6 +16,7 @@ use super::common::{check_omni_api_response, handle_omni_native_task};
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
 	pub user_email: String,
+	pub client_id: String,
 	pub request_id: Option<u32>,
 	pub chain_id: u32,
 	pub wallet_index: PumxWalletIndex,
@@ -47,7 +48,7 @@ impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
 				p.lang,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(p.client_id.clone(), p.user_email, p.email_code)),
 		)
 	}
 }

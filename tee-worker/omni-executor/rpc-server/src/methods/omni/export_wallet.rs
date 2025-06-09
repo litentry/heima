@@ -18,6 +18,7 @@ use super::common::handle_omni_native_task;
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
 	pub user_email: String,
+	pub client_id: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
 	pub chain_id: PumpxChainId,
@@ -37,7 +38,7 @@ impl From<ExportWalletParams> for NativeTaskWrapper<NativeTask> {
 				p.wallet_address,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(p.client_id.clone(), p.user_email, p.email_code)),
 		)
 	}
 }
