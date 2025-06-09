@@ -41,6 +41,8 @@ pumpx = { workspace = true }
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
 chrono = { workspace = true }
+alloy-signer = { workspace = true }
+alloy-signer-local = { workspace = true }
 
 [lints]
 workspace = true

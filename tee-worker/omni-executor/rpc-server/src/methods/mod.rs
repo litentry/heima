@@ -7,8 +7,13 @@ use pumpx::*;
 mod omni;
 use omni::*;
 
-// TODO: list all protected methods here once the interface has been updated
-pub const PROTECTED_METHODS: [&str; 1] = ["omni_testProtectedMethod"];
+pub const PROTECTED_METHODS: [&str; 5] = [
+	"omni_testProtectedMethod",
+	"omni_addWallet",
+	"omni_notifyLimitOrderResult",
+	"omni_signLimitOrder",
+	"omni_submitSwapOrder",
+];
 
 pub fn register_methods(module: &mut RpcModule<RpcContext>) {
 	register_omni(module);

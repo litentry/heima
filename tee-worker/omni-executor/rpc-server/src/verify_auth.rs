@@ -1,5 +1,4 @@
 use crate::server::RpcContext;
-use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
@@ -87,10 +86,9 @@ pub fn verify_web3_authentication(
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
-	let hashed = blake2_256(payload.as_bytes());
 
 	// Most common signatures variants by clients are verified first (4 and 2).
-	match signature.verify(&hashed, signer) {
+	match signature.verify(payload.as_bytes(), signer) {
 		true => Ok(()),
 		false => Err(AuthenticationError::Web3InvalidSignature),
 	}
@@ -168,19 +166,23 @@ async fn verify_google_oauth2(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_crypto::{hashing::blake2_256, sr25519::Pair, PairTrait};
-	use executor_primitives::{utils::hex::ToHexPrefixed, Hashable, Identity};
+	use alloy_signer::SignerSync;
+	use alloy_signer_local::PrivateKeySigner;
+	use executor_crypto::{ed25519, sr25519, PairTrait};
+	use executor_primitives::{
+		signature::EthereumSignature, utils::hex::ToHexPrefixed, Hashable, Identity,
+	};
 	use heima_identity_verification::helpers::generate_otp;
 	use tempfile::tempdir;
 
 	#[test]
-	fn test_verify_web3_authentication() {
+	fn test_verify_substrate_authentication() {
 		let tmp_dir = tempdir().unwrap();
 		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
-		let alice = Pair::from_string("//Alice", None).unwrap();
+		let alice = sr25519::Pair::from_string("//Alice", None).unwrap();
 		let public_key: [u8; 32] = alice.public().into();
-		let alice_identity = Identity::from(public_key);
+		let alice_identity = Identity::Substrate(public_key.into());
 		let client_id = "test_client".to_string();
 		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
@@ -197,13 +199,178 @@ mod tests {
 		};
 
 		let payload = serde_json::to_string(&message).expect("serialize");
-		let hashed = blake2_256(payload.as_bytes());
 
-		let signature = alice.sign(&hashed);
+		let signature = alice.sign(payload.as_bytes());
 		let multi_signature = HeimaMultiSignature::from(signature);
 
 		let result =
 			verify_web3_authentication(storage_db, &client_id, &alice_identity, &multi_signature);
 		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_verify_solana_authentication() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		// Create Ed25519 keypair for Solana
+		let (keypair, _) = ed25519::Pair::generate();
+		let public_key: [u8; 32] = keypair.public().into();
+		let solana_identity = Identity::Solana(public_key.into());
+		let client_id = "test_client_solana".to_string();
+		let solana_omni_account = solana_identity.to_omni_account_with_client_id(&client_id);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&solana_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: solana_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+
+		let signature = keypair.sign(payload.as_bytes());
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &solana_identity, &multi_signature);
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_verify_evm_authentication() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let evm_signer = PrivateKeySigner::random();
+		let signer_address = evm_signer.address();
+		let evm_identity = Identity::Evm(signer_address.0.as_slice().try_into().unwrap());
+		let client_id = "test_client_evm".to_string();
+		let evm_omni_account = evm_identity.to_omni_account_with_client_id(&client_id);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&evm_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: evm_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+		let signature = evm_signer.sign_message_sync(payload.as_bytes()).expect("sign message");
+
+		let ethereum_signature = EthereumSignature(signature.into());
+		let multi_signature = HeimaMultiSignature::Ethereum(ethereum_signature);
+
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &evm_identity, &multi_signature);
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_verify_web3_authentication_invalid_signature() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let alice = sr25519::Pair::from_string("//Alice", None).unwrap();
+		let bob = sr25519::Pair::from_string("//Bob", None).unwrap();
+
+		let alice_public_key: [u8; 32] = alice.public().into();
+		let alice_identity = Identity::from(alice_public_key);
+		let client_id = "test_client".to_string();
+		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&alice_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: alice_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+
+		// Sign with Bob's key but try to verify with Alice's identity
+		let signature = bob.sign(payload.as_bytes());
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &alice_identity, &multi_signature);
+		assert_eq!(result, Err(AuthenticationError::Web3InvalidSignature));
+	}
+
+	#[test]
+	fn test_verify_web3_authentication_missing_verification_code() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let alice = sr25519::Pair::from_string("//Alice", None).unwrap();
+		let public_key: [u8; 32] = alice.public().into();
+		let alice_identity = Identity::from(public_key);
+		let client_id = "test_client".to_string();
+
+		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let message_code = generate_otp(8);
+
+		let message = HeimaMessagePayload {
+			message_code,
+			omni_account: alice_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+		let signature = alice.sign(payload.as_bytes());
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		// Don't insert verification code
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &alice_identity, &multi_signature);
+		assert_eq!(result, Err(AuthenticationError::VerificationCodeNotFound));
+	}
+
+	#[test]
+	fn test_verify_web3_authentication_invalid_verification_code() {
+		let tmp_dir = tempdir().unwrap();
+		let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let alice = sr25519::Pair::from_string("//Alice", None).unwrap();
+		let public_key: [u8; 32] = alice.public().into();
+		let alice_identity = Identity::from(public_key);
+		let client_id = "test_client".to_string();
+
+		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
+		let message_code = generate_otp(8);
+
+		verification_code_storage
+			.insert(&alice_omni_account.hash(), message_code.clone())
+			.expect("insert");
+
+		let message = HeimaMessagePayload {
+			message_code: "invalid_code".to_string(), // Use an invalid code
+			omni_account: alice_omni_account.to_hex(),
+			client_id: client_id.to_string(),
+		};
+
+		let payload = serde_json::to_string(&message).expect("serialize");
+		let signature = alice.sign(payload.as_bytes());
+		let multi_signature = HeimaMultiSignature::from(signature);
+
+		let result =
+			verify_web3_authentication(storage_db, &client_id, &alice_identity, &multi_signature);
+		assert_eq!(result, Err(AuthenticationError::Web3InvalidSignature));
 	}
 }

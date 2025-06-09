@@ -37,6 +37,8 @@ edition = "2021"
 [workspace.dependencies]
 alloy = "1.0.3"
 alloy-rlp = "0.3.11"
+alloy-signer = "1.0.9"
+alloy-signer-local = "1.0.9"
 anchor-client = "0.31.1"
 async-trait = "0.1.82"
 base58 = "0.2.0"
