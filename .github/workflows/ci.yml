@@ -669,7 +669,7 @@ jobs:
 
         - name: Test contract
           run: |
-            docker run --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build && anchor test -- --features test-skip-auth' 
+            cd tee-worker/omni-executor/accounting-contract/solana && docker run --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build && anchor test -- --features test-skip-auth' 
         
 
   parachain-ts-test:
