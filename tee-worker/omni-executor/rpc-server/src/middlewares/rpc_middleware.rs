@@ -15,6 +15,7 @@ use tower::layer::util::{Identity, Stack};
 #[derive(Clone, Debug)]
 pub struct RpcExtensions {
 	pub sender: String,
+	pub client_id: String,
 }
 
 pub struct RpcMiddleware;
@@ -64,7 +65,10 @@ where
 					false,
 				) {
 					Ok(claims) => {
-						req.extensions_mut().insert(RpcExtensions { sender: claims.sub.clone() });
+						req.extensions_mut().insert(RpcExtensions { 
+							sender: claims.sub.clone(),
+							client_id: claims.aud.clone(),
+						});
 					},
 					Err(e) => {
 						tracing::debug!("Authentication failed: {}", e);
