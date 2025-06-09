@@ -104,9 +104,9 @@ async fn main() -> Result<(), ()> {
 					("OE_BINANCE_API_BASE_URL", "binance_api_base_url"),
 					("OE_WORKER_BASE_URL", "worker_base_url"),
 				];
-				
+
 				let mut env_map = std::collections::HashMap::new();
-				
+
 				for (env_name, var_name) in vars {
 					let value = if env_name.ends_with("_API_BASE_URL") {
 						std::env::var(env_name).ok()
@@ -115,12 +115,15 @@ async fn main() -> Result<(), ()> {
 					};
 					env_map.insert(var_name, value);
 				}
-				
+
 				let args_string = std::env::args().collect::<Vec<String>>().join(" ");
 				info!("Executing: {}", args_string);
-				
+
 				for (name, value) in &env_map {
-					if *name != "alchemy_key" && *name != "binance_api_key" && *name != "binance_api_secret" {
+					if *name != "alchemy_key"
+						&& *name != "binance_api_key"
+						&& *name != "binance_api_secret"
+					{
 						if let Some(val) = value {
 							if !val.is_empty() {
 								info!("Environment variable {}: {}", name, val);
@@ -128,7 +131,7 @@ async fn main() -> Result<(), ()> {
 						}
 					}
 				}
-				
+
 				env_map
 			};
 
@@ -205,10 +208,13 @@ async fn main() -> Result<(), ()> {
 				.unwrap()
 			);
 
-			let storage_db =
-				init_storage(env_vars["parentchain_url"].as_ref().unwrap()).await.expect("Could not initialize storage");
+			let storage_db = init_storage(env_vars["parentchain_url"].as_ref().unwrap())
+				.await
+				.expect("Could not initialize storage");
 
-			let client_factory = SubxtClientFactory::<CustomConfig>::new(env_vars["parentchain_url"].as_ref().unwrap());
+			let client_factory = SubxtClientFactory::<CustomConfig>::new(
+				env_vars["parentchain_url"].as_ref().unwrap(),
+			);
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
 
@@ -251,14 +257,19 @@ async fn main() -> Result<(), ()> {
 					env_vars["pumpx_signer_url"].as_ref().unwrap().to_string(),
 					pumpx_signer_pair,
 				)));
-			
-			let ethereum_intent_executor =
-				EthereumIntentExecutor::new(env_vars["ethereum_url"].as_ref().unwrap(), &args.delegation_contract_address)?;
-			let solana_intent_executor = SolanaIntentExecutor::new(env_vars["solana_url"].as_ref().unwrap())?;
+
+			let ethereum_intent_executor = EthereumIntentExecutor::new(
+				env_vars["ethereum_url"].as_ref().unwrap(),
+				&args.delegation_contract_address,
+			)?;
+			let solana_intent_executor =
+				SolanaIntentExecutor::new(env_vars["solana_url"].as_ref().unwrap())?;
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
-			rpc_endpoint_registry.insert(Chain::Solana, env_vars["solana_url"].as_ref().unwrap().to_string());
-			rpc_endpoint_registry.insert(Chain::Ethereum(56), env_vars["bsc_url"].as_ref().unwrap().to_string());
+			rpc_endpoint_registry
+				.insert(Chain::Solana, env_vars["solana_url"].as_ref().unwrap().to_string());
+			rpc_endpoint_registry
+				.insert(Chain::Ethereum(56), env_vars["bsc_url"].as_ref().unwrap().to_string());
 
 			if let Some(ref bsc_testnet_url) = env_vars["bsc_testnet_url"] {
 				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
@@ -300,7 +311,9 @@ async fn main() -> Result<(), ()> {
 
 			// wallet monitoring setup start
 			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(env_vars["bsc_url"].as_ref().unwrap())));
+				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(
+					env_vars["bsc_url"].as_ref().unwrap(),
+				)));
 
 			let solana_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
 				Arc::new(Box::new(SolanaRpcClient::new(env_vars["solana_url"].as_ref().unwrap())));
@@ -358,7 +371,8 @@ async fn main() -> Result<(), ()> {
 			let native_task_sender =
 				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
-			let worker_url = url::Url::parse(env_vars["worker_base_url"].as_ref().unwrap()).expect("Invalid worker url");
+			let worker_url = url::Url::parse(env_vars["worker_base_url"].as_ref().unwrap())
+				.expect("Invalid worker url");
 
 			let shielding_key_store = ShieldingKeyStore::new(
 				Path::new(&args.local_directory_path)
