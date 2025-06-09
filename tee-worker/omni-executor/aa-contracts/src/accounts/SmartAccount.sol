@@ -15,11 +15,11 @@ import "../core/Helpers.sol";
 import "./callback/TokenCallbackHandler.sol";
 
 /**
- * smart wallet account
+ *  smart wallet account
  *  has an owner which is represented by sha256(0x01+hexencoded-address)
- *  has signers whos signatures will pass validation
+ *  has and root address, this account can generate session keys that will pass signature validation
+ *  has list of allowed signers who can sign messages
  *  has execute, eth handling methods
- *  has a single signer that can send requests through the entryPoint.
  */
 contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     bytes32 public owner;
