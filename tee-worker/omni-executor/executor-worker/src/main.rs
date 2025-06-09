@@ -108,11 +108,7 @@ async fn main() -> Result<(), ()> {
 				let mut env_map = std::collections::HashMap::new();
 
 				for (env_name, var_name) in vars {
-					let value = if env_name.ends_with("_API_BASE_URL") {
-						std::env::var(env_name).ok()
-					} else {
-						Some(std::env::var(env_name).unwrap_or_default())
-					};
+					let value = Some(std::env::var(env_name).unwrap_or_default());
 					env_map.insert(var_name, value);
 				}
 
