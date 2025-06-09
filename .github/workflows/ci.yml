@@ -663,20 +663,13 @@ jobs:
             submodules: recursive
             fetch-depth: 0
 
-        - name: Install Solana CLI
+        - name: Build contract image
           run: |
-            curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
-  
-
-        - name: Build contract
-          run: |
-            export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
-            cd tee-worker/omni-executor/accounting-contract/solana  && anchor build
+            cd tee-worker/omni-executor/accounting-contract/solana && docker build -t solana-contracts .
 
         - name: Test contract
           run: |
-            export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
-            cd tee-worker/omni-executor/accounting-contract/solana  && anchor test -- --features test-skip-auth
+            docker run -it --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build && anchor test -- --features test-skip-auth' 
         
 
   parachain-ts-test:
