@@ -26,7 +26,6 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 				params.client_id, params.user_email
 			);
 
-			// Create omni account from email identity and client_id
 			let email_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
 			let omni_account = email_identity.to_omni_account_with_client_id(&params.client_id);
