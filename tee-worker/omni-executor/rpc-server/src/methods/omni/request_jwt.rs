@@ -48,13 +48,17 @@ impl RequestJwtParams {
 }
 
 pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
-	module        .register_async_method("omni_requestJwt", |params, ctx, _ext| async move {
+	module
+		.register_async_method("omni_requestJwt", |params, ctx, _ext| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received omni_requestJwt, user_email: {}, client_id: {}", params.user_email, params.client_id);
+			debug!(
+				"Received omni_requestJwt, user_email: {}, client_id: {}",
+				params.user_email, params.client_id
+			);
 
 			let wrapper = params.into_native_task_wrapper();
 

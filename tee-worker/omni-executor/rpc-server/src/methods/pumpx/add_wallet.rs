@@ -38,7 +38,8 @@ impl AddWalletParams {
 }
 
 pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
-	module        .register_async_method("pumpx_addWallet", |params, ctx, _ext| async move {
+	module
+		.register_async_method("pumpx_addWallet", |params, ctx, _ext| async move {
 			let params = params.parse::<AddWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)

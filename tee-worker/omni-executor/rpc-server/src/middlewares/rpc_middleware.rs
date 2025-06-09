@@ -65,7 +65,7 @@ where
 					false,
 				) {
 					Ok(claims) => {
-						req.extensions_mut().insert(RpcExtensions { 
+						req.extensions_mut().insert(RpcExtensions {
 							sender: claims.sub.clone(),
 							client_id: claims.aud.clone(),
 						});

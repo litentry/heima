@@ -133,7 +133,7 @@ pub struct User {
 /// Check rpc_middleware.rs
 pub fn check_auth(ext: &Extensions) -> Result<User, ()> {
 	if let Some(rpc_extensions) = ext.get::<RpcExtensions>() {
-		return Ok(User { 
+		return Ok(User {
 			omni_account: rpc_extensions.sender.clone(),
 			client_id: rpc_extensions.client_id.clone(),
 		});
