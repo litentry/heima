@@ -59,7 +59,6 @@ use rust_decimal::Decimal;
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
-use std::env;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
@@ -90,18 +89,48 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or("".to_string());
-			let parentchain_url = std::env::var("OE_PARENTCHAIN_URL").unwrap_or("".to_string());
-			let ethereum_url = std::env::var("OE_ETHERUM_URL").unwrap_or("".to_string());
-			let solana_url = std::env::var("OE_SOLANA_URL").unwrap_or("".to_string());
-			let pumpx_signer_url = std::env::var("OE_PUMPX_SIGNER_URL").unwrap_or("".to_string());
-			let pumpx_api_base_url = std::env::var("OE_PUMPX_API_BASE_URL").ok();
-			let binance_api_key = std::env::var("OE_BINANCE_API_KEY").unwrap_or("".to_string());
-			let binance_api_secret = std::env::var("OE_BINANCE_API_SECRET").unwrap_or("".to_string());
-			let binance_api_base_url = std::env::var("OE_BINANCE_API_BASE_URL").ok();
-			let worker_base_url = std::env::var("OE_WORKER_BASE_URL").unwrap_or("".to_string());
-			let args_string = std::env::args().collect::<Vec<String>>().join(" ");
-			info!("Executing: {}", args_string);
+			let env_vars = {
+				let vars = [
+					("OE_PARENTCHAIN_URL", "parentchain_url"),
+					("OE_ETHERUM_URL", "ethereum_url"),
+					("OE_SOLANA_URL", "solana_url"),
+					("OE_BSC_URL", "bsc_url"),
+					("OE_BSC_TESTNET_URL", "bsc_testnet_url"),
+					("OE_ALCHEMY_KEY", "alchemy_key"),
+					("OE_PUMPX_SIGNER_URL", "pumpx_signer_url"),
+					("OE_PUMPX_API_BASE_URL", "pumpx_api_base_url"),
+					("OE_BINANCE_API_KEY", "binance_api_key"),
+					("OE_BINANCE_API_SECRET", "binance_api_secret"),
+					("OE_BINANCE_API_BASE_URL", "binance_api_base_url"),
+					("OE_WORKER_BASE_URL", "worker_base_url"),
+				];
+				
+				let mut env_map = std::collections::HashMap::new();
+				
+				for (env_name, var_name) in vars {
+					let value = if env_name.ends_with("_API_BASE_URL") {
+						std::env::var(env_name).ok()
+					} else {
+						Some(std::env::var(env_name).unwrap_or_default())
+					};
+					env_map.insert(var_name, value);
+				}
+				
+				let args_string = std::env::args().collect::<Vec<String>>().join(" ");
+				info!("Executing: {}", args_string);
+				
+				for (name, value) in &env_map {
+					if *name != "alchemy_key" && *name != "binance_api_key" && *name != "binance_api_secret" {
+						if let Some(val) = value {
+							if !val.is_empty() {
+								info!("Environment variable {}: {}", name, val);
+							}
+						}
+					}
+				}
+				
+				env_map
+			};
 
 			let builder = PrometheusBuilder::new();
 
@@ -177,9 +206,9 @@ async fn main() -> Result<(), ()> {
 			);
 
 			let storage_db =
-				init_storage(&parentchain_url).await.expect("Could not initialize storage");
+				init_storage(env_vars["parentchain_url"].as_ref().unwrap()).await.expect("Could not initialize storage");
 
-			let client_factory = SubxtClientFactory::<CustomConfig>::new(&parentchain_url);
+			let client_factory = SubxtClientFactory::<CustomConfig>::new(env_vars["parentchain_url"].as_ref().unwrap());
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
 
@@ -219,33 +248,33 @@ async fn main() -> Result<(), ()> {
 
 			let pumpx_signer_client: Arc<Box<dyn signer_client::SignerClient>> =
 				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
-					pumpx_signer_url.clone(),
+					env_vars["pumpx_signer_url"].as_ref().unwrap().to_string(),
 					pumpx_signer_pair,
 				)));
 			
 			let ethereum_intent_executor =
-				EthereumIntentExecutor::new(&ethereum_url, &args.delegation_contract_address)?;
-			let solana_intent_executor = SolanaIntentExecutor::new(&solana_url)?;
+				EthereumIntentExecutor::new(env_vars["ethereum_url"].as_ref().unwrap(), &args.delegation_contract_address)?;
+			let solana_intent_executor = SolanaIntentExecutor::new(env_vars["solana_url"].as_ref().unwrap())?;
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
-			rpc_endpoint_registry.insert(Chain::Solana, solana_url.clone());
-			rpc_endpoint_registry.insert(Chain::Ethereum(56), bsc_url.clone());
+			rpc_endpoint_registry.insert(Chain::Solana, env_vars["solana_url"].as_ref().unwrap().to_string());
+			rpc_endpoint_registry.insert(Chain::Ethereum(56), env_vars["bsc_url"].as_ref().unwrap().to_string());
 
-			if let Some(ref bsc_testnet_url) = bsc_testnet_url {
+			if let Some(ref bsc_testnet_url) = env_vars["bsc_testnet_url"] {
 				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
 			}
 
 			let pumpx_api: Arc<Box<dyn PumpxApi>> =
-				Arc::new(Box::new(PumpxApiClient::new(pumpx_api_base_url)));
+				Arc::new(Box::new(PumpxApiClient::new(env_vars["pumpx_api_base_url"].clone())));
 
 			let binance_api = Arc::new(BinanceApiClient::new(
-				binance_api_key,
-				binance_api_secret,
-				binance_api_base_url,
+				env_vars["binance_api_key"].as_ref().unwrap().to_string(),
+				env_vars["binance_api_secret"].as_ref().unwrap().to_string(),
+				env_vars["binance_api_base_url"].clone(),
 			));
 
 			let solana_client: Arc<SolanaRpcClient> =
-				Arc::new(SolanaRpcClient::new(&solana_url));
+				Arc::new(SolanaRpcClient::new(env_vars["solana_url"].as_ref().unwrap()));
 
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&evm_accounting_ecdsa_signer_key_pair.seed())
@@ -253,7 +282,7 @@ async fn main() -> Result<(), ()> {
 			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
 
 			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
-				&bsc_url,
+				env_vars["bsc_url"].as_ref().unwrap(),
 				accounting_contract_wallet,
 			);
 			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
@@ -262,19 +291,19 @@ async fn main() -> Result<(), ()> {
 			);
 			let solana_accounting_contract_client = SolanaAccountingContractClient::new(
 				solana_accounting_ed25519_signer_key_pair,
-				solana_url.clone(),
+				env_vars["solana_url"].as_ref().unwrap().to_string(),
 				args.solana_accounting_contract_address.parse().unwrap(),
 			);
 
 			let bsc_client: Arc<EthereumRpcClient> =
-				Arc::new(EthereumRpcClient::new(&bsc_url));
+				Arc::new(EthereumRpcClient::new(env_vars["bsc_url"].as_ref().unwrap()));
 
 			// wallet monitoring setup start
 			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(&bsc_url)));
+				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(env_vars["bsc_url"].as_ref().unwrap())));
 
 			let solana_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(SolanaRpcClient::new(&solana_url)));
+				Arc::new(Box::new(SolanaRpcClient::new(env_vars["solana_url"].as_ref().unwrap())));
 
 			let mut balance_fetchers: HashMap<
 				WalletNetworkType,
@@ -329,7 +358,7 @@ async fn main() -> Result<(), ()> {
 			let native_task_sender =
 				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
-			let worker_url = url::Url::parse(&worker_base_url).expect("Invalid worker url");
+			let worker_url = url::Url::parse(env_vars["worker_base_url"].as_ref().unwrap()).expect("Invalid worker url");
 
 			let shielding_key_store = ShieldingKeyStore::new(
 				Path::new(&args.local_directory_path)
