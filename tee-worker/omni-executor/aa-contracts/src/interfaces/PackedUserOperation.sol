@@ -24,5 +24,7 @@ struct PackedUserOperation {
     uint256 preVerificationGas;
     bytes32 gasFees;
     bytes paymasterAndData;
+    address session_account;
+    bytes session_account_proof;
     bytes signature;
 }

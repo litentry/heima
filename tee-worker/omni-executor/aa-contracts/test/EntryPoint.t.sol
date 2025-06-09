@@ -27,7 +27,10 @@ contract EntryPointTest is Test {
         address sender = 0x922D6956C99E12DFeB3224DEA977D0939758A1Fe;
         bytes memory initCode = "";
 
-        PackedUserOperation memory op = TestUtils.preparePackedOp(sender, initCode);
+        address session_account = 0x0000000000000000000000000000000000000000;
+        bytes memory session_account_proof = "";
+        PackedUserOperation memory op =
+            TestUtils.preparePackedOp(sender, initCode, session_account, session_account_proof);
         assertEq(entryPoint.getUserOpHash(op), expectedHash);
     }
 
@@ -47,7 +50,10 @@ contract EntryPointTest is Test {
         address payable beneficiary = payable(0x0000000000000000000000000000000000000002);
 
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        address session_account = 0x0000000000000000000000000000000000000000;
+        bytes memory session_account_proof = "";
+        PackedUserOperation memory packedOp =
+            TestUtils.preparePackedOp(sender, initCode, session_account, session_account_proof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, packedOpHash);

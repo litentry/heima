@@ -72,7 +72,10 @@ contract SmartAccountTest is Test {
 
         bytes memory initCode = "";
 
-        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        address session_account = 0x0000000000000000000000000000000000000000;
+        bytes memory session_account_proof = "";
+        PackedUserOperation memory packedOp =
+            TestUtils.preparePackedOp(sender, initCode, session_account, session_account_proof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(bobPk, packedOpHash);
