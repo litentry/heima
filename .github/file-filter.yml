@@ -52,4 +52,4 @@ evm_accounting_contracts_src:
   - "tee-worker/omni-executor/accounting-contract/bsc/**"
 
 evm_aa_contracts_src:  
-- "tee-worker/omni-executor/aa-contracts/**"
+  - "tee-worker/omni-executor/aa-contracts/**"
