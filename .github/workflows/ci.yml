@@ -1108,22 +1108,6 @@ jobs:
           docker push litentry/heima
           docker push litentry/heima-aio
 
-      - name: Tirgger omni-bridge CI
-        if: needs.set-condition.outputs.rebuild_parachain == 'true'
-        run: |
-          curl -X POST \
-            https://api.github.com/repos/litentry/omni-bridge/dispatches \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -d '{ 
-                "event_type": "heima-update",
-                "client_payload": {
-                    "version": "latest",
-                    "commit": "${{ github.sha }}"
-                }
-            }'
-          echo "Tirgger omni-bridge CI with Heima commit: ${{ github.sha }}"
-
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'
         run: |
