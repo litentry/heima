@@ -28,9 +28,9 @@ contract SmartAccountFactory {
      * Note that during UserOperation execution, this method is called only if the account is not deployed.
      * This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
      */
-    function createAccount(bytes32 oa, address root) public returns (SmartAccount ret) {
+    function createAccount(bytes32 oa, bytes32 clientId, address root) public returns (SmartAccount ret) {
         require(msg.sender == address(senderCreator), "only callable from SenderCreator");
-        address addr = getAddress(oa, root);
+        address addr = getAddress(oa, clientId, root);
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
             return SmartAccount(payable(addr));
@@ -38,7 +38,7 @@ contract SmartAccountFactory {
         ret = SmartAccount(
             payable(
                 new ERC1967Proxy{salt: oa}(
-                    address(accountImplementation), abi.encodeCall(SmartAccount.initialize, (oa, root))
+                    address(accountImplementation), abi.encodeCall(SmartAccount.initialize, (oa, clientId, root))
                 )
             )
         );
@@ -47,13 +47,15 @@ contract SmartAccountFactory {
     /**
      * calculate the counterfactual address of this account as it would be returned by createAccount()
      */
-    function getAddress(bytes32 oa, address root) public view returns (address) {
+    function getAddress(bytes32 oa, bytes32 clientId, address root) public view returns (address) {
         return Create2.computeAddress(
             oa,
             keccak256(
                 abi.encodePacked(
                     type(ERC1967Proxy).creationCode,
-                    abi.encode(address(accountImplementation), abi.encodeCall(SmartAccount.initialize, (oa, root)))
+                    abi.encode(
+                        address(accountImplementation), abi.encodeCall(SmartAccount.initialize, (oa, clientId, root))
+                    )
                 )
             )
         );

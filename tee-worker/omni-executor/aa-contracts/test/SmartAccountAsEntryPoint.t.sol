@@ -15,9 +15,10 @@ contract SmartAccountAsEntryPoint is Test {
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
+    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, rootAddress);
+        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Execute() public {

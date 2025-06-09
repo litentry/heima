@@ -23,12 +23,15 @@ import "./callback/TokenCallbackHandler.sol";
  */
 contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     bytes32 public owner;
+    bytes32 public clientId;
     address public root;
     mapping(address => bool) public allowedSigners;
 
     IEntryPoint private immutable _entryPoint;
 
-    event AccountInitialized(IEntryPoint indexed entryPoint, bytes32 indexed owner, address indexed root);
+    event AccountInitialized(
+        IEntryPoint indexed entryPoint, bytes32 indexed owner, bytes32 clientId, address indexed root
+    );
 
     event AllowedSignerAdded(address signer);
     event AllowedSignerRemoved(address signer);
@@ -62,14 +65,15 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
      * the implementation by calling `upgradeTo()`
      * @param anOwner the owner (signer) of this account
      */
-    function initialize(bytes32 anOwner, address aRoot) public virtual initializer {
-        _initialize(anOwner, aRoot);
+    function initialize(bytes32 anOwner, bytes32 aClientId, address aRoot) public virtual initializer {
+        _initialize(anOwner, aClientId, aRoot);
     }
 
-    function _initialize(bytes32 anOwner, address aRoot) internal virtual {
+    function _initialize(bytes32 anOwner, bytes32 aClientId, address aRoot) internal virtual {
         owner = anOwner;
         root = aRoot;
-        emit AccountInitialized(_entryPoint, owner, root);
+        clientId = aClientId;
+        emit AccountInitialized(_entryPoint, owner, clientId, root);
     }
 
     // Require the function call went through EntryPoint or be signed by [owner|allowed signer|root]
@@ -84,9 +88,9 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
     /**
      * convert sender to oa bytes
      */
-    function _determineOa(address sender) internal pure returns (bytes32) {
+    function _determineOa(address sender) internal view returns (bytes32) {
         bytes1 oaType = 0x01;
-        return sha256(abi.encodePacked(oaType, sender));
+        return sha256(abi.encodePacked(oaType, clientId, sender));
     }
 
     function isAllowed(address sender) internal view returns (bool) {

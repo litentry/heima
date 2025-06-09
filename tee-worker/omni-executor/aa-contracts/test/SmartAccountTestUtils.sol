@@ -10,15 +10,18 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 library SmartAccountTestUtils {
-    function setUp(address ownerAddress, address rootAddress) external returns (Counter, EntryPoint, SmartAccount) {
+    function setUp(address ownerAddress, bytes32 clientId, address rootAddress)
+        external
+        returns (Counter, EntryPoint, SmartAccount)
+    {
         Counter counter = new Counter();
         EntryPoint entryPoint = new EntryPoint();
         SmartAccount accountImpl = new SmartAccount(entryPoint);
-        bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress);
+        bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
         SmartAccount account = SmartAccount(
             payable(
                 new ERC1967Proxy{salt: oa}(
-                    address(accountImpl), abi.encodeCall(SmartAccount.initialize, (oa, rootAddress))
+                    address(accountImpl), abi.encodeCall(SmartAccount.initialize, (oa, clientId, rootAddress))
                 )
             )
         );

@@ -20,13 +20,14 @@ contract SmartAccountTest is Test {
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
+    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, rootAddress);
+        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Owner() public view {
-        bytes32 expected_owner = 0x10c7b76c881edd80616f48eefded8b9e7fe0f4ad52df3128647365be7e21b4e0;
+        bytes32 expected_owner = 0xf6303c05d9d35cfba84718aa98720ad82569bef77b2c236c0e4f5e211f3cc3b0;
         assertEq(account.owner(), expected_owner);
     }
 
@@ -61,11 +62,11 @@ contract SmartAccountTest is Test {
     }
 
     function test_validateOp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, rootAddress);
+        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (address bob, uint256 bobPk) = makeAddrAndKey("bob");
 
-        bytes32 aliceOa = TestUtils.prepare_evm_oa(alice);
+        bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
 

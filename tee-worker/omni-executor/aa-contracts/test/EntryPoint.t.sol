@@ -12,12 +12,13 @@ contract EntryPointTest is Test {
     SmartAccountFactory public smartAccountFactory;
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
+    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
     bytes32 oa;
 
     function setUp() public {
         entryPoint = new EntryPoint();
         smartAccountFactory = new SmartAccountFactory(entryPoint);
-        oa = TestUtils.prepare_evm_oa(ownerAddress);
+        oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
     }
 
     function test_UserOpHash() public view {
@@ -33,15 +34,16 @@ contract EntryPointTest is Test {
     function test_HandleOps() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
 
-        bytes32 aliceOa = TestUtils.prepare_evm_oa(alice);
+        bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
         address factory = address(smartAccountFactory);
-        address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
+        address sender = 0xFFbF00b7738136be1DC881A2B856543996e37908;
 
         fundAccountOnEntryPoint(sender, entryPoint);
 
-        bytes memory initCode =
-            abi.encodePacked(factory, abi.encodeCall(smartAccountFactory.createAccount, (aliceOa, rootAddress)));
+        bytes memory initCode = abi.encodePacked(
+            factory, abi.encodeCall(smartAccountFactory.createAccount, (aliceOa, clientId, rootAddress))
+        );
         address payable beneficiary = payable(0x0000000000000000000000000000000000000002);
 
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);

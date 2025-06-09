@@ -11,6 +11,7 @@ contract SmartAccountFactoryTest is Test {
     SmartAccountFactory public smartAccountFactory;
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
+    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
     bytes32 oa;
 
     function setUp() public {
@@ -23,9 +24,9 @@ contract SmartAccountFactoryTest is Test {
     function test_CreateAccountReturnsSameAddress() public {
         address senderCreator = address(entryPoint.senderCreator());
         vm.prank(senderCreator);
-        SmartAccount account1 = smartAccountFactory.createAccount(oa, rootAddress);
+        SmartAccount account1 = smartAccountFactory.createAccount(oa, clientId, rootAddress);
         vm.prank(senderCreator);
-        SmartAccount account2 = smartAccountFactory.createAccount(oa, rootAddress);
+        SmartAccount account2 = smartAccountFactory.createAccount(oa, clientId, rootAddress);
 
         assertEq(address(account1), address(account2));
     }

@@ -18,11 +18,12 @@ contract SmartAccountAsAllowed is Test {
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
+    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
     address allowedAddress;
     uint256 allowedPk;
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, rootAddress);
+        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (allowedAddress, allowedPk) = makeAddrAndKey("allowed");
     }
 
@@ -47,7 +48,7 @@ contract SmartAccountAsAllowed is Test {
     }
 
     function test_validateOp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, rootAddress);
+        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
 
         vm.prank(ownerAddress);
         account.addAllowedSigner(allowedAddress);
