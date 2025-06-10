@@ -109,12 +109,12 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
         if (owner == _determineOa(signer) || allowedSigners[signer] || root == signer) {
             return SIG_VALIDATION_SUCCESS;
         }
-        if (signer == userOp.session_account) {
+        if (signer == userOp.sessionAccount) {
             // validate session_proof was signed by root
-            bytes32 session_digest = sha256(abi.encodePacked(userOp.session_account));
-            address session_proof_signer = ECDSA.recover(session_digest, userOp.session_account_proof);
+            bytes32 sessionDigest = sha256(abi.encodePacked(userOp.sessionAccount));
+            address sessionProofSigner = ECDSA.recover(sessionDigest, userOp.sessionAccountProof);
 
-            if (session_proof_signer == root) {
+            if (sessionProofSigner == root) {
                 return SIG_VALIDATION_SUCCESS;
             }
         }

@@ -13,6 +13,8 @@ pragma solidity ^0.8.28;
  * @param gasFees               - packed gas fields maxPriorityFeePerGas and maxFeePerGas - Same as EIP-1559 gas parameters.
  * @param paymasterAndData      - If set, this field holds the paymaster address, verification gas limit, postOp gas limit and paymaster-specific extra data
  *                                The paymaster will pay for the transaction instead of the sender.
+ * @param sessionAccount        - Session account used to sign userOp
+ * @param sessionAccountProof   - Proof that session account is authorized by root key
  * @param signature             - Sender-verified signature over the entire request, the EntryPoint address and the chain ID.
  */
 struct PackedUserOperation {
@@ -24,7 +26,7 @@ struct PackedUserOperation {
     uint256 preVerificationGas;
     bytes32 gasFees;
     bytes paymasterAndData;
-    address session_account;
-    bytes session_account_proof;
+    address sessionAccount;
+    bytes sessionAccountProof;
     bytes signature;
 }
