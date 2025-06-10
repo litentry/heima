@@ -459,7 +459,7 @@ describe('account-store', () => {
     console.log('Step 1: create account store');
     await (async () => {
       // Request email verification code for next account store creation
-      await requestEmailVerificationCode({ email });
+      await requestEmailVerificationCode({ email, clientId: 'account-store-test-client' });
       // Get the email verification code from the email inbox
       const verificationCode = 'emailVerificationCodeYouReceivedInEmail';
 
@@ -487,7 +487,7 @@ describe('account-store', () => {
     // Step 2: request auth token
     console.log('Step 2: request auth token');
     // Request email verification code again for next auth token request
-    await requestEmailVerificationCode({ email });
+    await requestEmailVerificationCode({ email, clientId: 'account-store-test-client' });
     // Get the email verification code from the email inbox
     const verificationCode = 'emailVerificationCodeYouReceivedInEmail';
 

@@ -16,6 +16,7 @@ use super::common::{check_omni_api_response, handle_omni_native_task};
 #[derive(Debug, Deserialize)]
 pub struct RequestJwtParams {
 	pub user_email: String,
+	pub client_id: String,
 	pub invite_code: Option<String>,
 	pub google_code: String,
 	pub language: Option<String>,
@@ -40,7 +41,7 @@ impl From<RequestJwtParams> for NativeTaskWrapper<NativeTask> {
 				p.language,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(p.client_id.clone(), p.user_email, p.email_code)),
 		)
 	}
 }
