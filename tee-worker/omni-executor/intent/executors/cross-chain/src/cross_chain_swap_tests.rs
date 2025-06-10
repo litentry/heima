@@ -37,6 +37,7 @@ use executor_storage::Storage;
 use executor_storage::StorageDB;
 use executor_storage::{HeimaJwtStorage, PumpxProfileStorage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::BoundedVec;
 use heima_primitives::IdentityString;
 use intent_asset_lock::precise::PreciseAssetsLock;
@@ -69,8 +70,8 @@ use test_log::test;
 
 #[test(tokio::test)]
 async fn simple_cross_chain_swap_sol_to_bsc() {
-	let account_id: AccountId =
-		Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec())).to_omni_account();
+	let account_id: AccountId = Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec()))
+		.to_omni_account(CLIENT_ID_PUMPX);
 
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();
@@ -371,8 +372,8 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 
 #[test(tokio::test)]
 async fn simple_cross_chain_swap_bsc_to_sol() {
-	let account_id: AccountId =
-		Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec())).to_omni_account();
+	let account_id: AccountId = Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec()))
+		.to_omni_account(CLIENT_ID_PUMPX);
 
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();
@@ -670,8 +671,8 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 
 #[test(tokio::test)]
 async fn instant_payout_cross_chain_swap() {
-	let account_id: AccountId =
-		Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec())).to_omni_account();
+	let account_id: AccountId = Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec()))
+		.to_omni_account(CLIENT_ID_PUMPX);
 
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();
@@ -982,8 +983,8 @@ async fn instant_payout_cross_chain_swap() {
 
 #[test(tokio::test)]
 async fn no_instant_payout_if_exported_wallet() {
-	let account_id: AccountId =
-		Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec())).to_omni_account();
+	let account_id: AccountId = Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec()))
+		.to_omni_account(CLIENT_ID_PUMPX);
 
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();

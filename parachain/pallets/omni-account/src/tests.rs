@@ -66,6 +66,7 @@ fn create_account_store_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -83,7 +84,7 @@ fn create_account_store_works() {
 
 		// create it the second time will fail
 		assert_noop!(
-			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), alice().identity),
+			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), TEST_CLIENT_ID.to_string(), alice().identity),
 			Error::<Test>::AccountAlreadyAdded
 		);
 	});
@@ -120,6 +121,7 @@ fn add_account_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -217,6 +219,7 @@ fn add_account_with_already_linked_account_fails() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity.clone(),
 		));
 
@@ -251,6 +254,7 @@ fn add_account_with_already_linked_account_fails() {
 		// intent to create a new AccountStore with an account that is already added
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			charlie().identity,
 		));
 
@@ -284,6 +288,7 @@ fn add_account_store_len_limit_reached_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -332,6 +337,7 @@ fn remove_account_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -422,6 +428,7 @@ fn remove_account_empty_account_check_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -466,6 +473,7 @@ fn publicize_account_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity.clone(),
 		));
 
@@ -545,6 +553,7 @@ fn publicize_account_identity_not_found_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -586,6 +595,7 @@ fn request_intent_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity
 		));
 
@@ -636,6 +646,7 @@ fn dispatch_as_signed_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -676,6 +687,7 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -705,6 +717,7 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -730,6 +743,7 @@ fn ensure_permission_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -844,6 +858,7 @@ fn set_permissions_works() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -944,6 +959,7 @@ fn set_permissions_with_only_one_member_fails() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -972,6 +988,7 @@ fn set_permissions_with_no_member_with_default_permissions_fails() {
 
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -1015,12 +1032,12 @@ fn auth_token_requested_works() {
 
 		assert_ok!(OmniAccount::auth_token_requested(
 			RuntimeOrigin::signed(tee_signer.clone()),
-			alice().identity.to_omni_account(),
+			alice().identity.to_omni_account(""),
 			10
 		));
 
 		System::assert_last_event(
-			Event::AuthTokenRequested { who: alice().identity.to_omni_account(), expires_at: 10 }
+			Event::AuthTokenRequested { who: alice().identity.to_omni_account(""), expires_at: 10 }
 				.into(),
 		);
 	});
@@ -1034,6 +1051,7 @@ fn create_account_store_already_exists_fails() {
 		// Create account store with alice
 		assert_ok!(OmniAccount::create_account_store(
 			RuntimeOrigin::signed(tee_signer.clone()),
+			TEST_CLIENT_ID.to_string(),
 			alice().identity,
 		));
 
@@ -1058,7 +1076,7 @@ fn create_account_store_already_exists_fails() {
 		));
 
 		assert_noop!(
-			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), alice().identity),
+			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), TEST_CLIENT_ID.to_string(), alice().identity),
 			Error::<Test>::AccountStoreAlreadyExists
 		);
 	});

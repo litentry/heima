@@ -2065,8 +2065,8 @@ impl_runtime_apis! {
 	}
 
 	impl pallet_omni_account_runtime_api::OmniAccountApi<Block, AccountId> for Runtime {
-		fn omni_account(identity: Identity) -> AccountId {
-			OmniAccount::omni_account(identity)
+		fn omni_account(client_id: String, identity: Identity) -> AccountId {
+			OmniAccount::omni_account(client_id, identity)
 		}
 	}
 

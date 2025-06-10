@@ -323,11 +323,12 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn create_account_store(
 			origin: OriginFor<T>,
+			client_id: String,
 			identity: Identity,
 		) -> DispatchResultWithPostInfo {
 			// initial creation request has to come from `TEECallOrigin`
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			let _ = Self::do_create_account_store(identity)?;
+			let _ = Self::do_create_account_store(identity, &client_id)?;
 			Ok(Pays::No.into())
 		}
 
@@ -449,16 +450,17 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn update_account_store_by_one(
 			origin: OriginFor<T>,
+			client_id: String,
 			who: Identity,
 			member_account: MemberAccount,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin.clone())?;
 
-			let who_account = T::OmniAccountConverter::convert(&who);
+			let who_account = T::OmniAccountConverter::convert(&who, &client_id);
 
 			let mut member_accounts = match AccountStore::<T>::get(&who_account) {
 				Some(s) => s,
-				None => Self::do_create_account_store(who)?,
+				None => Self::do_create_account_store(who, &client_id)?,
 			};
 
 			if !member_accounts.contains(&member_account) {
@@ -556,18 +558,18 @@ pub mod pallet {
 		/// Given an `Identity`, get its derived OmniAccount:
 		/// - if the given Identity is a member Identity of some AccountStore, get its belonged OmniAccount
 		/// - directly derive it otherwise
-		pub fn omni_account(identity: Identity) -> T::AccountId {
+		pub fn omni_account(client_id: String, identity: Identity) -> T::AccountId {
 			let hash = identity.hash();
 			if let Some(account) = MemberAccountHash::<T>::get(hash) {
 				account
 			} else {
-				T::OmniAccountConverter::convert(&identity)
+				T::OmniAccountConverter::convert(&identity, &client_id)
 			}
 		}
 
-		fn do_create_account_store(identity: Identity) -> Result<MemberAccounts<T>, Error<T>> {
+		fn do_create_account_store(identity: Identity, client_id: &str) -> Result<MemberAccounts<T>, Error<T>> {
 			let hash = identity.hash();
-			let omni_account = T::OmniAccountConverter::convert(&identity);
+			let omni_account = T::OmniAccountConverter::convert(&identity, client_id);
 
 			ensure!(!MemberAccountHash::<T>::contains_key(hash), Error::<T>::AccountAlreadyAdded);
 			ensure!(

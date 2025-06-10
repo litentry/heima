@@ -1,4 +1,4 @@
-use crate::VerificationCode;
+use crate::{VerificationCode, DEFAULT_CLIENT_ID};
 use alloc::{format, string::String, sync::Arc};
 use codec::{Decode, Encode};
 use ita_stf::{LitentryMultiSignature, TrustedCall};
@@ -133,7 +133,7 @@ fn verify_google_oauth2(
 	let google_identity = Identity::from_web2_account(&claims.email, Web2IdentityType::Google);
 	let identity_omni_account = match OmniAccountStore::get_omni_account(google_identity.hash()) {
 		Ok(Some(account_id)) => account_id,
-		_ => google_identity.to_omni_account(),
+		_ => google_identity.to_omni_account(DEFAULT_CLIENT_ID),
 	};
 
 	match *omni_account == identity_omni_account {

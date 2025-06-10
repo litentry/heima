@@ -24,6 +24,6 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
-		fn omni_account(id: Identity) -> AccountId;
+		fn omni_account(client_id: String, id: Identity) -> AccountId;
 	}
 }
