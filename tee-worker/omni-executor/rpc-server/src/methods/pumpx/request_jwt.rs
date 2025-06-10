@@ -41,7 +41,7 @@ impl RequestJwtParams {
 				self.language,
 			),
 			None,
-			Some(OmniAuth::Email(self.user_email, self.email_code)),
+			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
 			self.client_id,
 		)
 	}
@@ -64,7 +64,7 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 
 			if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
+					error!("Missing auth");
 					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 						REQUIRE_AUTHENTICATION_CODE,
 					)));

@@ -49,8 +49,8 @@ pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), Au
 		OmniAuth::Web3(ref client_id, ref signer, ref signature) => {
 			verify_web3_authentication(ctx.storage_db.clone(), client_id, signer, signature)
 		},
-		OmniAuth::Email(ref email, ref verification_code) => {
-			verify_email_authentication(ctx, email, verification_code)
+		OmniAuth::Email(ref client_id, ref email, ref verification_code) => {
+			verify_email_authentication(ctx, client_id, email, verification_code)
 		},
 		OmniAuth::OAuth2(ref sender, ref oauth2_data) => {
 			verify_oauth2_authentication(ctx, sender, oauth2_data).await
@@ -96,10 +96,13 @@ pub fn verify_web3_authentication(
 
 pub fn verify_email_authentication(
 	ctx: Arc<RpcContext>,
+	client_id: &str,
 	email: &str,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	let storage_key = Identity::from_web2_account(email, Web2IdentityType::Email).hash();
+	let email_identity = Identity::from_web2_account(email, Web2IdentityType::Email);
+	let omni_account = email_identity.to_omni_account_with_client_id(client_id);
+	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
 		return Err(AuthenticationError::VerificationCodeNotFound);

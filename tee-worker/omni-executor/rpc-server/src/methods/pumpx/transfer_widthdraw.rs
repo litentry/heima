@@ -52,7 +52,7 @@ impl TransferWithdrawParams {
 				self.lang,
 			),
 			None,
-			Some(OmniAuth::Email(self.user_email, self.email_code)),
+			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
 			self.client_id,
 		)
 	}

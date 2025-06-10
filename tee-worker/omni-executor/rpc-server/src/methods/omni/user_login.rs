@@ -43,7 +43,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 					error!("User ID must be an email for Email authentication");
 					return Err(ErrorCode::ParseError);
 				};
-				OmniAuth::Email(email, code)
+				OmniAuth::Email(p.client_id.clone(), email, code)
 			},
 			UserAuth::Substrate(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {

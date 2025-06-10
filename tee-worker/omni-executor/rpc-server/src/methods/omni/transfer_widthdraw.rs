@@ -16,6 +16,7 @@ use super::common::{check_omni_api_response, handle_omni_native_task};
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
 	pub user_email: String,
+	pub client_id: String,
 	pub request_id: Option<u32>,
 	pub chain_id: u32,
 	pub wallet_index: PumxWalletIndex,
@@ -25,7 +26,6 @@ pub struct TransferWithdrawParams {
 	pub email_code: String,
 	pub google_code: String,
 	pub lang: Option<String>,
-	pub client_id: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -48,7 +48,7 @@ impl TransferWithdrawParams {
 				self.lang,
 			),
 			None,
-			Some(OmniAuth::Email(self.user_email, self.email_code)),
+			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
 			self.client_id,
 		)
 	}

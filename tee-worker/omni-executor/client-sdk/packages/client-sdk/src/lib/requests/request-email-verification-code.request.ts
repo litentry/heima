@@ -9,13 +9,15 @@ import { enclave, Enclave } from '@lib/enclave';
  *
  * @param {Object} args - The args object containing the following properties:
  * @param {string} args.email - The email address to send the verification code to.
+ * @param {string} args.clientId - The client ID to associate with the verification request.
  * @param {Enclave} [enclaveInstance] - The enclave instance to use for the request.
- * @throws {Error} Throws an error if the email is empty.
+ * @throws {Error} Throws an error if the email or clientId is empty.
  * @returns {Promise<void>} A promise that resolves when the request is sent.
  */
-export async function requestEmailVerificationCode(args: { email: string }, enclaveInstance: Enclave = enclave): Promise<void> {
-  const { email } = args;
+export async function requestEmailVerificationCode(args: { email: string; clientId: string }, enclaveInstance: Enclave = enclave): Promise<void> {
+  const { email, clientId } = args;
   assert(email.length > 0, 'Email is required');
+  assert(clientId.length > 0, 'Client ID is required');
 
   // send the request to the Enclave
   const rpcRequest: JsonRpcRequest = {
@@ -23,6 +25,7 @@ export async function requestEmailVerificationCode(args: { email: string }, encl
     method: 'omni_requestEmailVerificationCode',
     params: {
       user_email: email,
+      client_id: clientId,
     },
   };
 
