@@ -567,7 +567,10 @@ pub mod pallet {
 			}
 		}
 
-		fn do_create_account_store(identity: Identity, client_id: &str) -> Result<MemberAccounts<T>, Error<T>> {
+		fn do_create_account_store(
+			identity: Identity,
+			client_id: &str,
+		) -> Result<MemberAccounts<T>, Error<T>> {
 			let hash = identity.hash();
 			let omni_account = T::OmniAccountConverter::convert(&identity, client_id);
 

@@ -84,7 +84,11 @@ fn create_account_store_works() {
 
 		// create it the second time will fail
 		assert_noop!(
-			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), TEST_CLIENT_ID.to_string(), alice().identity),
+			OmniAccount::create_account_store(
+				RuntimeOrigin::signed(tee_signer),
+				TEST_CLIENT_ID.to_string(),
+				alice().identity
+			),
 			Error::<Test>::AccountAlreadyAdded
 		);
 	});
@@ -1076,7 +1080,11 @@ fn create_account_store_already_exists_fails() {
 		));
 
 		assert_noop!(
-			OmniAccount::create_account_store(RuntimeOrigin::signed(tee_signer), TEST_CLIENT_ID.to_string(), alice().identity),
+			OmniAccount::create_account_store(
+				RuntimeOrigin::signed(tee_signer),
+				TEST_CLIENT_ID.to_string(),
+				alice().identity
+			),
 			Error::<Test>::AccountStoreAlreadyExists
 		);
 	});

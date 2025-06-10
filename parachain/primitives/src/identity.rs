@@ -423,7 +423,6 @@ impl Identity {
 		}
 	}
 
-
 	/// derive an `OmniAccount` from `Identity` using SHA256 hash of client_id + user_id_type + user_id_value
 	pub fn to_omni_account(&self, client_id: &str) -> AccountId {
 		let mut hasher = Sha256::new();
