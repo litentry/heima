@@ -22,3 +22,5 @@ rococo-fork.json
 **/.env
 
 rust-analyzer.json
+
+*.local.md
