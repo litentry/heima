@@ -59,3 +59,17 @@ impl KeyStore<Vec<u8>> for AuthTokenKeyStore {
 		self.path.clone()
 	}
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_auth_token_key_store() {
+        // Create a new key store - this will generate and save a new key
+        let store = AuthTokenKeyStore::new("./auth_token_key_test.bin".into());
+
+        let result = store.read();
+        assert!(result.is_ok());
+    }
+}
+
