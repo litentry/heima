@@ -669,7 +669,7 @@ fn test_full_workerflow() {
 	let (treasury_pda, _) = Pubkey::find_program_address(&[b"treasury"], &program.id());
 	let final_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
 
-	assert_eq!(final_treasury_balance - initial_treasury_balance, 997_000_000);
+	assert_eq!(final_treasury_balance - initial_treasury_balance, 1_000_000_000);
 
 	let payer_account = program.rpc().get_account(&payer.pubkey()).unwrap();
 	let initial_balance = payer_account.lamports;
