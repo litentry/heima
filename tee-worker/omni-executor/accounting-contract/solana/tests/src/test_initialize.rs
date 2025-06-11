@@ -411,7 +411,7 @@ fn create_pay_request_unauthorized() {
 		})
 		.args(accounting_contract::instruction::SetWorker { new_worker: second_payer.pubkey() })
 		.send()
-		.map_err(|_| ())?;
+		.unwrap();
 	
 	let tx = program
 		.request()
