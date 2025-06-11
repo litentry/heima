@@ -433,7 +433,7 @@ fn create_pay_request_unauthorized() {
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
-			beneficiary: keypair.pubkey(),
+			beneficiary: payer.pubkey(),
 			system_program: anchor_client::solana_sdk::system_program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
