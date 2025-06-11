@@ -26,11 +26,14 @@ use heima_authentication::{
 	},
 };
 use heima_identity_verification::{get_verification_message, web2, web3};
-use parentchain_api_interface::runtime_types::{
-	frame_system::pallet::Call as SystemCall,
-	pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
-	paseo_runtime::RuntimeCall,
+use parentchain_api_interface::{
+	omni_account::calls::types::create_account_store::ClientId,
+	runtime_types::{
+		frame_system::pallet::Call as SystemCall,
+		pallet_balances::pallet::Call as BalancesCall,
+		pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
+		paseo_runtime::RuntimeCall,
+	},
 };
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
@@ -449,9 +452,11 @@ async fn handle_native_task<
 		},
 		NativeTask::CreateAccountStore(sender) => {
 			let sender_bytes = sender.encode();
-			let create_account_store_call = parentchain_api_interface::tx()
-				.omni_account()
-				.create_account_store(Decode::decode(&mut &sender_bytes[..]).unwrap());
+			let create_account_store_call =
+				parentchain_api_interface::tx().omni_account().create_account_store(
+					ClientId::from(CLIENT_ID_HEIMA), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+					Decode::decode(&mut &sender_bytes[..]).unwrap(),
+				);
 			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
 			(response_sender, tx)
 		},
