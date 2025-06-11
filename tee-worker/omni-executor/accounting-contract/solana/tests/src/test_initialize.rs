@@ -444,6 +444,7 @@ fn create_pay_request_unauthorized() {
 		})
 		.send();
 
+	println!("{:?}", tx);
 	if let Err(SolanaClientError(e)) = tx {
 		assert_eq!(e.get_transaction_error(), Some(InstructionError(0, Custom(6000))));
 	}
