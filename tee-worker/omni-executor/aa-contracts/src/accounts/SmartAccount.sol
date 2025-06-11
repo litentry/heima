@@ -24,7 +24,7 @@ import "./callback/TokenCallbackHandler.sol";
 contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     bytes32 public owner;
     bytes32 public clientId;
-    address public root;
+    mapping(address => bool) public rootSigners;
     mapping(address => bool) public allowedSigners;
 
     IEntryPoint private immutable _entryPoint;
@@ -71,16 +71,16 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
 
     function _initialize(bytes32 anOwner, bytes32 aClientId, address aRoot) internal virtual {
         owner = anOwner;
-        root = aRoot;
+        rootSigners[aRoot] = true;
         clientId = aClientId;
-        emit AccountInitialized(_entryPoint, owner, clientId, root);
+        emit AccountInitialized(_entryPoint, owner, clientId, aRoot);
     }
 
     // Require the function call went through EntryPoint or be signed by [owner|allowed signer|root]
     function _requireForExecute() internal view virtual override {
         require(
-            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner || isAllowed(msg.sender)
-                || root == msg.sender,
+            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner || isAllowedSigner(msg.sender)
+                || isRootSigner(msg.sender),
             "account: not Owner or EntryPoint or allowed signer or root"
         );
     }
@@ -93,8 +93,12 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
         return sha256(abi.encodePacked(oaType, clientId, sender));
     }
 
-    function isAllowed(address sender) internal view returns (bool) {
+    function isAllowedSigner(address sender) public view returns (bool) {
         return allowedSigners[sender];
+    }
+
+    function isRootSigner(address sender) public view returns (bool) {
+        return rootSigners[sender];
     }
 
     /// implement template method of BaseAccount
@@ -106,7 +110,7 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
     {
         // UserOpHash can be generated using eth_signTypedData_v4
         address signer = ECDSA.recover(userOpHash, userOp.signature);
-        if (owner == _determineOa(signer) || allowedSigners[signer] || root == signer) {
+        if (owner == _determineOa(signer) || isAllowedSigner(signer) || isRootSigner(signer)) {
             return SIG_VALIDATION_SUCCESS;
         }
         if (signer == userOp.sessionAccount) {
@@ -114,7 +118,7 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
             bytes32 sessionDigest = sha256(abi.encodePacked(userOp.sessionAccount));
             address sessionProofSigner = ECDSA.recover(sessionDigest, userOp.sessionAccountProof);
 
-            if (sessionProofSigner == root) {
+            if (isRootSigner(sessionProofSigner)) {
                 return SIG_VALIDATION_SUCCESS;
             }
         }

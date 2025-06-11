@@ -33,7 +33,7 @@ contract SmartAccountTest is Test {
 
     function test_Root() public view {
         address expected_root = 0x0000000000000000000000000000000000000001;
-        assertEq(account.root(), expected_root);
+        assert(account.isRootSigner(expected_root));
     }
 
     function test_EntryPoint() public view {
