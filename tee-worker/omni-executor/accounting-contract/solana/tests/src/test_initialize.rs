@@ -414,6 +414,8 @@ fn create_pay_request_unauthorized() {
 	let payer = Keypair::from_seed(secret.as_ref()).unwrap();
 	let program = setup_program(&payer);
 
+	request_airdrop(&program, &payer);
+
 	let nonce: u64 = 1;
 	let keypair = Keypair::new();
 
