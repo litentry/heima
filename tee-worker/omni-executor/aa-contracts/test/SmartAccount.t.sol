@@ -27,13 +27,13 @@ contract SmartAccountTest is Test {
     }
 
     function test_Owner() public view {
-        bytes32 expected_owner = 0xf6303c05d9d35cfba84718aa98720ad82569bef77b2c236c0e4f5e211f3cc3b0;
-        assertEq(account.owner(), expected_owner);
+        bytes32 expectedOwner = 0xf6303c05d9d35cfba84718aa98720ad82569bef77b2c236c0e4f5e211f3cc3b0;
+        assertEq(account.owner(), expectedOwner);
     }
 
     function test_Root() public view {
-        address expected_root = 0x0000000000000000000000000000000000000001;
-        assert(account.isRootSigner(expected_root));
+        address expectedRoot = 0x0000000000000000000000000000000000000001;
+        assert(account.isRootSigner(expectedRoot));
     }
 
     function test_EntryPoint() public view {
@@ -83,9 +83,9 @@ contract SmartAccountTest is Test {
         bytes memory initCode = "";
 
         address session_account = 0x0000000000000000000000000000000000000000;
-        bytes memory session_account_proof = "";
+        bytes memory sessionAccountProof = "";
         PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, session_account, session_account_proof);
+            TestUtils.preparePackedOp(sender, initCode, session_account, 2, sessionAccountProof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(bobPk, packedOpHash);

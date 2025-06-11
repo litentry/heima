@@ -14,6 +14,7 @@ pragma solidity ^0.8.28;
  * @param paymasterAndData      - If set, this field holds the paymaster address, verification gas limit, postOp gas limit and paymaster-specific extra data
  *                                The paymaster will pay for the transaction instead of the sender.
  * @param sessionAccount        - Session account used to sign userOp
+ * @param sessionExpiration     - Point in time when session expires
  * @param sessionAccountProof   - Proof that session account is authorized by root key
  * @param signature             - Sender-verified signature over the entire request, the EntryPoint address and the chain ID.
  */
@@ -27,6 +28,7 @@ struct PackedUserOperation {
     bytes32 gasFees;
     bytes paymasterAndData;
     address sessionAccount;
+    uint256 sessionExpiration;
     bytes sessionAccountProof;
     bytes signature;
 }

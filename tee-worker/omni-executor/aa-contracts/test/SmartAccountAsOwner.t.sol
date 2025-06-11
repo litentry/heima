@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {SmartAccount} from "../src/accounts/SmartAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
@@ -61,13 +61,11 @@ contract SmartAccountAsOwner is Test {
 
         bytes memory initCode = "";
 
-        address session_account = 0x0000000000000000000000000000000000000000;
-        bytes memory session_account_proof = "";
+        address sessionAccount = 0x0000000000000000000000000000000000000000;
+        bytes memory sessionAccountProof = "";
         PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, session_account, session_account_proof);
+            TestUtils.preparePackedOp(sender, initCode, sessionAccount, 2, sessionAccountProof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
-        console.log("packed op hash:");
-        console.logBytes32(packedOpHash);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, packedOpHash);
         packedOp.signature = abi.encodePacked(r, s, v);

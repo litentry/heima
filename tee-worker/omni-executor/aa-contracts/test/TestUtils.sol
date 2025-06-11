@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 
 library TestUtils {
-    function prepare_evm_oa(address account, bytes32 clientId) public returns (bytes32) {
+    function prepare_evm_oa(address account, bytes32 clientId) public pure returns (bytes32) {
         bytes1 oaType = 0x01;
         return (sha256(abi.encodePacked(oaType, clientId, account)));
     }
@@ -12,8 +12,9 @@ library TestUtils {
     function preparePackedOp(
         address sender,
         bytes memory initCode,
-        address session_account,
-        bytes memory session_account_proof
+        address sessionAccount,
+        uint256 sessionExpiration,
+        bytes memory sessionAccountProof
     ) internal pure returns (PackedUserOperation memory) {
         uint256 nonce = 0;
         bytes memory callData = "";
@@ -33,8 +34,9 @@ library TestUtils {
                 preVerificationGas,
                 gasFees,
                 paymasterAndData,
-                session_account,
-                session_account_proof,
+                sessionAccount,
+                sessionExpiration,
+                sessionAccountProof,
                 signature
             )
         );
