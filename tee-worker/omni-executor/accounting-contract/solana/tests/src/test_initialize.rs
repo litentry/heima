@@ -191,15 +191,22 @@ fn test_deposit_funds() {
 		.send()
 		.expect("Failed to send transaction");
 
-	let treasury_account = program
-		.rpc()
-		.get_account(&Pubkey::find_program_address(&[b"treasury"], &program.id()).0)
-		.unwrap();
+	let (treasury_pda, _) = Pubkey::find_program_address(&[b"treasury"], &program.id());
+	let initial_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
 
-	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
-	let rent_exempt_amount = program.rpc().get_minimum_balance_for_rent_exemption(size_of_treasury_account).unwrap();
+	let _ = program
+		.request()
+		.accounts(accounting_contract::accounts::DepositFunds {
+			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
+			signer: payer.pubkey(),
+			system_program: anchor_client::solana_sdk::system_program::ID,
+		})
+		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
+		.send()
+		.expect("Failed to send transaction");
 
-	assert_eq!(treasury_account.lamports, rent_exempt_amount + 1_000_000_000);
+	let final_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
+	assert_eq!(final_treasury_balance - initial_treasury_balance, 1_000_000_000);
 }
 
 #[test]
@@ -639,18 +646,6 @@ fn test_full_workerflow() {
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
 		.expect("Failed to send transaction");
-
-	// let treasury_account = program
-	// 	.rpc()
-	// 	.get_account(&Pubkey::find_program_address(&[b"treasury"], &program.id()).0)
-	// 	.unwrap();
-	// let treasury_struct: accounting_contract::TreasuryAccount =
-	// 	bincode::deserialize(&treasury_account.data[8..]).unwrap();
-	//
-	// let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
-	// let rent_exempt_amount = Rent::default().minimum_balance(size_of_treasury_account);
-	//
-	// assert_eq!(treasury_account.lamports, 1_000_000_000 + rent_exempt_amount);
 
 	let (treasury_pda, _) = Pubkey::find_program_address(&[b"treasury"], &program.id());
 	let initial_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
