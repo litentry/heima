@@ -33,7 +33,6 @@ contract SmartAccountAsRoot is Test {
     }
 
     function test_validateOp() public {
-        (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, root);
 
@@ -55,7 +54,6 @@ contract SmartAccountAsRoot is Test {
     }
 
     function test_validateOpSessionKey() public {
-        (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 2;
@@ -66,7 +64,6 @@ contract SmartAccountAsRoot is Test {
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
-        bytes memory sessionAccountProof = "";
         PackedUserOperation memory packedOp =
             TestUtils.preparePackedOp(sender, initCode, session, sessionExpiration, sessionProof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
@@ -80,7 +77,6 @@ contract SmartAccountAsRoot is Test {
     }
 
     function test_validateOpExpiredSessionKey() public {
-        (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 0;
@@ -91,7 +87,6 @@ contract SmartAccountAsRoot is Test {
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
-        bytes memory sessionAccountProof = "";
         PackedUserOperation memory packedOp =
             TestUtils.preparePackedOp(sender, initCode, session, sessionExpiration, sessionProof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
@@ -106,8 +101,8 @@ contract SmartAccountAsRoot is Test {
     }
 
     function test_validateOpSessionKeyFailsIfProofNotSignedByRoot() public {
-        (address alice, uint256 alicePk) = makeAddrAndKey("alice");
-        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (, uint256 alicePk) = makeAddrAndKey("alice");
+        (address root,) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 2;
 
@@ -117,7 +112,6 @@ contract SmartAccountAsRoot is Test {
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
-        bytes memory sessionAccountProof = "";
         PackedUserOperation memory packedOp =
             TestUtils.preparePackedOp(sender, initCode, session, sessionExpiration, sessionProof);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
@@ -152,7 +146,11 @@ contract SmartAccountAsRoot is Test {
         account.removeRootSigner(0x0000000000000000000000000000000000000000);
     }
 
-    function prepareSession(address session, uint256 expiration, uint256 proofSigner) internal returns (bytes memory) {
+    function prepareSession(address session, uint256 expiration, uint256 proofSigner)
+        internal
+        pure
+        returns (bytes memory)
+    {
         bytes32 sessionDigest = sha256(abi.encodePacked(session, expiration));
         (uint8 sv, bytes32 sr, bytes32 ss) = vm.sign(proofSigner, sessionDigest);
         bytes memory sessionProof = abi.encodePacked(sr, ss, sv);

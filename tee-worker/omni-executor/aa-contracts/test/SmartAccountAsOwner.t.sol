@@ -55,7 +55,6 @@ contract SmartAccountAsOwner is Test {
     function test_validateOp() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (counter, entryPoint, account) = SmartAccountTestUtils.setUp(alice, clientId, rootAddress);
-        bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
 

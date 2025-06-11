@@ -64,7 +64,7 @@ contract EntryPointTest is Test {
     }
 
     function fundAccountOnEntryPoint(address to, EntryPoint ep) internal {
-        (bool callSuccess, bytes memory data) =
-            address(ep).call{value: 1000000000000000}(abi.encodeCall(ep.depositTo, (to)));
+        (bool callSuccess,) = address(ep).call{value: 1000000000000000}(abi.encodeCall(ep.depositTo, (to)));
+        require(callSuccess, "call failed");
     }
 }
