@@ -58,11 +58,7 @@ async fn simple_single_chain_swap() {
 	let account_id: AccountId = Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec()))
 		.to_omni_account(CLIENT_ID_PUMPX);
 	let intent_id = 0;
-	let pumpx_wallet_omni_account: [u8; 32] =
-		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
-			.unwrap()
-			.try_into()
-			.unwrap();
+	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
 	let solana_wallet_pub_key: [u8; 32] =
 		hex::decode("96dd2f4ecf7c9330e4f0e58a8e6272672fefee208857cd772e8aa1327b39dbfa")
 			.unwrap()

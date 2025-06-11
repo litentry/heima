@@ -79,11 +79,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
-	let pumpx_wallet_omni_account: [u8; 32] =
-		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
-			.unwrap()
-			.try_into()
-			.unwrap();
+	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
 	let from_chain_id = 100000;
 	let to_chain_id = 56;
 	let order_id = 0;
@@ -381,10 +377,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
-	let pumpx_wallet_omni_account: [u8; 32] = [
-		127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171, 116, 52,
-		128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
-	];
+	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
 	let from_chain_id = 56;
 	let to_chain_id = 100000;
 	let order_id = 0;
@@ -680,11 +673,7 @@ async fn instant_payout_cross_chain_swap() {
 	let mut pumpx_signer_client_mock = MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
-	let pumpx_wallet_omni_account: [u8; 32] =
-		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
-			.unwrap()
-			.try_into()
-			.unwrap();
+	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
 	let from_chain_id = 100000;
 	let to_chain_id = 56;
 	let order_id = 0;
@@ -714,10 +703,7 @@ async fn instant_payout_cross_chain_swap() {
 		.with(
 			mockall::predicate::eq(signer_client::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
-			mockall::predicate::eq([
-				127, 34, 2, 199, 225, 243, 79, 58, 208, 100, 126, 151, 198, 62, 176, 11, 14, 171,
-				116, 52, 128, 14, 245, 109, 68, 26, 222, 183, 80, 165, 126, 31,
-			]),
+			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
 		.times(1)
 		.returning(|_, _, _| {
@@ -992,11 +978,7 @@ async fn no_instant_payout_if_exported_wallet() {
 	let mut pumpx_signer_client_mock = MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
-	let pumpx_wallet_omni_account: [u8; 32] =
-		hex::decode("7f2202c7e1f34f3ad0647e97c63eb00b0eab7434800ef56d441adeb750a57e1f")
-			.unwrap()
-			.try_into()
-			.unwrap();
+	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
 	let from_chain_id = 100000;
 	let to_chain_id = 56;
 	let order_id = 0;
