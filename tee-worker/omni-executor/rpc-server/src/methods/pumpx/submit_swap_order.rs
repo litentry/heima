@@ -6,7 +6,7 @@ use crate::{
 use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
+use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
 use heima_primitives::{
 	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
 	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
@@ -234,6 +234,13 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
             })?);
            	let user_identity =
 				Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
+
+			// Save access token to storage before submitting swap order intent, as it's required by the cross-chain intent executor
+			let user_omni_account = user_identity.to_omni_account_with_client_id(CLIENT_ID_HEIMA);
+			if storage.insert(&(user_omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone()).is_err() {
+				error!("Failed to insert {} token into storage from swapp intent", AUTH_TOKEN_ACCESS_TYPE);
+			};
+				
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				 None,
