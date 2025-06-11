@@ -23,17 +23,17 @@ pub struct RPCAddWalletResponse {
 	pub backend_response: AddWalletResponse,
 }
 
-impl From<AddWalletParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: AddWalletParams) -> Self {
-		let sender = Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email);
-		NativeTaskWrapper::new(NativeTask::PumpxAddWallet(sender.clone()), None, None)
+impl AddWalletParams {
+	pub fn into_native_task_wrapper(self, client_id: String) -> NativeTaskWrapper<NativeTask> {
+		let sender = Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Email);
+		NativeTaskWrapper::new(NativeTask::PumpxAddWallet(sender.clone()), None, None, client_id)
 	}
 }
 
 pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_addWallet", |params, ctx, ext| async move {
-			check_auth(&ext).map_err(|e| {
+			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ServerError(
 					AUTH_VERIFICATION_FAILED_CODE,
@@ -46,7 +46,7 @@ pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received omni_addWallet, user_email: {}", params.user_email);
 
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
+			let wrapper = params.into_native_task_wrapper(user.client_id);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxAddWallet(response) => {
