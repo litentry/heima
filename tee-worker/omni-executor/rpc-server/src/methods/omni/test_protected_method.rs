@@ -1,6 +1,5 @@
 use crate::methods::omni::common::check_auth;
 use crate::server::RpcContext;
-use heima_authentication::constants::CLIENT_ID_HEIMA;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 
 #[cfg(test)]
