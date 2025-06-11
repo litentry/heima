@@ -61,6 +61,16 @@ contract SmartAccountTest is Test {
         account.removeAllowedSigner(0x0000000000000000000000000000000000000000);
     }
 
+    function test_AddRootSigner_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        account.addRootSigner(0x0000000000000000000000000000000000000000);
+    }
+
+    function test_RemoveRootSigner_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        account.removeRootSigner(0x0000000000000000000000000000000000000000);
+    }
+
     function test_validateOp() public {
         (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");

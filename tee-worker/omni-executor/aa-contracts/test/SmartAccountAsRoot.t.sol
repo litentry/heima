@@ -100,6 +100,28 @@ contract SmartAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 
+    function test_AddAllowedSigner_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        vm.prank(rootAddress);
+        account.addAllowedSigner(0x0000000000000000000000000000000000000000);
+    }
+
+    function test_RemoveAllowedSigner_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        vm.prank(rootAddress);
+        account.removeAllowedSigner(0x0000000000000000000000000000000000000000);
+    }
+
+    function test_AddRootSigner_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        account.addRootSigner(0x0000000000000000000000000000000000000000);
+    }
+
+    function test_RemoveRootSigner_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        account.removeRootSigner(0x0000000000000000000000000000000000000000);
+    }
+
     function prepareSession(address session, uint256 proofSigner) internal returns (bytes memory) {
         bytes32 session_digest = sha256(abi.encodePacked(session));
         (uint8 sv, bytes32 sr, bytes32 ss) = vm.sign(proofSigner, session_digest);

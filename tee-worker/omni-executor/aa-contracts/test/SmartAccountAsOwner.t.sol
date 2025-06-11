@@ -42,6 +42,16 @@ contract SmartAccountAsOwner is Test {
         assert(!account.allowedSigners(signer));
     }
 
+    function test_AddRemoveRootSigner() public {
+        address root = 0x0000000000000000000000000000000000000002;
+        vm.prank(ownerAddress);
+        account.addRootSigner(root);
+        assert(account.rootSigners(root));
+        vm.prank(ownerAddress);
+        account.removeRootSigner(root);
+        assert(!account.rootSigners(root));
+    }
+
     function test_validateOp() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (counter, entryPoint, account) = SmartAccountTestUtils.setUp(alice, clientId, rootAddress);

@@ -35,6 +35,8 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
 
     event AllowedSignerAdded(address signer);
     event AllowedSignerRemoved(address signer);
+    event RootSignerAdded(address root);
+    event RootSignerRemoved(address root);
 
     modifier onlyOwner() {
         _onlyOwner();
@@ -161,6 +163,16 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
     function removeAllowedSigner(address signer) public onlyOwner {
         allowedSigners[signer] = false;
         emit AllowedSignerRemoved(signer);
+    }
+
+    function addRootSigner(address root) public onlyOwner {
+        rootSigners[root] = true;
+        emit RootSignerAdded(root);
+    }
+
+    function removeRootSigner(address root) public onlyOwner {
+        rootSigners[root] = false;
+        emit RootSignerRemoved(root);
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
