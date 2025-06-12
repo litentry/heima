@@ -98,6 +98,7 @@ async function sendRequest(
                 reject(new Error(parsed.error.message, { cause: transaction }));
             }
             const response = api.createType('NativeTaskResponse', parsed.result);
+            console.log('response:', JSON.stringify(response, null, 2));
             if (onMessageReceived) onMessageReceived(response);
             wsClient.onMessage.removeAllListeners();
             resolve(response);
