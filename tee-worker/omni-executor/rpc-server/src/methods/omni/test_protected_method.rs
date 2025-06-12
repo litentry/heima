@@ -69,8 +69,8 @@ mod test {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 		let auth_options = AuthOptions { expires_at };
-		let omni_account =
-			Identity::from_web2_account("test@test.com", Web2IdentityType::Email).to_omni_account();
+		let omni_account = Identity::from_web2_account("test@test.com", Web2IdentityType::Email)
+			.to_omni_account(CLIENT_ID_HEIMA);
 
 		let access_token_claims = AuthTokenClaims::new(
 			omni_account.to_hex(),

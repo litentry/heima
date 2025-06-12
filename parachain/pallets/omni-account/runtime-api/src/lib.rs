@@ -16,6 +16,15 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::string::String;
+
+#[cfg(feature = "std")]
+use std::string::String;
+
 use heima_primitives::Identity;
 use parity_scale_codec::Codec;
 
@@ -24,6 +33,6 @@ sp_api::decl_runtime_apis! {
 	where
 		AccountId: Codec,
 	{
-		fn omni_account(id: Identity) -> AccountId;
+		fn omni_account(client_id: String, id: Identity) -> AccountId;
 	}
 }

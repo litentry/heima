@@ -139,7 +139,7 @@ mod tests {
 			.timestamp();
 
 		let uid = Identity::from_web2_account("012345", Web2IdentityType::Pumpx);
-		let omni_account = uid.to_omni_account_with_client_id(CLIENT_ID_HEIMA);
+		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
@@ -163,7 +163,7 @@ mod tests {
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
 
 		let uid = Identity::from_web2_account("012345", Web2IdentityType::Pumpx);
-		let omni_account = uid.to_omni_account_with_client_id(CLIENT_ID_HEIMA);
+		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
@@ -239,7 +239,7 @@ mod tests {
 			.timestamp();
 
 		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
-		let omni_account = email_identity.to_omni_account_with_client_id(CLIENT_ID_HEIMA);
+		let omni_account = email_identity.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			omni_account.to_hex(),
