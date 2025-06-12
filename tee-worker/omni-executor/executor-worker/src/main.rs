@@ -400,8 +400,9 @@ async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
 ) -> Result<JoinHandle<()>, ()> {
+	let env_config = EnvConfig::from_env();
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
-	let parentchain_url = std::env::var("OE_PARENTCHAIN_URL").unwrap_or("".to_string());
+	let parentchain_url = env_config.parentchain_url;
 	let mut parentchain_listener = parentchain_listener::create_listener(
 		"heima",
 		Handle::current(),
