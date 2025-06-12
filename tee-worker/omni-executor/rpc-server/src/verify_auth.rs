@@ -71,7 +71,7 @@ pub fn verify_web3_authentication(
 	signer: &Identity,
 	signature: &HeimaMultiSignature,
 ) -> Result<(), AuthenticationError> {
-	let omni_account = signer.to_omni_account_with_client_id(client_id);
+	let omni_account = signer.to_omni_account(client_id);
 	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(storage_db);
 	let Ok(Some(message_code)) = verification_code_storage.get(&storage_key) else {
@@ -101,7 +101,7 @@ pub fn verify_email_authentication(
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
 	let email_identity = Identity::from_web2_account(email, Web2IdentityType::Email);
-	let omni_account = email_identity.to_omni_account_with_client_id(client_id);
+	let omni_account = email_identity.to_omni_account(client_id);
 	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
@@ -187,7 +187,7 @@ mod tests {
 		let public_key: [u8; 32] = alice.public().into();
 		let alice_identity = Identity::Substrate(public_key.into());
 		let client_id = "test_client".to_string();
-		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let alice_omni_account = alice_identity.to_omni_account(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
 		let message_code = generate_otp(8);
 
@@ -221,7 +221,7 @@ mod tests {
 		let public_key: [u8; 32] = keypair.public().into();
 		let solana_identity = Identity::Solana(public_key.into());
 		let client_id = "test_client_solana".to_string();
-		let solana_omni_account = solana_identity.to_omni_account_with_client_id(&client_id);
+		let solana_omni_account = solana_identity.to_omni_account(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
 		let message_code = generate_otp(8);
 
@@ -254,7 +254,7 @@ mod tests {
 		let signer_address = evm_signer.address();
 		let evm_identity = Identity::Evm(signer_address.0.as_slice().try_into().unwrap());
 		let client_id = "test_client_evm".to_string();
-		let evm_omni_account = evm_identity.to_omni_account_with_client_id(&client_id);
+		let evm_omni_account = evm_identity.to_omni_account(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
 		let message_code = generate_otp(8);
 
@@ -290,7 +290,7 @@ mod tests {
 		let alice_public_key: [u8; 32] = alice.public().into();
 		let alice_identity = Identity::from(alice_public_key);
 		let client_id = "test_client".to_string();
-		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let alice_omni_account = alice_identity.to_omni_account(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
 		let message_code = generate_otp(8);
 
@@ -325,7 +325,7 @@ mod tests {
 		let alice_identity = Identity::from(public_key);
 		let client_id = "test_client".to_string();
 
-		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let alice_omni_account = alice_identity.to_omni_account(&client_id);
 		let message_code = generate_otp(8);
 
 		let message = HeimaMessagePayload {
@@ -354,7 +354,7 @@ mod tests {
 		let alice_identity = Identity::from(public_key);
 		let client_id = "test_client".to_string();
 
-		let alice_omni_account = alice_identity.to_omni_account_with_client_id(&client_id);
+		let alice_omni_account = alice_identity.to_omni_account(&client_id);
 		let verification_code_storage = VerificationCodeStorage::new(storage_db.clone());
 		let message_code = generate_otp(8);
 

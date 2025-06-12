@@ -54,15 +54,15 @@ impl From<Identity> for MemberAccount {
 
 pub trait OmniAccountConverter {
 	type OmniAccount;
-	fn convert(identity: &Identity) -> Self::OmniAccount;
+	fn convert(identity: &Identity, client_id: &str) -> Self::OmniAccount;
 }
 
 pub struct DefaultOmniAccountConverter;
 
 impl OmniAccountConverter for DefaultOmniAccountConverter {
 	type OmniAccount = AccountId;
-	fn convert(identity: &Identity) -> AccountId {
-		identity.to_omni_account()
+	fn convert(identity: &Identity, client_id: &str) -> AccountId {
+		identity.to_omni_account(client_id)
 	}
 }
 

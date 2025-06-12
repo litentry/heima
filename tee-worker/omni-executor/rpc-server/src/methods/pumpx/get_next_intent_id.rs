@@ -38,7 +38,7 @@ pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
 
 			let account =
 				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
-					.to_omni_account_with_client_id(CLIENT_ID_PUMPX);
+					.to_omni_account(CLIENT_ID_PUMPX);
 
 			let storage = IntentIdStorage::new(ctx.storage_db.clone());
 			let intent_id = storage
