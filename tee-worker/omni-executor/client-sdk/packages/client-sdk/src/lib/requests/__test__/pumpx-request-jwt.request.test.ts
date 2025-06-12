@@ -40,7 +40,7 @@ describe('pumpx-request-jwt', () => {
 
         // Step 1
         it('request email verification code', async () => {
-            await requestEmailVerificationCode({ email });
+            await requestEmailVerificationCode({ email, clientId: 'pumpx-test-client' });
         });
 
         // Step 2

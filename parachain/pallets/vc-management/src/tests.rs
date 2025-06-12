@@ -355,7 +355,7 @@ fn on_vc_issued_works() {
 	new_test_ext().execute_with(|| {
 		let signer: SystemAccountId = get_signer(TEST8_SIGNER_PUB);
 		let alice: Identity = get_signer(ALICE_PUBKEY);
-		let omni_account = alice.to_omni_account();
+		let omni_account = alice.to_omni_account("");
 		assert_ok!(VCManagement::on_vc_issued(
 			RuntimeOrigin::signed(signer),
 			alice.clone(),

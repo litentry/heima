@@ -26,7 +26,7 @@ pub struct PostHeimaLoginResponseData {
 
 pub type PostHeimaLoginResponse = ApiResponse<PostHeimaLoginResponseData>;
 
-pub async fn heima_post_login_impl(
+pub async fn post_heima_login_impl(
 	client: &crate::pumpx_api::PumpxApiClient,
 	access_token: &str,
 	body: PostHeimaLoginBody,

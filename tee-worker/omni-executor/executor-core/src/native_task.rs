@@ -24,12 +24,13 @@ pub struct NativeTaskWrapper<T: NativeTaskTrait> {
 	pub task: T,
 	pub nonce: Option<Nonce>,
 	pub auth: Option<OmniAuth>,
+	pub client_id: String,
 }
 
 impl<T: NativeTaskTrait + Debug> NativeTaskWrapper<T> {
-	pub fn new(task: T, nonce: Option<Nonce>, auth: Option<OmniAuth>) -> Self {
+	pub fn new(task: T, nonce: Option<Nonce>, auth: Option<OmniAuth>, client_id: String) -> Self {
 		let id: String = Uuid::new_v4().into();
-		Self { id, task, nonce, auth }
+		Self { id, task, nonce, auth, client_id }
 	}
 }
 
