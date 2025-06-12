@@ -48,7 +48,7 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let pumpx_api = PumpxApiClient::new(None);
+		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 
 		start_server(
 			port,
