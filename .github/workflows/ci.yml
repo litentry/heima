@@ -128,7 +128,7 @@ jobs:
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
-          run_omni_executor_test=true
+          run_omni_executor_test=false
           if [ "${{ github.event.inputs.rebuild-parachain }}" = "true" ] || [ "${{ steps.filter.outputs.parachain_src }}" = "true" ]; then
             rebuild_parachain=true
           fi
@@ -249,9 +249,7 @@ jobs:
       - fmt
       - set-condition
       - sequentialise
-    # if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    # TODO: enable once tests are verified
-    if: false
+    if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -276,9 +274,7 @@ jobs:
       - fmt
       - set-condition
       - sequentialise
-    # if: needs.set-condition.outputs.rebuild_identity == 'true'
-    # TODO: enable once tests are verified
-    if: false
+    if: needs.set-condition.outputs.rebuild_identity == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -435,8 +431,6 @@ jobs:
 
   identity-worker-build:
     runs-on: ubuntu-22.04
-    # TODO: enable once tests are verified
-    if: false
     needs:
       - fmt
       - set-condition
@@ -630,9 +624,7 @@ jobs:
       - fmt
       - set-condition
       - sequentialise
-    # if: needs.set-condition.outputs.rebuild_evm_contracts == 'true'
-    # TODO: enable once tests are verified
-    if: false
+    if: needs.set-condition.outputs.rebuild_evm_contracts == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -652,8 +644,6 @@ jobs:
 
   parachain-ts-test:
     runs-on: ubuntu-22.04
-    # TODO: enable once tests are verified
-    if: false
     needs:
       - set-condition
       - parachain-build-dev
@@ -730,9 +720,7 @@ jobs:
       - set-condition
       - sequentialise
     # run_parachain_test is related to ts-tests only
-    # if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    # TODO: enable once tests are verified
-    if: false
+    if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -759,9 +747,7 @@ jobs:
       - fmt
       - set-condition
       - sequentialise
-    # if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    # TODO: enable once tests are verified
-    if: false
+    if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -796,8 +782,6 @@ jobs:
 
   identity-single-worker-test:
     runs-on: ubuntu-22.04
-    # TODO: enable once tests are verified
-    if: false
     needs:
       - set-condition
       - parachain-build-dev
@@ -895,9 +879,7 @@ jobs:
   identity-multi-worker-test:
     runs-on: ubuntu-22.04
     continue-on-error: true
-    # if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
-    # TODO: enable once tests are verified
-    if: false
+    if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
     needs:
       - set-condition
       - parachain-build-dev
