@@ -57,11 +57,8 @@ pub enum BinanceApiResponse<T> {
 }
 
 impl BinanceApiClient {
-	pub fn new(api_key: String, api_secret: String, base_url: Option<String>) -> BinanceApiClient {
-		let base_url = match base_url {
-			Some(url) => Url::parse(&url).expect("Invalid base URL"),
-			None => Url::parse("https://api.binance.com").unwrap(),
-		};
+	pub fn new(api_key: String, api_secret: String, base_url: String) -> BinanceApiClient {
+		let base_url = Url::parse(&base_url).expect("Invalid base URL");
 		let client = Client::new();
 		BinanceApiClient { client, base_url, api_key, api_secret }
 	}
@@ -246,7 +243,8 @@ mod tests {
 		let api_secret =
 			"NhqPtmdSJYdKjVHjA7PZj4Mge3R5YNiP1e3UZjInClVN65XAbvqqM6A7H5fATj0j".to_string();
 		let query_string = "symbol=LTCBTC&side=BUY&type=LIMIT&timeInForce=GTC&quantity=1&price=0.1&recvWindow=5000&timestamp=1499827319559".to_string();
-		let binance_api = BinanceApiClient::new(api_key, api_secret, None);
+		let binance_api =
+			BinanceApiClient::new(api_key, api_secret, "https://api.binance.com".to_string());
 		let signature = binance_api.sign_request(&query_string);
 
 		assert_eq!(signature, "c8db56825ae71d6d79447849e617115f4a920fa2acdcab2b053c4b2838bd6b71");

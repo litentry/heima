@@ -16,6 +16,7 @@ use super::common::{check_omni_api_response, handle_omni_native_task};
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
 	pub user_email: String,
+	pub client_id: String,
 	pub request_id: Option<u32>,
 	pub chain_id: u32,
 	pub wallet_index: PumxWalletIndex,
@@ -32,29 +33,30 @@ pub struct TransferWithdrawResponse {
 	pub backend_response: CreateTransferTxResponse,
 }
 
-impl From<TransferWithdrawParams> for NativeTaskWrapper<NativeTask> {
-	fn from(p: TransferWithdrawParams) -> Self {
+impl TransferWithdrawParams {
+	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
 		NativeTaskWrapper::new(
 			NativeTask::PumpxTransferWidthdraw(
-				Identity::from_web2_account(p.user_email.as_str(), Web2IdentityType::Email),
-				p.request_id,
-				p.chain_id,
-				p.wallet_index,
-				p.recipient_address,
-				p.token_ca,
-				p.amount,
-				p.google_code,
-				p.lang,
+				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Email),
+				self.request_id,
+				self.chain_id,
+				self.wallet_index,
+				self.recipient_address,
+				self.token_ca,
+				self.amount,
+				self.google_code,
+				self.lang,
 			),
 			None,
-			Some(OmniAuth::Email(p.user_email, p.email_code)),
+			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
+			self.client_id,
 		)
 	}
 }
 
 pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_transferWithdraw", |params, ctx, _| async move {
+		.register_async_method("omni_transferWithdraw", |params, ctx, _ext| async move {
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -63,10 +65,9 @@ pub fn register_transfer_withdraw(module: &mut RpcModule<RpcContext>) {
 			debug!("Received omni_transferWithdraw, user_email: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.user_email, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
+			let wrapper = params.into_native_task_wrapper();
 
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into();
-
-          	if wrapper.task.require_auth() {
+			if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
 					error!("Missing auth token");
 					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(

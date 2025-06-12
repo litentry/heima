@@ -16,13 +16,6 @@ pub enum Commands {
 
 #[derive(Args)]
 pub struct RunArgs {
-	pub parentchain_url: String,
-	pub ethereum_url: String,
-	pub solana_url: String,
-	pub pumpx_signer_url: String,
-	pub worker_url: String,
-	pub bsc_url: String,
-	pub bsc_testnet_url: Option<String>,
 	#[arg(long, short = 'b', default_value = "0", help = "Start block to sync from parentchain")]
 	pub start_block: u64,
 	#[arg(short, long, default_value = "local", value_name = "local directory path")]
