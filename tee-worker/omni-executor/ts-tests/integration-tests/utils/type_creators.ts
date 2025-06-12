@@ -79,12 +79,11 @@ export async function createNativeTaskWrapper(
     msgToSign: SignMessagePayload
 ): Promise<NativeTaskWrapper> {
     const payload = JSON.stringify(msgToSign);
-    const hashedPayload = blake2AsHex(payload, 256);
     const signerIdentity = await signer.getIdentity(api);
 
     const signature = await createHeimaMultiSignature(api, {
         signer,
-        payload: hashedPayload,
+        payload,
     });
 
     const auth: OmniAuth = api.createType('OmniAuth', {
