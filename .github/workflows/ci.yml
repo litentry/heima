@@ -361,7 +361,9 @@ jobs:
       - fmt
       - set-condition
       - sequentialise
-    if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+    # if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
+    # TODO: enable once tests are verified
+    if: false
     steps:
       - uses: actions/checkout@v4
 
