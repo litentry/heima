@@ -29,10 +29,10 @@ pub struct EnvConfig {
 	pub bsc_testnet_url: Option<String>,
 	pub pumpx_signer_url: String,
 	pub pumpx_api_base_url: String,
+	pub pumpx_worker_url: String,
 	pub binance_api_key: String,
 	pub binance_api_secret: String,
 	pub binance_api_base_url: String,
-	pub worker_base_url: String,
 }
 
 impl EnvConfig {
@@ -57,10 +57,10 @@ impl EnvConfig {
 			("OE_ALCHEMY_KEY", "alchemy_key"),
 			("OE_PUMPX_SIGNER_URL", "pumpx_signer_url"),
 			("OE_PUMPX_API_BASE_URL", "pumpx_api_base_url"),
+			("OE_PUMPX_WORKER_URL", "pumpx_worker_url"),
 			("OE_BINANCE_API_KEY", "binance_api_key"),
 			("OE_BINANCE_API_SECRET", "binance_api_secret"),
 			("OE_BINANCE_API_BASE_URL", "binance_api_base_url"),
-			("OE_WORKER_BASE_URL", "worker_base_url"),
 		];
 
 		let mut env_map = HashMap::new();
@@ -90,18 +90,17 @@ impl EnvConfig {
 	fn log_env_vars(env_map: &HashMap<&'static str, Option<String>>) {
 		// Log command line arguments
 		let args_string = std::env::args().collect::<Vec<String>>().join(" ");
-		info!("Executing: {}", args_string);
 
 		for (name, value) in env_map {
 			if *name != "alchemy_key" && *name != "binance_api_key" && *name != "binance_api_secret"
 			{
 				if let Some(val) = value {
-					if !val.is_empty() {
-						info!("Environment variable {}: {}", name, val);
-					}
+					info!("Environment variable {}: {}", name, val);
 				}
 			}
 		}
+
+		info!("Executing: {}", args_string);
 	}
 
 	/// Converts a HashMap of environment variables to an EnvConfig struct
@@ -137,10 +136,10 @@ impl EnvConfig {
 			bsc_testnet_url: bsc_testnet_url.as_ref().map(|url| append_key(url)),
 			pumpx_signer_url: get_string("pumpx_signer_url"),
 			pumpx_api_base_url: get_string("pumpx_api_base_url"),
+			pumpx_worker_url: get_string("pumpx_worker_url"),
 			binance_api_key: get_string("binance_api_key"),
 			binance_api_secret: get_string("binance_api_secret"),
 			binance_api_base_url: get_string("binance_api_base_url"),
-			worker_base_url: get_string("worker_base_url"),
 		}
 	}
 }

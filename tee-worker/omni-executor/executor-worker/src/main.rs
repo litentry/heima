@@ -322,7 +322,7 @@ async fn main() -> Result<(), ()> {
 				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
 			let worker_url =
-				url::Url::parse(&env_config.worker_base_url).expect("Invalid worker url");
+				url::Url::parse(&env_config.pumpx_worker_url).expect("Invalid worker url");
 
 			let shielding_key_store = ShieldingKeyStore::new(
 				Path::new(&args.local_directory_path)
