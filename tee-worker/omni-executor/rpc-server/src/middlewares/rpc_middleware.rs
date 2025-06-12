@@ -2,7 +2,7 @@ use crate::{
 	error_code::AUTH_VERIFICATION_FAILED_CODE, methods::PROTECTED_METHODS,
 	middlewares::HttpExtensions, verify_auth::verify_auth_token_authentication,
 };
-use heima_authentication::constants::AUTH_TOKEN_ID_TYPE;
+use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use jsonrpsee::{
 	server::{
 		middleware::rpc::{ResponseFuture, RpcServiceT},
@@ -13,9 +13,9 @@ use jsonrpsee::{
 use tower::layer::util::{Identity, Stack};
 
 #[derive(Clone, Debug)]
-#[allow(dead_code)] // TODO: remove this once the extensions are used in the methods
 pub struct RpcExtensions {
 	pub sender: String,
+	pub client_id: String,
 }
 
 pub struct RpcMiddleware;
@@ -61,11 +61,14 @@ where
 				match verify_auth_token_authentication(
 					&self.rsa_private_key,
 					token,
-					AUTH_TOKEN_ID_TYPE, // TODO: conditionally set token type based on the method
+					auth_token_type_for_method(req.method_name()),
 					false,
 				) {
 					Ok(claims) => {
-						req.extensions_mut().insert(RpcExtensions { sender: claims.sub.clone() });
+						req.extensions_mut().insert(RpcExtensions {
+							sender: claims.sub.clone(),
+							client_id: claims.aud.clone(),
+						});
 					},
 					Err(e) => {
 						tracing::debug!("Authentication failed: {}", e);
@@ -89,5 +92,17 @@ where
 		}
 
 		ResponseFuture::future(self.service.call(req))
+	}
+}
+
+// Defines the methods that require "access" auth token type
+const ACCESS_TOKEN_PROTECTED_METHODS: [&str; 2] =
+	["omni_notifyLimitOrderResult", "omni_signLimitOrder"];
+
+fn auth_token_type_for_method(method: &str) -> &'static str {
+	if ACCESS_TOKEN_PROTECTED_METHODS.contains(&method) {
+		AUTH_TOKEN_ACCESS_TYPE
+	} else {
+		AUTH_TOKEN_ID_TYPE
 	}
 }
