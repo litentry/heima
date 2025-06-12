@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@polkadot/api':
-        specifier: ^15.10.2
+        specifier: '*'
         version: 15.10.2
       '@polkadot/util-crypto':
         specifier: ^13.0.2
@@ -1662,7 +1662,7 @@ snapshots:
 
   smoldot@2.0.26:
     dependencies:
-      ws: 8.17.1
+      ws: 8.18.2
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
