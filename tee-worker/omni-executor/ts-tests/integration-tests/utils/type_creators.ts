@@ -11,7 +11,7 @@ import {
     OmniAccountPermission,
     RawTask,
     NativeTaskWrapper,
-} from '@heima-network/api-argument/omni';
+} from '@heima-network/api-augment/omni';
 import { Signer } from './signer';
 import { SignMessagePayload } from './requests';
 

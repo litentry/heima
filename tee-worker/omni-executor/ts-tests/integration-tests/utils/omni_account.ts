@@ -1,5 +1,5 @@
 import { ApiPromise } from '@polkadot/api';
-import { Identity } from '@heima-network/api-argument/omni';
+import { Identity } from '@heima-network/api-augment/omni';
 import { encodeAddress } from '@polkadot/util-crypto';
 import { Index } from '@polkadot/types/interfaces';
 
