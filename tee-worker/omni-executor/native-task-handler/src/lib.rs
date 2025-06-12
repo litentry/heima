@@ -715,8 +715,8 @@ async fn handle_native_task<
 			expected_wallet_address,
 		) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage
-				.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) =
+				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
@@ -790,8 +790,8 @@ async fn handle_native_task<
 						p
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				if let Err(e) = omni_account_profile_storage
-					.insert(&sender.to_omni_account(client_id), profile)
+				if let Err(e) =
+					omni_account_profile_storage.insert(&sender.to_omni_account(client_id), profile)
 				{
 					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
@@ -814,8 +814,8 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxAddWallet(sender) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage
-				.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) =
+				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
@@ -891,8 +891,8 @@ async fn handle_native_task<
 		) => {
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage
-				.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) =
+				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					"Failed to get access_token within NativeTask::PumpxTransferWidthdraw"
