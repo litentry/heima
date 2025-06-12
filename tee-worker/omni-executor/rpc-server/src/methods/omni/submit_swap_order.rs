@@ -254,6 +254,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
 				None,
 				None,
+				user.client_id,
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {

@@ -28,7 +28,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 
 			let email_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
-			let omni_account = email_identity.to_omni_account_with_client_id(&params.client_id);
+			let omni_account = email_identity.to_omni_account(&params.client_id);
 			let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 			let verification_code = generate_verification_code();
 

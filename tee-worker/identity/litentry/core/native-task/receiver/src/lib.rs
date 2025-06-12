@@ -24,6 +24,9 @@ extern crate sgx_tstd as std;
 
 extern crate alloc;
 
+// Default client_id for identity worker when no specific client context is available
+const DEFAULT_CLIENT_ID: &str = "heima";
+
 // re-export module to properly feature gate sgx and regular std environment
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 pub mod sgx_reexport_prelude {
@@ -218,7 +221,7 @@ where
 			let omni_account =
 				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
 					Ok(account) => account,
-					_ => sender_identity.to_omni_account(),
+					_ => sender_identity.to_omni_account(DEFAULT_CLIENT_ID),
 				};
 			verify_tca_email_authentication(
 				sender_identity.hash(),
@@ -231,7 +234,7 @@ where
 			let omni_account =
 				match get_omni_account(context.ocall_api.clone(), sender_identity, None) {
 					Ok(account) => account,
-					_ => sender_identity.to_omni_account(),
+					_ => sender_identity.to_omni_account(DEFAULT_CLIENT_ID),
 				};
 			verify_tca_oauth2_authentication(
 				context.data_provider_config.clone(),
@@ -251,7 +254,7 @@ where
 			let omni_account =
 				match get_omni_account(context.ocall_api.clone(), sender_identity, Some(header)) {
 					Ok(account) => account,
-					_ => sender_identity.to_omni_account(),
+					_ => sender_identity.to_omni_account(DEFAULT_CLIENT_ID),
 				};
 			verify_tca_auth_token_authentication(
 				&omni_account,
