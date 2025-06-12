@@ -97,6 +97,7 @@ export async function createNativeTaskWrapper(
         task: task,
         nonce: n,
         auth: a,
+        client_id: msgToSign.client_id,
     });
 }
 
