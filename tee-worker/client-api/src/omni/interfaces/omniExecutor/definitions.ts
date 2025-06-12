@@ -11,6 +11,7 @@ export default {
       task: "NativeTask",
       nonce: "Option<Nonce>",
       auth: "Option<OmniAuth>",
+      client_id: "String",
     },
     MrEnclave: "H256",
     NativeTask: {

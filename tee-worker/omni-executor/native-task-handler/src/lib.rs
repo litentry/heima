@@ -20,10 +20,7 @@ use executor_storage::{
 };
 use heima_authentication::{
 	auth_token::*,
-	constants::{
-		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA,
-		CLIENT_ID_PUMPX,
-	},
+	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::{
@@ -209,6 +206,7 @@ async fn handle_native_task<
 	};
 
 	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
+	let client_id = &wrapper.client_id;
 
 	let (response_sender, tx) = match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
@@ -239,14 +237,14 @@ async fn handle_native_task<
 					AuthTokenClaims::new(
 						email.to_string(),
 						AUTH_TOKEN_ID_TYPE.to_string(),
-						CLIENT_ID_HEIMA.to_string(),
+						client_id.to_string(),
 						auth_options,
 					)
 				},
 				_ => AuthTokenClaims::new(
 					sender.hash().to_string(),
 					AUTH_TOKEN_ID_TYPE.to_string(),
-					CLIENT_ID_HEIMA.to_string(),
+					client_id.to_string(),
 					auth_options,
 				),
 			};
@@ -278,8 +276,7 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::RequestIntent(sender, intent_id, intent) => {
-			// TODO: get client_id from NativeTaskWrapper once P-1568 is merged
-			let omni_account = sender.to_omni_account(CLIENT_ID_HEIMA);
+			let omni_account = sender.to_omni_account_with_client_id(client_id);
 
 			debug!("Intent requested");
 
@@ -454,7 +451,7 @@ async fn handle_native_task<
 			let sender_bytes = sender.encode();
 			let create_account_store_call =
 				parentchain_api_interface::tx().omni_account().create_account_store(
-					ClientId::from(CLIENT_ID_HEIMA), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+					ClientId::from(client_id.clone()),
 					Decode::decode(&mut &sender_bytes[..]).unwrap(),
 				);
 			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
@@ -627,12 +624,12 @@ async fn handle_native_task<
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
 			let omni_account = Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx)
-				.to_omni_account(CLIENT_ID_PUMPX); // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+				.to_omni_account_with_client_id(client_id);
 
 			let access_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
-				CLIENT_ID_PUMPX.to_string(), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+				client_id.to_string(),
 				auth_options.clone(),
 			);
 			let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
@@ -680,7 +677,7 @@ async fn handle_native_task<
 			let id_token_claims = AuthTokenClaims::new(
 				omni_account.to_hex(),
 				AUTH_TOKEN_ID_TYPE.to_string(),
-				CLIENT_ID_PUMPX.to_string(), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+				client_id.to_string(),
 				auth_options,
 			);
 			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
@@ -718,10 +715,9 @@ async fn handle_native_task<
 			expected_wallet_address,
 		) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(
-				sender.to_omni_account(CLIENT_ID_PUMPX), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
-				AUTH_TOKEN_ACCESS_TYPE,
-			)) else {
+			let Ok(Some(access_token)) = storage
+				.get(&(sender.to_omni_account_with_client_id(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
 					response_sender,
@@ -760,7 +756,7 @@ async fn handle_native_task<
 				.export_wallet(
 					chain,
 					pumpx_wallet_index,
-					sender.to_omni_account(CLIENT_ID_PUMPX).into(), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+					sender.to_omni_account_with_client_id(client_id).into(),
 					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
 					//       we don't have to do double encryption/decryption
 					ctx.aes256_key.to_vec(),
@@ -786,8 +782,7 @@ async fn handle_native_task<
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
 			if let Ok(maybe_profile) =
-				omni_account_profile_storage.get(&sender.to_omni_account(CLIENT_ID_PUMPX))
-			// TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+				omni_account_profile_storage.get(&sender.to_omni_account_with_client_id(client_id))
 			{
 				let profile = maybe_profile
 					.map(|mut p| {
@@ -796,8 +791,7 @@ async fn handle_native_task<
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
 				if let Err(e) = omni_account_profile_storage
-					.insert(&sender.to_omni_account(CLIENT_ID_PUMPX), profile)
-				// TODO: get client_id from NativeTaskWrapper once P-1568 is merged
+					.insert(&sender.to_omni_account_with_client_id(client_id), profile)
 				{
 					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
@@ -820,10 +814,9 @@ async fn handle_native_task<
 		},
 		NativeTask::PumpxAddWallet(sender) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(
-				sender.to_omni_account(CLIENT_ID_PUMPX), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
-				AUTH_TOKEN_ACCESS_TYPE,
-			)) else {
+			let Ok(Some(access_token)) = storage
+				.get(&(sender.to_omni_account_with_client_id(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
 					response_sender,
@@ -898,10 +891,9 @@ async fn handle_native_task<
 		) => {
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(
-				sender.to_omni_account(CLIENT_ID_PUMPX), // TODO: get client_id from NativeTaskWrapper once P-1568 is merged
-				AUTH_TOKEN_ACCESS_TYPE,
-			)) else {
+			let Ok(Some(access_token)) = storage
+				.get(&(sender.to_omni_account_with_client_id(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			else {
 				send_error(
 					"Failed to get access_token within NativeTask::PumpxTransferWidthdraw"
 						.to_string(),
