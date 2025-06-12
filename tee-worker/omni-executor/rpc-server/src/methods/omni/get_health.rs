@@ -27,7 +27,6 @@ pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use executor_storage::StorageDB;
-	use executor_worker::env_config::EnvConfig;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -50,9 +49,7 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		
-		let env_config = EnvConfig::from_env();
-		let pumpx_api = PumpxApiClient::new(env_config.pumpx_api_base_url);
+		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 
 		start_server(
 			port,

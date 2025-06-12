@@ -36,7 +36,6 @@ native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 pumpx = { workspace = true }
-executor-worker = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
