@@ -10,7 +10,7 @@ pub mod cross_fail;
 pub mod get_account_user_id;
 pub mod get_gas_info;
 pub mod get_user_trade_info;
-pub mod heima_post_login;
+pub mod post_heima_login;
 pub mod send_order_tx;
 pub mod send_transfer_tx;
 pub mod user_connect;
