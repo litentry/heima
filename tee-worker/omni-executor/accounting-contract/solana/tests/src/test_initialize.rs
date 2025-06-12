@@ -191,22 +191,15 @@ fn test_deposit_funds() {
 		.send()
 		.expect("Failed to send transaction");
 
-	let (treasury_pda, _) = Pubkey::find_program_address(&[b"treasury"], &program.id());
-	let initial_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
+	let treasury_account = program
+		.rpc()
+		.get_account(&Pubkey::find_program_address(&[b"treasury"], &program.id()).0)
+		.unwrap();
 
-	let _ = program
-		.request()
-		.accounts(accounting_contract::accounts::DepositFunds {
-			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
-			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
-		})
-		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
-		.send()
-		.expect("Failed to send transaction");
+	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
+	let rent_exempt_amount = program.rpc().get_minimum_balance_for_rent_exemption(size_of_treasury_account).unwrap();
 
-	let final_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
-	assert_eq!(final_treasury_balance - initial_treasury_balance, 1_000_000_000);
+	assert_eq!(treasury_account.lamports, rent_exempt_amount + 1_000_000_000);
 }
 
 #[test]
@@ -238,12 +231,12 @@ fn test_create_pay_request() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -287,12 +280,12 @@ fn test_create_pay_request_invalid_nonce() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -313,12 +306,12 @@ fn test_create_pay_request_invalid_nonce() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -364,12 +357,12 @@ fn create_pay_request_out_of_balance() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -384,6 +377,66 @@ fn create_pay_request_out_of_balance() {
 
 	if let Err(SolanaClientError(e)) = tx {
 		assert_eq!(e.get_transaction_error(), Some(InstructionError(0, Custom(6003))));
+	}
+}
+
+#[test]
+fn create_pay_request_unauthorized() {
+	let payer = read_keypair_file("../test-account.json").expect("Failed to read keypair file");
+	let program = setup_program(&payer);
+	request_airdrop(&program, &payer);
+
+	set_admin(&program, &payer).unwrap();
+	set_worker_account(&program, &payer).unwrap();
+
+	let tx = program
+		.request()
+		.accounts(accounting_contract::accounts::DepositFunds {
+			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
+			signer: payer.pubkey(),
+			system_program: anchor_client::solana_sdk::system_program::ID,
+		})
+		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
+		.send()
+		.expect("Failed to send transaction");
+
+	let seed_hex = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+	let seed_bytes = hex::decode(seed_hex).unwrap();
+	let secret: [u8; 32] = seed_bytes.clone().try_into().unwrap();
+
+	let payer = Keypair::from_seed(secret.as_ref()).unwrap();
+	let program = setup_program(&payer);
+
+	let nonce: u64 = 1;
+	let keypair = Keypair::new();
+
+	let tx = program
+		.request()
+		.accounts(accounting_contract::accounts::CreatePayRequest {
+			pay_out_request: Pubkey::find_program_address(
+				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
+				&program.id(),
+			)
+				.0,
+			account_nonce: Pubkey::find_program_address(
+				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
+				&program.id(),
+			)
+				.0,
+			signer: payer.pubkey(),
+			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
+			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
+			beneficiary: keypair.pubkey(),
+			system_program: anchor_client::solana_sdk::system_program::ID,
+		})
+		.args(accounting_contract::instruction::CreatePayRequest {
+			amount: 1_000_000_000,
+			nonce: 1_u64,
+		})
+		.send();
+
+	if let Err(SolanaClientError(e)) = tx {
+		assert_eq!(e.get_transaction_error(), Some(InstructionError(0, Custom(6000))));
 	}
 }
 
@@ -587,24 +640,17 @@ fn test_full_workerflow() {
 		.send()
 		.expect("Failed to send transaction");
 
-	let (treasury_pda, _) = Pubkey::find_program_address(&[b"treasury"], &program.id());
-	let initial_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
+	let treasury_account = program
+		.rpc()
+		.get_account(&Pubkey::find_program_address(&[b"treasury"], &program.id()).0)
+		.unwrap();
+	let treasury_struct: accounting_contract::TreasuryAccount =
+		bincode::deserialize(&treasury_account.data[8..]).unwrap();
 
-	let tx = program
-		.request()
-		.accounts(accounting_contract::accounts::DepositFunds {
-			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
-			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
-		})
-		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
-		.send()
-		.expect("Failed to send transaction");
+	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
+	let rent_exempt_amount = Rent::default().minimum_balance(size_of_treasury_account);
 
-	let (treasury_pda, _) = Pubkey::find_program_address(&[b"treasury"], &program.id());
-	let final_treasury_balance = program.rpc().get_balance(&treasury_pda).unwrap();
-
-	assert_eq!(final_treasury_balance - initial_treasury_balance, 1_000_000_000);
+	assert_eq!(treasury_account.lamports, 1_000_000_000 + rent_exempt_amount);
 
 	let payer_account = program.rpc().get_account(&payer.pubkey()).unwrap();
 	let initial_balance = payer_account.lamports;
@@ -619,12 +665,12 @@ fn test_full_workerflow() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-			.0,
+				.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
