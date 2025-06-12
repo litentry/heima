@@ -17,6 +17,7 @@ import { createOmniAuth, OmniAuthData } from './omni-auth';
  * @param data.nonce - Optional nonce value
  * @param data.authData - Optional authentication data
  * @param data.plain - Flag to return unencrypted raw task
+ * @param data.clientId - Client identifier for the task
  * @param {Enclave} enclaveInstance - The enclave instance use to interact with Enclave.
  * @returns Promise resolving to RawTask
  */
@@ -27,6 +28,7 @@ export async function createRawTaskType(
     nonce?: Index;
     authData?: OmniAuthData;
     plain: true;
+    clientId: string;
   },
   enclaveInstance?: Enclave,
 ): Promise<RawTask>;
@@ -50,6 +52,7 @@ export async function createRawTaskType(
     nonce?: Index;
     authData?: OmniAuthData;
     plain?: false;
+    clientId: string;
   },
   enclaveInstance?: Enclave,
 ): Promise<{ rawTask: RawTask, encryptionKey: CryptoKey }>;
@@ -90,16 +93,18 @@ export async function createRawTaskType(
     nonce?: Index;
     authData?: OmniAuthData;
     plain?: boolean;
+    clientId: string;
   },
   enclaveInstance: Enclave = enclave,
 ): Promise<RawTask | { rawTask: RawTask, encryptionKey: CryptoKey }> {
-  const { authData, task, nonce, plain = false } = data;
+  const { authData, task, nonce, plain = false, clientId } = data;
 
   const auth = authData ? createOmniAuth(api.registry, authData) : undefined;
   const wrappedTask = api.createType<NativeTaskWrapper>('NativeTaskWrapper', {
     task,
     nonce: api.createType('Option<Nonce>', nonce),
     auth: api.createType('Option<OmniAuth>', auth),
+    client_id: clientId,
   });
 
   if (plain) {

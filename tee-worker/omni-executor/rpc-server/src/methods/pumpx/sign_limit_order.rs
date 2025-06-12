@@ -66,13 +66,13 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received pumpx_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
 
-           	let omni_account = match verify_auth_token_authentication(
+           	let (omni_account, client_id) = match verify_auth_token_authentication(
 				&ctx.jwt_rsa_private_key,
 				&params.auth_token,
 				AUTH_TOKEN_ACCESS_TYPE,
 				true,
 			) {
-				Ok(claims) => claims.sub,
+				Ok(claims) => (claims.sub, claims.aud),
 				Err(_) => {
 					error!("Failed to verify auth token");
 					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
@@ -95,6 +95,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				),
 			    None,
          		Some(OmniAuth::AuthToken(params.auth_token)),
+				client_id,
 			);
 
 			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
