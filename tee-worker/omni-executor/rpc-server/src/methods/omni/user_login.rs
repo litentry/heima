@@ -43,7 +43,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 					error!("User ID must be an email for Email authentication");
 					return Err(ErrorCode::ParseError);
 				};
-				OmniAuth::Email(email, code)
+				OmniAuth::Email(p.client_id.clone(), email, code)
 			},
 			UserAuth::Substrate(signature) => {
 				let identity = Identity::try_from(p.user_id).map_err(|_| {
@@ -160,7 +160,7 @@ pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
 				check_omni_api_response(backend_response.clone(), "Post heima login".into())?;
 
 				let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-				let omni_account = identity.to_omni_account_with_client_id(&params.client_id);
+				let omni_account = identity.to_omni_account(&params.client_id);
 				if storage
 					.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 					.is_err()
@@ -194,7 +194,7 @@ fn create_jwt_for_user(
 		.expect("Failed to calculate expiration")
 		.timestamp();
 	let auth_options = AuthOptions { expires_at };
-	let omni_account = identity.to_omni_account_with_client_id(client_id);
+	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
 		omni_account.to_hex(),
 		token_type.to_string(),

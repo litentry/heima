@@ -39,8 +39,6 @@ use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdRes
 
 use crate::methods::post_heima_login::PostHeimaLoginBody;
 
-const DEFAULT_BASE_URL: &str = "https://api.pumpx.ai";
-
 #[async_trait]
 pub trait PumpxApi: Send + Sync {
 	async fn user_connect(
@@ -149,11 +147,8 @@ pub struct PumpxApiClient {
 }
 
 impl PumpxApiClient {
-	pub fn new(base_url: Option<String>) -> Self {
-		let base_url = match base_url {
-			Some(url) => Url::parse(&url).expect("Invalid base URL"),
-			None => Url::parse(DEFAULT_BASE_URL).unwrap(),
-		};
+	pub fn new(base_url: String) -> Self {
+		let base_url = Url::parse(&base_url).expect("Invalid base URL");
 		let mut default_headers = reqwest::header::HeaderMap::new();
 		default_headers.insert("X-Language", "en".parse().unwrap());
 		let http_client = Client::builder()

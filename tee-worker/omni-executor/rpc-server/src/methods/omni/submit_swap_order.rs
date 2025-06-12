@@ -1,12 +1,13 @@
-use crate::methods::omni::PumpxRpcError;
+use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
-	error_code::*, server::RpcContext, verify_auth::verify_auth_token_authentication, Decode,
-	Deserialize, ErrorCode,
+	error_code::*,
+	methods::omni::{common::check_auth, PumpxRpcError},
+	server::RpcContext,
+	Decode, Deserialize, ErrorCode,
 };
 use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
 use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::{
 	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
 	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
@@ -21,8 +22,6 @@ use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use std::str::FromStr;
 use tracing::{debug, error};
-
-use super::common::{check_omni_api_response, handle_omni_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -42,7 +41,6 @@ pub struct SubmitSwapOrderParams {
 	pub usd_worth: String,
 	pub trailing_percent: Option<u32>,
 	pub wallet_index: u32,
-	pub auth_token: String,
 }
 
 impl SubmitSwapOrderParams {
@@ -108,29 +106,25 @@ struct BackendResponse {
 
 pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_submitSwapOrder", |params, ctx, _| async move {
+		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
+			let user = check_auth(&ext).map_err(|e| {
+				error!("Authentication check failed: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				))
+			})?;
+
 			let params = params.parse::<SubmitSwapOrderParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received omni_submitSwapOrder, user_email: {}, intent_id: {}, order_type: {:?}, swap_type: {:?}, from_chain_id: {}, from_token_ca: {:?}, from_amount: {}, to_chain_id: {}, to_token_ca: {:?}, wallet_index: {}",
-			params.user_email, params.intent_id, params.order_type, params.swap_type, params.from_chain_id, params.from_token_ca, params.from_amount, params.to_chain_id, params.to_token_ca, params.wallet_index);
+			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 
-            let omni_account = match verify_auth_token_authentication(&ctx.jwt_rsa_private_key, &params.auth_token, AUTH_TOKEN_ID_TYPE, false) {
-                Ok(claims) => {
-                    AccountId::from_str(&claims.sub).map_err(|_| {
-                        error!("Failed to parse account id from auth token");
-                        PumpxRpcError::from_error_code(ErrorCode::InternalError)
-                    })?
-                },
-                Err(_) => {
-                    error!("Failed to verify auth token");
-                    return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-                        AUTH_VERIFICATION_FAILED_CODE,
-                    )));
-                }
-            };
+			let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
+				error!("Failed to parse from omni account token");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+			};
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				error!("Failed to get from chain asset");
@@ -155,8 +149,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
@@ -178,14 +171,35 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
-			let gas_type_base = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_base, "gas_type_base")?;
-			let gas_type_bsc = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_bsc, "gas_type_bsc")?;
-			let gas_type_eth = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_eth, "gas_type_eth")?;
-			let gas_type_sol = check_and_get_option_user_trade_info_field(user_trade_info.data.gas_type_sol, "gas_type_sol")?;
+			let gas_type_base = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.gas_type_base,
+				"gas_type_base",
+			)?;
+			let gas_type_bsc = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.gas_type_bsc,
+				"gas_type_bsc",
+			)?;
+			let gas_type_eth = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.gas_type_eth,
+				"gas_type_eth",
+			)?;
+			let gas_type_sol = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.gas_type_sol,
+				"gas_type_sol",
+			)?;
 
-			let is_anti_mev = check_and_get_option_user_trade_info_field(user_trade_info.data.is_anti_mev, "is_anti_mev")?;
-			let is_auto_slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.is_auto_slippage, "is_auto_slippage")?;
-			let slippage = check_and_get_option_user_trade_info_field(user_trade_info.data.slippage, "slippage")?;
+			let is_anti_mev = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.is_anti_mev,
+				"is_anti_mev",
+			)?;
+			let is_auto_slippage = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.is_auto_slippage,
+				"is_auto_slippage",
+			)?;
+			let slippage = check_and_get_option_user_trade_info_field(
+				user_trade_info.data.slippage,
+				"slippage",
+			)?;
 
 			let gas_type = match params.to_chain_id {
 				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
@@ -226,16 +240,21 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
 			}
 
-			let intent = Intent::Swap(swap_order, ccs_provider, scs_provider.try_into().map_err(|_| {
-                error!("Failed to convert single chain swap provider");
-                PumpxRpcError::from_error_code(ErrorCode::InternalError)
-            })?);
-           	let user_identity =
+			let intent = Intent::Swap(
+				swap_order,
+				ccs_provider,
+				scs_provider.try_into().map_err(|_| {
+					error!("Failed to convert single chain swap provider");
+					PumpxRpcError::from_error_code(ErrorCode::InternalError)
+				})?,
+			);
+			let user_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Pumpx);
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
-				 None,
-				 Some(OmniAuth::AuthToken(params.auth_token)),
+				None,
+				None,
+				user.client_id,
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {

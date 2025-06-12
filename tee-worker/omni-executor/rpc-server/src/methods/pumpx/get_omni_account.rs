@@ -39,7 +39,7 @@ pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 
 			let account =
 				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
-					.to_omni_account_with_client_id(CLIENT_ID_PUMPX);
+					.to_omni_account(CLIENT_ID_PUMPX);
 			Ok::<String, ErrorObject>(account.to_hex())
 		})
 		.expect("Failed to register pumpx_getOmniAccount method");
