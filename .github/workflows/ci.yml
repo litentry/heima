@@ -973,6 +973,7 @@ jobs:
 
   omni-executor-test:
     runs-on: ubuntu-22.04
+    if: ${{ needs.set-condition.outputs.run_omni_executor_test == 'true' }}
     needs:
       - set-condition
       - parachain-build-dev
