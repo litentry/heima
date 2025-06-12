@@ -35,6 +35,7 @@ mod test {
 	use std::sync::Arc;
 	use tempfile::tempdir;
 	use tokio::sync::mpsc;
+	use executor_worker::env_config::EnvConfig;
 
 	#[tokio::test]
 	pub async fn test_protected_method() {
@@ -48,7 +49,8 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let pumpx_api = PumpxApiClient::new(None);
+		let env_config = EnvConfig::from_env();
+		let pumpx_api = PumpxApiClient::new(env_config.pumpx_api_base_url);
 
 		start_server(
 			port,
