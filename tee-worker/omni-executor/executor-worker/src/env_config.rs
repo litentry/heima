@@ -38,37 +38,42 @@ pub struct EnvConfig {
 impl EnvConfig {
 	/// Creates a new EnvConfig by loading values from environment variables
 	pub fn from_env() -> Self {
-		let env_map = Self::load_env_vars();
+		let (env_map, sensitive_map) = Self::load_env_vars();
 
-		Self::log_env_vars(&env_map);
+		Self::log_env_vars(&env_map, &sensitive_map);
 
 		// Convert from HashMap to struct for better type safety and usage
 		Self::from_map(env_map)
 	}
 
 	/// Loads environment variables into a HashMap
-	fn load_env_vars() -> HashMap<&'static str, Option<String>> {
+	fn load_env_vars() -> (HashMap<&'static str, Option<String>>, HashMap<&'static str, bool>) {
+		const SENSITIVE: bool = true;
+		const NOT_SENSITIVE: bool = false;
+
 		let vars = [
-			("OE_PARENTCHAIN_URL", "parentchain_url"),
-			("OE_ETHERUM_URL", "ethereum_url"),
-			("OE_SOLANA_URL", "solana_url"),
-			("OE_BSC_URL", "bsc_url"),
-			("OE_BSC_TESTNET_URL", "bsc_testnet_url"),
-			("OE_ALCHEMY_KEY", "alchemy_key"),
-			("OE_PUMPX_SIGNER_URL", "pumpx_signer_url"),
-			("OE_PUMPX_API_BASE_URL", "pumpx_api_base_url"),
-			("OE_PUMPX_WORKER_URL", "pumpx_worker_url"),
-			("OE_BINANCE_API_KEY", "binance_api_key"),
-			("OE_BINANCE_API_SECRET", "binance_api_secret"),
-			("OE_BINANCE_API_BASE_URL", "binance_api_base_url"),
+			("OE_PARENTCHAIN_URL", "parentchain_url", NOT_SENSITIVE),
+			("OE_ETHERUM_URL", "ethereum_url", NOT_SENSITIVE),
+			("OE_SOLANA_URL", "solana_url", NOT_SENSITIVE),
+			("OE_BSC_URL", "bsc_url", NOT_SENSITIVE),
+			("OE_BSC_TESTNET_URL", "bsc_testnet_url", NOT_SENSITIVE),
+			("OE_ALCHEMY_KEY", "alchemy_key", SENSITIVE),
+			("OE_PUMPX_SIGNER_URL", "pumpx_signer_url", NOT_SENSITIVE),
+			("OE_PUMPX_API_BASE_URL", "pumpx_api_base_url", NOT_SENSITIVE),
+			("OE_PUMPX_WORKER_URL", "pumpx_worker_url", NOT_SENSITIVE),
+			("OE_BINANCE_API_KEY", "binance_api_key", SENSITIVE),
+			("OE_BINANCE_API_SECRET", "binance_api_secret", SENSITIVE),
+			("OE_BINANCE_API_BASE_URL", "binance_api_base_url", NOT_SENSITIVE),
 		];
 
 		let mut env_map = HashMap::new();
+		let mut sensitive_map = HashMap::new();
 
 		// Load environment variables
-		for (env_name, var_name) in vars {
+		for (env_name, var_name, is_sensitive) in vars {
 			let value = Some(std::env::var(env_name).unwrap_or_default());
 			env_map.insert(var_name, value);
+			sensitive_map.insert(var_name, is_sensitive);
 		}
 
 		// Set default values for certain variables if they're empty
@@ -78,24 +83,28 @@ impl EnvConfig {
 		];
 
 		for (key, default_value) in defaults {
-			if env_map.get(key).and_then(|v| v.as_ref()).map_or(true, |v| v.is_empty()) {
+			if env_map.get(key).and_then(|v| v.as_ref()).is_none_or(|v| v.is_empty()) {
 				env_map.insert(key, Some(default_value.to_string()));
 			}
 		}
 
-		env_map
+		(env_map, sensitive_map)
 	}
 
 	/// Logs non-sensitive environment variables
-	fn log_env_vars(env_map: &HashMap<&'static str, Option<String>>) {
+	fn log_env_vars(
+		env_map: &HashMap<&'static str, Option<String>>,
+		sensitive_map: &HashMap<&'static str, bool>,
+	) {
 		// Log command line arguments
 		let args_string = std::env::args().collect::<Vec<String>>().join(" ");
 
 		for (name, value) in env_map {
-			if *name != "alchemy_key" && *name != "binance_api_key" && *name != "binance_api_secret"
-			{
-				if let Some(val) = value {
-					info!("Environment variable {}: {}", name, val);
+			if let Some(is_sensitive) = sensitive_map.get(name) {
+				if !*is_sensitive {
+					if let Some(val) = value {
+						info!("Environment variable {}: {}", name, val);
+					}
 				}
 			}
 		}
@@ -121,8 +130,8 @@ impl EnvConfig {
 
 		// Append alchemy_key to URLs in the format: https://base-url/v2/{alchemy_key}
 		let append_key = |url: &str| -> String {
-			if !alchemy_key.is_empty() && !url.is_empty() {
-				format!("{}/v2/{}", url.trim_end_matches('/'), alchemy_key)
+			if !alchemy_key.is_empty() && url.contains("alchemy") {
+				format!("{}{}", url, alchemy_key)
 			} else {
 				url.to_string()
 			}
