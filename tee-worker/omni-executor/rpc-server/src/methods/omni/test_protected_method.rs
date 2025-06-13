@@ -48,7 +48,7 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let pumpx_api = PumpxApiClient::new(None);
+		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 
 		start_server(
 			port,
@@ -69,8 +69,8 @@ mod test {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 		let auth_options = AuthOptions { expires_at };
-		let omni_account =
-			Identity::from_web2_account("test@test.com", Web2IdentityType::Email).to_omni_account();
+		let omni_account = Identity::from_web2_account("test@test.com", Web2IdentityType::Email)
+			.to_omni_account(CLIENT_ID_HEIMA);
 
 		let access_token_claims = AuthTokenClaims::new(
 			omni_account.to_hex(),

@@ -26,6 +26,7 @@ use async_trait::async_trait;
 use executor_primitives::{AccountId, BlockEvent, BlockNumber, EventId, Hash};
 use parity_scale_codec::{Decode, Encode};
 use scale_encode::EncodeAsType;
+use std::error::Error;
 use std::marker::PhantomData;
 use std::vec::Vec;
 use subxt::{
@@ -367,7 +368,7 @@ impl<ChainConfig: Config<AccountId = String, Header = RpcClientHeader>>
 
 #[async_trait]
 pub trait SubstrateRpcClientFactory<Header, RpcClient: SubstrateRpcClient<Header>> {
-	async fn new_client(&self) -> Result<RpcClient, ()>;
+	async fn new_client(&self) -> Result<RpcClient, Box<dyn Error>>;
 }
 
 #[derive(Clone)]
@@ -407,19 +408,13 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 	SubstrateRpcClientFactory<ChainConfig::Header, SubxtClient<ChainConfig>>
 	for SubxtClientFactory<ChainConfig>
 {
-	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, ()> {
+	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, Box<dyn Error>> {
 		let rpc_client = subxt::backend::rpc::reconnecting_rpc_client::RpcClient::builder()
 			.build(self.url.clone())
-			.await
-			.map_err(|e| {
-				error!("Could not create RpcClient: {:?}", e);
-			})?;
+			.await?;
 		let legacy = LegacyRpcMethods::new(rpc_client.into());
 
-		let online_client =
-			OnlineClient::from_insecure_url(self.url.clone()).await.map_err(|e| {
-				error!("Could not create OnlineClient: {:?}", e);
-			})?;
+		let online_client = OnlineClient::from_insecure_url(self.url.clone()).await?;
 
 		let events = online_client.events();
 		let tx = online_client.tx();

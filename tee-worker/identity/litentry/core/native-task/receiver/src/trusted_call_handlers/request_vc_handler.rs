@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Context, Mutex, TrustedCallResult};
+use crate::{Context, Mutex, TrustedCallResult, DEFAULT_CLIENT_ID};
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use frame_support::ensure;
@@ -129,7 +129,7 @@ where
 
 	let omni_account = match OmniAccountStore::get_omni_account(who.hash()) {
 		Ok(Some(account)) => account,
-		Ok(None) => who.to_omni_account(),
+		Ok(None) => who.to_omni_account(DEFAULT_CLIENT_ID),
 		Err(_) => return Err(RequestVcErrorDetail::OmniAccountStoreRetrievalFailed),
 	};
 

@@ -33,6 +33,9 @@ use sp_runtime::{
 };
 use sp_std::marker::PhantomData;
 
+// Test client_id constant
+pub const TEST_CLIENT_ID: &str = "test_client";
+
 pub type Signature = sp_runtime::MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Balance = u64;
@@ -82,7 +85,7 @@ pub struct Accounts {
 fn create_accounts(keyring: AccountKeyring) -> Accounts {
 	let native_account = keyring.to_account_id();
 	let identity = Identity::from(native_account.clone());
-	Accounts { native_account, omni_account: identity.to_omni_account(), identity }
+	Accounts { native_account, omni_account: identity.to_omni_account("test_client"), identity }
 }
 
 pub fn alice() -> Accounts {

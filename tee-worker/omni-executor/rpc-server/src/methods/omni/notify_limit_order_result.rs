@@ -49,6 +49,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 				),
 				None,
 				None,
+				user.client_id,
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
