@@ -17,11 +17,11 @@
 #[cfg(feature = "try-runtime")]
 use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
-use sp_std::vec::Vec;
-#[cfg(feature = "try-runtime")]
 use frame_support::traits::StorageVersion;
 #[cfg(feature = "try-runtime")]
 use sp_runtime::DispatchError;
+#[cfg(feature = "try-runtime")]
+use sp_std::vec::Vec;
 
 use frame_support::{
 	pallet_prelude::*,
