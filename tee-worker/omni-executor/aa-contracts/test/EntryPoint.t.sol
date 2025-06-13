@@ -40,7 +40,7 @@ contract EntryPointTest is Test {
         bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
         address factory = address(smartAccountFactory);
-        address sender = 0xFFbF00b7738136be1DC881A2B856543996e37908;
+        address sender = 0x815F01B20fC313970A6CE586F6638d3cfeA7c837;
 
         fundAccountOnEntryPoint(sender, entryPoint);
 
