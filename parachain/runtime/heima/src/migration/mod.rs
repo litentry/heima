@@ -18,18 +18,21 @@
 use frame_support::ensure;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
+#[cfg(feature = "try-runtime")]
+use frame_support::traits::StorageVersion;
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 
 use frame_support::{
 	pallet_prelude::*,
 	storage::migration::{clear_storage_prefix, put_storage_value},
-	traits::{Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess, StorageVersion},
+	traits::{Get, GetStorageVersion, OnRuntimeUpgrade, PalletInfoAccess},
 	weights::Weight,
 };
 use frame_system::pallet_prelude::BlockNumberFor;
 use log;
 use pallet_xcm::QueryStatus;
 use sp_io::hashing::blake2_128;
-use sp_runtime::DispatchError;
 use sp_std::marker::PhantomData;
 use xcm::v5::{Junctions, Location};
 use xcm::VersionedLocation;
@@ -45,7 +48,7 @@ where
 	T: frame_system::Config + pallet_identity::Config,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
+	fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_identity::Pallet<T>>() == 1,
 			"Current pallet_identity StorageVersion is not 1."
@@ -77,7 +80,7 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(_state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+	fn post_upgrade(_state: Vec<u8>) -> Result<(), DispatchError> {
 		ensure!(
 			StorageVersion::get::<pallet_identity::Pallet<T>>() == 2,
 			"Please upgrade pallet_identity StorageVersion to 2"
