@@ -211,6 +211,8 @@ if is_omni_executor_release; then
   WORKER_RUSTC_VERSION=$(cd tee-worker/omni-executor && rustc --version)
   docker run --rm --entrypoint gramine-sgx-sigstruct-view -v /var/run/aesmd:/var/run/aesmd litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG omni-executor.sig > enclave-sigstruct.txt
   SIGSTRUCT=$(<enclave-sigstruct.txt)
+  # Format the sigstruct output with proper indentation
+  FORMATTED_SIGSTRUCT=$(echo "$SIGSTRUCT" | sed 's/^/    /')
 cat << EOF >> "$1"
 ## Omni-Executor
 
@@ -219,8 +221,8 @@ client version               : $WORKER_VERSION
 client name                  : $WORKER_BIN
 rustc                        : $WORKER_RUSTC_VERSION
 docker image                 : litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG
-SGX enclave info
-$SIGSTRUCT
+SGX enclave info             :
+$FORMATTED_SIGSTRUCT
 <CODEBLOCK>
 
 EOF
