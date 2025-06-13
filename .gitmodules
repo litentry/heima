@@ -4,9 +4,6 @@
 [submodule "tee-worker/omni-executor/accounting-contract/bsc/lib/forge-std"]
 	path = tee-worker/omni-executor/accounting-contract/bsc/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "tee-worker/omni-executor/aa-contracts/aa-contracts/lib/forge-std"]
-	path = tee-worker/omni-executor/aa-contracts/aa-contracts/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
 [submodule "tee-worker/omni-executor/aa-contracts/lib/forge-std"]
 	path = tee-worker/omni-executor/aa-contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
