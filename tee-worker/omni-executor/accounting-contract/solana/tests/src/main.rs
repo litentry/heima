@@ -77,7 +77,7 @@ fn main() {
 	println!("Interacting with program: {}", program_id);
 
 	let payer = read_keypair_file(wallet_path).expect("Failed to read keypair file");
-	let client = Client::new_with_options(Cluster::Devnet, &payer, CommitmentConfig::confirmed());
+	let client = Client::new_with_options(Cluster::Mainnet, &payer, CommitmentConfig::confirmed());
 
 	// Ensure the payer has tokens
 	let program = client.program(Pubkey::from_str(&program_id).unwrap()).unwrap();
