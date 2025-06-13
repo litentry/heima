@@ -1,6 +1,6 @@
 import { u8aToHex } from '@polkadot/util';
 import { ApiPromise } from '@polkadot/api';
-import { NativeTaskWrapper, NativeTaskResponse } from '@heima-network/api-argument/omni';
+import { NativeTaskWrapper, NativeTaskResponse } from '@heima-network/api-augment/omni';
 import { createPublicKey } from 'crypto';
 import { IntegrationTestContext, nextRequestId } from './context';
 import { decodeRpcBytesAsString } from './helpers';
@@ -98,6 +98,7 @@ async function sendRequest(
                 reject(new Error(parsed.error.message, { cause: transaction }));
             }
             const response = api.createType('NativeTaskResponse', parsed.result);
+            console.log('response:', JSON.stringify(response, null, 2));
             if (onMessageReceived) onMessageReceived(response);
             wsClient.onMessage.removeAllListeners();
             resolve(response);

@@ -1,6 +1,6 @@
 import { step } from 'mocha-steps';
 import { assert } from 'chai';
-import { Identity, MemberAccount } from '@heima-network/api-argument/omni';
+import { Identity, MemberAccount } from '@heima-network/api-augment/omni';
 import { createIntegrationTestContext, IntegrationTestContext } from './utils/context';
 import { SubstrateSigner } from './utils/signer';
 import { getOmniAccount } from './utils/omni_account';
