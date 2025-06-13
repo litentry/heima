@@ -17,7 +17,7 @@ import "./callback/TokenCallbackHandler.sol";
 /**
  *  smart wallet account
  *  has an owner which is represented by sha256(0x01+hexencoded-address)
- *  has and root address, this account can generate session keys that will pass signature validation
+ *  has list of root signers, root signer can generate session keys that will pass signature validation
  *  has list of allowed signers who can sign messages
  *  has execute, eth handling methods
  */
