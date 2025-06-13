@@ -19,4 +19,4 @@ test-skip-auth = []
 
 [dependencies]
 anchor-lang = { version = "0.31", features = ["init-if-needed"] }
-serde = { workspace = true }
+serde = { version = "1.0.217", features = ["derive"] }
