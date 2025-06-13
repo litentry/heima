@@ -38,7 +38,7 @@
         "micro-base58": "^0.5.1",
         "mocha": "^10.6.0",
         "mocha-steps": "^1.3.0",
-        "@heima-network/api-argument": "file:../../../client-api",
+        "@heima-network/api-augment": "file:../../../client-api",
         "scale-ts": "^0.2.11",
         "tiny-secp256k1": "^2.2.3",
         "tweetnacl": "^1.0.3",

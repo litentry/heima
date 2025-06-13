@@ -11,7 +11,7 @@ import {
     OmniAccountPermission,
     RawTask,
     NativeTaskWrapper,
-} from '@heima-network/api-argument/omni';
+} from '@heima-network/api-augment/omni';
 import { Signer } from './signer';
 import { SignMessagePayload } from './requests';
 
@@ -79,12 +79,11 @@ export async function createNativeTaskWrapper(
     msgToSign: SignMessagePayload
 ): Promise<NativeTaskWrapper> {
     const payload = JSON.stringify(msgToSign);
-    const hashedPayload = blake2AsHex(payload, 256);
     const signerIdentity = await signer.getIdentity(api);
 
     const signature = await createHeimaMultiSignature(api, {
         signer,
-        payload: hashedPayload,
+        payload,
     });
 
     const auth: OmniAuth = api.createType('OmniAuth', {
@@ -98,6 +97,7 @@ export async function createNativeTaskWrapper(
         task: task,
         nonce: n,
         auth: a,
+        client_id: msgToSign.client_id,
     });
 }
 
