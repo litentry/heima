@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use serde::{Deserialize, Serialize};
 
-declare_id!("31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub");
+declare_id!("D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV");
 
 #[program]
 pub mod accounting_contract {
@@ -14,7 +14,10 @@ pub mod accounting_contract {
 			Some(address) => address,
 			None => return Err(ErrorCode::UpgradeAuthorityNotFound.into()),
 		};
+
+		#[cfg(not(feature = "test-skip-auth"))]
 		require!(ctx.accounts.signer.key() == upgrade_authority, ErrorCode::Unauthorized);
+
 		let admin = &mut ctx.accounts.admin_account.admin;
 		*admin = new_admin;
 		Ok(())
@@ -72,7 +75,7 @@ pub mod accounting_contract {
 			ErrorCode::OutOfBalance
 		);
 
-		require!(ctx.accounts.account_nonce.nonce < nonce, ErrorCode::InvalidNonce);
+		require!(ctx.accounts.account_nonce.nonce + 1 == nonce, ErrorCode::InvalidNonce);
 
 		**ctx.accounts.treasury.to_account_info().try_borrow_mut_lamports()? -= amount;
 		**ctx.accounts.beneficiary.to_account_info().try_borrow_mut_lamports()? += amount;
@@ -106,7 +109,7 @@ pub struct WorkerAccount {
 pub struct TreasuryAccount {}
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Serialize, Deserialize, Debug)]
 pub struct PayoutRequest {
 	pub beneficiary: Pubkey,
 	pub nonce: u64,

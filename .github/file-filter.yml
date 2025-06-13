@@ -50,3 +50,6 @@ omni_executor_test: &omni_executor_test
 
 evm_contracts_src:
   - "tee-worker/omni-executor/accounting-contract/bsc/**"
+
+solana_contracts_src:
+  - "tee-worker/omni-executor/accounting-contract/solana/**"
