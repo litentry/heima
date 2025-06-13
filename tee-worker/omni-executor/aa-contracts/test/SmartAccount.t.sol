@@ -27,7 +27,7 @@ contract SmartAccountTest is Test {
     }
 
     function test_Owner() public view {
-        bytes32 expectedOwner = 0xf6303c05d9d35cfba84718aa98720ad82569bef77b2c236c0e4f5e211f3cc3b0;
+        bytes32 expectedOwner = 0x671ec09fb6c26802c3d666179d280335a94e416969018a0ffe13104540f5e172;
         assertEq(account.owner(), expectedOwner);
     }
 

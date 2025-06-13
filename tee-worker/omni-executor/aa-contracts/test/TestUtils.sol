@@ -5,7 +5,7 @@ import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 
 library TestUtils {
     function prepare_evm_oa(address account, bytes32 clientId) public pure returns (bytes32) {
-        bytes1 oaType = 0x01;
+        bytes memory oaType = bytes("evm");
         return (sha256(abi.encodePacked(oaType, clientId, account)));
     }
 

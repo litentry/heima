@@ -91,7 +91,7 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
      * convert sender to oa bytes
      */
     function _determineOa(address sender) internal view returns (bytes32) {
-        bytes1 oaType = 0x01;
+        bytes memory oaType = bytes("evm");
         return sha256(abi.encodePacked(oaType, clientId, sender));
     }
 

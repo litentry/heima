@@ -5,6 +5,7 @@ import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {SmartAccountFactory} from "../src/accounts/SmartAccountFactory.sol";
 import {SmartAccount} from "../src/accounts/SmartAccount.sol";
 import {Test, console} from "forge-std/Test.sol";
+import {TestUtils} from "./TestUtils.sol";
 
 contract SmartAccountFactoryTest is Test {
     EntryPoint public entryPoint;
@@ -16,8 +17,7 @@ contract SmartAccountFactoryTest is Test {
 
     function setUp() public {
         entryPoint = new EntryPoint();
-        bytes1 oaType = 0x01;
-        oa = sha256(abi.encodePacked(oaType, ownerAddress));
+        oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
         smartAccountFactory = new SmartAccountFactory(entryPoint);
     }
 
