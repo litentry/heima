@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: "cargo"
-    directory: "/"
+    directories:
+      - "/parachain"
+      - "/tee-worker/omni-executor"
     labels: ["automated-pr"]
     # Handle updates for crates from github.com/paritytech/substrate manually.
     ignore:
