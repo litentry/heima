@@ -29,22 +29,10 @@ updates:
     schedule:
       interval: "weekly"
       
-  # npm dependencies for parachain
   - package-ecosystem: "npm"
-    directory: "/parachain"
-    labels: ["automated-pr"]
-    groups:
-      typescript-dependencies:
-        patterns:
-          - "*"
-    reviewers:
-      - "litentry/parachain"
-    schedule:
-      interval: "weekly"
-
-  # npm dependencies for omni-executor
-  - package-ecosystem: "npm"
-    directory: "/tee-worker/omni-executor"
+    directories:
+      - "/parachain"
+      - "/tee-worker/omni-executor"
     labels: ["automated-pr"]
     groups:
       typescript-dependencies:
