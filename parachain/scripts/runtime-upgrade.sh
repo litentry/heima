@@ -147,7 +147,7 @@ echo $(ls -al /tmp)
 
 echo $(pwd)
 echo "execute: node /tmp/upgrade.js"
-node /tmp/upgrade.js
+NODE_PATH="$(pwd)/node_modules" node /tmp/upgrade.js
 
 # Produce blocks to process the upgrade
 print_divider
