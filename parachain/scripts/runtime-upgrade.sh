@@ -139,6 +139,14 @@ EOF
 
 # Run the upgrade script
 export USE_SUDO=$use_sudo
+echo "ls -al"
+echo $(ls -al)
+
+echo "ls -al /tmp"
+echo $(ls -al /tmp)
+
+echo $(pwd)
+echo "execute: node /tmp/upgrade.js"
 node /tmp/upgrade.js
 
 # Produce blocks to process the upgrade
