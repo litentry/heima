@@ -17,15 +17,13 @@ import "./callback/TokenCallbackHandler.sol";
 /**
  *  smart wallet account
  *  has an owner which is represented by sha256(bytes('evm')+client_id+hexencoded-address)
- *  has list of root signers, root signer can generate session keys that will pass signature validation
- *  has list of allowed signers who can sign messages
+ *  has list of root signers who can sign messages and generate sessions
  *  has execute, eth handling methods
  */
 contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     bytes32 public owner;
     bytes32 public clientId;
     mapping(address => bool) public rootSigners;
-    mapping(address => bool) public allowedSigners;
 
     IEntryPoint private immutable _entryPoint;
 
@@ -33,8 +31,6 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
         IEntryPoint indexed entryPoint, bytes32 indexed owner, bytes32 clientId, address indexed root
     );
 
-    event AllowedSignerAdded(address signer);
-    event AllowedSignerRemoved(address signer);
     event RootSignerAdded(address root);
     event RootSignerRemoved(address root);
 
@@ -78,12 +74,11 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
         emit AccountInitialized(_entryPoint, owner, clientId, aRoot);
     }
 
-    // Require the function call went through EntryPoint or be signed by [owner|allowed signer|root]
+    // Require the function call went through EntryPoint or be signed by [owner|root]
     function _requireForExecute() internal view virtual override {
         require(
-            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner || isAllowedSigner(msg.sender)
-                || isRootSigner(msg.sender),
-            "account: not Owner or EntryPoint or allowed signer or root"
+            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner || isRootSigner(msg.sender),
+            "account: not Owner or EntryPoint or root"
         );
     }
 
@@ -93,10 +88,6 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
     function _determineOa(address sender) internal view returns (bytes32) {
         bytes memory oaType = bytes("evm");
         return sha256(abi.encodePacked(oaType, clientId, sender));
-    }
-
-    function isAllowedSigner(address sender) public view returns (bool) {
-        return allowedSigners[sender];
     }
 
     function isRootSigner(address sender) public view returns (bool) {
@@ -112,7 +103,7 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
     {
         // UserOpHash can be generated using eth_signTypedData_v4
         address signer = ECDSA.recover(userOpHash, userOp.signature);
-        if (owner == _determineOa(signer) || isAllowedSigner(signer) || isRootSigner(signer)) {
+        if (owner == _determineOa(signer) || isRootSigner(signer)) {
             return SIG_VALIDATION_SUCCESS;
         }
         if (signer == userOp.sessionAccount) {
@@ -156,16 +147,6 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
      */
     function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
-    }
-
-    function addAllowedSigner(address signer) public onlyOwner {
-        allowedSigners[signer] = true;
-        emit AllowedSignerAdded(signer);
-    }
-
-    function removeAllowedSigner(address signer) public onlyOwner {
-        allowedSigners[signer] = false;
-        emit AllowedSignerRemoved(signer);
     }
 
     function addRootSigner(address root) public onlyOwner {

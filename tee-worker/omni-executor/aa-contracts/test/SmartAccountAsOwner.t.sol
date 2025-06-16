@@ -32,16 +32,6 @@ contract SmartAccountAsOwner is Test {
         SmartAccountTestUtils.performExecuteBatchTestAs(vm, ownerAddress, account, counter);
     }
 
-    function test_AddRemoveAllowedSigner() public {
-        address signer = 0x0000000000000000000000000000000000000002;
-        vm.prank(ownerAddress);
-        account.addAllowedSigner(signer);
-        assert(account.allowedSigners(signer));
-        vm.prank(ownerAddress);
-        account.removeAllowedSigner(signer);
-        assert(!account.allowedSigners(signer));
-    }
-
     function test_AddRemoveRootSigner() public {
         address root = 0x0000000000000000000000000000000000000002;
         vm.prank(ownerAddress);

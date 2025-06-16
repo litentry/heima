@@ -41,24 +41,14 @@ contract SmartAccountTest is Test {
     }
 
     function test_Execute_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint or allowed signer or root");
+        vm.expectRevert("account: not Owner or EntryPoint or root");
         account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
     function test_ExecuteBatch_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint or allowed signer or root");
+        vm.expectRevert("account: not Owner or EntryPoint or root");
         BaseAccount.Call[] memory calls = new BaseAccount.Call[](0);
         account.executeBatch(calls);
-    }
-
-    function test_AddAllowedSigner_As_Not_Allowed() public {
-        vm.expectRevert("only owner");
-        account.addAllowedSigner(0x0000000000000000000000000000000000000000);
-    }
-
-    function test_RemoveAllowedSigner_As_Not_Allowed() public {
-        vm.expectRevert("only owner");
-        account.removeAllowedSigner(0x0000000000000000000000000000000000000000);
     }
 
     function test_AddRootSigner_As_Not_Allowed() public {

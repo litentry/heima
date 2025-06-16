@@ -124,18 +124,6 @@ contract SmartAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 
-    function test_AddAllowedSigner_As_Not_Allowed() public {
-        vm.expectRevert("only owner");
-        vm.prank(rootAddress);
-        account.addAllowedSigner(0x0000000000000000000000000000000000000000);
-    }
-
-    function test_RemoveAllowedSigner_As_Not_Allowed() public {
-        vm.expectRevert("only owner");
-        vm.prank(rootAddress);
-        account.removeAllowedSigner(0x0000000000000000000000000000000000000000);
-    }
-
     function test_AddRootSigner_As_Not_Allowed() public {
         vm.expectRevert("only owner");
         account.addRootSigner(0x0000000000000000000000000000000000000000);
