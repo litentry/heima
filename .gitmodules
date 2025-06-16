@@ -1,0 +1,6 @@
+[submodule "tee-worker/omni-executor/forge-libs/forge-std"]
+	path = tee-worker/omni-executor/forge-libs/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "tee-worker/omni-executor/forge-libs/openzeppelin-contracts"]
+	path = tee-worker/omni-executor/forge-libs/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
