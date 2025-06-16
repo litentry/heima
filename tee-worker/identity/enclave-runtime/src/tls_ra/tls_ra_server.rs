@@ -296,9 +296,6 @@ fn tls_server_config<A: EnclaveAttestationOCallApi + 'static>(
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ServerConfig> {
-	#[cfg(not(feature = "dcap"))]
-	let attestation_type = RemoteAttestationType::Epid;
-	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
 	// report will be signed with server enclave ed25519 signing key

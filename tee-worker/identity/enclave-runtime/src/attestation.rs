@@ -107,13 +107,8 @@ pub fn create_ra_report_and_signature(
 
 	match remote_attestation_type {
 		RemoteAttestationType::Epid => {
-			match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
-				Ok(epid) => Ok(epid),
-				Err(e) => {
-					error!("create_epid_ra_report_and_signature failure: {:?}", e);
-					Err(e.into())
-				},
-			}
+			error!("EPID/IAS attestation is no longer supported. Use DCAP instead.");
+			Err(EnclaveError::Other("EPID/IAS attestation is deprecated".into()))
 		},
 		RemoteAttestationType::Dcap => {
 			match attestation_handler.generate_dcap_ra_cert(
