@@ -245,8 +245,6 @@ pub(crate) fn main() {
 		println!("Enclave signing account: {:}", &tee_accountid.to_ss58check());
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
-		#[cfg(not(feature = "dcap"))]
-		enclave.dump_ias_ra_cert_to_disk().unwrap();
 		#[cfg(feature = "dcap")]
 		{
 			let skip_ra = false;
@@ -254,6 +252,11 @@ pub(crate) fn main() {
 			let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 			enclave.dump_dcap_collateral_to_disk(fmspc).unwrap();
 			enclave.dump_dcap_ra_cert_to_disk().unwrap();
+		}
+		#[cfg(not(feature = "dcap"))]
+		{
+			error!("IAS attestation is no longer supported. Use DCAP instead.");
+			return;
 		}
 	} else if matches.is_present("mrenclave") {
 		let mrenclave = enclave.get_fingerprint().unwrap();

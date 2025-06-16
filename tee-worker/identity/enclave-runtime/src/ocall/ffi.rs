@@ -24,7 +24,6 @@ extern "C" {
 		ret_gid: *mut sgx_epid_group_id_t,
 	) -> sgx_status_t;
 
-	pub fn ocall_get_ias_socket(ret_val: *mut sgx_status_t, ret_fd: *mut i32) -> sgx_status_t;
 
 	pub fn ocall_get_quote(
 		ret_val: *mut sgx_status_t,

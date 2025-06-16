@@ -78,19 +78,6 @@ impl EnclaveAttestationOCallApi for OcallApi {
 		Ok((ti, eg))
 	}
 
-	fn get_ias_socket(&self) -> SgxResult<i32> {
-		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let mut ias_sock: i32 = 0;
-
-		let res = unsafe {
-			ffi::ocall_get_ias_socket(&mut rt as *mut sgx_status_t, &mut ias_sock as *mut i32)
-		};
-
-		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
-
-		Ok(ias_sock)
-	}
 
 	fn get_quote(
 		&self,

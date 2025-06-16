@@ -30,7 +30,6 @@ pub struct QveReport {
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
-	fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 	fn generate_dcap_ra_extrinsic_from_quote(
@@ -44,7 +43,6 @@ pub trait RemoteAttestation {
 
 	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
-	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
 	fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
@@ -138,37 +136,6 @@ mod impl_ffi {
 	const QVE_ENCLAVE: &str = "libsgx_qve.signed.so.1";
 
 	impl RemoteAttestation for Enclave {
-		fn generate_ias_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
-			let mut retval = sgx_status_t::SGX_SUCCESS;
-
-			let mut unchecked_extrinsic: Vec<u8> = vec![0u8; EXTRINSIC_MAX_SIZE];
-			let mut unchecked_extrinsic_size: u32 = 0;
-
-			trace!("Generating ias_ra_extrinsic with URL: {}", w_url);
-
-			let url = w_url.encode();
-
-			let result = unsafe {
-				ffi::generate_ias_ra_extrinsic(
-					self.eid,
-					&mut retval,
-					url.as_ptr(),
-					url.len() as u32,
-					unchecked_extrinsic.as_mut_ptr(),
-					unchecked_extrinsic.len() as u32,
-					&mut unchecked_extrinsic_size as *mut u32,
-					skip_ra.into(),
-				)
-			};
-
-			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-			ensure!(
-				(unchecked_extrinsic_size as usize) < unchecked_extrinsic.len(),
-				Error::Sgx(sgx_status_t::SGX_ERROR_INVALID_PARAMETER)
-			);
-			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
-		}
 		fn generate_dcap_ra_extrinsic_from_quote(
 			&self,
 			url: String,
@@ -356,16 +323,6 @@ mod impl_ffi {
 			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
 
-		fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()> {
-			let mut retval = sgx_status_t::SGX_SUCCESS;
-
-			let result = unsafe { ffi::dump_ias_ra_cert_to_disk(self.eid, &mut retval) };
-
-			ensure!(result == sgx_status_t::SGX_SUCCESS, Error::Sgx(result));
-			ensure!(retval == sgx_status_t::SGX_SUCCESS, Error::Sgx(retval));
-
-			Ok(())
-		}
 
 		fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;

@@ -1,7 +1,6 @@
 use crate::{
 	attestation::{
 		generate_dcap_ra_extrinsic_from_quote_internal,
-		generate_ias_ra_extrinsic_from_der_cert_internal,
 	},
 	std::borrow::ToOwned,
 	utils::get_validator_accessor_from_integritee_solo_or_parachain,
@@ -325,19 +324,6 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		Ok(json!(json_value))
 	});
 
-	io_handler.add_sync_method("attesteer_forwardIasAttestationReport", move |params: Params| {
-		debug!("worker_api_direct rpc was called: attesteer_forwardIasAttestationReport");
-		let json_value = match attesteer_forward_ias_attestation_report_inner(params) {
-			Ok(val) => RpcReturnValue {
-				do_watch: false,
-				value: val.encode(),
-				status: DirectRequestStatus::Ok,
-			}
-			.to_hex(),
-			Err(error) => compute_hex_encoded_return_error(error.as_str()),
-		};
-		Ok(json!(json_value))
-	});
 
 	// state_getMrenclave
 	io_handler.add_sync_method("state_getMrenclave", move |_: Params| {
@@ -602,38 +588,6 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 	Ok(ext)
 }
 
-fn attesteer_forward_ias_attestation_report_inner(
-	params: Params,
-) -> Result<OpaqueExtrinsic, String> {
-	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
-
-	if hex_encoded_params.len() != 1 {
-		return Err(format!(
-			"Wrong number of arguments for IAS attestation report forwarding: {}, expected: {}",
-			hex_encoded_params.len(),
-			1
-		));
-	}
-
-	let param = &hex_encoded_params.get(0).ok_or("Could not get first param")?;
-	let ias_attestation_report = decode_hex(param).map_err(|e| format!("{:?}", e))?;
-
-	let url = String::new();
-	let ext = generate_ias_ra_extrinsic_from_der_cert_internal(
-		url.as_bytes().to_vec(),
-		&ias_attestation_report,
-		false,
-	)
-	.map_err(|e| format!("{:?}", e))?;
-
-	let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()
-		.map_err(|e| format!("{:?}", e))?;
-	validator_access
-		.execute_on_validator(|v| v.send_extrinsics(vec![ext.clone()]))
-		.map_err(|e| format!("{:?}", e))?;
-
-	Ok(ext)
-}
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability
 pub fn decode_shard_from_base58(shard_base58: &str) -> Result<ShardIdentifier, String> {

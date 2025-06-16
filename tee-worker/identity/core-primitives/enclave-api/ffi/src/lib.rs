@@ -136,16 +136,6 @@ extern "C" {
 		mrenclave_size: u32,
 	) -> sgx_status_t;
 
-	pub fn generate_ias_ra_extrinsic(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		w_url: *const u8,
-		w_url_size: u32,
-		unchecked_extrinsic: *mut u8,
-		unchecked_extrinsic_max_size: u32,
-		unchecked_extrinsic_size: *mut u32,
-		skip_ra: c_int,
-	) -> sgx_status_t;
 
 	pub fn generate_dcap_ra_extrinsic(
 		eid: sgx_enclave_id_t,
@@ -188,10 +178,6 @@ extern "C" {
 		unchecked_extrinsic_size: *mut u32,
 	) -> sgx_status_t;
 
-	pub fn dump_ias_ra_cert_to_disk(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-	) -> sgx_status_t;
 
 	pub fn dump_dcap_ra_cert_to_disk(
 		eid: sgx_enclave_id_t,
