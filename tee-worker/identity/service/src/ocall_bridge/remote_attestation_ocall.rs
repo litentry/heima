@@ -46,7 +46,6 @@ where
 		})
 	}
 
-
 	fn get_quote(
 		&self,
 		revocation_list: Vec<u8>,
@@ -119,4 +118,3 @@ where
 			})
 	}
 }
-

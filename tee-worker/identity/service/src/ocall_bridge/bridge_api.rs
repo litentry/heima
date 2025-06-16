@@ -164,7 +164,6 @@ pub trait RemoteAttestationBridge {
 	/// initialize the quote
 	fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
-
 	/// retrieve the quote from intel
 	fn get_quote(
 		&self,

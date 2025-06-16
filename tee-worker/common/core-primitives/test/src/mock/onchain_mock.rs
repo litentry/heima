@@ -103,7 +103,6 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 		todo!()
 	}
 
-
 	fn get_quote(
 		&self,
 		_sig_rl: Vec<u8>,

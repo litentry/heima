@@ -30,7 +30,6 @@ pub struct QveReport {
 
 /// general remote attestation methods
 pub trait RemoteAttestation {
-
 	fn generate_dcap_ra_extrinsic(&self, w_url: &str, skip_ra: bool) -> EnclaveResult<Vec<u8>>;
 	fn generate_dcap_ra_extrinsic_from_quote(
 		&self,
@@ -42,7 +41,6 @@ pub trait RemoteAttestation {
 	fn generate_register_quoting_enclave_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
 
 	fn generate_register_tcb_info_extrinsic(&self, fmspc: Fmspc) -> EnclaveResult<Vec<u8>>;
-
 
 	fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()>;
 
@@ -322,7 +320,6 @@ mod impl_ffi {
 			);
 			Ok(Vec::from(&unchecked_extrinsic[..unchecked_extrinsic_size as usize]))
 		}
-
 
 		fn dump_dcap_ra_cert_to_disk(&self) -> EnclaveResult<()> {
 			let mut retval = sgx_status_t::SGX_SUCCESS;

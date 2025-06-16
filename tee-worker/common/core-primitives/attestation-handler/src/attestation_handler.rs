@@ -105,7 +105,6 @@ pub trait AttestationHandler {
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()>;
-
 }
 
 pub struct IntelAttestationHandler<OCallApi, SigningKeyRepo> {
@@ -167,7 +166,6 @@ where
 		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 		Ok(())
 	}
-
 
 	fn generate_dcap_ra_cert(
 		&self,
@@ -447,7 +445,6 @@ where
 			+ (u32::from(array[2]) << 16)
 			+ (u32::from(array[3]) << 24)
 	}
-
 
 	fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
 		// Check if set as an environment variable
