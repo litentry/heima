@@ -78,7 +78,6 @@ impl EnclaveAttestationOCallApi for OcallApi {
 		Ok((ti, eg))
 	}
 
-
 	fn get_quote(
 		&self,
 		sig_rl: Vec<u8>,

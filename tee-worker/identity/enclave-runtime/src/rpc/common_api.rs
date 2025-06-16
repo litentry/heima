@@ -1,8 +1,5 @@
 use crate::{
-	attestation::{
-		generate_dcap_ra_extrinsic_from_quote_internal,
-	},
-	std::borrow::ToOwned,
+	attestation::generate_dcap_ra_extrinsic_from_quote_internal, std::borrow::ToOwned,
 	utils::get_validator_accessor_from_integritee_solo_or_parachain,
 };
 use base58::FromBase58;
@@ -324,7 +321,6 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 		Ok(json!(json_value))
 	});
 
-
 	// state_getMrenclave
 	io_handler.add_sync_method("state_getMrenclave", move |_: Params| {
 		let json_value = match ocall_api.get_mrenclave_of_self() {
@@ -587,7 +583,6 @@ fn forward_dcap_quote_inner(params: Params) -> Result<OpaqueExtrinsic, String> {
 
 	Ok(ext)
 }
-
 
 // converts the rpc methods vector to a string and adds commas and brackets for readability
 pub fn decode_shard_from_base58(shard_base58: &str) -> Result<ShardIdentifier, String> {

@@ -126,7 +126,6 @@ pub fn create_ra_report_and_signature(
 	}
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn generate_dcap_ra_extrinsic(
 	w_url: *const u8,
@@ -342,7 +341,6 @@ pub fn generate_dcap_skip_ra_extrinsic_from_mr_enclave(
 	create_extrinsics(call)
 }
 
-
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
@@ -438,7 +436,6 @@ where
 	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode())
 		.map_err(|e| format!("{:?}", e).into())
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn dump_dcap_ra_cert_to_disk(

@@ -43,7 +43,6 @@ impl EnclaveAttestationOCallApi for AttestationOCallMock {
 		unreachable!()
 	}
 
-
 	fn get_quote(
 		&self,
 		_sig_rl: Vec<u8>,
