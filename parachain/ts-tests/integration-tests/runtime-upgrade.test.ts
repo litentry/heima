@@ -104,22 +104,27 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     if (!preimageStatus) {
         await excuteNotePreimage(api, alice, encoded);
     }
+    console.log(`1`);
     const externalMotion = api.tx.democracy.externalProposeMajority({ Legacy: encodedHash });
 
+    console.log(`2`);
     // propose the council proposal
     const proposedEvent = await excuteCouncilProposal(api, alice, externalMotion);
     const proposalHash = proposedEvent[0].data[2].toString();
     const proposalIndex = Number(proposedEvent[0].data[1].toHuman());
 
+    console.log(`3`);
     // vote on the council proposal
     const voteTx = api.tx.council.vote(proposalHash, proposalIndex, true);
     const voteEventsPromise = subscribeToEvents('council', 'Voted', api);
 
+    console.log(`4`);
     await Promise.all([await signAndSend(voteTx, alice), await signAndSend(voteTx, bob)]);
     const voteTxEvent = (await voteEventsPromise).map(({ event }) => event);
     expect(voteTxEvent.length === 2);
     console.log('Alice Bob council Voted ✅');
 
+    console.log(`5`);
     // close the council proposal
     const councilCloseTx = api.tx.council.close(
         proposalHash,
@@ -136,6 +141,7 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     expect(councilCloseEvent.length === 1);
     console.log('Council Closed ✅');
 
+    console.log(`6`);
     // fast track the democracy proposal
     await excuteTechnicalCommitteeProposal(api, alice, encodedHash);
 
@@ -145,6 +151,8 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     const democracyVoteTx = api.tx.democracy.vote(referendumCount - 1, {
         Standard: { vote: true, balance: 1_00_000_000_000_000 },
     });
+
+    console.log(`7`);
     await Promise.all([await signAndSend(democracyVoteTx, alice), await signAndSend(democracyVoteTx, bob)]);
     const democracyVoteEvent = (await democracyVoteEventsPromise).map(({ event }) => event);
     expect(democracyVoteEvent.length === 2);

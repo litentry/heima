@@ -6,8 +6,8 @@ ROOTDIR=$(git rev-parse --show-toplevel)
 new_wasm=/tmp/runtime.wasm
 chopsticks_port=9944
 chopsticks_db=./new-db.sqlite
-sudo_key="5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" # Alice's default dev key, replace with your sudo key
-use_sudo=true # Set to false to use democracy instead of sudo
+# sudo_key="5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY" # Alice's default dev key, replace with your sudo key
+# use_sudo=true # Set to false to use democracy instead of sudo
 
 function usage() {
   echo
@@ -35,20 +35,20 @@ else
 fi
 
 # Install tools
-print_divider
-echo "Installing dependencies ..."
+# print_divider
+# echo "Installing dependencies ..."
 
-# Install nvm and Node.js
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-nvm install 20
-echo "nvm version: $(nvm --version)"
-echo "node version: $(node --version)"
+# # Install nvm and Node.js
+# curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+# export NVM_DIR="$HOME/.nvm"
+# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+# [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+# nvm install 20
+# echo "nvm version: $(nvm --version)"
+# echo "node version: $(node --version)"
 
-# Install Polkadot.js API and other dependencies
-npm install @polkadot/api @polkadot/util @acala-network/chopsticks@1.0.1
+# # Install Polkadot.js API and other dependencies
+# npm install @polkadot/api @polkadot/util @acala-network/chopsticks@1.0.1
 
 # Check runtime version
 print_divider
@@ -78,8 +78,7 @@ npx @acala-network/chopsticks@1.0.1 \
   --mock-signature-host=true \
   --db=$chopsticks_db \
   --runtime-log-level=5 \
-  --allow-unresolved-imports=true \
-  --wasm-override=$new_wasm &
+  --allow-unresolved-imports=true &
 chopsticks_pid=$!
 echo "Chopsticks fork parachain PID: $chopsticks_pid"
 sleep 30 # Wait for Chopsticks to initialize
