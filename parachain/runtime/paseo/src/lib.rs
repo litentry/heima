@@ -167,7 +167,6 @@ pub type Executive = frame_executive::Executive<
 	// it was reverse order before.
 	// See the comment before collation related pallets too.
 	AllPalletsWithSystem,
-	migration::Migrations<Runtime>,
 >;
 
 impl fp_self_contained::SelfContainedCall for RuntimeCall {
@@ -293,7 +292,7 @@ impl frame_system::Config for Runtime {
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 	type SingleBlockMigrations = ();
-	type MultiBlockMigrator = ();
+	type MultiBlockMigrator = MultiBlockMigrations;
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
@@ -467,6 +466,25 @@ impl pallet_preimage::Config for Runtime {
 		PreimageHoldReason,
 		LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
 	>;
+}
+
+parameter_types! {
+	pub MbmServiceWeight: Weight = Perbill::from_percent(80) * RuntimeBlockWeights::get().max_block;
+}
+
+impl pallet_migrations::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type Migrations = pallet_identity::migration::v2::LazyMigrationV1ToV2<Runtime>;
+	// Benchmarks need mocked migrations to guarantee that they succeed.
+	#[cfg(feature = "runtime-benchmarks")]
+	type Migrations = pallet_migrations::mock_helpers::MockedMigrations;
+	type CursorMaxLen = ConstU32<65_536>;
+	type IdentifierMaxLen = ConstU32<256>;
+	type MigrationStatusHandler = ();
+	type FailedMigrationHandler = ExtrinsicFilter;
+	type MaxServiceWeight = MbmServiceWeight;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -1422,6 +1440,7 @@ construct_runtime! {
 		Multisig: pallet_multisig = 4,
 		Proxy: pallet_proxy = 5,
 		Preimage: pallet_preimage = 6,
+		MultiBlockMigrations: pallet_migrations = 7,
 
 		// Token related
 		Balances: pallet_balances = 10,

@@ -12,6 +12,7 @@ version = '0.1.0'
 workspace = true
 
 [dependencies]
+log = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 
@@ -35,6 +36,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
 ]
 std = [
+    "log/std",
     "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
