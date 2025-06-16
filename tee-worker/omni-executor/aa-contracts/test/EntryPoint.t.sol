@@ -40,13 +40,13 @@ contract EntryPointTest is Test {
         bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
         address factory = address(smartAccountFactory);
-        address sender = 0xE4bcd5D91207C36CCA09fB7BCB4A4FCF693A1089;
+        address sender = 0x9a41cEaf1731Bdde67c871D7de07EC90EFBe846D;
 
         fundAccountOnEntryPoint(sender, entryPoint);
 
         bytes memory initCode = abi.encodePacked(
             factory, abi.encodeCall(smartAccountFactory.createAccount, (aliceOa, clientId, rootAddress))
-        );
+        );        
         address payable beneficiary = payable(0x0000000000000000000000000000000000000002);
 
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
