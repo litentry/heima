@@ -384,36 +384,18 @@ fn register_enclave_prod_fails_with_no_authorized_enclave() {
 #[test]
 fn register_enclave_prod_fails_with_max_limit_reached() {
 	new_test_ext(true).execute_with(|| {
-		// In development mode, we don't need authorized enclaves
+		// Test the maximum enclave identifier limit (MaxEnclaveIdentifier = 2)
+		// In development mode, register_enclave automatically adds identifiers
 
-		let admin: AccountId32 = alice();
 		let signer4: AccountId32 = get_signer(TEST4_SIGNER_PUB);
 		let signer6: AccountId32 = get_signer(TEST6_SIGNER_PUB);
-		assert_ok!(Teebag::add_enclave_identifier(
-			RuntimeOrigin::signed(admin.clone()),
-			WorkerType::OmniExecutor,
-			signer4.clone(),
-		));
-		assert_ok!(Teebag::add_enclave_identifier(
-			RuntimeOrigin::signed(admin.clone()),
-			WorkerType::Identity,
-			signer4.clone(),
-		));
-		assert_ok!(Teebag::add_enclave_identifier(
-			RuntimeOrigin::signed(admin.clone()),
-			WorkerType::OmniExecutor,
-			signer6.clone(),
-		));
-		assert_ok!(Teebag::add_enclave_identifier(
-			RuntimeOrigin::signed(admin.clone()),
-			WorkerType::Identity,
-			signer6.clone(),
-		));
+		let signer8: AccountId32 = get_signer(TEST8_SIGNER_PUB);
 
+		// Register first enclave (identifier will be automatically added)
 		Timestamp::set_timestamp(TEST4_TIMESTAMP);
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer4.clone()),
-			WorkerType::OmniExecutor,
+			WorkerType::Identity,
 			Default::default(),
 			TEST4_CERT.to_vec(),
 			URL.to_vec(),
@@ -422,10 +404,11 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 			AttestationType::Ignore,
 		));
 
+		// Register second enclave (identifier will be automatically added)
 		Timestamp::set_timestamp(TEST6_TIMESTAMP);
 		assert_ok!(Teebag::register_enclave(
 			RuntimeOrigin::signed(signer6.clone()),
-			WorkerType::OmniExecutor,
+			WorkerType::Identity,
 			Default::default(),
 			TEST6_CERT.to_vec(),
 			URL.to_vec(),
@@ -434,50 +417,34 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 			AttestationType::Ignore,
 		));
 
-		// re-register them as WorkerType::Identity is not allowed
-		Timestamp::set_timestamp(TEST4_TIMESTAMP);
+		// Try to register a third enclave with same certificate (to avoid MaxAuthorizedEnclaveOverflow)
+		// This should fail due to MaxEnclaveIdentifierOverflow
+		Timestamp::set_timestamp(TEST8_TIMESTAMP);
 		assert_noop!(
 			Teebag::register_enclave(
-				RuntimeOrigin::signed(signer4.clone()),
+				RuntimeOrigin::signed(signer8.clone()),
 				WorkerType::Identity,
 				Default::default(),
-				TEST4_CERT.to_vec(),
+				TEST4_CERT.to_vec(), // Use same certificate as first enclave
 				URL.to_vec(),
 				None,
 				None,
 				AttestationType::Ignore,
 			),
-			Error::<Test>::UnexpectedWorkerType
+			Error::<Test>::MaxEnclaveIdentifierOverflow
 		);
 
-		// remove and re-register it should work
-		assert_ok!(Teebag::force_remove_enclave(RuntimeOrigin::signed(alice()), signer4.clone(),));
-
+		// Verify that different worker types have separate limits
 		assert_ok!(Teebag::register_enclave(
-			RuntimeOrigin::signed(signer4),
-			WorkerType::Identity,
+			RuntimeOrigin::signed(signer8.clone()),
+			WorkerType::OmniExecutor,
 			Default::default(),
-			TEST4_CERT.to_vec(),
+			TEST8_CERT.to_vec(),
 			URL.to_vec(),
 			None,
 			None,
 			AttestationType::Ignore,
 		));
-
-		Timestamp::set_timestamp(TEST6_TIMESTAMP);
-		assert_noop!(
-			Teebag::register_enclave(
-				RuntimeOrigin::signed(signer6),
-				WorkerType::Identity,
-				Default::default(),
-				TEST6_CERT.to_vec(),
-				URL.to_vec(),
-				None,
-				None,
-				AttestationType::Ignore,
-			),
-			Error::<Test>::UnexpectedWorkerType
-		);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 2);
 		assert_eq!(Teebag::enclave_count(WorkerType::OmniExecutor), 1);
