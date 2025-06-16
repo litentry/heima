@@ -1,4 +1,6 @@
 #![allow(unexpected_cfgs)]
+#![allow(deprecated)]
+
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use serde::{Deserialize, Serialize};
