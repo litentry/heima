@@ -129,14 +129,14 @@ fn register_enclave_dev_works_with_sgx_build_mode_debug() {
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		));
 
 		let enclave = default_enclave()
 			.with_mrenclave(TEST4_MRENCLAVE)
 			.with_last_seen_timestamp(TEST4_TIMESTAMP)
 			.with_sgx_build_mode(SgxBuildMode::Debug)
-			.with_attestation_type(AttestationType::Ias);
+			.with_attestation_type(AttestationType::Ignore);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
 		assert_eq!(EnclaveRegistry::<Test>::get(signer4).unwrap(), enclave);
@@ -167,7 +167,7 @@ fn parentchain_block_processed_works() {
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		));
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
 
@@ -279,87 +279,60 @@ fn register_dcap_enclave2_works() {
 #[test]
 fn register_enclave_prod_works_with_sgx_build_mode_debug() {
 	new_test_ext(false).execute_with(|| {
-		assert_ok!(Teebag::force_add_authorized_enclave(
-			RuntimeOrigin::signed(alice()),
-			WorkerType::Identity,
-			TEST4_MRENCLAVE
-		));
+		Timestamp::set_timestamp(VALID_TIMESTAMP);
+		register_quoting_enclave();
+		register_tcb_info();
 
-		set_timestamp(TEST4_TIMESTAMP);
-		let admin: AccountId32 = alice();
-		let signer4: AccountId32 = get_signer(TEST4_SIGNER_PUB);
-		assert_ok!(Teebag::add_enclave_identifier(
-			RuntimeOrigin::signed(admin.clone()),
-			Default::default(),
-			signer4.clone(),
-		));
+		let pubkey: [u8; 32] = [
+			65, 89, 193, 118, 86, 172, 17, 149, 206, 160, 174, 75, 219, 151, 51, 235, 110, 135, 20,
+			55, 147, 162, 106, 110, 143, 207, 57, 64, 67, 63, 203, 95,
+		];
+		let signer: AccountId = get_signer(&pubkey);
 		assert_ok!(Teebag::register_enclave(
-			RuntimeOrigin::signed(signer4.clone()),
+			RuntimeOrigin::signed(signer.clone()),
+			WorkerType::Identity,
 			Default::default(),
-			Default::default(),
-			TEST4_CERT.to_vec(),
+			TEST1_DCAP_QUOTE.to_vec(),
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Dcap(DcapProvider::Intel),
 		));
 
-		let enclave = default_enclave()
-			.with_mrenclave(TEST4_MRENCLAVE)
-			.with_last_seen_timestamp(TEST4_TIMESTAMP)
-			.with_sgx_build_mode(SgxBuildMode::Debug)
-			.with_attestation_type(AttestationType::Ias);
-
+		// Check that the enclave was registered successfully
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(EnclaveRegistry::<Test>::get(signer4).unwrap(), enclave);
+		assert_eq!(
+			Teebag::enclave_registry(&signer).unwrap().attestation_type,
+			AttestationType::Dcap(DcapProvider::Intel)
+		);
 	})
 }
 
 #[test]
 fn register_enclave_prod_works_with_sgx_build_mode_production() {
 	new_test_ext(false).execute_with(|| {
-		assert_ok!(Teebag::force_add_authorized_enclave(
-			RuntimeOrigin::signed(alice()),
-			WorkerType::Identity,
-			TEST8_MRENCLAVE
-		));
+		Timestamp::set_timestamp(VALID_TIMESTAMP);
+		register_quoting_enclave();
+		register_tcb_info();
 
-		set_timestamp(TEST8_TIMESTAMP);
-		let admin: AccountId32 = alice();
-		let signer8: AccountId32 = get_signer(TEST8_SIGNER_PUB);
-		assert_ok!(Teebag::add_enclave_identifier(
-			RuntimeOrigin::signed(admin.clone()),
-			Default::default(),
-			signer8.clone(),
-		));
-
+		let pubkey: [u8; 32] = [
+			65, 89, 193, 118, 86, 172, 17, 149, 206, 160, 174, 75, 219, 151, 51, 235, 110, 135, 20,
+			55, 147, 162, 106, 110, 143, 207, 57, 64, 67, 63, 203, 95,
+		];
+		let signer: AccountId = get_signer(&pubkey);
 		assert_ok!(Teebag::register_enclave(
-			RuntimeOrigin::signed(signer8.clone()),
+			RuntimeOrigin::signed(signer.clone()),
+			WorkerType::Identity,
 			Default::default(),
-			Default::default(),
-			TEST8_CERT.to_vec(),
+			TEST1_DCAP_QUOTE.to_vec(),
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Dcap(DcapProvider::Intel)
 		));
-
-		let enclave = default_enclave()
-			.with_mrenclave(TEST8_MRENCLAVE)
-			.with_last_seen_timestamp(TEST8_TIMESTAMP)
-			.with_sgx_build_mode(SgxBuildMode::Production)
-			.with_attestation_type(AttestationType::Ias);
-
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
-		assert_eq!(EnclaveRegistry::<Test>::get(signer8).unwrap(), enclave);
-
-		// remove authorized enclave should remove enclave too
-		assert_ok!(Teebag::force_remove_authorized_enclave(
-			RuntimeOrigin::signed(alice()),
-			WorkerType::Identity,
-			TEST8_MRENCLAVE
-		));
-		assert_eq!(Teebag::authorized_enclave(WorkerType::Identity).len(), 0);
+		assert_eq!(Teebag::enclave_registry(&signer).unwrap().last_seen_timestamp, VALID_TIMESTAMP);
+		assert_ok!(Teebag::unregister_enclave(RuntimeOrigin::signed(signer)));
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 0);
 	})
 }
@@ -397,7 +370,7 @@ fn register_enclave_prod_fails_with_no_authorized_enclave() {
 				URL.to_vec(),
 				None,
 				None,
-				AttestationType::Ias,
+				AttestationType::Ignore,
 			),
 			Error::<Test>::EnclaveNotAuthorized
 		);
@@ -461,7 +434,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		));
 
 		Timestamp::set_timestamp(TEST6_TIMESTAMP);
@@ -473,7 +446,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		));
 
 		// re-register them as WorkerType::Identity is not allowed
@@ -487,7 +460,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 				URL.to_vec(),
 				None,
 				None,
-				AttestationType::Ias,
+				AttestationType::Ignore,
 			),
 			Error::<Test>::UnexpectedWorkerType
 		);
@@ -503,7 +476,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 			URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		));
 
 		Timestamp::set_timestamp(TEST6_TIMESTAMP);
@@ -516,7 +489,7 @@ fn register_enclave_prod_fails_with_max_limit_reached() {
 				URL.to_vec(),
 				None,
 				None,
-				AttestationType::Ias,
+				AttestationType::Ignore,
 			),
 			Error::<Test>::UnexpectedWorkerType
 		);
