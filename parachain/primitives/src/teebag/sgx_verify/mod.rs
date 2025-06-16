@@ -144,12 +144,12 @@ pub fn encode_as_der(data: &[u8]) -> Result<Vec<u8>, &'static str> {
 	if data.len() != 64 {
 		return Result::Err("Key must be 64 bytes long");
 	}
-	let mut sequence = der::asn1::SequenceOf::<der::asn1::UIntRef, 2>::new();
+	let mut sequence = der::asn1::SequenceOf::<der::asn1::UintRef, 2>::new();
 	sequence
-		.add(der::asn1::UIntRef::new(&data[0..32]).map_err(|_| "Invalid public key")?)
+		.add(der::asn1::UintRef::new(&data[0..32]).map_err(|_| "Invalid public key")?)
 		.map_err(|_| "Invalid public key")?;
 	sequence
-		.add(der::asn1::UIntRef::new(&data[32..]).map_err(|_| "Invalid public key")?)
+		.add(der::asn1::UintRef::new(&data[32..]).map_err(|_| "Invalid public key")?)
 		.map_err(|_| "Invalid public key")?;
 	// 72 should be enough in all cases. 2 + 2 x (32 + 3)
 	let mut asn1 = vec![0u8; 72];
@@ -488,7 +488,7 @@ fn get_intel_extension(der_encoded: &[u8]) -> Result<Vec<u8>, &'static str> {
 		.unwrap_or(&[])
 		.iter()
 		.filter(|e| e.extn_id == INTEL_SGX_EXTENSION_OID)
-		.map(|e| e.extn_value);
+		.map(|e| e.extn_value.clone());
 
 	let extension = extension_iter.next();
 	ensure!(
@@ -496,7 +496,7 @@ fn get_intel_extension(der_encoded: &[u8]) -> Result<Vec<u8>, &'static str> {
 		"There should only be one section containing Intel extensions"
 	);
 	// SAFETY: Ensured above that extension.is_some() == true
-	Ok(extension.unwrap().to_vec())
+	Ok(extension.unwrap().into_bytes())
 }
 
 fn get_fmspc(der: &[u8]) -> Result<Fmspc, &'static str> {
