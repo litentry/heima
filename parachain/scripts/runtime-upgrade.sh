@@ -72,7 +72,14 @@ fi
 # Start Chopsticks to fork the chain
 print_divider
 echo "Forking parachain with Chopsticks ..."
-npx @acala-network/chopsticks@1.0.1 --endpoint=$2 --port=$chopsticks_port --mock-signature-host=true --db=$chopsticks_db --runtime-log-level=5 --allow-unresolved-imports=true &
+npx @acala-network/chopsticks@1.0.1 \
+  --endpoint=$2 \
+  --port=$chopsticks_port \
+  --mock-signature-host=true \
+  --db=$chopsticks_db \
+  --runtime-log-level=5 \
+  --allow-unresolved-imports=true \
+  --wasm-override=$new_wasm &
 chopsticks_pid=$!
 echo "Chopsticks fork parachain PID: $chopsticks_pid"
 sleep 30 # Wait for Chopsticks to initialize
@@ -87,67 +94,73 @@ fi
 print_divider
 echo "Performing runtime upgrade ..."
 
-cat << 'EOF' > /tmp/upgrade.js
-const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
-const { u8aToHex } = require('@polkadot/util');
-const fs = require('fs').promises;
+# cat << 'EOF' > /tmp/upgrade.js
+# const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
+# const { u8aToHex } = require('@polkadot/util');
+# const fs = require('fs').promises;
 
-async function main() {
-  const wsProvider = new WsProvider('ws://localhost:9944');
-  const api = await ApiPromise.create({ provider: wsProvider });
-  const keyring = new Keyring({ type: 'sr25519' });
-  const sudoKey = keyring.addFromUri('//Alice'); // Replace with your sudo key
-  const wasmPath = '/tmp/runtime.wasm';
-  const useSudo = process.env.USE_SUDO === 'true';
+# async function main() {
+#   const wsProvider = new WsProvider('ws://localhost:9944');
+#   const api = await ApiPromise.create({ provider: wsProvider });
+#   const keyring = new Keyring({ type: 'sr25519' });
+#   const sudoKey = keyring.addFromUri('//Alice'); // Replace with your sudo key
+#   const wasmPath = '/tmp/runtime.wasm';
+#   const useSudo = process.env.USE_SUDO === 'true';
 
-  // Read WASM file
-  const wasm = await fs.readFile(wasmPath);
-  const wasmHex = u8aToHex(wasm);
+#   // Read WASM file
+#   const wasm = await fs.readFile(wasmPath);
+#   const wasmHex = u8aToHex(wasm);
 
-  // Perform upgrade
-  let extrinsic;
-  if (useSudo) {
-    console.log('Performing upgrade via sudo...');
-    extrinsic = api.tx.sudo.sudo(api.tx.system.setCode(wasmHex));
-  } else {
-    console.log('Performing upgrade via democracy...');
-    const preimage = api.tx.system.setCode(wasmHex);
-    const preimageHash = preimage.method.hash.toHex();
-    extrinsic = api.tx.democracy.propose({
-      Inline: preimageHex,
-      Legacy: preimageHash
-    }, 1000000000000000000); // Adjust deposit as needed
-  }
+#   // Perform upgrade
+#   let extrinsic;
+#   if (useSudo) {
+#     console.log('Performing upgrade via sudo...');
+#     extrinsic = api.tx.sudo.sudo(api.tx.system.setCode(wasmHex));
+#   } else {
+#     console.log('Performing upgrade via democracy...');
+#     const preimage = api.tx.system.setCode(wasmHex);
+#     const preimageHash = preimage.method.hash.toHex();
+#     extrinsic = api.tx.democracy.propose({
+#       Inline: preimageHex,
+#       Legacy: preimageHash
+#     }, 1000000000000000000); // Adjust deposit as needed
+#   }
 
-  // Sign and send transaction
-  await extrinsic.signAndSend(sudoKey, ({ status, events }) => {
-    if (status.isInBlock || status.isFinalized) {
-      console.log(`Transaction included at block: ${status.asInBlock || status.asFinalized}`);
-      events.forEach(({ event: { method, section } }) => {
-        console.log(`Event: ${section}.${method}`);
-      });
-      process.exit(0);
-    }
-  });
-}
+#   // Sign and send transaction
+#   await extrinsic.signAndSend(sudoKey, ({ status, events }) => {
+#     if (status.isInBlock || status.isFinalized) {
+#       console.log(`Transaction included at block: ${status.asInBlock || status.asFinalized}`);
+#       events.forEach(({ event: { method, section } }) => {
+#         console.log(`Event: ${section}.${method}`);
+#       });
+#       process.exit(0);
+#     }
+#   });
+# }
 
-main().catch((error) => {
-  console.error('Error:', error);
-  process.exit(1);
-});
-EOF
+# main().catch((error) => {
+#   console.error('Error:', error);
+#   process.exit(1);
+# });
+# EOF
 
-# Run the upgrade script
-export USE_SUDO=$use_sudo
-echo "ls -al"
-echo $(ls -al)
+# # Run the upgrade script
+# export USE_SUDO=$use_sudo
+# echo "ls -al"
+# echo $(ls -al)
 
-echo "ls -al /tmp"
-echo $(ls -al /tmp)
+# echo "ls -al /tmp"
+# echo $(ls -al /tmp)
 
-echo $(pwd)
-echo "execute: node /tmp/upgrade.js"
-NODE_PATH="$(pwd)/node_modules" node /tmp/upgrade.js
+# echo $(pwd)
+# echo "execute: node /tmp/upgrade.js"
+# NODE_PATH="$(pwd)/node_modules" node /tmp/upgrade.js
+
+
+cd "$ROOTDIR/parachain/ts-tests"
+echo "NODE_ENV=ci" > .env
+pnpm install && pnpm run test-runtime-upgrade 2>&1
+
 
 # Produce blocks to process the upgrade
 print_divider
