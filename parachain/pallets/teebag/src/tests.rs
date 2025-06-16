@@ -116,7 +116,7 @@ fn register_enclave_dev_works_with_no_authorized_enclave() {
 }
 
 #[test]
-fn register_enclave_dev_works_with_sgx_build_mode_debug() {
+fn register_enclave_dev_works_with_ignore_attestation() {
 	new_test_ext(true).execute_with(|| {
 		// we'll need to use real attestation data
 		set_timestamp(TEST4_TIMESTAMP);
@@ -139,7 +139,7 @@ fn register_enclave_dev_works_with_sgx_build_mode_debug() {
 		let enclave = default_enclave()
 			.with_mrenclave(expected_mrenclave)
 			.with_last_seen_timestamp(TEST4_TIMESTAMP)
-			.with_sgx_build_mode(SgxBuildMode::Production) // This comes from the actual decoded data
+			.with_sgx_build_mode(SgxBuildMode::Production) // AttestationType::Ignore always sets default (Production)
 			.with_attestation_type(AttestationType::Ignore);
 
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
