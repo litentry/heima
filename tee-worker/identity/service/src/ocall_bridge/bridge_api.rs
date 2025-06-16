@@ -123,8 +123,6 @@ pub enum OCallBridgeError {
 	InitQuote(sgx_status_t),
 	#[error("GetUpdateInfo Error: {0}")]
 	GetUpdateInfo(sgx_status_t),
-	#[error("GetIasSocket Error: {0}")]
-	GetIasSocket(String),
 	#[error("UpdateMetric Error: {0}")]
 	UpdateMetric(String),
 	#[error("Propose sidechain block failed: {0}")]
@@ -166,8 +164,6 @@ pub trait RemoteAttestationBridge {
 	/// initialize the quote
 	fn init_quote(&self) -> OCallBridgeResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
-	/// get the intel attestation service socket
-	fn get_ias_socket(&self) -> OCallBridgeResult<i32>;
 
 	/// retrieve the quote from intel
 	fn get_quote(

@@ -22,11 +22,7 @@ use crate::ocall_bridge::bridge_api::{
 use itp_enclave_api::remote_attestation::{QveReport, RemoteAttestationCallBacks};
 use log::debug;
 use sgx_types::*;
-use std::{
-	net::{SocketAddr, TcpStream},
-	os::unix::io::IntoRawFd,
-	sync::Arc,
-};
+use std::sync::Arc;
 
 pub struct RemoteAttestationOCall<E> {
 	enclave_api: Arc<E>,
@@ -50,18 +46,6 @@ where
 		})
 	}
 
-	fn get_ias_socket(&self) -> OCallBridgeResult<i32> {
-		let port = 443;
-		let hostname = "api.trustedservices.intel.com";
-
-		let addr = lookup_ipv4(hostname, port).map_err(OCallBridgeError::GetIasSocket)?;
-
-		let stream = TcpStream::connect(addr).map_err(|_| {
-			OCallBridgeError::GetIasSocket("[-] Connect tls server failed!".to_string())
-		})?;
-
-		Ok(stream.into_raw_fd())
-	}
 
 	fn get_quote(
 		&self,
@@ -136,15 +120,3 @@ where
 	}
 }
 
-fn lookup_ipv4(host: &str, port: u16) -> Result<SocketAddr, String> {
-	use std::net::ToSocketAddrs;
-
-	let addrs = (host, port).to_socket_addrs().map_err(|e| format!("{:?}", e))?;
-	for addr in addrs {
-		if let SocketAddr::V4(_) = addr {
-			return Ok(addr);
-		}
-	}
-
-	Err("Cannot lookup address".to_string())
-}

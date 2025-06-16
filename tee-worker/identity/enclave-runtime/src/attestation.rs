@@ -407,7 +407,7 @@ pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
 
 	let shielding_pubkey = get_shielding_pubkey()?;
 	let vc_pubkey = get_vc_pubkey()?;
-	let attestation_type = if skip_ra { AttestationType::Ignore } else { AttestationType::Ias };
+	let attestation_type = AttestationType::Ignore; // IAS is deprecated, use Ignore mode
 
 	let call = OpaqueCall::from_tuple(&(
 		call_ids,
