@@ -70,6 +70,16 @@ on:
         description: rebuild-evm-accounting-contracts
         required: true
         default: false
+      rebuild-evm-aa-contracts:
+        type: boolean
+        description: rebuild-evm-accounting-contracts
+        required: true
+        default: false          
+      rebuild-solana-contracts:
+        type: boolean
+        description: rebuild-solana-contracts
+        required: true
+        default: false
       push-docker:
         type: boolean
         description: push-docker
@@ -102,6 +112,7 @@ jobs:
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
       rebuild_evm_accounting_contracts: ${{ steps.env.outputs.rebuild_evm_accounting_contracts }}
       rebuild_evm_aa_contracts: ${{ steps.env.outputs.rebuild_evm_aa_contracts }}
+      rebuild_solana_contracts: ${{ steps.env.outputs.rebuild_solana_contracts }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
@@ -146,6 +157,9 @@ jobs:
           if [ "${{ github.event.inputs.rebuild-evm-aa-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_aa_contracts_src }}" = "true" ]; then
             rebuild_evm_aa_contracts=true
           fi          
+          if [ "${{ github.event.inputs.rebuild-solana-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.solana_contracts_src }}" = "true" ]; then
+            rebuild_solana_contracts=true
+          fi
           if [ "${{ github.event.inputs.push-docker }}" = "true" ]; then
             push_docker=true
           elif [ "${{ github.event_name }}" = 'push' ] && [ "${{ github.ref }}" = 'refs/heads/dev' ]; then
@@ -166,6 +180,7 @@ jobs:
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
           echo "rebuild_evm_accounting_contracts=$rebuild_evm_accounting_contracts" | tee -a $GITHUB_OUTPUT
           echo "rebuild_evm_aa_contracts=$rebuild_evm_aa_contracts" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_solana_contracts=$rebuild_solana_contracts" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
           echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
@@ -670,6 +685,28 @@ jobs:
         run: |          
           cd tee-worker/omni-executor/aa-contracts && forge test          
 
+  solana-contracts-build-test:
+      runs-on: ubuntu-24.04
+      needs:
+        - fmt
+        - set-condition
+        - sequentialise
+      if: needs.set-condition.outputs.rebuild_solana_contracts == 'true'
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            submodules: recursive
+            fetch-depth: 0
+
+        - name: Build contract image
+          run: |
+            cd tee-worker/omni-executor/accounting-contract/solana && docker build -t solana-contracts .
+
+        - name: Test contract
+          run: |
+            cd tee-worker/omni-executor/accounting-contract/solana && docker run --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build' 
+        
+
   parachain-ts-test:
     runs-on: ubuntu-22.04
     needs:
@@ -1002,8 +1039,6 @@ jobs:
           retention-days: 3
 
   omni-executor-test:
-    # disable the whole test before pallet-omni-account is revamped - the whole identity-linking is sadly unused
-    if: false
     runs-on: ubuntu-22.04
     needs:
       - set-condition

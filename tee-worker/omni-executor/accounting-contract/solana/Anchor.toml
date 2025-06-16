@@ -5,14 +5,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-accounting_contract = "31weKQJQA9ZFYaVdnjtAXUoEGPW8UUFC5TEvgPJugAub"
+accounting_contract = "D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-url = "http://localhost:8899"
-cluster = "Localnet"
+cluster = "localnet"
 wallet = "test-account.json"
 
 [scripts]
