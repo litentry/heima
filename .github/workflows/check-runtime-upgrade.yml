@@ -143,7 +143,7 @@ jobs:
           # Store the command in a variable so we can log it
           COMMAND="./try-runtime \
             --runtime $RUNTIME_BLOB_PATH \
-            on-runtime-upgrade --disable-mbm-checks --blocktime 12000000 \
+            on-runtime-upgrade --disable-mbm-checks --blocktime 12000 \
             live --uri ${{ matrix.runtime.uri }}"
 
           # Echo the command before running it, for debugging purposes
