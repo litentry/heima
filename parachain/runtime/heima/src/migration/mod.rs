@@ -23,6 +23,7 @@ use sp_runtime::DispatchError;
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
+use frame_support::StorageHasher;
 use frame_support::{
 	pallet_prelude::*,
 	storage::migration::{clear_storage_prefix, put_storage_value},
@@ -32,7 +33,6 @@ use frame_support::{
 use frame_system::pallet_prelude::BlockNumberFor;
 use log;
 use pallet_xcm::QueryStatus;
-use sp_io::hashing::blake2_128;
 use sp_std::marker::PhantomData;
 use xcm::v5::{Junctions, Location};
 use xcm::VersionedLocation;
@@ -126,10 +126,9 @@ where
 
 		// Build Blake2_128Concat key
 		let encoded_key = known_query_id.encode();
-		let mut final_key = blake2_128(&encoded_key).to_vec();
-		final_key.extend(encoded_key);
+		let key_hashed = Blake2_128Concat::hash(&encoded_key);
 
-		put_storage_value(b"PolkadotXcm", b"Queries", &final_key, known_new_value);
+		put_storage_value(b"PolkadotXcm", b"Queries", &key_hashed, known_new_value);
 
 		log::info!(
 			target: XCM_LOG_TARGET,
