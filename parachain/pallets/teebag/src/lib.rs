@@ -764,7 +764,6 @@ impl<T: Config> Pallet<T> {
 		EnclaveIdentifier::<T>::get(worker_type).iter().count() as u32
 	}
 
-
 	fn verify_dcap(
 		sender: &T::AccountId,
 		dcap_quote: Vec<u8>,

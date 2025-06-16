@@ -132,7 +132,10 @@ fn register_enclave_dev_works_with_sgx_build_mode_debug() {
 			AttestationType::Ignore,
 		));
 
-		let expected_mrenclave = [48, 130, 12, 158, 48, 130, 12, 69, 160, 3, 2, 1, 2, 2, 1, 1, 48, 10, 6, 8, 42, 134, 72, 206, 61, 4, 3, 2, 48, 21, 49, 19];
+		let expected_mrenclave = [
+			48, 130, 12, 158, 48, 130, 12, 69, 160, 3, 2, 1, 2, 2, 1, 1, 48, 10, 6, 8, 42, 134, 72,
+			206, 61, 4, 3, 2, 48, 21, 49, 19,
+		];
 		let enclave = default_enclave()
 			.with_mrenclave(expected_mrenclave)
 			.with_last_seen_timestamp(TEST4_TIMESTAMP)
@@ -363,18 +366,16 @@ fn register_enclave_prod_fails_with_no_authorized_enclave() {
 		// In development mode, enclaves don't need to be authorized
 		Timestamp::set_timestamp(TEST4_TIMESTAMP);
 		let signer: AccountId32 = get_signer(TEST4_SIGNER_PUB);
-		assert_ok!(
-			Teebag::register_enclave(
-				RuntimeOrigin::signed(signer.clone()),
-				Default::default(),
-				Default::default(),
-				TEST4_CERT.to_vec(),
-				URL.to_vec(),
-				None,
-				None,
-				AttestationType::Ignore,
-			)
-		);
+		assert_ok!(Teebag::register_enclave(
+			RuntimeOrigin::signed(signer.clone()),
+			Default::default(),
+			Default::default(),
+			TEST4_CERT.to_vec(),
+			URL.to_vec(),
+			None,
+			None,
+			AttestationType::Ignore,
+		));
 		// Verify it was registered successfully
 		assert_eq!(Teebag::enclave_count(WorkerType::Identity), 1);
 	})
