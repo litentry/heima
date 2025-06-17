@@ -253,12 +253,8 @@ pub(crate) fn run_state_provisioning_server_internal<
 	skip_ra: c_int,
 	seal_handler: StateAndKeyUnsealer,
 ) -> EnclaveResult<()> {
-	let server_config = tls_server_config(
-		quoting_enclave_target_info,
-		quote_size,
-		OcallApi,
-		skip_ra == 1,
-	)?;
+	let server_config =
+		tls_server_config(quoting_enclave_target_info, quote_size, OcallApi, skip_ra == 1)?;
 	let (server_session, tcp_stream) = tls_server_session_stream(socket_fd, server_config)?;
 
 	let provisioning = ProvisioningPayload::from(WorkerModeProvider::worker_mode());

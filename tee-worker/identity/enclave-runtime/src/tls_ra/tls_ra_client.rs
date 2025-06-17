@@ -264,12 +264,8 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	client_account: AccountId,
 ) -> EnclaveResult<()> {
 	debug!("Client config generate...");
-	let client_config = tls_client_config(
-		quoting_enclave_target_info,
-		quote_size,
-		OcallApi,
-		skip_ra == 1,
-	)?;
+	let client_config =
+		tls_client_config(quoting_enclave_target_info, quote_size, OcallApi, skip_ra == 1)?;
 	debug!("Client config retrieved");
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
 	debug!("Client sesssion established.");
