@@ -65,11 +65,16 @@ on:
         description: run-multi-worker-test
         required: true
         default: false
-      rebuild-evm-contracts:
+      rebuild-evm-accounting-contracts:
         type: boolean
-        description: rebuild-evm-contracts
+        description: rebuild-evm-accounting-contracts
         required: true
         default: false
+      rebuild-evm-aa-contracts:
+        type: boolean
+        description: rebuild-evm-accounting-contracts
+        required: true
+        default: false          
       rebuild-solana-contracts:
         type: boolean
         description: rebuild-solana-contracts
@@ -105,7 +110,8 @@ jobs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
-      rebuild_evm_contracts: ${{ steps.env.outputs.rebuild_evm_contracts }}
+      rebuild_evm_accounting_contracts: ${{ steps.env.outputs.rebuild_evm_accounting_contracts }}
+      rebuild_evm_aa_contracts: ${{ steps.env.outputs.rebuild_evm_aa_contracts }}
       rebuild_solana_contracts: ${{ steps.env.outputs.rebuild_solana_contracts }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
@@ -130,7 +136,8 @@ jobs:
           rebuild_parachain=false
           rebuild_identity=false
           rebuild_omni_executor=false
-          rebuild_evm_contracts=false
+          rebuild_evm_accounting_contracts=false
+          rebuild_evm_aa_contracts=false
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
@@ -144,9 +151,12 @@ jobs:
           if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
             rebuild_omni_executor=true
           fi
-          if [ "${{ github.event.inputs.rebuild-evm-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_contracts_src }}" = "true" ]; then
-            rebuild_evm_contracts=true
+          if [ "${{ github.event.inputs.rebuild-evm-accounting-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_accounting_contracts_src }}" = "true" ]; then
+            rebuild_evm_accounting_contracts=true
           fi
+          if [ "${{ github.event.inputs.rebuild-evm-aa-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_aa_contracts_src }}" = "true" ]; then
+            rebuild_evm_aa_contracts=true
+          fi          
           if [ "${{ github.event.inputs.rebuild-solana-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.solana_contracts_src }}" = "true" ]; then
             rebuild_solana_contracts=true
           fi
@@ -168,7 +178,8 @@ jobs:
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
           echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_evm_contracts=$rebuild_evm_contracts" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_evm_accounting_contracts=$rebuild_evm_accounting_contracts" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_evm_aa_contracts=$rebuild_evm_aa_contracts" | tee -a $GITHUB_OUTPUT
           echo "rebuild_solana_contracts=$rebuild_solana_contracts" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
@@ -626,13 +637,13 @@ jobs:
           path: litentry-omni.tar.gz
           if-no-files-found: error
 
-  evm-contracts-build-test:
+  evm-accounting-contracts-build-test:
     runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
       - sequentialise
-    if: needs.set-condition.outputs.rebuild_evm_contracts == 'true'
+    if: needs.set-condition.outputs.rebuild_evm_accounting_contracts == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -649,6 +660,30 @@ jobs:
       - name: Test contracts
         run: |
           cd tee-worker/omni-executor/accounting-contract/bsc && forge test
+
+  evm-aa-contracts-build-test:
+    runs-on: ubuntu-22.04
+    needs:
+      - fmt
+      - set-condition
+      - sequentialise
+    if: needs.set-condition.outputs.rebuild_evm_aa_contracts == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build contracts
+        run: |
+          cd tee-worker/omni-executor/aa-contracts && forge build
+
+      - name: Test contracts
+        run: |          
+          cd tee-worker/omni-executor/aa-contracts && forge test          
 
   solana-contracts-build-test:
       runs-on: ubuntu-24.04
