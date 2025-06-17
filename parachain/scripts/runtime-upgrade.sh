@@ -52,7 +52,7 @@ echo "Release:  $release_version"
 # Start Chopsticks to fork the chain
 print_divider
 echo "Forking parachain with Chopsticks ..."
-npx @acala-network/chopsticks@latest $ROOTDIR/parachain/scripts/chopsticks/$1.yml &
+npx @acala-network/chopsticks@latest --config=$ROOTDIR/parachain/scripts/chopsticks/$1.yml &
 chopsticks_pid=$!
 echo "Chopsticks fork parachain PID: $chopsticks_pid"
 sleep 30 # Wait for Chopsticks to initialize
