@@ -17,7 +17,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 	// mock other Convert APIs you need here
 
 	// Spot Trading API
-	let create_order = warp::get()
+	let create_order = warp::post()
 		.and(warp::path(BASE_PATH))
 		.and(warp::path!("api" / "v3" / "order"))
 		.map(|| {
