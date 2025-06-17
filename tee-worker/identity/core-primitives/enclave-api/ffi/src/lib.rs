@@ -1,8 +1,7 @@
 ///! FFI's that call into the enclave. These functions need to be added to the
 /// enclave edl file and be implemented within the enclave.
 use sgx_types::{
-	c_int, sgx_enclave_id_t, sgx_ql_qve_collateral_t, sgx_status_t,
-	sgx_target_info_t,
+	c_int, sgx_enclave_id_t, sgx_ql_qve_collateral_t, sgx_status_t, sgx_target_info_t,
 };
 
 extern "C" {
