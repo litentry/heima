@@ -16,6 +16,7 @@ members = [
     "intent/executors/ethereum",
     "intent/executors/solana",
     "intent/token-query",
+    "mock-server",
     "native-task-handler",
     "oauth-providers",
     "parentchain/listener",
@@ -115,6 +116,7 @@ heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 intent-asset-lock = { path = "intent/asset-lock" }
 intent-token-query = { path = "intent/token-query" }
+mock-server = { path = "mock-server" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }

@@ -35,6 +35,24 @@ RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
 CMD ["$BIN_DIR/executor-worker"]
 
 
+### Mock Server image
+##################################################
+FROM debian:bookworm-slim AS mock-server
+
+ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
+ENV BIN_DIR=/usr/local/bin
+WORKDIR $BIN_DIR
+
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+COPY --from=plain-builder $SRC_DIR/target/release/mock-server $BIN_DIR/mock-server
+
+RUN chmod +x $BIN_DIR/mock-server
+RUN ls -al $BIN_DIR
+RUN ldd $BIN_DIR/mock-server && $BIN_DIR/mock-server --version
+CMD ["$BIN_DIR/mock-server"]
+
+
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
 FROM gramineproject/gramine:stable-jammy AS sgx-builder
