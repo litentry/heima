@@ -28,6 +28,7 @@ executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 intent-asset-lock = { workspace = true }
+mock-server = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-attestation = { workspace = true }
 parentchain-listener = { workspace = true }
@@ -38,7 +39,6 @@ rpc-server = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
 solana-intent-executor = { workspace = true }
-mock-server = { workspace = true }
 
 [features]
 default = []
