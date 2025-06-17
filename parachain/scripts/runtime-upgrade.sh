@@ -44,10 +44,10 @@ fi
 echo "On-chain: $onchain_version"
 echo "Release:  $release_version"
 
-if [ "$onchain_version" -ge "$release_version" ]; then
-  echo "Current On-chain runtime is up to date, quit"
-  exit 1
-fi
+# if [ "$onchain_version" -ge "$release_version" ]; then
+#   echo "Current On-chain runtime is up to date, quit"
+#   exit 1
+# fi
 
 # Start Chopsticks to fork the chain
 print_divider
