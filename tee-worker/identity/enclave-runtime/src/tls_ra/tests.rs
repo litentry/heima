@@ -36,7 +36,7 @@ use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_types::ShardIdentifier;
 use lc_evm_dynamic_assertions::mock::AssertionsSealMock;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
-use sgx_types::{sgx_quote_sign_type_t, sgx_target_info_t};
+use sgx_types::sgx_target_info_t;
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
