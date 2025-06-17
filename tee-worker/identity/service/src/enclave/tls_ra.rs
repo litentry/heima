@@ -29,7 +29,6 @@ use std::{
 
 pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 	enclave_api: &E,
-	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 	addr: &str,
@@ -50,7 +49,6 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 
 				let result = enclave_api.run_state_provisioning_server(
 					socket.as_raw_fd(),
-					sign_type,
 					quoting_enclave_target_info,
 					quote_size,
 					skip_ra,
@@ -72,7 +70,6 @@ pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(
 
 pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation + RemoteAttestation>(
 	enclave_api: &E,
-	sign_type: sgx_quote_sign_type_t,
 	addr: &str,
 	shard: &ShardIdentifier,
 	skip_ra: bool,
@@ -106,7 +103,6 @@ pub fn enclave_request_state_provisioning<E: TlsRemoteAttestation + RemoteAttest
 
 	enclave_api.request_state_provisioning(
 		stream.as_raw_fd(),
-		sign_type,
 		quoting_enclave_target_info.as_ref(),
 		quote_size.as_ref(),
 		shard,

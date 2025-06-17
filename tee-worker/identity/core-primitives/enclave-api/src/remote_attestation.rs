@@ -96,7 +96,6 @@ pub trait TlsRemoteAttestation {
 	fn run_state_provisioning_server(
 		&self,
 		socket_fd: c_int,
-		sign_type: sgx_quote_sign_type_t,
 		quoting_enclave_target_info: Option<&sgx_target_info_t>,
 		quote_size: Option<&u32>,
 		skip_ra: bool,
@@ -105,7 +104,6 @@ pub trait TlsRemoteAttestation {
 	fn request_state_provisioning(
 		&self,
 		socket_fd: c_int,
-		sign_type: sgx_quote_sign_type_t,
 		quoting_enclave_target_info: Option<&sgx_target_info_t>,
 		quote_size: Option<&u32>,
 		shard: &ShardIdentifier,
@@ -701,7 +699,6 @@ mod impl_ffi {
 		fn run_state_provisioning_server(
 			&self,
 			socket_fd: c_int,
-			sign_type: sgx_quote_sign_type_t,
 			quoting_enclave_target_info: Option<&sgx_target_info_t>,
 			quote_size: Option<&u32>,
 			skip_ra: bool,
@@ -713,7 +710,6 @@ mod impl_ffi {
 					self.eid,
 					&mut retval,
 					socket_fd,
-					sign_type,
 					quoting_enclave_target_info,
 					quote_size,
 					skip_ra.into(),
@@ -729,7 +725,6 @@ mod impl_ffi {
 		fn request_state_provisioning(
 			&self,
 			socket_fd: c_int,
-			sign_type: sgx_quote_sign_type_t,
 			quoting_enclave_target_info: Option<&sgx_target_info_t>,
 			quote_size: Option<&u32>,
 			shard: &ShardIdentifier,
@@ -744,7 +739,6 @@ mod impl_ffi {
 					self.eid,
 					&mut retval,
 					socket_fd,
-					sign_type,
 					quoting_enclave_target_info,
 					quote_size,
 					encoded_shard.as_ptr(),

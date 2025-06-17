@@ -57,7 +57,6 @@ pub(crate) fn sync_state<
 
 	enclave_request_state_provisioning(
 		enclave_api,
-		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 		&provider_url,
 		shard,
 		skip_ra,

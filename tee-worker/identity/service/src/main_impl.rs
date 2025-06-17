@@ -273,7 +273,6 @@ pub(crate) fn main() {
 			info!("*** Running Enclave MU-RA TLS server\n");
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
-				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				quoting_enclave_target_info.as_ref(),
 				quote_size.as_ref(),
 				&config.mu_ra_url(),
@@ -285,7 +284,6 @@ pub(crate) fn main() {
 			let shard = extract_shard(sub_matches.value_of("shard"), enclave.as_ref());
 			enclave_request_state_provisioning(
 				enclave.as_ref(),
-				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url_external(),
 				&shard,
 				sub_matches.is_present("skip-ra"),
@@ -379,7 +377,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	thread::spawn(move || {
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
-			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 			quoting_enclave_target_info.as_ref(),
 			quote_size.as_ref(),
 			&ra_url,

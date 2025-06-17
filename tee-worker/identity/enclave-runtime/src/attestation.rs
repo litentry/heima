@@ -93,7 +93,6 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize
 pub fn create_ra_report_and_signature(
 	skip_ra: bool,
 	remote_attestation_type: RemoteAttestationType,
-	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
