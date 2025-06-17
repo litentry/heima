@@ -479,15 +479,8 @@ pub mod pallet {
 				},
 				#[allow(deprecated)]
 				AttestationType::Ias => {
-					// IAS is deprecated, treat it the same as Ignore for now
-					ensure!(
-						Self::mode() == OperationalMode::Development,
-						Error::<T>::InvalidAttestationType
-					);
-					enclave.mrenclave =
-						<MrEnclave>::decode(&mut attestation.as_slice()).unwrap_or_default();
-					enclave.last_seen_timestamp = Self::now().saturated_into();
-					enclave.sgx_build_mode = SgxBuildMode::default();
+					// IAS is deprecated and no longer supported
+					return Err(Error::<T>::InvalidAttestationType.into());
 				},
 				AttestationType::Dcap(provider) => {
 					ensure!(provider == DcapProvider::Intel, Error::<T>::DcapProviderNotSupported);
