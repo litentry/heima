@@ -13,12 +13,12 @@ import-storage:
         -
           - "4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh"
         - data:
-            free: "100000000000000000000000"
+            free: "100000000000000000000"
       -
         -
           - "49dXob6fj4uh9SKNm4yCuxfnrvcmArxkoUTkNWQPdtoj3Xvn"
         - data:
-            free: "100000000000000000000000"
+            free: "100000000000000000000"
   TechnicalCommittee:
     Members: ["4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh"]
   Council:

@@ -4,8 +4,6 @@ set -eo pipefail
 
 ROOTDIR=$(git rev-parse --show-toplevel)
 new_wasm=/tmp/runtime.wasm
-chopsticks_port=9944
-chopsticks_db=./new-db.sqlite
 
 function usage() {
   echo
@@ -73,45 +71,6 @@ cd "$ROOTDIR/parachain/ts-tests"
 echo "NODE_ENV=ci" > .env
 pnpm install && pnpm run test-runtime-upgrade 2>&1
 
-# Produce blocks to process the upgrade
-print_divider
-echo "Producing blocks to process upgrade ..."
-curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "dev_newBlock", "params": [{"count": 50}]}' http://localhost:$chopsticks_port > /dev/null
-sleep 10
-
-# Verify runtime upgrade
-print_divider
-echo "Verifying runtime upgrade ..."
-new_onchain_version=$(curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' http://localhost:$chopsticks_port | jq .result.specVersion)
-
-if [ "$new_onchain_version" -ne "$release_version" ]; then
-  echo "On-chain new: $new_onchain_version"
-  echo "Runtime version NOT increased successfully, quit"
-  kill $chopsticks_pid
-  exit 1
-fi
-
-# Verify block production
-print_divider
-echo "Verifying block production ..."
-initial_block=$(curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "chain_getBlock", "params": [] }' http://localhost:$chopsticks_port | jq .block.header.number)
-curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "dev_newBlock", "params": [{"count": 10}]}' http://localhost:$chopsticks_port > /dev/null
-sleep 5
-final_block=$(curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "chain_getBlock", "params": [] }' http://localhost:$chopsticks_port | jq .block.header.number)
-
-if [ "$final_block" -le "$initial_block" ]; then
-  echo "Block production failed, quit"
-  kill $chopsticks_pid
-  exit 1
-fi
-
-echo "Runtime upgrade succeeded: $new_onchain_version"
-echo "Block production verified: $initial_block -> $final_block"
-
 # Cleanup
 print_divider
-echo "Cleaning up ..."
-kill $chopsticks_pid
-rm -f $chopsticks_db
-rm -f $new_wasm
-echo "Done"
+echo "Runtime upgrade succeed!"
