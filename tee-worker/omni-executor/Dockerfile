@@ -4,6 +4,8 @@
 ##################################################
 FROM rust:1.87-bookworm AS plain-builder
 
+ARG CARGO_FEATURES=""
+
 RUN apt-get update && apt-get install -y clang
 
 ENV HOME=/home/ubuntu
@@ -12,7 +14,11 @@ ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 COPY . $HOME
 WORKDIR $BUILD_DIR
 
-RUN cargo build --release
+RUN if [ -n "$CARGO_FEATURES" ]; then \
+        cargo build --release --features "$CARGO_FEATURES"; \
+    else \
+        cargo build --release; \
+    fi
 
 
 ### Deploy image (for CI - No Gramine)
@@ -33,24 +39,6 @@ RUN chmod +x $BIN_DIR/executor-worker
 RUN ls -al $BIN_DIR
 RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
 CMD ["$BIN_DIR/executor-worker"]
-
-
-### Mock Server image
-##################################################
-FROM debian:bookworm-slim AS mock-server
-
-ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
-ENV BIN_DIR=/usr/local/bin
-WORKDIR $BIN_DIR
-
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-
-COPY --from=plain-builder $SRC_DIR/target/release/mock-server $BIN_DIR/mock-server
-
-RUN chmod +x $BIN_DIR/mock-server
-RUN ls -al $BIN_DIR
-RUN ldd $BIN_DIR/mock-server && $BIN_DIR/mock-server --version
-CMD ["$BIN_DIR/mock-server"]
 
 
 ### Builder Stage - With Gramine (SGX Hardware)

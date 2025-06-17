@@ -3,10 +3,6 @@ edition = "2021"
 name = "mock-server"
 version = "0.1.0"
 
-[[bin]]
-name = "mock-server"
-path = "src/main.rs"
-
 [dependencies]
 env_logger = "0.10"
 hex = { workspace = true, features = ["std"] }

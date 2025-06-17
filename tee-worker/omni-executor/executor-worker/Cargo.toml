@@ -38,6 +38,11 @@ rpc-server = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
 solana-intent-executor = { workspace = true }
+mock-server = { workspace = true }
+
+[features]
+default = []
+mock-server = []
 
 [lints]
 workspace = true

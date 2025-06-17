@@ -1942,7 +1942,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.4",
- "hashbrown 0.12.3",
+ "hashbrown 0.13.2",
 ]
 
 [[package]]
@@ -4022,6 +4022,7 @@ dependencies = [
  "hex",
  "intent-asset-lock",
  "metrics-exporter-prometheus",
+ "mock-server",
  "native-task-handler",
  "parentchain-attestation",
  "parentchain-listener",
@@ -4487,18 +4488,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.103",
-]
-
-[[package]]
-name = "frame-support-procedural-tools"
-version = "13.0.1"
-source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2412#128a93179953ddfbf807c874a04060350c4902e6"
-dependencies = [
- "frame-support-procedural-tools-derive 12.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
- "proc-macro-crate 3.3.0",
- "proc-macro2",
- "quote",
- "syn 2.0.101",
 ]
 
 [[package]]
@@ -5738,6 +5727,17 @@ checksum = "dbc5ebe9c3a1a7a5127f920a418f7585e9e758e911d0466ed004f393b0e380b2"
 dependencies = [
  "memchr",
  "serde",
+]
+
+[[package]]
+name = "is-terminal"
+version = "0.4.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
+dependencies = [
+ "hermit-abi 0.5.2",
+ "libc",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

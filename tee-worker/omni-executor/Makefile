@@ -73,7 +73,6 @@ clean-data:
 .PHONY: build-docker
 build-docker:
 	docker build --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
-	docker build --target mock-server -t litentry/mock-server:latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
@@ -88,13 +87,17 @@ start-local:
 stop-local:
 	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml down
 
+.PHONY: build-docker-test
+build-docker-test:
+	docker build --build-arg CARGO_FEATURES="mock-server" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+
 .PHONY: start-test
 start-test:
-	docker compose -f $(OMNI_DIR)/docker/docker-compose.test.yml up
+	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml -f $(OMNI_DIR)/docker/docker-compose.test.yml up
 
 .PHONY: stop-test
 stop-test:
-	docker compose -f $(OMNI_DIR)/docker/docker-compose.test.yml down
+	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml -f $(OMNI_DIR)/docker/docker-compose.test.yml down
 
 .PHONY: get-metadata
 get-metadata:
