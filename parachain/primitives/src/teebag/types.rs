@@ -60,6 +60,8 @@ pub enum DcapProvider {
 pub enum AttestationType {
 	#[default]
 	Ignore,
+	#[deprecated(note = "IAS attestation is deprecated, use DCAP instead")]
+	Ias,
 	Dcap(DcapProvider),
 }
 

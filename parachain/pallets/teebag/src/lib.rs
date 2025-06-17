@@ -441,6 +441,8 @@ pub mod pallet {
             match attestation_type {
                 AttestationType::Dcap(_) => <T as Config>::WeightInfo::register_enclave_with_dcap_attestation(),
                 AttestationType::Ignore => Weight::zero(),
+                #[allow(deprecated)]
+                AttestationType::Ias => Weight::zero(),
             }
         })]
 		pub fn register_enclave(
@@ -466,6 +468,18 @@ pub mod pallet {
 
 			match attestation_type {
 				AttestationType::Ignore => {
+					ensure!(
+						Self::mode() == OperationalMode::Development,
+						Error::<T>::InvalidAttestationType
+					);
+					enclave.mrenclave =
+						<MrEnclave>::decode(&mut attestation.as_slice()).unwrap_or_default();
+					enclave.last_seen_timestamp = Self::now().saturated_into();
+					enclave.sgx_build_mode = SgxBuildMode::default();
+				},
+				#[allow(deprecated)]
+				AttestationType::Ias => {
+					// IAS is deprecated, treat it the same as Ignore for now
 					ensure!(
 						Self::mode() == OperationalMode::Development,
 						Error::<T>::InvalidAttestationType
