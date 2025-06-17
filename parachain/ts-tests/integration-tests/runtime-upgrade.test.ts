@@ -1,12 +1,12 @@
 import { blake2AsHex } from '@polkadot/util-crypto';
 import * as fs from 'fs';
-import { Keyring, ApiPromise } from '@polkadot/api';
+import { Keyring, ApiPromise, WsProvider } from '@polkadot/api';
 import { describeLitentry } from '../common/utils/integration-setup';
 import '@polkadot/wasm-crypto/initOnlyAsm';
 import * as path from 'path';
 import { expect } from 'chai';
 import { step } from 'mocha-steps';
-import { signAndSend, subscribeToEvents, observeEvent } from '../common/utils';
+import { signAndSend, subscribeToEvents } from '../common/utils';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Event } from '@polkadot/types/interfaces/system';
 import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
@@ -16,34 +16,56 @@ async function getRuntimeVersion(api: ApiPromise) {
     return +runtime_version['specVersion'];
 }
 
-async function waitForRuntimeUpgrade(api: ApiPromise, oldRuntimeVersion: number): Promise<number> {
-    return new Promise(async (resolve, reject) => {
-        let runtimeUpgraded = false;
-        let timeoutBlock = (await api.rpc.chain.getHeader()).number.toNumber() + 10;
+async function waitForEventWithBlockProduction(
+    section: string,
+    method: string,
+    api: ApiPromise,
+    maxBlocks = 100
+): Promise<Event> {
+    const header = await api.rpc.chain.getHeader();
+    console.log(`Current block number: ${header.number.toNumber()}`);
+    for (let i = 0; i < maxBlocks; i++) {
+        await api.rpc('dev_newBlock', { count: 1 });
 
-        const unsub = await api.rpc.chain.subscribeNewHeads(async (header) => {
-            console.log(`Polling .. block = ${header.number.toNumber()}`);
-            const runtimeVersion = await getRuntimeVersion(api);
-            if (!runtimeUpgraded) {
-                if (runtimeVersion > oldRuntimeVersion) {
-                    runtimeUpgraded = true;
-                    console.log(
-                        `Runtime upgrade OK, new runtime version = ${runtimeVersion}, waiting for 2 more blocks ...`
-                    );
-                    timeoutBlock = header.number.toNumber() + 2;
-                }
+        const events = await api.query.system.events();
+        for (const record of events) {
+            const { event } = record;
+            if (event.section === section && event.method === method) {
+                const header = await api.rpc.chain.getHeader();
+                console.log(
+                    `✅ Event ${section}.${method} observed after ${i + 1} blocks at: ${header.number.toNumber()}`
+                );
+                return event;
             }
-            if (header.number.toNumber() == timeoutBlock) {
-                unsub();
-                if (!runtimeUpgraded) {
-                    reject('Runtime upgrade failed with timeout');
-                } else {
-                    console.log('All good');
-                    resolve(runtimeVersion);
-                }
-            }
-        });
-    });
+        }
+    }
+
+    throw new Error(`❌ Timed out waiting for event ${section}.${method} after ${maxBlocks} blocks`);
+}
+
+async function waitForRuntimeUpgradeWithBlockProduction(
+    api: ApiPromise,
+    oldRuntimeVersion: number,
+    maxBlocks = 100
+): Promise<number> {
+    const header = await api.rpc.chain.getHeader();
+    console.log(`Current block number: ${header.number.toNumber()}`);
+    for (let i = 0; i < maxBlocks; i++) {
+        await api.rpc('dev_newBlock', { count: 1 });
+
+        const runtimeVersion = await getRuntimeVersion(api);
+        console.log(`⏳ Block +${i + 1}: Runtime version = ${runtimeVersion}`);
+
+        if (runtimeVersion > oldRuntimeVersion) {
+            const header = await api.rpc.chain.getHeader();
+            console.log(
+                `✅ Runtime upgraded to version ${runtimeVersion} after ${i + 1} blocks at: ${header.number.toNumber()}`
+            );
+            return runtimeVersion;
+        }
+    }
+
+    throw new Error(`❌ Timeout: runtime not upgraded after ${maxBlocks} blocks`);
 }
 
 async function excuteNotePreimage(api: ApiPromise, signer: KeyringPair, encoded: string) {
@@ -100,31 +122,26 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     console.log(`Preimage hash: ${encodedHash}`);
 
     // Submit the preimage (if it doesn't already exist)
-    let preimageStatus = (await api.query.preimage.statusFor(encodedHash)).toHuman();
+    let preimageStatus = (await api.query.preimage.requestStatusFor(encodedHash)).toHuman();
     if (!preimageStatus) {
         await excuteNotePreimage(api, alice, encoded);
     }
-    console.log(`1`);
     const externalMotion = api.tx.democracy.externalProposeMajority({ Legacy: encodedHash });
 
-    console.log(`2`);
     // propose the council proposal
     const proposedEvent = await excuteCouncilProposal(api, alice, externalMotion);
     const proposalHash = proposedEvent[0].data[2].toString();
     const proposalIndex = Number(proposedEvent[0].data[1].toHuman());
 
-    console.log(`3`);
     // vote on the council proposal
     const voteTx = api.tx.council.vote(proposalHash, proposalIndex, true);
     const voteEventsPromise = subscribeToEvents('council', 'Voted', api);
 
-    console.log(`4`);
     await Promise.all([await signAndSend(voteTx, alice), await signAndSend(voteTx, bob)]);
     const voteTxEvent = (await voteEventsPromise).map(({ event }) => event);
     expect(voteTxEvent.length === 2);
     console.log('Alice Bob council Voted ✅');
 
-    console.log(`5`);
     // close the council proposal
     const councilCloseTx = api.tx.council.close(
         proposalHash,
@@ -141,7 +158,6 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     expect(councilCloseEvent.length === 1);
     console.log('Council Closed ✅');
 
-    console.log(`6`);
     // fast track the democracy proposal
     await excuteTechnicalCommitteeProposal(api, alice, encodedHash);
 
@@ -152,30 +168,25 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
         Standard: { vote: true, balance: 1_00_000_000_000_000 },
     });
 
-    console.log(`7`);
     await Promise.all([await signAndSend(democracyVoteTx, alice), await signAndSend(democracyVoteTx, bob)]);
     const democracyVoteEvent = (await democracyVoteEventsPromise).map(({ event }) => event);
     expect(democracyVoteEvent.length === 2);
     console.log('Alice Bob democracy Voted ✅');
 
     console.log('Waiting for democracy to pass...');
-    await observeEvent('democracy', 'Passed', api);
-    console.log('Democracy passed ✅');
+    await waitForEventWithBlockProduction('democracy', 'Passed', api);
 
     console.log('Waiting for parachainSystem upgrade authorize...');
-    await observeEvent('parachainSystem', 'UpgradeAuthorized', api);
-    console.log('parachainSystem upgrade authorized ✅');
+    await waitForEventWithBlockProduction('system', 'UpgradeAuthorized', api);
 
     // enact the upgrade
     const parachainSystemScheduleUpgradeTx = api.tx.parachainSystem.enactAuthorizedUpgrade(wasm);
     await signAndSend(parachainSystemScheduleUpgradeTx, alice);
 
     console.log('Waiting for runtime upgrade to be applied...');
-    await observeEvent('parachainSystem', 'ValidationFunctionApplied', api);
-    console.log('Runtime upgrade applied ✅');
+    await waitForEventWithBlockProduction('parachainSystem', 'ValidationFunctionApplied', api);
 
-    const newRuntimeVersion = await waitForRuntimeUpgrade(api, old_runtime_version);
-    console.log(`New runtime version = ${newRuntimeVersion}`);
+    const newRuntimeVersion = await waitForRuntimeUpgradeWithBlockProduction(api, old_runtime_version);
     return newRuntimeVersion;
 }
 describeLitentry('Runtime upgrade test', ``, (context) => {
@@ -183,9 +194,13 @@ describeLitentry('Runtime upgrade test', ``, (context) => {
         let runtimeVersion: number;
         const wasmPath = path.resolve('/tmp/runtime.wasm');
         const wasm = fs.readFileSync(wasmPath).toString('hex');
-        runtimeVersion = await runtimeupgradeViaGovernance(context.api, `0x${wasm}`);
 
-        expect(runtimeVersion === (await getRuntimeVersion(context.api)));
+        const wsProvider = new WsProvider('ws://localhost:9944');
+        const api = await ApiPromise.create({ provider: wsProvider });
+        await api.isReady;
+
+        runtimeVersion = await runtimeupgradeViaGovernance(api, `0x${wasm}`);
+        expect(runtimeVersion === (await getRuntimeVersion(api)));
 
         console.log('Runtime upgraded ✅');
     });
