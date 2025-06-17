@@ -2,7 +2,7 @@
 
 use warp::{http::Response, Filter};
 
-const BASE_PATH: &str = "binnace";
+const BASE_PATH: &str = "binance";
 
 pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone
 {
