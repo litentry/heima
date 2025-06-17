@@ -117,6 +117,36 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     const old_runtime_version = await getRuntimeVersion(api);
     console.log(`Old runtime version = ${old_runtime_version}`);
 
+    // const storage = {
+    //     System: {
+    //         Account: [
+    //                     [[alice.address], { data: { free: 1000000000000000 }, nonce: 1 }],
+    //                     [[bob.address], { data: { free: 1000000000000000 }, nonce: 1 }]
+    //                 ],
+    //     },
+    //     Council: {
+    //         Members: [alice.address, bob.address],
+    //     },
+    //     TechnicalCommittee: {
+    //         Members: [alice.address],
+    //     }
+    // };
+    // await api.rpc('dev_setStorage', storage);
+    // const council_members = await api.query.council.members();
+    // console.log(
+    //     'Council:',
+    //     council_members.map((a) => a.toHuman())
+    // );
+    // const tm_members = await api.query.technicalCommittee.members();
+    // console.log(
+    //     'TechnicalCommittee:',
+    //     tm_members.map((a) => a.toHuman())
+    // );
+    // const alice_balance = await api.query.system.account(alice.address);
+    // console.log(`Alice balance: ${alice_balance.data.free}`);
+    // const bob_balance = await api.query.system.account(bob.address);
+    // console.log(`Bob balance: ${bob_balance.data.free}`);
+
     const encoded = api.tx.parachainSystem.authorizeUpgrade(blake2AsHex(wasm), false).method.toHex();
     const encodedHash = blake2AsHex(encoded);
     console.log(`Preimage hash: ${encodedHash}`);
