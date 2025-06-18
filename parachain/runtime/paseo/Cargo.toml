@@ -42,6 +42,7 @@ pallet-democracy = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-membership = { workspace = true }
 pallet-message-queue = { workspace = true }
+pallet-migrations = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
@@ -187,6 +188,7 @@ runtime-benchmarks = [
     "pallet-identity/runtime-benchmarks",
     "pallet-membership/runtime-benchmarks",
     "pallet-message-queue/runtime-benchmarks",
+    "pallet-migrations/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-omni-account/runtime-benchmarks",
     "pallet-parachain-staking/runtime-benchmarks",
@@ -288,6 +290,7 @@ std = [
     "pallet-identity/std",
     "pallet-membership/std",
     "pallet-message-queue/std",
+    "pallet-migrations/std",
     "pallet-multisig/std",
     "pallet-omni-account-runtime-api/std",
     "pallet-omni-account/std",
@@ -385,6 +388,7 @@ try-runtime = [
     "pallet-identity/try-runtime",
     "pallet-membership/try-runtime",
     "pallet-message-queue/try-runtime",
+    "pallet-migrations/try-runtime",
     "pallet-multisig/try-runtime",
     "pallet-omni-account/try-runtime",
     "pallet-parachain-staking/try-runtime",
