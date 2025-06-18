@@ -111,26 +111,16 @@ jobs:
           curl -sL https://github.com/paritytech/try-runtime-cli/releases/download/v${{ env.TRYRUNTIME_VERSION }}/try-runtime-x86_64-unknown-linux-musl -o try-runtime
           chmod +x ./try-runtime
           mv try-runtime parachain
-        shell: bash
 
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3.0.0
-        with:
-          version: "23.x"
-
-      - name: Add wasm32-unknown-unknown target
-        run: rustup target add wasm32-unknown-unknown
-        shell: bash
-
-      - name: Add rust-src component
-        run: rustup component add rust-src
-        shell: bash
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq protobuf-compiler
 
       - name: Build ${{ matrix.runtime.name }}
         run: |
           cd parachain
           cargo build --profile production -p ${{ matrix.runtime.package }} --features try-runtime -q --locked
-        shell: bash
 
       - name: Check migrations
         run: |
@@ -140,15 +130,12 @@ jobs:
           RUNTIME_BLOB_PATH=./target/production/wbuild/$PACKAGE_NAME/$RUNTIME_BLOB_NAME
           export RUST_LOG=remote-ext=debug,runtime=debug
 
-          # Store the command in a variable so we can log it
           COMMAND="./try-runtime \
             --runtime $RUNTIME_BLOB_PATH \
-            on-runtime-upgrade --disable-mbm-checks --blocktime 12000000 \
+            on-runtime-upgrade --blocktime 12000 \
             live --uri ${{ matrix.runtime.uri }}"
 
-          # Echo the command before running it, for debugging purposes
           echo "Running command:"
           echo "$COMMAND"
           eval "$COMMAND"
-
         shell: bash

@@ -439,9 +439,10 @@ pub mod pallet {
 		#[pallet::call_index(8)]
 		#[pallet::weight({
             match attestation_type {
-                AttestationType::Ias => <T as Config>::WeightInfo::register_enclave_with_ias_attestation(),
                 AttestationType::Dcap(_) => <T as Config>::WeightInfo::register_enclave_with_dcap_attestation(),
                 AttestationType::Ignore => Weight::zero(),
+                #[allow(deprecated)]
+                AttestationType::Ias => Weight::zero(),
             }
         })]
 		pub fn register_enclave(
@@ -476,11 +477,10 @@ pub mod pallet {
 					enclave.last_seen_timestamp = Self::now().saturated_into();
 					enclave.sgx_build_mode = SgxBuildMode::default();
 				},
+				#[allow(deprecated)]
 				AttestationType::Ias => {
-					let report = Self::verify_ias(&sender, attestation)?;
-					enclave.mrenclave = report.mr_enclave;
-					enclave.last_seen_timestamp = report.timestamp;
-					enclave.sgx_build_mode = report.build_mode;
+					// IAS is deprecated and no longer supported
+					return Err(Error::<T>::InvalidAttestationType.into());
 				},
 				AttestationType::Dcap(provider) => {
 					ensure!(provider == DcapProvider::Intel, Error::<T>::DcapProviderNotSupported);
@@ -769,23 +769,6 @@ impl<T: Config> Pallet<T> {
 
 	pub fn enclave_count(worker_type: WorkerType) -> u32 {
 		EnclaveIdentifier::<T>::get(worker_type).iter().count() as u32
-	}
-
-	fn verify_ias(
-		sender: &T::AccountId,
-		ra_report: Vec<u8>,
-	) -> Result<SgxReport, DispatchErrorWithPostInfo> {
-		ensure!(ra_report.len() <= MAX_RA_REPORT_LEN, Error::<T>::AttestationTooLong);
-		let report = verify_ias_report(&ra_report)
-			.map_err(|_| Error::<T>::RemoteAttestationVerificationFailed)?;
-
-		let enclave_signer = T::AccountId::decode(&mut &report.pubkey[..])
-			.map_err(|_| Error::<T>::EnclaveSignerDecodeError)?;
-
-		ensure!(sender == &enclave_signer, Error::<T>::SenderIsNotAttestedEnclave);
-
-		Self::ensure_timestamp_within_24_hours(report.timestamp)?;
-		Ok(report)
 	}
 
 	fn verify_dcap(

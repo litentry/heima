@@ -36,7 +36,7 @@ pub type EnclaveFingerprint = H256;
 ///
 /// please note:
 /// `Attestation::Ignore` is only possible under `OperationalMode::Development`, but not vice versa.
-/// So if you define `Attestation::Ias`, the attestation will be verified even in `Development` mode
+/// So if you define `Attestation::Dcap`, the attestation will be verified even in `Development` mode
 #[derive(
 	PartialEq, Eq, Clone, Copy, Default, Encode, Decode, Debug, TypeInfo, Serialize, Deserialize,
 )]
@@ -60,6 +60,7 @@ pub enum DcapProvider {
 pub enum AttestationType {
 	#[default]
 	Ignore,
+	#[deprecated(note = "IAS attestation is deprecated, use DCAP instead")]
 	Ias,
 	Dcap(DcapProvider),
 }

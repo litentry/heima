@@ -278,4 +278,20 @@ pub mod pallet {
 			false
 		}
 	}
+
+	impl<T: Config> frame_support::migrations::FailedMigrationHandler for Pallet<T> {
+		fn failed(migration: Option<u32>) -> frame_support::migrations::FailedMigrationHandling {
+			log::error!(
+				target: "runtime::migrations",
+				"Migration {:?} failed - entering safe mode",
+				migration
+			);
+
+			Mode::<T>::put(OperationalMode::Safe);
+			Self::deposit_event(Event::ModeSet { new_mode: OperationalMode::Safe });
+
+			// Continue the chain in safe mode rather than completely stalling
+			frame_support::migrations::FailedMigrationHandling::ForceUnstuck
+		}
+	}
 }

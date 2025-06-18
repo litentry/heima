@@ -93,7 +93,6 @@ pub unsafe extern "C" fn get_mrenclave(mrenclave: *mut u8, mrenclave_size: usize
 pub fn create_ra_report_and_signature(
 	skip_ra: bool,
 	remote_attestation_type: RemoteAttestationType,
-	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 ) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
@@ -107,13 +106,8 @@ pub fn create_ra_report_and_signature(
 
 	match remote_attestation_type {
 		RemoteAttestationType::Epid => {
-			match attestation_handler.create_epid_ra_report_and_signature(sign_type, skip_ra) {
-				Ok(epid) => Ok(epid),
-				Err(e) => {
-					error!("create_epid_ra_report_and_signature failure: {:?}", e);
-					Err(e.into())
-				},
-			}
+			error!("EPID/IAS attestation is no longer supported. Use DCAP instead.");
+			Err(EnclaveError::Other("EPID/IAS attestation is deprecated".into()))
 		},
 		RemoteAttestationType::Dcap => {
 			match attestation_handler.generate_dcap_ra_cert(
@@ -129,43 +123,6 @@ pub fn create_ra_report_and_signature(
 			}
 		},
 	}
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn generate_ias_ra_extrinsic(
-	w_url: *const u8,
-	w_url_size: u32,
-	unchecked_extrinsic: *mut u8,
-	unchecked_extrinsic_max_size: u32,
-	unchecked_extrinsic_size: *mut u32,
-	skip_ra: c_int,
-) -> sgx_status_t {
-	if w_url.is_null() || unchecked_extrinsic.is_null() {
-		return sgx_status_t::SGX_ERROR_INVALID_PARAMETER;
-	}
-	let mut url_slice = slice::from_raw_parts(w_url, w_url_size as usize);
-	let url = match String::decode(&mut url_slice) {
-		// Litentry: the teebag extrinsic expects an URL with plain utf8 encoded Vec<u8>, not string scale-encoded
-		Ok(url) => url.as_bytes().to_vec(),
-		Err(_) => {
-			return EnclaveError::Other("Could not decode url slice to a valid String".into())
-				.into()
-		},
-	};
-	let extrinsic_slice =
-		slice::from_raw_parts_mut(unchecked_extrinsic, unchecked_extrinsic_max_size as usize);
-
-	let extrinsic = match generate_ias_ra_extrinsic_internal(url, skip_ra == 1) {
-		Ok(xt) => xt,
-		Err(e) => return e.into(),
-	};
-
-	*unchecked_extrinsic_size =
-		match write_slice_and_whitespace_pad(extrinsic_slice, extrinsic.encode()) {
-			Ok(l) => l as u32,
-			Err(e) => return EnclaveError::BufferError(e).into(),
-		};
-	sgx_status_t::SGX_SUCCESS
 }
 
 #[no_mangle]
@@ -383,46 +340,6 @@ pub fn generate_dcap_skip_ra_extrinsic_from_mr_enclave(
 	create_extrinsics(call)
 }
 
-fn generate_ias_ra_extrinsic_internal(
-	url: Vec<u8>,
-	skip_ra: bool,
-) -> EnclaveResult<OpaqueExtrinsic> {
-	let attestation_handler = GLOBAL_ATTESTATION_HANDLER_COMPONENT.get()?;
-	let cert_der = attestation_handler.generate_ias_ra_cert(skip_ra)?;
-
-	generate_ias_ra_extrinsic_from_der_cert_internal(url, &cert_der, skip_ra)
-}
-
-pub fn generate_ias_ra_extrinsic_from_der_cert_internal(
-	url: Vec<u8>,
-	cert_der: &[u8],
-	skip_ra: bool,
-) -> EnclaveResult<OpaqueExtrinsic> {
-	let node_metadata_repo = get_node_metadata_repository_from_integritee_solo_or_parachain()?;
-
-	info!("    [Enclave] Compose register ias enclave (skip-ra) call");
-	let call_ids = node_metadata_repo
-		.get_from_metadata(|m| m.register_enclave_call_indexes())?
-		.map_err(MetadataProviderError::MetadataError)?;
-
-	let shielding_pubkey = get_shielding_pubkey()?;
-	let vc_pubkey = get_vc_pubkey()?;
-	let attestation_type = if skip_ra { AttestationType::Ignore } else { AttestationType::Ias };
-
-	let call = OpaqueCall::from_tuple(&(
-		call_ids,
-		WorkerType::Identity,
-		WorkerModeProvider::worker_mode(),
-		cert_der,
-		url,
-		shielding_pubkey,
-		vc_pubkey,
-		attestation_type,
-	));
-
-	create_extrinsics(call)
-}
-
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
@@ -517,21 +434,6 @@ where
 	let xt = create_extrinsics(call)?;
 	write_slice_and_whitespace_pad(extrinsic_slice, xt.encode())
 		.map_err(|e| format!("{:?}", e).into())
-}
-
-#[no_mangle]
-pub extern "C" fn dump_ias_ra_cert_to_disk() -> sgx_status_t {
-	let attestation_handler = match GLOBAL_ATTESTATION_HANDLER_COMPONENT.get() {
-		Ok(r) => r,
-		Err(e) => {
-			error!("Component get failure: {:?}", e);
-			return sgx_status_t::SGX_ERROR_UNEXPECTED;
-		},
-	};
-	match attestation_handler.dump_ias_ra_cert_to_disk() {
-		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => e.into(),
-	}
 }
 
 #[no_mangle]
