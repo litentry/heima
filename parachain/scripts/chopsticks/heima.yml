@@ -1,0 +1,27 @@
+endpoint: wss://rpc.heima-parachain.heima.network
+port: 9944
+db: ./new-db.sqlite
+runtime-log-level: 3
+block: 7608100
+allow-unresolved-imports: true
+mock-signature-host: true
+
+import-storage:
+  System:
+    Account:
+      -
+        -
+          - "4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh"
+        - providers: 1
+          data:
+            free: "100000000000000000000"
+      -
+        -
+          - "49dXob6fj4uh9SKNm4yCuxfnrvcmArxkoUTkNWQPdtoj3Xvn"
+        - providers: 1
+          data:
+            free: "100000000000000000000"
+  TechnicalCommittee:
+    Members: ["4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh"]
+  Council:
+    Members: ["4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh", "49dXob6fj4uh9SKNm4yCuxfnrvcmArxkoUTkNWQPdtoj3Xvn"]

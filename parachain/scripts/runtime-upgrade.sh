@@ -7,9 +7,9 @@ new_wasm=/tmp/runtime.wasm
 
 function usage() {
   echo
-  echo "Usage: $0 <wasm-name> <endpoint> <release-tag> "
+  echo "Usage: $0 <wasm-name> <endpoint> <release-tag>"
   echo "e.g.:"
-  echo "    $0 heima wss://rpc.heima-parachain.heima.network v0.9.21-01"
+  echo "    $0 heima wss://rpc.heima-parachain.heima.network:443 v0.9.25-01"
 }
 
 [ $# -ne 3 ] && (usage; exit 1)
@@ -30,16 +30,7 @@ else
   exit 1
 fi
 
-# Install tools
-print_divider
-
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-echo "nvm version: $(nvm --version)"
-
-# Check if the released runtime version is greater than the on-chain runtime version,
+# Check runtime version
 print_divider
 echo "Check runtime version ..."
 release_version=$(subwasm --json info "$new_wasm" | jq .core_version.specVersion)
@@ -58,27 +49,28 @@ if [ "$onchain_version" -ge "$release_version" ]; then
   exit 1
 fi
 
-# Do runtime upgrade and verify
+# Start Chopsticks to fork the chain
 print_divider
-echo "Do runtime upgrade and verify ..."
+echo "Forking parachain with Chopsticks ..."
+npx @acala-network/chopsticks@latest --config=$ROOTDIR/parachain/scripts/chopsticks/$1.yml &
+chopsticks_pid=$!
+echo "Chopsticks fork parachain PID: $chopsticks_pid"
+sleep 30 # Wait for Chopsticks to initialize
 
-nvm install 20
-echo "Start chopsticks: $1"
-npx @acala-network/chopsticks@1.0.1 --endpoint=$2 --port=9944 --mock-signature-host=true --db=./new-db.sqlite --runtime-log-level=5 --allow-unresolved-imports=true --wasm-override $new_wasm &
-PID=$!
-echo "Chopsticks fork parachain PID: $PID"
-sleep 30
-
-echo "after chopsticks: $1"
-new_onchain_version=$(curl -s -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' http://localhost:9944 | jq .result.specVersion)
-if [ "$new_onchain_version" -ne "$release_version" ]; then
-  echo "On-chain new: $new_onchain_version"
-  echo "Runtime version NOT increased successfully, quit"
+# Check if Chopsticks is running
+if ! ps -p $chopsticks_pid > /dev/null; then
+  echo "Chopsticks failed to start, quit"
   exit 1
 fi
 
-echo "Runtime upgrade succeed: $new_onchain_version"
-
+# Create a Node.js script to perform the runtime upgrade
 print_divider
-echo "Done"
+echo "Performing runtime upgrade ..."
 
+cd "$ROOTDIR/parachain/ts-tests"
+echo "NODE_ENV=ci" > .env
+pnpm install && pnpm run test-runtime-upgrade 2>&1
+
+# Cleanup
+print_divider
+echo "Runtime upgrade succeed!"
