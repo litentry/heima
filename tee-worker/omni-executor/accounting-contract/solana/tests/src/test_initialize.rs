@@ -24,7 +24,7 @@ use anchor_client::solana_sdk::rent::Rent;
 
 // PK - 8QQds7P14EL1ZFjPLsTg2AHZaQHfNGH1EDW8wMhJmxaX
 pub fn setup_program<'a>(payer: &'a Keypair) -> Program<&'a Keypair> {
-	let program_id = "D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV";
+	let program_id = "EJgprV3h3RECRWtsMnee6FUD8CT5AUk3nMFXb7PA4xYP";
 	let client = setup_client(program_id, payer);
 
 	// Ensure the payer has tokens
