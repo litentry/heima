@@ -11,8 +11,8 @@ chrono = { workspace = true }
 der = { workspace = true }
 hex = { workspace = true }
 hex-literal = { workspace = true }
+p256 = { workspace = true }
 parity-scale-codec = { workspace = true }
-ring = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
@@ -39,7 +39,7 @@ std = [
     "chrono/std",
     "der/std",
     "hex/std",
-    "ring/std",
+    "p256/std",
     "x509-cert/std",
     "serde/std",
     "serde_json/std",
