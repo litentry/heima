@@ -27,6 +27,7 @@ members = [
     "rpc-server",
     "signer-client",
     "solana",
+    "evm-aggregators-client",
 ]
 
 resolver = "2"
