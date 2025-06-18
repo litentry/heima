@@ -4,6 +4,8 @@
 ##################################################
 FROM rust:1.87-bookworm AS plain-builder
 
+ARG CARGO_FEATURES=""
+
 RUN apt-get update && apt-get install -y clang
 
 ENV HOME=/home/ubuntu
@@ -12,7 +14,11 @@ ENV BUILD_DIR=$HOME/tee-worker/omni-executor
 COPY . $HOME
 WORKDIR $BUILD_DIR
 
-RUN cargo build --release
+RUN if [ -n "$CARGO_FEATURES" ]; then \
+        cargo build --release --features "$CARGO_FEATURES"; \
+    else \
+        cargo build --release; \
+    fi
 
 
 ### Deploy image (for CI - No Gramine)
