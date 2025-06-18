@@ -2561,7 +2561,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d162beedaa69905488a8da94f5ac3edb4dd4788b732fadb7bd120b2625c1976"
 dependencies = [
  "data-encoding",
- "syn 2.0.101",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -8412,7 +8412,7 @@ dependencies = [
 name = "pallet-evm-precompile-aiusd-convertor"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8438,7 +8438,7 @@ dependencies = [
 name = "pallet-evm-precompile-assets-erc20"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8479,7 +8479,7 @@ dependencies = [
 name = "pallet-evm-precompile-bridge-transfer"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8502,7 +8502,7 @@ dependencies = [
 name = "pallet-evm-precompile-curator"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8549,7 +8549,7 @@ dependencies = [
 name = "pallet-evm-precompile-guardian"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8575,7 +8575,7 @@ dependencies = [
 name = "pallet-evm-precompile-investing-pool"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8608,7 +8608,7 @@ dependencies = [
 name = "pallet-evm-precompile-omni-bridge"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8632,7 +8632,7 @@ dependencies = [
 name = "pallet-evm-precompile-parachain-staking"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8655,7 +8655,7 @@ dependencies = [
 name = "pallet-evm-precompile-pool-proposal"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8679,7 +8679,7 @@ dependencies = [
 name = "pallet-evm-precompile-score-staking"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -8723,7 +8723,7 @@ dependencies = [
 name = "pallet-evm-precompile-vesting"
 version = "0.1.0"
 dependencies = [
- "derive_more 0.99.20",
+ "derive_more 1.0.0",
  "fp-evm",
  "frame-support",
  "frame-system",
