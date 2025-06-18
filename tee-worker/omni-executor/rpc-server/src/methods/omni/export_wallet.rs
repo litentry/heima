@@ -1,11 +1,12 @@
 use crate::{
-	error_code::*, methods::omni::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
+	error_code::*, 
+	methods::omni::{common::check_auth, PumpxRpcError}, 
+	server::RpcContext,
 	Deserialize, ErrorCode,
 };
 use ethers::types::Bytes;
 use executor_core::native_task::*;
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
-use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
@@ -17,18 +18,16 @@ use super::common::handle_omni_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
-	pub client_id: String,
 	pub user_email: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
 	pub chain_id: PumpxChainId,
 	pub wallet_index: PumxWalletIndex,
 	pub wallet_address: String,
-	pub email_code: String,
 }
 
 impl ExportWalletParams {
-	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
+	pub fn into_native_task_wrapper(self, client_id: String) -> NativeTaskWrapper<NativeTask> {
 		NativeTaskWrapper::new(
 			NativeTask::PumpxExportWallet(
 				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Pumpx),
@@ -38,14 +37,22 @@ impl ExportWalletParams {
 				self.wallet_address,
 			),
 			None,
-			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
-			self.client_id,
+			None,
+			client_id,
 		)
 	}
 }
 
 pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
-	module        .register_async_method("omni_exportWallet", |params, ctx, _ext| async move {
+	module
+		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
+			let user = check_auth(&ext).map_err(|e| {
+				error!("Authentication check failed: {:?}", e);
+				PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					AUTH_VERIFICATION_FAILED_CODE,
+				))
+			})?;
+
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -72,22 +79,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				)
 			})?;
 
-			let wrapper = params.into_native_task_wrapper();
-
-			if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|_| {
-					error!("Failed to verify auth: {:?}", wrapper.auth);
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					))
-				})?;
-			}
+			let wrapper = params.into_native_task_wrapper(user.client_id);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxExportWallet(wallet) => {
