@@ -90,6 +90,16 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			if args.enable_mock_server {
+				#[cfg(feature = "mock-server")]
+				{
+					let mock_server_port = args.mock_server_port;
+					thread::spawn(move || {
+						mock_server::run(mock_server_port).expect("Mock server failed to start");
+					});
+				}
+			}
+
 			let env_config = EnvConfig::from_env();
 			let builder = PrometheusBuilder::new();
 
