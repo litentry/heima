@@ -23,14 +23,21 @@ pub trait MailerTrait {
 }
 
 pub struct Mailer {
+	// for mocking purpose
+	api_host: Option<String>,
 	api_key: String,
 	from_email: String,
 	from_name: String,
 }
 
 impl Mailer {
-	pub fn new(api_key: String, from_email: String, from_name: String) -> Self {
-		Self { api_key, from_email, from_name }
+	pub fn new(
+		api_host: Option<String>,
+		api_key: String,
+		from_email: String,
+		from_name: String,
+	) -> Self {
+		Self { api_host, api_key, from_email, from_name }
 	}
 }
 
@@ -44,9 +51,13 @@ impl MailerTrait for Mailer {
 			.set_subject(&mail.subject)
 			.add_content(content)
 			.add_personalization(personalization);
-		let sender = Sender::new(self.api_key.clone(), None);
-		sender.send(&message).await.map_err(|_| {
-			error!("Failed to send email");
+		let mut sender = Sender::new(self.api_key.clone(), None);
+		// for mocking purpose
+		if let Some(api_host) = &self.api_host {
+			sender.set_host(api_host.to_string());
+		}
+		sender.send(&message).await.map_err(|e| {
+			error!("Failed to send email: {:?}", e);
 			Error::SendEmailFailed
 		})?;
 

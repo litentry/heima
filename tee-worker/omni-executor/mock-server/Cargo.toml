@@ -1,0 +1,12 @@
+[package]
+edition = "2021"
+name = "mock-server"
+version = "0.1.0"
+
+[dependencies]
+env_logger = "0.10"
+hex = { workspace = true, features = ["std"] }
+log = { workspace = true, features = ["std"] }
+serde_json = { workspace = true, features = ["std"] }
+tokio = { workspace = true, features = ["full"] }
+warp = "0.3.7"
