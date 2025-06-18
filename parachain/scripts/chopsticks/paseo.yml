@@ -2,7 +2,6 @@ endpoint: wss://rpc.paseo-parachain.heima.network
 port: 9944
 db: ./new-db.sqlite
 runtime-log-level: 3
-block: 1650000
 allow-unresolved-imports: true
 mock-signature-host: true
 
