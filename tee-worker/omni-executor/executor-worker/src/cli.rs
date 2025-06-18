@@ -47,6 +47,10 @@ pub struct RunArgs {
 	pub metrics_port: String,
 	#[arg(long, default_value = "0", value_name = "threshold value in usdt")]
 	pub instant_payout_threshold: String,
+	#[arg(long, value_name = "enable mock server for testing")]
+	pub enable_mock_server: bool,
+	#[arg(short, long, default_value = "3456", value_name = "mock server port")]
+	pub mock_server_port: u16,
 }
 
 #[derive(Args)]

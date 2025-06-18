@@ -108,10 +108,12 @@ pub mod constants;
 pub mod governance_v2;
 pub mod precompiles;
 
-#[cfg(test)]
-mod tests;
+pub mod migration;
 pub mod weights;
 pub mod xcm_config;
+
+#[cfg(test)]
+mod tests;
 
 pub use precompiles::RococoNetworkPrecompiles;
 pub type Precompiles = RococoNetworkPrecompiles<Runtime>;
@@ -165,6 +167,7 @@ pub type Executive = frame_executive::Executive<
 	// it was reverse order before.
 	// See the comment before collation related pallets too.
 	AllPalletsWithSystem,
+	migration::Migrations<Runtime>,
 >;
 
 impl fp_self_contained::SelfContainedCall for RuntimeCall {
