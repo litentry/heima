@@ -17,8 +17,7 @@
 pub mod client;
 pub mod signer;
 
-use std::str::FromStr;
-
+use alloy::hex;
 use alloy::network::Ethereum;
 use alloy::network::EthereumWallet;
 use alloy::network::NetworkWallet;
@@ -27,8 +26,10 @@ use alloy::primitives::U256;
 use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
 use alloy::rpc::types::TransactionRequest;
+use alloy::transports::RpcError;
 use async_trait::async_trait;
 use executor_core::wallet_metrics::WalletBalanceFetcher;
+use std::str::FromStr;
 use tracing::log::error;
 
 pub trait RpcProviderFactory {
@@ -66,7 +67,11 @@ pub trait RpcProvider: Send + Sync {
 	) -> Result<String, ()>;
 	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()>;
 	async fn get_gas_price(&self) -> Result<u128, ()>;
-	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, ()>;
+	//todo: get code at to check if smart wallet is deployed or not, because we init it only once
+
+	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()>;
+
+	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, Option<Vec<u8>>>;
 	async fn get_wallet_address(&self) -> Result<Address, ()>;
 }
 
@@ -174,13 +179,46 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get gas price: {:?}", e))
 	}
 
-	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, ()> {
+	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()> {
 		let provider = ProviderBuilder::new().connect_http(
 			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
 		);
 
-		let result = provider.call(tx).await.map_err(|e| error!("Could not call: {:?}", e))?;
+		provider
+			.get_code_at(address)
+			.await
+			.map_err(|e| error!("Could not get gas price: {:?}", e))
+			.map(|b| b.to_vec())
+	}
 
+	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, Option<Vec<u8>>> {
+		let provider = ProviderBuilder::new().connect_http(self.url.parse().map_err(|e| {
+			error!("Could not parse rpc url: {:?}", e);
+			None
+		})?);
+		let result = match provider.call(tx).await {
+			Ok(r) => r,
+			Err(e) => {
+				error!("Error from call: {:?}", e);
+				match e {
+					RpcError::ErrorResp(resp) => match resp.data {
+						Some(value) => {
+							let value: String = serde_json::from_str(value.get()).map_err(|e| {
+								error!("Could not deserialize rpc response: {:?}", e);
+								None
+							})?;
+							let decoded = hex::decode(value).map_err(|e| {
+								error!("Could not decode rpc response: {:?}", e);
+								None
+							})?;
+							return Err(Some(decoded));
+						},
+						None => return Err(None),
+					},
+					_ => return Err(None),
+				}
+			},
+		};
 		Ok(result.to_vec())
 	}
 
@@ -225,7 +263,6 @@ pub mod mocks {
 	mock! {
 		pub RpcProvider {}
 
-
 		#[async_trait]
 		impl RpcProviderTrait for RpcProvider {
 			type Addr = Address;
@@ -237,11 +274,10 @@ pub mod mocks {
 			async fn send_transaction_with_wallet(&self, wallet: &EthereumWallet, tx: TransactionRequest) -> Result<String, ()>;
 			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;
 			async fn get_gas_price(&self) -> Result<u128, ()>;
-			async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, ()>;
+			async fn get_code_at(&self, address: Address) -> Result<Vec<u8>, ()>;
+			async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, Option<Vec<u8>>>;
 			async fn get_wallet_address(&self) -> Result<Address, ()>;
 		}
-
-
 
 	}
 

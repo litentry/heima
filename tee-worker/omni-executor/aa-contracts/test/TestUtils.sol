@@ -4,9 +4,9 @@ pragma solidity ^0.8.13;
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 
 library TestUtils {
-    function prepare_evm_oa(address account, bytes32 clientId) public pure returns (bytes32) {
-        bytes memory oaType = bytes("evm");
-        return (sha256(abi.encodePacked(oaType, clientId, account)));
+    function prepare_evm_oa(address account, bytes memory clientId) public pure returns (bytes32) {
+        bytes3 oaType = 0x65766d;
+        return sha256(abi.encodePacked(clientId, oaType, account));
     }
 
     function preparePackedOp(

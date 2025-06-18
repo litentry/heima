@@ -95,7 +95,11 @@ pub async fn query_ethereum(
 			let address = address.as_ref().into();
 			let call = IERC20::balanceOfCall { account };
 			let tx = TransactionRequest::default().with_to(address).with_input(call.abi_encode());
-			provider.call(tx).await.map(|balance| U256::from_be_slice(&balance))
+			provider
+				.call(tx)
+				.await
+				.map_err(|_| ())
+				.map(|balance| U256::from_be_slice(&balance))
 		},
 	}
 }

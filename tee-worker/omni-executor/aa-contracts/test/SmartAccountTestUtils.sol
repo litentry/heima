@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 library SmartAccountTestUtils {
-    function setUp(address ownerAddress, bytes32 clientId, address rootAddress)
+    function setUp(address ownerAddress, bytes memory clientId, address rootAddress)
         external
         returns (Counter, EntryPoint, SmartAccount)
     {

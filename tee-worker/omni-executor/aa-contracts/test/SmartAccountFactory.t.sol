@@ -12,7 +12,7 @@ contract SmartAccountFactoryTest is Test {
     SmartAccountFactory public smartAccountFactory;
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
-    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes clientId = bytes("test_client");
     bytes32 oa;
 
     function setUp() public {

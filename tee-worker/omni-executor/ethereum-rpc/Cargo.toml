@@ -16,6 +16,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
+serde_json = "1.0.138"
 signer-client = { workspace = true }
 
 [lints]

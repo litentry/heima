@@ -20,14 +20,14 @@ contract SmartAccountTest is Test {
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
-    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes clientId = bytes("test_client");
 
     function setUp() public {
         (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Owner() public view {
-        bytes32 expectedOwner = 0x671ec09fb6c26802c3d666179d280335a94e416969018a0ffe13104540f5e172;
+        bytes32 expectedOwner = 0xe502d639feeb199ae332376b050307d76d11b32e93b9fd1310127d2af64923fe;
         assertEq(account.owner(), expectedOwner);
     }
 
