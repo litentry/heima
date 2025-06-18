@@ -105,14 +105,6 @@ pub trait AttestationHandler {
 		quoting_enclave_target_info: &sgx_target_info_t,
 		quote_size: u32,
 	) -> EnclaveResult<()>;
-
-	/// Create the remote attestation report and encapsulate it in a DER certificate
-	/// Returns a pair consisting of (private key DER, certificate DER)
-	fn create_epid_ra_report_and_signature(
-		&self,
-		sign_type: sgx_quote_sign_type_t,
-		skip_ra: bool,
-	) -> EnclaveResult<(Vec<u8>, Vec<u8>)>;
 }
 
 pub struct IntelAttestationHandler<OCallApi, SigningKeyRepo> {
@@ -125,28 +117,6 @@ where
 	OCallApi: EnclaveAttestationOCallApi,
 	AccessSigningKey: AccessKey<KeyType = ed25519::Pair>,
 {
-	fn create_payload_epid(
-		&self,
-		pub_k: &[u8; 32],
-		sign_type: sgx_quote_sign_type_t,
-	) -> EnclaveResult<String> {
-		info!("    [Enclave] Create attestation report");
-		let (attn_report, sig, cert) = match self.create_epid_attestation_report(&pub_k, sign_type)
-		{
-			Ok(r) => r,
-			Err(e) => {
-				error!("    [Enclave] Error in create_attestation_report: {:?}", e);
-				return Err(e.into());
-			},
-		};
-		println!("    [Enclave] Create attestation report successful");
-		debug!("              attn_report = {:?}", attn_report);
-		debug!("              sig         = {:?}", sig);
-		debug!("              cert        = {:?}", cert);
-
-		// concat the information
-		Ok(attn_report + "|" + &sig + "|" + &cert)
-	}
 }
 
 impl<OCallApi, AccessSigningKey> AttestationHandler
@@ -155,22 +125,9 @@ where
 	OCallApi: EnclaveAttestationOCallApi,
 	AccessSigningKey: AccessKey<KeyType = ed25519::Pair>,
 {
-	fn generate_ias_ra_cert(&self, skip_ra: bool) -> EnclaveResult<Vec<u8>> {
-		// Our certificate is unlinkable.
-		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-		// FIXME: should call `create_ra_report_and_signature` in skip_ra mode as well:
-		// https://github.com/integritee-network/worker/issues/321.
-		let cert_der = if !skip_ra {
-			match self.create_epid_ra_report_and_signature(sign_type, skip_ra) {
-				Ok((_key_der, cert_der)) => cert_der,
-				Err(e) => return Err(e),
-			}
-		} else {
-			self.get_mrenclave()?.encode()
-		};
-
-		Ok(cert_der)
+	fn generate_ias_ra_cert(&self, _skip_ra: bool) -> EnclaveResult<Vec<u8>> {
+		// IAS remote attestation is no longer supported - this system uses DCAP only
+		Err(EnclaveError::Other("IAS remote attestation is not supported".into()))
 	}
 
 	fn get_mrenclave(&self) -> EnclaveResult<[u8; MR_ENCLAVE_SIZE]> {
@@ -181,24 +138,8 @@ where
 	}
 
 	fn dump_ias_ra_cert_to_disk(&self) -> EnclaveResult<()> {
-		// our certificate is unlinkable
-		let sign_type = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
-
-		let (_key_der, cert_der) = match self.create_epid_ra_report_and_signature(sign_type, false)
-		{
-			Ok(r) => r,
-			Err(e) => return Err(e),
-		};
-
-		if let Err(err) = io::write(&cert_der, RA_DUMP_CERT_DER_FILE) {
-			error!(
-				"    [Enclave] failed to write RA file ({}), status: {:?}",
-				RA_DUMP_CERT_DER_FILE, err
-			);
-			return Err(EnclaveError::IoError(err));
-		}
-		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
-		Ok(())
+		// IAS remote attestation is no longer supported - this system uses DCAP only
+		Err(EnclaveError::Other("IAS remote attestation is not supported".into()))
 	}
 
 	fn dump_dcap_ra_cert_to_disk(
@@ -224,43 +165,6 @@ where
 		}
 		info!("    [Enclave] dumped ra cert to {}", RA_DUMP_CERT_DER_FILE);
 		Ok(())
-	}
-
-	fn create_epid_ra_report_and_signature(
-		&self,
-		sign_type: sgx_quote_sign_type_t,
-		skip_ra: bool,
-	) -> EnclaveResult<(Vec<u8>, Vec<u8>)> {
-		let chain_signer = self.signing_key_repo.retrieve_key()?;
-		info!("[Enclave Attestation] Ed25519 pub raw : {:?}", chain_signer.public().0);
-
-		info!("    [Enclave] Generate keypair");
-		let ecc_handle = SgxEccHandle::new();
-		let _result = ecc_handle.open();
-		let (prv_k, pub_k) = ecc_handle.create_key_pair()?;
-		info!("    [Enclave] Generate ephemeral ECDSA keypair successful");
-		debug!("     pubkey X is {:02x}", pub_k.gx.iter().format(""));
-		debug!("     pubkey Y is {:02x}", pub_k.gy.iter().format(""));
-
-		let payload = if !skip_ra {
-			self.create_payload_epid(&chain_signer.public().0, sign_type)?
-		} else {
-			Default::default()
-		};
-
-		// generate an ECC certificate
-		info!("    [Enclave] Generate ECC Certificate");
-		let (key_der, cert_der) = match cert::gen_ecc_cert(&payload, &prv_k, &pub_k, &ecc_handle) {
-			Ok(r) => r,
-			Err(e) => {
-				error!("    [Enclave] gen_ecc_cert failed: {:?}", e);
-				return Err(e.into());
-			},
-		};
-
-		let _ = ecc_handle.close();
-		info!("    [Enclave] Generate ECC Certificate successful");
-		Ok((key_der, cert_der))
 	}
 
 	fn generate_dcap_ra_cert(
@@ -540,128 +444,6 @@ where
 			+ (u32::from(array[1]) << 8)
 			+ (u32::from(array[2]) << 16)
 			+ (u32::from(array[3]) << 24)
-	}
-
-	fn create_epid_attestation_report(
-		&self,
-		pub_k: &[u8; 32],
-		sign_type: sgx_quote_sign_type_t,
-	) -> SgxResult<(String, String, String)> {
-		// Workflow:
-		// (1) ocall to get the target_info structure (ti) and epid group id (eg)
-		// (1.5) get sigrl
-		// (2) call sgx_create_report with ti+data, produce an sgx_report_t
-		// (3) ocall to sgx_get_quote to generate (*mut sgx-quote_t, uint32_t)
-
-		// (1) get ti + eg
-		let init_quote = self.ocall_api.sgx_init_quote()?;
-
-		let epid_group_id: sgx_epid_group_id_t = init_quote.1;
-		let target_info: sgx_target_info_t = init_quote.0;
-
-		debug!("    [Enclave] EPID group id = {:?}", epid_group_id);
-
-		let eg_num = self.as_u32_le(epid_group_id);
-
-		// (1.5) get sigrl
-		let ias_socket = self.ocall_api.get_ias_socket()?;
-
-		info!("    [Enclave] ias_sock = {}", ias_socket);
-
-		// Now sigrl_vec is the revocation list, a vec<u8>
-		let sigrl_vec: Vec<u8> = self.get_sigrl_from_intel(ias_socket, eg_num)?;
-
-		// (2) Generate the report
-		let mut report_data: sgx_report_data_t = sgx_report_data_t::default();
-		report_data.d[..32].clone_from_slice(&pub_k[..]);
-
-		let report = match rsgx_create_report(&target_info, &report_data) {
-			Ok(r) => {
-				debug!(
-					"    [Enclave] Report creation successful. mr_signer.m = {:x?}",
-					r.body.mr_signer.m
-				);
-				r
-			},
-			Err(e) => {
-				error!("    [Enclave] Report creation failed. {:?}", e);
-				return Err(e);
-			},
-		};
-
-		let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
-		let mut os_rng = os::SgxRng::new().map_err(|e| EnclaveError::Other(e.into()))?;
-		os_rng.fill_bytes(&mut quote_nonce.rand);
-
-		// (3) Generate the quote
-		// Args:
-		//       1. sigrl: ptr + len
-		//       2. report: ptr 432bytes
-		//       3. linkable: u32, unlinkable=0, linkable=1
-		//       4. spid: sgx_spid_t ptr 16bytes
-		//       5. sgx_quote_nonce_t ptr 16bytes
-		//       6. p_sig_rl + sigrl size ( same to sigrl)
-		//       7. [out]p_qe_report need further check
-		//       8. [out]p_quote
-		//       9. quote_size
-
-		let spid: sgx_spid_t = Self::load_spid(RA_SPID_FILE)?;
-
-		let quote_result =
-			self.ocall_api.get_quote(sigrl_vec, report, sign_type, spid, quote_nonce)?;
-
-		let qe_report = quote_result.0;
-		let quote_content = quote_result.1;
-
-		// Added 09-28-2018
-		// Perform a check on qe_report to verify if the qe_report is valid
-		match rsgx_verify_report(&qe_report) {
-			Ok(()) => debug!("    [Enclave] rsgx_verify_report success!"),
-			Err(x) => {
-				error!("    [Enclave] rsgx_verify_report failed. {:?}", x);
-				return Err(x);
-			},
-		}
-
-		// Check if the qe_report is produced on the same platform
-		if target_info.mr_enclave.m != qe_report.body.mr_enclave.m
-			|| target_info.attributes.flags != qe_report.body.attributes.flags
-			|| target_info.attributes.xfrm != qe_report.body.attributes.xfrm
-		{
-			error!("    [Enclave] qe_report does not match current target_info!");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-		}
-
-		debug!("    [Enclave] qe_report check success");
-
-		// Check qe_report to defend against replay attack
-		// The purpose of p_qe_report is for the ISV enclave to confirm the QUOTE
-		// it received is not modified by the untrusted SW stack, and not a replay.
-		// The implementation in QE is to generate a REPORT targeting the ISV
-		// enclave (target info from p_report) , with the lower 32Bytes in
-		// report.data = SHA256(p_nonce||p_quote). The ISV enclave can verify the
-		// p_qe_report and report.data to confirm the QUOTE has not be modified and
-		// is not a replay. It is optional.
-
-		// need to call this a second time (first time is when we get the sigrl revocation list)
-		// (has some internal state that needs to be reset)!
-		let ias_socket = self.ocall_api.get_ias_socket()?;
-
-		let mut rhs_vec: Vec<u8> = quote_nonce.rand.to_vec();
-		rhs_vec.extend(&quote_content);
-		let rhs_hash = rsgx_sha256_slice(&rhs_vec[..])?;
-		let lhs_hash = &qe_report.body.report_data.d[..32];
-
-		debug!("    [Enclave] rhs hash = {:02X}", rhs_hash.iter().format(""));
-		debug!("    [Enclave] lhs hash = {:02X}", lhs_hash.iter().format(""));
-
-		if rhs_hash != lhs_hash {
-			error!("    [Enclave] Quote is tampered!");
-			return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
-		}
-
-		let (attn_report, sig, cert) = self.get_report_from_intel(ias_socket, quote_content)?;
-		Ok((attn_report, sig, cert))
 	}
 
 	fn load_spid(filename: &str) -> SgxResult<sgx_spid_t> {
