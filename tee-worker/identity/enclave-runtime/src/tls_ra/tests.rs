@@ -36,7 +36,7 @@ use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_types::ShardIdentifier;
 use lc_evm_dynamic_assertions::mock::AssertionsSealMock;
 use sgx_crypto_helper::{rsa3072::Rsa3072KeyPair, RsaKeyPair};
-use sgx_types::{sgx_quote_sign_type_t, sgx_target_info_t};
+use sgx_types::sgx_target_info_t;
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
@@ -47,7 +47,6 @@ use std::{
 	vec::Vec,
 };
 
-static SIGN_TYPE: sgx_quote_sign_type_t = sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE;
 static SKIP_RA: i32 = 1;
 static QUOTE_SIZE: u32 = 0;
 
@@ -58,7 +57,6 @@ fn run_state_provisioning_server(seal_handler: impl UnsealStateAndKeys, port: u1
 	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	run_state_provisioning_server_internal::<_, WorkerModeProvider>(
 		socket.as_raw_fd(),
-		SIGN_TYPE,
 		Some(&sgx_target_info),
 		Some(&QUOTE_SIZE),
 		SKIP_RA,
@@ -117,7 +115,6 @@ pub fn test_tls_ra_server_client_networking() {
 	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
-		SIGN_TYPE,
 		Some(&sgx_target_info),
 		Some(&QUOTE_SIZE),
 		shard,
@@ -165,7 +162,6 @@ pub fn test_state_and_key_provisioning() {
 	let sgx_target_info: sgx_target_info_t = sgx_target_info_t::default();
 	let result = request_state_provisioning_internal(
 		socket.as_raw_fd(),
-		SIGN_TYPE,
 		Some(&sgx_target_info),
 		Some(&QUOTE_SIZE),
 		shard,
