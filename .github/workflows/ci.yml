@@ -74,7 +74,7 @@ on:
         type: boolean
         description: rebuild-evm-accounting-contracts
         required: true
-        default: false          
+        default: false
       rebuild-solana-contracts:
         type: boolean
         description: rebuild-solana-contracts
@@ -156,7 +156,7 @@ jobs:
           fi
           if [ "${{ github.event.inputs.rebuild-evm-aa-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_aa_contracts_src }}" = "true" ]; then
             rebuild_evm_aa_contracts=true
-          fi          
+          fi
           if [ "${{ github.event.inputs.rebuild-solana-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.solana_contracts_src }}" = "true" ]; then
             rebuild_solana_contracts=true
           fi
@@ -682,8 +682,8 @@ jobs:
           cd tee-worker/omni-executor/aa-contracts && forge build
 
       - name: Test contracts
-        run: |          
-          cd tee-worker/omni-executor/aa-contracts && forge test          
+        run: |
+          cd tee-worker/omni-executor/aa-contracts && forge test
 
   solana-contracts-build-test:
       runs-on: ubuntu-24.04
@@ -704,8 +704,7 @@ jobs:
 
         - name: Test contract
           run: |
-            cd tee-worker/omni-executor/accounting-contract/solana && docker run --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build' 
-        
+            cd tee-worker/omni-executor/accounting-contract/solana && docker run --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build'
 
   parachain-ts-test:
     runs-on: ubuntu-22.04
