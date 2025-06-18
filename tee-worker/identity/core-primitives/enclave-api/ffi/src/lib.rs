@@ -1,8 +1,7 @@
 ///! FFI's that call into the enclave. These functions need to be added to the
 /// enclave edl file and be implemented within the enclave.
 use sgx_types::{
-	c_int, sgx_enclave_id_t, sgx_ql_qve_collateral_t, sgx_quote_sign_type_t, sgx_status_t,
-	sgx_target_info_t,
+	c_int, sgx_enclave_id_t, sgx_ql_qve_collateral_t, sgx_status_t, sgx_target_info_t,
 };
 
 extern "C" {
@@ -136,17 +135,6 @@ extern "C" {
 		mrenclave_size: u32,
 	) -> sgx_status_t;
 
-	pub fn generate_ias_ra_extrinsic(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-		w_url: *const u8,
-		w_url_size: u32,
-		unchecked_extrinsic: *mut u8,
-		unchecked_extrinsic_max_size: u32,
-		unchecked_extrinsic_size: *mut u32,
-		skip_ra: c_int,
-	) -> sgx_status_t;
-
 	pub fn generate_dcap_ra_extrinsic(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -188,11 +176,6 @@ extern "C" {
 		unchecked_extrinsic_size: *mut u32,
 	) -> sgx_status_t;
 
-	pub fn dump_ias_ra_cert_to_disk(
-		eid: sgx_enclave_id_t,
-		retval: *mut sgx_status_t,
-	) -> sgx_status_t;
-
 	pub fn dump_dcap_ra_cert_to_disk(
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
@@ -212,7 +195,6 @@ extern "C" {
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		socket_fd: c_int,
-		sign_type: sgx_quote_sign_type_t,
 		quoting_enclave_target_info: Option<&sgx_target_info_t>,
 		quote_size: Option<&u32>,
 		skip_ra: c_int,
@@ -222,7 +204,6 @@ extern "C" {
 		eid: sgx_enclave_id_t,
 		retval: *mut sgx_status_t,
 		socket_fd: c_int,
-		sign_type: sgx_quote_sign_type_t,
 		quoting_enclave_target_info: Option<&sgx_target_info_t>,
 		quote_size: Option<&u32>,
 		shard: *const u8,

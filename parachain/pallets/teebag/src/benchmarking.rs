@@ -3,6 +3,7 @@ use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use hex_literal::hex;
+use parity_scale_codec::Encode;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
@@ -208,7 +209,7 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn register_enclave_with_ias_attestation() {
+	fn register_enclave_with_ignore_attestation() {
 		AuthorizedEnclave::<T>::try_mutate(WorkerType::Identity, |v| {
 			v.try_push(test_util::TEST4_MRENCLAVE)
 		})
@@ -221,24 +222,26 @@ mod benchmarks {
 
 		let signer: T::AccountId =
 			test_util::get_signer::<T::AccountId>(test_util::TEST4_SIGNER_PUB);
+		// For AttestationType::Ignore, the attestation parameter should be the encoded mrenclave
+		let encoded_mrenclave = test_util::TEST4_MRENCLAVE.encode();
 		#[extrinsic_call]
 		Teebag::<T>::register_enclave(
 			RawOrigin::Signed(signer.clone()),
 			WorkerType::Identity,
 			WorkerMode::OffChainWorker,
-			test_util::TEST4_CERT.to_vec(),
+			encoded_mrenclave,
 			test_util::URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		);
 
 		let registered_enclave = Enclave::new(WorkerType::Identity)
 			.with_mrenclave(test_util::TEST4_MRENCLAVE)
 			.with_last_seen_timestamp(test_util::TEST4_TIMESTAMP)
-			.with_sgx_build_mode(SgxBuildMode::Debug)
+			.with_sgx_build_mode(SgxBuildMode::Production) // Default is Production
 			.with_url(test_util::URL.to_vec())
-			.with_attestation_type(AttestationType::Ias);
+			.with_attestation_type(AttestationType::Ignore);
 
 		assert_eq!(EnclaveRegistry::<T>::get(signer.clone()).unwrap(), registered_enclave);
 		assert_last_event::<T>(
@@ -311,15 +314,17 @@ mod benchmarks {
 
 		let signer: T::AccountId =
 			test_util::get_signer::<T::AccountId>(test_util::TEST4_SIGNER_PUB);
+		// For AttestationType::Ignore, the attestation parameter should be the encoded mrenclave
+		let encoded_mrenclave = test_util::TEST4_MRENCLAVE.encode();
 		assert_ok!(Teebag::<T>::register_enclave(
 			RawOrigin::Signed(signer.clone()).into(),
 			WorkerType::Identity,
 			WorkerMode::OffChainWorker,
-			test_util::TEST4_CERT.to_vec(),
+			encoded_mrenclave,
 			test_util::URL.to_vec(),
 			None,
 			None,
-			AttestationType::Ias,
+			AttestationType::Ignore,
 		));
 
 		#[extrinsic_call]

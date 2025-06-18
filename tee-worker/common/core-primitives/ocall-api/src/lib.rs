@@ -48,8 +48,6 @@ pub type Result<T> = StdResult<T, Error>;
 pub trait EnclaveAttestationOCallApi: Clone + Send + Sync {
 	fn sgx_init_quote(&self) -> SgxResult<(sgx_target_info_t, sgx_epid_group_id_t)>;
 
-	fn get_ias_socket(&self) -> SgxResult<i32>;
-
 	fn get_quote(
 		&self,
 		sig_rl: Vec<u8>,
