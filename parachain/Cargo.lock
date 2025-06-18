@@ -4593,7 +4593,7 @@ dependencies = [
  "base58",
  "base64 0.13.1",
  "chrono",
- "der 0.6.1",
+ "der 0.7.10",
  "frame-support",
  "heima-utils",
  "heima-utils-proc-macros",
@@ -9476,7 +9476,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.13.1",
  "chrono",
- "der 0.6.1",
+ "der 0.7.10",
  "env_logger",
  "frame-benchmarking",
  "frame-support",
