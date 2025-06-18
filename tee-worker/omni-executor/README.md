@@ -22,12 +22,27 @@ Gramine is required for running inside TEE, please refer to [installation option
 2. Build omni-executor docker image:
 
    ```bash
+   # for local
    make build-docker
+   # for integration test
+   make build-docker-test
    ```
 
-3. Start local omni-executor:
+3. Start omni-executor:
    ```bash
+   # for local
    make start-local
+   # for integration test
+   make start-test
    ```
+
+4. Stop omni-executor:
+   ```bash
+   # for local
+   make stop-local
+   # for integration test
+   make stop-test
+   ```
+
 
 First service run will generate substrate account, it needs to set as omni executor in `omniAccount` pallet. 
