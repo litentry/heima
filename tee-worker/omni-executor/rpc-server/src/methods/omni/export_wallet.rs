@@ -1,6 +1,6 @@
 use crate::{
-	error_code::*, 
-	methods::omni::{common::check_auth, PumpxRpcError}, 
+	error_code::*,
+	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
 	Deserialize, ErrorCode,
 };
