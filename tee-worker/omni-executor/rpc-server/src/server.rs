@@ -3,6 +3,7 @@ use crate::{
 	middlewares::{HttpMiddleware, RpcMiddleware},
 	ShieldingKey,
 };
+use config_loader::ConfigLoader;
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
@@ -54,16 +55,14 @@ pub async fn start_server(
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	jwt_rsa_private_key: Vec<u8>,
+	config_loader: &ConfigLoader,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	// TODO: move to config
-	let mailer_api_host = env::var("OE_SENDGRID_API_HOST").ok();
-	let mailer_api_key = env::var("OE_SENDGRID_API_KEY").unwrap_or("".to_string());
-	let mailer_from_email = env::var("OE_SENDGRID_FROM_EMAIL").unwrap_or("".to_string());
-	let mailer_from_name = env::var("OE_SENDGRID_FROM_NAME").unwrap_or("".to_string());
-	let mailer = Mailer::new(mailer_api_host, mailer_api_key, mailer_from_email, mailer_from_name);
-
-	let google_client_id = env::var("OE_GOOGLE_CLIENT_ID").unwrap_or("".to_string());
-	let google_client_secret = env::var("OE_GOOGLE_CLIENT_SECRET").unwrap_or("".to_string());
+	let mailer = Mailer::new(
+		config_loader.mailer_api_host.clone(),
+		config_loader.mailer_api_key.clone(),
+		config_loader.mailer_from_email.clone(),
+		config_loader.mailer_from_name.clone(),
+	);
 
 	let ctx = RpcContext::new(
 		shielding_key,
@@ -71,8 +70,8 @@ pub async fn start_server(
 		storage_db,
 		mailer,
 		jwt_rsa_private_key.clone(),
-		google_client_id,
-		google_client_secret,
+		config_loader.google_client_id.clone(),
+		config_loader.google_client_secret.clone(),
 		pumpx_api,
 	);
 	let mut module = RpcModule::new(ctx);
