@@ -24,6 +24,7 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
+config-loader = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
