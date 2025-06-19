@@ -781,18 +781,14 @@ async fn handle_native_task<
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
-			if let Ok(maybe_profile) =
-				omni_account_profile_storage.get(&omni_account)
-			{
+			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {
 				let profile = maybe_profile
 					.map(|mut p| {
 						p.wallet_exported = true;
 						p
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				if let Err(e) =
-					omni_account_profile_storage.insert(&omni_account, profile)
-				{
+				if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
 					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
 						"Failed to update omni account profile".to_string(),

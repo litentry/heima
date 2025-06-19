@@ -41,7 +41,7 @@ impl TransferWithdrawParams {
 	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
 		let identity = Identity::from_web2_account(self.user_id.as_str(), Web2IdentityType::Pumpx);
 		let omni_account = identity.to_omni_account(&self.client_id);
-		
+
 		NativeTaskWrapper::new(
 			NativeTask::PumpxTransferWidthdraw(
 				omni_account,
