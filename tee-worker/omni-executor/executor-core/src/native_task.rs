@@ -52,7 +52,7 @@ pub enum NativeTask {
 	#[codec(index = 21)]
 	PumpxExportWallet(AccountId, GoogleCode, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]
-	PumpxAddWallet(Identity),
+	PumpxAddWallet(AccountId),
 	#[codec(index = 23)]
 	PumpxSignLimitOrder(Identity, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
 	#[codec(index = 24)]

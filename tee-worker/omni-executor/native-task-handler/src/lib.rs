@@ -808,10 +808,9 @@ async fn handle_native_task<
 			send_ok(response_sender, NativeTaskOk::PumpxExportWallet(decrypted_wallet));
 			return;
 		},
-		NativeTask::PumpxAddWallet(sender) => {
+		NativeTask::PumpxAddWallet(omni_account) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
