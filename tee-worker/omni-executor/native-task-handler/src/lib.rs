@@ -879,7 +879,7 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxTransferWidthdraw(
-			sender,
+			omni_account,
 			request_id,
 			chain_id,
 			wallet_index,
@@ -892,7 +892,7 @@ async fn handle_native_task<
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					"Failed to get access_token within NativeTask::PumpxTransferWidthdraw"

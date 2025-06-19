@@ -57,7 +57,7 @@ pub enum NativeTask {
 	PumpxSignLimitOrder(Identity, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
 	#[codec(index = 24)]
 	PumpxTransferWidthdraw(
-		Identity,
+		AccountId,
 		Option<u32>,    // request_id
 		u32,            // chain_id
 		u32,            // wallet_index
