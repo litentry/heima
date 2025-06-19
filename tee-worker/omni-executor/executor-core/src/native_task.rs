@@ -68,7 +68,7 @@ pub enum NativeTask {
 		Option<String>, // language
 	),
 	#[codec(index = 25)]
-	PumpxNotifyLimitOrderResult(Identity, u32, String, Option<String>),
+	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
 }
 
 impl NativeTaskTrait for NativeTask {

@@ -929,7 +929,7 @@ async fn handle_native_task<
 			};
 			return;
 		},
-		NativeTask::PumpxNotifyLimitOrderResult(sender, intent_id, result, message) => {
+		NativeTask::PumpxNotifyLimitOrderResult(omni_account, intent_id, result, message) => {
 			if result != "ok" && result != "nok" {
 				send_error(
 					format!("Invalid result value: {}. Must be 'ok' or 'nok'", result),
@@ -948,19 +948,6 @@ async fn handle_native_task<
 			if let Some(msg) = message {
 				info!("Limit order result message for intent_id {}: {}", intent_id, msg);
 			}
-
-			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
-			let omni_account: AccountId = match sender {
-				Identity::Substrate(ref account) => account.into(),
-				_ => {
-					send_error(
-						"Invalid sender type for PumpxSignLimitOrder".to_string(),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
-					return;
-				},
-			};
 
 			send_ok(response_sender, NativeTaskOk::PumpxNotifyLimitOrderResult);
 
