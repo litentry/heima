@@ -39,7 +39,7 @@ pub type PumpxChainId = u32;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
-	RequestIntent(Identity, IntentId, Intent),
+	RequestIntent(AccountId, IntentId, Intent),
 	CreateAccountStore(Identity),
 	AddAccount(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	RemoveAccounts(Identity, Vec<Identity>),
