@@ -7,7 +7,8 @@ use crate::{
 use ethers::types::Bytes;
 use executor_core::native_task::*;
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
-use heima_primitives::{Identity, Web2IdentityType};
+use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
+use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use rsa::Oaep;
@@ -18,7 +19,6 @@ use super::common::handle_omni_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
-	pub user_email: String,
 	pub key: Bytes, // RSA-encrypted AES key to encrypt the wallet private key, in 0x-hex-string
 	pub google_code: String,
 	pub chain_id: PumpxChainId,
@@ -27,10 +27,14 @@ pub struct ExportWalletParams {
 }
 
 impl ExportWalletParams {
-	pub fn into_native_task_wrapper(self, client_id: String) -> NativeTaskWrapper<NativeTask> {
+	pub fn into_native_task_wrapper(
+		self,
+		client_id: String,
+		omni_account: AccountId,
+	) -> NativeTaskWrapper<NativeTask> {
 		NativeTaskWrapper::new(
 			NativeTask::PumpxExportWallet(
-				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Pumpx),
+				omni_account,
 				self.google_code,
 				self.chain_id,
 				self.wallet_index,
@@ -58,7 +62,13 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received omni_exportWallet, user_email: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_email, params.chain_id, params.wallet_index, params.wallet_address);
+			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
+
+			let Ok(address) = Address32::from_hex(&user.omni_account) else {
+				error!("Failed to parse from omni account token");
+				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+			};
+			let omni_account = AccountId::from(address);
 
 			let aes_key = ctx
 				.shielding_key
@@ -79,7 +89,7 @@ pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
 				)
 			})?;
 
-			let wrapper = params.into_native_task_wrapper(user.client_id);
+			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 				NativeTaskOk::PumpxExportWallet(wallet) => {

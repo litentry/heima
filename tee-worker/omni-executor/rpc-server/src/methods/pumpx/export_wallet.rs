@@ -33,9 +33,12 @@ pub struct ExportWalletParams {
 
 impl ExportWalletParams {
 	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
+		let identity = Identity::from_web2_account(self.user_id.as_str(), Web2IdentityType::Pumpx);
+		let omni_account = identity.to_omni_account(&self.client_id);
+		
 		NativeTaskWrapper::new(
 			NativeTask::PumpxExportWallet(
-				Identity::from_web2_account(self.user_id.as_str(), Web2IdentityType::Pumpx),
+				omni_account,
 				self.google_code,
 				self.chain_id,
 				self.wallet_index,

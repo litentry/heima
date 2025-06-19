@@ -708,7 +708,7 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxExportWallet(
-			sender,
+			omni_account,
 			google_code,
 			pumpx_chain_id,
 			pumpx_wallet_index,
@@ -716,7 +716,7 @@ async fn handle_native_task<
 		) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
@@ -756,7 +756,7 @@ async fn handle_native_task<
 				.export_wallet(
 					chain,
 					pumpx_wallet_index,
-					sender.to_omni_account(client_id).into(),
+					omni_account.clone().into(),
 					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
 					//       we don't have to do double encryption/decryption
 					ctx.aes256_key.to_vec(),
@@ -782,7 +782,7 @@ async fn handle_native_task<
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
 			if let Ok(maybe_profile) =
-				omni_account_profile_storage.get(&sender.to_omni_account(client_id))
+				omni_account_profile_storage.get(&omni_account)
 			{
 				let profile = maybe_profile
 					.map(|mut p| {
@@ -791,7 +791,7 @@ async fn handle_native_task<
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
 				if let Err(e) =
-					omni_account_profile_storage.insert(&sender.to_omni_account(client_id), profile)
+					omni_account_profile_storage.insert(&omni_account, profile)
 				{
 					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
