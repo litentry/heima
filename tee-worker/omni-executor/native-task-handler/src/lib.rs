@@ -834,19 +834,7 @@ async fn handle_native_task<
 			send_ok(response_sender, NativeTaskOk::PumpxAddWallet(backend_response));
 			return;
 		},
-		NativeTask::PumpxSignLimitOrder(sender, chain_id, wallet_index, unsigned_tx) => {
-			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
-			let omni_account: AccountId = match sender {
-				Identity::Substrate(ref account) => account.into(),
-				_ => {
-					send_error(
-						"Invalid sender type for PumpxSignLimitOrder".to_string(),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
-					return;
-				},
-			};
+		NativeTask::PumpxSignLimitOrder(omni_account, chain_id, wallet_index, unsigned_tx) => {
 			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
 				error!("Failed to map pumpx chain_id {}", chain_id);
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
