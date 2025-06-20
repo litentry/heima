@@ -37,9 +37,11 @@ use crate::{
 	SgxStatus, TcbVersionStatus, ATTESTATION_KEY_SIZE, REPORT_SIGNATURE_SIZE,
 };
 use alloc::string::String;
-use der::asn1::ObjectIdentifier;
+use der::{
+	asn1::{ObjectIdentifier, PrintableStringRef, Utf8StringRef},
+	Decode as _, Encode as _,
+};
 use frame_support::ensure;
-// use ecdsa::Signature as _;
 use p256::ecdsa::{
 	signature::{DigestVerifier, Verifier},
 	Signature, VerifyingKey,
@@ -47,9 +49,7 @@ use p256::ecdsa::{
 use parity_scale_codec::Decode;
 use sha2::{Digest, Sha256};
 use sp_std::{convert::TryInto, prelude::*, vec};
-use x509_parser::certificate::X509Certificate;
-use x509_parser::oid_registry::Oid;
-use x509_parser::{nom::AsBytes, prelude::*};
+use x509_cert::Certificate;
 
 pub mod collateral;
 #[cfg(test)]
@@ -91,7 +91,7 @@ pub fn encode_as_der(data: &[u8]) -> Result<Vec<u8>, &'static str> {
 pub fn deserialize_enclave_identity(
 	data: &[u8],
 	signature: &[u8],
-	cert: &X509Certificate,
+	cert: &Certificate,
 ) -> Result<EnclaveIdentity, &'static str> {
 	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, signature))?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
@@ -103,7 +103,7 @@ pub fn deserialize_enclave_identity(
 pub fn deserialize_tcb_info(
 	data: &[u8],
 	signature: &[u8],
-	cert: &X509Certificate,
+	cert: &Certificate,
 ) -> Result<TcbInfo, &'static str> {
 	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, signature))?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
@@ -129,9 +129,9 @@ pub fn verify_cert_chain(
 	cert_chain: &[Vec<u8>],
 	verification_time_millis: u64,
 ) -> Result<(), &'static str> {
-	let parsed: Vec<X509Certificate> = cert_chain
+	let parsed: Vec<Certificate> = cert_chain
 		.iter()
-		.map(|c| x509_parser::parse_x509_certificate(c).map(|(_, cert)| cert))
+		.map(|c| Certificate::from_der(c))
 		.collect::<Result<_, _>>()
 		.map_err(|_| "Failed to parse cert")?;
 
@@ -192,8 +192,8 @@ pub fn verify_dcap_quote(
 
 	let certs = extract_certs(&quote.quote_signature_data.qe_certification_data.certification_data);
 	ensure!(certs.len() >= 2, "Certificate chain must have at least two certificates");
-	let (_, leaf_cert) =
-		X509Certificate::from_der(&certs[0]).map_err(|_| "Failed to parse leaf certificate")?;
+	let leaf_cert =
+		Certificate::from_der(&certs[0]).map_err(|_| "Failed to parse leaf certificate")?;
 
 	verify_cert_chain(&certs, verification_time)?;
 
@@ -286,14 +286,23 @@ pub fn extract_tcb_info(cert: &[u8]) -> Result<(Fmspc, TcbVersionStatus), &'stat
 }
 
 fn get_intel_extension(der_encoded: &[u8]) -> Result<Vec<u8>, &'static str> {
-	let (_, cert) =
-		X509Certificate::from_der(der_encoded).map_err(|_| "Error parsing certificate")?;
+	let cert = Certificate::from_der(der_encoded).map_err(|_| "Error parsing certificate")?;
+	let mut extension_iter = cert
+		.tbs_certificate
+		.extensions
+		.as_deref()
+		.unwrap_or(&[])
+		.iter()
+		.filter(|e| e.extn_id == INTEL_SGX_EXTENSION_OID)
+		.map(|e| e.extn_value.clone());
 
-	match cert.get_extension_unique(&Oid::new(INTEL_SGX_EXTENSION_OID.as_bytes().into())) {
-		Ok(Some(ext)) => Ok(ext.value.to_vec()),
-		Ok(None) => Err("No INTEL_SGX_EXTENSION_OID extension found"),
-		Err(_) => Err("Error get INTEL_SGX_EXTENSION_OID extension"),
-	}
+	let extension = extension_iter.next();
+	ensure!(
+		extension.is_some() && extension_iter.next().is_none(),
+		"There should only be one section containing Intel extensions"
+	);
+	// SAFETY: Ensured above that extension.is_some() == true
+	Ok(extension.unwrap().into_bytes())
 }
 
 fn get_fmspc(der: &[u8]) -> Result<Fmspc, &'static str> {
@@ -367,25 +376,28 @@ fn verify_raw_sig(
 }
 
 pub fn verify_cert_sig(
-	child_cert: &X509Certificate<'_>,
-	parent_cert: &X509Certificate<'_>,
+	child_cert: &Certificate,
+	parent_cert: &Certificate,
 ) -> Result<(), &'static str> {
 	let parent_spki = extract_cert_pubkey(parent_cert)?;
-	let tbs = child_cert.tbs_certificate.as_ref();
-	let sig = &child_cert.signature_value.data;
+	let tbs = child_cert
+		.tbs_certificate
+		.to_der()
+		.map_err(|_| "Failed to encode tbs_certificate")?;
+	let sig = child_cert.signature.raw_bytes();
 
 	let verifying_key =
 		VerifyingKey::from_sec1_bytes(parent_spki).map_err(|_| "Invalid parent SPKI")?;
 	let signature = Signature::from_der(sig).map_err(|_| "Invalid DER signature")?;
 
 	verifying_key
-		.verify(tbs, &signature)
+		.verify(&tbs, &signature)
 		.map_err(|_| "Signature verification failed")
 }
 
-pub fn check_cert_validity(cert: &X509Certificate, time: i64) -> Result<(), &'static str> {
-	let not_before = cert.validity().not_before.timestamp();
-	let not_after = cert.validity().not_after.timestamp();
+pub fn check_cert_validity(cert: &Certificate, time: i64) -> Result<(), &'static str> {
+	let not_before = cert.tbs_certificate.validity.not_before.to_unix_duration().as_secs() as i64;
+	let not_after = cert.tbs_certificate.validity.not_after.to_unix_duration().as_secs() as i64;
 
 	if time < not_before {
 		return Err("Certificate not yet valid");
@@ -396,40 +408,56 @@ pub fn check_cert_validity(cert: &X509Certificate, time: i64) -> Result<(), &'st
 	Ok(())
 }
 
-fn extract_cert_pubkey<'a>(cert: &'a X509Certificate) -> Result<&'a [u8], &'static str> {
-	let spki = cert.public_key();
-	let raw_key = &spki.subject_public_key.data;
+fn extract_cert_pubkey(cert: &Certificate) -> Result<&[u8], &'static str> {
+	let raw_key = cert.tbs_certificate.subject_public_key_info.subject_public_key.raw_bytes();
 
 	ensure!(
 		raw_key.len() == 65 && raw_key[0] == 0x04,
 		"Expected uncompressed 65-byte EC public key"
 	);
 
-	Ok(raw_key.as_bytes())
+	Ok(raw_key)
 }
 
-fn is_intel_sgx_root(cert: &X509Certificate) -> Result<(), &'static str> {
+fn is_intel_sgx_root(cert: &Certificate) -> Result<(), &'static str> {
+	const OID_COMMON_NAME: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.3"); // CN
+	const OID_ORGANIZATION_NAME: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.4.10"); // O
+
 	ensure!(
-		cert.tbs_certificate.subject.iter().any(|rdn| {
-			rdn.iter().any(|attr| {
-				*attr.attr_type() == oid_registry::OID_X509_COMMON_NAME
-					&& attr.attr_value().as_str().map_or(false, |s| s == "Intel SGX Root CA")
+		cert.tbs_certificate.subject.0.iter().any(|rdn| {
+			rdn.0.iter().any(|attr| {
+				attr.oid == OID_COMMON_NAME
+					&& attr_value_as_str(&attr.value) == Some("Intel SGX Root CA".to_string())
 			})
 		}),
-		"OID_X509_COMMON_NAME mismatch"
+		"OID_COMMON_NAME mismatch"
 	);
 
 	ensure!(
-		cert.tbs_certificate.subject.iter().any(|rdn| {
-			rdn.iter().any(|attr| {
-				*attr.attr_type() == oid_registry::OID_X509_ORGANIZATION_NAME
-					&& attr.attr_value().as_str().map_or(false, |s| s == "Intel Corporation")
+		cert.tbs_certificate.subject.0.iter().any(|rdn| {
+			rdn.0.iter().any(|attr| {
+				attr.oid == OID_ORGANIZATION_NAME
+					&& attr_value_as_str(&attr.value) == Some("Intel Corporation".to_string())
 			})
 		}),
-		"OID_X509_ORGANIZATION_NAME mismatch"
+		"OID_ORGANIZATION_NAME mismatch"
 	);
 
-	ensure!(cert.tbs_certificate.subject_pki.raw == INTEL_ROOT_CA_SPKI, "Spki mismatch");
+	let spki = cert
+		.tbs_certificate
+		.subject_public_key_info
+		.to_der()
+		.map_err(|_| "Failed to encode spki")?;
+	ensure!(spki.as_slice() == INTEL_ROOT_CA_SPKI, "Spki mismatch");
 
 	Ok(())
+}
+
+fn attr_value_as_str(value: &der::Any) -> Option<String> {
+	Utf8StringRef::from_der(&value.to_der().unwrap_or_default())
+		.map(|s| s.to_string())
+		.or_else(|_| {
+			PrintableStringRef::from_der(&value.to_der().unwrap_or_default()).map(|s| s.to_string())
+		})
+		.ok()
 }

@@ -32,7 +32,6 @@ use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{prelude::*, str};
 
 use heima_primitives::*;
-use x509_parser::prelude::*;
 
 pub use pallet::*;
 

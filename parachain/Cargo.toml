@@ -108,8 +108,6 @@ num_enum = { version = "0.7.3", default-features = false }
 num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.2", default-features = false }
-x509-parser = { version = "0.17" }
-webpki = { version = "=0.102.0-alpha.3", git = "https://github.com/rustls/webpki", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
 # to be compatible with astar-frontier
 evm = { git = "https://github.com/rust-ethereum/evm", rev = "e81732d", default-features = false }
 
@@ -320,6 +318,3 @@ pallet-guardian = { path = "pallets/collab-ai/guardian", default-features = fals
 pallet-halving-mint = { path = "pallets/collab-ai/halving-mint", default-features = false }
 pallet-pool-proposal = { path = "pallets/collab-ai/pool-proposal", default-features = false }
 pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-features = false }
-
-[patch.crates-io]
-ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }

@@ -19,9 +19,7 @@ parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["alloc"] }
-webpki = { workspace = true }
 x509-cert = { workspace = true }
-x509-parser = { workspace = true }
 
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
@@ -34,7 +32,7 @@ sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-heima-primitives = { workspace = true, features = ["webpki"] }
+heima-primitives = { workspace = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
@@ -66,7 +64,6 @@ std = [
     "sp-keyring/std",
     "sp-runtime/std",
     "sp-std/std",
-    "webpki/std",
     "x509-cert/std",
 ]
 runtime-benchmarks = [

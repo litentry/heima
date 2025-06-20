@@ -19,9 +19,7 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
-webpki = { workspace = true, optional = true }
 x509-cert = { workspace = true }
-x509-parser = { workspace = true }
 
 frame-support = { workspace = true }
 pallet-evm = { workspace = true }
@@ -36,14 +34,13 @@ heima-utils = { workspace = true }
 heima-utils-proc-macros = { workspace = true }
 
 [features]
-default = ["std", "webpki"]
+default = ["std"]
 std = [
     "chrono/std",
     "der/std",
     "hex/std",
     "ecdsa/std",
     "p256/std",
-    "x509-cert/std",
     "serde/std",
     "serde_json/std",
     "strum/std",
@@ -57,10 +54,9 @@ std = [
     "sp-consensus-aura/std",
     "pallet-evm/std",
     "heima-utils/std",
-    "webpki?/std",
     "sha2/std",
+    "x509-cert/std",
 ]
 development = [
     "heima-utils/development",
 ]
-webpki = ["dep:webpki"]
