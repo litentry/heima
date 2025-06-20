@@ -56,6 +56,7 @@ pub mod collateral;
 mod tests;
 mod utils;
 
+// copied from old webpki TrustAnchors, prefixed with full SPKI SEQUENCE
 const INTEL_ROOT_CA_SPKI: &[u8] = &[
 	48, 89, 48, 19, 6, 7, 42, 134, 72, 206, 61, 2, 1, 6, 8, 42, 134, 72, 206, 61, 3, 1, 7, 3, 66,
 	0, 4, 11, 169, 196, 192, 192, 200, 97, 147, 163, 254, 35, 214, 176, 44, 218, 16, 168, 187, 212,
@@ -90,9 +91,9 @@ pub fn encode_as_der(data: &[u8]) -> Result<Vec<u8>, &'static str> {
 pub fn deserialize_enclave_identity(
 	data: &[u8],
 	signature: &[u8],
-	certificate: &X509Certificate,
+	cert: &X509Certificate,
 ) -> Result<EnclaveIdentity, &'static str> {
-	verify_raw_sig(certificate.public_key().raw, data, signature)?;
+	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, &signature))?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
 }
 
@@ -102,9 +103,9 @@ pub fn deserialize_enclave_identity(
 pub fn deserialize_tcb_info(
 	data: &[u8],
 	signature: &[u8],
-	certificate: &X509Certificate,
+	cert: &X509Certificate,
 ) -> Result<TcbInfo, &'static str> {
-	verify_raw_sig(certificate.public_key().raw, data, signature)?;
+	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, &signature))?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
 }
 
