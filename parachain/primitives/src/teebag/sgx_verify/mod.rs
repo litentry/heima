@@ -36,7 +36,7 @@ use crate::{
 	Cpusvn, DcapQuote, DcapQuoteHeader, Fmspc, Pcesvn, QuotingEnclave, SgxReport, SgxReportBody,
 	SgxStatus, TcbVersionStatus, ATTESTATION_KEY_SIZE, REPORT_SIGNATURE_SIZE,
 };
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use der::{
 	asn1::{ObjectIdentifier, PrintableStringRef, Utf8StringRef},
 	Decode as _, Encode as _,
