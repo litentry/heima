@@ -58,6 +58,7 @@
 //! All dispatchables in this pallet must come from a priviledged origin.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::useless_conversion)]
 
 #[cfg(test)]
 mod mock;
