@@ -2464,6 +2464,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "config-loader"
+version = "0.1.0"
+dependencies = [
+ "tracing",
+]
+
+[[package]]
 name = "console"
 version = "0.15.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4002,6 +4009,7 @@ dependencies = [
  "alloy",
  "binance-api",
  "clap",
+ "config-loader",
  "cross-chain-intent-executor",
  "ethereum-intent-executor",
  "ethereum-rpc",
@@ -8498,6 +8506,7 @@ dependencies = [
  "alloy-signer-local",
  "base58",
  "chrono",
+ "config-loader",
  "ethers",
  "executor-core",
  "executor-crypto",
