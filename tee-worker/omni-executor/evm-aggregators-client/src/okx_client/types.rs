@@ -1,0 +1,180 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SwapRequest {
+    pub chain_id: String,
+    pub amount: String,
+    pub from_token_address: String,
+    pub to_token_address: String,
+    pub slippage: String,
+    pub user_wallet_address: String,
+    pub fee_percent: String,
+    pub from_token_referrer_wallet_address: String,
+    pub to_token_referrer_wallet_address: String,
+    pub gas_level: String,
+    pub dex_ids: String,
+    pub auto_slippage: bool,
+}
+
+impl SwapRequest {
+    /// Converts the SwapRequest into a vector of (&str, String) suitable for query params.
+    pub fn convert_to_query_params(&self) -> Vec<(&'static str, String)> {
+        let mut params = vec![
+            ("chainId", self.chain_id.clone()),
+            ("amount", self.amount.clone()),
+            ("fromTokenAddress", self.from_token_address.clone()),
+            ("toTokenAddress", self.to_token_address.clone()),
+            ("slippage", self.slippage.clone()),
+            ("userWalletAddress", self.user_wallet_address.clone()),
+            ("feePercent", self.fee_percent.clone()),
+        ];
+
+        if !self.from_token_referrer_wallet_address.is_empty() {
+            params.push((
+                "fromTokenReferrerWalletAddress",
+                self.from_token_referrer_wallet_address.clone(),
+            ));
+        }
+        if !self.to_token_referrer_wallet_address.is_empty() {
+            params.push((
+                "toTokenReferrerWalletAddress",
+                self.to_token_referrer_wallet_address.clone(),
+            ));
+        }
+        if !self.gas_level.is_empty() {
+            params.push(("gasLevel", self.gas_level.clone()));
+        }
+        if !self.dex_ids.is_empty() {
+            params.push(("dexIds", self.dex_ids.clone()));
+        }
+        if self.auto_slippage {
+            params.push(("autoSlippage", "true".to_string()));
+        }
+
+        params
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SwapResponse {
+    #[serde(rename = "routerResult")]
+    pub router_result: RouterResult,
+    pub tx: Tx,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RouterResult {
+    #[serde(rename = "chainId")]
+    pub chain_id: String,
+
+    #[serde(rename = "dexRouterList")]
+    pub dex_router_list: Vec<DexRouter>,
+
+    #[serde(rename = "estimateGasFee")]
+    pub estimate_gas_fee: String,
+
+    #[serde(rename = "fromToken")]
+    pub from_token: Token,
+
+    #[serde(rename = "fromTokenAmount")]
+    pub from_token_amount: String,
+
+    #[serde(rename = "priceImpactPercentage")]
+    pub price_impact_percentage: String,
+
+    #[serde(rename = "quoteCompareList")]
+    pub quote_compare_list: Vec<QuoteCompare>,
+
+    #[serde(rename = "toToken")]
+    pub to_token: Token,
+
+    #[serde(rename = "toTokenAmount")]
+    pub to_token_amount: String,
+
+    #[serde(rename = "tradeFee")]
+    pub trade_fee: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DexRouter {
+    pub router: String,
+
+    #[serde(rename = "routerPercent")]
+    pub router_percent: String,
+
+    #[serde(rename = "subRouterList")]
+    pub sub_router_list: Vec<SubRouter>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubRouter {
+    #[serde(rename = "dexProtocol")]
+    pub dex_protocol: Vec<DexProtocol>,
+
+    #[serde(rename = "fromToken")]
+    pub from_token: Token,
+
+    #[serde(rename = "toToken")]
+    pub to_token: Token,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DexProtocol {
+    #[serde(rename = "dexName")]
+    pub dex_name: String,
+
+    pub percent: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Token {
+    pub decimal: String,
+
+    #[serde(rename = "isHoneyPot")]
+    pub is_honey_pot: bool,
+
+    #[serde(rename = "taxRate")]
+    pub tax_rate: String,
+
+    #[serde(rename = "tokenContractAddress")]
+    pub token_contract_address: String,
+
+    #[serde(rename = "tokenSymbol")]
+    pub token_symbol: String,
+
+    #[serde(rename = "tokenUnitPrice")]
+    pub token_unit_price: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QuoteCompare {
+    #[serde(rename = "amountOut")]
+    pub amount_out: String,
+
+    #[serde(rename = "dexLogo")]
+    pub dex_logo: String,
+
+    #[serde(rename = "dexName")]
+    pub dex_name: String,
+
+    #[serde(rename = "tradeFee")]
+    pub trade_fee: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tx {
+    pub data: String,
+    pub from: String,
+    pub gas: String,
+    #[serde(rename = "gasPrice")]
+    pub gas_price: String,
+    #[serde(rename = "maxPriorityFeePerGas")]
+    pub max_priority_fee_per_gas: String,
+    #[serde(rename = "minReceiveAmount")]
+    pub min_receive_amount: String,
+    #[serde(rename = "signatureData")]
+    pub signature_data: Vec<String>,
+    pub slippage: String,
+    pub to: String,
+    pub value: String,
+}
