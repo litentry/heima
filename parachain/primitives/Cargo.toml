@@ -9,6 +9,7 @@ base58 = { workspace = true }
 base64 = { workspace = true }
 chrono = { workspace = true }
 der = { workspace = true }
+ecdsa = { workspace = true }
 hex = { workspace = true }
 hex-literal = { workspace = true }
 p256 = { workspace = true }
@@ -20,6 +21,7 @@ strum = { workspace = true }
 strum_macros = { workspace = true }
 webpki = { workspace = true, optional = true }
 x509-cert = { workspace = true }
+x509-parser = { workspace = true }
 
 frame-support = { workspace = true }
 pallet-evm = { workspace = true }
@@ -39,6 +41,7 @@ std = [
     "chrono/std",
     "der/std",
     "hex/std",
+    "ecdsa/std",
     "p256/std",
     "x509-cert/std",
     "serde/std",

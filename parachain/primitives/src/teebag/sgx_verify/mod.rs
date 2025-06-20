@@ -37,46 +37,32 @@ use crate::{
 	SgxStatus, TcbVersionStatus, ATTESTATION_KEY_SIZE, REPORT_SIGNATURE_SIZE,
 };
 use alloc::string::String;
-use core::time::Duration;
 use der::asn1::ObjectIdentifier;
 use frame_support::ensure;
-use p256::ecdsa::{signature::DigestVerifier, Signature, VerifyingKey};
+// use ecdsa::Signature as _;
+use p256::ecdsa::{
+	signature::{DigestVerifier, Verifier},
+	Signature, VerifyingKey,
+};
 use parity_scale_codec::Decode;
 use sha2::{Digest, Sha256};
-use sp_std::{
-	convert::{TryFrom, TryInto},
-	prelude::*,
-	vec,
-};
-use x509_cert::Certificate;
+use sp_std::{convert::TryInto, prelude::*, vec};
+use x509_parser::certificate::X509Certificate;
+use x509_parser::oid_registry::Oid;
+use x509_parser::{nom::AsBytes, prelude::*};
 
 pub mod collateral;
 #[cfg(test)]
 mod tests;
 mod utils;
 
-/// The needed code for a trust anchor can be extracted using `webpki` with something like this:
-/// println!("{:?}", webpki::TrustAnchor::try_from_cert_der(&root_cert));
-#[allow(clippy::zero_prefixed_literal)]
-pub static DCAP_SERVER_ROOTS: &[webpki::types::TrustAnchor<'static>; 1] =
-	&[webpki::types::TrustAnchor {
-		subject: webpki::types::Der::from_slice(&[
-			49, 26, 48, 24, 06, 03, 85, 04, 03, 12, 17, 73, 110, 116, 101, 108, 32, 83, 71, 88, 32,
-			82, 111, 111, 116, 32, 67, 65, 49, 26, 48, 24, 06, 03, 85, 04, 10, 12, 17, 73, 110,
-			116, 101, 108, 32, 67, 111, 114, 112, 111, 114, 97, 116, 105, 111, 110, 49, 20, 48, 18,
-			06, 03, 85, 04, 07, 12, 11, 83, 97, 110, 116, 97, 32, 67, 108, 97, 114, 97, 49, 11, 48,
-			09, 06, 03, 85, 04, 08, 12, 02, 67, 65, 49, 11, 48, 09, 06, 03, 85, 04, 06, 19, 02, 85,
-			83,
-		]),
-		subject_public_key_info: webpki::types::Der::from_slice(&[
-			48, 19, 06, 07, 42, 134, 72, 206, 61, 02, 01, 06, 08, 42, 134, 72, 206, 61, 03, 01, 07,
-			03, 66, 00, 04, 11, 169, 196, 192, 192, 200, 97, 147, 163, 254, 35, 214, 176, 44, 218,
-			16, 168, 187, 212, 232, 142, 72, 180, 69, 133, 97, 163, 110, 112, 85, 37, 245, 103,
-			145, 142, 46, 220, 136, 228, 13, 134, 11, 208, 204, 78, 226, 106, 172, 201, 136, 229,
-			05, 169, 83, 85, 140, 69, 63, 107, 09, 04, 174, 115, 148,
-		]),
-		name_constraints: None,
-	}];
+const INTEL_ROOT_CA_SPKI: &[u8] = &[
+	48, 89, 48, 19, 6, 7, 42, 134, 72, 206, 61, 2, 1, 6, 8, 42, 134, 72, 206, 61, 3, 1, 7, 3, 66,
+	0, 4, 11, 169, 196, 192, 192, 200, 97, 147, 163, 254, 35, 214, 176, 44, 218, 16, 168, 187, 212,
+	232, 142, 72, 180, 69, 133, 97, 163, 110, 112, 85, 37, 245, 103, 145, 142, 46, 220, 136, 228,
+	13, 134, 11, 208, 204, 78, 226, 106, 172, 201, 136, 229, 5, 169, 83, 85, 140, 69, 63, 107, 9,
+	4, 174, 115, 148,
+];
 
 /// Encode two 32-byte values in DER format
 /// This is meant for 256 bit ECC signatures or public keys
@@ -104,10 +90,9 @@ pub fn encode_as_der(data: &[u8]) -> Result<Vec<u8>, &'static str> {
 pub fn deserialize_enclave_identity(
 	data: &[u8],
 	signature: &[u8],
-	certificate: &webpki::EndEntityCert,
+	certificate: &X509Certificate,
 ) -> Result<EnclaveIdentity, &'static str> {
-	let signature = encode_as_der(signature)?;
-	verify_signature(certificate, data, &signature, webpki::ring::ECDSA_P256_SHA256)?;
+	verify_raw_sig(certificate.public_key().raw, data, signature)?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
 }
 
@@ -117,10 +102,9 @@ pub fn deserialize_enclave_identity(
 pub fn deserialize_tcb_info(
 	data: &[u8],
 	signature: &[u8],
-	certificate: &webpki::EndEntityCert,
+	certificate: &X509Certificate,
 ) -> Result<TcbInfo, &'static str> {
-	let signature = encode_as_der(signature)?;
-	verify_signature(certificate, data, &signature, webpki::ring::ECDSA_P256_SHA256)?;
+	verify_raw_sig(certificate.public_key().raw, data, signature)?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
 }
 
@@ -140,26 +124,31 @@ pub fn extract_certs(cert_chain: &[u8]) -> Vec<Vec<u8>> {
 /// Verifies that the `leaf_cert` in combination with the `intermediate_certs` establishes
 /// a valid certificate chain that is rooted in one of the trust anchors that was compiled into to
 /// the pallet
-pub fn verify_certificate_chain<'a>(
-	leaf_cert: &webpki::EndEntityCert<'a>,
-	intermediate_certs: &[webpki::types::CertificateDer<'a>],
-	verification_time: u64,
+pub fn verify_cert_chain(
+	cert_chain: &[Vec<u8>],
+	verification_time_millis: u64,
 ) -> Result<(), &'static str> {
-	let time =
-		webpki::types::UnixTime::since_unix_epoch(Duration::from_secs(verification_time / 1000));
-	let sig_algs = &[webpki::ring::ECDSA_P256_SHA256];
-	leaf_cert
-		.verify_for_usage(
-			sig_algs,
-			DCAP_SERVER_ROOTS,
-			intermediate_certs,
-			time,
-			webpki::KeyUsage::client_auth(),
-			None,
-		)
-		.map_err(|_| "Invalid certificate chain")?;
+	let parsed: Vec<X509Certificate> = cert_chain
+		.iter()
+		.map(|c| x509_parser::parse_x509_certificate(c).map(|(_, cert)| cert))
+		.collect::<Result<_, _>>()
+		.map_err(|_| "Failed to parse cert")?;
+
+	let unix_time_secs = (verification_time_millis / 1000) as i64;
+
+	for (child, parent) in parsed.iter().zip(parsed.iter().skip(1)) {
+		verify_cert_sig(child, parent)?;
+		check_cert_validity(child, unix_time_secs)?;
+	}
+
+	let last = parsed.last().ok_or("Empty chain")?;
+	check_cert_validity(last, unix_time_secs)?;
+
+	is_intel_sgx_root(&last)?;
+
 	Ok(())
 }
+
 #[allow(unused)]
 pub fn extract_tcb_info_from_raw_dcap_quote(
 	dcap_quote_raw: &[u8],
@@ -203,12 +192,10 @@ pub fn verify_dcap_quote(
 
 	let certs = extract_certs(&quote.quote_signature_data.qe_certification_data.certification_data);
 	ensure!(certs.len() >= 2, "Certificate chain must have at least two certificates");
-	let intermediate_certificate_slices: Vec<webpki::types::CertificateDer> =
-		certs[1..].iter().map(|c| c.as_slice().into()).collect();
-	let leaf_cert_der = webpki::types::CertificateDer::from(certs[0].as_slice());
-	let leaf_cert = webpki::EndEntityCert::try_from(&leaf_cert_der)
-		.map_err(|_| "Failed to parse leaf certificate")?;
-	verify_certificate_chain(&leaf_cert, &intermediate_certificate_slices, verification_time)?;
+	let (_, leaf_cert) =
+		X509Certificate::from_der(&certs[0]).map_err(|_| "Failed to parse leaf certificate")?;
+
+	verify_cert_chain(&certs, verification_time)?;
 
 	let (fmspc, tcb_info) = extract_tcb_info(&certs[0])?;
 
@@ -262,16 +249,12 @@ pub fn verify_dcap_quote(
 
 	// Verify that the enclave data matches the signature generated by the trusted attestation key.
 	// This establishes trust into the data of the enclave we actually want to verify
-	verify_report_signature(&pub_key, report, sig)?;
+	verify_raw_sig(&pub_key, report, sig)?;
 
 	// Verify that the QE report was signed by Intel. This establishes trust into the QE report.
-	let asn1_signature = encode_as_der(&quote.quote_signature_data.qe_report_signature)?;
-	verify_signature(
-		&leaf_cert,
-		qe_report_slice,
-		&asn1_signature,
-		webpki::ring::ECDSA_P256_SHA256,
-	)?;
+	extract_cert_pubkey(&leaf_cert).and_then(|k| {
+		verify_raw_sig(&k, qe_report_slice, &quote.quote_signature_data.qe_report_signature)
+	})?;
 
 	ensure!(dcap_quote_clone.is_empty(), "There should be no bytes left over after decoding");
 	let report = SgxReport {
@@ -282,19 +265,6 @@ pub fn verify_dcap_quote(
 		build_mode: quote.body.sgx_build_mode(),
 	};
 	Ok((fmspc, tcb_info, report))
-}
-
-/// * `signature` - Must be encoded in DER format.
-pub fn verify_signature(
-	entity_cert: &webpki::EndEntityCert,
-	data: &[u8],
-	signature: &[u8],
-	signature_algorithm: &dyn webpki::types::SignatureVerificationAlgorithm,
-) -> Result<(), &'static str> {
-	match entity_cert.verify_signature(signature_algorithm, data, signature) {
-		Ok(()) => Ok(()),
-		Err(_e) => Err("bad signature"),
-	}
 }
 
 /// See document "Intel® Software Guard Extensions: PCK Certificate and Certificate Revocation List
@@ -316,24 +286,14 @@ pub fn extract_tcb_info(cert: &[u8]) -> Result<(Fmspc, TcbVersionStatus), &'stat
 }
 
 fn get_intel_extension(der_encoded: &[u8]) -> Result<Vec<u8>, &'static str> {
-	let cert: Certificate =
-		der::Decode::from_der(der_encoded).map_err(|_| "Error parsing certificate")?;
-	let mut extension_iter = cert
-		.tbs_certificate
-		.extensions
-		.as_deref()
-		.unwrap_or(&[])
-		.iter()
-		.filter(|e| e.extn_id == INTEL_SGX_EXTENSION_OID)
-		.map(|e| e.extn_value.clone());
+	let (_, cert) =
+		X509Certificate::from_der(der_encoded).map_err(|_| "Error parsing certificate")?;
 
-	let extension = extension_iter.next();
-	ensure!(
-		extension.is_some() && extension_iter.next().is_none(),
-		"There should only be one section containing Intel extensions"
-	);
-	// SAFETY: Ensured above that extension.is_some() == true
-	Ok(extension.unwrap().into_bytes())
+	match cert.get_extension_unique(&Oid::new(INTEL_SGX_EXTENSION_OID.as_bytes().into())) {
+		Ok(Some(ext)) => Ok(ext.value.to_vec()),
+		Ok(None) => Err("No INTEL_SGX_EXTENSION_OID extension found"),
+		Err(_) => Err("Error get INTEL_SGX_EXTENSION_OID extension"),
+	}
 }
 
 fn get_fmspc(der: &[u8]) -> Result<Fmspc, &'static str> {
@@ -385,17 +345,17 @@ fn get_pcesvn(der: &[u8]) -> Result<Pcesvn, &'static str> {
 	}
 }
 
-fn verify_report_signature(
-	pubkey_sec1: &[u8],   // 65 bytes: 0x04 || X || Y
-	message: &[u8],       // Message to verify (the report)
-	signature_raw: &[u8], // 64 bytes: r || s
+fn verify_raw_sig(
+	pubkey_sec1: &[u8], // 65 bytes: 0x04 || X || Y
+	message: &[u8],     // Message to verify (the report)
+	sig: &[u8],         // 64 bytes: r || s
 ) -> Result<(), &'static str> {
 	// Load verifying key from uncompressed SEC1-encoded public key
 	let verifying_key =
 		VerifyingKey::from_sec1_bytes(pubkey_sec1).map_err(|_| "Invalid public key format")?;
 
 	// Parse raw signature (r || s)
-	let signature = Signature::from_slice(signature_raw).map_err(|_| "Invalid ECDSA signature")?;
+	let signature = Signature::from_slice(sig).map_err(|_| "Invalid ECDSA signature")?;
 
 	// Hash the message
 	let digest = Sha256::new().chain_update(message);
@@ -404,4 +364,72 @@ fn verify_report_signature(
 	verifying_key
 		.verify_digest(digest, &signature)
 		.map_err(|_| "Failed to verify report signature")
+}
+
+pub fn verify_cert_sig(
+	child_cert: &X509Certificate<'_>,
+	parent_cert: &X509Certificate<'_>,
+) -> Result<(), &'static str> {
+	let parent_spki = extract_cert_pubkey(parent_cert)?;
+	let tbs = child_cert.tbs_certificate.as_ref();
+	let sig = &child_cert.signature_value.data;
+
+	let verifying_key =
+		VerifyingKey::from_sec1_bytes(parent_spki).map_err(|_| "Invalid parent SPKI")?;
+	let signature = Signature::from_der(sig).map_err(|_| "Invalid DER signature")?;
+
+	verifying_key
+		.verify(tbs, &signature)
+		.map_err(|_| "Signature verification failed")
+}
+
+pub fn check_cert_validity(cert: &X509Certificate, time: i64) -> Result<(), &'static str> {
+	let not_before = cert.validity().not_before.timestamp();
+	let not_after = cert.validity().not_after.timestamp();
+
+	if time < not_before {
+		return Err("Certificate not yet valid");
+	}
+	if time > not_after {
+		return Err("Certificate expired");
+	}
+	Ok(())
+}
+
+fn extract_cert_pubkey<'a>(cert: &'a X509Certificate) -> Result<&'a [u8], &'static str> {
+	let spki = cert.public_key();
+	let raw_key = &spki.subject_public_key.data;
+
+	ensure!(
+		raw_key.len() == 65 && raw_key[0] == 0x04,
+		"Expected uncompressed 65-byte EC public key"
+	);
+
+	Ok(raw_key.as_bytes())
+}
+
+fn is_intel_sgx_root(cert: &X509Certificate) -> Result<(), &'static str> {
+	ensure!(
+		cert.tbs_certificate.subject.iter().any(|rdn| {
+			rdn.iter().any(|attr| {
+				*attr.attr_type() == oid_registry::OID_X509_COMMON_NAME
+					&& attr.attr_value().as_str().map_or(false, |s| s == "Intel SGX Root CA")
+			})
+		}),
+		"OID_X509_COMMON_NAME mismatch"
+	);
+
+	ensure!(
+		cert.tbs_certificate.subject.iter().any(|rdn| {
+			rdn.iter().any(|attr| {
+				*attr.attr_type() == oid_registry::OID_X509_ORGANIZATION_NAME
+					&& attr.attr_value().as_str().map_or(false, |s| s == "Intel Corporation")
+			})
+		}),
+		"OID_X509_ORGANIZATION_NAME mismatch"
+	);
+
+	ensure!(cert.tbs_certificate.subject_pki.raw == INTEL_ROOT_CA_SPKI, "Spki mismatch");
+
+	Ok(())
 }

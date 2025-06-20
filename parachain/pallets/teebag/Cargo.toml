@@ -21,6 +21,7 @@ serde = { workspace = true }
 serde_json = { workspace = true, features = ["alloc"] }
 webpki = { workspace = true }
 x509-cert = { workspace = true }
+x509-parser = { workspace = true }
 
 frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }

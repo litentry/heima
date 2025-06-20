@@ -4584,6 +4584,7 @@ dependencies = [
  "base64 0.13.1",
  "chrono",
  "der",
+ "ecdsa",
  "frame-support",
  "heima-utils",
  "heima-utils-proc-macros",
@@ -4605,6 +4606,7 @@ dependencies = [
  "strum 0.26.3",
  "strum_macros 0.26.4",
  "x509-cert",
+ "x509-parser 0.17.0",
 ]
 
 [[package]]
@@ -9503,6 +9505,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "x509-cert",
+ "x509-parser 0.17.0",
 ]
 
 [[package]]

@@ -32,6 +32,7 @@ use sp_runtime::traits::{CheckedSub, SaturatedConversion};
 use sp_std::{prelude::*, str};
 
 use heima_primitives::*;
+use x509_parser::prelude::*;
 
 pub use pallet::*;
 
@@ -802,12 +803,14 @@ impl<T: Config> Pallet<T> {
 		let verification_time: u64 = Self::now().saturated_into();
 		let certs = extract_certs(&certificate_chain);
 		ensure!(certs.len() >= 2, "Certificate chain must have at least two certificates");
+
 		let intermediate_slices: Vec<webpki::types::CertificateDer> =
 			certs[1..].iter().map(|c| c.as_slice().into()).collect();
 		let leaf_cert_der = webpki::types::CertificateDer::from(certs[0].as_slice());
 		let leaf_cert = webpki::EndEntityCert::try_from(&leaf_cert_der)
 			.map_err(|_| "Failed to parse leaf certificate")?;
-		verify_certificate_chain(&leaf_cert, &intermediate_slices, verification_time)?;
+		verify_cert_chain(&leaf_cert, &intermediate_slices, verification_time)?;
+
 		let enclave_identity =
 			deserialize_enclave_identity(&enclave_identity, &signature, &leaf_cert)?;
 
@@ -831,7 +834,7 @@ impl<T: Config> Pallet<T> {
 		let leaf_cert_der = webpki::types::CertificateDer::from(certs[0].as_slice());
 		let leaf_cert = webpki::EndEntityCert::try_from(&leaf_cert_der)
 			.map_err(|_| "Failed to parse leaf certificate")?;
-		verify_certificate_chain(&leaf_cert, &intermediate_slices, verification_time)?;
+		verify_cert_chain(&leaf_cert, &intermediate_slices, verification_time)?;
 		let tcb_info = deserialize_tcb_info(&tcb_info, &signature, &leaf_cert)?;
 		if tcb_info.is_valid(verification_time.try_into().unwrap()) {
 			Ok(tcb_info.to_chain_tcb_info())
