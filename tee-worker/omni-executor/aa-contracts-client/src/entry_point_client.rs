@@ -81,7 +81,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 		&self,
 		user_op: PackedUserOperation,
 	) -> Result<FixedBytes<32>, ()> {
-		let call_data = getUserOpHashCall { userOp: user_op.into() }.abi_encode();
+		let call_data = getUserOpHashCall { userOp: user_op }.abi_encode();
 		let tx = TransactionRequest {
 			to: Some(TxKind::Call(self.entry_point_address)),
 			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
@@ -104,9 +104,9 @@ pub fn prepare_factory_init_code(
 
 	let mut call = createAccountCall {
 		//safe to unwrap
-		oa: oa.try_into().unwrap(),
+		oa: oa.into(),
 		//safe to unwrap
-		clientId: client_id.to_owned().try_into().unwrap(),
+		clientId: client_id.to_owned().into(),
 		root,
 	}
 	.abi_encode();
@@ -257,6 +257,7 @@ pub mod test {
 
 		let init_code = alloy::primitives::bytes::Bytes::from(init_code_bytes.to_vec());
 		let sender = entrypoint_client.get_sender_address(init_code.clone()).await.unwrap();
+		println!("Sender address: {:?}", sender);
 		let nonce = U256::from(0); // it's fresh account
 
 		let account_gas_limits: FixedBytes<32> = FixedBytes::<32>::from_str(

@@ -29,4 +29,6 @@ sol! {
 
 	// smart account
 	function getNonce() public view virtual returns (uint256);
+	function addRootSigner(address root) public;
+	function removeRootSigner(address root) public;
 }
