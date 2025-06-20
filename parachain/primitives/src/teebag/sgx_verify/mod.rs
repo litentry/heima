@@ -93,7 +93,7 @@ pub fn deserialize_enclave_identity(
 	signature: &[u8],
 	cert: &X509Certificate,
 ) -> Result<EnclaveIdentity, &'static str> {
-	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, &signature))?;
+	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, signature))?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
 }
 
@@ -105,7 +105,7 @@ pub fn deserialize_tcb_info(
 	signature: &[u8],
 	cert: &X509Certificate,
 ) -> Result<TcbInfo, &'static str> {
-	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, &signature))?;
+	extract_cert_pubkey(cert).and_then(|k| verify_raw_sig(k, data, signature))?;
 	serde_json::from_slice(data).map_err(|_| "Deserialization failed")
 }
 
@@ -144,8 +144,7 @@ pub fn verify_cert_chain(
 
 	let last = parsed.last().ok_or("Empty chain")?;
 	check_cert_validity(last, unix_time_secs)?;
-
-	is_intel_sgx_root(&last)?;
+	is_intel_sgx_root(last)?;
 
 	Ok(())
 }
@@ -254,7 +253,7 @@ pub fn verify_dcap_quote(
 
 	// Verify that the QE report was signed by Intel. This establishes trust into the QE report.
 	extract_cert_pubkey(&leaf_cert).and_then(|k| {
-		verify_raw_sig(&k, qe_report_slice, &quote.quote_signature_data.qe_report_signature)
+		verify_raw_sig(k, qe_report_slice, &quote.quote_signature_data.qe_report_signature)
 	})?;
 
 	ensure!(dcap_quote_clone.is_empty(), "There should be no bytes left over after decoding");
