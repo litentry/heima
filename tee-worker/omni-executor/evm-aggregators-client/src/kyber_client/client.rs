@@ -201,7 +201,7 @@ pub struct OutputChange {
 
 trait KyberSwap {
     async fn get_swap_route(&self, access_token: String, swap_route_request: GetSwapRouteRequest) -> Result<GetSwapRouteResponse, Error>;
-    async fn swap(&self, access_token: String, swap_request: crate::inch_client::SwapRequest) -> Result<crate::inch_client::SwapResponse, Error>;
+    async fn swap(&self, access_token: String, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }
 
 impl KyberSwap for KyberClient {
@@ -233,7 +233,7 @@ impl KyberSwap for KyberClient {
         })
     }
 
-    async fn swap(&self, access_token: String, swap_request: crate::inch_client::SwapRequest) -> Result<crate::inch_client::SwapResponse, Error> {
+    async fn swap(&self, access_token: String, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
         let response = self
             .client
             .post(self.endpoint.clone())

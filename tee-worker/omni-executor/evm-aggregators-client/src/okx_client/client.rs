@@ -197,7 +197,7 @@ pub trait OkxSwap {
 impl OkxSwap for OkxClient {
     async fn swap(&self, swap_request: SwapRequest, access_token: String) -> Result<SwapResponse, Error> {
         let query_params = swap_request.convert_to_query_params();
-        
+
         let response = self.client
             .get(self.endpoint.as_str())
             .query(&query_params)
