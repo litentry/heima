@@ -1,6 +1,23 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::types::{addRootSignerCall, getNonceCall, removeRootSignerCall};
-use alloy::primitives::{Address, TxKind, U256};
-use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use crate::utils::build_call_transaction;
+use alloy::primitives::{Address, U256};
+use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolValue};
 use ethereum_rpc::RpcProvider;
 use std::sync::Arc;
@@ -18,11 +35,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> SmartWalletClient<P> {
 
 	pub async fn get_nonce(&self) -> Result<U256, ()> {
 		let call_data = getNonceCall {}.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			..Default::default()
-		};
+		let tx = build_call_transaction(self.address, call_data);
 		let result = self
 			.rpc_client
 			.call(tx)
@@ -34,22 +47,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> SmartWalletClient<P> {
 
 	pub async fn add_root_signer(&self, root: Address) -> Result<(), ()> {
 		let call_data = addRootSignerCall { root }.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			..Default::default()
-		};
+		let tx = build_call_transaction(self.address, call_data);
 		self.rpc_client.send_transaction(tx).await.map_err(|_| ())?;
 		Ok(())
 	}
 
 	pub async fn remove_root_signer(&self, root: Address) -> Result<(), ()> {
 		let call_data = removeRootSignerCall { root }.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			..Default::default()
-		};
+		let tx = build_call_transaction(self.address, call_data);
 		self.rpc_client.send_transaction(tx).await.map_err(|_| ())?;
 		Ok(())
 	}

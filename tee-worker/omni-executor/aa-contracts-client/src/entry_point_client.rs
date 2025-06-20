@@ -1,11 +1,28 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
 	SenderAddressResult,
 };
+use crate::utils::{build_call_transaction, build_payable_transaction};
 use crate::PackedUserOperation;
 use alloy::primitives::bytes::Bytes;
-use alloy::primitives::{Address, FixedBytes, TxKind, U256};
-use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use alloy::primitives::{Address, FixedBytes, U256};
+use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
 use ethereum_rpc::RpcProvider;
 use std::sync::Arc;
@@ -29,11 +46,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 	) -> Result<(), ()> {
 		let ops = user_ops.to_vec();
 		let call_data = handleOpsCall { ops, beneficiary }.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.entry_point_address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			..Default::default()
-		};
+		let tx = build_call_transaction(self.entry_point_address, call_data);
 		self.rpc_client
 			.send_transaction(tx)
 			.await
@@ -43,11 +56,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 
 	pub async fn get_sender_address(&self, init_code: Bytes) -> Result<Address, ()> {
 		let call_data = getSenderAddressCall { initCode: init_code.into() }.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.entry_point_address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			..Default::default()
-		};
+		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(e) => {
 				if let Some(bytes) = e {
@@ -64,12 +73,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 
 	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<(), ()> {
 		let call_data = depositToCall { account }.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.entry_point_address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			value: Some(amount),
-			..Default::default()
-		};
+		let tx = build_payable_transaction(self.entry_point_address, call_data, amount);
 		self.rpc_client
 			.send_transaction(tx)
 			.await
@@ -82,11 +86,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 		user_op: PackedUserOperation,
 	) -> Result<FixedBytes<32>, ()> {
 		let call_data = getUserOpHashCall { userOp: user_op }.abi_encode();
-		let tx = TransactionRequest {
-			to: Some(TxKind::Call(self.entry_point_address)),
-			input: TransactionInput { data: Some(call_data.into()), ..Default::default() },
-			..Default::default()
-		};
+		let tx = build_call_transaction(self.entry_point_address, call_data);
 		let result = self.rpc_client.call(tx).await.map_err(|_| error!("Could not send tx"))?;
 		let hash: FixedBytes<32> = FixedBytes::abi_decode(&result).unwrap();
 		Ok(hash)
