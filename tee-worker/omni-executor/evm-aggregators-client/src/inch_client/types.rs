@@ -1,3 +1,8 @@
+use std::str::FromStr;
+use alloy::primitives::{Address, U256};
+use hex::FromHex;
+use log::error;
+use rust_decimal::prelude::{Decimal};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -5,6 +10,22 @@ pub struct SwapResponse {
     #[serde(rename = "dstAmount")]
     pub dst_amount: String,
     pub tx: TransactionData,
+}
+
+impl SwapResponse {
+    pub fn get_transaction_data(self) -> Result<(Vec<u8>, Address, U256), ()> {
+        let data = hex::decode(&self.tx.data).map_err(|e| {
+           error!("Failed to decode transaction data: {}", e);
+        })?;
+        let value: U256 = U256::from_str(&self.tx.value).map_err(|e| {
+            error!("Failed to deserialize to u256: {}", e);
+        })?;
+        let to = Address::from_hex(&self.tx.to).map_err(|e| {
+            error!("Failed to decode hex to address: {}", e)
+        })?;
+
+        Ok((data, to, value))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,7 +39,7 @@ pub struct TransactionData {
     pub gas_price: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SwapRequest {
     pub chain_id: u64,
     pub amount: String,
@@ -49,3 +70,16 @@ impl SwapRequest {
         ]
     }
 }
+
+pub fn convert_slippage_to_inch(slippage: u32) -> String {
+    // inch max 50% slippage
+    if slippage > 5000 {
+        return "50".to_string();
+    }
+
+    Decimal::from(slippage)
+        .checked_div(Decimal::from(100))
+        .map(|d| d.normalize().to_string())
+        .unwrap_or_else(|| "0".to_string())
+}
+

@@ -8,14 +8,15 @@ use crate::inch_client::types::{SwapResponse, SwapRequest};
 pub struct InchClient {
     client: Client,
     base_url: String,
+    access_token: String,
 }
 
-trait Swap {
-    async fn swap(self, access_token: String, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
+pub trait InchSwap {
+    async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }
 
-impl Swap for InchClient {
-    async fn swap(self, access_token: String, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
+impl InchSwap for InchClient {
+    async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
         let query_params = swap_request.convert_to_query_params();
 
         let response = self.client
@@ -24,7 +25,7 @@ impl Swap for InchClient {
             .header("Content-Length", "0")
             .header("accept", "application/json")
             .header("content-type", "application/json")
-            .bearer_auth(access_token)
+            .bearer_auth(self.access_token.clone())
             .send()
             .await
             .map_err(|e| {

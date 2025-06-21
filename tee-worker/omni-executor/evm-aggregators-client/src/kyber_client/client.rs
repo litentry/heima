@@ -7,7 +7,7 @@ pub struct KyberClient {
     endpoint: String,
 }
 
-trait KyberSwap {
+pub(crate) trait KyberSwap {
     async fn get_swap_route(&self, access_token: String, swap_route_request: GetSwapRouteRequest) -> Result<GetSwapRouteResponse, Error>;
     async fn swap(&self, access_token: String, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }

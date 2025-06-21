@@ -1,6 +1,10 @@
+use std::str::FromStr;
+use alloy::primitives::{Address, U256};
+use hex::FromHex;
+use log::error;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SwapRequest {
     pub chain_id: String,
     pub amount: String,
@@ -60,6 +64,22 @@ pub struct SwapResponse {
     #[serde(rename = "routerResult")]
     pub router_result: RouterResult,
     pub tx: Tx,
+}
+
+impl SwapResponse {
+    pub fn get_transaction_data(self) -> Result<(Vec<u8>, Address, U256), ()> {
+        let data = hex::decode(&self.tx.data).map_err(|e| {
+            error!("Failed to decode transaction data: {}", e);
+        })?;
+        let value: U256 = U256::from_str(&self.tx.value).map_err(|e| {
+            error!("Failed to deserialize to u256: {}", e);
+        })?;
+        let to = Address::from_hex(&self.tx.to).map_err(|e| {
+            error!("Failed to decode hex to address: {}", e)
+        })?;
+
+        Ok((data, to, value))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -177,4 +197,29 @@ pub struct Tx {
     pub slippage: String,
     pub to: String,
     pub value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetGasPriceResp {
+    pub normal: String,
+    pub min: String,
+    pub max: String,
+    #[serde(rename = "supportEip1559")]
+    pub support_eip1559: bool,
+    #[serde(rename = "erc1599Protocol")]
+    pub erc1599_protocol: Erc1599Protocol,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Erc1599Protocol {
+    #[serde(rename = "suggestBaseFee")]
+    pub suggest_base_fee: String,
+    #[serde(rename = "baseFee")]
+    pub base_fee: String,
+    #[serde(rename = "proposePriorityFee")]
+    pub propose_priority_fee: String,
+    #[serde(rename = "safePriorityFee")]
+    pub safe_priority_fee: String,
+    #[serde(rename = "fastPriorityFee")]
+    pub fast_priority_fee: String,
 }
