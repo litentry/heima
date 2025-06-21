@@ -118,14 +118,17 @@ pub fn prepare_factory_init_code(
 
 #[cfg(test)]
 pub mod test {
+	use crate::types::depositCall;
+	use crate::utils::build_payable_transaction;
 	use crate::{prepare_factory_init_code, EntryPointClient, PackedUserOperation};
 	use alloy::hex;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::{address, Bytes, FixedBytes, U256};
 	use alloy::signers::local::PrivateKeySigner;
 	use alloy::signers::Signer;
+	use alloy::sol_types::SolCall;
 	use ethereum_rpc::mocks::MockRpcProvider;
-	use ethereum_rpc::AlloyRpcProvider;
+	use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
 	use heima_primitives::{AccountId, Identity};
 	use std::str::FromStr;
 	use std::sync::Arc;
@@ -233,6 +236,8 @@ pub mod test {
 		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
 		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
 		let root_address = address!("0x0000000000000000000000000000000000000001");
+		// This should be the address where SimplePaymaster contract is deployed
+		let paymaster_address = address!("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
 		let signer = PrivateKeySigner::from_str(
 			"0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
 		)
@@ -269,7 +274,14 @@ pub mod test {
 			"0x0000000000000000000000003b9aca00000000000000000000000000b2d05e00",
 		)
 		.unwrap();
-		let paymaster_and_data: Bytes = Bytes::new();
+		// Set up paymaster - use SimplePaymaster address with gas limits
+		let verification_gas_limit = U256::from(50000u64); // 50k gas for paymaster validation
+		let post_op_gas_limit = U256::from(50000u64); // 50k gas for post-op
+		let mut paymaster_and_data = Vec::new();
+		paymaster_and_data.extend_from_slice(paymaster_address.as_slice()); // 20 bytes
+		paymaster_and_data.extend_from_slice(&verification_gas_limit.to_be_bytes::<32>()[16..]); // 16 bytes
+		paymaster_and_data.extend_from_slice(&post_op_gas_limit.to_be_bytes::<32>()[16..]); // 16 bytes
+		let paymaster_and_data: Bytes = paymaster_and_data.into();
 		let session_account = alloy::primitives::Address::default();
 		let session_expiration = U256::from(0);
 		let session_account_proof = Bytes::new();
@@ -295,14 +307,20 @@ pub mod test {
 
 		user_op.signature = signature.as_bytes().into();
 
-		// use paymaster instead of paying on account own
-		// (bool callSuccess,) = address(ep).call{value: 1000000000000000}(abi.encodeCall(ep.depositTo, (to)));
-
-		// deposit some eth
+		// Fund the paymaster with ETH deposits to EntryPoint
+		let paymaster_deposit_call = depositCall {}.abi_encode();
+		let paymaster_deposit_tx = build_payable_transaction(
+			paymaster_address,
+			paymaster_deposit_call,
+			U256::from_str("1000000000000000000").unwrap(), // 1 ETH
+		);
 		entrypoint_client
-			.deposit_to(sender, U256::from_str("100000000000000000000").unwrap())
+			.rpc_client
+			.send_transaction(paymaster_deposit_tx)
 			.await
 			.unwrap();
+
+		// Execute user operation with paymaster sponsorship
 		entrypoint_client.handle_ops(&vec![user_op], entrypoint_address).await.unwrap();
 	}
 }

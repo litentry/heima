@@ -47,4 +47,8 @@ sol! {
 	function getNonce() public view virtual returns (uint256);
 	function addRootSigner(address root) public;
 	function removeRootSigner(address root) public;
+
+	// paymaster
+	function deposit() public payable;
+	function setAuthorizedBundler(address bundler, bool authorized) external;
 }
