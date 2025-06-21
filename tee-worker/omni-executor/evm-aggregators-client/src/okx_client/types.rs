@@ -1,225 +1,256 @@
-use std::str::FromStr;
+use std::ops::Mul;
 use alloy::primitives::{Address, U256};
 use hex::FromHex;
 use log::error;
+use rust_decimal::prelude::{Decimal, ToPrimitive};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use crate::common::GAS_LIMIT;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SwapRequest {
-    pub chain_id: String,
-    pub amount: String,
-    pub from_token_address: String,
-    pub to_token_address: String,
-    pub slippage: String,
-    pub user_wallet_address: String,
-    pub fee_percent: String,
-    pub from_token_referrer_wallet_address: String,
-    pub to_token_referrer_wallet_address: String,
-    pub gas_level: String,
-    pub dex_ids: String,
-    pub auto_slippage: bool,
+	pub chain_id: String,
+	pub amount: String,
+	pub from_token_address: String,
+	pub to_token_address: String,
+	pub slippage: String,
+	pub user_wallet_address: String,
+	pub fee_percent: String,
+	pub from_token_referrer_wallet_address: String,
+	pub to_token_referrer_wallet_address: String,
+	pub gas_level: String,
+	pub dex_ids: String,
+	pub auto_slippage: bool,
 }
 
 impl SwapRequest {
-    /// Converts the SwapRequest into a vector of (&str, String) suitable for query params.
-    pub fn convert_to_query_params(&self) -> Vec<(&'static str, String)> {
-        let mut params = vec![
-            ("chainId", self.chain_id.clone()),
-            ("amount", self.amount.clone()),
-            ("fromTokenAddress", self.from_token_address.clone()),
-            ("toTokenAddress", self.to_token_address.clone()),
-            ("slippage", self.slippage.clone()),
-            ("userWalletAddress", self.user_wallet_address.clone()),
-            ("feePercent", self.fee_percent.clone()),
-        ];
+	/// Converts the SwapRequest into a vector of (&str, String) suitable for query params.
+	pub fn convert_to_query_params(&self) -> Vec<(&'static str, String)> {
+		let mut params = vec![
+			("chainId", self.chain_id.clone()),
+			("amount", self.amount.clone()),
+			("fromTokenAddress", self.from_token_address.clone()),
+			("toTokenAddress", self.to_token_address.clone()),
+			("slippage", self.slippage.clone()),
+			("userWalletAddress", self.user_wallet_address.clone()),
+			("feePercent", self.fee_percent.clone()),
+		];
 
-        if !self.from_token_referrer_wallet_address.is_empty() {
-            params.push((
-                "fromTokenReferrerWalletAddress",
-                self.from_token_referrer_wallet_address.clone(),
-            ));
-        }
-        if !self.to_token_referrer_wallet_address.is_empty() {
-            params.push((
-                "toTokenReferrerWalletAddress",
-                self.to_token_referrer_wallet_address.clone(),
-            ));
-        }
-        if !self.gas_level.is_empty() {
-            params.push(("gasLevel", self.gas_level.clone()));
-        }
-        if !self.dex_ids.is_empty() {
-            params.push(("dexIds", self.dex_ids.clone()));
-        }
-        if self.auto_slippage {
-            params.push(("autoSlippage", "true".to_string()));
-        }
+		if !self.from_token_referrer_wallet_address.is_empty() {
+			params.push((
+				"fromTokenReferrerWalletAddress",
+				self.from_token_referrer_wallet_address.clone(),
+			));
+		}
+		if !self.to_token_referrer_wallet_address.is_empty() {
+			params.push((
+				"toTokenReferrerWalletAddress",
+				self.to_token_referrer_wallet_address.clone(),
+			));
+		}
+		if !self.gas_level.is_empty() {
+			params.push(("gasLevel", self.gas_level.clone()));
+		}
+		if !self.dex_ids.is_empty() {
+			params.push(("dexIds", self.dex_ids.clone()));
+		}
+		if self.auto_slippage {
+			params.push(("autoSlippage", "true".to_string()));
+		}
 
-        params
-    }
+		params
+	}
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SwapResponse {
-    #[serde(rename = "routerResult")]
-    pub router_result: RouterResult,
-    pub tx: Tx,
+	#[serde(rename = "routerResult")]
+	pub router_result: RouterResult,
+	pub tx: Tx,
 }
 
 impl SwapResponse {
-    pub fn get_transaction_data(self) -> Result<(Vec<u8>, Address, U256), ()> {
-        let data = hex::decode(&self.tx.data).map_err(|e| {
-            error!("Failed to decode transaction data: {}", e);
-        })?;
-        let value: U256 = U256::from_str(&self.tx.value).map_err(|e| {
-            error!("Failed to deserialize to u256: {}", e);
-        })?;
-        let to = Address::from_hex(&self.tx.to).map_err(|e| {
-            error!("Failed to decode hex to address: {}", e)
-        })?;
+	pub fn get_transaction_data(self) -> Result<(Vec<u8>, Address, U256, u64), ()> {
+		let data = hex::decode(&self.tx.data).map_err(|e| {
+			error!("Failed to decode transaction data: {}", e);
+		})?;
+		let value: U256 = U256::from_str(&self.tx.value).map_err(|e| {
+			error!("Failed to deserialize to u256: {}", e);
+		})?;
+		let to = Address::from_hex(&self.tx.to)
+			.map_err(|e| error!("Failed to decode hex to address: {}", e))?;
 
-        Ok((data, to, value))
-    }
+		let gas = Decimal::from_str(&self.tx.gas).map_err(|e| {
+			error!("Failed to deserialize to decimal: {}", e);
+		})?;
+
+		let adjusted_gas = gas.mul(Decimal::new(1, 5)).to_u64().ok_or_else(|| {
+			error!("Failed to convert gas to u128");
+		})?;
+		let mut final_gas = adjusted_gas;
+		if final_gas > *GAS_LIMIT {
+			final_gas = GAS_LIMIT.clone();
+		}
+
+		Ok((data, to, value, final_gas))
+	}
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RouterResult {
-    #[serde(rename = "chainId")]
-    pub chain_id: String,
+	#[serde(rename = "chainId")]
+	pub chain_id: String,
 
-    #[serde(rename = "dexRouterList")]
-    pub dex_router_list: Vec<DexRouter>,
+	#[serde(rename = "dexRouterList")]
+	pub dex_router_list: Vec<DexRouter>,
 
-    #[serde(rename = "estimateGasFee")]
-    pub estimate_gas_fee: String,
+	#[serde(rename = "estimateGasFee")]
+	pub estimate_gas_fee: String,
 
-    #[serde(rename = "fromToken")]
-    pub from_token: Token,
+	#[serde(rename = "fromToken")]
+	pub from_token: Token,
 
-    #[serde(rename = "fromTokenAmount")]
-    pub from_token_amount: String,
+	#[serde(rename = "fromTokenAmount")]
+	pub from_token_amount: String,
 
-    #[serde(rename = "priceImpactPercentage")]
-    pub price_impact_percentage: String,
+	#[serde(rename = "priceImpactPercentage")]
+	pub price_impact_percentage: String,
 
-    #[serde(rename = "quoteCompareList")]
-    pub quote_compare_list: Vec<QuoteCompare>,
+	#[serde(rename = "quoteCompareList")]
+	pub quote_compare_list: Vec<QuoteCompare>,
 
-    #[serde(rename = "toToken")]
-    pub to_token: Token,
+	#[serde(rename = "toToken")]
+	pub to_token: Token,
 
-    #[serde(rename = "toTokenAmount")]
-    pub to_token_amount: String,
+	#[serde(rename = "toTokenAmount")]
+	pub to_token_amount: String,
 
-    #[serde(rename = "tradeFee")]
-    pub trade_fee: String,
+	#[serde(rename = "tradeFee")]
+	pub trade_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DexRouter {
-    pub router: String,
+	pub router: String,
 
-    #[serde(rename = "routerPercent")]
-    pub router_percent: String,
+	#[serde(rename = "routerPercent")]
+	pub router_percent: String,
 
-    #[serde(rename = "subRouterList")]
-    pub sub_router_list: Vec<SubRouter>,
+	#[serde(rename = "subRouterList")]
+	pub sub_router_list: Vec<SubRouter>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SubRouter {
-    #[serde(rename = "dexProtocol")]
-    pub dex_protocol: Vec<DexProtocol>,
+	#[serde(rename = "dexProtocol")]
+	pub dex_protocol: Vec<DexProtocol>,
 
-    #[serde(rename = "fromToken")]
-    pub from_token: Token,
+	#[serde(rename = "fromToken")]
+	pub from_token: Token,
 
-    #[serde(rename = "toToken")]
-    pub to_token: Token,
+	#[serde(rename = "toToken")]
+	pub to_token: Token,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DexProtocol {
-    #[serde(rename = "dexName")]
-    pub dex_name: String,
+	#[serde(rename = "dexName")]
+	pub dex_name: String,
 
-    pub percent: String,
+	pub percent: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Token {
-    pub decimal: String,
+	pub decimal: String,
 
-    #[serde(rename = "isHoneyPot")]
-    pub is_honey_pot: bool,
+	#[serde(rename = "isHoneyPot")]
+	pub is_honey_pot: bool,
 
-    #[serde(rename = "taxRate")]
-    pub tax_rate: String,
+	#[serde(rename = "taxRate")]
+	pub tax_rate: String,
 
-    #[serde(rename = "tokenContractAddress")]
-    pub token_contract_address: String,
+	#[serde(rename = "tokenContractAddress")]
+	pub token_contract_address: String,
 
-    #[serde(rename = "tokenSymbol")]
-    pub token_symbol: String,
+	#[serde(rename = "tokenSymbol")]
+	pub token_symbol: String,
 
-    #[serde(rename = "tokenUnitPrice")]
-    pub token_unit_price: String,
+	#[serde(rename = "tokenUnitPrice")]
+	pub token_unit_price: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuoteCompare {
-    #[serde(rename = "amountOut")]
-    pub amount_out: String,
+	#[serde(rename = "amountOut")]
+	pub amount_out: String,
 
-    #[serde(rename = "dexLogo")]
-    pub dex_logo: String,
+	#[serde(rename = "dexLogo")]
+	pub dex_logo: String,
 
-    #[serde(rename = "dexName")]
-    pub dex_name: String,
+	#[serde(rename = "dexName")]
+	pub dex_name: String,
 
-    #[serde(rename = "tradeFee")]
-    pub trade_fee: String,
+	#[serde(rename = "tradeFee")]
+	pub trade_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Tx {
-    pub data: String,
-    pub from: String,
-    pub gas: String,
-    #[serde(rename = "gasPrice")]
-    pub gas_price: String,
-    #[serde(rename = "maxPriorityFeePerGas")]
-    pub max_priority_fee_per_gas: String,
-    #[serde(rename = "minReceiveAmount")]
-    pub min_receive_amount: String,
-    #[serde(rename = "signatureData")]
-    pub signature_data: Vec<String>,
-    pub slippage: String,
-    pub to: String,
-    pub value: String,
+	pub data: String,
+	pub from: String,
+	pub gas: String,
+	#[serde(rename = "gasPrice")]
+	pub gas_price: String,
+	#[serde(rename = "maxPriorityFeePerGas")]
+	pub max_priority_fee_per_gas: String,
+	#[serde(rename = "minReceiveAmount")]
+	pub min_receive_amount: String,
+	#[serde(rename = "signatureData")]
+	pub signature_data: Vec<String>,
+	pub slippage: String,
+	pub to: String,
+	pub value: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetGasPriceResp {
-    pub normal: String,
-    pub min: String,
-    pub max: String,
-    #[serde(rename = "supportEip1559")]
-    pub support_eip1559: bool,
-    #[serde(rename = "erc1599Protocol")]
-    pub erc1599_protocol: Erc1599Protocol,
+	pub normal: String,
+	pub min: String,
+	pub max: String,
+	#[serde(rename = "supportEip1559")]
+	pub support_eip1559: bool,
+	#[serde(rename = "erc1599Protocol")]
+	pub erc1599_protocol: Erc1599Protocol,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Erc1599Protocol {
-    #[serde(rename = "suggestBaseFee")]
-    pub suggest_base_fee: String,
-    #[serde(rename = "baseFee")]
-    pub base_fee: String,
-    #[serde(rename = "proposePriorityFee")]
-    pub propose_priority_fee: String,
-    #[serde(rename = "safePriorityFee")]
-    pub safe_priority_fee: String,
-    #[serde(rename = "fastPriorityFee")]
-    pub fast_priority_fee: String,
+	#[serde(rename = "suggestBaseFee")]
+	pub suggest_base_fee: String,
+	#[serde(rename = "baseFee")]
+	pub base_fee: String,
+	#[serde(rename = "proposePriorityFee")]
+	pub propose_priority_fee: String,
+	#[serde(rename = "safePriorityFee")]
+	pub safe_priority_fee: String,
+	#[serde(rename = "fastPriorityFee")]
+	pub fast_priority_fee: String,
+}
+
+/// Converts a slippage value in basis points (u32) to a decimal string representation for OKX.
+pub fn convert_slippage_to_okx(slippage: u32) -> String {
+	let slippage_decimal = Decimal::from(slippage);
+	let all_bp_decimal = Decimal::from(10000u32);
+	(slippage_decimal / all_bp_decimal).to_string()
+}
+
+/// Maps an integer gas_type to OKX gas level string.
+pub fn get_okx_gas_level(gas_type: i32) -> &'static str {
+	match gas_type {
+		1 => "slow",
+		2 => "average",
+		3 => "fast",
+		_ => "average",
+	}
 }
