@@ -23,6 +23,13 @@ pub trait EthereumClient: Send + Sync {
 		contract_address: &str,
 		signer: Box<dyn TxSigner<Signature> + Send + Sync>,
 	) -> Result<String, ()>;
+
+	async fn construct_approve_erc20_tx(
+		&self,
+		spender: &str,
+		value: U256,
+		contract_address: &str,
+	) -> Result<TransactionRequest, ()>;
 }
 
 pub struct EthereumRpcClient {
@@ -118,6 +125,40 @@ impl EthereumClient for EthereumRpcClient {
 
 		Ok(tx_signature)
 	}
+
+	async fn construct_approve_erc20_tx(
+		&self,
+		spender: &str,
+		value: U256,
+		contract_address: &str,
+	) -> Result<TransactionRequest, ()> {
+		let spender_address = Address::from_str(spender).map_err(|err| {
+			error!("Could not parse address: {:?}", err);
+		})?;
+
+		// ERC20 approve function signature: approve(address,uint256)
+		let approve_function_signature = &hex_literal::hex!("095ea7b3");
+
+		// Encode the function call with the spender address and amount
+		let mut data = Vec::with_capacity(4 + 32 + 32);
+		data.extend_from_slice(approve_function_signature);
+		let mut address_bytes = [0u8; 32];
+		address_bytes[12..32].copy_from_slice(spender_address.as_slice());
+		data.extend_from_slice(&address_bytes);
+		data.extend_from_slice(&value.to_be_bytes::<32>());
+
+		let contract_address = Address::from_str(contract_address).map_err(|err| {
+			error!("Could not parse address: {:?}", err);
+		})?;
+
+		let tx = TransactionRequest {
+			to: Some(TxKind::from(contract_address)),
+			input: TransactionInput::from(Bytes::from(data)),
+			..Default::default()
+		};
+
+		Ok(tx)
+	}
 }
 
 #[cfg(feature = "mocks")]
@@ -151,6 +192,14 @@ pub mod mocks {
 				contract_address: &str,
 				signer: Box<dyn TxSigner<Signature> + Send + Sync>,
 			) -> Result<String, ()>;
+
+			#[mockall::concretize]
+			async fn construct_approve_erc20_tx(
+				&self,
+				spender: &str,
+				value: U256,
+				contract_address: &str,
+			) -> Result<TransactionRequest, ()>;
 		}
 
 	}

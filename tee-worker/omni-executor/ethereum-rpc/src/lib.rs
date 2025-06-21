@@ -22,7 +22,7 @@ use std::str::FromStr;
 use alloy::network::Ethereum;
 use alloy::network::EthereumWallet;
 use alloy::network::NetworkWallet;
-use alloy::primitives::Address;
+use alloy::primitives::{Address};
 use alloy::primitives::U256;
 use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
@@ -30,6 +30,7 @@ use alloy::rpc::types::TransactionRequest;
 use async_trait::async_trait;
 use executor_core::wallet_metrics::WalletBalanceFetcher;
 use tracing::log::error;
+use alloy::eips::{BlockId, BlockNumberOrTag};
 
 pub trait RpcProviderFactory {
 	type Provider;
@@ -57,6 +58,7 @@ pub trait RpcProvider: Send + Sync {
 	type Transaction;
 
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()>;
+	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()>;
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()>;
 	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()>;
 	async fn send_transaction_with_wallet(
@@ -98,6 +100,21 @@ impl RpcProvider for AlloyRpcProvider {
 			.get_balance(address)
 			.await
 			.map_err(|e| error!("Could not get balance: {:?}", e))
+	}
+
+	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()> {
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
+		let transaction_count = self.get_transaction_count(address).await.map_err(|e| error!("Could not get transaction count: {:?}", e))?;
+
+		let pending_transaction_count = provider
+			.get_transaction_count(address)
+			.block_id(BlockId::Number(BlockNumberOrTag::Pending))
+			.await
+			.map_err(|e| error!("Could not get balance: {:?}", e))?;
+
+		Ok(transaction_count + pending_transaction_count)
 	}
 
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()> {
