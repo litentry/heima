@@ -19,9 +19,8 @@ use crate::types::{
 	SenderAddressResult,
 };
 use crate::utils::{build_call_transaction, build_payable_transaction};
-use crate::PackedUserOperation;
-use alloy::primitives::bytes::Bytes;
-use alloy::primitives::{Address, FixedBytes, U256};
+use crate::{PackedUserOperation, SmartWalletClient};
+use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
 use ethereum_rpc::RpcProvider;
@@ -34,7 +33,7 @@ pub struct EntryPointClient<P: RpcProvider<Transaction = TransactionRequest>> {
 	rpc_client: Arc<P>,
 }
 
-impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
+impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPointClient<P> {
 	pub fn new(entry_point_address: Address, rpc_client: Arc<P>) -> Self {
 		Self { entry_point_address, rpc_client }
 	}
@@ -55,7 +54,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 	}
 
 	pub async fn get_sender_address(&self, init_code: Bytes) -> Result<Address, ()> {
-		let call_data = getSenderAddressCall { initCode: init_code.into() }.abi_encode();
+		let call_data = getSenderAddressCall { initCode: init_code }.abi_encode();
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(e) => {
@@ -91,6 +90,70 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> EntryPointClient<P> {
 		let hash: FixedBytes<32> = FixedBytes::abi_decode(&result).unwrap();
 		Ok(hash)
 	}
+
+	#[allow(clippy::too_many_arguments)]
+	pub async fn create_packed_user_operation(
+		&self,
+		factory_address: Address,
+		oa: [u8; 32],
+		client_id: &[u8],
+		root_address: Address,
+		call_data: Bytes,
+		paymaster_address: Option<Address>,
+	) -> Result<PackedUserOperation, ()> {
+		// Create init code using existing helper
+		let init_code_bytes =
+			prepare_factory_init_code(factory_address, oa, client_id, root_address);
+		let init_code = Bytes::from(init_code_bytes);
+
+		// Get sender address from EntryPoint
+		let sender = self.get_sender_address(init_code.clone()).await?;
+
+		// Create SmartWalletClient and get nonce from smart wallet contract
+		let smart_wallet_client = SmartWalletClient::new(sender, self.rpc_client.clone());
+		let nonce = smart_wallet_client.get_nonce().await?;
+
+		// Check if the account already has code deployed
+		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
+		let init_code_to_use = if code.is_empty() {
+			// No code at address, include init code
+			init_code
+		} else {
+			// Code already exists, no init code needed
+			Bytes::new()
+		};
+
+		// Default gas limits - can be adjusted based on requirements
+		let verification_gas_limit = U256::from(250000u64); // Higher for verification
+		let call_gas_limit = U256::from(50000u64); // Lower for simple calls
+		let account_gas_limits = create_account_gas_limits(verification_gas_limit, call_gas_limit);
+
+		let pre_verification_gas = U256::from(21000u64);
+		let max_fee_per_gas = U256::from(3000000000u64); // 3 gwei
+		let max_priority_fee_per_gas = U256::from(1000000000u64); // 1 gwei
+		let gas_fees = create_gas_fees(max_fee_per_gas, max_priority_fee_per_gas);
+
+		let paymaster_and_data = if let Some(paymaster_addr) = paymaster_address {
+			create_paymaster_and_data(paymaster_addr, U256::from(50000u64), U256::from(50000u64))
+		} else {
+			Bytes::new()
+		};
+
+		Ok(PackedUserOperation {
+			sender,
+			nonce,
+			initCode: init_code_to_use,
+			callData: call_data,
+			accountGasLimits: account_gas_limits,
+			preVerificationGas: pre_verification_gas,
+			gasFees: gas_fees,
+			paymasterAndData: paymaster_and_data,
+			sessionAccount: Address::default(),
+			sessionExpiration: U256::from(0),
+			sessionAccountProof: Bytes::new(),
+			signature: Bytes::new(),
+		})
+	}
 }
 
 #[allow(dead_code)]
@@ -116,11 +179,44 @@ pub fn prepare_factory_init_code(
 	init_code
 }
 
+pub fn create_paymaster_and_data(
+	paymaster_address: Address,
+	verification_gas_limit: U256,
+	post_op_gas_limit: U256,
+) -> Bytes {
+	let mut paymaster_and_data = Vec::new();
+	paymaster_and_data.extend_from_slice(paymaster_address.as_slice()); // 20 bytes
+	paymaster_and_data.extend_from_slice(&verification_gas_limit.to_be_bytes::<32>()[16..]); // 16 bytes
+	paymaster_and_data.extend_from_slice(&post_op_gas_limit.to_be_bytes::<32>()[16..]); // 16 bytes
+	paymaster_and_data.into()
+}
+
+pub fn create_account_gas_limits(
+	verification_gas_limit: U256,
+	call_gas_limit: U256,
+) -> FixedBytes<32> {
+	let mut gas_limits = [0u8; 32];
+	// First 16 bytes: verification gas limit
+	gas_limits[0..16].copy_from_slice(&verification_gas_limit.to_be_bytes::<32>()[16..]);
+	// Last 16 bytes: call gas limit
+	gas_limits[16..32].copy_from_slice(&call_gas_limit.to_be_bytes::<32>()[16..]);
+	FixedBytes::from(gas_limits)
+}
+
+pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) -> FixedBytes<32> {
+	let mut gas_fees = [0u8; 32];
+	// First 16 bytes: max priority fee per gas
+	gas_fees[0..16].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// Last 16 bytes: max fee per gas
+	gas_fees[16..32].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	FixedBytes::from(gas_fees)
+}
+
 #[cfg(test)]
 pub mod test {
 	use crate::types::depositCall;
 	use crate::utils::build_payable_transaction;
-	use crate::{prepare_factory_init_code, EntryPointClient, PackedUserOperation};
+	use crate::{prepare_factory_init_code, EntryPointClient};
 	use alloy::hex;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::{address, Bytes, FixedBytes, U256};
@@ -165,7 +261,7 @@ pub mod test {
 			root_address,
 		);
 
-		let init_code = alloy::primitives::bytes::Bytes::from(init_code_bytes.to_vec());
+		let init_code = Bytes::from(init_code_bytes.to_vec());
 		let sender = entrypoint_client.get_sender_address(init_code.clone()).await.unwrap();
 
 		assert_eq!(expected_sender, sender);
@@ -217,7 +313,7 @@ pub mod test {
 			root_address,
 		);
 
-		let init_code = alloy::primitives::bytes::Bytes::from(init_code_bytes.to_vec());
+		let init_code = Bytes::from(init_code_bytes.to_vec());
 		let sender = entrypoint_client.get_sender_address(init_code.clone()).await.unwrap();
 
 		assert_eq!(expected_sender, sender);
@@ -260,47 +356,22 @@ pub mod test {
 			root_address,
 		);
 
-		let init_code = alloy::primitives::bytes::Bytes::from(init_code_bytes.to_vec());
-		let sender = entrypoint_client.get_sender_address(init_code.clone()).await.unwrap();
-		println!("Sender address: {:?}", sender);
-		let nonce = U256::from(0); // it's fresh account
+		// Create PackedUserOperation using the utility function
+		let call_data = Bytes::from(init_code_bytes.to_vec()); // Use init_code as call_data for account creation
 
-		let account_gas_limits: FixedBytes<32> = FixedBytes::<32>::from_str(
-			"0x0000000000000000000000000003d09000000000000000000000000000005b8d",
-		)
-		.unwrap();
-		let pre_verification_gas = U256::from(21000);
-		let gas_fees: FixedBytes<32> = FixedBytes::<32>::from_str(
-			"0x0000000000000000000000003b9aca00000000000000000000000000b2d05e00",
-		)
-		.unwrap();
-		// Set up paymaster - use SimplePaymaster address with gas limits
-		let verification_gas_limit = U256::from(50000u64); // 50k gas for paymaster validation
-		let post_op_gas_limit = U256::from(50000u64); // 50k gas for post-op
-		let mut paymaster_and_data = Vec::new();
-		paymaster_and_data.extend_from_slice(paymaster_address.as_slice()); // 20 bytes
-		paymaster_and_data.extend_from_slice(&verification_gas_limit.to_be_bytes::<32>()[16..]); // 16 bytes
-		paymaster_and_data.extend_from_slice(&post_op_gas_limit.to_be_bytes::<32>()[16..]); // 16 bytes
-		let paymaster_and_data: Bytes = paymaster_and_data.into();
-		let session_account = alloy::primitives::Address::default();
-		let session_expiration = U256::from(0);
-		let session_account_proof = Bytes::new();
-		let signature = Bytes::new();
+		let mut user_op = entrypoint_client
+			.create_packed_user_operation(
+				factory_address,
+				oa_bytes.0,
+				&client_id_fixed_bytes,
+				root_address,
+				call_data,
+				Some(paymaster_address),
+			)
+			.await
+			.unwrap();
 
-		let mut user_op = PackedUserOperation {
-			sender,
-			nonce,
-			initCode: init_code.clone().into(),
-			callData: init_code.into(),
-			accountGasLimits: account_gas_limits,
-			preVerificationGas: pre_verification_gas,
-			gasFees: gas_fees,
-			paymasterAndData: paymaster_and_data,
-			sessionAccount: session_account,
-			sessionExpiration: session_expiration,
-			sessionAccountProof: session_account_proof,
-			signature,
-		};
+		println!("Sender address: {:?}", user_op.sender);
 
 		let user_op_hash = entrypoint_client.get_user_op_hash(user_op.clone()).await.unwrap();
 		let signature = user_signer.sign_hash(&user_op_hash).await.unwrap();
