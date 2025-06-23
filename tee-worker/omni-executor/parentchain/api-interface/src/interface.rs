@@ -1306,9 +1306,9 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							21u8, 204u8, 69u8, 130u8, 122u8, 135u8, 181u8, 223u8, 223u8, 79u8,
-							234u8, 200u8, 59u8, 0u8, 40u8, 3u8, 118u8, 90u8, 148u8, 220u8, 235u8,
-							247u8, 149u8, 126u8, 171u8, 77u8, 178u8, 10u8, 195u8, 99u8, 32u8, 60u8,
+							236u8, 178u8, 108u8, 151u8, 103u8, 114u8, 150u8, 87u8, 171u8, 238u8,
+							191u8, 195u8, 207u8, 7u8, 67u8, 47u8, 172u8, 27u8, 114u8, 22u8, 77u8,
+							13u8, 73u8, 95u8, 154u8, 168u8, 7u8, 79u8, 146u8, 180u8, 100u8, 18u8,
 						],
 					)
 				}
@@ -1326,9 +1326,9 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							90u8, 82u8, 181u8, 102u8, 193u8, 88u8, 242u8, 249u8, 238u8, 35u8,
-							191u8, 192u8, 189u8, 83u8, 239u8, 74u8, 14u8, 130u8, 216u8, 87u8, 2u8,
-							2u8, 51u8, 239u8, 29u8, 226u8, 70u8, 177u8, 167u8, 144u8, 113u8, 82u8,
+							123u8, 99u8, 2u8, 101u8, 165u8, 163u8, 27u8, 143u8, 160u8, 227u8, 36u8,
+							12u8, 99u8, 164u8, 212u8, 248u8, 168u8, 104u8, 60u8, 79u8, 233u8,
+							102u8, 0u8, 8u8, 205u8, 178u8, 61u8, 24u8, 42u8, 202u8, 207u8, 241u8,
 						],
 					)
 				}
@@ -3076,9 +3076,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				11u8, 157u8, 151u8, 178u8, 86u8, 196u8, 214u8, 166u8, 173u8, 222u8, 58u8, 114u8,
-				203u8, 223u8, 116u8, 46u8, 224u8, 150u8, 17u8, 19u8, 255u8, 169u8, 109u8, 226u8,
-				241u8, 209u8, 161u8, 109u8, 139u8, 205u8, 48u8, 29u8,
+				243u8, 195u8, 165u8, 29u8, 124u8, 51u8, 129u8, 127u8, 159u8, 248u8, 114u8, 231u8,
+				197u8, 210u8, 232u8, 103u8, 240u8, 93u8, 191u8, 224u8, 100u8, 152u8, 33u8, 244u8,
+				205u8, 255u8, 185u8, 31u8, 210u8, 168u8, 5u8, 174u8,
 			]
 	}
 	pub mod system {
@@ -4231,10 +4231,10 @@ pub mod api {
 						"Events",
 						(),
 						[
-							131u8, 33u8, 83u8, 73u8, 119u8, 128u8, 181u8, 104u8, 199u8, 181u8,
-							105u8, 99u8, 216u8, 216u8, 244u8, 51u8, 197u8, 255u8, 143u8, 160u8,
-							9u8, 194u8, 7u8, 221u8, 58u8, 117u8, 114u8, 198u8, 216u8, 132u8, 82u8,
-							193u8,
+							249u8, 195u8, 27u8, 167u8, 121u8, 207u8, 250u8, 208u8, 222u8, 180u8,
+							108u8, 123u8, 174u8, 133u8, 42u8, 29u8, 27u8, 235u8, 155u8, 181u8,
+							121u8, 244u8, 16u8, 69u8, 234u8, 247u8, 77u8, 46u8, 129u8, 188u8,
+							166u8, 135u8,
 						],
 					)
 				}
@@ -6973,9 +6973,9 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							216u8, 99u8, 2u8, 127u8, 182u8, 138u8, 161u8, 218u8, 66u8, 98u8, 181u8,
-							48u8, 27u8, 200u8, 151u8, 208u8, 90u8, 197u8, 67u8, 228u8, 170u8,
-							158u8, 71u8, 122u8, 81u8, 160u8, 120u8, 68u8, 15u8, 180u8, 148u8, 80u8,
+							84u8, 124u8, 37u8, 67u8, 60u8, 212u8, 192u8, 117u8, 93u8, 190u8, 165u8,
+							184u8, 88u8, 198u8, 91u8, 131u8, 53u8, 18u8, 139u8, 99u8, 239u8, 231u8,
+							167u8, 254u8, 227u8, 218u8, 102u8, 77u8, 98u8, 133u8, 199u8, 111u8,
 						],
 					)
 				}
@@ -8173,9 +8173,9 @@ pub mod api {
 							auth_type,
 						},
 						[
-							245u8, 135u8, 62u8, 24u8, 204u8, 74u8, 79u8, 196u8, 87u8, 52u8, 21u8,
-							20u8, 11u8, 189u8, 198u8, 37u8, 248u8, 35u8, 146u8, 155u8, 78u8, 107u8,
-							0u8, 252u8, 244u8, 228u8, 155u8, 111u8, 49u8, 231u8, 61u8, 236u8,
+							159u8, 85u8, 99u8, 86u8, 10u8, 251u8, 42u8, 52u8, 63u8, 174u8, 242u8,
+							53u8, 54u8, 76u8, 146u8, 111u8, 231u8, 170u8, 168u8, 201u8, 250u8,
+							47u8, 5u8, 101u8, 57u8, 5u8, 204u8, 183u8, 5u8, 184u8, 222u8, 239u8,
 						],
 					)
 				}
@@ -8195,9 +8195,10 @@ pub mod api {
 							auth_type,
 						},
 						[
-							204u8, 54u8, 92u8, 248u8, 215u8, 57u8, 199u8, 145u8, 18u8, 17u8, 32u8,
-							123u8, 74u8, 160u8, 205u8, 21u8, 70u8, 248u8, 255u8, 37u8, 122u8, 79u8,
-							160u8, 76u8, 158u8, 131u8, 21u8, 37u8, 1u8, 248u8, 63u8, 60u8,
+							249u8, 147u8, 165u8, 31u8, 147u8, 194u8, 52u8, 217u8, 103u8, 2u8,
+							218u8, 70u8, 76u8, 142u8, 80u8, 22u8, 42u8, 48u8, 222u8, 210u8, 226u8,
+							245u8, 110u8, 210u8, 247u8, 139u8, 105u8, 137u8, 120u8, 11u8, 247u8,
+							131u8,
 						],
 					)
 				}
@@ -18069,6 +18070,196 @@ pub mod api {
 				}
 			}
 		}
+		pub mod pallet_migrations {
+			use super::runtime_types;
+			pub mod pallet {
+				use super::runtime_types;
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				#[doc = "Contains a variant per dispatchable extrinsic that this pallet has."]
+				pub enum Call {
+					#[codec(index = 0)]
+					#[doc = "Allows root to set a cursor to forcefully start, stop or forward the migration process."]
+					#[doc = ""]
+					#[doc = "Should normally not be needed and is only in place as emergency measure. Note that"]
+					#[doc = "restarting the migration process in this manner will not call the"]
+					#[doc = "[`MigrationStatusHandler::started`] hook or emit an `UpgradeStarted` event."]
+					force_set_cursor {
+						cursor: ::core::option::Option<
+							runtime_types::pallet_migrations::MigrationCursor<
+								runtime_types::bounded_collections::bounded_vec::BoundedVec<
+									::core::primitive::u8,
+								>,
+								::core::primitive::u32,
+							>,
+						>,
+					},
+					#[codec(index = 1)]
+					#[doc = "Allows root to set an active cursor to forcefully start/forward the migration process."]
+					#[doc = ""]
+					#[doc = "This is an edge-case version of [`Self::force_set_cursor`] that allows to set the"]
+					#[doc = "`started_at` value to the next block number. Otherwise this would not be possible, since"]
+					#[doc = "`force_set_cursor` takes an absolute block number. Setting `started_at` to `None`"]
+					#[doc = "indicates that the current block number plus one should be used."]
+					force_set_active_cursor {
+						index: ::core::primitive::u32,
+						inner_cursor: ::core::option::Option<
+							runtime_types::bounded_collections::bounded_vec::BoundedVec<
+								::core::primitive::u8,
+							>,
+						>,
+						started_at: ::core::option::Option<::core::primitive::u32>,
+					},
+					#[codec(index = 2)]
+					#[doc = "Forces the onboarding of the migrations."]
+					#[doc = ""]
+					#[doc = "This process happens automatically on a runtime upgrade. It is in place as an emergency"]
+					#[doc = "measurement. The cursor needs to be `None` for this to succeed."]
+					force_onboard_mbms,
+					#[codec(index = 3)]
+					#[doc = "Clears the `Historic` set."]
+					#[doc = ""]
+					#[doc = "`map_cursor` must be set to the last value that was returned by the"]
+					#[doc = "`HistoricCleared` event. The first time `None` can be used. `limit` must be chosen in a"]
+					#[doc = "way that will result in a sensible weight."]
+					clear_historic {
+						selector: runtime_types::pallet_migrations::HistoricCleanupSelector<
+							runtime_types::bounded_collections::bounded_vec::BoundedVec<
+								::core::primitive::u8,
+							>,
+						>,
+					},
+				}
+				#[derive(
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+					Debug,
+				)]
+				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+				#[codec(dumb_trait_bound)]
+				#[decode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
+				)]
+				#[encode_as_type(
+					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
+				)]
+				#[doc = "The `Event` enum of this pallet"]
+				pub enum Event {
+					#[codec(index = 0)]
+					#[doc = "A Runtime upgrade started."]
+					#[doc = ""]
+					#[doc = "Its end is indicated by `UpgradeCompleted` or `UpgradeFailed`."]
+					UpgradeStarted { migrations: ::core::primitive::u32 },
+					#[codec(index = 1)]
+					#[doc = "The current runtime upgrade completed."]
+					#[doc = ""]
+					#[doc = "This implies that all of its migrations completed successfully as well."]
+					UpgradeCompleted,
+					#[codec(index = 2)]
+					#[doc = "Runtime upgrade failed."]
+					#[doc = ""]
+					#[doc = "This is very bad and will require governance intervention."]
+					UpgradeFailed,
+					#[codec(index = 3)]
+					#[doc = "A migration was skipped since it was already executed in the past."]
+					MigrationSkipped { index: ::core::primitive::u32 },
+					#[codec(index = 4)]
+					#[doc = "A migration progressed."]
+					MigrationAdvanced {
+						index: ::core::primitive::u32,
+						took: ::core::primitive::u32,
+					},
+					#[codec(index = 5)]
+					#[doc = "A Migration completed."]
+					MigrationCompleted {
+						index: ::core::primitive::u32,
+						took: ::core::primitive::u32,
+					},
+					#[codec(index = 6)]
+					#[doc = "A Migration failed."]
+					#[doc = ""]
+					#[doc = "This implies that the whole upgrade failed and governance intervention is required."]
+					MigrationFailed { index: ::core::primitive::u32, took: ::core::primitive::u32 },
+					#[codec(index = 7)]
+					#[doc = "The set of historical migrations has been cleared."]
+					HistoricCleared {
+						next_cursor: ::core::option::Option<
+							::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
+						>,
+					},
+				}
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub struct ActiveCursor<_0, _1> {
+				pub index: ::core::primitive::u32,
+				pub inner_cursor: ::core::option::Option<_0>,
+				pub started_at: _1,
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub enum HistoricCleanupSelector<_0> {
+				#[codec(index = 0)]
+				Specific(::subxt::ext::subxt_core::alloc::vec::Vec<_0>),
+				#[codec(index = 1)]
+				Wildcard {
+					limit: ::core::option::Option<::core::primitive::u32>,
+					previous_cursor: ::core::option::Option<
+						::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
+					>,
+				},
+			}
+			#[derive(
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
+				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
+				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
+				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
+				Debug,
+			)]
+			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
+			#[codec(dumb_trait_bound)]
+			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
+			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
+			pub enum MigrationCursor<_0, _1> {
+				#[codec(index = 0)]
+				Active(runtime_types::pallet_migrations::ActiveCursor<_0, _1>),
+				#[codec(index = 1)]
+				Stuck,
+			}
+		}
 		pub mod pallet_multisig {
 			use super::runtime_types;
 			pub mod pallet {
@@ -22501,6 +22692,8 @@ pub mod api {
 				Proxy(runtime_types::pallet_proxy::pallet::Call),
 				#[codec(index = 6)]
 				Preimage(runtime_types::pallet_preimage::pallet::Call),
+				#[codec(index = 7)]
+				MultiBlockMigrations(runtime_types::pallet_migrations::pallet::Call),
 				#[codec(index = 10)]
 				Balances(runtime_types::pallet_balances::pallet::Call),
 				#[codec(index = 11)]
@@ -22641,6 +22834,8 @@ pub mod api {
 				Proxy(runtime_types::pallet_proxy::pallet::Event),
 				#[codec(index = 6)]
 				Preimage(runtime_types::pallet_preimage::pallet::Event),
+				#[codec(index = 7)]
+				MultiBlockMigrations(runtime_types::pallet_migrations::pallet::Event),
 				#[codec(index = 10)]
 				Balances(runtime_types::pallet_balances::pallet::Event),
 				#[codec(index = 11)]

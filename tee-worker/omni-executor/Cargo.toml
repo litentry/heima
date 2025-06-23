@@ -29,6 +29,7 @@ members = [
     "rpc-server",
     "signer-client",
     "solana",
+    "config-loader",
 ]
 
 resolver = "2"
@@ -106,6 +107,7 @@ uuid = "1.16.0"
 accounting-contract = { path = "accounting-contract/solana/programs/accounting-contract", features = ["no-entrypoint"] }
 accounting-contract-client = { path = "accounting-contract-client" }
 binance-api = { path = "binance-api" }
+config-loader = { path = "config-loader" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
 ethereum-rpc = { path = "ethereum-rpc" }

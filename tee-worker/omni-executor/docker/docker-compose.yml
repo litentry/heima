@@ -14,7 +14,7 @@ services:
       - RUST_LOG=${RUST_LOG:-debug}
       # RPC URLs moved from CLI args to environment variables (see commit 8803b7dd)
       - OE_PARENTCHAIN_URL=ws://heima-node:9944
-      - OE_ETHERUM_URL=http://ethereum-node:8545
+      - OE_ETHEREUM_URL=http://ethereum-node:8545
       - OE_SOLANA_URL=https://api.devnet.solana.com
       - OE_PUMPX_WORKER_URL=ws://omni-executor:2100
       # These should be set in the .env file or overridden as needed:
