@@ -171,7 +171,6 @@ where
 #[no_mangle]
 pub unsafe extern "C" fn request_state_provisioning(
 	socket_fd: c_int,
-	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 	shard: *const u8,
@@ -238,7 +237,6 @@ pub unsafe extern "C" fn request_state_provisioning(
 
 	if let Err(e) = request_state_provisioning_internal(
 		socket_fd,
-		sign_type,
 		quoting_enclave_target_info,
 		quote_size,
 		shard,
@@ -258,7 +256,6 @@ pub unsafe extern "C" fn request_state_provisioning(
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAndKeys>(
 	socket_fd: c_int,
-	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 	shard: ShardIdentifier,
@@ -267,13 +264,8 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 	client_account: AccountId,
 ) -> EnclaveResult<()> {
 	debug!("Client config generate...");
-	let client_config = tls_client_config(
-		sign_type,
-		quoting_enclave_target_info,
-		quote_size,
-		OcallApi,
-		skip_ra == 1,
-	)?;
+	let client_config =
+		tls_client_config(quoting_enclave_target_info, quote_size, OcallApi, skip_ra == 1)?;
 	debug!("Client config retrieved");
 	let (mut client_session, mut tcp_stream) = tls_client_session_stream(socket_fd, client_config)?;
 	debug!("Client sesssion established.");
@@ -289,22 +281,17 @@ pub(crate) fn request_state_provisioning_internal<StateAndKeySealer: SealStateAn
 }
 
 fn tls_client_config<A: EnclaveAttestationOCallApi + 'static>(
-	sign_type: sgx_quote_sign_type_t,
 	quoting_enclave_target_info: Option<&sgx_target_info_t>,
 	quote_size: Option<&u32>,
 	ocall_api: A,
 	skip_ra: bool,
 ) -> EnclaveResult<ClientConfig> {
-	#[cfg(not(feature = "dcap"))]
-	let attestation_type = RemoteAttestationType::Epid;
-	#[cfg(feature = "dcap")]
 	let attestation_type = RemoteAttestationType::Dcap;
 
 	// report will be signed with client enclave ed25519 signing key
 	let (key_der, cert_der) = create_ra_report_and_signature(
 		skip_ra,
 		attestation_type,
-		sign_type,
 		quoting_enclave_target_info,
 		quote_size,
 	)?;

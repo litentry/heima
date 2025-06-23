@@ -43,10 +43,6 @@ impl EnclaveAttestationOCallApi for AttestationOCallMock {
 		unreachable!()
 	}
 
-	fn get_ias_socket(&self) -> SgxResult<i32> {
-		unreachable!()
-	}
-
 	fn get_quote(
 		&self,
 		_sig_rl: Vec<u8>,

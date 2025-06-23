@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use serde::{Deserialize, Serialize};
 
-declare_id!("D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV");
+declare_id!("EJgprV3h3RECRWtsMnee6FUD8CT5AUk3nMFXb7PA4xYP");
 
 #[program]
 pub mod accounting_contract {

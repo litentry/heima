@@ -20,6 +20,7 @@ url = { workspace = true }
 # Local dependencies
 accounting-contract-client = { workspace = true }
 binance-api = { workspace = true }
+config-loader = { workspace = true }
 cross-chain-intent-executor = { workspace = true }
 ethereum-intent-executor = { workspace = true }
 ethereum-rpc = { workspace = true }
@@ -28,6 +29,7 @@ executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 intent-asset-lock = { workspace = true }
+mock-server = { workspace = true }
 native-task-handler = { workspace = true }
 parentchain-attestation = { workspace = true }
 parentchain-listener = { workspace = true }
@@ -38,6 +40,10 @@ rpc-server = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
 solana-intent-executor = { workspace = true }
+
+[features]
+default = []
+mock-server = []
 
 [lints]
 workspace = true

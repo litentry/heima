@@ -16,6 +16,7 @@ members = [
     "intent/executors/ethereum",
     "intent/executors/solana",
     "intent/token-query",
+    "mock-server",
     "native-task-handler",
     "oauth-providers",
     "parentchain/listener",
@@ -28,6 +29,7 @@ members = [
     "signer-client",
     "solana",
     "evm-aggregators-client",
+    "config-loader",
 ]
 
 resolver = "2"
@@ -105,6 +107,7 @@ uuid = "1.16.0"
 accounting-contract = { path = "accounting-contract/solana/programs/accounting-contract", features = ["no-entrypoint"] }
 accounting-contract-client = { path = "accounting-contract-client" }
 binance-api = { path = "binance-api" }
+config-loader = { path = "config-loader" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
 ethereum-rpc = { path = "ethereum-rpc" }
@@ -116,6 +119,7 @@ heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 intent-asset-lock = { path = "intent/asset-lock" }
 intent-token-query = { path = "intent/token-query" }
+mock-server = { path = "mock-server" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
 parentchain-api-interface = { path = "parentchain/api-interface" }

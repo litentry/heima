@@ -24,6 +24,7 @@ use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::*;
+use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
@@ -72,8 +73,6 @@ use tracing::info;
 use tracing::log::error;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
-mod env_config;
-use env_config::EnvConfig;
 mod cli;
 
 #[tokio::main]
@@ -90,7 +89,17 @@ async fn main() -> Result<(), ()> {
 
 	match cli.cmd {
 		Commands::Run(args) => {
-			let env_config = EnvConfig::from_env();
+			if args.enable_mock_server {
+				#[cfg(feature = "mock-server")]
+				{
+					let mock_server_port = args.mock_server_port;
+					thread::spawn(move || {
+						mock_server::run(mock_server_port).expect("Mock server failed to start");
+					});
+				}
+			}
+
+			let config_loader = ConfigLoader::from_env();
 			let builder = PrometheusBuilder::new();
 
 			let address = SocketAddr::from_str(&format!("0.0.0.0:{}", args.metrics_port)).unwrap();
@@ -164,12 +173,12 @@ async fn main() -> Result<(), ()> {
 				.unwrap()
 			);
 
-			let storage_db = init_storage(&env_config.parentchain_url)
+			let storage_db = init_storage(&config_loader.parentchain_url)
 				.await
 				.expect("Could not initialize storage");
 
 			let client_factory =
-				SubxtClientFactory::<CustomConfig>::new(&env_config.parentchain_url);
+				SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
 			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
 			let parentchain_rpc_client_factory = Arc::new(client_factory);
 
@@ -209,35 +218,36 @@ async fn main() -> Result<(), ()> {
 
 			let pumpx_signer_client: Arc<Box<dyn signer_client::SignerClient>> =
 				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
-					env_config.pumpx_signer_url,
+					config_loader.pumpx_signer_url.clone(),
 					pumpx_signer_pair,
 				)));
 
 			let ethereum_intent_executor = EthereumIntentExecutor::new(
-				&env_config.ethereum_url,
+				&config_loader.ethereum_url,
 				&args.delegation_contract_address,
 			)?;
-			let solana_intent_executor = SolanaIntentExecutor::new(&env_config.solana_url)?;
+			let solana_intent_executor = SolanaIntentExecutor::new(&config_loader.solana_url)?;
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
-			rpc_endpoint_registry.insert(Chain::Solana, env_config.solana_url.to_string());
-			rpc_endpoint_registry.insert(Chain::Ethereum(56), env_config.bsc_url.to_string());
+			rpc_endpoint_registry.insert(Chain::Solana, config_loader.solana_url.to_string());
+			rpc_endpoint_registry.insert(Chain::Ethereum(56), config_loader.bsc_url.to_string());
 
-			if let Some(ref bsc_testnet_url) = env_config.bsc_testnet_url {
+			if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
 				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
 			}
 
-			let pumpx_api: Arc<Box<dyn PumpxApi>> =
-				Arc::new(Box::new(PumpxApiClient::new(env_config.pumpx_api_base_url.to_string())));
+			let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(PumpxApiClient::new(
+				config_loader.pumpx_api_base_url.to_string(),
+			)));
 
 			let binance_api = Arc::new(BinanceApiClient::new(
-				env_config.binance_api_key,
-				env_config.binance_api_secret,
-				env_config.binance_api_base_url,
+				config_loader.binance_api_key.clone(),
+				config_loader.binance_api_secret.clone(),
+				config_loader.binance_api_base_url.clone(),
 			));
 
 			let solana_client: Arc<SolanaRpcClient> =
-				Arc::new(SolanaRpcClient::new(&env_config.solana_url));
+				Arc::new(SolanaRpcClient::new(&config_loader.solana_url));
 
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&evm_accounting_ecdsa_signer_key_pair.seed())
@@ -245,7 +255,7 @@ async fn main() -> Result<(), ()> {
 			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
 
 			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
-				&env_config.bsc_url,
+				&config_loader.bsc_url,
 				accounting_contract_wallet,
 			);
 			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
@@ -254,19 +264,19 @@ async fn main() -> Result<(), ()> {
 			);
 			let solana_accounting_contract_client = SolanaAccountingContractClient::new(
 				solana_accounting_ed25519_signer_key_pair,
-				env_config.solana_url.clone(),
+				config_loader.solana_url.clone(),
 				args.solana_accounting_contract_address.parse().unwrap(),
 			);
 
 			let bsc_client: Arc<EthereumRpcClient> =
-				Arc::new(EthereumRpcClient::new(&env_config.bsc_url));
+				Arc::new(EthereumRpcClient::new(&config_loader.bsc_url));
 
 			// wallet monitoring setup start
 			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(&env_config.bsc_url)));
+				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url)));
 
 			let solana_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(SolanaRpcClient::new(&env_config.solana_url)));
+				Arc::new(Box::new(SolanaRpcClient::new(&config_loader.solana_url)));
 
 			let mut balance_fetchers: HashMap<
 				WalletNetworkType,
@@ -322,7 +332,7 @@ async fn main() -> Result<(), ()> {
 				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
 			let worker_url =
-				url::Url::parse(&env_config.pumpx_worker_url).expect("Invalid worker url");
+				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
 
 			let shielding_key_store = ShieldingKeyStore::new(
 				Path::new(&args.local_directory_path)
@@ -359,6 +369,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_api,
 				storage_db.clone(),
 				jwt_rsa_private_key,
+				&config_loader,
 			)
 			.await
 			.map_err(|e| {
@@ -366,7 +377,9 @@ async fn main() -> Result<(), ()> {
 			})?;
 
 			if args.parentchain_sync {
-				listen_to_parentchain(*args, storage_db).await.unwrap();
+				listen_to_parentchain(*args, storage_db, &config_loader.parentchain_url)
+					.await
+					.unwrap();
 			}
 
 			if let Err(e) = join.await {
@@ -399,14 +412,13 @@ async fn main() -> Result<(), ()> {
 async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,
+	ws_rpc_endpoint: &str,
 ) -> Result<JoinHandle<()>, ()> {
-	let env_config = EnvConfig::from_env();
 	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
-	let parentchain_url = env_config.parentchain_url;
 	let mut parentchain_listener = parentchain_listener::create_listener(
 		"heima",
 		Handle::current(),
-		&parentchain_url,
+		ws_rpc_endpoint,
 		sub_stop_receiver,
 		storage_db,
 		&Path::new(&args.local_directory_path)

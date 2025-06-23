@@ -18,6 +18,7 @@ pub fn register_test_protected_method(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use chrono::{Days, Utc};
+	use config_loader::ConfigLoader;
 	use executor_crypto::jwt;
 	use executor_primitives::utils::hex::ToHexPrefixed;
 	use executor_storage::StorageDB;
@@ -49,6 +50,7 @@ mod test {
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
+		let config_loader = ConfigLoader::from_env();
 
 		start_server(
 			port,
@@ -57,6 +59,7 @@ mod test {
 			Arc::new(Box::new(pumpx_api)),
 			Arc::new(db),
 			jwt_private_key.as_bytes().to_vec(),
+			&config_loader,
 		)
 		.await
 		.unwrap();

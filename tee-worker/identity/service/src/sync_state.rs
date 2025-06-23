@@ -55,14 +55,7 @@ pub(crate) fn sync_state<
 
 	println!("Requesting state provisioning from worker at {}", &provider_url);
 
-	enclave_request_state_provisioning(
-		enclave_api,
-		sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
-		&provider_url,
-		shard,
-		skip_ra,
-	)
-	.unwrap();
+	enclave_request_state_provisioning(enclave_api, &provider_url, shard, skip_ra).unwrap();
 	println!("[+] State provisioning successfully performed.");
 }
 

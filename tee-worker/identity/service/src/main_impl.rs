@@ -245,8 +245,6 @@ pub(crate) fn main() {
 		println!("Enclave signing account: {:}", &tee_accountid.to_ss58check());
 	} else if matches.is_present("dump-ra") {
 		info!("*** Perform RA and dump cert to disk");
-		#[cfg(not(feature = "dcap"))]
-		enclave.dump_ias_ra_cert_to_disk().unwrap();
 		#[cfg(feature = "dcap")]
 		{
 			let skip_ra = false;
@@ -254,6 +252,11 @@ pub(crate) fn main() {
 			let (fmspc, _tcb_info) = extract_tcb_info_from_raw_dcap_quote(&dcap_quote).unwrap();
 			enclave.dump_dcap_collateral_to_disk(fmspc).unwrap();
 			enclave.dump_dcap_ra_cert_to_disk().unwrap();
+		}
+		#[cfg(not(feature = "dcap"))]
+		{
+			error!("IAS attestation is no longer supported. Use DCAP instead.");
+			return;
 		}
 	} else if matches.is_present("mrenclave") {
 		let mrenclave = enclave.get_fingerprint().unwrap();
@@ -270,7 +273,6 @@ pub(crate) fn main() {
 			info!("*** Running Enclave MU-RA TLS server\n");
 			enclave_run_state_provisioning_server(
 				enclave.as_ref(),
-				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				quoting_enclave_target_info.as_ref(),
 				quote_size.as_ref(),
 				&config.mu_ra_url(),
@@ -282,7 +284,6 @@ pub(crate) fn main() {
 			let shard = extract_shard(sub_matches.value_of("shard"), enclave.as_ref());
 			enclave_request_state_provisioning(
 				enclave.as_ref(),
-				sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 				&config.mu_ra_url_external(),
 				&shard,
 				sub_matches.is_present("skip-ra"),
@@ -376,7 +377,6 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	thread::spawn(move || {
 		enclave_run_state_provisioning_server(
 			enclave_api_key_prov.as_ref(),
-			sgx_quote_sign_type_t::SGX_UNLINKABLE_SIGNATURE,
 			quoting_enclave_target_info.as_ref(),
 			quote_size.as_ref(),
 			&ra_url,

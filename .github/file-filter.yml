@@ -48,8 +48,11 @@ omni_executor_test: &omni_executor_test
   - "tee-worker/omni-executor/client-sdk/**"
   - "tee-worker/omni-executor/ts-tests/**"
 
-evm_contracts_src:
+evm_accounting_contracts_src:
   - "tee-worker/omni-executor/accounting-contract/bsc/**"
 
 solana_contracts_src:
   - "tee-worker/omni-executor/accounting-contract/solana/**"
+
+evm_aa_contracts_src:  
+  - "tee-worker/omni-executor/aa-contracts/**"  

@@ -19,6 +19,7 @@ pub fn register_get_shielding_key(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
+	use config_loader::ConfigLoader;
 	use executor_storage::StorageDB;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
@@ -42,6 +43,7 @@ mod test {
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
+		let config_loader = ConfigLoader::from_env();
 
 		start_server(
 			port,
@@ -50,6 +52,7 @@ mod test {
 			Arc::new(Box::new(pumpx_api)),
 			Arc::new(db),
 			jwt_private_key.as_bytes().to_vec(),
+			&config_loader,
 		)
 		.await
 		.unwrap();

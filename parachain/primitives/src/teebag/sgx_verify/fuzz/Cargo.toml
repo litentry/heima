@@ -48,11 +48,6 @@ path = "fuzz_targets/extract_tcb_info.rs"
 test = false
 doc = false
 
-[[bin]]
-name = "verify_ias_report"
-path = "fuzz_targets/verify_ias_report.rs"
-test = false
-doc = false
 
 [patch.crates-io]
 ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }

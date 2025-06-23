@@ -103,10 +103,6 @@ impl EnclaveAttestationOCallApi for OnchainMock {
 		todo!()
 	}
 
-	fn get_ias_socket(&self) -> SgxResult<i32> {
-		Ok(42)
-	}
-
 	fn get_quote(
 		&self,
 		_sig_rl: Vec<u8>,
