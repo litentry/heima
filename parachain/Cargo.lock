@@ -3272,7 +3272,7 @@ dependencies = [
 [[package]]
 name = "fc-api"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "async-trait",
  "fp-storage",
@@ -3284,7 +3284,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "async-trait",
  "fp-consensus",
@@ -3300,7 +3300,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "async-trait",
  "fc-api",
@@ -3321,7 +3321,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fc-db",
  "fc-storage",
@@ -3342,7 +3342,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -3395,7 +3395,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -3410,7 +3410,7 @@ dependencies = [
 [[package]]
 name = "fc-storage"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -3527,12 +3527,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
-name = "fixedbitset"
-version = "0.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
-
-[[package]]
 name = "flagset"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3589,7 +3583,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "hex",
  "impl-serde 0.5.0",
@@ -3608,7 +3602,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -3619,7 +3613,7 @@ dependencies = [
 [[package]]
 name = "fp-ethereum"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -3631,7 +3625,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "environmental",
  "evm",
@@ -3647,7 +3641,7 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -3663,7 +3657,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -3675,7 +3669,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "parity-scale-codec",
  "serde",
@@ -7761,7 +7755,7 @@ dependencies = [
  "expander",
  "indexmap 2.9.0",
  "itertools 0.11.0",
- "petgraph 0.6.5",
+ "petgraph",
  "proc-macro-crate 3.3.0",
  "proc-macro2",
  "quote",
@@ -8341,7 +8335,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -8364,7 +8358,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "environmental",
  "evm",
@@ -8451,7 +8445,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fp-evm",
 ]
@@ -8459,7 +8453,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -8518,7 +8512,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -8530,7 +8524,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-ed25519"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ed25519-dalek",
  "fp-evm",
@@ -8589,7 +8583,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fp-evm",
  "num",
@@ -8694,7 +8688,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fp-evm",
  "tiny-keccak",
@@ -8703,7 +8697,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "fp-evm",
  "ripemd",
@@ -10089,17 +10083,7 @@ version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
 dependencies = [
- "fixedbitset 0.4.2",
- "indexmap 2.9.0",
-]
-
-[[package]]
-name = "petgraph"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772"
-dependencies = [
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "indexmap 2.9.0",
 ]
 
@@ -11449,7 +11433,7 @@ dependencies = [
 [[package]]
 name = "precompile-utils"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "derive_more 1.0.0",
  "environmental",
@@ -11478,7 +11462,7 @@ dependencies = [
 [[package]]
 name = "precompile-utils-macro"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "case",
  "num_enum",
@@ -11741,7 +11725,7 @@ dependencies = [
  "log",
  "multimap",
  "once_cell",
- "petgraph 0.7.1",
+ "petgraph",
  "prettyplease",
  "prost 0.13.5",
  "prost-types",
