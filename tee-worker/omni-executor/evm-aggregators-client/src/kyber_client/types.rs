@@ -210,7 +210,7 @@ impl SwapResponse {
 		})?;
 		let mut final_gas = adjusted_gas;
 		if final_gas > *GAS_LIMIT {
-			final_gas = GAS_LIMIT.clone();
+			final_gas = *GAS_LIMIT;
 		}
 
 		Ok((data, to, value, final_gas))

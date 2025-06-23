@@ -25,7 +25,7 @@ impl SwapResponse {
 		let to = Address::from_hex(&self.tx.to)
 			.map_err(|e| error!("Failed to decode hex to address: {}", e))?;
 
-		let gas = Decimal::from_u64(self.tx.gas.clone()).ok_or_else(|| {
+		let gas = Decimal::from_u64(self.tx.gas).ok_or_else(|| {
 			error!("Failed to deserialize to decimal");
 		})?;
 
@@ -34,7 +34,7 @@ impl SwapResponse {
 		})?;
 		let mut final_gas = adjusted_gas;
 		if final_gas > *GAS_LIMIT {
-			final_gas = GAS_LIMIT.clone();
+			final_gas = *GAS_LIMIT;
 		}
 
 		Ok((data, to, value, final_gas))

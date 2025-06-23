@@ -76,10 +76,10 @@ where
 		nonce: u64,
 		amount_decimal: Decimal,
 	) -> Result<TransactionRequest, ()> {
-		let chain_id = create_market_tx.chain_id.clone();
+		let chain_id = create_market_tx.chain_id;
 
 		let mut swap_request = SwapRequest {
-			chain_id: chain_id.clone(),
+			chain_id,
 			amount: amount_decimal.to_string(),
 			from_token_address: create_market_tx.in_token_ca.clone(),
 			to_token_address: create_market_tx.out_token_ca.clone(),
@@ -91,7 +91,7 @@ where
 			..Default::default()
 		};
 
-		if is_native_token(&*create_market_tx.out_token_ca.into_bytes()) {
+		if is_native_token(&create_market_tx.out_token_ca.into_bytes()) {
 			swap_request.from_token_address = NATIVE_ADDRESS.to_string();
 		} else {
 			swap_request.to_token_address = NATIVE_ADDRESS.to_string();
@@ -135,7 +135,7 @@ where
 		nonce: u64,
 		amount_decimal: Decimal,
 	) -> Result<TransactionRequest, ()> {
-		let chain_id = create_market_tx.chain_id.clone();
+		let chain_id = create_market_tx.chain_id;
 		let mut fee_bps = SERVICE_FEE_PERCENT.to_string();
 		if create_market_tx.is_pre_cross {
 			fee_bps = CROSS_SERVICE_FEE_PERCENT.to_string();
@@ -154,7 +154,7 @@ where
 			..Default::default()
 		};
 
-		if is_native_token(&*create_market_tx.in_token_ca.into_bytes()) {
+		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
 			swap_request.from_token_referrer_wallet_address = self.fee_receiver.clone();
 			swap_request.from_token_address = NATIVE_ADDRESS.to_string();
 		} else {
@@ -198,14 +198,14 @@ where
 		nonce: u64,
 		amount_decimal: Decimal,
 	) -> Result<TransactionRequest, ()> {
-		let chain_id = create_market_tx.chain_id.clone();
+		let chain_id = create_market_tx.chain_id;
 		let mut fee_bps = SERVICE_FEE_BPS.to_string();
 		if create_market_tx.is_pre_cross {
 			fee_bps = CROSS_SERVICE_FEE_BPS.to_string();
 		}
 
 		let mut swap_route_request = GetSwapRouteRequest {
-			chain_id: chain_id.clone(),
+			chain_id,
 			amount: amount_decimal.to_string(),
 			from_token_address: create_market_tx.in_token_ca.clone(),
 			to_token_address: create_market_tx.out_token_ca.clone(),
@@ -213,10 +213,9 @@ where
 			referrer: self.fee_receiver.clone(),
 			dex_ids: KYBER_SWAP_DEX_ID_MAP[&create_market_tx.trade_pool_name].to_string(),
 			is_from_token_referrer: false,
-			..Default::default()
 		};
 
-		if is_native_token(&*create_market_tx.in_token_ca.into_bytes()) {
+		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
 			swap_route_request.from_token_address = NATIVE_ADDRESS.to_string();
 			swap_route_request.is_from_token_referrer = true;
 		} else {
@@ -322,7 +321,7 @@ where
 		&self,
 		tx: CreateMarketTx,
 	) -> Result<Vec<TransactionRequest>, ()> {
-		let amount_decimal = Decimal::from_str(&*tx.amount_in).unwrap();
+		let amount_decimal = Decimal::from_str(&tx.amount_in).unwrap();
 		let multiplier = DECIMALS_TO_VALUE.get(&tx.in_decimal).cloned().unwrap_or(1);
 		let amount_decimal = amount_decimal * Decimal::from(multiplier);
 
@@ -337,17 +336,15 @@ where
 			error!("Couldn't get pending nonce");
 		})?;
 
-		let is_buy = is_native_token(&*tx.in_token_ca.clone().into_bytes());
+		let is_buy = is_native_token(&tx.in_token_ca.clone().into_bytes());
 		let platform = Platform::KyberSwap;
 
 		let amount_u128 = amount_decimal.to_u128().ok_or_else(|| {
 			error!("amount_decimal could not be converted to u128: {}", amount_decimal);
-			()
 		})?;
 
 		let amount = Uint::try_from(amount_u128).map_err(|e| {
 			error!("Failed to convert amount_u128 to Uint: {:?}", e);
-			()
 		})?;
 
 		let mut transactions: Vec<TransactionRequest> = Vec::new();
@@ -409,29 +406,24 @@ where
 
 		let gas = unsigned_tx.gas.ok_or_else(|| {
 			error!("Gas not set in transaction");
-			()
 		})?;
 
 		let gas_price_u64 = unsigned_tx
 			.gas_price
 			.ok_or_else(|| {
 				error!("Gas price not set in transaction");
-				()
 			})?
 			.to_u64()
 			.ok_or_else(|| {
 				error!("Failed to convert gas price to u64");
-				()
 			})?;
 
 		let gas_fee_u128 = gas.checked_mul(gas_price_u64).ok_or_else(|| {
 			error!("Gas fee multiplication overflow");
-			()
 		})?;
 
 		let gas_fee = Uint::try_from(gas_fee_u128).map_err(|e| {
 			error!("Failed to convert gas fee to Uint: {:?}", e);
-			()
 		})?;
 
 		if balance < gas_fee {
