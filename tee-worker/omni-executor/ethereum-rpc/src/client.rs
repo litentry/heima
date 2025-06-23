@@ -29,7 +29,7 @@ pub trait EthereumClient: Send + Sync {
 		spender: Address,
 		value: U256,
 		contract_address: Address,
-		nonce: u64
+		nonce: u64,
 	) -> Result<TransactionRequest, ()>;
 }
 
@@ -132,7 +132,7 @@ impl EthereumClient for EthereumRpcClient {
 		to: Address,
 		value: U256,
 		contract_address: Address,
-		nonce: u64
+		nonce: u64,
 	) -> Result<TransactionRequest, ()> {
 		// TODO: Double check this
 		// ERC20 approve function signature: approve(address,uint256)
