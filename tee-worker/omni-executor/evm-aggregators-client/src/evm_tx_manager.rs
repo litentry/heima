@@ -1,5 +1,5 @@
-use crate::common::{is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, GAS_LIMIT, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT};
-use crate::inch_client::client::{InchClient, InchSwap};
+use crate::common::{is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT};
+use crate::inch_client::client::{InchSwap};
 use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
 use crate::kyber_client::client::KyberSwap;
 use crate::okx_client::client::OkxSwap;
@@ -12,12 +12,13 @@ use crate::kyber_client::types::GetSwapRouteRequest;
 use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level};
 use alloy::primitives::Uint;
 use alloy::{
-	primitives::{Address, TxKind, U256},
+	primitives::{Address, TxKind},
 	rpc::types::{TransactionInput, TransactionRequest},
 };
 use ethereum_rpc::client::EthereumClient;
 use hex::FromHex;
 use log::error;
+use async_trait::async_trait;
 
 /// EVM Transaction Manager
 pub struct EvmTxManager<
@@ -33,7 +34,8 @@ pub struct EvmTxManager<
 	pub fee_receiver: String,
 }
 
-pub trait ConstructEvmTx {
+#[async_trait]
+pub trait ConstructEvmTx: Send + Sync{
 	async fn construct_inch_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
@@ -54,6 +56,7 @@ pub trait ConstructEvmTx {
 	) -> Result<TransactionRequest, ()>;
 }
 
+#[async_trait]
 impl<EthClient, InchClient, KyberClient, OkxClient> ConstructEvmTx
 	for EvmTxManager<EthClient, InchClient, KyberClient, OkxClient>
 where
@@ -95,7 +98,7 @@ where
 			.await
 			.map_err(|e| error!("Failed to get swap response from 1inch due to: {:?}", e))?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|e| {
+		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|_| {
 			error!("Failed to extract transaction details from swap response");
 		})?;
 
@@ -154,11 +157,11 @@ where
 			swap_request.to_token_address = NATIVE_ADDRESS.to_string();
 		}
 
-		let swap_response = self.okx_client.swap(swap_request).await.map_err(|e| {
+		let swap_response = self.okx_client.swap(swap_request).await.map_err(|_| {
 			error!("Failed to get swap response from okx");
 		})?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|e| {
+		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|_| {
 			error!("Failed to extract transaction details from swap response");
 		})?;
 
@@ -240,7 +243,7 @@ where
 			error!("Failed to get swap response from kyber: {}", e);
 		})?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|e| {
+		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|_| {
 			error!("Failed to extract transaction details from swap response");
 		})?;
 
@@ -306,12 +309,11 @@ where
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
 {
+	#[allow(dead_code)]
 	async fn construct_unsigned_market_tx(
 		&self,
 		tx: CreateMarketTx,
 	) -> Result<Vec<TransactionRequest>, ()> {
-		let chain_id = tx.chain_id.clone();
-
 		let amount_decimal = Decimal::from_str(&*tx.amount_in).unwrap();
 		let multiplier = DECIMALS_TO_VALUE.get(&tx.in_decimal).cloned().unwrap_or(1);
 		let amount_decimal = amount_decimal * Decimal::from(multiplier);
@@ -319,11 +321,11 @@ where
 		let from = Address::from_hex(&tx.user_wallet_address)
 			.map_err(|e| error!("Failed to convert user wallet to address: {}", e))?;
 
-		let mut balance = self.eth_client.get_balance(from).await.map_err(|e| {
+		let mut balance = self.eth_client.get_balance(from).await.map_err(|_| {
 			error!("Couldn't get balance");
 		})?;
 
-		let mut nonce = self.eth_client.get_pending_nonce(from).await.map_err(|e| {
+		let mut nonce = self.eth_client.get_pending_nonce(from).await.map_err(|_| {
 			error!("Couldn't get pending nonce");
 		})?;
 

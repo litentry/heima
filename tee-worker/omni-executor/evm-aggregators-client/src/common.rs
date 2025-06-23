@@ -1,4 +1,3 @@
-use hex::{FromHex, ToHex};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

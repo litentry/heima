@@ -3,6 +3,7 @@ use crate::kyber_client::types::{
 };
 use log::error;
 use reqwest::{Client, Error};
+use async_trait::async_trait;
 
 pub const BASIC_ENDPOINT: &str = "https://aggregator-api.kyberswap.com";
 pub const GET_SWAP_ROUTE_PATH: &str = "/56/api/v1/routes";
@@ -19,7 +20,8 @@ impl KyberClient {
 	}
 }
 
-pub(crate) trait KyberSwap {
+#[async_trait]
+pub trait KyberSwap: Send + Sync {
 	async fn get_swap_route(
 		&self,
 		swap_route_request: GetSwapRouteRequest,
@@ -27,6 +29,7 @@ pub(crate) trait KyberSwap {
 	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }
 
+#[async_trait]
 impl KyberSwap for KyberClient {
 	async fn get_swap_route(
 		&self,

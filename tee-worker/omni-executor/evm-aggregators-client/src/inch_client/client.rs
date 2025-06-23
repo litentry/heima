@@ -3,7 +3,7 @@
 use crate::inch_client::types::{SwapRequest, SwapResponse};
 use log::error;
 use reqwest::{Client, Error};
-use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 
 pub const BASIC_ENDPOINT: &str = "https://api.1inch.dev";
 pub const GET_SWAP_PATH: &str = "/swap/v6.0/56/swap";
@@ -19,10 +19,12 @@ impl InchClient {
 	}
 }
 
-pub trait InchSwap {
+#[async_trait]
+pub trait InchSwap: Send + Sync {
 	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }
 
+#[async_trait]
 impl InchSwap for InchClient {
 	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
 		let query_params = swap_request.convert_to_query_params();

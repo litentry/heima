@@ -1,6 +1,7 @@
 use crate::okx_client::types::{GetGasPriceResp, SwapRequest, SwapResponse};
 use log::error;
 use reqwest::{Client, Error};
+use async_trait::async_trait;
 
 pub const BASIC_ENDPOINT: &str = "https://www.okx.com";
 pub const GET_SWAP_PATH: &str = "/api/v5/dex/aggregator/swap";
@@ -17,11 +18,13 @@ impl OkxClient {
 	}
 }
 
-pub trait OkxSwap {
+#[async_trait]
+pub trait OkxSwap: Send + Sync {
 	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 	async fn get_gas_price(&self, chain_id: u64) -> Result<GetGasPriceResp, Error>;
 }
 
+#[async_trait]
 impl OkxSwap for OkxClient {
 	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
 		let query_params = swap_request.convert_to_query_params();
