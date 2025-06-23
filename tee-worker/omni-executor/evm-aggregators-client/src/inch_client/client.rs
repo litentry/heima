@@ -14,12 +14,9 @@ pub struct InchClient {
 }
 
 impl InchClient {
-    pub fn new(access_token: impl Into<String>) -> Self {
-        InchClient {
-            client: Client::new(),
-            access_token: access_token.into(),
-        }
-    }
+	pub fn new(access_token: impl Into<String>) -> Self {
+		InchClient { client: Client::new(), access_token: access_token.into() }
+	}
 }
 
 pub trait InchSwap {

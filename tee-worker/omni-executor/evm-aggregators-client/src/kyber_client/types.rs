@@ -1,13 +1,13 @@
-use std::ops::Mul;
-use std::str::FromStr;
+use crate::common::GAS_LIMIT;
 use alloy::primitives::{Address, U256};
 use hex::FromHex;
 use log::error;
-use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::common::GAS_LIMIT;
+use std::ops::Mul;
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BasicResp {
@@ -96,8 +96,7 @@ pub struct RouteSummary {
 	pub timestamp: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ExtraFee {
 	#[serde(rename = "feeAmount")]
 	pub fee_amount: String,

@@ -16,6 +16,10 @@ pub const CROSS_SERVICE_FEE_PERCENT: &str = "1.1";
 pub const SERVICE_FEE_BPS: &str = "100";
 pub const CROSS_SERVICE_FEE_BPS: &str = "110";
 
+pub const KYBER_SWAP_APPROVE_ADDRESS: &str = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5";
+pub const INCH_SWAP_APPROVE_ADDRESS: &str = "0x111111125421cA6dc452d289314280a0f8842A65";
+pub const OKX_SWAP_APPROVE_ADDRESS: &str = "0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6";
+
 lazy_static! {
     pub static ref GAS_LIMIT: u64 = 450_000u64;
     pub static ref GWEI_DECIMAL: Decimal = Decimal::from(1_000_000_000u64);

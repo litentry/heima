@@ -1,11 +1,11 @@
-use std::ops::Mul;
+use crate::common::GAS_LIMIT;
 use alloy::primitives::{Address, U256};
 use hex::FromHex;
 use log::error;
 use rust_decimal::prelude::{Decimal, FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
+use std::ops::Mul;
 use std::str::FromStr;
-use crate::common::GAS_LIMIT;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SwapResponse {

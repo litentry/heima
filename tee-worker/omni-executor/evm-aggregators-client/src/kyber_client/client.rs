@@ -14,12 +14,9 @@ pub struct KyberClient {
 }
 
 impl KyberClient {
-    pub fn new(access_token: impl Into<String>) -> Self {
-        KyberClient {
-            client: Client::new(),
-            access_token: access_token.into(),
-        }
-    }
+	pub fn new(access_token: impl Into<String>) -> Self {
+		KyberClient { client: Client::new(), access_token: access_token.into() }
+	}
 }
 
 pub(crate) trait KyberSwap {
