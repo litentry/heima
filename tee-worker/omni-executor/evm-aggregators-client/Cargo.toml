@@ -8,6 +8,16 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
+rust_decimal = { workspace = true }
+hex = { workspace = true }
+alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
+ethereum-rpc = { workspace = true }
+lazy_static = "1.5.0"
+async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+ethers = { workspace = true }
 
 [lints]
 workspace = true
