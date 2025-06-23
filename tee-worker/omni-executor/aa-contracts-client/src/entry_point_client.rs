@@ -109,12 +109,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		// Get sender address from EntryPoint
 		let sender = self.get_sender_address(init_code.clone()).await?;
 
-		// Create SmartWalletClient and get nonce from smart wallet contract
-		let smart_wallet_client = SmartWalletClient::new(sender, self.rpc_client.clone());
-		let nonce = smart_wallet_client.get_nonce().await?;
-
 		// Check if the account already has code deployed
 		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
+
+		// Get nonce - if smart wallet doesn't exist yet, use 0
+		let nonce = if code.is_empty() {
+			// Smart wallet doesn't exist yet, use 0 as nonce
+			U256::from(0)
+		} else {
+			// Smart wallet exists, get nonce from contract
+			let smart_wallet_client = SmartWalletClient::new(sender, self.rpc_client.clone());
+			smart_wallet_client.get_nonce().await?
+		};
 		let init_code_to_use = if code.is_empty() {
 			// No code at address, include init code
 			init_code
