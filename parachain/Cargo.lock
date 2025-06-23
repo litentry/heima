@@ -3182,7 +3182,7 @@ dependencies = [
 [[package]]
 name = "evm-tracing-events"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "environmental",
  "ethereum",
@@ -3272,10 +3272,22 @@ dependencies = [
 [[package]]
 name = "fc-api"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "async-trait",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "fc-api"
+version = "1.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "async-trait",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
@@ -3284,11 +3296,27 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "async-trait",
- "fp-consensus",
- "fp-rpc",
+ "fp-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "sc-consensus",
+ "sp-api",
+ "sp-block-builder",
+ "sp-consensus",
+ "sp-runtime",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "fc-consensus"
+version = "2.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "async-trait",
+ "fp-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "sc-consensus",
  "sp-api",
  "sp-block-builder",
@@ -3300,11 +3328,30 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "async-trait",
- "fc-api",
- "fp-storage",
+ "fc-api 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "log",
+ "parity-db",
+ "parity-scale-codec",
+ "parking_lot 0.12.4",
+ "sc-client-db",
+ "sp-blockchain",
+ "sp-core",
+ "sp-database",
+ "sp-runtime",
+]
+
+[[package]]
+name = "fc-db"
+version = "2.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "async-trait",
+ "fc-api 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "kvdb-rocksdb",
  "log",
  "parity-db",
@@ -3321,12 +3368,33 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
- "fc-db",
- "fc-storage",
- "fp-consensus",
- "fp-rpc",
+ "fc-db 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "futures 0.3.31",
+ "futures-timer",
+ "log",
+ "parking_lot 0.12.4",
+ "sc-client-api",
+ "sc-utils",
+ "sp-api",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-runtime",
+]
+
+[[package]]
+name = "fc-mapping-sync"
+version = "2.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "fc-db 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "futures 0.3.31",
  "futures-timer",
  "log",
@@ -3342,24 +3410,74 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
  "evm",
- "fc-api",
- "fc-mapping-sync",
- "fc-rpc-core",
- "fc-storage",
- "fp-evm",
- "fp-rpc",
- "fp-storage",
+ "fc-api 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-mapping-sync 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-rpc-core 1.1.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "futures 0.3.31",
  "hex",
  "jsonrpsee 0.24.9",
  "libsecp256k1",
  "log",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "parity-scale-codec",
+ "prometheus",
+ "rand 0.8.5",
+ "rlp",
+ "sc-client-api",
+ "sc-network",
+ "sc-network-sync",
+ "sc-rpc",
+ "sc-service",
+ "sc-transaction-pool-api",
+ "sc-utils",
+ "schnellru",
+ "serde",
+ "sp-api",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-core",
+ "sp-externalities",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-storage",
+ "substrate-prometheus-endpoint",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
+name = "fc-rpc"
+version = "2.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "ethereum",
+ "ethereum-types",
+ "evm",
+ "fc-api 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-mapping-sync 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-rpc-core 1.1.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "futures 0.3.31",
+ "hex",
+ "jsonrpsee 0.24.9",
+ "libsecp256k1",
+ "log",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "parity-scale-codec",
  "prometheus",
  "rand 0.8.5",
@@ -3395,7 +3513,22 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "ethereum",
+ "ethereum-types",
+ "jsonrpsee 0.24.9",
+ "rlp",
+ "rustc-hex",
+ "serde",
+ "serde_json",
+ "sp-crypto-hashing 0.1.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
+]
+
+[[package]]
+name = "fc-rpc-core"
+version = "1.1.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -3410,12 +3543,29 @@ dependencies = [
 [[package]]
 name = "fc-storage"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fp-rpc",
- "fp-storage",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "parity-scale-codec",
+ "sc-client-api",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+ "sp-storage",
+]
+
+[[package]]
+name = "fc-storage"
+version = "1.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "ethereum",
+ "ethereum-types",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "parity-scale-codec",
  "sc-client-api",
  "sp-api",
@@ -3527,12 +3677,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
-name = "fixedbitset"
-version = "0.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
-
-[[package]]
 name = "flagset"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3589,7 +3733,26 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "hex",
+ "impl-serde 0.5.0",
+ "libsecp256k1",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "staging-xcm",
+]
+
+[[package]]
+name = "fp-account"
+version = "1.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "hex",
  "impl-serde 0.5.0",
@@ -3608,7 +3771,18 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "ethereum",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "fp-consensus"
+version = "2.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -3623,7 +3797,7 @@ source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolw
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "parity-scale-codec",
 ]
@@ -3631,7 +3805,23 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "environmental",
+ "evm",
+ "frame-support",
+ "num_enum",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "fp-evm"
+version = "3.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "environmental",
  "evm",
@@ -3647,11 +3837,27 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-core",
+ "sp-runtime",
+ "sp-state-machine",
+]
+
+[[package]]
+name = "fp-rpc"
+version = "3.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "ethereum",
+ "ethereum-types",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
@@ -3675,7 +3881,16 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
+]
+
+[[package]]
+name = "fp-storage"
+version = "2.0.0"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "parity-scale-codec",
  "serde",
@@ -4499,14 +4714,14 @@ dependencies = [
  "cumulus-primitives-parachain-inherent",
  "cumulus-relay-chain-interface",
  "cumulus-test-relay-sproof-builder",
- "fc-api",
- "fc-consensus",
- "fc-db",
- "fc-mapping-sync",
- "fc-rpc",
- "fc-rpc-core",
- "fc-storage",
- "fp-rpc",
+ "fc-api 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-db 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-mapping-sync 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-rpc 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-rpc-core 1.1.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "frame-metadata-hash-extension",
@@ -4524,7 +4739,7 @@ dependencies = [
  "moonbeam-rpc-primitives-txpool",
  "moonbeam-rpc-trace",
  "pallet-ethereum",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-omni-account-runtime-api",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
@@ -4589,7 +4804,7 @@ dependencies = [
  "heima-utils-proc-macros",
  "hex",
  "hex-literal",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "parity-scale-codec",
  "ring 0.16.20",
  "rustls-webpki 0.102.0-alpha.3",
@@ -4622,8 +4837,8 @@ dependencies = [
  "cumulus-primitives-parachain-inherent",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "fp-evm",
- "fp-rpc",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "fp-self-contained",
  "frame-benchmarking",
  "frame-executive",
@@ -4654,7 +4869,7 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-ethereum",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-evm-assertions",
  "pallet-evm-precompile-assets-erc20",
  "pallet-evm-precompile-blake2",
@@ -7007,7 +7222,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-client-evm-tracing"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7023,16 +7238,16 @@ dependencies = [
 [[package]]
 name = "moonbeam-evm-tracer"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum-types",
  "evm",
  "evm-gasometer",
  "evm-runtime",
  "evm-tracing-events",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "moonbeam-primitives-ext",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -7043,7 +7258,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-primitives-ext"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7056,11 +7271,11 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-debug"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fc-rpc-core",
+ "fc-rpc-core 1.1.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "futures 0.3.31",
  "jsonrpsee 0.24.9",
  "moonbeam-client-evm-tracing",
@@ -7073,7 +7288,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-trace"
 version = "0.6.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum-types",
  "futures 0.3.31",
@@ -7087,7 +7302,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-types"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum-types",
  "serde",
@@ -7097,17 +7312,17 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-debug"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fc-api",
- "fc-consensus",
- "fc-db",
- "fc-rpc",
- "fc-rpc-core",
- "fc-storage",
- "fp-rpc",
+ "fc-api 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-db 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-rpc 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-rpc-core 1.1.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "futures 0.3.31",
  "hex-literal",
  "jsonrpsee 0.24.9",
@@ -7129,7 +7344,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-debug"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "environmental",
  "ethereum",
@@ -7147,7 +7362,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-txpool"
 version = "0.6.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -7161,15 +7376,15 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-trace"
 version = "0.6.0"
-source = "git+https://github.com/AstarNetwork/Astar#b57fb622ce95c3a676e5c5a700b5398d11a6014f"
+source = "git+https://github.com/AstarNetwork/Astar#ca5d2f1acde5d5335b8396291cae401da5ce72b9"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "fc-consensus",
- "fc-rpc",
- "fc-rpc-core",
- "fc-storage",
- "fp-rpc",
+ "fc-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-rpc 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-rpc-core 1.1.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fc-storage 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "futures 0.3.31",
  "jsonrpsee 0.24.9",
  "log",
@@ -7761,7 +7976,7 @@ dependencies = [
  "expander",
  "indexmap 2.9.0",
  "itertools 0.11.0",
- "petgraph 0.6.5",
+ "petgraph",
  "proc-macro-crate 3.3.0",
  "proc-macro2",
  "quote",
@@ -8346,14 +8561,14 @@ dependencies = [
  "ethereum",
  "ethereum-types",
  "evm",
- "fp-consensus",
+ "fp-consensus 2.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "fp-ethereum",
- "fp-evm",
- "fp-rpc",
- "fp-storage",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-storage 2.0.0 (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "parity-scale-codec",
  "scale-info",
  "sp-io",
@@ -8364,12 +8579,35 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
+source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#e74325d1b2150a6e505c20a4190236db4daca2bb"
 dependencies = [
  "environmental",
  "evm",
- "fp-account",
- "fp-evm",
+ "fp-account 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hash-db",
+ "hex-literal",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-evm"
+version = "6.0.0-dev"
+source = "git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb#e74325d1b2150a6e505c20a4190236db4daca2bb"
+dependencies = [
+ "environmental",
+ "evm",
+ "fp-account 1.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?rev=e74325d1b2150a6e505c20a4190236db4daca2bb)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -8404,7 +8642,7 @@ name = "pallet-evm-precompile-aiusd-convertor"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -8412,7 +8650,7 @@ dependencies = [
  "pallet-aiusd-convertor",
  "pallet-assets",
  "pallet-balances",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8430,12 +8668,12 @@ name = "pallet-evm-precompile-assets-erc20"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "pallet-assets",
  "pallet-balances",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8453,7 +8691,7 @@ name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
 ]
 
 [[package]]
@@ -8461,7 +8699,7 @@ name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "sp-core",
  "substrate-bn",
 ]
@@ -8471,13 +8709,13 @@ name = "pallet-evm-precompile-bridge-transfer"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-bridge-transfer",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8494,7 +8732,7 @@ name = "pallet-evm-precompile-curator"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
@@ -8502,7 +8740,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collab-ai-common",
  "pallet-curator",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-timestamp",
  "parity-scale-codec",
  "precompile-utils",
@@ -8520,9 +8758,9 @@ name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "parity-scale-codec",
  "sp-runtime",
 ]
@@ -8533,7 +8771,7 @@ version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
  "ed25519-dalek",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
 ]
 
 [[package]]
@@ -8541,14 +8779,14 @@ name = "pallet-evm-precompile-guardian"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-balances",
  "pallet-collab-ai-common",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-guardian",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8567,13 +8805,13 @@ name = "pallet-evm-precompile-investing-pool"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-collab-ai-common",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-investing-pool",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8591,7 +8829,7 @@ name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "num",
 ]
 
@@ -8600,13 +8838,13 @@ name = "pallet-evm-precompile-omni-bridge"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "heima-primitives",
  "hex-literal",
  "libsecp256k1",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-omni-bridge",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8624,11 +8862,11 @@ name = "pallet-evm-precompile-parachain-staking"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-parachain-staking",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8647,13 +8885,13 @@ name = "pallet-evm-precompile-pool-proposal"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
  "pallet-collab-ai-common",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-pool-proposal",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -8671,12 +8909,12 @@ name = "pallet-evm-precompile-score-staking"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "heima-primitives",
  "pallet-balances",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-parachain-staking",
  "pallet-score-staking",
  "pallet-timestamp",
@@ -8696,7 +8934,7 @@ name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "tiny-keccak",
 ]
 
@@ -8705,7 +8943,7 @@ name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
 source = "git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper#ee6814a9c3b5487fe4cef9b63023509f90e3f0b8"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "ripemd",
  "sp-io",
 ]
@@ -8715,12 +8953,12 @@ name = "pallet-evm-precompile-vesting"
 version = "0.1.0"
 dependencies = [
  "derive_more 1.0.0",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex-literal",
  "libsecp256k1",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-timestamp",
  "pallet-vesting",
  "parity-scale-codec",
@@ -9870,8 +10108,8 @@ dependencies = [
  "cumulus-primitives-parachain-inherent",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
- "fp-evm",
- "fp-rpc",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
+ "fp-rpc 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "fp-self-contained",
  "frame-benchmarking",
  "frame-executive",
@@ -9906,7 +10144,7 @@ dependencies = [
  "pallet-curator",
  "pallet-democracy",
  "pallet-ethereum",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "pallet-evm-assertions",
  "pallet-evm-precompile-aiusd-convertor",
  "pallet-evm-precompile-assets-erc20",
@@ -10089,17 +10327,7 @@ version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4c5cc86750666a3ed20bdaf5ca2a0344f9c67674cae0515bec2da16fbaa47db"
 dependencies = [
- "fixedbitset 0.4.2",
- "indexmap 2.9.0",
-]
-
-[[package]]
-name = "petgraph"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772"
-dependencies = [
- "fixedbitset 0.5.7",
+ "fixedbitset",
  "indexmap 2.9.0",
 ]
 
@@ -11454,7 +11682,7 @@ dependencies = [
  "derive_more 1.0.0",
  "environmental",
  "evm",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "frame-support",
  "frame-system",
  "hex",
@@ -11462,7 +11690,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "log",
  "num_enum",
- "pallet-evm",
+ "pallet-evm 6.0.0-dev (git+https://github.com/AstarNetwork/frontier?branch=stable2412-txpoolwrapper)",
  "parity-scale-codec",
  "precompile-utils-macro",
  "scale-info",
@@ -11741,7 +11969,7 @@ dependencies = [
  "log",
  "multimap",
  "once_cell",
- "petgraph 0.7.1",
+ "petgraph",
  "prettyplease",
  "prost 0.13.5",
  "prost-types",
