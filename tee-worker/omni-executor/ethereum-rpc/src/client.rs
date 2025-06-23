@@ -26,9 +26,10 @@ pub trait EthereumClient: Send + Sync {
 
 	async fn construct_approve_erc20_tx(
 		&self,
-		spender: &str,
+		spender: Address,
 		value: U256,
-		contract_address: &str,
+		contract_address: Address,
+		nonce: u64
 	) -> Result<TransactionRequest, ()>;
 }
 
@@ -128,14 +129,12 @@ impl EthereumClient for EthereumRpcClient {
 
 	async fn construct_approve_erc20_tx(
 		&self,
-		spender: &str,
+		to: Address,
 		value: U256,
-		contract_address: &str,
+		contract_address: Address,
+		nonce: u64
 	) -> Result<TransactionRequest, ()> {
-		let spender_address = Address::from_str(spender).map_err(|err| {
-			error!("Could not parse address: {:?}", err);
-		})?;
-
+		// TODO: Double check this
 		// ERC20 approve function signature: approve(address,uint256)
 		let approve_function_signature = &hex_literal::hex!("095ea7b3");
 
@@ -143,17 +142,14 @@ impl EthereumClient for EthereumRpcClient {
 		let mut data = Vec::with_capacity(4 + 32 + 32);
 		data.extend_from_slice(approve_function_signature);
 		let mut address_bytes = [0u8; 32];
-		address_bytes[12..32].copy_from_slice(spender_address.as_slice());
+		address_bytes[12..32].copy_from_slice(to.as_slice());
 		data.extend_from_slice(&address_bytes);
 		data.extend_from_slice(&value.to_be_bytes::<32>());
-
-		let contract_address = Address::from_str(contract_address).map_err(|err| {
-			error!("Could not parse address: {:?}", err);
-		})?;
 
 		let tx = TransactionRequest {
 			to: Some(TxKind::from(contract_address)),
 			input: TransactionInput::from(Bytes::from(data)),
+			nonce: Some(nonce),
 			..Default::default()
 		};
 
