@@ -67,7 +67,6 @@ pub trait RpcProvider: Send + Sync {
 	) -> Result<String, ()>;
 	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()>;
 	async fn get_gas_price(&self) -> Result<u128, ()>;
-	//todo: get code at to check if smart wallet is deployed or not, because we init it only once
 
 	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()>;
 
