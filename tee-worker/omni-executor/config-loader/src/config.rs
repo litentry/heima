@@ -146,7 +146,7 @@ impl ConfigLoader {
 			(
 				"ethereum_url",
 				EnvVar {
-					env_key: "OE_ETHERUM_URL",
+					env_key: "OE_ETHEREUM_URL",
 					default: DEFAULT_ETHEREUM_URL,
 					sensitive: false,
 					optional: false,
