@@ -1,4 +1,4 @@
-use crate::common::{is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, GAS_LIMIT, INCH_DEX_IDS_MAP, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT};
+use crate::common::{is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, GAS_LIMIT, INCH_DEX_IDS_MAP, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE};
 use crate::inch_client::client::{InchClient, InchSwap};
 use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
 use crate::kyber_client::client::KyberSwap;
@@ -14,7 +14,10 @@ use alloy::{
 	primitives::{Address, TxKind, U256},
 	rpc::types::{TransactionInput, TransactionRequest},
 };
+use alloy::primitives::Uint;
+use hex::FromHex;
 use log::error;
+use ethereum_rpc::client::EthereumClient;
 
 /// EVM Transaction Manager
 pub struct EvmTxManager<
@@ -287,12 +290,148 @@ where
 impl<EthClient, InchClient, KyberClient, OkxClient>
 EvmTxManager<EthClient, InchClient, KyberClient, OkxClient>
 where
-	EthClient: RpcProvider + ?Sized,
+	EthClient: RpcProvider<Addr = Address> + ?Sized + EthereumClient,
 	InchClient: InchSwap + ?Sized,
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
 {
-	fn construct_unsigned_market_tx() {
+	async fn construct_unsigned_market_tx(&self, tx: CreateMarketTx) -> Result<Vec<TransactionRequest>, ()> {
+		let chain_id = tx.chain_id.clone();
 
+		let amount_decimal = Decimal::from_str(&*tx.amount_in).unwrap();
+		let multiplier = DECIMALS_TO_VALUE
+			.get(&tx.in_decimal)
+			.cloned()
+			.unwrap_or(1);
+		let amount_decimal = amount_decimal * Decimal::from(multiplier);
+
+		let from = Address::from_hex(&tx.user_wallet_address).map_err(|e| {
+			error!("Failed to convert user wallet to address: {}", e)
+		})?;
+
+		let mut balance = self.eth_client.get_balance(from).await.map_err(|e| {
+			error!("Couldn't get balance");
+		})?;
+
+		let mut nonce = self.eth_client.get_pending_nonce(from).await.map_err(|e| {
+			error!("Couldn't get pending nonce");
+		})?;
+
+		let is_buy = is_native_token(&*tx.in_token_ca.clone().into_bytes());
+		let platform = Platform::KyberSwap;
+
+		let amount_u128 = amount_decimal.to_u128().ok_or_else(|| {
+			error!("amount_decimal could not be converted to u128: {}", amount_decimal);
+			()
+		})?;
+
+		let amount = Uint::try_from(amount_u128).map_err(|e| {
+			error!("Failed to convert amount_u128 to Uint: {:?}", e);
+			()
+		})?;
+
+		let mut transactions: Vec<TransactionRequest> = Vec::new();
+		if is_buy {
+			if balance < amount {
+				error!("Balance is too low");
+				return Err(());
+			}
+			balance -= amount;
+		} else {
+			let approve_addr: Address;
+			match platform {
+				// TODO: Move these to constants or somewhere else
+				Platform::KyberSwap => {
+					approve_addr = Address::from_hex("0x6131B5fae19EA4f9D964eAc0408E4408b66337b5").map_err(|_|{
+						error!("Failed to convert address from hex to address");
+					})?
+				}
+				Platform::Inch => {
+					approve_addr = Address::from_hex("0x111111125421cA6dc452d289314280a0f8842A65").map_err(|_| {
+						error!("Failed to convert address from hex to address");
+					})?
+				}
+				Platform::Okx => {
+					approve_addr = Address::from_hex("0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6").map_err(|_| {
+						error!("Failed to convert address from hex to address");
+					})?
+				}
+			}
+
+			let approve_tx = self.eth_client.construct_approve_erc20_tx(approve_addr, amount, Address::from_hex(tx.in_token_ca.clone()).unwrap(), nonce).await.map_err(|_| {
+				error!("Failed to create approve tx");
+			})?;
+
+			transactions.push(approve_tx);
+			nonce += 1;
+		}
+
+		let unsigned_tx: TransactionRequest;
+		match platform {
+			Platform::KyberSwap => {
+				unsigned_tx = self.construct_kyber_tx(
+					tx,
+					nonce,
+					amount_decimal,
+				).await.map_err(|_| {
+					error!("Failed to create unsigned tx for kyber swap");
+				})?
+			}
+			Platform::Inch => {
+				unsigned_tx = self.construct_inch_tx(
+					tx,
+					nonce,
+					amount_decimal,
+				).await.map_err(|_| {
+					error!("Failed to create unsigned tx for 1inch swap");
+				})?
+			}
+			Platform::Okx => {
+				unsigned_tx = self.construct_okx_tx(
+					tx,
+					nonce,
+					amount_decimal,
+				).await.map_err(|_| {
+					error!("Failed to create unsigned tx for okx swap");
+				})?
+			}
+		}
+		
+		let gas = unsigned_tx.gas.ok_or_else(|| {
+			error!("Gas not set in transaction");
+			()
+		})?;
+
+		let gas_price_u64 = unsigned_tx.gas_price.ok_or_else(|| {
+			error!("Gas price not set in transaction");
+			()
+		})?.to_u64().ok_or_else(|| {
+			error!("Failed to convert gas price to u64");
+			()
+		})?;
+
+		let gas_fee_u128 = gas.checked_mul(gas_price_u64).ok_or_else(|| {
+			error!("Gas fee multiplication overflow");
+			()
+		})?;
+
+		let gas_fee = Uint::try_from(gas_fee_u128).map_err(|e| {
+			error!("Failed to convert gas fee to Uint: {:?}", e);
+			()
+		})?;
+
+		if balance < gas_fee {
+			error!("Balance is too low for gas fee");
+			return Err(());
+		}
+
+		transactions.push(unsigned_tx);
+		Ok(transactions)
 	}
+}
+
+pub enum Platform {
+	Inch,
+	Okx,
+	KyberSwap
 }

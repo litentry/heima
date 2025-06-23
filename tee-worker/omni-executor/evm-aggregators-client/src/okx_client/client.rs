@@ -2,10 +2,22 @@ use crate::okx_client::types::{GetGasPriceResp, SwapRequest, SwapResponse};
 use log::error;
 use reqwest::{Client, Error};
 
+pub const BASIC_ENDPOINT: &str = "https://www.okx.com";
+pub const GET_SWAP_PATH: &str = "/api/v5/dex/aggregator/swap";
+pub const GET_GAS_PATH: &str = "/api/v5/wallet/pre-transaction/gas-price?chainIndex=56";
+
 pub struct OkxClient {
 	client: Client,
-	endpoint: String,
 	access_token: String,
+}
+
+impl OkxClient {
+    pub fn new(access_token: impl Into<String>) -> Self {
+        OkxClient {
+            client: Client::new(),
+            access_token: access_token.into(),
+        }
+    }
 }
 
 pub trait OkxSwap {
@@ -19,7 +31,7 @@ impl OkxSwap for OkxClient {
 
 		let response = self
 			.client
-			.get(self.endpoint.as_str())
+			.get(BASIC_ENDPOINT.to_owned() + GET_SWAP_PATH)
 			.query(&query_params)
 			.header("accept", "application/json")
 			.header("content-type", "application/json")
@@ -46,7 +58,7 @@ impl OkxSwap for OkxClient {
 		// TODO: Check endpoint for gas fees and all okx endpoints in general
 		let response = self
 			.client
-			.get(self.endpoint.as_str())
+			.get(BASIC_ENDPOINT.to_owned() + GET_GAS_PATH)
 			.query(&[("gasPrice", format!("{}", chain_id))])
 			.header("accept", "application/json")
 			.header("content-type", "application/json")

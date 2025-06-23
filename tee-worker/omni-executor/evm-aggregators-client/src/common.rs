@@ -59,6 +59,32 @@ lazy_static! {
 	};
 }
 
+lazy_static! {
+    pub static ref DECIMALS_TO_VALUE: HashMap<u8, i64> = {
+        let mut map = HashMap::new();
+        map.insert(0, 1);
+        map.insert(1, 10_i64.pow(1));
+        map.insert(2, 10_i64.pow(2));
+        map.insert(3, 10_i64.pow(3));
+        map.insert(4, 10_i64.pow(4));
+        map.insert(5, 10_i64.pow(5));
+        map.insert(6, 10_i64.pow(6));
+        map.insert(7, 10_i64.pow(7));
+        map.insert(8, 10_i64.pow(8));
+        map.insert(9, 10_i64.pow(9));
+        map.insert(10, 10_i64.pow(10));
+        map.insert(11, 10_i64.pow(11));
+        map.insert(12, 10_i64.pow(12));
+        map.insert(13, 10_i64.pow(13));
+        map.insert(14, 10_i64.pow(14));
+        map.insert(15, 10_i64.pow(15));
+        map.insert(16, 10_i64.pow(16));
+        map.insert(17, 10_i64.pow(17));
+        map.insert(18, 10_i64.pow(18));
+        map
+    };
+}
+
 pub const SWAP_NAME_UNIV2: &str = "Uniswap V2";
 pub const SWAP_NAME_UNIV3: &str = "Uniswap V3";
 pub const SWAP_NAME_PANCAKE_V2: &str = "PancakeSwap V2";

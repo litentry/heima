@@ -5,10 +5,21 @@ use log::error;
 use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 
+pub const BASIC_ENDPOINT: &str = "https://api.1inch.dev";
+pub const GET_SWAP_PATH: &str = "/swap/v6.0/56/swap";
+
 pub struct InchClient {
 	client: Client,
-	base_url: String,
 	access_token: String,
+}
+
+impl InchClient {
+    pub fn new(access_token: impl Into<String>) -> Self {
+        InchClient {
+            client: Client::new(),
+            access_token: access_token.into(),
+        }
+    }
 }
 
 pub trait InchSwap {
@@ -21,7 +32,7 @@ impl InchSwap for InchClient {
 
 		let response = self
 			.client
-			.get(&self.base_url)
+			.get(BASIC_ENDPOINT.to_owned() + GET_SWAP_PATH)
 			.query(&query_params)
 			.header("Content-Length", "0")
 			.header("accept", "application/json")
