@@ -1,7 +1,7 @@
 use crate::okx_client::types::{GetGasPriceResp, SwapRequest, SwapResponse};
+use async_trait::async_trait;
 use log::error;
 use reqwest::{Client, Error};
-use async_trait::async_trait;
 
 pub const BASIC_ENDPOINT: &str = "https://www.okx.com";
 pub const GET_SWAP_PATH: &str = "/api/v5/dex/aggregator/swap";

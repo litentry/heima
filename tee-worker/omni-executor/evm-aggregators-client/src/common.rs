@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use rust_decimal::Decimal;
 
 pub const WRAPPED_MAINNET_ETH: &[u8] = b"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 pub const WRAPPPED_BASE_ETH: &[u8] = b"0x4200000000000000000000000000000000000006";
@@ -20,20 +20,20 @@ pub const INCH_SWAP_APPROVE_ADDRESS: &str = "0x111111125421cA6dc452d289314280a0f
 pub const OKX_SWAP_APPROVE_ADDRESS: &str = "0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6";
 
 lazy_static! {
-    pub static ref GAS_LIMIT: u64 = 450_000u64;
-    pub static ref GWEI_DECIMAL: Decimal = Decimal::from(1_000_000_000u64);
-    pub static ref WEI_DECIMAL: Decimal = Decimal::from(1_000_000_000_000_000_000u128);
+	pub static ref GAS_LIMIT: u64 = 450_000u64;
+	pub static ref GWEI_DECIMAL: Decimal = Decimal::from(1_000_000_000u64);
+	pub static ref WEI_DECIMAL: Decimal = Decimal::from(1_000_000_000_000_000_000u128);
 }
 
 lazy_static! {
-    pub static ref KYBER_SWAP_DEX_ID_MAP: HashMap<String, String> = {
-        let mut map = HashMap::new();
-        map.insert(SWAP_NAME_UNIV2.to_string(), "uniswap".to_string());
-        map.insert(SWAP_NAME_UNIV3.to_string(), "uniswapv3".to_string());
-        map.insert(SWAP_NAME_PANCAKE_V2.to_string(), "pancake".to_string());
-        map.insert(SWAP_NAME_PANCAKE_V3.to_string(), "pancake-v3".to_string());
-        map
-    };
+	pub static ref KYBER_SWAP_DEX_ID_MAP: HashMap<String, String> = {
+		let mut map = HashMap::new();
+		map.insert(SWAP_NAME_UNIV2.to_string(), "uniswap".to_string());
+		map.insert(SWAP_NAME_UNIV3.to_string(), "uniswapv3".to_string());
+		map.insert(SWAP_NAME_PANCAKE_V2.to_string(), "pancake".to_string());
+		map.insert(SWAP_NAME_PANCAKE_V3.to_string(), "pancake-v3".to_string());
+		map
+	};
 	pub static ref INCH_DEX_IDS_MAP: HashMap<u64, HashMap<String, String>> = {
 		let mut map = HashMap::new();
 
@@ -63,29 +63,29 @@ lazy_static! {
 }
 
 lazy_static! {
-    pub static ref DECIMALS_TO_VALUE: HashMap<u8, i64> = {
-        let mut map = HashMap::new();
-        map.insert(0, 1);
-        map.insert(1, 10_i64.pow(1));
-        map.insert(2, 10_i64.pow(2));
-        map.insert(3, 10_i64.pow(3));
-        map.insert(4, 10_i64.pow(4));
-        map.insert(5, 10_i64.pow(5));
-        map.insert(6, 10_i64.pow(6));
-        map.insert(7, 10_i64.pow(7));
-        map.insert(8, 10_i64.pow(8));
-        map.insert(9, 10_i64.pow(9));
-        map.insert(10, 10_i64.pow(10));
-        map.insert(11, 10_i64.pow(11));
-        map.insert(12, 10_i64.pow(12));
-        map.insert(13, 10_i64.pow(13));
-        map.insert(14, 10_i64.pow(14));
-        map.insert(15, 10_i64.pow(15));
-        map.insert(16, 10_i64.pow(16));
-        map.insert(17, 10_i64.pow(17));
-        map.insert(18, 10_i64.pow(18));
-        map
-    };
+	pub static ref DECIMALS_TO_VALUE: HashMap<u8, i64> = {
+		let mut map = HashMap::new();
+		map.insert(0, 1);
+		map.insert(1, 10_i64.pow(1));
+		map.insert(2, 10_i64.pow(2));
+		map.insert(3, 10_i64.pow(3));
+		map.insert(4, 10_i64.pow(4));
+		map.insert(5, 10_i64.pow(5));
+		map.insert(6, 10_i64.pow(6));
+		map.insert(7, 10_i64.pow(7));
+		map.insert(8, 10_i64.pow(8));
+		map.insert(9, 10_i64.pow(9));
+		map.insert(10, 10_i64.pow(10));
+		map.insert(11, 10_i64.pow(11));
+		map.insert(12, 10_i64.pow(12));
+		map.insert(13, 10_i64.pow(13));
+		map.insert(14, 10_i64.pow(14));
+		map.insert(15, 10_i64.pow(15));
+		map.insert(16, 10_i64.pow(16));
+		map.insert(17, 10_i64.pow(17));
+		map.insert(18, 10_i64.pow(18));
+		map
+	};
 }
 
 pub const SWAP_NAME_UNIV2: &str = "Uniswap V2";

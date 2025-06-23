@@ -1,5 +1,10 @@
-use crate::common::{is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT};
-use crate::inch_client::client::{InchSwap};
+use crate::common::{
+	is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT,
+	DECIMALS_TO_VALUE, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS,
+	KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS,
+	SERVICE_FEE_BPS, SERVICE_FEE_PERCENT,
+};
+use crate::inch_client::client::InchSwap;
 use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
 use crate::kyber_client::client::KyberSwap;
 use crate::okx_client::client::OkxSwap;
@@ -15,10 +20,10 @@ use alloy::{
 	primitives::{Address, TxKind},
 	rpc::types::{TransactionInput, TransactionRequest},
 };
+use async_trait::async_trait;
 use ethereum_rpc::client::EthereumClient;
 use hex::FromHex;
 use log::error;
-use async_trait::async_trait;
 
 /// EVM Transaction Manager
 pub struct EvmTxManager<
@@ -35,7 +40,7 @@ pub struct EvmTxManager<
 }
 
 #[async_trait]
-pub trait ConstructEvmTx: Send + Sync{
+pub trait ConstructEvmTx: Send + Sync {
 	async fn construct_inch_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
@@ -352,23 +357,16 @@ where
 		} else {
 			let approve_addr: Address = match platform {
 				Platform::KyberSwap => {
-					Address::from_hex(KYBER_SWAP_APPROVE_ADDRESS)
-						.map_err(|_| {
+					Address::from_hex(KYBER_SWAP_APPROVE_ADDRESS).map_err(|_| {
 						error!("Failed to convert address from hex to address");
 					})?
 				},
-				Platform::Inch => {
-					Address::from_hex(INCH_SWAP_APPROVE_ADDRESS)
-						.map_err(|_| {
-						error!("Failed to convert address from hex to address");
-					})?
-				},
-				Platform::Okx => {
-					Address::from_hex(OKX_SWAP_APPROVE_ADDRESS)
-						.map_err(|_| {
-						error!("Failed to convert address from hex to address");
-					})?
-				},
+				Platform::Inch => Address::from_hex(INCH_SWAP_APPROVE_ADDRESS).map_err(|_| {
+					error!("Failed to convert address from hex to address");
+				})?,
+				Platform::Okx => Address::from_hex(OKX_SWAP_APPROVE_ADDRESS).map_err(|_| {
+					error!("Failed to convert address from hex to address");
+				})?,
 			};
 
 			let approve_tx = self
@@ -390,19 +388,19 @@ where
 
 		let unsigned_tx: TransactionRequest = match platform {
 			Platform::KyberSwap => {
-					self.construct_kyber_tx(tx, nonce, amount_decimal).await.map_err(|_| {
-						error!("Failed to create unsigned tx for kyber swap");
-					})?
+				self.construct_kyber_tx(tx, nonce, amount_decimal).await.map_err(|_| {
+					error!("Failed to create unsigned tx for kyber swap");
+				})?
 			},
 			Platform::Inch => {
-					self.construct_inch_tx(tx, nonce, amount_decimal).await.map_err(|_| {
-						error!("Failed to create unsigned tx for 1inch swap");
-					})?
+				self.construct_inch_tx(tx, nonce, amount_decimal).await.map_err(|_| {
+					error!("Failed to create unsigned tx for 1inch swap");
+				})?
 			},
 			Platform::Okx => {
-					self.construct_okx_tx(tx, nonce, amount_decimal).await.map_err(|_| {
-						error!("Failed to create unsigned tx for okx swap");
-					})?
+				self.construct_okx_tx(tx, nonce, amount_decimal).await.map_err(|_| {
+					error!("Failed to create unsigned tx for okx swap");
+				})?
 			},
 		};
 

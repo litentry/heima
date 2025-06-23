@@ -1,9 +1,9 @@
 // This is where the client code of 1inch will reside
 // It's main object will be to provide swapping
 use crate::inch_client::types::{SwapRequest, SwapResponse};
+use async_trait::async_trait;
 use log::error;
 use reqwest::{Client, Error};
-use async_trait::async_trait;
 
 pub const BASIC_ENDPOINT: &str = "https://api.1inch.dev";
 pub const GET_SWAP_PATH: &str = "/swap/v6.0/56/swap";

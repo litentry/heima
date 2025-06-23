@@ -1,9 +1,9 @@
 use crate::kyber_client::types::{
 	GetSwapRouteRequest, GetSwapRouteResponse, SwapRequest, SwapResponse,
 };
+use async_trait::async_trait;
 use log::error;
 use reqwest::{Client, Error};
-use async_trait::async_trait;
 
 pub const BASIC_ENDPOINT: &str = "https://aggregator-api.kyberswap.com";
 pub const GET_SWAP_ROUTE_PATH: &str = "/56/api/v1/routes";
