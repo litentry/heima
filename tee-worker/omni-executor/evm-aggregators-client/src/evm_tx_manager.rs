@@ -99,7 +99,7 @@ where
 
 		let swap_response = self
 			.inch_client
-			.swap(swap_request)
+			.swap(chain_id, swap_request)
 			.await
 			.map_err(|e| error!("Failed to get swap response from 1inch due to: {:?}", e))?;
 
@@ -224,7 +224,7 @@ where
 		}
 
 		let swap_route_response =
-			self.kyber_client.get_swap_route(swap_route_request).await.map_err(|e| {
+			self.kyber_client.get_swap_route(chain_id, swap_route_request).await.map_err(|e| {
 				error!("Failed to get swap route response from kyber: {}", e);
 			})?;
 
@@ -244,7 +244,7 @@ where
 			..Default::default()
 		};
 
-		let swap_response = self.kyber_client.swap(swap_request).await.map_err(|e| {
+		let swap_response = self.kyber_client.swap(chain_id, swap_request).await.map_err(|e| {
 			error!("Failed to get swap response from kyber: {}", e);
 		})?;
 

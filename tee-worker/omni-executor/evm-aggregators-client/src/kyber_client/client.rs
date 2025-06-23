@@ -4,19 +4,21 @@ use crate::kyber_client::types::{
 use async_trait::async_trait;
 use log::error;
 use reqwest::{Client, Error};
-
-pub const BASIC_ENDPOINT: &str = "https://aggregator-api.kyberswap.com";
-pub const GET_SWAP_ROUTE_PATH: &str = "/56/api/v1/routes";
-pub const GET_SWAP_PATH: &str = "/56/api/v1/route/build";
+use std::sync::Arc;
 
 pub struct KyberClient {
 	client: Client,
-	access_token: String,
+	access_token: Arc<str>,
+	base_url: Arc<str>,
 }
 
 impl KyberClient {
-	pub fn new(access_token: impl Into<String>) -> Self {
-		KyberClient { client: Client::new(), access_token: access_token.into() }
+	pub fn new(access_token: impl Into<String>, base_url: impl Into<String>) -> Self {
+		KyberClient {
+			client: Client::new(),
+			access_token: Arc::from(access_token.into()),
+			base_url: Arc::from(base_url.into()),
+		}
 	}
 }
 
@@ -24,22 +26,25 @@ impl KyberClient {
 pub trait KyberSwap: Send + Sync {
 	async fn get_swap_route(
 		&self,
+		chain_id: u64,
 		swap_route_request: GetSwapRouteRequest,
 	) -> Result<GetSwapRouteResponse, Error>;
-	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
+	async fn swap(&self, chain_id: u64, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }
 
 #[async_trait]
 impl KyberSwap for KyberClient {
 	async fn get_swap_route(
 		&self,
+		chain_id: u64,
 		swap_route_request: GetSwapRouteRequest,
 	) -> Result<GetSwapRouteResponse, Error> {
 		let query = swap_route_request.convert_to_query_params();
+		let path = format!("{}/{}/api/v1/routes", self.base_url, chain_id);
 
 		let response = self
 			.client
-			.get(BASIC_ENDPOINT.to_owned() + GET_SWAP_ROUTE_PATH)
+			.get(&path)
 			.query(&query)
 			.header("accept", "application/json")
 			.header("content-type", "application/json")
@@ -62,10 +67,12 @@ impl KyberSwap for KyberClient {
 		})
 	}
 
-	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
+	async fn swap(&self, chain_id: u64, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
+		let path = format!("{}/{}/api/v1/route/build", self.base_url, chain_id);
+
 		let response = self
 			.client
-			.post(BASIC_ENDPOINT.to_owned() + GET_SWAP_PATH)
+			.post(&path)
 			.json(&swap_request)
 			.header("accept", "application/json")
 			.header("content-type", "application/json")

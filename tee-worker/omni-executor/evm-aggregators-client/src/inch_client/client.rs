@@ -4,34 +4,39 @@ use crate::inch_client::types::{SwapRequest, SwapResponse};
 use async_trait::async_trait;
 use log::error;
 use reqwest::{Client, Error};
-
-pub const BASIC_ENDPOINT: &str = "https://api.1inch.dev";
-pub const GET_SWAP_PATH: &str = "/swap/v6.0/56/swap";
+use std::sync::Arc;
 
 pub struct InchClient {
 	client: Client,
-	access_token: String,
+	access_token: Arc<str>,
+	base_url: Arc<str>,
 }
 
 impl InchClient {
-	pub fn new(access_token: impl Into<String>) -> Self {
-		InchClient { client: Client::new(), access_token: access_token.into() }
+	pub fn new(access_token: impl Into<String>, base_url: impl Into<String>) -> Self {
+		InchClient {
+			client: Client::new(),
+			access_token: Arc::from(access_token.into()),
+			base_url: Arc::from(base_url.into()),
+		}
 	}
 }
 
 #[async_trait]
 pub trait InchSwap: Send + Sync {
-	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
+	async fn swap(&self, chain_id: u64, swap_request: SwapRequest) -> Result<SwapResponse, Error>;
 }
 
 #[async_trait]
 impl InchSwap for InchClient {
-	async fn swap(&self, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
+	async fn swap(&self, chain_id: u64, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
 		let query_params = swap_request.convert_to_query_params();
+
+		let path = format!("{}/swap/v6.0/{}/swap", self.base_url, chain_id);
 
 		let response = self
 			.client
-			.get(BASIC_ENDPOINT.to_owned() + GET_SWAP_PATH)
+			.get(&path)
 			.query(&query_params)
 			.header("Content-Length", "0")
 			.header("accept", "application/json")
