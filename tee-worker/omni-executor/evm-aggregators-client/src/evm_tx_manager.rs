@@ -223,8 +223,11 @@ where
 			swap_route_request.to_token_address = NATIVE_ADDRESS.to_string();
 		}
 
-		let swap_route_response =
-			self.kyber_client.get_swap_route(chain_id, swap_route_request).await.map_err(|e| {
+		let swap_route_response = self
+			.kyber_client
+			.get_swap_route(chain_id, swap_route_request)
+			.await
+			.map_err(|e| {
 				error!("Failed to get swap route response from kyber: {}", e);
 			})?;
 
