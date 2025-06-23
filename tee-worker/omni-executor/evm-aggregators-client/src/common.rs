@@ -7,6 +7,7 @@ pub const WRAPPED_MAINNET_ETH: &[u8] = b"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756
 pub const WRAPPPED_BASE_ETH: &[u8] = b"0x4200000000000000000000000000000000000006";
 pub const GOERLI_WETH: &[u8] = b"0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6";
 pub const WRAPPED_BNB: &[u8] = b"0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+pub const NATIVE_TOKEN: &[u8] = b"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
 pub const NATIVE_ADDRESS: &str = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
@@ -130,12 +131,12 @@ pub struct CreateMarketTx {
 	pub is_pre_cross: bool,
 }
 
-// TODO: Need to check for Okx native address too
 pub fn is_native_token(token: &[u8]) -> bool {
 	if token == WRAPPED_MAINNET_ETH
 		|| token == WRAPPED_BNB
 		|| token == WRAPPPED_BASE_ETH
 		|| token == GOERLI_WETH
+		|| token == NATIVE_TOKEN
 	{
 		return true;
 	}

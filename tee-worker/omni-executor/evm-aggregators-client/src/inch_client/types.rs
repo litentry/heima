@@ -67,19 +67,21 @@ pub struct SwapRequest {
 }
 
 impl SwapRequest {
-	// TODO, adding protocols is conditional
-	pub fn convert_to_query_params(&self) -> Vec<(&'static str, &'_ str)> {
-		vec![
-			("amount", &self.amount),
-			("src", &self.from_token_address),
-			("dst", &self.to_token_address),
-			("slippage", &self.slippage),
-			("from", &self.user_wallet_address),
-			("origin", &self.user_wallet_address),
-			("fee", &self.fee_percent),
-			("referrer", &self.referrer),
-			("protocols", &self.dex_ids),
-		]
+	pub fn convert_to_query_params(&self) -> Vec<(&str, String)> {
+		let mut params = vec![
+			("amount", self.amount.clone()),
+			("src", self.from_token_address.clone()),
+			("dst", self.to_token_address.clone()),
+			("slippage", self.slippage.clone()),
+			("from", self.user_wallet_address.clone()),
+			("origin", self.user_wallet_address.clone()),
+			("fee", self.fee_percent.clone()),
+			("referrer", self.referrer.clone()),
+		];
+		if !self.dex_ids.is_empty() {
+			params.push(("protocols", self.dex_ids.clone()));
+		}
+		params
 	}
 }
 

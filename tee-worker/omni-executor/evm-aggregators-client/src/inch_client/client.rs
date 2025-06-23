@@ -46,7 +46,7 @@ impl InchSwap for InchClient {
 
 		let status = response.status();
 		let response = response.error_for_status().map_err(|e| {
-			error!("add_wallet request failed with status: {}, error: {:?}", status, e);
+			error!("swap request failed with status: {}, error: {:?}", status, e);
 			e
 		})?;
 		response.json().await.map_err(|e| {
