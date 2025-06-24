@@ -11,10 +11,6 @@ import {
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
 /**
- * Calculate the omni account for a given identity and client ID
- * Following the same logic as Identity::to_omni_account in Rust
- * Formula: sha256(identityType + clientId + address)
- *
  * Based on the SmartAccount.sol _determineOa function:
  * bytes memory oaType = bytes("evm");
  * return sha256(abi.encodePacked(oaType, clientId, sender));
@@ -22,24 +18,13 @@ import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 export function calculateOmniAccount(
 	address: Address | string,
 	clientId: string = DEFAULT_CLIENT_ID,
-	identityType:
-		| "evm"
-		| "substrate"
-		| "bitcoin"
-		| "solana"
-		| "twitter"
-		| "discord"
-		| "github"
-		| "email"
-		| "google" = "evm",
+	identityType: "evm" | "solana" = "evm",
 ): `0x${string}` {
 	// Create input array for hashing
 	const inputs: Uint8Array[] = [];
 
-	// Add identity type FIRST (matching SmartAccount.sol)
 	inputs.push(new TextEncoder().encode(identityType));
 
-	// Add client ID (as bytes32)
 	const clientIdBytes = stringToBytes32(clientId);
 	const clientIdArray = new Uint8Array(32);
 	for (let i = 0; i < 32; i++) {
@@ -47,7 +32,6 @@ export function calculateOmniAccount(
 	}
 	inputs.push(clientIdArray);
 
-	// Add address/handle based on type
 	if (identityType === "evm") {
 		// For EVM addresses, remove 0x prefix and convert from hex
 		const addressHex = address.slice(2).toLowerCase();
@@ -56,16 +40,13 @@ export function calculateOmniAccount(
 			addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
 		}
 		inputs.push(addressBytes);
-	} else if (identityType === "solana" || identityType === "substrate") {
-		// For Solana/Substrate, handle as appropriate
-		// This is a simplified version - real implementation would handle base58 for Solana
-		inputs.push(new TextEncoder().encode(address));
 	} else {
-		// For Web2 identities (twitter, discord, etc.), use the string directly
+		// For Solana, handle as appropriate
+		// This is a simplified version - real implementation would handle base58 for Solana
+		// TODO
 		inputs.push(new TextEncoder().encode(address));
 	}
 
-	// Combine all inputs
 	const totalLength = inputs.reduce((sum, arr) => sum + arr.length, 0);
 	const combined = new Uint8Array(totalLength);
 	let offset = 0;
