@@ -248,7 +248,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9244,
+	spec_version: 9252,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
