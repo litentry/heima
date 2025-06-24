@@ -10,8 +10,8 @@ use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::{
 	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
-	EthereumToken, Identity, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider,
-	SolanaToken, SwapOrder, Web2IdentityType,
+	EthereumToken, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider, SolanaToken,
+	SwapOrder,
 };
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
@@ -25,7 +25,6 @@ use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
-	pub user_email: String,
 	pub intent_id: u32,
 	pub order_type: PumpxOrderType,
 	pub swap_type: SwapType,
@@ -149,7 +148,8 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) =
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
@@ -162,7 +162,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				to_address: None,
 			};
 
-			debug!("Calling pumpx get_user_trade_info, user_email: {}", params.user_email);
+			debug!("Calling pumpx get_user_trade_info");
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
 					error!("Failed to get user trade info: {:?}", e);
@@ -248,10 +248,8 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 					PumpxRpcError::from_error_code(ErrorCode::InternalError)
 				})?,
 			);
-			let user_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Pumpx);
 			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(user_identity, params.intent_id, intent),
+				NativeTask::RequestIntent(omni_account, params.intent_id, intent),
 				None,
 				None,
 				user.client_id,

@@ -20,6 +20,7 @@
 // TODO: benchmark and weights: we need worst-case scenarios
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::useless_conversion)]
 #![allow(unused_variables)]
 
 #[cfg(feature = "runtime-benchmarks")]

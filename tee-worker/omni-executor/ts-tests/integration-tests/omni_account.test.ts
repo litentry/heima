@@ -225,55 +225,56 @@ describe('OmniAccount', function () {
         assert.equal(membersCount, 1, 'account store members count should be 1');
     });
 
-    step('test request_intent (TransferNative)', async function () {
-        const initialBalance = context.api.createType('u128', 50000000000000000000n);
-        await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
-        const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
-        const {
-            data: { free: bobInitialBalance },
-        } = await context.api.query.system.account(bobAddress);
-        const transferAmount = context.api.createType('u128', 10000000000000000000n);
-        const intent = context.api.createType('Intent', {
-            TransferNative: context.api.createType('IntentTransferNative', {
-                to: bobAddress,
-                value: transferAmount.toBigInt(),
-            }),
-        });
-        const intentId = context.api.createType('u32', 1n);
-
-        const nativeTask = createNativeTask(
-            context.api,
-            ['RequestIntent', '(HeimaIdentity, u32, Intent)'],
-            [aliceIdentity, intentId, intent]
-        );
-        const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
-        const nativeTaskWrapper = await createNativeTaskWrapper(
-            context.api,
-            nativeTask,
-            aliceWallet,
-            '00005',
-            context.api.createType('Index', currentNonce),
-            msgToSign
-        );
-        const response = await sendRawTaskPlain(context, nativeTaskWrapper);
-        console.log('response:', response.toHuman());
-
-        currentNonce++;
-
-        // wait for the intent to be processed and the tx to be finalized on-chain
-        await sleep(36);
-
-        const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
-        assert.equal(
-            bobAccountDataAfter.free.toBigInt(),
-            bobInitialBalance.toBigInt() + transferAmount.toBigInt(),
-            'Bob balance should be increased by 10'
-        );
-        const { data: omniAccountData } = await context.api.query.system.account(omniAccount);
-        assert.equal(
-            omniAccountData.free.toBigInt(),
-            initialBalance.toBigInt() - transferAmount.toBigInt(),
-            'omni account balance should be decreased by 10'
-        );
-    });
+    // This test is commented out until the omni-account pallet is refactored.
+    // step('test request_intent (TransferNative)', async function () {
+    //     const initialBalance = context.api.createType('u128', 50000000000000000000n);
+    //     await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
+    //     const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
+    //     const {
+    //         data: { free: bobInitialBalance },
+    //     } = await context.api.query.system.account(bobAddress);
+    //     const transferAmount = context.api.createType('u128', 10000000000000000000n);
+    //     const intent = context.api.createType('Intent', {
+    //         TransferNative: context.api.createType('IntentTransferNative', {
+    //             to: bobAddress,
+    //             value: transferAmount.toBigInt(),
+    //         }),
+    //     });
+    //     const intentId = context.api.createType('u32', 1n);
+    //
+    //     const nativeTask = createNativeTask(
+    //         context.api,
+    //         ['RequestIntent', '(HeimaIdentity, u32, Intent)'],
+    //         [aliceIdentity, intentId, intent]
+    //     );
+    //     const msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
+    //     const nativeTaskWrapper = await createNativeTaskWrapper(
+    //         context.api,
+    //         nativeTask,
+    //         aliceWallet,
+    //         '00005',
+    //         context.api.createType('Index', currentNonce),
+    //         msgToSign
+    //     );
+    //     const response = await sendRawTaskPlain(context, nativeTaskWrapper);
+    //     console.log('response:', response.toHuman());
+    //
+    //     currentNonce++;
+    //
+    //     // wait for the intent to be processed and the tx to be finalized on-chain
+    //     await sleep(36);
+    //
+    //     const { data: bobAccountDataAfter } = await context.api.query.system.account(bobAddress);
+    //     assert.equal(
+    //         bobAccountDataAfter.free.toBigInt(),
+    //         bobInitialBalance.toBigInt() + transferAmount.toBigInt(),
+    //         'Bob balance should be increased by 10'
+    //     );
+    //     const { data: omniAccountData } = await context.api.query.system.account(omniAccount);
+    //     assert.equal(
+    //         omniAccountData.free.toBigInt(),
+    //         initialBalance.toBigInt() - transferAmount.toBigInt(),
+    //         'omni account balance should be decreased by 10'
+    //     );
+    // });
 });

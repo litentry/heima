@@ -2,9 +2,9 @@ use crate::methods::pumpx::PumpxRpcError;
 use crate::verify_auth::verify_auth_token_authentication;
 use crate::{error_code::*, server::RpcContext, Deserialize, ErrorCode};
 use executor_core::native_task::*;
-use executor_primitives::{utils::hex::FromHexPrefixed, OmniAuth};
+use executor_primitives::{utils::hex::FromHexPrefixed, AccountId, OmniAuth};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
-use heima_primitives::{Address32, Identity};
+use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use tracing::{debug, error};
@@ -54,7 +54,7 @@ pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::PumpxNotifyLimitOrderResult(
-					Identity::Substrate(address),
+					AccountId::from(address),
 					params.intent_id,
 					params.result,
 					params.message,

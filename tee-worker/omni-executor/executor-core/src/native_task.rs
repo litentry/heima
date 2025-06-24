@@ -1,5 +1,5 @@
 use executor_primitives::{
-	Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
+	AccountId, Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::fmt::Debug;
@@ -7,8 +7,6 @@ use std::vec::Vec;
 use uuid::Uuid;
 
 pub trait NativeTaskTrait: Codec {
-	fn sender(&self) -> &Identity;
-
 	fn signature_message_prefix(&self) -> String {
 		"Token: ".to_string()
 	}
@@ -41,7 +39,7 @@ pub type PumpxChainId = u32;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
-	RequestIntent(Identity, IntentId, Intent),
+	RequestIntent(AccountId, IntentId, Intent),
 	CreateAccountStore(Identity),
 	AddAccount(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
 	RemoveAccounts(Identity, Vec<Identity>),
@@ -52,14 +50,14 @@ pub enum NativeTask {
 	#[codec(index = 20)]
 	PumpxRequestJwt(Identity, String, Option<String>, GoogleCode, Option<String>),
 	#[codec(index = 21)]
-	PumpxExportWallet(Identity, GoogleCode, PumpxChainId, PumxWalletIndex, String),
+	PumpxExportWallet(AccountId, GoogleCode, PumpxChainId, PumxWalletIndex, String),
 	#[codec(index = 22)]
-	PumpxAddWallet(Identity),
+	PumpxAddWallet(AccountId),
 	#[codec(index = 23)]
-	PumpxSignLimitOrder(Identity, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
+	PumpxSignLimitOrder(AccountId, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
 	#[codec(index = 24)]
 	PumpxTransferWidthdraw(
-		Identity,
+		AccountId,
 		Option<u32>,    // request_id
 		u32,            // chain_id
 		u32,            // wallet_index
@@ -70,28 +68,10 @@ pub enum NativeTask {
 		Option<String>, // language
 	),
 	#[codec(index = 25)]
-	PumpxNotifyLimitOrderResult(Identity, u32, String, Option<String>),
+	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
 }
 
 impl NativeTaskTrait for NativeTask {
-	fn sender(&self) -> &Identity {
-		match self {
-			Self::RequestAuthToken(sender, ..) => sender,
-			Self::RequestIntent(sender, ..) => sender,
-			Self::CreateAccountStore(sender) => sender,
-			Self::AddAccount(sender, ..) => sender,
-			Self::RemoveAccounts(sender, ..) => sender,
-			Self::PublicizeAccount(sender, ..) => sender,
-			Self::SetPermissions(sender, ..) => sender,
-			Self::PumpxRequestJwt(sender, ..) => sender,
-			Self::PumpxExportWallet(sender, ..) => sender,
-			Self::PumpxAddWallet(sender, ..) => sender,
-			Self::PumpxSignLimitOrder(sender, ..) => sender,
-			Self::PumpxTransferWidthdraw(sender, ..) => sender,
-			Self::PumpxNotifyLimitOrderResult(sender, ..) => sender,
-		}
-	}
-
 	fn require_auth(&self) -> bool {
 		// currently all tasks require auth
 		true
