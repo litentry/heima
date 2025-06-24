@@ -1,0 +1,12 @@
+[package]
+name = "sgx-verify-fuzz-shim"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[profile.release]
+debug = 1
+
+[dependencies]
+sgx-verify-fuzz = { path = "fuzz" }

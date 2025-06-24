@@ -16,6 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::useless_conversion)]
 
 use frame_support::{
 	pallet_prelude::*,
