@@ -27,9 +27,10 @@ pub struct RPCAddWalletResponse {
 
 impl AddWalletParams {
 	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
-		let sender = Identity::from_web2_account(self.user_id.as_str(), Web2IdentityType::Pumpx);
+		let identity = Identity::from_web2_account(self.user_id.as_str(), Web2IdentityType::Pumpx);
+		let omni_account = identity.to_omni_account(&self.client_id);
 		NativeTaskWrapper::new(
-			NativeTask::PumpxAddWallet(sender.clone()),
+			NativeTask::PumpxAddWallet(omni_account),
 			None,
 			Some(OmniAuth::AuthToken(self.auth_token)),
 			self.client_id,

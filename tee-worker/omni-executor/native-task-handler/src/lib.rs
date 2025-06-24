@@ -26,8 +26,8 @@ use heima_identity_verification::{get_verification_message, web2, web3};
 use parentchain_api_interface::{
 	omni_account::calls::types::create_account_store::ClientId,
 	runtime_types::{
-		frame_system::pallet::Call as SystemCall,
-		pallet_balances::pallet::Call as BalancesCall,
+		// frame_system::pallet::Call as SystemCall,
+		// pallet_balances::pallet::Call as BalancesCall,
 		pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
 		paseo_runtime::RuntimeCall,
 	},
@@ -275,9 +275,7 @@ async fn handle_native_task<
 			send_ok(response_sender, NativeTaskOk::AuthToken(token));
 			return;
 		},
-		NativeTask::RequestIntent(sender, intent_id, intent) => {
-			let omni_account = sender.to_omni_account(client_id);
-
+		NativeTask::RequestIntent(omni_account, intent_id, intent) => {
 			debug!("Intent requested");
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
@@ -325,40 +323,54 @@ async fn handle_native_task<
 			.await;
 
 			let (execution_result, should_notify_parentchain) = match intent {
-				Intent::SystemRemark(remark) => {
-					let remark_call = SystemCall::remark { remark: remark.to_vec() };
-					let _ = dispatch_as_signed(
-						&mut rpc_client,
-						ctx.transaction_signer.clone(),
-						sender,
-						RuntimeCall::System(remark_call),
-						auth_type,
-					)
-					.await;
-					send_ok(
+				Intent::SystemRemark(_remark) => {
+					// let remark_call = SystemCall::remark { remark: remark.to_vec() };
+					// let _ = dispatch_as_signed(
+					// 	&mut rpc_client,
+					// 	ctx.transaction_signer.clone(),
+					// 	sender,
+					// 	RuntimeCall::System(remark_call),
+					// 	auth_type,
+					// )
+					// .await;
+					// send_ok(
+					// 	response_sender,
+					// 	NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					// );
+					// (IntentCompletedDetail::Success, true)
+					info!("Intent rejected");
+					send_error(
+						"Intent not accepted".to_string(),
 						response_sender,
-						NativeTaskOk::RequestIntentResult { intent_id, success: true },
+						NativeTaskError::InternalError,
 					);
-					(IntentCompletedDetail::Success, true)
+					(IntentCompletedDetail::Failure, true)
 				},
-				Intent::TransferNative(transfer) => {
-					let transfer_call = BalancesCall::transfer_allow_death {
-						dest: transfer.to.to_subxt_type().into(),
-						value: transfer.value,
-					};
-					let _ = dispatch_as_signed(
-						&mut rpc_client,
-						ctx.transaction_signer.clone(),
-						sender,
-						RuntimeCall::Balances(transfer_call),
-						auth_type,
-					)
-					.await;
-					send_ok(
+				Intent::TransferNative(_transfer) => {
+					// let transfer_call = BalancesCall::transfer_allow_death {
+					// 	dest: transfer.to.to_subxt_type().into(),
+					// 	value: transfer.value,
+					// };
+					// let _ = dispatch_as_signed(
+					// 	&mut rpc_client,
+					// 	ctx.transaction_signer.clone(),
+					// 	sender,
+					// 	RuntimeCall::Balances(transfer_call),
+					// 	auth_type,
+					// )
+					// .await;
+					// send_ok(
+					// 	response_sender,
+					// 	NativeTaskOk::RequestIntentResult { intent_id, success: true },
+					// );
+					// (IntentCompletedDetail::Success, true)
+					info!("Intent rejected");
+					send_error(
+						"Intent not accepted".to_string(),
 						response_sender,
-						NativeTaskOk::RequestIntentResult { intent_id, success: true },
+						NativeTaskError::InternalError,
 					);
-					(IntentCompletedDetail::Success, true)
+					(IntentCompletedDetail::Failure, true)
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
 					// if let Err(e) = ctx
@@ -708,7 +720,7 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxExportWallet(
-			sender,
+			omni_account,
 			google_code,
 			pumpx_chain_id,
 			pumpx_wallet_index,
@@ -716,7 +728,7 @@ async fn handle_native_task<
 		) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
@@ -756,7 +768,7 @@ async fn handle_native_task<
 				.export_wallet(
 					chain,
 					pumpx_wallet_index,
-					sender.to_omni_account(client_id).into(),
+					omni_account.clone().into(),
 					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
 					//       we don't have to do double encryption/decryption
 					ctx.aes256_key.to_vec(),
@@ -781,18 +793,14 @@ async fn handle_native_task<
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
-			if let Ok(maybe_profile) =
-				omni_account_profile_storage.get(&sender.to_omni_account(client_id))
-			{
+			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {
 				let profile = maybe_profile
 					.map(|mut p| {
 						p.wallet_exported = true;
 						p
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				if let Err(e) =
-					omni_account_profile_storage.insert(&sender.to_omni_account(client_id), profile)
-				{
+				if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
 					error!("Failed to update pumpx account profile: {:?}", e);
 					send_error(
 						"Failed to update omni account profile".to_string(),
@@ -812,10 +820,9 @@ async fn handle_native_task<
 			send_ok(response_sender, NativeTaskOk::PumpxExportWallet(decrypted_wallet));
 			return;
 		},
-		NativeTask::PumpxAddWallet(sender) => {
+		NativeTask::PumpxAddWallet(omni_account) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					format!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE),
@@ -839,19 +846,7 @@ async fn handle_native_task<
 			send_ok(response_sender, NativeTaskOk::PumpxAddWallet(backend_response));
 			return;
 		},
-		NativeTask::PumpxSignLimitOrder(sender, chain_id, wallet_index, unsigned_tx) => {
-			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
-			let omni_account: AccountId = match sender {
-				Identity::Substrate(ref account) => account.into(),
-				_ => {
-					send_error(
-						"Invalid sender type for PumpxSignLimitOrder".to_string(),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
-					return;
-				},
-			};
+		NativeTask::PumpxSignLimitOrder(omni_account, chain_id, wallet_index, unsigned_tx) => {
 			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
 				error!("Failed to map pumpx chain_id {}", chain_id);
 				let response = NativeTaskResponse::Err(NativeTaskError::InternalError);
@@ -879,7 +874,7 @@ async fn handle_native_task<
 			return;
 		},
 		NativeTask::PumpxTransferWidthdraw(
-			sender,
+			omni_account,
 			request_id,
 			chain_id,
 			wallet_index,
@@ -892,7 +887,7 @@ async fn handle_native_task<
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(sender.to_omni_account(client_id), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				send_error(
 					"Failed to get access_token within NativeTask::PumpxTransferWidthdraw"
@@ -946,7 +941,7 @@ async fn handle_native_task<
 			};
 			return;
 		},
-		NativeTask::PumpxNotifyLimitOrderResult(sender, intent_id, result, message) => {
+		NativeTask::PumpxNotifyLimitOrderResult(omni_account, intent_id, result, message) => {
 			if result != "ok" && result != "nok" {
 				send_error(
 					format!("Invalid result value: {}. Must be 'ok' or 'nok'", result),
@@ -965,19 +960,6 @@ async fn handle_native_task<
 			if let Some(msg) = message {
 				info!("Limit order result message for intent_id {}: {}", intent_id, msg);
 			}
-
-			// This is a workaround, in this case the Substrate identity is the OmniAccount address itself
-			let omni_account: AccountId = match sender {
-				Identity::Substrate(ref account) => account.into(),
-				_ => {
-					send_error(
-						"Invalid sender type for PumpxSignLimitOrder".to_string(),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
-					return;
-				},
-			};
 
 			send_ok(response_sender, NativeTaskOk::PumpxNotifyLimitOrderResult);
 
@@ -1030,33 +1012,33 @@ fn send_ok(sender: ResponseSender, ok_res: NativeTaskOk) {
 	send_response(sender, NativeTaskResponse::Ok(ok_res));
 }
 
-async fn dispatch_as_signed<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	sender: Identity,
-	call: RuntimeCall,
-	auth_type: Option<OmniAccountAuthType>,
-) {
-	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
-		sender.hash().to_subxt_type(),
-		call,
-		auth_type.map(|t| t.to_subxt_type()),
-	);
-	let tx = signer.sign(call).await;
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted dispatch_as_signed parentchain call")
-		},
-		Err(_) => {
-			error!("Failed to submit dispatch_as_signed parentchain call",);
-			signer.update_nonce().await
-		},
-	};
-}
+// async fn dispatch_as_signed<
+// 	Header: Send + Sync + 'static,
+// 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+// >(
+// 	client: &mut RpcClient,
+// 	signer: Arc<ParentchainTxSigner>,
+// 	sender: Identity,
+// 	call: RuntimeCall,
+// 	auth_type: Option<OmniAccountAuthType>,
+// ) {
+// 	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
+// 		sender.hash().to_subxt_type(),
+// 		call,
+// 		auth_type.map(|t| t.to_subxt_type()),
+// 	);
+// 	let tx = signer.sign(call).await;
+// 	// notify parentchain - for now we continue even with error
+// 	match client.submit_tx(&tx).await {
+// 		Ok(_) => {
+// 			debug!("Submitted dispatch_as_signed parentchain call")
+// 		},
+// 		Err(_) => {
+// 			error!("Failed to submit dispatch_as_signed parentchain call",);
+// 			signer.update_nonce().await
+// 		},
+// 	};
+// }
 
 async fn notify_intent_accepted<
 	Header: Send + Sync + 'static,
