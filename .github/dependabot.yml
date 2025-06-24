@@ -24,6 +24,12 @@ updates:
       - dependency-name: "kusama-*"
       - dependency-name: "westend-*"
       - dependency-name: "heima-*"
+      - dependency-name: "moonbeam-*"
+      - dependency-name: "fp-*"
+      - dependency-name: "fc-*"
+      - dependency-name: "pallet-evm"
+      - dependency-name: "pallet-ethereum"
+      - dependency-name: "pallet-evm-*"
     reviewers:
       - "litentry/parachain"
     schedule:
