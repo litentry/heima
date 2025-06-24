@@ -102,6 +102,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable2Step {
      * @param amount          - Amount to withdraw.
      */
     function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+        require(amount > 0, "Amount must be greater than 0");
         entryPoint.withdrawTo(withdrawAddress, amount);
     }
 

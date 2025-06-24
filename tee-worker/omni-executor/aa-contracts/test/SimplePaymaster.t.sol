@@ -173,6 +173,12 @@ contract SimplePaymasterTest is Test {
         paymaster.withdrawTo(payable(bundler1), 1 ether);
     }
 
+    function test_WithdrawTo_ZeroAmount() public {
+        vm.prank(owner);
+        vm.expectRevert("Amount must be greater than 0");
+        paymaster.withdrawTo(payable(owner), 0);
+    }
+
     function test_ReceiveEther() public {
         uint256 initialDeposit = paymaster.getDeposit();
         uint256 sendAmount = 1 ether;
