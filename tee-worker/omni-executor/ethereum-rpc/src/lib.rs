@@ -253,6 +253,7 @@ pub mod mocks {
 
 			async fn get_balance(&self, address: Address) -> Result<U256, ()>;
 			async fn get_transaction_count(&self, address: Address) -> Result<u64, ()>;
+			async fn get_pending_nonce(&self, address: Address) -> Result<u64, ()>;
 			async fn send_transaction(&self, tx: TransactionRequest) -> Result<(), ()>;
 			async fn send_transaction_with_wallet(&self, wallet: &EthereumWallet, tx: TransactionRequest) -> Result<String, ()>;
 			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;

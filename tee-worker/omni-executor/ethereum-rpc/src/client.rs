@@ -162,7 +162,8 @@ pub mod mocks {
 
 	use crate::client::EthereumClient;
 	use alloy::network::TxSigner;
-	use alloy::primitives::{Signature, U256};
+	use alloy::primitives::{Signature, U256, Address};
+	use alloy::rpc::types::TransactionRequest;
 	use async_trait::async_trait;
 	use mockall::mock;
 
@@ -192,9 +193,10 @@ pub mod mocks {
 			#[mockall::concretize]
 			async fn construct_approve_erc20_tx(
 				&self,
-				spender: &str,
+				spender: Address,
 				value: U256,
-				contract_address: &str,
+				contract_address: Address,
+				nonce: u64,
 			) -> Result<TransactionRequest, ()>;
 		}
 

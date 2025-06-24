@@ -9,7 +9,7 @@ async fn main() {
 	let wallet = LocalWallet::from_str(private_key_hex).expect("Invalid private key");
 	println!("Wallet address: {:?}", wallet.address());
 
-	let inch_client = InchClient::new("dummy_secret_key");
+	let inch_client = InchClient::new("dummy_secret_key", "https://api.1inch.dev");
 
 	let swap_request = SwapRequest {
 		chain_id: 56,
@@ -24,7 +24,7 @@ async fn main() {
 		dex_ids: "BSC_PANCAKESWAP_V3".to_string(),
 	};
 
-	let swap_response = inch_client.swap(swap_request).await.unwrap();
+	let swap_response = inch_client.swap(56, swap_request).await.unwrap();
 
 	println!("Swap response: {:?}", swap_response.get_transaction_data());
 }

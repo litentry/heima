@@ -9,7 +9,7 @@ async fn main() {
 	let wallet = LocalWallet::from_str(private_key_hex).expect("Invalid private key");
 	println!("Wallet address: {:?}", wallet.address());
 
-	let okx_client = OkxClient::new("dummy_secret_key");
+	let okx_client = OkxClient::new("dummy_secret_key", "https://www.okx.com");
 
 	let swap_request = SwapRequest {
 		chain_id: "56".to_string(),
