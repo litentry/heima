@@ -17,6 +17,7 @@
     "@solana/web3.js": "^1.98.2",
     "@tanstack/react-query": "^5.80.10",
     "buffer": "^6.0.3",
+    "js-sha256": "^0.11.1",
     "lucide-react": "^0.518.0",
     "next": "15.3.4",
     "react": "^19.0.0",
