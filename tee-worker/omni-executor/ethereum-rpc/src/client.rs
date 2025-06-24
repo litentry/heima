@@ -162,7 +162,7 @@ pub mod mocks {
 
 	use crate::client::EthereumClient;
 	use alloy::network::TxSigner;
-	use alloy::primitives::{Signature, U256, Address};
+	use alloy::primitives::{Address, Signature, U256};
 	use alloy::rpc::types::TransactionRequest;
 	use async_trait::async_trait;
 	use mockall::mock;
