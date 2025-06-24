@@ -3182,7 +3182,7 @@ dependencies = [
 [[package]]
 name = "evm-tracing-events"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "environmental",
  "ethereum",
@@ -6998,7 +6998,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-client-evm-tracing"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7014,7 +7014,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-evm-tracer"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum-types",
  "evm",
@@ -7034,7 +7034,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-primitives-ext"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum-types",
  "evm-tracing-events",
@@ -7047,7 +7047,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-debug"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7064,7 +7064,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-trace"
 version = "0.6.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum-types",
  "futures 0.3.31",
@@ -7078,7 +7078,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-core-types"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum-types",
  "serde",
@@ -7088,7 +7088,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-debug"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -7120,7 +7120,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-debug"
 version = "0.1.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "environmental",
  "ethereum",
@@ -7138,7 +7138,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-primitives-txpool"
 version = "0.6.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -7152,7 +7152,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-rpc-trace"
 version = "0.6.0"
-source = "git+https://github.com/AstarNetwork/Astar#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
+source = "git+https://github.com/AstarNetwork/Astar?rev=eca8c3f#eca8c3fe4464e0cd688fa375fb916295b1b0ac5e"
 dependencies = [
  "ethereum",
  "ethereum-types",
