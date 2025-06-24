@@ -1129,9 +1129,9 @@ dependencies = [
 
 [[package]]
 name = "cargo_toml"
-version = "0.19.2"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a98356df42a2eb1bd8f1793ae4ee4de48e384dd974ce5eac8eee802edb7492be"
+checksum = "02260d489095346e5cafd04dea8e8cb54d1d74fcd759022a9b72986ebe9a1257"
 dependencies = [
  "serde",
  "toml 0.8.23",
@@ -4581,7 +4581,7 @@ name = "heima-primitives"
 version = "0.1.0"
 dependencies = [
  "base58",
- "base64 0.13.1",
+ "base64 0.22.1",
  "chrono",
  "der",
  "ecdsa",
@@ -9439,7 +9439,7 @@ dependencies = [
 name = "pallet-teebag"
 version = "0.1.0"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.22.1",
  "chrono",
  "der",
  "env_logger",

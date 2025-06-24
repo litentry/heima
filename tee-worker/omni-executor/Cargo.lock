@@ -924,7 +924,7 @@ checksum = "5dc7a6d90cc643df0ed2744862cdf180587d1e5d28936538c18fc8908489ed67"
 dependencies = [
  "anyhow",
  "bs58",
- "cargo_toml",
+ "cargo_toml 0.19.2",
  "heck 0.3.3",
  "proc-macro2",
  "quote",
@@ -2224,6 +2224,16 @@ name = "cargo_toml"
 version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a98356df42a2eb1bd8f1793ae4ee4de48e384dd974ce5eac8eee802edb7492be"
+dependencies = [
+ "serde",
+ "toml 0.8.23",
+]
+
+[[package]]
+name = "cargo_toml"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02260d489095346e5cafd04dea8e8cb54d1d74fcd759022a9b72986ebe9a1257"
 dependencies = [
  "serde",
  "toml 0.8.23",
@@ -5063,7 +5073,7 @@ name = "heima-primitives"
 version = "0.1.0"
 dependencies = [
  "base58",
- "base64 0.13.1",
+ "base64 0.22.1",
  "chrono",
  "der",
  "ecdsa",
@@ -5100,7 +5110,7 @@ dependencies = [
 name = "heima-utils-proc-macros"
 version = "0.1.0"
 dependencies = [
- "cargo_toml",
+ "cargo_toml 0.22.1",
  "proc-macro2",
  "quote",
  "syn 2.0.104",
