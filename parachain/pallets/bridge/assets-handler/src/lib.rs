@@ -16,6 +16,8 @@
 
 //! A pallet for handling bridge transfer lgoic.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::useless_conversion)]
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

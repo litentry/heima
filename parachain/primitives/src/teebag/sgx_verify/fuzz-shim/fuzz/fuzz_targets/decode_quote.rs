@@ -2,7 +2,7 @@
 
 use parity_scale_codec::{Decode};
 use libfuzzer_sys::fuzz_target;
-use sgx_verify::DcapQuote;
+use heima_primitives::DcapQuote;
 
 fuzz_target!(|data: &[u8]| {
 	let mut copy = data;

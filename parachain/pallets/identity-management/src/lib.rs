@@ -29,6 +29,7 @@
 //!   shield_funds)
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::useless_conversion)]
 #![allow(unused_variables)]
 
 #[cfg(feature = "runtime-benchmarks")]
