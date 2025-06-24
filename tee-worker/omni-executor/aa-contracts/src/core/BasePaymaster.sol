@@ -5,6 +5,7 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/IPaymaster.sol";
 import "../interfaces/IEntryPoint.sol";
 import "./UserOperationLib.sol";
@@ -14,7 +15,7 @@ import "./UserOperationLib.sol";
  * Validates that the postOp is called only by the entryPoint.
  */
 
-abstract contract BasePaymaster is IPaymaster, Ownable2Step {
+abstract contract BasePaymaster is IPaymaster, Ownable2Step, Pausable {
     IEntryPoint public immutable entryPoint;
 
     uint256 internal constant PAYMASTER_VALIDATION_GAS_OFFSET = UserOperationLib.PAYMASTER_VALIDATION_GAS_OFFSET;
@@ -39,6 +40,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable2Step {
     function validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
         external
         override
+        whenNotPaused
         returns (bytes memory context, uint256 validationData)
     {
         _requireFromEntryPoint();
@@ -144,5 +146,19 @@ abstract contract BasePaymaster is IPaymaster, Ownable2Step {
      */
     function _requireFromEntryPoint() internal virtual {
         require(msg.sender == address(entryPoint), "Sender not EntryPoint");
+    }
+
+    /**
+     * Pause the paymaster, preventing new user operation validations
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * Unpause the paymaster, allowing user operation validations
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

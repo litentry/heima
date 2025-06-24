@@ -179,6 +179,75 @@ contract SimplePaymasterTest is Test {
         paymaster.withdrawTo(payable(owner), 0);
     }
 
+    function test_Pause() public {
+        vm.prank(owner);
+        paymaster.pause();
+        assertTrue(paymaster.paused());
+    }
+
+    function test_Pause_OnlyOwner() public {
+        vm.prank(bundler1);
+        vm.expectRevert();
+        paymaster.pause();
+    }
+
+    function test_Unpause() public {
+        // First pause
+        vm.prank(owner);
+        paymaster.pause();
+
+        // Then unpause
+        vm.prank(owner);
+        paymaster.unpause();
+        assertFalse(paymaster.paused());
+    }
+
+    function test_Unpause_OnlyOwner() public {
+        // First pause as owner
+        vm.prank(owner);
+        paymaster.pause();
+
+        // Try to unpause as non-owner
+        vm.prank(bundler1);
+        vm.expectRevert();
+        paymaster.unpause();
+    }
+
+    function test_ValidatePaymasterUserOp_WhenPaused() public {
+        // Pause the paymaster
+        vm.prank(owner);
+        paymaster.pause();
+
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        bytes32 userOpHash = keccak256("test");
+        uint256 maxCost = 1000000;
+
+        // Should revert when paused
+        vm.prank(address(entryPoint), bundler1);
+        vm.expectRevert();
+        paymaster.validatePaymasterUserOp(userOp, userOpHash, maxCost);
+    }
+
+    function test_ValidatePaymasterUserOp_WhenUnpaused() public {
+        // Pause then unpause the paymaster
+        vm.startPrank(owner);
+        paymaster.pause();
+        paymaster.unpause();
+        vm.stopPrank();
+
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        bytes32 userOpHash = keccak256("test");
+        uint256 maxCost = 1000000;
+
+        // Should work normally when unpaused
+        vm.prank(address(entryPoint), bundler1);
+        (bytes memory context, uint256 validationData) = paymaster.validatePaymasterUserOp(userOp, userOpHash, maxCost);
+
+        assertEq(validationData, 0); // Success
+        address decodedAccount = abi.decode(context, (address));
+        assertEq(decodedAccount, smartAccount);
+    }
+
     function test_ReceiveEther() public {
         uint256 initialDeposit = paymaster.getDeposit();
         uint256 sendAmount = 1 ether;
