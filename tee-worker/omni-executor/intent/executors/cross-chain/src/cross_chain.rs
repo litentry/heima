@@ -857,7 +857,8 @@ impl<
 					.rpc_endpoint_registry
 					.get(&Chain::Ethereum(*chain_id))
 					.ok_or(error!("No RPC endpoint in registry for Ethereum chain"))?;
-				query_ethereum(rpc_url, EthereumAddress::from_slice(&address), token).await
+				let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
+				query_ethereum(&provider, EthereumAddress::from_slice(&address), token).await
 			},
 			ChainAsset::Solana(token) => {
 				let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
