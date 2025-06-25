@@ -82,13 +82,13 @@ pub async fn query_solana<Client: SolanaClient>(
 	}
 }
 
-pub async fn query_ethereum(
-	rpc_url: &str,
+pub async fn query_ethereum<
+	Provider: RpcProvider<Addr = Address, Transaction = TransactionRequest>,
+>(
+	provider: &Provider,
 	account: Address,
 	token: &EthereumToken,
 ) -> Result<U256, ()> {
-	let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
-
 	match token {
 		EthereumToken::Native => provider.get_balance(account).await,
 		EthereumToken::ERC20(address) => {
@@ -113,11 +113,12 @@ pub mod tests {
 	#[tokio::test]
 	pub async fn check_query_ethereum() {
 		let rpc_url = "http://127.0.0.1:8545";
+		let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
 		let account =
 			alloy::primitives::Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
 				.unwrap();
 		let balance = query_ethereum(
-			rpc_url,
+			&provider,
 			account,
 			&crate::EthereumToken::ERC20(
 				hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707").try_into().unwrap(),
