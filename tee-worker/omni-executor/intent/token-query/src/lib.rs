@@ -212,11 +212,8 @@ pub mod tests {
 				}
 			});
 
-			let parsed_account = ParsedAccount {
-				parsed: parsed_json,
-				program: "spl-token".to_string(),
-				space: 165,
-			};
+			let parsed_account =
+				ParsedAccount { parsed: parsed_json, program: "spl-token".to_string(), space: 165 };
 
 			let account_data = UiAccountData::Json(parsed_account);
 
@@ -247,7 +244,6 @@ pub mod tests {
 
 			assert_eq!(result, Ok(500));
 		}
-
 
 		#[tokio::test]
 		async fn test_query_solana_spl_multiple_accounts() {
@@ -414,10 +410,7 @@ pub mod tests {
 			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
 			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
 
-			mock_provider
-				.expect_call()
-				.times(1)
-				.returning(|_| Err(()));
+			mock_provider.expect_call().times(1).returning(|_| Err(()));
 
 			let result = query_ethereum(&mock_provider, account, &token).await;
 
