@@ -25,9 +25,8 @@ use executor_core::native_task::NativeTask;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
 use executor_core::native_task::PumxWalletIndex;
-use executor_primitives::utils::hex::FromHexPrefixed;
+use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
-use heima_primitives::Identity;
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
@@ -76,7 +75,7 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::PumpxSignLimitOrder(
-					Identity::Substrate(address),
+					AccountId::from(address),
 					params.chain_id,
 					params.wallet_index,
 					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),

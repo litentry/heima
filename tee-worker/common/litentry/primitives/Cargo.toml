@@ -23,7 +23,7 @@ sp-std = { workspace = true }
 
 sgx_tstd = { workspace = true, features = ["net", "thread"], optional = true }
 
-heima-primitives = { workspace = true, features = ["webpki"] }
+heima-primitives = { workspace = true }
 heima-utils = { workspace = true }
 itp-sgx-crypto = { workspace = true }
 itp-sgx-runtime-primitives = { workspace = true }

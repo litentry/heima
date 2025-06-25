@@ -20,6 +20,10 @@ executor-primitives = { workspace = true }
 [dev-dependencies]
 tokio = { workspace = true }
 hex-literal = { workspace = true }
+mockall = { workspace = true }
+ethereum-rpc = { workspace = true, features = ["mocks"] }
+solana = { workspace = true, features = ["mocks"] }
+base64 = { workspace = true }
 
 [lints]
 workspace = true

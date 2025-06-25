@@ -17,6 +17,7 @@
 //! A pallet for temporary fix of onchain accountInfo.
 //! No storage for this pallet and it should be removed right after fixing.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::useless_conversion)]
 
 use frame_support::{
 	pallet_prelude::*,
