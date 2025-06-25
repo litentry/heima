@@ -1,28 +1,20 @@
 [package]
 name = "sgx-verify-fuzz"
-version = "0.0.0"
-publish = false
+version = "0.1.0"
 edition = "2021"
+publish = false
 
 [package.metadata]
 cargo-fuzz = true
 
 [dependencies]
 base64 = { version = "0.13", default-features = false, features = ["alloc"] }
-codec = { version = "3.0.0", default-features = false, features = ["derive"], package = "parity-scale-codec" }
-libfuzzer-sys = "0.4"
+der = { version = "0.7", default-features = false }
+heima-primitives = { path = "../../../../../" }
+libfuzzer-sys = { version = "0.4" }
+parity-scale-codec = { version = "3.0", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0" }
-webpki = { git = "https://github.com/rustls/webpki", version = "=0.102.0-alpha.3", rev = "da923ed", package = "rustls-webpki", default-features = false, features = ["alloc", "ring"] }
-
-[dependencies.sgx-verify]
-path = ".."
-
-# Prevent this from interfering with workspaces
-[workspace]
-members = ["."]
-
-[profile.release]
-debug = 1
+x509-cert = { version = "0.2", default-features = false }
 
 [[bin]]
 name = "decode_quote"
@@ -47,7 +39,3 @@ name = "extract_tcb_info"
 path = "fuzz_targets/extract_tcb_info.rs"
 test = false
 doc = false
-
-
-[patch.crates-io]
-ring = { git = "https://github.com/betrusted-io/ring-xous", branch = "0.16.20-cleanup" }

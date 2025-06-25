@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::useless_conversion)]
 
 #[cfg(test)]
 mod mock;

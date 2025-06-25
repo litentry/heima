@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 #![warn(unused_extern_crates)]
+#![allow(clippy::result_large_err)]
 
 mod chain_specs;
 mod cli;

@@ -20,9 +20,7 @@ pub use types::*;
 mod tcb;
 pub use tcb::*;
 
-#[cfg(feature = "webpki")]
 mod sgx_verify;
-#[cfg(feature = "webpki")]
 pub use sgx_verify::*;
 
 mod quoting_enclave;
