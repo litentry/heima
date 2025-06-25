@@ -147,6 +147,8 @@ export interface UserOperation {
 
 /**
  * PackedUserOperation structure for EntryPoint v0.7
+ * Includes packed gas fields and session-related fields for future extensibility
+ * Session fields are currently set to default values (zero address/empty proof)
  */
 export interface PackedUserOperation {
 	sender: Address;
@@ -190,6 +192,8 @@ export function createUserOperation(params: {
 /**
  * Get the hash of a UserOperation for signing
  * This follows the ERC-4337 specification for PackedUserOperation hash calculation
+ * Uses EIP-712 typed data hashing with EntryPoint v0.7 domain separator
+ * Includes support for session fields (sessionAccount, sessionExpiration, sessionAccountProof)
  */
 export function getUserOpHash(
 	userOp: UserOperation,
@@ -274,8 +278,11 @@ export function getUserOpHash(
 
 /**
  * Generate initCode for deploying a Smart Account
- * For EntryPoint v0.7, initCode should be empty if using SenderCreator
- * The actual deployment happens via EntryPoint -> SenderCreator -> Factory
+ * The initCode contains factory address + createAccount calldata
+ * During deployment, SmartAccount extracts these params to validate the deployer's signature
+ * This enables the AA24 signature fix where deployment can be authorized by either:
+ * - The account whose omniAccount matches the expected OA
+ * - The designated root signer
  */
 export function generateInitCode(
 	factoryAddress: Address,
@@ -324,6 +331,8 @@ export function packGasFees(
 
 /**
  * Convert UserOperation to PackedUserOperation for EntryPoint v0.7
+ * Session fields (sessionAccount, sessionExpiration, sessionAccountProof) are set to default values
+ * as they're not yet implemented but required for the PackedUserOperation structure
  */
 export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 	const packed = {
