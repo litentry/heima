@@ -82,7 +82,9 @@ pub async fn query_solana<Client: SolanaClient>(
 	}
 }
 
-pub async fn query_ethereum<Provider: RpcProvider<Addr = Address, Transaction = TransactionRequest>>(
+pub async fn query_ethereum<
+	Provider: RpcProvider<Addr = Address, Transaction = TransactionRequest>,
+>(
 	provider: &Provider,
 	account: Address,
 	token: &EthereumToken,
