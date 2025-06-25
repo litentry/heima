@@ -152,4 +152,276 @@ pub mod tests {
 
 		println!("Balance is {:?}", balance);
 	}
+
+	#[cfg(test)]
+	mod tests {
+		use super::*;
+		use alloy::primitives::{Address, U256};
+		use executor_primitives::{EthereumToken, SolanaToken};
+		use solana_account_decoder_client_types::{ParsedAccount, UiAccount, UiAccountData};
+		use solana_client::rpc_request::TokenAccountsFilter;
+		use solana_client::rpc_response::RpcKeyedAccount;
+		use solana_sdk::pubkey::Pubkey;
+
+		#[tokio::test]
+		async fn test_query_solana_native_success() {
+			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let pubkey = Pubkey::new_unique();
+			let expected_balance = 1000000000u64; // 1 SOL in lamports
+
+			mock_client
+				.expect_get_balance()
+				.with(mockall::predicate::eq(pubkey))
+				.times(1)
+				.returning(move |_| Ok(expected_balance));
+
+			let result = query_solana(&mock_client, &pubkey, &SolanaToken::Native).await;
+
+			assert_eq!(result, Ok(expected_balance));
+		}
+
+		#[tokio::test]
+		async fn test_query_solana_native_error() {
+			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let pubkey = Pubkey::new_unique();
+
+			mock_client
+				.expect_get_balance()
+				.with(mockall::predicate::eq(pubkey))
+				.times(1)
+				.returning(|_| Err(()));
+
+			let result = query_solana(&mock_client, &pubkey, &SolanaToken::Native).await;
+
+			assert_eq!(result, Err(()));
+		}
+
+		#[tokio::test]
+		async fn test_query_solana_spl_success_json_format() {
+			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let pubkey = Pubkey::new_unique();
+			let mint_pubkey = Pubkey::new_unique();
+			let token = SolanaToken::SPL(mint_pubkey.to_bytes().into());
+
+			// Create JSON response structure
+			let parsed_json = serde_json::json!({
+				"info": {
+					"tokenAmount": {
+						"amount": "500"
+					}
+				}
+			});
+
+			let parsed_account = ParsedAccount {
+				parsed: parsed_json,
+				program: "spl-token".to_string(),
+				space: 165,
+			};
+
+			let account_data = UiAccountData::Json(parsed_account);
+
+			let rpc_account = RpcKeyedAccount {
+				pubkey: Pubkey::new_unique().to_string(),
+				account: UiAccount {
+					lamports: 2039280,
+					data: account_data,
+					owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
+					executable: false,
+					rent_epoch: 361,
+					space: Some(165),
+				},
+			};
+
+			mock_client
+				.expect_get_token_accounts_by_owner()
+				.with(
+					mockall::predicate::eq(pubkey),
+					mockall::predicate::function(move |filter: &TokenAccountsFilter| {
+						matches!(filter, TokenAccountsFilter::Mint(mint) if *mint == mint_pubkey)
+					}),
+				)
+				.times(1)
+				.returning(move |_, _| Ok(vec![rpc_account.clone()]));
+
+			let result = query_solana(&mock_client, &pubkey, &token).await;
+
+			assert_eq!(result, Ok(500));
+		}
+
+
+		#[tokio::test]
+		async fn test_query_solana_spl_multiple_accounts() {
+			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let pubkey = Pubkey::new_unique();
+			let mint_pubkey = Pubkey::new_unique();
+			let token = SolanaToken::SPL(mint_pubkey.to_bytes().into());
+
+			// First account with 300 tokens
+			let parsed_json1 = serde_json::json!({
+				"info": {
+					"tokenAmount": {
+						"amount": "300"
+					}
+				}
+			});
+
+			let parsed_account1 = ParsedAccount {
+				parsed: parsed_json1,
+				program: "spl-token".to_string(),
+				space: 165,
+			};
+
+			let account_data1 = UiAccountData::Json(parsed_account1);
+
+			// Second account with 700 tokens
+			let parsed_json2 = serde_json::json!({
+				"info": {
+					"tokenAmount": {
+						"amount": "700"
+					}
+				}
+			});
+
+			let parsed_account2 = ParsedAccount {
+				parsed: parsed_json2,
+				program: "spl-token".to_string(),
+				space: 165,
+			};
+
+			let account_data2 = UiAccountData::Json(parsed_account2);
+
+			let accounts = vec![
+				RpcKeyedAccount {
+					pubkey: Pubkey::new_unique().to_string(),
+					account: UiAccount {
+						lamports: 2039280,
+						data: account_data1,
+						owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
+						executable: false,
+						rent_epoch: 361,
+						space: Some(165),
+					},
+				},
+				RpcKeyedAccount {
+					pubkey: Pubkey::new_unique().to_string(),
+					account: UiAccount {
+						lamports: 2039280,
+						data: account_data2,
+						owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string(),
+						executable: false,
+						rent_epoch: 361,
+						space: Some(165),
+					},
+				},
+			];
+
+			mock_client
+				.expect_get_token_accounts_by_owner()
+				.with(
+					mockall::predicate::eq(pubkey),
+					mockall::predicate::function(move |filter: &TokenAccountsFilter| {
+						matches!(filter, TokenAccountsFilter::Mint(mint) if *mint == mint_pubkey)
+					}),
+				)
+				.times(1)
+				.returning(move |_, _| Ok(accounts.clone()));
+
+			let result = query_solana(&mock_client, &pubkey, &token).await;
+
+			assert_eq!(result, Ok(1000)); // 300 + 700
+		}
+
+		#[tokio::test]
+		async fn test_query_solana_spl_error() {
+			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let pubkey = Pubkey::new_unique();
+			let mint_pubkey = Pubkey::new_unique();
+			let token = SolanaToken::SPL(mint_pubkey.to_bytes().into());
+
+			mock_client
+				.expect_get_token_accounts_by_owner()
+				.with(
+					mockall::predicate::eq(pubkey),
+					mockall::predicate::function(move |filter: &TokenAccountsFilter| {
+						matches!(filter, TokenAccountsFilter::Mint(mint) if *mint == mint_pubkey)
+					}),
+				)
+				.times(1)
+				.returning(|_, _| Err(()));
+
+			let result = query_solana(&mock_client, &pubkey, &token).await;
+
+			assert_eq!(result, Err(()));
+		}
+
+		#[tokio::test]
+		async fn test_query_ethereum_native_success() {
+			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let address = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
+			let expected_balance = U256::from(1000000000000000000u64); // 1 ETH in wei
+
+			mock_provider
+				.expect_get_balance()
+				.with(mockall::predicate::eq(address))
+				.times(1)
+				.returning(move |_| Ok(expected_balance));
+
+			let result = query_ethereum(&mock_provider, address, &EthereumToken::Native).await;
+
+			assert_eq!(result, Ok(expected_balance));
+		}
+
+		#[tokio::test]
+		async fn test_query_ethereum_native_error() {
+			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let address = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
+
+			mock_provider
+				.expect_get_balance()
+				.with(mockall::predicate::eq(address))
+				.times(1)
+				.returning(|_| Err(()));
+
+			let result = query_ethereum(&mock_provider, address, &EthereumToken::Native).await;
+
+			assert_eq!(result, Err(()));
+		}
+
+		#[tokio::test]
+		async fn test_query_ethereum_erc20_success() {
+			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let account = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
+			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
+			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
+			let expected_balance = U256::from(500000000u64); // 500 tokens (with 6 decimals)
+
+			// Mock the call method to return the balance
+			let balance_bytes = expected_balance.to_be_bytes_vec();
+			mock_provider
+				.expect_call()
+				.times(1)
+				.returning(move |_| Ok(balance_bytes.clone()));
+
+			let result = query_ethereum(&mock_provider, account, &token).await;
+
+			assert_eq!(result, Ok(expected_balance));
+		}
+
+		#[tokio::test]
+		async fn test_query_ethereum_erc20_error() {
+			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let account = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
+			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
+			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
+
+			mock_provider
+				.expect_call()
+				.times(1)
+				.returning(|_| Err(()));
+
+			let result = query_ethereum(&mock_provider, account, &token).await;
+
+			assert_eq!(result, Err(()));
+		}
+	}
 }
