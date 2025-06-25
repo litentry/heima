@@ -20,6 +20,8 @@ import {
 } from "@/lib/aa-utils";
 import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 interface RootKeyAuthorizationProps {
 	aaWalletAddress?: string;
 	isFunded: boolean;
@@ -140,34 +142,116 @@ export function RootKeyAuthorization({
 				callData: "0x", // No additional operations needed for initialization
 			});
 
-			// Get the UserOperation hash for signing
-			const userOpHash = getUserOpHash(
-				userOp as UserOperation,
-				CONTRACTS.EntryPoint.address,
-				chain.id,
-			);
-
-			console.log("UserOp hash to sign:", userOpHash);
-
 			// For deployment operations, we need special handling
 			let signature: `0x${string}`;
 
-			if (!accountExists) {
-				// During deployment, the account doesn't exist yet, so normal signature validation won't work
-				// We need to create a signature that will be validated by the factory or use a special format
-				console.log("Creating deployment signature...");
+			// Import necessary functions  
+			const { keccak256, toHex, encodeAbiParameters } = await import('viem');
+			
+			// Instead of getting the hash and then signing it, we should use EIP-712 signTypedData
+			// to sign the structured data directly
+			console.log("Creating deployment signature using EIP-712...");
 
-				// Sign the hash with the wallet that will be the owner
-				signature = await walletClient.signMessage({
+			try {
+				// Convert UserOperation to PackedUserOperation for signing
+				const packedOp = packUserOperation(userOp as UserOperation);
+				
+				// EIP-712 domain
+				const domain = {
+					name: 'ERC4337',
+					version: '1', 
+					chainId: chain.id,
+					verifyingContract: CONTRACTS.EntryPoint.address as `0x${string}`,
+				};
+
+				// EIP-712 types for PackedUserOperation
+				const types = {
+					PackedUserOperation: [
+						{ name: 'sender', type: 'address' },
+						{ name: 'nonce', type: 'uint256' },
+						{ name: 'initCode', type: 'bytes' },
+						{ name: 'callData', type: 'bytes' },
+						{ name: 'accountGasLimits', type: 'bytes32' },
+						{ name: 'preVerificationGas', type: 'uint256' },
+						{ name: 'gasFees', type: 'bytes32' },
+						{ name: 'paymasterAndData', type: 'bytes' },
+						{ name: 'sessionAccount', type: 'address' },
+						{ name: 'sessionExpiration', type: 'uint256' },
+						{ name: 'sessionAccountProof', type: 'bytes' },
+					],
+				};
+
+				// Message to sign (without signature field)
+				const message = {
+					sender: packedOp.sender,
+					nonce: packedOp.nonce,
+					initCode: packedOp.initCode,
+					callData: packedOp.callData,
+					accountGasLimits: packedOp.accountGasLimits,
+					preVerificationGas: packedOp.preVerificationGas,
+					gasFees: packedOp.gasFees,
+					paymasterAndData: packedOp.paymasterAndData,
+					sessionAccount: packedOp.sessionAccount,
+					sessionExpiration: packedOp.sessionExpiration,
+					sessionAccountProof: packedOp.sessionAccountProof,
+				};
+
+				console.log("Signing PackedUserOperation with EIP-712...");
+				signature = await walletClient.signTypedData({
 					account: evmAddress,
-					message: { raw: userOpHash },
+					domain,
+					types,
+					primaryType: 'PackedUserOperation',
+					message,
 				});
-			} else {
-				// For regular operations on existing accounts
-				signature = await walletClient.signMessage({
-					account: evmAddress,
-					message: { raw: userOpHash },
-				});
+
+				console.log("Successfully signed with EIP-712");
+				
+				// Verify the hash matches what we expect
+				const userOpHash = getUserOpHash(
+					userOp as UserOperation,
+					CONTRACTS.EntryPoint.address,
+					chain.id,
+				);
+				console.log("Expected UserOp hash:", userOpHash);
+				
+			} catch (e) {
+				console.error("EIP-712 signing failed:", e);
+				
+				// Fallback: Try raw eth_sign if available
+				try {
+					if (walletClient.request) {
+						console.log("Attempting raw eth_sign as fallback...");
+						const userOpHash = getUserOpHash(
+							userOp as UserOperation,
+							CONTRACTS.EntryPoint.address,
+							chain.id,
+						);
+						signature = await walletClient.request({
+							method: 'eth_sign',
+							params: [evmAddress, userOpHash],
+						});
+						console.log("Successfully used eth_sign");
+					} else {
+						throw new Error("Wallet doesn't support raw signing");
+					}
+				} catch (ethSignError) {
+					console.error("eth_sign also failed:", ethSignError);
+					
+					// Last resort: Use personal_sign (adds message prefix)
+					const userOpHash = getUserOpHash(
+						userOp as UserOperation,
+						CONTRACTS.EntryPoint.address,
+						chain.id,
+					);
+					signature = await walletClient.signMessage({
+						account: evmAddress,
+						message: { raw: userOpHash },
+					});
+					
+					console.warn("WARNING: Using personal_sign which adds message prefix");
+					console.warn("The contract expects a raw signature, this may fail");
+				}
 			}
 
 			console.log("Signature:", signature);

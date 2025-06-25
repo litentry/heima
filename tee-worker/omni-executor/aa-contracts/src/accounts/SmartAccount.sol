@@ -101,6 +101,42 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
         override
         returns (uint256 validationData)
     {
+        // Check if this is a deployment operation (account not initialized)
+        if (owner == bytes32(0) && userOp.initCode.length > 0) {
+            // During deployment, validate against the signer who will become the owner
+            address deploySigner = ECDSA.recover(userOpHash, userOp.signature);
+            
+            // Extract factory address and decode the createAccount parameters
+            if (userOp.initCode.length >= 24) { // Need at least 20 bytes for address + 4 for selector
+                // The initCode format is: [20 bytes factory address][4 bytes selector][encoded params]
+                // We need to extract the parameters starting from byte 24
+                
+                // Extract just the parameter bytes (skip factory address and selector)
+                uint256 paramsLength = userOp.initCode.length - 24;
+                bytes memory params = new bytes(paramsLength);
+                
+                // Copy parameter bytes from calldata
+                for (uint256 i = 0; i < paramsLength; i++) {
+                    params[i] = userOp.initCode[i + 24];
+                }
+                
+                // Decode createAccount parameters (oa, clientId, root)
+                (bytes32 expectedOa, , address expectedRoot) = abi.decode(
+                    params,
+                    (bytes32, bytes32, address)
+                );
+                
+                // Verify the signer matches either:
+                // 1. The address whose omniAccount equals expectedOa, OR
+                // 2. The expectedRoot address
+                if (_determineOa(deploySigner) == expectedOa || deploySigner == expectedRoot) {
+                    return SIG_VALIDATION_SUCCESS;
+                }
+            }
+            return SIG_VALIDATION_FAILED;
+        }
+        
+        // Existing validation logic for initialized accounts
         // UserOpHash can be generated using eth_signTypedData_v4
         address signer = ECDSA.recover(userOpHash, userOp.signature);
         if (owner == _determineOa(signer) || isRootSigner(signer)) {

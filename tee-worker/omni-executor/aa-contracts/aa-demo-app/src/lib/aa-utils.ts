@@ -2,6 +2,7 @@ import { sha256 } from "js-sha256";
 import {
 	encodeFunctionData,
 	encodePacked,
+	encodeAbiParameters,
 	keccak256,
 	pad,
 	toHex,
@@ -188,51 +189,84 @@ export function createUserOperation(params: {
 
 /**
  * Get the hash of a UserOperation for signing
- * This follows the ERC-4337 specification for UserOperation hash calculation
+ * This follows the ERC-4337 specification for PackedUserOperation hash calculation
  */
 export function getUserOpHash(
 	userOp: UserOperation,
 	entryPointAddress: Address,
 	chainId: number,
 ): Hash {
-	// Pack the UserOperation struct hash
-	const packed = encodePacked(
+	// First, convert to PackedUserOperation format
+	const packedOp = packUserOperation(userOp);
+	
+	// Type hash for PackedUserOperation
+	const PACKED_USEROP_TYPEHASH = keccak256(
+		toHex("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData,address sessionAccount,uint256 sessionExpiration,bytes sessionAccountProof)")
+	);
+	
+	// Encode according to the contract's UserOperationLib.encode
+	// Note: The contract uses abi.encode, not encodePacked
+	const encoded = encodeAbiParameters(
 		[
-			"address",
-			"uint256",
-			"bytes32",
-			"bytes32",
-			"uint256",
-			"uint256",
-			"uint256",
-			"uint256",
-			"uint256",
-			"bytes32",
+			{ name: 'typehash', type: 'bytes32' },
+			{ name: 'sender', type: 'address' },
+			{ name: 'nonce', type: 'uint256' },
+			{ name: 'hashInitCode', type: 'bytes32' },
+			{ name: 'hashCallData', type: 'bytes32' },
+			{ name: 'accountGasLimits', type: 'bytes32' },
+			{ name: 'preVerificationGas', type: 'uint256' },
+			{ name: 'gasFees', type: 'bytes32' },
+			{ name: 'hashPaymasterAndData', type: 'bytes32' },
+			{ name: 'sessionAccount', type: 'address' },
+			{ name: 'sessionExpiration', type: 'uint256' },
+			{ name: 'hashSessionAccountProof', type: 'bytes32' },
 		],
 		[
-			userOp.sender,
-			userOp.nonce,
-			keccak256(userOp.initCode),
-			keccak256(userOp.callData),
-			userOp.callGasLimit,
-			userOp.verificationGasLimit,
-			userOp.preVerificationGas,
-			userOp.maxFeePerGas,
-			userOp.maxPriorityFeePerGas,
-			keccak256(userOp.paymasterAndData),
+			PACKED_USEROP_TYPEHASH,
+			packedOp.sender,
+			packedOp.nonce,
+			keccak256(packedOp.initCode),
+			keccak256(packedOp.callData),
+			packedOp.accountGasLimits,
+			packedOp.preVerificationGas,
+			packedOp.gasFees,
+			keccak256(packedOp.paymasterAndData),
+			packedOp.sessionAccount,
+			packedOp.sessionExpiration,
+			keccak256(packedOp.sessionAccountProof),
 		],
 	);
 
-	const userOpHashInner = keccak256(packed);
+	const userOpHashInner = keccak256(encoded);
 	console.log("UserOp hash inner:", userOpHashInner);
 
-	// Calculate the final hash with EntryPoint address and chain ID
-	const encoded = encodePacked(
-		["bytes32", "address", "uint256"],
-		[userOpHashInner, entryPointAddress, BigInt(chainId)],
+	// EIP-712 domain separator
+	const domainSeparator = keccak256(
+		encodeAbiParameters(
+			[
+				{ name: 'typeHash', type: 'bytes32' },
+				{ name: 'name', type: 'bytes32' },
+				{ name: 'version', type: 'bytes32' },
+				{ name: 'chainId', type: 'uint256' },
+				{ name: 'verifyingContract', type: 'address' },
+			],
+			[
+				keccak256(toHex('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')),
+				keccak256(toHex('ERC4337')),
+				keccak256(toHex('1')),
+				BigInt(chainId),
+				entryPointAddress,
+			]
+		)
 	);
 
-	const finalHash = keccak256(encoded);
+	// Final hash using EIP-712 format
+	const finalHash = keccak256(
+		encodePacked(
+			['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+			['0x19', '0x01', domainSeparator, userOpHashInner]
+		)
+	);
 	console.log("UserOp hash final:", finalHash);
 
 	return finalHash;
