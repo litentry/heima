@@ -22,3 +22,4 @@ mod utils;
 pub use entry_point_client::{prepare_factory_init_code, EntryPointClient};
 pub use smart_wallet_client::SmartWalletClient;
 pub use types::PackedUserOperation;
+pub use utils::calculate_smart_account_address;

@@ -42,11 +42,13 @@ sol! {
 
 	// smart account factory
 	function createAccount(bytes32 oa, bytes memory clientId, address root) public;
+	function getAddress(bytes32 oa, bytes memory clientId, address root) public view returns (address);
 
 	// smart account
 	function getNonce() public view virtual returns (uint256);
 	function addRootSigner(address root) public;
 	function removeRootSigner(address root) public;
+	function initialize(bytes32 oa, bytes memory clientId, address root) public;
 
 	// paymaster
 	function deposit() public payable;

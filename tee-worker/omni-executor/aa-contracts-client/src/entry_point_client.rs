@@ -18,7 +18,9 @@ use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
 	SenderAddressResult,
 };
-use crate::utils::{build_call_transaction, build_payable_transaction};
+use crate::utils::{
+	build_call_transaction, build_payable_transaction, calculate_smart_account_address,
+};
 use crate::{PackedUserOperation, SmartWalletClient};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
@@ -68,6 +70,25 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			},
 			Ok(_) => Err(()),
 		}
+	}
+
+	/// Calculate sender address locally using CREATE2 without calling EntryPoint
+	/// This is more efficient as it doesn't require an RPC call
+	pub fn calculate_sender_address(
+		&self,
+		factory_address: Address,
+		account_implementation: Address,
+		oa: FixedBytes<32>,
+		client_id: &[u8],
+		root: Address,
+	) -> Address {
+		calculate_smart_account_address(
+			factory_address,
+			account_implementation,
+			oa,
+			client_id,
+			root,
+		)
 	}
 
 	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<(), ()> {
@@ -124,6 +145,85 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let init_code_to_use = if code.is_empty() {
 			// No code at address, include init code
 			init_code
+		} else {
+			// Code already exists, no init code needed
+			Bytes::new()
+		};
+
+		// Default gas limits - can be adjusted based on requirements
+		let verification_gas_limit = U256::from(250000u64); // Higher for verification
+		let call_gas_limit = U256::from(50000u64); // Lower for simple calls
+		let account_gas_limits = create_account_gas_limits(verification_gas_limit, call_gas_limit);
+
+		let pre_verification_gas = U256::from(21000u64);
+		let max_fee_per_gas = U256::from(3000000000u64); // 3 gwei
+		let max_priority_fee_per_gas = U256::from(1000000000u64); // 1 gwei
+		let gas_fees = create_gas_fees(max_fee_per_gas, max_priority_fee_per_gas);
+
+		let paymaster_and_data = if let Some(paymaster_addr) = paymaster_address {
+			create_paymaster_and_data(paymaster_addr, U256::from(50000u64), U256::from(50000u64))
+		} else {
+			Bytes::new()
+		};
+
+		Ok(PackedUserOperation {
+			sender,
+			nonce,
+			initCode: init_code_to_use,
+			callData: call_data,
+			accountGasLimits: account_gas_limits,
+			preVerificationGas: pre_verification_gas,
+			gasFees: gas_fees,
+			paymasterAndData: paymaster_and_data,
+			sessionAccount: Address::default(),
+			sessionExpiration: U256::from(0),
+			sessionAccountProof: Bytes::new(),
+			signature: Bytes::new(),
+		})
+	}
+
+	/// Create PackedUserOperation using local CREATE2 address calculation
+	/// This is more efficient as it avoids the EntryPoint.getSenderAddress RPC call
+	#[allow(clippy::too_many_arguments)]
+	pub async fn create_packed_user_operation_with_local_address(
+		&self,
+		factory_address: Address,
+		account_implementation: Address,
+		oa: [u8; 32],
+		client_id: &[u8],
+		root_address: Address,
+		call_data: Bytes,
+		paymaster_address: Option<Address>,
+	) -> Result<PackedUserOperation, ()> {
+		let oa_fixed = FixedBytes::from(oa);
+
+		// Calculate sender address locally using CREATE2
+		let sender = self.calculate_sender_address(
+			factory_address,
+			account_implementation,
+			oa_fixed,
+			client_id,
+			root_address,
+		);
+
+		// Check if the account already has code deployed
+		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
+
+		// Get nonce - if smart wallet doesn't exist yet, use 0
+		let nonce = if code.is_empty() {
+			// Smart wallet doesn't exist yet, use 0 as nonce
+			U256::from(0)
+		} else {
+			// Smart wallet exists, get nonce from contract
+			let smart_wallet_client = SmartWalletClient::new(sender, self.rpc_client.clone());
+			smart_wallet_client.get_nonce().await?
+		};
+
+		let init_code_to_use = if code.is_empty() {
+			// No code at address, include init code
+			let init_code_bytes =
+				prepare_factory_init_code(factory_address, oa, client_id, root_address);
+			Bytes::from(init_code_bytes)
 		} else {
 			// Code already exists, no init code needed
 			Bytes::new()
@@ -285,8 +385,6 @@ pub mod test {
 				.unwrap();
 		let client_id: Vec<u8> =
 			hex::decode("0x0000000000000000000000000000000000000000000000000000000000000000")
-				.unwrap()
-				.try_into()
 				.unwrap();
 		let root_address = address!("0x0000000000000000000000000000000000000001");
 
@@ -399,5 +497,51 @@ pub mod test {
 
 		// Execute user operation with paymaster sponsorship
 		entrypoint_client.handle_ops(&vec![user_op], entrypoint_address).await.unwrap();
+	}
+
+	/// Integration test to verify that local CREATE2 calculation matches EntryPoint.getSenderAddress
+	///
+	/// To run this test:
+	/// 1. Deploy contracts using: `cd aa-contracts && ./local-deploy.sh`
+	/// 2. Run: `cargo test test_local_vs_entrypoint_address_calculation -- --ignored`
+	#[test(tokio::test)]
+	#[ignore = "manual"]
+	pub async fn test_local_vs_entrypoint_address_calculation() {
+		let client_id = "test_client";
+		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
+		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
+		let account_implementation = address!("0xCafaC3dD18aC6c6e92c921884f9E4176737C052C");
+		let root_address = address!("0x0000000000000000000000000000000000000001");
+
+		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
+		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
+
+		// Create test parameters
+		let oa: AccountId =
+			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let client_id_bytes = client_id.as_bytes();
+		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
+
+		// Calculate address using EntryPoint.getSenderAddress
+		let init_code_bytes =
+			prepare_factory_init_code(factory_address, oa_bytes.0, client_id_bytes, root_address);
+		let init_code = Bytes::from(init_code_bytes);
+		let entrypoint_address_result = entrypoint_client
+			.get_sender_address(init_code)
+			.await
+			.expect("EntryPoint address calculation should succeed");
+
+		// Calculate address using local CREATE2 calculation
+		let local_address_result = entrypoint_client.calculate_sender_address(
+			factory_address,
+			account_implementation,
+			oa_bytes,
+			client_id_bytes,
+			root_address,
+		);
+
+		// Assert that all three methods return the same address
+		assert_eq!(entrypoint_address_result, local_address_result,);
 	}
 }
