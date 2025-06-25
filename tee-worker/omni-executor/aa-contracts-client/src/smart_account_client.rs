@@ -23,12 +23,12 @@ use ethereum_rpc::RpcProvider;
 use std::sync::Arc;
 use tracing::error;
 
-pub struct SmartWalletClient<P: RpcProvider<Transaction = TransactionRequest>> {
+pub struct SmartAccountClient<P: RpcProvider<Transaction = TransactionRequest>> {
 	address: Address,
 	rpc_client: Arc<P>,
 }
 
-impl<P: RpcProvider<Transaction = TransactionRequest>> SmartWalletClient<P> {
+impl<P: RpcProvider<Transaction = TransactionRequest>> SmartAccountClient<P> {
 	pub fn new(address: Address, rpc_client: Arc<P>) -> Self {
 		Self { address, rpc_client }
 	}
@@ -62,7 +62,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> SmartWalletClient<P> {
 
 #[cfg(test)]
 pub mod test {
-	use crate::SmartWalletClient;
+	use crate::SmartAccountClient;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::{address, U256};
 	use alloy::signers::local::PrivateKeySigner;
@@ -85,7 +85,7 @@ pub mod test {
 			.times(1)
 			.returning(move |_| Ok(U256::from(42).to_be_bytes_vec()));
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let nonce = client.get_nonce().await.unwrap();
 
 		assert_eq!(expected_nonce, nonce);
@@ -104,7 +104,7 @@ pub mod test {
 			.times(1)
 			.returning(|_| Ok(()));
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.add_root_signer(root_signer).await;
 
 		assert!(result.is_ok());
@@ -123,7 +123,7 @@ pub mod test {
 			.times(1)
 			.returning(|_| Ok(()));
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.remove_root_signer(root_signer).await;
 
 		assert!(result.is_ok());
@@ -142,7 +142,7 @@ pub mod test {
 			.times(1)
 			.returning(|_| Err(()));
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.add_root_signer(root_signer).await;
 
 		assert!(result.is_err());
@@ -161,7 +161,7 @@ pub mod test {
 			.times(1)
 			.returning(|_| Err(()));
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.remove_root_signer(root_signer).await;
 
 		assert!(result.is_err());
@@ -179,7 +179,7 @@ pub mod test {
 			.times(1)
 			.returning(|_| Ok(vec![0x12, 0x34])); // Invalid length for U256
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.get_nonce().await;
 
 		assert!(result.is_err());
@@ -197,20 +197,20 @@ pub mod test {
 			.times(1)
 			.returning(|_| Err(None));
 
-		let client = SmartWalletClient::new(account_address, Arc::new(rpc_client));
+		let client = SmartAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.get_nonce().await;
 
 		assert!(result.is_err());
 	}
 
 	// Integration tests (marked as ignore for manual testing)
-	// account_address should point to SmartWallet instance, run `try_full_flow` from entry_point_client.rs first to deploy it and reuse address from logs
+	// account_address should point to SmartAccount instance, run `try_full_flow` from entry_point_client.rs first to deploy it and reuse address from logs
 	#[test(tokio::test)]
 	#[ignore = "manual"]
 	pub async fn try_get_nonce_integration() {
 		let account_address = address!("0x3c50ecfcda4b0f93fa86baa72807208267a5013d");
 		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
-		let client = SmartWalletClient::new(account_address, rpc_client);
+		let client = SmartAccountClient::new(account_address, rpc_client);
 
 		let nonce = client.get_nonce().await.unwrap();
 		println!("Account nonce: {}", nonce);
@@ -231,7 +231,7 @@ pub mod test {
 		let rpc_client =
 			Arc::new(AlloyRpcProvider::new_with_wallet("http://localhost:8545", wallet));
 
-		let client = SmartWalletClient::new(account_address, rpc_client);
+		let client = SmartAccountClient::new(account_address, rpc_client);
 		let result = client.add_root_signer(root_signer).await;
 
 		assert!(result.is_ok());
@@ -253,7 +253,7 @@ pub mod test {
 		let rpc_client =
 			Arc::new(AlloyRpcProvider::new_with_wallet("http://localhost:8545", wallet));
 
-		let client = SmartWalletClient::new(account_address, rpc_client);
+		let client = SmartAccountClient::new(account_address, rpc_client);
 		let result = client.remove_root_signer(root_signer).await;
 
 		assert!(result.is_ok());

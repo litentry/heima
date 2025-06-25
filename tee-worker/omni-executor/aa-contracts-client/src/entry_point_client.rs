@@ -21,7 +21,7 @@ use crate::types::{
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_smart_account_address,
 };
-use crate::{PackedUserOperation, SmartWalletClient};
+use crate::{PackedUserOperation, SmartAccountClient};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
@@ -133,14 +133,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		// Check if the account already has code deployed
 		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
 
-		// Get nonce - if smart wallet doesn't exist yet, use 0
+		// Get nonce - if smart account doesn't exist yet, use 0
 		let nonce = if code.is_empty() {
-			// Smart wallet doesn't exist yet, use 0 as nonce
+			// Smart account doesn't exist yet, use 0 as nonce
 			U256::from(0)
 		} else {
-			// Smart wallet exists, get nonce from contract
-			let smart_wallet_client = SmartWalletClient::new(sender, self.rpc_client.clone());
-			smart_wallet_client.get_nonce().await?
+			// Smart account exists, get nonce from contract
+			let smart_account_client = SmartAccountClient::new(sender, self.rpc_client.clone());
+			smart_account_client.get_nonce().await?
 		};
 		let init_code_to_use = if code.is_empty() {
 			// No code at address, include init code
@@ -209,14 +209,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		// Check if the account already has code deployed
 		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
 
-		// Get nonce - if smart wallet doesn't exist yet, use 0
+		// Get nonce - if smart account doesn't exist yet, use 0
 		let nonce = if code.is_empty() {
-			// Smart wallet doesn't exist yet, use 0 as nonce
+			// Smart account doesn't exist yet, use 0 as nonce
 			U256::from(0)
 		} else {
-			// Smart wallet exists, get nonce from contract
-			let smart_wallet_client = SmartWalletClient::new(sender, self.rpc_client.clone());
-			smart_wallet_client.get_nonce().await?
+			// Smart account exists, get nonce from contract
+			let smart_account_client = SmartAccountClient::new(sender, self.rpc_client.clone());
+			smart_account_client.get_nonce().await?
 		};
 
 		let init_code_to_use = if code.is_empty() {
