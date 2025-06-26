@@ -15,7 +15,7 @@ use anchor_client::{
 };
 use async_trait::async_trait;
 use sp_core::ed25519;
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 #[derive(Debug)]
 pub struct NonceAccount {
@@ -150,25 +150,18 @@ impl AccountingContractApi for AccountingContractClient {
 	async fn get_nonce(&self, user: Pubkey) -> Result<u64, ()> {
 		let client = self.create_client()?;
 
-		let (account_nonce, _bump) =
-			Pubkey::find_program_address(&[user.to_bytes().as_ref(), b"nonce"], &self.program_id);
-
 		let program = client.program(self.program_id).map_err(|e| {
 			error!("Failed to create program client: {:?}", e);
 		})?;
 
 		let nonce_account: NonceAccount =
-			tokio::task::spawn_blocking(move || program.account(account_nonce))
+			tokio::task::spawn_blocking(move || program.account(user))
 				.await
 				.map_err(|e| {
 					error!("Failed to spawn blocking task: {:?}", e);
 				})?
 				.map_err(|e| {
-					if e.to_string().contains("AccountNotFound") {
-						info!("Nonce account {} not found, returning 0", account_nonce);
-					} else {
-						error!("Failed to get nonce account {}: {:?}", account_nonce, e);
-					}
+					error!("Failed to get nonce account {}: {:?}", user, e);
 				})?;
 
 		Ok(nonce_account.nonce)
