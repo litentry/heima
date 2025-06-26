@@ -1211,8 +1211,6 @@ impl pallet_omni_account::Config for Runtime {
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type OmniAccountOrigin = EnsureOmniAccount;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
-	type MaxPermissions = ConstU32<4>;
-	type Permission = OmniAccountPermission;
 }
 
 impl pallet_omni_bridge::Config for Runtime {

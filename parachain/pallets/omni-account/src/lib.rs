@@ -336,8 +336,8 @@ impl<O: Into<Result<RawOrigin<AccountId>, O>> + From<RawOrigin<AccountId>>, Acco
 {
 	type Success = AccountId;
 	fn try_origin(o: O) -> Result<Self::Success, O> {
-		o.into().and_then(|o| match o {
-			RawOrigin::OmniAccount(id) => Ok(id),
+		o.into().map(|o| match o {
+			RawOrigin::OmniAccount(id) => id,
 		})
 	}
 
