@@ -39,8 +39,12 @@ updates:
       
   - package-ecosystem: "npm"
     directories:
-      - "/parachain"
-      - "/tee-worker/omni-executor"
+      - "/parachain/ts-tests"
+      - "/parachain/scripts/ts-utils"
+      - "/tee-worker/omni-executor/client-sdk"
+      - "/tee-worker/omni-executor/ts-tests"
+      - "/tee-worker/omni-executor/ts-tests/integration-tests"
+      - "/tee-worker/omni-executor/accounting-contract/solana"
     labels: ["automated-pr"]
     groups:
       typescript-dependencies:
