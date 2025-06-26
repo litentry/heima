@@ -30,8 +30,6 @@ pub type ParentchainListener<
 	RpcClientFactory,
 	CheckpointRepository,
 	ChainConfig,
-	AccountStoreStorage,
-	MemberAccountStorage,
 > = Listener<
 	Fetcher<<ChainConfig as Config>::Header, RpcClient, RpcClientFactory>,
 	SyncCheckpoint,
@@ -41,7 +39,5 @@ pub type ParentchainListener<
 	EventHandler<
 		Metadata,
 		SubxtMetadataProvider<ChainConfig>,
-		AccountStoreStorage,
-		MemberAccountStorage,
 	>,
 >;
