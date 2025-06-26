@@ -7,12 +7,12 @@ use executor_core::{
 	native_task::{NativeTask, NativeTaskWrapper},
 };
 use executor_crypto::{
-	aes256::{aes_decrypt, aes_encrypt_default, Aes256Key},
+	aes256::{aes_decrypt, Aes256Key},
 	jwt,
 };
 use executor_primitives::{
-	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, MemberAccount,
-	OmniAccountAuthType, PumpxAccountProfile, ValidationData, Web2IdentityType,
+	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, PumpxAccountProfile,
+	Web2IdentityType,
 };
 use executor_storage::{
 	HeimaJwtStorage, IntentIdStorage, MemberOmniAccountStorage, PumpxProfileStorage, Storage,
@@ -22,23 +22,14 @@ use heima_authentication::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use heima_identity_verification::{get_verification_message, web2, web3};
-use parentchain_api_interface::{
-	omni_account::calls::types::create_account_store::ClientId,
-	runtime_types::{
-		// frame_system::pallet::Call as SystemCall,
-		// pallet_balances::pallet::Call as BalancesCall,
-		pallet_omni_account::pallet::{Call as OmniAccountCall, IntentCompletedDetail},
-		paseo_runtime::RuntimeCall,
-	},
-};
+use parentchain_api_interface::runtime_types::pallet_omni_account::pallet::IntentCompletedDetail;
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
 	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory, ToSubxtType, XtStatus,
+	SubxtClientFactory, ToSubxtType,
 };
 use parentchain_signer::TxSigner;
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::Encode;
 use pumpx::{
 	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
 };
@@ -205,10 +196,9 @@ async fn handle_native_task<
 		return;
 	};
 
-	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
 	let client_id = &wrapper.client_id;
 
-	let (response_sender, tx) = match wrapper.task {
+	match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
 			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
 			let Ok(Some(omni_account)) = omni_account_storage.get(&sender.hash()) else {
@@ -273,9 +263,9 @@ async fn handle_native_task<
 			}
 
 			send_ok(response_sender, NativeTaskOk::AuthToken(token));
-			return;
 		},
 		NativeTask::RequestIntent(omni_account, intent_id, intent) => {
+			let intent = *intent; // Unbox the intent
 			debug!("Intent requested");
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
@@ -457,155 +447,6 @@ async fn handle_native_task<
 				)
 				.await;
 			}
-			return;
-		},
-		NativeTask::CreateAccountStore(sender) => {
-			let sender_bytes = sender.encode();
-			let create_account_store_call =
-				parentchain_api_interface::tx().omni_account().create_account_store(
-					ClientId::from(client_id.clone()),
-					Decode::decode(&mut &sender_bytes[..]).unwrap(),
-				);
-			let tx = ctx.transaction_signer.sign(create_account_store_call).await;
-			(response_sender, tx)
-		},
-		NativeTask::AddAccount(sender, identity, validation_data, public_account, permissions) => {
-			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Ok(Some(omni_account)) = omni_account_storage.get(&sender.hash()) else {
-				send_error(
-					"No omni account found".to_string(),
-					response_sender,
-					NativeTaskError::UnauthorizedSender,
-				);
-				return;
-			};
-			let Ok(nonce) = rpc_client.get_account_nonce(&omni_account).await else {
-				send_error(
-					"Failed to get account nonce".to_string(),
-					response_sender,
-					NativeTaskError::InternalError,
-				);
-				return;
-			};
-			let verification_message = get_verification_message(&sender, &identity, nonce);
-
-			let validation_result = match validation_data {
-				ValidationData::Web2(web2_validation_data) => {
-					if !identity.is_web2() {
-						Err(NativeTaskError::InvalidMemberIdentity)
-					} else {
-						tokio::task::spawn_blocking({
-							let identity = identity.clone();
-							let storage_db = ctx.storage_db.clone();
-							move || {
-								web2::verify_identity(
-									&identity,
-									&verification_message,
-									&web2_validation_data,
-									storage_db,
-								)
-							}
-						})
-						.await
-						.map_err(|e| {
-							error!("Failed to verify identity: {:?}", e);
-							NativeTaskError::InternalError
-						})
-						.and_then(|result| {
-							result.map_err(|_| NativeTaskError::ValidationDataVerificationFailed)
-						})
-					}
-				},
-				ValidationData::Web3(web3_validation_data) => {
-					if !identity.is_web3() {
-						Err(NativeTaskError::InvalidMemberIdentity)
-					} else {
-						tokio::task::spawn_blocking({
-							let identity = identity.clone();
-							move || {
-								web3::verify_identity(
-									&identity,
-									&verification_message,
-									&web3_validation_data,
-								)
-							}
-						})
-						.await
-						.map_err(|e| {
-							error!("Failed to verify identity: {:?}", e);
-							NativeTaskError::InternalError
-						})
-						.and_then(|result| {
-							result.map_err(|_| NativeTaskError::ValidationDataVerificationFailed)
-						})
-					}
-				},
-			};
-			if let Err(e) = validation_result {
-				send_error("Validation failed".to_string(), response_sender, e);
-				return;
-			}
-			let member_account = match public_account {
-				true => MemberAccount::Public(identity),
-				false => MemberAccount::Private(
-					aes_encrypt_default(&ctx.aes256_key, &identity.encode()).encode(),
-					identity.hash(),
-				),
-			};
-			let call = OmniAccountCall::add_account {
-				member_account: member_account.to_subxt_type(),
-				permissions: permissions.map(|p| p.to_subxt_type()),
-			};
-			let dispatch_as_omni_account_call =
-				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
-				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			(response_sender, tx)
-		},
-		NativeTask::RemoveAccounts(sender, identities) => {
-			let call = OmniAccountCall::remove_accounts {
-				member_account_hashes: identities
-					.iter()
-					.map(|i| i.hash().to_subxt_type())
-					.collect(),
-			};
-			let dispatch_as_omni_account_call =
-				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
-				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			(response_sender, tx)
-		},
-		NativeTask::PublicizeAccount(sender, identity) => {
-			let call =
-				OmniAccountCall::publicize_account { member_account: identity.to_subxt_type() };
-			let dispatch_as_omni_account_call =
-				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
-				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			(response_sender, tx)
-		},
-		NativeTask::SetPermissions(sender, identity, permissions) => {
-			let call = OmniAccountCall::set_permissions {
-				member_account_hash: identity.hash().to_subxt_type(),
-				permissions: permissions.to_subxt_type(),
-			};
-			let dispatch_as_omni_account_call =
-				parentchain_api_interface::tx().omni_account().dispatch_as_omni_account(
-					sender.hash().to_subxt_type(),
-					RuntimeCall::OmniAccount(call),
-					auth_type.map(|t| t.to_subxt_type()),
-				);
-			let tx = ctx.transaction_signer.sign(dispatch_as_omni_account_call).await;
-			(response_sender, tx)
 		},
 		NativeTask::PumpxRequestJwt(_sender, email, invite_code, google_code, language) => {
 			let expires_at = Utc::now()
@@ -717,7 +558,6 @@ async fn handle_native_task<
 				response_sender,
 				NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response },
 			);
-			return;
 		},
 		NativeTask::PumpxExportWallet(
 			omni_account,
@@ -818,7 +658,6 @@ async fn handle_native_task<
 				return;
 			}
 			send_ok(response_sender, NativeTaskOk::PumpxExportWallet(decrypted_wallet));
-			return;
 		},
 		NativeTask::PumpxAddWallet(omni_account) => {
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
@@ -844,7 +683,6 @@ async fn handle_native_task<
 			};
 
 			send_ok(response_sender, NativeTaskOk::PumpxAddWallet(backend_response));
-			return;
 		},
 		NativeTask::PumpxSignLimitOrder(omni_account, chain_id, wallet_index, unsigned_tx) => {
 			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
@@ -871,7 +709,6 @@ async fn handle_native_task<
 			if response_sender.send(response.encode()).is_err() {
 				error!("Failed to send response");
 			}
-			return;
 		},
 		NativeTask::PumpxTransferWidthdraw(
 			omni_account,
@@ -939,7 +776,6 @@ async fn handle_native_task<
 					);
 				},
 			};
-			return;
 		},
 		NativeTask::PumpxNotifyLimitOrderResult(omni_account, intent_id, result, message) => {
 			if result != "ok" && result != "nok" {
@@ -971,30 +807,8 @@ async fn handle_native_task<
 				execution_result,
 			)
 			.await;
-			return;
 		},
-	};
-
-	match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
-		Ok(report) => {
-			send_ok(
-				response_sender,
-				NativeTaskOk::ExtrinsicReport {
-					extrinsic_hash: report.extrinsic_hash,
-					block_hash: report.block_hash,
-					status: report.status,
-				},
-			);
-		},
-		Err(e) => {
-			send_error(
-				format!("Failed to submit and watch tx: {:?}", e),
-				response_sender,
-				NativeTaskError::InternalError,
-			);
-			ctx.transaction_signer.update_nonce().await;
-		},
-	};
+	}
 }
 
 fn send_response(sender: ResponseSender, response: NativeTaskResponse) {
