@@ -198,15 +198,8 @@ impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
 		match self {
 			Self::All => true,
 			Self::AccountManagement => {
-				matches!(
-					call,
-					RuntimeCall::OmniAccount(pallet_omni_account::Call::add_account { .. })
-						| RuntimeCall::OmniAccount(
-							pallet_omni_account::Call::remove_accounts { .. }
-						) | RuntimeCall::OmniAccount(
-						pallet_omni_account::Call::publicize_account { .. }
-					) | RuntimeCall::OmniAccount(pallet_omni_account::Call::set_permissions { .. })
-				)
+				// No account management calls after removing AccountStore
+				false
 			},
 			Self::RequestNativeIntent => {
 				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
@@ -255,7 +248,6 @@ impl pallet_omni_account::Config for Test {
 	type RuntimeCall = RuntimeCall;
 	type RuntimeEvent = RuntimeEvent;
 	type TEECallOrigin = EnsureEnclaveSigner<Self>;
-	type MaxAccountStoreLength = ConstU32<3>;
 	type OmniAccountOrigin = EnsureOmniAccount<Self::AccountId>;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 	type MaxPermissions = ConstU32<4>;
