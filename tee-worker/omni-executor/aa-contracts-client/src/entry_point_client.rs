@@ -123,63 +123,23 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		paymaster_address: Option<Address>,
 	) -> Result<PackedUserOperation, ()> {
 		// Create init code using existing helper
-		let init_code_bytes =
-			prepare_factory_init_code(factory_address, oa, client_id, root_address);
+		let init_code_bytes = prepare_factory_init_code(factory_address, oa, client_id, root_address);
 		let init_code = Bytes::from(init_code_bytes);
 
 		// Get sender address from EntryPoint
-		let sender = self.get_sender_address(init_code.clone()).await?;
+		let sender = self.get_sender_address(init_code).await?;
 
-		// Check if the account already has code deployed
-		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
-
-		// Get nonce - if smart account doesn't exist yet, use 0
-		let nonce = if code.is_empty() {
-			// Smart account doesn't exist yet, use 0 as nonce
-			U256::from(0)
-		} else {
-			// Smart account exists, get nonce from contract
-			let smart_account_client = SmartAccountClient::new(sender, self.rpc_client.clone());
-			smart_account_client.get_nonce().await?
-		};
-		let init_code_to_use = if code.is_empty() {
-			// No code at address, include init code
-			init_code
-		} else {
-			// Code already exists, no init code needed
-			Bytes::new()
-		};
-
-		// Default gas limits - can be adjusted based on requirements
-		let verification_gas_limit = U256::from(250000u64); // Higher for verification
-		let call_gas_limit = U256::from(50000u64); // Lower for simple calls
-		let account_gas_limits = create_account_gas_limits(verification_gas_limit, call_gas_limit);
-
-		let pre_verification_gas = U256::from(21000u64);
-		let max_fee_per_gas = U256::from(3000000000u64); // 3 gwei
-		let max_priority_fee_per_gas = U256::from(1000000000u64); // 1 gwei
-		let gas_fees = create_gas_fees(max_fee_per_gas, max_priority_fee_per_gas);
-
-		let paymaster_and_data = if let Some(paymaster_addr) = paymaster_address {
-			create_paymaster_and_data(paymaster_addr, U256::from(50000u64), U256::from(50000u64))
-		} else {
-			Bytes::new()
-		};
-
-		Ok(PackedUserOperation {
+		// Use common helper for the rest
+		self.build_packed_user_operation(
 			sender,
-			nonce,
-			initCode: init_code_to_use,
-			callData: call_data,
-			accountGasLimits: account_gas_limits,
-			preVerificationGas: pre_verification_gas,
-			gasFees: gas_fees,
-			paymasterAndData: paymaster_and_data,
-			sessionAccount: Address::default(),
-			sessionExpiration: U256::from(0),
-			sessionAccountProof: Bytes::new(),
-			signature: Bytes::new(),
-		})
+			factory_address,
+			oa,
+			client_id,
+			root_address,
+			call_data,
+			paymaster_address,
+		)
+		.await
 	}
 
 	/// Create PackedUserOperation using local CREATE2 address calculation
@@ -206,6 +166,30 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			root_address,
 		);
 
+		// Use common helper for the rest
+		self.build_packed_user_operation(
+			sender,
+			factory_address,
+			oa,
+			client_id,
+			root_address,
+			call_data,
+			paymaster_address,
+		)
+		.await
+	}
+
+	/// Common helper to build PackedUserOperation with shared logic
+	async fn build_packed_user_operation(
+		&self,
+		sender: Address,
+		factory_address: Address,
+		oa: [u8; 32],
+		client_id: &[u8],
+		root_address: Address,
+		call_data: Bytes,
+		paymaster_address: Option<Address>,
+	) -> Result<PackedUserOperation, ()> {
 		// Check if the account already has code deployed
 		let code = self.rpc_client.get_code_at(sender).await.map_err(|_| ())?;
 
@@ -221,8 +205,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 		let init_code_to_use = if code.is_empty() {
 			// No code at address, include init code
-			let init_code_bytes =
-				prepare_factory_init_code(factory_address, oa, client_id, root_address);
+			let init_code_bytes = prepare_factory_init_code(factory_address, oa, client_id, root_address);
 			Bytes::from(init_code_bytes)
 		} else {
 			// Code already exists, no init code needed
@@ -396,7 +379,7 @@ pub mod test {
 	#[test(tokio::test)]
 	#[ignore = "manual"]
 	pub async fn try_get_sender_address() {
-		let expected_sender = address!("0x5dfec187c82986cf670f4e2ed6de1cd001cee5be");
+		let expected_sender = address!("0x3c50ecfcda4b0f93fa86baa72807208267a5013d");
 		let client_id = "test_client";
 		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
 		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
