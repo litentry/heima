@@ -19,9 +19,9 @@ use crate::types::{
 	SenderAddressResult,
 };
 use crate::utils::{
-	build_call_transaction, build_payable_transaction, calculate_smart_account_address,
+	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
 };
-use crate::{PackedUserOperation, SmartAccountClient};
+use crate::{PackedUserOperation, OmniAccountClient};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
@@ -82,7 +82,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		client_id: &[u8],
 		root: Address,
 	) -> Address {
-		calculate_smart_account_address(
+		calculate_omni_account_address(
 			factory_address,
 			account_implementation,
 			oa,
@@ -201,7 +201,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			U256::from(0)
 		} else {
 			// Smart account exists, get nonce from contract
-			let smart_account_client = SmartAccountClient::new(sender, self.rpc_client.clone());
+			let smart_account_client = OmniAccountClient::new(sender, self.rpc_client.clone());
 			smart_account_client.get_nonce().await?
 		};
 

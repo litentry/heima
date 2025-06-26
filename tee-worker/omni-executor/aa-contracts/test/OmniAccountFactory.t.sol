@@ -2,14 +2,14 @@
 pragma solidity ^0.8.13;
 
 import {EntryPoint} from "../src/core/EntryPoint.sol";
-import {SmartAccountFactory} from "../src/accounts/SmartAccountFactory.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {TestUtils} from "./TestUtils.sol";
 
-contract SmartAccountFactoryTest is Test {
+contract OmniAccountFactoryTest is Test {
     EntryPoint public entryPoint;
-    SmartAccountFactory public smartAccountFactory;
+    OmniAccountFactory public omniAccountFactory;
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
     bytes clientId = bytes("test_client");
@@ -18,15 +18,15 @@ contract SmartAccountFactoryTest is Test {
     function setUp() public {
         entryPoint = new EntryPoint();
         oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
-        smartAccountFactory = new SmartAccountFactory(entryPoint);
+        omniAccountFactory = new OmniAccountFactory(entryPoint);
     }
 
     function test_CreateAccountReturnsSameAddress() public {
         address senderCreator = address(entryPoint.senderCreator());
         vm.prank(senderCreator);
-        SmartAccount account1 = smartAccountFactory.createAccount(oa, clientId, rootAddress);
+        OmniAccount account1 = omniAccountFactory.createAccount(oa, clientId, rootAddress);
         vm.prank(senderCreator);
-        SmartAccount account2 = smartAccountFactory.createAccount(oa, clientId, rootAddress);
+        OmniAccount account2 = omniAccountFactory.createAccount(oa, clientId, rootAddress);
 
         assertEq(address(account1), address(account2));
     }

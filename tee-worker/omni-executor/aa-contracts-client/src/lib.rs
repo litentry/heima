@@ -15,11 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 mod entry_point_client;
-mod smart_account_client;
+mod omni_account_client;
 mod types;
 mod utils;
 
 pub use entry_point_client::{prepare_factory_init_code, EntryPointClient};
-pub use smart_account_client::SmartAccountClient;
+pub use omni_account_client::OmniAccountClient;
 pub use types::PackedUserOperation;
-pub use utils::calculate_smart_account_address;
+pub use utils::calculate_omni_account_address;

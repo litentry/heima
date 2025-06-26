@@ -15,7 +15,7 @@ contract SimplePaymasterTest is Test {
     address bundler1 = makeAddr("bundler1");
     address bundler2 = makeAddr("bundler2");
     address unauthorizedBundler = makeAddr("unauthorizedBundler");
-    address smartAccount = makeAddr("smartAccount");
+    address omniAccount = makeAddr("omniAccount");
     address owner = makeAddr("owner");
 
     event AuthorizedBundlerUpdated(address indexed bundler, bool authorized);
@@ -73,7 +73,7 @@ contract SimplePaymasterTest is Test {
     }
 
     function test_ValidatePaymasterUserOp_AuthorizedBundler() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -83,11 +83,11 @@ contract SimplePaymasterTest is Test {
 
         assertEq(validationData, 0); // Success
         address decodedAccount = abi.decode(context, (address));
-        assertEq(decodedAccount, smartAccount);
+        assertEq(decodedAccount, omniAccount);
     }
 
     function test_ValidatePaymasterUserOp_UnauthorizedBundler() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -105,7 +105,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.withdrawTo(payable(owner), currentDeposit);
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -117,7 +117,7 @@ contract SimplePaymasterTest is Test {
     }
 
     function test_ValidatePaymasterUserOp_OnlyEntryPoint() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -128,19 +128,19 @@ contract SimplePaymasterTest is Test {
     }
 
     function test_PostOp() public {
-        bytes memory context = abi.encode(smartAccount);
+        bytes memory context = abi.encode(omniAccount);
         uint256 actualGasCost = 50000;
         uint256 actualUserOpFeePerGas = 1000000000;
 
         vm.expectEmit(true, false, false, true);
-        emit UserOpSponsored(smartAccount, actualGasCost);
+        emit UserOpSponsored(omniAccount, actualGasCost);
 
         vm.prank(address(entryPoint));
         paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, actualGasCost, actualUserOpFeePerGas);
     }
 
     function test_PostOp_OnlyEntryPoint() public {
-        bytes memory context = abi.encode(smartAccount);
+        bytes memory context = abi.encode(omniAccount);
 
         vm.prank(bundler1);
         vm.expectRevert("Sender not EntryPoint");
@@ -218,7 +218,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.pause();
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -235,7 +235,7 @@ contract SimplePaymasterTest is Test {
         paymaster.unpause();
         vm.stopPrank();
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -245,7 +245,7 @@ contract SimplePaymasterTest is Test {
 
         assertEq(validationData, 0); // Success
         address decodedAccount = abi.decode(context, (address));
-        assertEq(decodedAccount, smartAccount);
+        assertEq(decodedAccount, omniAccount);
     }
 
     function test_ReceiveEther() public {
@@ -329,7 +329,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.setAuthorizedBundler(bundler2, true);
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -349,7 +349,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.setAuthorizedBundler(bundler1, false);
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(smartAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 

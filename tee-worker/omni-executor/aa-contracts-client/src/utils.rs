@@ -41,9 +41,9 @@ pub fn build_payable_transaction(
 	}
 }
 
-/// Calculate the CREATE2 address for a SmartAccount without calling the EntryPoint
-/// This mirrors the getAddress function in SmartAccountFactory.sol
-pub fn calculate_smart_account_address(
+/// Calculate the CREATE2 address for an OmniAccount without calling the EntryPoint
+/// This mirrors the getAddress function in OmniAccountFactory.sol
+pub fn calculate_omni_account_address(
 	factory_address: Address,
 	account_implementation: Address,
 	oa: FixedBytes<32>,
@@ -143,7 +143,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_calculate_smart_account_address() {
+	fn test_calculate_omni_account_address() {
 		use alloy::hex;
 
 		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
@@ -155,7 +155,7 @@ mod tests {
 		let client_id = b"test_client";
 		let root = address!("0x0000000000000000000000000000000000000001");
 
-		let calculated_address = calculate_smart_account_address(
+		let calculated_address = calculate_omni_account_address(
 			factory_address,
 			account_implementation,
 			oa,
@@ -165,7 +165,7 @@ mod tests {
 
 		assert_ne!(calculated_address, Address::ZERO);
 
-		let calculated_address_2 = calculate_smart_account_address(
+		let calculated_address_2 = calculate_omni_account_address(
 			factory_address,
 			account_implementation,
 			oa,
@@ -176,7 +176,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_calculate_smart_account_address_different_parameters() {
+	fn test_calculate_omni_account_address_different_parameters() {
 		use alloy::hex;
 
 		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
@@ -189,7 +189,7 @@ mod tests {
 		let client_id_2 = b"different_client";
 		let root = address!("0x0000000000000000000000000000000000000001");
 
-		let address_1 = calculate_smart_account_address(
+		let address_1 = calculate_omni_account_address(
 			factory_address,
 			account_implementation,
 			oa,
@@ -197,7 +197,7 @@ mod tests {
 			root,
 		);
 
-		let address_2 = calculate_smart_account_address(
+		let address_2 = calculate_omni_account_address(
 			factory_address,
 			account_implementation,
 			oa,

@@ -50,16 +50,16 @@ deploy_contracts() {
     
     echo "✅ EntryPoint deployed at: $ENTRYPOINT_ADDRESS"
     
-    echo "📦 Deploying SmartAccountFactory contract..."
-    FACTORY_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast SmartAccountFactory --constructor-args $ENTRYPOINT_ADDRESS)
+    echo "📦 Deploying OmniAccountFactory contract..."
+    FACTORY_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast OmniAccountFactory --constructor-args $ENTRYPOINT_ADDRESS)
     FACTORY_ADDRESS=$(echo "$FACTORY_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
     
     if [ -z "$FACTORY_ADDRESS" ]; then
-        echo "❌ Failed to deploy SmartAccountFactory contract"
+        echo "❌ Failed to deploy OmniAccountFactory contract"
         exit 1
     fi
     
-    echo "✅ SmartAccountFactory deployed at: $FACTORY_ADDRESS"
+    echo "✅ OmniAccountFactory deployed at: $FACTORY_ADDRESS"
     
     echo "📦 Deploying SimplePaymaster contract..."
     PAYMASTER_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast SimplePaymaster --constructor-args $ENTRYPOINT_ADDRESS $OMNI_EXECUTOR_SIGNER)
@@ -78,7 +78,7 @@ deploy_contracts() {
     echo "Contract Addresses:"
     echo "==================="
     echo "EntryPoint:         $ENTRYPOINT_ADDRESS"
-    echo "SmartAccountFactory: $FACTORY_ADDRESS"
+    echo "OmniAccountFactory:  $FACTORY_ADDRESS"
     echo "SimplePaymaster:    $PAYMASTER_ADDRESS"
     echo ""
     echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"

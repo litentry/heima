@@ -2,14 +2,14 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {Counter} from "../src/Counter.sol";
-import {SmartAccountTestUtils} from "./SmartAccountTestUtils.sol";
+import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 
-contract SmartAccountAsEntryPoint is Test {
-    SmartAccount public account;
+contract OmniAccountAsEntryPoint is Test {
+    OmniAccount public account;
     EntryPoint public entryPoint;
     Counter public counter;
 
@@ -18,14 +18,14 @@ contract SmartAccountAsEntryPoint is Test {
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Execute() public {
-        SmartAccountTestUtils.performExecuteTestAs(vm, address(entryPoint), account, counter);
+        OmniAccountTestUtils.performExecuteTestAs(vm, address(entryPoint), account, counter);
     }
 
     function test_ExecuteBatch() public {
-        SmartAccountTestUtils.performExecuteBatchTestAs(vm, address(entryPoint), account, counter);
+        OmniAccountTestUtils.performExecuteBatchTestAs(vm, address(entryPoint), account, counter);
     }
 }

@@ -20,7 +20,7 @@ import "./callback/TokenCallbackHandler.sol";
  *  has list of root signers who can sign messages and generate sessions
  *  has execute, eth handling methods
  */
-contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     bytes32 public owner;
     bytes public clientId;
     mapping(address => bool) public rootSigners;

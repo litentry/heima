@@ -2,19 +2,19 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {Counter} from "../src/Counter.sol";
-import {SmartAccountTestUtils} from "./SmartAccountTestUtils.sol";
+import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
 
 // add test cases for revert if called by non authorized address
 
-contract SmartAccountTest is Test {
-    SmartAccount public account;
+contract OmniAccountTest is Test {
+    OmniAccount public account;
     EntryPoint public entryPoint;
     Counter public counter;
 
@@ -23,7 +23,7 @@ contract SmartAccountTest is Test {
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Owner() public view {
@@ -62,7 +62,7 @@ contract SmartAccountTest is Test {
     }
 
     function test_validateOp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (, uint256 bobPk) = makeAddrAndKey("bob");
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
