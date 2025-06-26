@@ -40,49 +40,43 @@ wait_for_anvil() {
 
 # Function to deploy contracts
 deploy_contracts() {
-    echo "📦 Deploying EntryPoint contract..."
-    ENTRYPOINT_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast EntryPoint)
-    ENTRYPOINT_ADDRESS=$(echo "$ENTRYPOINT_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
+    echo "📦 Deploying contracts using Forge script..."
+    
+    # Set the private key for the deployer (using Anvil's default account 0)
+    export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    
+    # Run the deployment script
+    forge script script/DeployAA.s.sol:DeployAA \
+        --rpc-url http://$ANVIL_HOST:$ANVIL_PORT \
+        --broadcast \
+        --chain-id $CHAIN_ID \
+        -vvv
 
-    if [ -z "$ENTRYPOINT_ADDRESS" ]; then
-        echo "❌ Failed to deploy EntryPoint contract"
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to deploy contracts"
         exit 1
     fi
 
-    echo "✅ EntryPoint deployed at: $ENTRYPOINT_ADDRESS"
-
-    echo "📦 Deploying SmartAccountFactory contract..."
-    FACTORY_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast SmartAccountFactory --constructor-args $ENTRYPOINT_ADDRESS)
-    FACTORY_ADDRESS=$(echo "$FACTORY_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
-
-    if [ -z "$FACTORY_ADDRESS" ]; then
-        echo "❌ Failed to deploy SmartAccountFactory contract"
+    # Extract addresses from broadcast file
+    BROADCAST_FILE="broadcast/DeployAA.s.sol/$CHAIN_ID/run-latest.json"
+    
+    if [ -f "$BROADCAST_FILE" ]; then
+        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        FACTORY_ADDRESS=$(grep -A2 '"contractName": "SmartAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        
+        echo ""
+        echo "🎉 All contracts deployed successfully!"
+        echo ""
+        echo "Contract Addresses:"
+        echo "==================="
+        echo "EntryPoint:         $ENTRYPOINT_ADDRESS"
+        echo "SmartAccountFactory: $FACTORY_ADDRESS"
+        echo ""
+        echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"
+    else
+        echo "❌ Broadcast file not found after deployment"
         exit 1
     fi
-
-    echo "✅ SmartAccountFactory deployed at: $FACTORY_ADDRESS"
-
-    # echo "📦 Deploying SimplePaymaster contract..."
-    # PAYMASTER_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast SimplePaymaster --constructor-args $ENTRYPOINT_ADDRESS $OMNI_EXECUTOR_SIGNER)
-    # PAYMASTER_ADDRESS=$(echo "$PAYMASTER_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
-    #
-    # if [ -z "$PAYMASTER_ADDRESS" ]; then
-    #     echo "❌ Failed to deploy SimplePaymaster contract"
-    #     exit 1
-    # fi
-
-    # echo "✅ SimplePaymaster deployed at: $PAYMASTER_ADDRESS"
-
-    echo ""
-    echo "🎉 All contracts deployed successfully!"
-    echo ""
-    echo "Contract Addresses:"
-    echo "==================="
-    echo "EntryPoint:         $ENTRYPOINT_ADDRESS"
-    echo "SmartAccountFactory: $FACTORY_ADDRESS"
-    # echo "SimplePaymaster:    $PAYMASTER_ADDRESS"
-    echo ""
-    echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"
 }
 
 # Function to cleanup
