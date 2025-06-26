@@ -2,34 +2,34 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {Counter} from "../src/Counter.sol";
-import {SmartAccountTestUtils} from "./SmartAccountTestUtils.sol";
+import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {SIG_VALIDATION_SUCCESS} from "../src//core/Helpers.sol";
 
-contract SmartAccountAsOwner is Test {
-    SmartAccount public account;
+contract OmniAccountAsOwner is Test {
+    OmniAccount public account;
     EntryPoint public entryPoint;
     Counter public counter;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
-    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Execute() public {
-        SmartAccountTestUtils.performExecuteTestAs(vm, ownerAddress, account, counter);
+        OmniAccountTestUtils.performExecuteTestAs(vm, ownerAddress, account, counter);
     }
 
     function test_ExecuteBatch() public {
-        SmartAccountTestUtils.performExecuteBatchTestAs(vm, ownerAddress, account, counter);
+        OmniAccountTestUtils.performExecuteBatchTestAs(vm, ownerAddress, account, counter);
     }
 
     function test_AddRemoveRootSigner() public {
@@ -44,7 +44,7 @@ contract SmartAccountAsOwner is Test {
 
     function test_validateOp() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(alice, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(alice, clientId, rootAddress);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
 
