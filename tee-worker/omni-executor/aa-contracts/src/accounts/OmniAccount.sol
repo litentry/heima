@@ -20,15 +20,15 @@ import "./callback/TokenCallbackHandler.sol";
  *  has list of root signers who can sign messages and generate sessions
  *  has execute, eth handling methods
  */
-contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     bytes32 public owner;
-    bytes32 public clientId;
+    bytes public clientId;
     mapping(address => bool) public rootSigners;
 
     IEntryPoint private immutable _entryPoint;
 
     event AccountInitialized(
-        IEntryPoint indexed entryPoint, bytes32 indexed owner, bytes32 clientId, address indexed root
+        IEntryPoint indexed entryPoint, bytes32 indexed owner, bytes clientId, address indexed root
     );
 
     event RootSignerAdded(address root);
@@ -63,11 +63,11 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
      * the implementation by calling `upgradeTo()`
      * @param anOwner the owner (signer) of this account
      */
-    function initialize(bytes32 anOwner, bytes32 aClientId, address aRoot) public virtual initializer {
+    function initialize(bytes32 anOwner, bytes memory aClientId, address aRoot) public virtual initializer {
         _initialize(anOwner, aClientId, aRoot);
     }
 
-    function _initialize(bytes32 anOwner, bytes32 aClientId, address aRoot) internal virtual {
+    function _initialize(bytes32 anOwner, bytes memory aClientId, address aRoot) internal virtual {
         owner = anOwner;
         rootSigners[aRoot] = true;
         clientId = aClientId;
@@ -86,8 +86,9 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
      * convert sender to oa bytes
      */
     function _determineOa(address sender) internal view returns (bytes32) {
-        bytes memory oaType = bytes("evm");
-        return sha256(abi.encodePacked(oaType, clientId, sender));
+        // bytes("evm");
+        bytes3 oaType = 0x65766d;
+        return sha256(abi.encodePacked(clientId, oaType, sender));
     }
 
     function isRootSigner(address sender) public view returns (bool) {
@@ -118,7 +119,6 @@ contract SmartAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Ini
                 return SIG_VALIDATION_SUCCESS;
             }
         }
-
         return SIG_VALIDATION_FAILED;
     }
 

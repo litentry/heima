@@ -25,7 +25,7 @@ use sp_std::{cmp::Ordering, vec::Vec};
 
 bitflags! {
 	/// Flags used to record the status of pool proposal
-	#[derive(Encode, Decode, MaxEncodedLen, TypeInfo)]
+	#[derive(Clone, PartialEq, Eq, Debug)]
 	pub struct ProposalStatusFlags: u8 {
 		/// Whether the pool proposal passing the committee/democracy voting.
 		///
@@ -56,6 +56,34 @@ bitflags! {
 		///
 		/// Has nothing to do with pool. Only related to proposal expired time
 		const PROPOSAL_EXPIRED = 0b0000_1000;
+	}
+}
+
+impl Encode for ProposalStatusFlags {
+	fn encode(&self) -> Vec<u8> {
+		self.bits().encode()
+	}
+}
+
+impl Decode for ProposalStatusFlags {
+	fn decode<I: parity_scale_codec::Input>(
+		input: &mut I,
+	) -> Result<Self, parity_scale_codec::Error> {
+		let bits = u8::decode(input)?;
+		ProposalStatusFlags::from_bits(bits).ok_or_else(|| "Invalid bitflags value".into())
+	}
+}
+
+impl TypeInfo for ProposalStatusFlags {
+	type Identity = Self;
+	fn type_info() -> scale_info::Type {
+		<u8 as TypeInfo>::type_info()
+	}
+}
+
+impl MaxEncodedLen for ProposalStatusFlags {
+	fn max_encoded_len() -> usize {
+		<u8 as MaxEncodedLen>::max_encoded_len()
 	}
 }
 

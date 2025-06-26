@@ -15,5 +15,16 @@ licensed under the GNU General Public License v3.0.
 
 ## Deploying locally
 
-Run `anvil`, then contracts can be deployed using one of the node unlocked accounts, for example:
-```forge create --from 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --unlocked --broadcast EntryPoint```
+Run the deployment script to start an Anvil node and deploy all contracts:
+
+```bash
+./local-deploy.sh
+```
+
+This script will:
+- Start an Anvil node (or use existing one on port 8545)
+- Compile the contracts
+- Deploy EntryPoint, OmniAccountFactory, and SimplePaymaster contracts
+- Display the deployed contract addresses
+
+The script keeps Anvil running after deployment. Press Ctrl+C to stop both the script and Anvil.

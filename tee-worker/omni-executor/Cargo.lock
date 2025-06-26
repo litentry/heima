@@ -13,6 +13,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "aa-contracts-client"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "ethereum-rpc",
+ "heima-primitives",
+ "mockall",
+ "sha2 0.10.9",
+ "test-log",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "accounting-contract"
 version = "0.1.0"
 dependencies = [
@@ -3579,6 +3593,7 @@ dependencies = [
  "hex-literal",
  "libsecp256k1 0.7.2",
  "mockall",
+ "serde_json",
  "signer-client",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
@@ -5063,7 +5078,7 @@ name = "heima-primitives"
 version = "0.1.0"
 dependencies = [
  "base58",
- "base64 0.13.1",
+ "base64 0.22.1",
  "chrono",
  "der",
  "ecdsa",

@@ -23,6 +23,7 @@ updates:
       - dependency-name: "xcm*"
       - dependency-name: "kusama-*"
       - dependency-name: "westend-*"
+      - dependency-name: "cumulus-*"
       - dependency-name: "heima-*"
       - dependency-name: "moonbeam-*"
       - dependency-name: "fp-*"
@@ -30,6 +31,7 @@ updates:
       - dependency-name: "pallet-evm"
       - dependency-name: "pallet-ethereum"
       - dependency-name: "pallet-evm-*"
+      - dependency-name: "heima-utils-proc-macros" # still used by id-worker
     reviewers:
       - "litentry/parachain"
     schedule:
@@ -37,8 +39,12 @@ updates:
       
   - package-ecosystem: "npm"
     directories:
-      - "/parachain"
-      - "/tee-worker/omni-executor"
+      - "/parachain/ts-tests"
+      - "/parachain/scripts/ts-utils"
+      - "/tee-worker/omni-executor/client-sdk"
+      - "/tee-worker/omni-executor/ts-tests"
+      - "/tee-worker/omni-executor/ts-tests/integration-tests"
+      - "/tee-worker/omni-executor/accounting-contract/solana"
     labels: ["automated-pr"]
     groups:
       typescript-dependencies:
