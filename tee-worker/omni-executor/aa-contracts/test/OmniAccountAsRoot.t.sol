@@ -2,39 +2,39 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {Counter} from "../src/Counter.sol";
-import {SmartAccountTestUtils} from "./SmartAccountTestUtils.sol";
+import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
 
-contract SmartAccountAsRoot is Test {
-    SmartAccount public account;
+contract OmniAccountAsRoot is Test {
+    OmniAccount public account;
     EntryPoint public entryPoint;
     Counter public counter;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
-    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Execute() public {
-        SmartAccountTestUtils.performExecuteTestAs(vm, rootAddress, account, counter);
+        OmniAccountTestUtils.performExecuteTestAs(vm, rootAddress, account, counter);
     }
 
     function test_ExecuteBatch() public {
-        SmartAccountTestUtils.performExecuteBatchTestAs(vm, rootAddress, account, counter);
+        OmniAccountTestUtils.performExecuteBatchTestAs(vm, rootAddress, account, counter);
     }
 
     function test_validateOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -60,7 +60,7 @@ contract SmartAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
 
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -83,7 +83,7 @@ contract SmartAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
 
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -108,7 +108,7 @@ contract SmartAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, alicePk);
 
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";

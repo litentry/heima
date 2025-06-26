@@ -95,7 +95,11 @@ pub async fn query_ethereum<
 			let address = address.as_ref().into();
 			let call = IERC20::balanceOfCall { account };
 			let tx = TransactionRequest::default().with_to(address).with_input(call.abi_encode());
-			provider.call(tx).await.map(|balance| U256::from_be_slice(&balance))
+			provider
+				.call(tx)
+				.await
+				.map_err(|_| ())
+				.map(|balance| U256::from_be_slice(&balance))
 		},
 	}
 }
@@ -410,7 +414,7 @@ pub mod tests {
 			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
 			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
 
-			mock_provider.expect_call().times(1).returning(|_| Err(()));
+			mock_provider.expect_call().times(1).returning(|_| Err(None));
 
 			let result = query_ethereum(&mock_provider, account, &token).await;
 
