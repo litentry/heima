@@ -123,7 +123,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		paymaster_address: Option<Address>,
 	) -> Result<PackedUserOperation, ()> {
 		// Create init code using existing helper
-		let init_code_bytes = prepare_factory_init_code(factory_address, oa, client_id, root_address);
+		let init_code_bytes =
+			prepare_factory_init_code(factory_address, oa, client_id, root_address);
 		let init_code = Bytes::from(init_code_bytes);
 
 		// Get sender address from EntryPoint
@@ -205,7 +206,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 		let init_code_to_use = if code.is_empty() {
 			// No code at address, include init code
-			let init_code_bytes = prepare_factory_init_code(factory_address, oa, client_id, root_address);
+			let init_code_bytes =
+				prepare_factory_init_code(factory_address, oa, client_id, root_address);
 			Bytes::from(init_code_bytes)
 		} else {
 			// Code already exists, no init code needed
