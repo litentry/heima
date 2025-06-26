@@ -5078,7 +5078,7 @@ name = "heima-primitives"
 version = "0.1.0"
 dependencies = [
  "base58",
- "base64 0.13.1",
+ "base64 0.22.1",
  "chrono",
  "der",
  "ecdsa",
@@ -5730,9 +5730,11 @@ name = "intent-token-query"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "base64 0.22.1",
  "ethereum-rpc",
  "executor-primitives",
  "hex-literal",
+ "mockall",
  "serde_json",
  "solana",
  "solana-account-decoder-client-types",

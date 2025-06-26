@@ -30,6 +30,7 @@ updates:
       - dependency-name: "pallet-evm"
       - dependency-name: "pallet-ethereum"
       - dependency-name: "pallet-evm-*"
+      - dependency-name: "heima-utils-proc-macros" # still used by id-worker
     reviewers:
       - "litentry/parachain"
     schedule:
