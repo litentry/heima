@@ -23,6 +23,7 @@ updates:
       - dependency-name: "xcm*"
       - dependency-name: "kusama-*"
       - dependency-name: "westend-*"
+      - dependency-name: "cumulus-*"
       - dependency-name: "heima-*"
       - dependency-name: "moonbeam-*"
       - dependency-name: "fp-*"
