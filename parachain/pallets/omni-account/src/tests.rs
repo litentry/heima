@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{mock::*, MemberAccountHash, *};
-use frame_support::{assert_noop, assert_ok, BoundedVec, traits::ConstU32};
+use crate::{mock::*, *};
+use frame_support::{assert_noop, assert_ok};
 use sp_std::vec;
 
 fn request_intent_call(intent: Intent) -> Box<RuntimeCall> {
@@ -55,20 +55,12 @@ fn dispatch_as_signed_works() {
 		let value = 5;
 		let call = make_balance_transfer_call(dest, value);
 		
-		// Create a dummy member account hash for testing
-		let member_hash = alice().identity.hash();
-		MemberAccountHash::<Test>::insert(member_hash, alice().omni_account.clone());
-		
-		// Set default permissions
-		let permissions: BoundedVec<OmniAccountPermission, ConstU32<4>> = vec![OmniAccountPermission::default()].try_into().unwrap();
-		MemberAccountPermissions::<Test>::insert(member_hash, permissions);
-		
 		// Fund the omni account so it can make the transfer
 		assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), alice().omni_account, 10));
 
 		let res = OmniAccount::dispatch_as_signed(
 			RuntimeOrigin::signed(tee_signer.clone()),
-			member_hash,
+			alice().omni_account,
 			call,
 			Some(OmniAccountAuthType::Web3),
 		);
@@ -89,18 +81,10 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 		let dest = bob().native_account;
 		let value = 5;
 		let call = make_balance_transfer_call(dest, value);
-		
-		// Create a dummy member account hash for testing
-		let member_hash = alice().identity.hash();
-		MemberAccountHash::<Test>::insert(member_hash, alice().omni_account.clone());
-		
-		// Set default permissions
-		let permissions: BoundedVec<OmniAccountPermission, ConstU32<4>> = vec![OmniAccountPermission::default()].try_into().unwrap();
-		MemberAccountPermissions::<Test>::insert(member_hash, permissions);
 
 		assert_ok!(OmniAccount::dispatch_as_omni_account(
 			RuntimeOrigin::signed(tee_signer.clone()),
-			member_hash,
+			alice().omni_account,
 			call,
 			None,
 		));
@@ -120,18 +104,10 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 		let dest = bob().native_account;
 		let value = 5;
 		let call = make_balance_transfer_call(dest, value);
-		
-		// Create a dummy member account hash for testing
-		let member_hash = alice().identity.hash();
-		MemberAccountHash::<Test>::insert(member_hash, alice().omni_account.clone());
-		
-		// Set default permissions
-		let permissions: BoundedVec<OmniAccountPermission, ConstU32<4>> = vec![OmniAccountPermission::default()].try_into().unwrap();
-		MemberAccountPermissions::<Test>::insert(member_hash, permissions);
 
 		assert_ok!(OmniAccount::dispatch_as_signed(
 			RuntimeOrigin::signed(tee_signer.clone()),
-			member_hash,
+			alice().omni_account,
 			call,
 			None,
 		));
@@ -161,18 +137,6 @@ fn auth_token_requested_works() {
 	});
 }
 
-#[test]
-fn ensure_permission_works() {
-	new_test_ext().execute_with(|| {
-		let member_hash = alice().identity.hash();
-		
-		// Set specific permissions
-		let permissions: BoundedVec<OmniAccountPermission, ConstU32<4>> = vec![OmniAccountPermission::RequestNativeIntent].try_into().unwrap();
-		MemberAccountPermissions::<Test>::insert(member_hash, permissions);
-
-		// Test removed because ensure_permission is now a private function
-	});
-}
 
 #[test]
 fn omni_account_always_uses_converter() {

@@ -1158,83 +1158,6 @@ impl pallet_identity_management::Config for Runtime {
 	type MaxOIDCClientRedirectUris = ConstU32<10>;
 }
 
-#[derive(
-	Copy,
-	Clone,
-	PartialEq,
-	Eq,
-	Ord,
-	PartialOrd,
-	Encode,
-	Decode,
-	MaxEncodedLen,
-	RuntimeDebug,
-	scale_info::TypeInfo,
-)]
-pub enum OmniAccountPermission {
-	All,
-	AccountManagement,
-	RequestNativeIntent,
-	RequestEthereumIntent,
-	RequestSolanaIntent,
-}
-
-impl Default for OmniAccountPermission {
-	fn default() -> Self {
-		Self::All
-	}
-}
-
-impl InstanceFilter<RuntimeCall> for OmniAccountPermission {
-	fn filter(&self, call: &RuntimeCall) -> bool {
-		match self {
-			Self::All => true,
-			Self::AccountManagement => {
-				// No account management calls after removing AccountStore
-				false
-			},
-			Self::RequestNativeIntent => {
-				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
-					intent,
-				}) = call
-				{
-					matches!(
-						intent,
-						pallet_omni_account::Intent::SystemRemark(_)
-							| pallet_omni_account::Intent::TransferNative(_)
-					)
-				} else {
-					false
-				}
-			},
-			Self::RequestEthereumIntent => {
-				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
-					intent,
-				}) = call
-				{
-					matches!(
-						intent,
-						pallet_omni_account::Intent::TransferEthereum(_)
-							| pallet_omni_account::Intent::CallEthereum(_)
-					)
-				} else {
-					false
-				}
-			},
-			Self::RequestSolanaIntent => {
-				if let RuntimeCall::OmniAccount(pallet_omni_account::Call::request_intent {
-					intent,
-				}) = call
-				{
-					matches!(intent, pallet_omni_account::Intent::TransferSolana(_))
-				} else {
-					false
-				}
-			},
-		}
-	}
-}
-
 impl pallet_omni_account::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -1242,8 +1165,6 @@ impl pallet_omni_account::Config for Runtime {
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type OmniAccountOrigin = EnsureOmniAccount;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
-	type MaxPermissions = ConstU32<4>;
-	type Permission = OmniAccountPermission;
 }
 
 impl pallet_omni_bridge::Config for Runtime {

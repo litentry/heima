@@ -41,10 +41,9 @@ pub use pallet::*;
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
-	traits::{InstanceFilter, IsSubType, UnfilteredDispatchable},
+	traits::{IsSubType, UnfilteredDispatchable},
 };
 use frame_system::pallet_prelude::*;
-use sp_core::H256;
 use sp_runtime::traits::Dispatchable;
 use sp_std::{boxed::Box, vec, vec::Vec};
 
@@ -103,56 +102,15 @@ pub mod pallet {
 
 		/// Convert an `Identity` to OmniAccount type
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
-
-		/// The permissions that a member account can have
-		/// The instance filter determines whether a given call may can be dispatched under this type.
-		///
-		/// IMPORTANT: `Default` must be provided and MUST BE the the *most permissive* value.
-		type Permission: Parameter
-			+ Member
-			+ Ord
-			+ PartialOrd
-			+ Default
-			+ InstanceFilter<<Self as Config>::RuntimeCall>
-			+ MaxEncodedLen;
-
-		/// The maximum number of permissions that a member account can have
-		#[pallet::constant]
-		type MaxPermissions: Get<u32>;
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn integrity_test() {
-			assert!(
-				<T as Config>::MaxPermissions::get() > 0,
-				"MaxPermissions must be greater than 0"
-			);
-		}
+		fn integrity_test() {}
 	}
 
 	#[pallet::origin]
 	pub type Origin<T> = RawOrigin<<T as frame_system::Config>::AccountId>;
-
-	/// A map between hash of MemberAccount and its belonging OmniAccount
-	#[pallet::storage]
-	pub type MemberAccountHash<T: Config> =
-		StorageMap<Hasher = Blake2_128Concat, Key = H256, Value = T::AccountId>;
-
-	#[pallet::type_value]
-	pub fn DefaultPermissions<T: Config>() -> BoundedVec<T::Permission, T::MaxPermissions> {
-		BoundedVec::try_from(vec![T::Permission::default()]).expect("default permission")
-	}
-
-	/// A map between hash of MemberAccount and its permissions
-	#[pallet::storage]
-	pub type MemberAccountPermissions<T: Config> = StorageMap<
-		Hasher = Blake2_128Concat,
-		Key = H256,
-		Value = BoundedVec<T::Permission, T::MaxPermissions>,
-		QueryKind = ValueQuery,
-		OnEmpty = DefaultPermissions<T>,
-	>;
 
 	// For now we keep all intents online for easy query, it's concerning if it would bloat the data space
 	#[pallet::storage]
@@ -232,11 +190,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		AccountNotFound,
 		InvalidAccount,
 		EmptyAccount,
-		NoPermission,
-		PermissionsLenLimitReached,
 		IntentAlreadyExists,
 	}
 
@@ -247,18 +202,15 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn dispatch_as_omni_account(
 			origin: OriginFor<T>,
-			member_account_hash: H256,
+			who: T::AccountId,
 			call: Box<<T as Config>::RuntimeCall>,
 			auth_type: Option<OmniAccountAuthType>,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
-				.ok_or(Error::<T>::AccountNotFound)?;
-			Self::ensure_permission(call.as_ref(), member_account_hash)?;
-			let result = call.dispatch(RawOrigin::OmniAccount(omni_account.clone()).into());
-			system::Pallet::<T>::inc_account_nonce(&omni_account);
+			let result = call.dispatch(RawOrigin::OmniAccount(who.clone()).into());
+			system::Pallet::<T>::inc_account_nonce(&who);
 			Self::deposit_event(Event::DispatchedAsOmniAccount {
-				who: omni_account,
+				who,
 				auth_type,
 				result: result.map(|_| ()).map_err(|e| e.error),
 			});
@@ -271,21 +223,18 @@ pub mod pallet {
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
 		pub fn dispatch_as_signed(
 			origin: OriginFor<T>,
-			member_account_hash: H256,
+			who: T::AccountId,
 			call: Box<<T as Config>::RuntimeCall>,
 			auth_type: Option<OmniAccountAuthType>,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::TEECallOrigin::ensure_origin(origin)?;
-			let omni_account = MemberAccountHash::<T>::get(member_account_hash)
-				.ok_or(Error::<T>::AccountNotFound)?;
-			Self::ensure_permission(call.as_ref(), member_account_hash)?;
 			let result: Result<
 				PostDispatchInfo,
 				sp_runtime::DispatchErrorWithPostInfo<PostDispatchInfo>,
-			> = call.dispatch(frame_system::RawOrigin::Signed(omni_account.clone()).into());
-			system::Pallet::<T>::inc_account_nonce(&omni_account);
+			> = call.dispatch(frame_system::RawOrigin::Signed(who.clone()).into());
+			system::Pallet::<T>::inc_account_nonce(&who);
 			Self::deposit_event(Event::DispatchedAsSigned {
-				who: omni_account,
+				who,
 				auth_type,
 				result: result.map(|_| ()).map_err(|e| e.error),
 			});
@@ -368,19 +317,6 @@ pub mod pallet {
 		}
 
 
-		fn ensure_permission(
-			call: &<T as Config>::RuntimeCall,
-			member_account_hash: H256,
-		) -> Result<(), Error<T>> {
-			let member_permissions = MemberAccountPermissions::<T>::get(member_account_hash);
-
-			ensure!(
-				member_permissions.iter().any(|permission| permission.filter(call)),
-				Error::<T>::NoPermission
-			);
-
-			Ok(())
-		}
 
 		fn do_accept_intent(
 			who: T::AccountId,
