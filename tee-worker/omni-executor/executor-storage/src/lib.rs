@@ -3,8 +3,6 @@ use parity_scale_codec::{Codec, Decode, Encode};
 use rocksdb::{WriteOptions, DB};
 use std::{sync::Arc, vec::Vec};
 
-mod member_omni_account;
-pub use member_omni_account::MemberOmniAccountStorage;
 mod verification_code;
 pub use verification_code::VerificationCodeStorage;
 mod oauth2_state_verifier;

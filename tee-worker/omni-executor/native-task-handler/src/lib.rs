@@ -14,10 +14,7 @@ use executor_primitives::{
 	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, PumpxAccountProfile,
 	Web2IdentityType,
 };
-use executor_storage::{
-	HeimaJwtStorage, IntentIdStorage, MemberOmniAccountStorage, PumpxProfileStorage, Storage,
-	StorageDB,
-};
+use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
 use heima_authentication::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
@@ -200,15 +197,8 @@ async fn handle_native_task<
 
 	match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
-			let omni_account_storage = MemberOmniAccountStorage::new(ctx.storage_db.clone());
-			let Ok(Some(omni_account)) = omni_account_storage.get(&sender.hash()) else {
-				send_error(
-					"No omni account found".to_string(),
-					response_sender,
-					NativeTaskError::UnauthorizedSender,
-				);
-				return;
-			};
+			// Convert Identity to AccountId directly using client_id
+			let omni_account = sender.to_omni_account(client_id);
 			let expires_at = Utc::now()
 				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 				.expect("Failed to calculate expiration")
