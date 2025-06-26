@@ -21,7 +21,7 @@ use crate::types::{
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
 };
-use crate::{PackedUserOperation, OmniAccountClient};
+use crate::{OmniAccountClient, PackedUserOperation};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
@@ -82,13 +82,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		client_id: &[u8],
 		root: Address,
 	) -> Address {
-		calculate_omni_account_address(
-			factory_address,
-			account_implementation,
-			oa,
-			client_id,
-			root,
-		)
+		calculate_omni_account_address(factory_address, account_implementation, oa, client_id, root)
 	}
 
 	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<(), ()> {
