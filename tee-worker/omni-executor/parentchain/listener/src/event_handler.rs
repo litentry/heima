@@ -28,26 +28,16 @@ use subxt_core::config::DefaultExtrinsicParams;
 use subxt_core::utils::{AccountId32, MultiAddress, MultiSignature};
 use tracing::debug;
 
-pub struct EventHandler<
-	MetadataT,
-	MetadataProviderT: MetadataProvider<MetadataT>,
-> {
+pub struct EventHandler<MetadataT, MetadataProviderT: MetadataProvider<MetadataT>> {
 	_metadata_provider: Arc<MetadataProviderT>,
 	phantom_data: PhantomData<MetadataT>,
 }
 
-impl<
-		MetadataT,
-		MetadataProviderT: MetadataProvider<MetadataT>,
-	> EventHandler<MetadataT, MetadataProviderT>
+impl<MetadataT, MetadataProviderT: MetadataProvider<MetadataT>>
+	EventHandler<MetadataT, MetadataProviderT>
 {
-	pub fn new(
-		metadata_provider: Arc<MetadataProviderT>,
-	) -> Self {
-		Self {
-			_metadata_provider: metadata_provider,
-			phantom_data: Default::default(),
-		}
+	pub fn new(metadata_provider: Arc<MetadataProviderT>) -> Self {
+		Self { _metadata_provider: metadata_provider, phantom_data: Default::default() }
 	}
 }
 
@@ -60,11 +50,7 @@ impl<
 			Signature = MultiSignature,
 			Header = RpcClientHeader,
 		>,
-	> EventHandlerTrait<BlockEvent>
-	for EventHandler<
-		Metadata,
-		SubxtMetadataProvider<ChainConfig>,
-	>
+	> EventHandlerTrait<BlockEvent> for EventHandler<Metadata, SubxtMetadataProvider<ChainConfig>>
 {
 	async fn handle(&self, event: BlockEvent) -> Result<(), Error> {
 		debug!("Got event: {:?}, variant name: {}", event.id, event.variant_name);

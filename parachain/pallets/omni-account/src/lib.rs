@@ -33,8 +33,8 @@ mod tests;
 
 pub use frame_system::{self as system};
 pub use heima_primitives::{
-	Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountConverter,
-	TransferNative, TransferEthereum, CallEthereum, TransferSolana,
+	CallEthereum, Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountConverter,
+	TransferEthereum, TransferNative, TransferSolana,
 };
 pub use pallet::*;
 
@@ -103,7 +103,6 @@ pub mod pallet {
 		/// Convert an `Identity` to OmniAccount type
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
 	}
-
 
 	#[pallet::origin]
 	pub type Origin<T> = RawOrigin<<T as frame_system::Config>::AccountId>;
@@ -237,7 +236,6 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
-
 		// to allow any user to submit intent directly onto chain
 		// this extrinsic is currently **unused**, meaning it will do nothing except emitting events
 		#[pallet::call_index(2)]
@@ -247,8 +245,6 @@ pub mod pallet {
 			Self::deposit_event(Event::IntentRequested { who, intent });
 			Ok(())
 		}
-
-
 
 		#[pallet::call_index(3)]
 		#[pallet::weight((195_000_000, DispatchClass::Normal))]
@@ -311,8 +307,6 @@ pub mod pallet {
 		pub fn omni_account(client_id: String, identity: Identity) -> T::AccountId {
 			T::OmniAccountConverter::convert(&identity, &client_id)
 		}
-
-
 
 		fn do_accept_intent(
 			who: T::AccountId,

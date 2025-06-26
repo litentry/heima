@@ -54,7 +54,7 @@ fn dispatch_as_signed_works() {
 		let dest = bob().native_account;
 		let value = 5;
 		let call = make_balance_transfer_call(dest, value);
-		
+
 		// Fund the omni account so it can make the transfer
 		assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), alice().omni_account, 10));
 
@@ -89,10 +89,7 @@ fn dispatch_as_omni_account_increments_omni_account_nonce() {
 			None,
 		));
 
-		assert_eq!(
-			System::account_nonce(&alice().omni_account),
-			alice_omni_account_nonce + 1
-		);
+		assert_eq!(System::account_nonce(&alice().omni_account), alice_omni_account_nonce + 1);
 	});
 }
 
@@ -112,10 +109,7 @@ fn dispatch_as_signed_account_increments_omni_account_nonce() {
 			None,
 		));
 
-		assert_eq!(
-			System::account_nonce(&alice().omni_account),
-			alice_omni_account_nonce + 1
-		);
+		assert_eq!(System::account_nonce(&alice().omni_account), alice_omni_account_nonce + 1);
 	});
 }
 
@@ -137,16 +131,16 @@ fn auth_token_requested_works() {
 	});
 }
 
-
 #[test]
 fn omni_account_always_uses_converter() {
 	new_test_ext().execute_with(|| {
 		// Test that omni_account function always uses the converter
 		let identity = alice().identity;
 		let omni_account = OmniAccount::omni_account(TEST_CLIENT_ID.to_string(), identity.clone());
-		
+
 		// Should be the same as directly using the converter
-		let expected = <Test as crate::Config>::OmniAccountConverter::convert(&identity, TEST_CLIENT_ID);
+		let expected =
+			<Test as crate::Config>::OmniAccountConverter::convert(&identity, TEST_CLIENT_ID);
 		assert_eq!(omni_account, expected);
 	});
 }

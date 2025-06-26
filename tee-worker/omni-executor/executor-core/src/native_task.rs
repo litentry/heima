@@ -1,6 +1,4 @@
-use executor_primitives::{
-	AccountId, Identity, Intent, IntentId, Nonce, OmniAuth,
-};
+use executor_primitives::{AccountId, Identity, Intent, IntentId, Nonce, OmniAuth};
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::fmt::Debug;
 use std::vec::Vec;

@@ -1,12 +1,8 @@
-use executor_primitives::{
-	AccountId, Hash, Identity, Intent, OmniAccountAuthType,
-};
-use parentchain_api_interface::runtime_types::{
-	heima_primitives::{
-		identity::Identity as SubxtIdentity,
-		omni::account::OmniAccountAuthType as SubxtOmniAccountAuthType,
-		omni::intent::Intent as SubxtIntent,
-	},
+use executor_primitives::{AccountId, Hash, Identity, Intent, OmniAccountAuthType};
+use parentchain_api_interface::runtime_types::heima_primitives::{
+	identity::Identity as SubxtIdentity,
+	omni::account::OmniAccountAuthType as SubxtOmniAccountAuthType,
+	omni::intent::Intent as SubxtIntent,
 };
 use parity_scale_codec::{Decode, Encode};
 use subxt_core::utils::{AccountId32 as SubxtAccountId, H256 as SubxtHash};
@@ -67,4 +63,3 @@ impl ToSubxtType<SubxtIntent> for Intent {
 		Decode::decode(&mut &bytes[..]).expect("Failed to decode SubxtIntent")
 	}
 }
-

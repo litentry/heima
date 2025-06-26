@@ -1203,7 +1203,6 @@ impl pallet_identity_management::Config for Runtime {
 	type MaxOIDCClientRedirectUris = ConstU32<10>;
 }
 
-
 impl pallet_omni_account::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
