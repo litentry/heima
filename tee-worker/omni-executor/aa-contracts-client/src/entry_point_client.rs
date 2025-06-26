@@ -181,6 +181,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	}
 
 	/// Common helper to build PackedUserOperation with shared logic
+	#[allow(clippy::too_many_arguments)]
 	async fn build_packed_user_operation(
 		&self,
 		sender: Address,
