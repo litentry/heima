@@ -31,7 +31,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub use frame_system::{self as system, pallet_prelude::BlockNumberFor};
+pub use frame_system::{self as system};
 pub use heima_primitives::{
 	Identity, Intent, MemberAccount, OmniAccountAuthType, OmniAccountConverter,
 	TransferNative, TransferEthereum, CallEthereum, TransferSolana,
@@ -104,10 +104,6 @@ pub mod pallet {
 		type OmniAccountConverter: OmniAccountConverter<OmniAccount = Self::AccountId>;
 	}
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn integrity_test() {}
-	}
 
 	#[pallet::origin]
 	pub type Origin<T> = RawOrigin<<T as frame_system::Config>::AccountId>;
