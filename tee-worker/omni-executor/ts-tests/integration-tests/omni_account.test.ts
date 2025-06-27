@@ -9,7 +9,7 @@ import { getWeb3SignInMessage, sendRawTaskPlain } from './utils/requests';
 import { fundAccount, sleep } from './utils/helpers';
 import { encodeAddress } from '@polkadot/util-crypto';
 
-describe('OmniAccount', function () {
+describe('OmniAccount', function() {
     this.timeout(120000);
     let context: IntegrationTestContext;
     let aliceWallet: SubstrateSigner;
@@ -17,16 +17,14 @@ describe('OmniAccount', function () {
     let omniAccount: string;
     let currentNonce = 0;
 
-    before(async function () {
+    before(async function() {
         context = await createIntegrationTestContext(process.env.PARACHAIN_ENDPOINT, process.env.OMNI_WORKER_ENDPOINT);
         aliceWallet = context.web3Wallets['substrate']['Alice'] as SubstrateSigner;
         aliceIdentity = await aliceWallet.getIdentity(context.api);
         omniAccount = await getOmniAccount(context.api, aliceIdentity);
     });
 
-    // AccountStore tests removed after pallet refactoring
-    
-    step('test request auth token', async function () {
+    step('test request auth token', async function() {
         let msgToSign = await getWeb3SignInMessage(context, 'heima', omniAccount);
         console.log('msgCode:', msgToSign);
         const nativeTask = createNativeTask(context.api, ['RequestAuthToken', 'HeimaIdentity'], aliceIdentity);
@@ -40,17 +38,13 @@ describe('OmniAccount', function () {
         );
         console.log('nativeTaskWrapper:', nativeTaskWrapper.toHuman());
         const response = await sendRawTaskPlain(context, nativeTaskWrapper);
-        
+
         // Response should contain an auth token
         assert.exists(response, 'Response should exist');
         currentNonce++;
     });
 
-
-
-
-
-    step('test request_intent (TransferNative)', async function () {
+    step('test request_intent (TransferNative)', async function() {
         const initialBalance = context.api.createType('u128', 50000000000000000000n);
         await fundAccount(context.api, omniAccount, initialBalance.toBigInt());
         const bobAddress = encodeAddress(context.web3Wallets['substrate']['Bob'].getAddressRaw());
