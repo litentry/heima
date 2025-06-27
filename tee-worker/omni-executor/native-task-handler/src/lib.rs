@@ -11,15 +11,18 @@ use executor_crypto::{
 	jwt,
 };
 use executor_primitives::{
-	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, PumpxAccountProfile,
-	Web2IdentityType,
+	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, OmniAccountAuthType,
+	PumpxAccountProfile, Web2IdentityType,
 };
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
 use heima_authentication::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use parentchain_api_interface::runtime_types::pallet_omni_account::pallet::IntentCompletedDetail;
+use parentchain_api_interface::runtime_types::{
+	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
+	pallet_omni_account::pallet::IntentCompletedDetail, paseo_runtime::RuntimeCall,
+};
 use parentchain_rpc_client::{
 	metadata::{Metadata, SubxtMetadataProvider},
 	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
@@ -193,6 +196,7 @@ async fn handle_native_task<
 		return;
 	};
 
+	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
 	let client_id = &wrapper.client_id;
 
 	match wrapper.task {
@@ -303,54 +307,40 @@ async fn handle_native_task<
 			.await;
 
 			let (execution_result, should_notify_parentchain) = match intent {
-				Intent::SystemRemark(_remark) => {
-					// let remark_call = SystemCall::remark { remark: remark.to_vec() };
-					// let _ = dispatch_as_signed(
-					// 	&mut rpc_client,
-					// 	ctx.transaction_signer.clone(),
-					// 	sender,
-					// 	RuntimeCall::System(remark_call),
-					// 	auth_type,
-					// )
-					// .await;
-					// send_ok(
-					// 	response_sender,
-					// 	NativeTaskOk::RequestIntentResult { intent_id, success: true },
-					// );
-					// (IntentCompletedDetail::Success, true)
-					info!("Intent rejected");
-					send_error(
-						"Intent not accepted".to_string(),
+				Intent::SystemRemark(remark) => {
+					let remark_call = SystemCall::remark { remark: remark.to_vec() };
+					let _ = dispatch_as_signed(
+						&mut rpc_client,
+						ctx.transaction_signer.clone(),
+						omni_account.clone(),
+						RuntimeCall::System(remark_call),
+						auth_type,
+					)
+					.await;
+					send_ok(
 						response_sender,
-						NativeTaskError::InternalError,
+						NativeTaskOk::RequestIntentResult { intent_id, success: true },
 					);
-					(IntentCompletedDetail::Failure, true)
+					(IntentCompletedDetail::Success, true)
 				},
-				Intent::TransferNative(_transfer) => {
-					// let transfer_call = BalancesCall::transfer_allow_death {
-					// 	dest: transfer.to.to_subxt_type().into(),
-					// 	value: transfer.value,
-					// };
-					// let _ = dispatch_as_signed(
-					// 	&mut rpc_client,
-					// 	ctx.transaction_signer.clone(),
-					// 	sender,
-					// 	RuntimeCall::Balances(transfer_call),
-					// 	auth_type,
-					// )
-					// .await;
-					// send_ok(
-					// 	response_sender,
-					// 	NativeTaskOk::RequestIntentResult { intent_id, success: true },
-					// );
-					// (IntentCompletedDetail::Success, true)
-					info!("Intent rejected");
-					send_error(
-						"Intent not accepted".to_string(),
+				Intent::TransferNative(transfer) => {
+					let transfer_call = BalancesCall::transfer_allow_death {
+						dest: transfer.to.to_subxt_type().into(),
+						value: transfer.value,
+					};
+					let _ = dispatch_as_signed(
+						&mut rpc_client,
+						ctx.transaction_signer.clone(),
+						omni_account.clone(),
+						RuntimeCall::Balances(transfer_call),
+						auth_type,
+					)
+					.await;
+					send_ok(
 						response_sender,
-						NativeTaskError::InternalError,
+						NativeTaskOk::RequestIntentResult { intent_id, success: true },
 					);
-					(IntentCompletedDetail::Failure, true)
+					(IntentCompletedDetail::Success, true)
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
 					// if let Err(e) = ctx
@@ -816,33 +806,33 @@ fn send_ok(sender: ResponseSender, ok_res: NativeTaskOk) {
 	send_response(sender, NativeTaskResponse::Ok(ok_res));
 }
 
-// async fn dispatch_as_signed<
-// 	Header: Send + Sync + 'static,
-// 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-// >(
-// 	client: &mut RpcClient,
-// 	signer: Arc<ParentchainTxSigner>,
-// 	sender: Identity,
-// 	call: RuntimeCall,
-// 	auth_type: Option<OmniAccountAuthType>,
-// ) {
-// 	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
-// 		sender.hash().to_subxt_type(),
-// 		call,
-// 		auth_type.map(|t| t.to_subxt_type()),
-// 	);
-// 	let tx = signer.sign(call).await;
-// 	// notify parentchain - for now we continue even with error
-// 	match client.submit_tx(&tx).await {
-// 		Ok(_) => {
-// 			debug!("Submitted dispatch_as_signed parentchain call")
-// 		},
-// 		Err(_) => {
-// 			error!("Failed to submit dispatch_as_signed parentchain call",);
-// 			signer.update_nonce().await
-// 		},
-// 	};
-// }
+async fn dispatch_as_signed<
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+>(
+	client: &mut RpcClient,
+	signer: Arc<ParentchainTxSigner>,
+	sender: AccountId,
+	call: RuntimeCall,
+	auth_type: Option<OmniAccountAuthType>,
+) {
+	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
+		sender.to_subxt_type(),
+		call,
+		auth_type.map(|t| t.to_subxt_type()),
+	);
+	let tx = signer.sign(call).await;
+	// notify parentchain - for now we continue even with error
+	match client.submit_tx(&tx).await {
+		Ok(_) => {
+			debug!("Submitted dispatch_as_signed parentchain call")
+		},
+		Err(_) => {
+			error!("Failed to submit dispatch_as_signed parentchain call",);
+			signer.update_nonce().await
+		},
+	};
+}
 
 async fn notify_intent_accepted<
 	Header: Send + Sync + 'static,
