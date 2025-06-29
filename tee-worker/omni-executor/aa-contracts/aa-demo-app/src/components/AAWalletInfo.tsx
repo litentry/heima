@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Copy, ExternalLink, Wallet } from "lucide-react";
-import { calculateOmniAccount, stringToBytes32 } from "@/lib/aa-utils";
+import { calculateOmniAccount, stringToBytes } from "@/lib/aa-utils";
 import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
 import type { Address } from "viem";
 
@@ -17,8 +17,8 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 	const { publicKey: solanaAddress } = useWallet();
 	const [omniAccount, setOmniAccount] = useState<`0x${string}`>("0x");
 	const [clientId] = useState<string>(DEFAULT_CLIENT_ID);
-	const [clientIdBytes32] = useState<`0x${string}`>(
-		stringToBytes32(DEFAULT_CLIENT_ID),
+	const [clientIdBytes] = useState<`0x${string}`>(
+		stringToBytes(DEFAULT_CLIENT_ID),
 	);
 	const rootSigner =
 		evmAddress || ("0x0000000000000000000000000000000000000000" as Address);
@@ -36,15 +36,29 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 		}
 	}, [evmAddress]);
 
-	const { data: aaWalletAddress } = useReadContract({
-		address: CONTRACTS.SmartAccountFactory.address,
-		abi: CONTRACTS.SmartAccountFactory.abi,
+	const { data: aaWalletAddress, error: contractError } = useReadContract({
+		address: CONTRACTS.OmniAccountFactory.address,
+		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "getAddress",
-		args: [omniAccount, clientIdBytes32, rootSigner],
+		args: [omniAccount, clientIdBytes, rootSigner],
 		query: {
 			enabled: !!evmAddress && omniAccount !== "0x",
 		},
 	});
+
+	// Debug logging
+	useEffect(() => {
+		console.log("AAWalletInfo Debug:", {
+			evmAddress,
+			omniAccount,
+			clientIdBytes,
+			rootSigner,
+			factoryAddress: CONTRACTS.OmniAccountFactory.address,
+			aaWalletAddress,
+			contractError,
+			enabled: !!evmAddress && omniAccount !== "0x",
+		});
+	}, [evmAddress, omniAccount, clientIdBytes, rootSigner, aaWalletAddress, contractError]);
 
 	// Notify parent when address is calculated
 	useEffect(() => {
@@ -189,7 +203,7 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 				{aaWalletAddress && (
 					<div className="space-y-3">
 						<h3 className="text-lg font-semibold text-green-700">
-							Smart Account Address
+							Omni Account Address
 						</h3>
 						<div className="bg-green-50 p-4 rounded-lg border border-green-200">
 							<div className="flex items-center justify-between mb-2">
@@ -220,7 +234,7 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 								{(aaWalletAddress as string) || "Calculating..."}
 							</div>
 							<div className="text-xs text-green-600 mt-2">
-								This is your Smart Account address - fund this address to start
+								This is your Omni Account address - fund this address to start
 								using AA features.
 							</div>
 						</div>

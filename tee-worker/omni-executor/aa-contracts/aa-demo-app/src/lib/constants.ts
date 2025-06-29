@@ -1,6 +1,11 @@
-import EntryPointABI from "@/contracts/abis/EntryPoint.json";
-import SmartAccountABI from "@/contracts/abis/SmartAccount.json";
-import SmartAccountFactoryABI from "@/contracts/abis/SmartAccountFactory.json";
+import EntryPointArtifact from "@/contracts/abis/EntryPoint.json";
+import OmniAccountArtifact from "@/contracts/abis/OmniAccount.json";
+import OmniAccountFactoryArtifact from "@/contracts/abis/OmniAccountFactory.json";
+
+// Extract ABIs from artifacts
+const EntryPointABI = (EntryPointArtifact as any).abi || EntryPointArtifact;
+const OmniAccountABI = (OmniAccountArtifact as any).abi || OmniAccountArtifact;
+const OmniAccountFactoryABI = (OmniAccountFactoryArtifact as any).abi || OmniAccountFactoryArtifact;
 
 // Contract addresses - update these after running deploy-local.sh
 // Default addresses are for chainId 31337 (Hardhat)
@@ -13,18 +18,18 @@ export const CONTRACTS = {
 			"0x5FbDB2315678afecb367f032d93F642f64180aa3") as `0x${string}`,
 		abi: EntryPointABI,
 	},
-	SmartAccountFactory: {
+	OmniAccountFactory: {
 		// Default: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 (chainId 31337)
 		// deploy-local.sh will output the actual address for chainId 1337
 		address: (process.env.NEXT_PUBLIC_FACTORY_ADDRESS ||
 			"0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512") as `0x${string}`,
-		abi: SmartAccountFactoryABI,
+		abi: OmniAccountFactoryABI,
 	},
-	SmartAccountImplementation: {
+	OmniAccountImplementation: {
 		// This is deployed by the factory and address may vary
-		address: (process.env.NEXT_PUBLIC_SMART_ACCOUNT_IMPL_ADDRESS ||
+		address: (process.env.NEXT_PUBLIC_OMNI_ACCOUNT_IMPL_ADDRESS ||
 			"0xCafac3dD18aC6c6e92c921884f9E4176737C052c") as `0x${string}`,
-		abi: SmartAccountABI,
+		abi: OmniAccountABI,
 	},
 	SimplePaymaster: {
 		// Optional - deployed by deploy-local.sh but not used in basic flow

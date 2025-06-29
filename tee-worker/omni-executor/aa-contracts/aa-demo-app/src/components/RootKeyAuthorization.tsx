@@ -13,7 +13,7 @@ import {
 	calculateOmniAccount,
 	createUserOperation,
 	getUserOpHash,
-	stringToBytes32,
+	stringToBytes,
 	generateInitCode,
 	packUserOperation,
 	type UserOperation,
@@ -87,7 +87,7 @@ export function RootKeyAuthorization({
 				DEFAULT_CLIENT_ID,
 				"evm",
 			);
-			const clientIdBytes32 = stringToBytes32(DEFAULT_CLIENT_ID);
+			const clientIdBytes = stringToBytes(DEFAULT_CLIENT_ID);
 
 			// Debug: Let's verify the omni account calculation
 			console.log("Debug omni account calculation:", {
@@ -102,8 +102,8 @@ export function RootKeyAuthorization({
 				aaWalletAddress,
 				rootSignerAddress,
 				omniAccount,
-				clientIdBytes32,
-				factoryAddress: CONTRACTS.SmartAccountFactory.address,
+				clientIdBytes,
+				factoryAddress: CONTRACTS.OmniAccountFactory.address,
 			});
 
 			// Check if account already exists
@@ -118,13 +118,13 @@ export function RootKeyAuthorization({
 			// to calculate the counterfactual address. We'll use the user's wallet address.
 			const deploymentRootSigner = evmAddress as `0x${string}`;
 
-			// Generate initCode for Smart Account deployment (only if account doesn't exist)
+			// Generate initCode for Omni Account deployment (only if account doesn't exist)
 			const initCode = accountExists
 				? "0x"
 				: (generateInitCode(
-						CONTRACTS.SmartAccountFactory.address,
+						CONTRACTS.OmniAccountFactory.address,
 						omniAccount,
-						clientIdBytes32,
+						clientIdBytes,
 						deploymentRootSigner, // Use the user's wallet as root signer for deployment
 					) as `0x${string}`);
 
@@ -134,7 +134,7 @@ export function RootKeyAuthorization({
 				initCode: initCode.slice(0, 66) + "...",
 			});
 
-			// Create UserOperation for deploying and initializing the Smart Account
+			// Create UserOperation for deploying and initializing the Omni Account
 			const userOp = createUserOperation({
 				sender: aaWalletAddress as `0x${string}`,
 				nonce: BigInt(0),
@@ -391,7 +391,7 @@ export function RootKeyAuthorization({
 						Fund Wallet First
 					</h3>
 					<p className="text-yellow-700">
-						Please fund your Smart Account before setting up the root key
+						Please fund your Omni Account before setting up the root key
 						authorization.
 					</p>
 				</div>
@@ -424,7 +424,7 @@ export function RootKeyAuthorization({
 							</span>
 						</div>
 						<p className="text-green-600 text-sm">
-							Your Smart Account has been initialized with the root signer:
+							Your Omni Account has been initialized with the root signer:
 							<span className="font-mono text-xs block mt-1 break-all">
 								{rootSignerAddress}
 							</span>
@@ -445,7 +445,7 @@ export function RootKeyAuthorization({
 					<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
 						<h3 className="font-medium text-gray-900 mb-2">What's Next?</h3>
 						<ul className="text-sm text-gray-700 space-y-1">
-							<li>• Your Smart Account is now ready to use</li>
+							<li>• Your Omni Account is now ready to use</li>
 							<li>• You can create sessions for delegated access</li>
 							<li>• Send swap requests to the worker service</li>
 							<li>• Execute batch transactions via Account Abstraction</li>

@@ -129,7 +129,7 @@ export function FundingGuide({
 						AA Wallet Not Ready
 					</h3>
 					<p className="text-yellow-700">
-						Your Smart Account address is not available yet. Please make sure
+						Your Omni Account address is not available yet. Please make sure
 						your wallet is connected.
 					</p>
 				</div>
@@ -146,7 +146,7 @@ export function FundingGuide({
 					<QrCode className="mx-auto h-12 w-12 text-blue-500 mb-4" />
 				)}
 				<h2 className="text-2xl font-bold">
-					{fundingComplete ? "Wallet Funded!" : "Fund Your Smart Account"}
+					{fundingComplete ? "Wallet Funded!" : "Fund Your Omni Account"}
 				</h2>
 			</div>
 
@@ -160,7 +160,7 @@ export function FundingGuide({
 							</span>
 						</div>
 						<p className="text-green-600 text-sm mt-2">
-							Your Smart Account has been funded with{" "}
+							Your Omni Account has been funded with{" "}
 							{(Number(ethBalance) / 1e18).toFixed(6)} ETH. You can now proceed
 							to authorize your root key.
 						</p>
@@ -224,7 +224,7 @@ export function FundingGuide({
 									1
 								</span>
 								<span>
-									Copy the Smart Account address above or scan the QR code
+									Copy the Omni Account address above or scan the QR code
 								</span>
 							</li>
 							<li className="flex">
@@ -280,7 +280,7 @@ export function FundingGuide({
 								<p className="font-medium mb-1">Important:</p>
 								<p>
 									Make sure you're sending ETH on the correct network. This
-									Smart Account will only work on the network where the
+									Omni Account will only work on the network where the
 									contracts are deployed.
 								</p>
 							</div>

@@ -10,14 +10,26 @@ import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronRight, Check } from "lucide-react";
 
 function HomeContent() {
-	const { address: evmAddress } = useAccount();
+	const { address: evmAddress, chain, isConnected } = useAccount();
 	const publicClient = usePublicClient();
 	const [aaWalletAddress, setAAWalletAddress] = useState<string>("");
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isAuthorized, setIsAuthorized] = useState(false);
 	const [hasContract, setHasContract] = useState(false);
 
-	// Check if Smart Account contract exists
+	// Debug logging
+	useEffect(() => {
+		console.log("HomeContent Debug:", {
+			evmAddress,
+			chainId: chain?.id,
+			chainName: chain?.name,
+			isConnected,
+			aaWalletAddress,
+			publicClientChainId: publicClient?.chain?.id,
+		});
+	}, [evmAddress, chain, isConnected, aaWalletAddress, publicClient]);
+
+	// Check if Omni Account contract exists
 	useEffect(() => {
 		const checkContract = async () => {
 			if (!aaWalletAddress || !publicClient) {
@@ -115,13 +127,13 @@ function HomeContent() {
 		{
 			id: 2,
 			title: "View AA Wallet",
-			description: "See your pre-calculated Smart Account address",
+			description: "See your pre-calculated Omni Account address",
 			completed: !!evmAddress,
 		},
 		{
 			id: 3,
 			title: "Fund Wallet",
-			description: "Send ETH to your Smart Account",
+			description: "Send ETH to your Omni Account",
 			completed: !!isFunded,
 		},
 		{
@@ -218,7 +230,7 @@ function HomeContent() {
 								</h3>
 								<ul className="text-sm text-purple-700 space-y-1">
 									<li>• Multi-chain wallet support</li>
-									<li>• Smart Account calculation</li>
+									<li>• Omni Account calculation</li>
 									<li>• Root key delegation</li>
 									<li>• EIP-7702 research notes</li>
 									<li>• Worker integration ready</li>
@@ -247,10 +259,10 @@ function HomeContent() {
 							{currentStep >= 2 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 2: View Your Smart Account
+										Step 2: View Your Omni Account
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Your Smart Account address is pre-calculated using your
+										Your Omni Account address is pre-calculated using your
 										wallet address and client ID.
 									</p>
 									<AAWalletInfo onAddressCalculated={setAAWalletAddress} />
@@ -260,10 +272,10 @@ function HomeContent() {
 							{currentStep >= 3 && currentStep <= 3 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 3: Fund Your Smart Account
+										Step 3: Fund Your Omni Account
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Send some ETH to your Smart Account address to enable
+										Send some ETH to your Omni Account address to enable
 										Account Abstraction features.
 									</p>
 									<FundingGuide
@@ -283,7 +295,7 @@ function HomeContent() {
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Set up a root signer that can create sessions and delegate
-										access to your Smart Account.
+										access to your Omni Account.
 									</p>
 									<RootKeyAuthorization
 										aaWalletAddress={aaWalletAddress}
@@ -299,7 +311,7 @@ function HomeContent() {
 										Step 5: Start Swapping
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Your Smart Account is ready! Send swap requests to the TEE
+										Your Omni Account is ready! Send swap requests to the TEE
 										worker service.
 									</p>
 									{/* TODO */}
@@ -335,7 +347,7 @@ function HomeContent() {
 													<Check className="w-4 h-4 text-white" />
 												</div>
 												<span className="font-medium text-green-700">
-													Smart Account Funded
+													Omni Account Funded
 												</span>
 											</div>
 											<span className="text-sm text-gray-500">
