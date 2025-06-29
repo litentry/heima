@@ -13,7 +13,14 @@ echo "🔍 Extracting deployed contract addresses..."
 
 # Function to extract address from forge output or broadcast file
 extract_addresses() {
-    local broadcast_file="$SCRIPT_DIR/broadcast/DeployAA.s.sol/1337/run-latest.json"
+    local broadcast_file="$SCRIPT_DIR/broadcast/DeployLocal.s.sol/1337/run-latest.json"
+    
+    # Check for old broadcast file first
+    local old_broadcast_file="$SCRIPT_DIR/broadcast/DeployAA.s.sol/1337/run-latest.json"
+    if [ -f "$old_broadcast_file" ] && [ ! -f "$broadcast_file" ]; then
+        broadcast_file="$old_broadcast_file"
+        echo "⚠️  Using old broadcast file format. Consider re-running deploy-local.sh"
+    fi
     
     if [ ! -f "$broadcast_file" ]; then
         echo "❌ Broadcast file not found. Please run deploy-local.sh first."
@@ -22,15 +29,19 @@ extract_addresses() {
     
     # Extract addresses using grep and sed
     ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-    FACTORY_ADDRESS=$(grep -A2 '"contractName": "SmartAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    # Try both SmartAccountFactory (old) and OmniAccountFactory (new) names
+    FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    if [ -z "$FACTORY_ADDRESS" ]; then
+        FACTORY_ADDRESS=$(grep -A2 '"contractName": "SmartAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    fi
     
-    # SmartAccount implementation is created by the factory, need to find it differently
+    # OmniAccount implementation is created by the factory, need to find it differently
     # For now, we'll leave it empty as it's deployed by the factory
-    SMART_ACCOUNT_IMPL_ADDRESS=""
+    OMNI_ACCOUNT_IMPL_ADDRESS=""
     
     echo "Found addresses:"
     echo "  EntryPoint: $ENTRYPOINT_ADDRESS"
-    echo "  SmartAccountFactory: $FACTORY_ADDRESS"
+    echo "  OmniAccountFactory: $FACTORY_ADDRESS"
 }
 
 # Function to create or update .env.local
@@ -54,7 +65,7 @@ NEXT_PUBLIC_CHAIN_ID=1337
 # Contract Addresses
 NEXT_PUBLIC_ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS
 NEXT_PUBLIC_FACTORY_ADDRESS=$FACTORY_ADDRESS
-NEXT_PUBLIC_SMART_ACCOUNT_IMPL_ADDRESS=$SMART_ACCOUNT_IMPL_ADDRESS
+NEXT_PUBLIC_OMNI_ACCOUNT_IMPL_ADDRESS=$OMNI_ACCOUNT_IMPL_ADDRESS
 
 # Local RPC URL
 NEXT_PUBLIC_RPC_URL=http://localhost:8545
