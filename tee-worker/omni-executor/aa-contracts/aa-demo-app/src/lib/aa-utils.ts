@@ -12,27 +12,26 @@ import {
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
 /**
- * Based on the SmartAccount.sol _determineOa function:
+ * Based on the OmniAccount.sol _determineOa function:
  * bytes memory oaType = bytes("evm");
- * return sha256(abi.encodePacked(oaType, clientId, sender));
+ * return sha256(abi.encodePacked(clientId, oaType, sender));
  */
 export function calculateOmniAccount(
 	address: Address | string,
 	clientId: string = DEFAULT_CLIENT_ID,
 	identityType: "evm" | "solana" = "evm",
 ): `0x${string}` {
-	// Create input array for hashing
+	// Create input array for hashing - order is important: clientId, oaType, sender
 	const inputs: Uint8Array[] = [];
 
+	// First: clientId as raw bytes (not padded to 32)
+	const clientIdBytes = new TextEncoder().encode(clientId);
+	inputs.push(clientIdBytes);
+
+	// Second: identity type ("evm" or "solana")
 	inputs.push(new TextEncoder().encode(identityType));
 
-	const clientIdBytes = stringToBytes32(clientId);
-	const clientIdArray = new Uint8Array(32);
-	for (let i = 0; i < 32; i++) {
-		clientIdArray[i] = parseInt(clientIdBytes.slice(2 + i * 2, 4 + i * 2), 16);
-	}
-	inputs.push(clientIdArray);
-
+	// Third: address
 	if (identityType === "evm") {
 		// For EVM addresses, remove 0x prefix and convert from hex
 		const addressHex = address.slice(2).toLowerCase();
@@ -66,10 +65,10 @@ export function calculateOmniAccount(
 		address,
 		clientId,
 		identityType,
-		identityTypeBytes: Array.from(inputs[0])
+		clientIdBytes: Array.from(inputs[0])
 			.map((b) => b.toString(16).padStart(2, "0"))
 			.join(""),
-		clientIdBytes: Array.from(inputs[1])
+		identityTypeBytes: Array.from(inputs[1])
 			.map((b) => b.toString(16).padStart(2, "0"))
 			.join(""),
 		addressBytes: Array.from(inputs[2])
@@ -98,7 +97,18 @@ export function stringToBytes32(str: string): `0x${string}` {
 }
 
 /**
- * Encode the getAddress function call for the SmartAccountFactory
+ * Convert a string to bytes format for contract calls (variable length)
+ */
+export function stringToBytes(str: string): `0x${string}` {
+	const encoder = new TextEncoder();
+	const bytes = encoder.encode(str);
+	return `0x${Array.from(bytes)
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("")}`;
+}
+
+/**
+ * Encode the getAddress function call for the OmniAccountFactory
  * Note: This should be used with a contract read call to get the actual address
  */
 export function encodeGetAddress(
@@ -107,22 +117,22 @@ export function encodeGetAddress(
 	rootSigner: Address,
 ): `0x${string}` {
 	return encodeFunctionData({
-		abi: CONTRACTS.SmartAccountFactory.abi,
+		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "getAddress",
 		args: [omniAccount, clientId, rootSigner],
 	});
 }
 
 /**
- * Encode initialization data for Smart Account
+ * Encode initialization data for Omni Account
  */
-export function encodeSmartAccountInitData(
+export function encodeOmniAccountInitData(
 	omniAccount: `0x${string}`,
 	clientId: `0x${string}`,
 	rootSigner: Address,
 ): `0x${string}` {
 	return encodeFunctionData({
-		abi: CONTRACTS.SmartAccountFactory.abi,
+		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "createAccount",
 		args: [omniAccount, clientId, rootSigner],
 	});
@@ -277,9 +287,9 @@ export function getUserOpHash(
 }
 
 /**
- * Generate initCode for deploying a Smart Account
+ * Generate initCode for deploying an Omni Account
  * The initCode contains factory address + createAccount calldata
- * During deployment, SmartAccount extracts these params to validate the deployer's signature
+ * During deployment, OmniAccount extracts these params to validate the deployer's signature
  * This enables the AA24 signature fix where deployment can be authorized by either:
  * - The account whose omniAccount matches the expected OA
  * - The designated root signer
@@ -296,7 +306,7 @@ export function generateInitCode(
 
 	// Encode the factory address and init data together
 	const initCalldata = encodeFunctionData({
-		abi: CONTRACTS.SmartAccountFactory.abi,
+		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "createAccount",
 		args: [omniAccount, clientId, rootSigner],
 	});
