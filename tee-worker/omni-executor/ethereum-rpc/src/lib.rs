@@ -17,7 +17,6 @@
 pub mod client;
 pub mod signer;
 
-use std::str::FromStr;
 use alloy::eips::{BlockId, BlockNumberOrTag};
 use alloy::hex;
 use alloy::network::Ethereum;
