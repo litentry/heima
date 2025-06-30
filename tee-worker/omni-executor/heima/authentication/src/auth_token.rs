@@ -1,4 +1,4 @@
-use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX};
+use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX, CLIENT_ID_WILDMETA};
 use executor_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use rsa::{
@@ -72,7 +72,7 @@ impl AuthTokenValidator<AuthTokenClaims> for String {
 		let claims = jwt::decode::<AuthTokenClaims>(
 			self,
 			public_key.as_bytes(),
-			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX, CLIENT_ID_WILDMETA]),
 			validation.skip_exp_check,
 		)
 		.map_err(|e| Error::JwtError(e.kind().clone()))?;
@@ -96,7 +96,7 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 		let claims = jwt::decode::<AuthTokenClaims>(
 			self,
 			public_key.as_bytes(),
-			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX]),
+			Some(&[CLIENT_ID_HEIMA, CLIENT_ID_PUMPX, CLIENT_ID_WILDMETA]),
 			validation.skip_exp_check,
 		)
 		.map_err(|e| Error::JwtError(e.kind().clone()))?;
