@@ -19,6 +19,7 @@
 
 mod types;
 
+use aa_contracts_client::calculate_omni_account_address;
 use accounting_contract_client::{
 	solana::AccountingContractApi as SolanaAccountingContractApi,
 	AccountingContractApi as EvmAccountingContractApi,
@@ -48,7 +49,7 @@ use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_storage::StorageDB;
 use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
+use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, CLIENT_ID_HEIMA};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
@@ -59,16 +60,12 @@ use parentchain_rpc_client::SubxtClient;
 use parentchain_rpc_client::SubxtClientFactory;
 use parentchain_signer::TxSigner;
 use parity_scale_codec::Encode;
-use pumpx::methods::common::{GasType, SwapType};
-use pumpx::methods::create_cross_order::CreateCrossOrderBody;
-use pumpx::methods::create_cross_order::CrossOrderInfo;
-use pumpx::methods::create_limit_order::CreateLimitOrderBody;
-use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
-use pumpx::methods::cross_fail::CrossFailBody;
-use pumpx::methods::send_order_tx::SendOrderTxBody;
-use pumpx::pubkey_to_address;
-use pumpx::signer_client::PumpxChainId;
-use pumpx::PumpxApi;
+use ::pumpx::methods::common::{GasType, SwapType};
+use ::pumpx::methods::create_limit_order::CreateLimitOrderBody;
+use ::pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
+use ::pumpx::methods::cross_fail::CrossFailBody;
+use ::pumpx::methods::send_order_tx::SendOrderTxBody;
+use ::pumpx::signer_client::PumpxChainId;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
 use signer_client::{ChainType, SignerClient};
@@ -84,14 +81,10 @@ pub use types::*;
 
 use tracing::{debug, error};
 
-mod cross_chain;
-mod single_chain;
-
-#[cfg(test)]
-mod cross_chain_swap_tests;
-#[cfg(test)]
-mod single_chain_swap_tests;
-
+mod pumpx;
+mod omni;
+mod utils;
+use utils::{determine_trade_symbol_and_order_side, estimate_payout_amount, str_to_u256, get_binance_deposit_info};
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
 
@@ -112,7 +105,7 @@ pub struct CrossChainIntentExecutor<
 	account_asset_lock: Arc<AccountAssetLocks<PreciseAssetsLock>>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	pumpx_api: Arc<Box<dyn PumpxApi>>,
+	pumpx_api: Arc<Box<dyn ::pumpx::PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	binance_api: Arc<BinanceClient>,
 	bsc_client: Arc<EthereumClient>,
@@ -120,6 +113,9 @@ pub struct CrossChainIntentExecutor<
 	evm_accounting_contract_client: Arc<Box<dyn EvmAccountingContractApi>>,
 	solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>>,
 	instant_payout_threshold: Decimal,
+	// AA contracts configuration
+	omni_account_factory_address: Address,
+	omni_account_implementation_address: Address,
 }
 
 impl<
@@ -133,7 +129,7 @@ impl<
 		account_asset_lock: Arc<AccountAssetLocks<PreciseAssetsLock>>,
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		pumpx_api: Arc<Box<dyn PumpxApi>>,
+		pumpx_api: Arc<Box<dyn ::pumpx::PumpxApi>>,
 		storage_db: Arc<StorageDB>,
 		binance_api: Arc<BinanceClient>,
 		bsc_client: Arc<EthereumClient>,
@@ -141,6 +137,8 @@ impl<
 		evm_accounting_contract_client: Arc<Box<dyn EvmAccountingContractApi>>,
 		solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>>,
 		instant_payout_threshold: Decimal,
+		omni_account_factory_address: Address,
+		omni_account_implementation_address: Address,
 	) -> Result<Self, ()> {
 		Ok(Self {
 			account_asset_lock,
@@ -154,7 +152,25 @@ impl<
 			evm_accounting_contract_client,
 			solana_accounting_contract_client,
 			instant_payout_threshold,
+			omni_account_factory_address,
+			omni_account_implementation_address,
 		})
+	}
+
+	/// Generate omni account address using AA contracts
+	fn generate_omni_account_address(
+		&self,
+		omni_account: [u8; 32],
+		client_id: &[u8],
+		root_address: Address,
+	) -> Address {
+		calculate_omni_account_address(
+			self.omni_account_factory_address,
+			self.omni_account_implementation_address,
+			omni_account.into(),
+			client_id,
+			root_address,
+		)
 	}
 }
 
@@ -175,137 +191,263 @@ impl<
 			Intent::Swap(ref swap_order, ref _ccsp, ref scsp) => {
 				debug!("Started processing SwapOrder intent, order: {:?}, signle chain swap provider: {:?}", swap_order, scsp);
 
-				// TODO: update this when we have more providers
-				let SingleChainSwapProvider::Pumpx(pumpx_config) = scsp.to_owned().try_into()?;
+				match scsp.to_owned().try_into()? {
+					SingleChainSwapProvider::Pumpx(pumpx_config) => {
+						let mut amount = pumpx_config.from_amount.clone();
 
-				let mut amount = pumpx_config.from_amount.clone();
-
-				let Some(from_chain_type) =
-					ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
-				else {
-					error!("Unsupported from_chain_id: {}", pumpx_config.from_chain_id);
-					return Err(());
-				};
-				let from_wallet: Vec<u8> = self
-					.pumpx_signer_client
-					.request_wallet(
-						from_chain_type,
-						pumpx_config.wallet_index,
-						*account_id.as_ref(),
-					)
-					.await
-					.map_err(|e| error!("Could not get from_wallet from pumpx-signer: {:?}", e))?;
-
-				let mut from_address = pubkey_to_address(from_chain_type, &from_wallet)?;
-
-				let Some(to_chain_type) = ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
-				else {
-					error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
-					return Err(());
-				};
-
-				let to_wallet = self
-					.pumpx_signer_client
-					.request_wallet(to_chain_type, pumpx_config.wallet_index, *account_id.as_ref())
-					.await
-					.map_err(|e| error!("Could not get to_wallet from pumpx-signer: {:?}", e))?;
-
-				let to_address = pubkey_to_address(to_chain_type, &to_wallet)?;
-
-				let storage = HeimaJwtStorage::new(self.storage_db.clone());
-				let Ok(Some(access_token)) =
-					storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
-				else {
-					error!("Failed to get access token from storage");
-					return Err(());
-				};
-
-				let mut instant_flow_details: Option<InstantFlowDetails> = None;
-
-				let should_notify_parentchain = pumpx_config.order_type != PumpxOrderType::Limit;
-
-				// do cross-chain swap first, if required
-				if pumpx_config.is_cross_chain() {
-					(amount, from_address, instant_flow_details) = match self
-						.execute_cross_chain_swap(
-							account_id,
-							*account_id.as_ref(),
-							intent_id,
-							&access_token,
-							swap_order,
-							from_address,
-							from_wallet,
-							&pumpx_config,
-							to_address.clone(),
-						)
-						.await
-					{
-						Ok((amount, address, instant_flow_details)) => {
-							(amount, address, instant_flow_details)
-						},
-						Err(_) => {
-							error!("Error executing cross chain swap for intent_id: {}", intent_id);
-							let body = CrossFailBody {
-								request_id: intent_id,
-								fail_reason: "".to_string(), // TODO: `execute_cross_chain_swap` should return concrete reasons
-							};
-							self.pumpx_api.cross_fail(&access_token, body).await.map_err(|_| {
-								error!("Failed to notify pumpx-signer");
-							})?;
+						let Some(from_chain_type) =
+							ChainType::from_pumpx_chain_id(pumpx_config.from_chain_id)
+						else {
+							error!("Unsupported from_chain_id: {}", pumpx_config.from_chain_id);
 							return Err(());
-						},
-					};
-				}
+						};
+						let from_wallet: Vec<u8> = self
+							.pumpx_signer_client
+							.request_wallet(
+								from_chain_type,
+								pumpx_config.wallet_index,
+								*account_id.as_ref(),
+							)
+							.await
+							.map_err(|e| {
+								error!("Could not get from_wallet from pumpx-signer: {:?}", e)
+							})?;
 
-				// then do a single (native) chain swap
-				let res = self
-					.execute_single_chain_swap(
-						*account_id.as_ref(),
-						intent_id,
-						&access_token,
-						amount,
-						&pumpx_config,
-						from_address,
-						to_address,
-					)
-					.await?;
+						let mut from_address = ::pumpx::pubkey_to_address(from_chain_type, &from_wallet)?;
 
-				// deposit here and unlock assets
-				if let Some(details) = instant_flow_details {
-					let binance_api = self.binance_api.clone();
-					let pumpx_signer = self.pumpx_signer_client.clone();
-					let bsc_client = self.bsc_client.clone();
-					let solana_client = self.solana_client.clone();
-					let account_asset_lock = self.account_asset_lock.clone();
-					let from_asset = swap_order.from_asset.clone();
-					let account_id = account_id.clone();
-					tokio::spawn(async move {
-						if let Err(e) = Self::do_binance_deposit(
-							details.omni_account,
-							details.from_asset,
-							details.from_amount.to_string(),
-							details.from_address,
-							details.wallet_index,
-							false,
-							binance_api,
-							pumpx_signer,
-							bsc_client,
-							solana_client,
-						)
-						.await
-						{
-							error!("Could not deposit to binance: {:?}", e);
-						} else if let Err(e) = account_asset_lock.release(
-							account_id,
-							from_asset,
-							details.locked_amount,
-						) {
-							error!("Could not release asset lock: {:?}", e);
+						let Some(to_chain_type) =
+							ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
+						else {
+							error!("Unsupported to_chain_id: {}", pumpx_config.to_chain_id);
+							return Err(());
+						};
+
+						let to_wallet = self
+							.pumpx_signer_client
+							.request_wallet(
+								to_chain_type,
+								pumpx_config.wallet_index,
+								*account_id.as_ref(),
+							)
+							.await
+							.map_err(|e| {
+								error!("Could not get to_wallet from pumpx-signer: {:?}", e)
+							})?;
+
+						let to_address = ::pumpx::pubkey_to_address(to_chain_type, &to_wallet)?;
+
+						let storage = HeimaJwtStorage::new(self.storage_db.clone());
+						let Ok(Some(access_token)) =
+							storage.get(&(account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
+						else {
+							error!("Failed to get access token from storage");
+							return Err(());
+						};
+
+						let mut instant_flow_details: Option<InstantFlowDetails> = None;
+
+						let should_notify_parentchain =
+							pumpx_config.order_type != PumpxOrderType::Limit;
+
+						// do cross-chain swap first, if required
+						if pumpx_config.is_cross_chain() {
+							(amount, from_address, instant_flow_details) = match self
+								.execute_cross_chain_swap(
+									account_id,
+									*account_id.as_ref(),
+									intent_id,
+									&access_token,
+									swap_order,
+									from_address,
+									from_wallet,
+									&pumpx_config,
+									to_address.clone(),
+								)
+								.await
+							{
+								Ok((amount, address, instant_flow_details)) => {
+									(amount, address, instant_flow_details)
+								},
+								Err(_) => {
+									error!(
+										"Error executing cross chain swap for intent_id: {}",
+										intent_id
+									);
+									let body = CrossFailBody {
+										request_id: intent_id,
+										fail_reason: "".to_string(), // TODO: `execute_cross_chain_swap` should return concrete reasons
+									};
+									self.pumpx_api.cross_fail(&access_token, body).await.map_err(
+										|_| {
+											error!("Failed to notify pumpx-signer");
+										},
+									)?;
+									return Err(());
+								},
+							};
 						}
-					});
-				}
 
-				Ok((Some(res), should_notify_parentchain))
+						// then do a single (native) chain swap
+						let res = self
+							.execute_single_chain_swap(
+								*account_id.as_ref(),
+								intent_id,
+								&access_token,
+								amount,
+								&pumpx_config,
+								from_address,
+								to_address,
+							)
+							.await?;
+
+						// deposit here and unlock assets
+						if let Some(details) = instant_flow_details {
+							let binance_api = self.binance_api.clone();
+							let pumpx_signer = self.pumpx_signer_client.clone();
+							let bsc_client = self.bsc_client.clone();
+							let solana_client = self.solana_client.clone();
+							let account_asset_lock = self.account_asset_lock.clone();
+							let from_asset = swap_order.from_asset.clone();
+							let account_id = account_id.clone();
+							tokio::spawn(async move {
+								if let Err(e) = Self::do_binance_deposit(
+									details.omni_account,
+									details.from_asset,
+									details.from_amount.to_string(),
+									details.from_address,
+									details.wallet_index,
+									false,
+									binance_api,
+									pumpx_signer,
+									bsc_client,
+									solana_client,
+								)
+								.await
+								{
+									error!("Could not deposit to binance: {:?}", e);
+								} else if let Err(e) = account_asset_lock.release(
+									account_id,
+									from_asset,
+									details.locked_amount,
+								) {
+									error!("Could not release asset lock: {:?}", e);
+								}
+							});
+						}
+
+						Ok((Some(res), should_notify_parentchain))
+					},
+					SingleChainSwapProvider::Omni => {
+						debug!("Processing Omni single chain swap provider");
+						
+						// For omni, we generate addresses using AA contracts
+						let root_address = self.evm_accounting_contract_client.get_signer_address().await;
+						let omni_account: [u8; 32] = *account_id.as_ref();
+						
+						// Generate from and to addresses using AA contracts
+						let from_address_addr = self.generate_omni_account_address(
+							omni_account,
+							CLIENT_ID_HEIMA.as_bytes(),
+							root_address,
+						);
+						let from_address = from_address_addr.to_string();
+						let to_address = from_address.clone(); // For single chain swaps, from and to are the same account
+						let from_wallet = omni_account.to_vec();
+						
+						// Extract amount from swap order
+						let amount = String::from_utf8(swap_order.from_amount.to_vec()).map_err(|_| {
+							error!("Failed to parse from_amount from swap_order");
+						})?;
+						
+						// Check if this is a cross-chain swap for omni
+						let is_cross_chain = match (&swap_order.from_asset, &swap_order.to_asset) {
+							(ChainAsset::Solana(_), ChainAsset::Ethereum(56, _)) => true, // SOL to BSC
+							(ChainAsset::Ethereum(56, _), ChainAsset::Solana(_)) => true, // BSC to SOL
+							_ => false,
+						};
+						
+						let mut instant_flow_details: Option<InstantFlowDetails> = None;
+						let mut final_amount = amount.clone();
+						let mut final_from_address = from_address.clone();
+						
+						if is_cross_chain {
+							debug!("Omni cross-chain swap detected");
+							match self.execute_omni_cross_chain_swap(
+								account_id,
+								*account_id.as_ref(),
+								intent_id,
+								swap_order,
+								from_address,
+								from_wallet,
+								to_address.clone(),
+								amount,
+							).await {
+								Ok((payout_amount, payout_address, instant_details)) => {
+									final_amount = payout_amount;
+									final_from_address = payout_address;
+									instant_flow_details = instant_details;
+								},
+								Err(_) => {
+									error!("Omni cross-chain swap failed for intent_id: {}", intent_id);
+									return Err(());
+								}
+							}
+						}
+						
+						// For single chain swaps, call the omni single chain method
+						let res = self
+							.execute_omni_single_chain_swap(
+								*account_id.as_ref(),
+								intent_id,
+								final_amount,
+								final_from_address,
+								to_address,
+								swap_order.from_asset.clone(),
+								swap_order.to_asset.clone(),
+							)
+							.await;
+						
+						// Handle instant flow for omni (similar to pumpx but without pumpx-specific logic)
+						if let Some(details) = instant_flow_details {
+							let binance_api = self.binance_api.clone();
+							let bsc_client = self.bsc_client.clone();
+							let solana_client = self.solana_client.clone();
+							let account_asset_lock = self.account_asset_lock.clone();
+							let from_asset = swap_order.from_asset.clone();
+							let account_id_clone = account_id.clone();
+							
+							tokio::spawn(async move {
+								// For omni, we use the same binance deposit logic but without pumpx-signer
+								if let Err(e) = Self::do_omni_binance_deposit(
+									details.omni_account,
+									details.from_asset,
+									details.from_amount.to_string(),
+									details.from_address,
+									false,
+									binance_api,
+									bsc_client,
+									solana_client,
+								).await {
+									error!("Could not deposit to binance for omni: {:?}", e);
+								} else if let Err(e) = account_asset_lock.release(
+									account_id_clone,
+									from_asset,
+									details.locked_amount,
+								) {
+									error!("Could not release asset lock for omni: {:?}", e);
+								}
+							});
+						}
+						
+						match res {
+							Ok(result) => Ok((Some(result), false)), // false = don't notify parentchain for omni
+							Err(_) => {
+								error!("Omni single chain swap failed");
+								Err(())
+							}
+						}
+					},
+				}
 			},
 			_ => {
 				error!("[CrossChainIntentExecutor]: Unsupported intent: {:?}", intent);
@@ -334,6 +476,72 @@ impl<
 		SolanaClient: SolanaClientTrait,
 	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
+	async fn do_omni_binance_deposit(
+		omni_account: [u8; 32],
+		from_asset: ChainAsset,
+		from_amount: String,
+		from_address: String,
+		should_wait_for_deposit_confirm: bool,
+		binance_api: Arc<BinanceClient>,
+		_bsc_client: Arc<EthereumClient>,
+		_solana_client: Arc<SolanaClient>,
+	) -> Result<(String, U256), ()> {
+		let (_deposit_address, binance_asset, from_amount_decimal, _amount_to_transfer_decimal) =
+			get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
+
+		let binance_network = binance_asset.network;
+		let binance_coin = binance_asset.coin;
+		let _binance_address = binance_asset.address;
+
+		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
+			binance_network.clone(),
+			binance_coin.clone(),
+			BinanceNetwork::Bsc,
+		)?;
+
+		// init `payout_amount` with estimated-amount-to-receive
+		let mut payout_amount = estimate_payout_amount(
+			&binance_api,
+			&trade_symbol,
+			binance_coin.clone(),
+			from_amount_decimal,
+		)
+		.await?;
+
+		let mut payout_amount_u256 =
+			str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
+
+		// todo: adjust and use omni-account 
+		let tx_id = match from_asset {
+			ChainAsset::Solana(_) => {
+				debug!("Omni: Simulating SOL transfer to binance deposit address");
+				format!("omni_sol_transfer_{}", omni_account.iter().map(|b| format!("{:02x}", b)).collect::<String>())
+			},
+			ChainAsset::Ethereum(_, _) => {
+				debug!("Omni: Simulating BNB transfer to binance deposit address");
+				format!("omni_bnb_transfer_{}", omni_account.iter().map(|b| format!("{:02x}", b)).collect::<String>())
+			},
+		};
+
+		if should_wait_for_deposit_confirm {
+			let result = Self::wait_for_deposit_confirm(
+				from_address,
+				Some(tx_id.clone()),
+				binance_network.clone(),
+				binance_coin,
+				trade_symbol.clone(),
+				order_side,
+				from_amount,
+				BinanceCoin::Sol,
+				binance_api.clone(),
+			)
+			.await?;
+			payout_amount = result.0;
+			payout_amount_u256 = result.1;
+		};
+		Ok((payout_amount, payout_amount_u256))
+	}
+
 	async fn do_binance_deposit(
 		omni_account: [u8; 32],
 		from_asset: ChainAsset,
@@ -347,20 +555,20 @@ impl<
 		solana_client: Arc<SolanaClient>,
 	) -> Result<(String, U256), ()> {
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			Self::get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
+			get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
 
 		let binance_network = binance_asset.network;
 		let binance_coin = binance_asset.coin;
 		let binance_address = binance_asset.address;
 
-		let (trade_symbol, order_side) = cross_chain::determine_trade_symbol_and_order_side(
+		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
 			binance_network.clone(),
 			binance_coin.clone(),
 			BinanceNetwork::Bsc,
 		)?;
 
 		// init `payout_amount` with estimated-amount-to-receive
-		let mut payout_amount = cross_chain::estimate_payout_amount(
+		let mut payout_amount = estimate_payout_amount(
 			&binance_api,
 			&trade_symbol,
 			binance_coin.clone(),
@@ -369,7 +577,7 @@ impl<
 		.await?;
 
 		let mut payout_amount_u256 =
-			cross_chain::str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
+			str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
 
 		let tx_id = match from_asset {
 			ChainAsset::Solana(_) => {

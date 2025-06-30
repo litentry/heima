@@ -11,11 +11,11 @@ hex = { workspace = true }
 parity-scale-codec = { workspace = true }
 rust_decimal = { workspace = true }
 solana-sdk = { workspace = true }
-sp-core = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
+aa-contracts-client = { workspace = true }
 accounting-contract-client = { workspace = true }
 alloy = { workspace = true }
 base58 = { workspace = true }
@@ -28,11 +28,9 @@ heima-authentication = { workspace = true }
 heima-primitives = { workspace = true }
 intent-asset-lock = { workspace = true }
 intent-token-query = { workspace = true }
-parentchain-api-interface = { workspace = true }
 parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
-rand = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
 

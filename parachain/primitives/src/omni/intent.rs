@@ -215,6 +215,7 @@ pub enum PumpxOrderType {
 #[derive(Deserialize, Debug, Clone)]
 pub enum SingleChainSwapProvider {
 	Pumpx(PumpxConfig),
+	Omni
 }
 
 impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
@@ -226,6 +227,7 @@ impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
 				let pumpx_config = PumpxConfig::try_from(pumpx_config)?;
 				Ok(SingleChainSwapProvider::Pumpx(pumpx_config))
 			},
+			OnChainSingleChainSwapProvider::Omni => Ok(SingleChainSwapProvider::Omni),
 		}
 	}
 }
@@ -233,6 +235,7 @@ impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum OnChainSingleChainSwapProvider {
 	Pumpx(OnChainPumpxConfig),
+	Omni
 }
 
 impl TryFrom<SingleChainSwapProvider> for OnChainSingleChainSwapProvider {
@@ -244,6 +247,7 @@ impl TryFrom<SingleChainSwapProvider> for OnChainSingleChainSwapProvider {
 				let on_chain_config = OnChainPumpxConfig::try_from(pumpx_config)?;
 				Ok(OnChainSingleChainSwapProvider::Pumpx(on_chain_config))
 			},
+			SingleChainSwapProvider::Omni => Ok(OnChainSingleChainSwapProvider::Omni),
 		}
 	}
 }

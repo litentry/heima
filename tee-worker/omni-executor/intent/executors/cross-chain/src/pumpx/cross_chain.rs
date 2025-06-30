@@ -1,14 +1,13 @@
 // TODO: put it into a mod for potential different providers (other than binance)
 
-use super::*;
+use crate::*;
+use crate::utils::{get_binance_deposit_info, get_token_available_amount, estimate_asset_value_in_usdt};
 use executor_primitives::SwapOrder;
 use executor_storage::PumpxProfileStorage;
 use heima_primitives::PumpxConfig;
-use intent_token_query::query_ethereum;
-use intent_token_query::query_solana;
-use intent_token_query::EthereumAddress;
-use intent_token_query::SolanaPubkey;
-use std::ops::Deref;
+use ::pumpx::methods::create_cross_order::{CreateCrossOrderBody, CrossOrderInfo};
+use ::pumpx::methods::common::{SwapType};
+use std::str::FromStr;
 use tracing::{debug, error, info};
 
 impl<
@@ -85,8 +84,12 @@ impl<
 		.unwrap();
 
 		if instant {
-			let available_amount =
-				self.get_token_available_amount(&swap_order.from_asset, from_wallet).await?;
+			let available_amount = get_token_available_amount(
+				&swap_order.from_asset, 
+				from_wallet,
+				&self.rpc_endpoint_registry,
+				&self.solana_client,
+			).await?;
 
 			self.account_asset_lock.check_and_insert(
 				account_id.clone(),
@@ -110,7 +113,7 @@ impl<
 
 		match (&swap_order.from_asset, &swap_order.to_asset) {
 			// SOL to BSC
-			(ChainAsset::Solana(_), ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _)) => {
+			(ChainAsset::Solana(_), ChainAsset::Ethereum(::pumpx::constants::BSC_CHAIN_ID, _)) => {
 				let payout_address = Address::from_str(&to_address).map_err(|_| {
 					error!("Failed to parse payout address");
 				})?;
@@ -192,7 +195,7 @@ impl<
 				}
 			},
 			// BSC to SOL
-			(ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, _), ChainAsset::Solana(_)) => {
+			(ChainAsset::Ethereum(::pumpx::constants::BSC_CHAIN_ID, _), ChainAsset::Solana(_)) => {
 				let payout_address = Pubkey::from_str(&to_address).map_err(|_| {
 					error!("Failed to parse payout address");
 				})?;
@@ -277,7 +280,7 @@ impl<
 	}
 
 	// TODO: move `should_wait_for_deposit_confirm` to provider config
-	async fn do_binance_swap_sol_to_bsc(
+	pub async fn do_binance_swap_sol_to_bsc(
 		&self,
 		omni_account: [u8; 32],
 		from_asset: ChainAsset,
@@ -287,7 +290,7 @@ impl<
 		should_wait_for_deposit_confirm: bool,
 	) -> Result<(String, U256), ()> {
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			Self::get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount)
+			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount)
 				.await?;
 
 		let binance_network = binance_asset.network;
@@ -428,7 +431,7 @@ impl<
 		should_wait_for_deposit_confirm: bool,
 	) -> Result<(String, U256), ()> {
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			Self::get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount)
+			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount)
 				.await?;
 
 		let binance_network = binance_asset.network;
@@ -846,30 +849,6 @@ impl<
 		calculate_amount_in(payout_amount, gas_fee, payout_coin.decimals())
 	}
 
-	async fn get_token_available_amount(
-		&self,
-		asset: &ChainAsset,
-		address: Vec<u8>,
-	) -> Result<U256, ()> {
-		match &asset {
-			ChainAsset::Ethereum(chain_id, token) => {
-				let rpc_url = self
-					.rpc_endpoint_registry
-					.get(&Chain::Ethereum(*chain_id))
-					.ok_or(error!("No RPC endpoint in registry for Ethereum chain"))?;
-				let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
-				query_ethereum(&provider, EthereumAddress::from_slice(&address), token).await
-			},
-			ChainAsset::Solana(token) => {
-				let pubkey = SolanaPubkey::try_from(address).map_err(|e| {
-					error!("Could not create solana pubkey from wallet address: {:?}", e)
-				})?;
-				query_solana(self.solana_client.deref(), &pubkey, token)
-					.await
-					.map(|v| AmountType::from(v))
-			},
-		}
-	}
 }
 
 pub(crate) fn determine_trade_symbol_and_order_side(
@@ -944,41 +923,6 @@ pub(crate) async fn estimate_payout_amount<BinanceClient: BinanceApi>(
 	Ok(payout_amount.to_string())
 }
 
-async fn estimate_asset_value_in_usdt<BinanceClient: BinanceApi>(
-	binance_api: &Arc<BinanceClient>,
-	trade_symbol: &str,
-	binance_coin_name: &str,
-	from_amount_decimal: Decimal,
-) -> Result<Decimal, ()> {
-	let price_str = SpotTradingApi::new(binance_api.as_ref())
-		.get_symbol_price(trade_symbol)
-		.await
-		.map_err(|_| {
-			error!("Failed to get symbol price for {}", trade_symbol);
-		})?;
-
-	let price = if binance_coin_name == "SOL" {
-		// For SOL, we sell SOL to get BNB, so get SOLBNB price
-		Decimal::from_str(&price_str).map_err(|_| {
-			error!("Failed to parse symbol price {}", price_str);
-		})?
-	} else {
-		// For USDC/USDT, we buy BNB with USDC/USDT, so get BNBUSDC/BNBUSDT price and invert
-		let price = Decimal::from_str(&price_str).map_err(|_| {
-			error!("Failed to parse symbol price {}", price_str);
-		})?;
-		if price.is_zero() {
-			error!("Symbol price is zero for {}", trade_symbol);
-			return Err(());
-		}
-		Decimal::ONE / price
-	};
-
-	let amount = from_amount_decimal * price;
-
-	debug!("From amount in usdt: {}", amount);
-	Ok(amount)
-}
 
 fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Result<String, ()> {
 	let amount = Decimal::from_str(amount).map_err(|_| ())?;
