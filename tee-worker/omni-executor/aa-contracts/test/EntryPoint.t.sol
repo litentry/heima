@@ -3,21 +3,21 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
-import {SmartAccountFactory} from "../src/accounts/SmartAccountFactory.sol";
+import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 contract EntryPointTest is Test {
     EntryPoint public entryPoint;
-    SmartAccountFactory public smartAccountFactory;
+    OmniAccountFactory public omniAccountFactory;
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
-    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes clientId = bytes("test_client");
     bytes32 oa;
 
     function setUp() public {
         entryPoint = new EntryPoint();
-        smartAccountFactory = new SmartAccountFactory(entryPoint);
+        omniAccountFactory = new OmniAccountFactory(entryPoint);
         oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
     }
 
@@ -39,14 +39,15 @@ contract EntryPointTest is Test {
 
         bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
-        address factory = address(smartAccountFactory);
-        address sender = 0x9a41cEaf1731Bdde67c871D7de07EC90EFBe846D;
+        address factory = address(omniAccountFactory);
+        address sender = 0xc6B5E9103F9456Af0DA820B02C98a3e043bd99c1;
 
         fundAccountOnEntryPoint(sender, entryPoint);
 
         bytes memory initCode = abi.encodePacked(
-            factory, abi.encodeCall(smartAccountFactory.createAccount, (aliceOa, clientId, rootAddress))
-        );        
+            factory, abi.encodeCall(omniAccountFactory.createAccount, (aliceOa, clientId, rootAddress))
+        );
+
         address payable beneficiary = payable(0x0000000000000000000000000000000000000002);
 
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);

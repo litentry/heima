@@ -2,32 +2,32 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {Counter} from "../src/Counter.sol";
-import {SmartAccountTestUtils} from "./SmartAccountTestUtils.sol";
+import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
 
 // add test cases for revert if called by non authorized address
 
-contract SmartAccountTest is Test {
-    SmartAccount public account;
+contract OmniAccountTest is Test {
+    OmniAccount public account;
     EntryPoint public entryPoint;
     Counter public counter;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
-    bytes32 clientId = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Owner() public view {
-        bytes32 expectedOwner = 0x671ec09fb6c26802c3d666179d280335a94e416969018a0ffe13104540f5e172;
+        bytes32 expectedOwner = 0xe502d639feeb199ae332376b050307d76d11b32e93b9fd1310127d2af64923fe;
         assertEq(account.owner(), expectedOwner);
     }
 
@@ -62,7 +62,7 @@ contract SmartAccountTest is Test {
     }
 
     function test_validateOp() public {
-        (counter, entryPoint, account) = SmartAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (, uint256 bobPk) = makeAddrAndKey("bob");
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;

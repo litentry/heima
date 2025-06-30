@@ -37,6 +37,7 @@ use crate::{
 	SgxStatus, TcbVersionStatus, ATTESTATION_KEY_SIZE, REPORT_SIGNATURE_SIZE,
 };
 use alloc::string::{String, ToString};
+use base64::{engine::general_purpose, Engine as _};
 use der::{
 	asn1::{ObjectIdentifier, PrintableStringRef, Utf8StringRef},
 	Decode as _, Encode as _,
@@ -119,7 +120,10 @@ pub fn extract_certs(cert_chain: &[u8]) -> Vec<Vec<u8>> {
 	let certs_concat = certs_concat.replace("-----BEGIN CERTIFICATE-----", "");
 	// Use the end marker to split the string into certificates
 	let parts = certs_concat.split("-----END CERTIFICATE-----");
-	parts.filter(|p| !p.is_empty()).filter_map(|p| base64::decode(p).ok()).collect()
+	parts
+		.filter(|p| !p.is_empty())
+		.filter_map(|p| general_purpose::STANDARD.decode(p).ok())
+		.collect()
 }
 
 /// Verifies that the `leaf_cert` in combination with the `intermediate_certs` establishes

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "aa-contracts-client",
     "accounting-contract/solana/programs/accounting-contract",
     "accounting-contract-client",
     "binance-api",
