@@ -335,7 +335,7 @@ jobs:
         working-directory: ./tee-worker/identity
         shell: bash
         run: |
-          for d in . identity/enclave-runtime; do
+          for d in . enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
             cargo clippy -- -D warnings
