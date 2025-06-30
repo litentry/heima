@@ -59,7 +59,7 @@ impl OkxSwap for OkxClient {
 			.send()
 			.await
 			.map_err(|e| {
-				error!("Failed to send add_wallet request: {:?}", e);
+				error!("Failed to send okx swap request: {:?}", e);
 				e
 			})?;
 
@@ -69,7 +69,7 @@ impl OkxSwap for OkxClient {
 			e
 		})?;
 		response.json().await.map_err(|e| {
-			error!("Failed to parse 1inch swap response: {:?}", e);
+			error!("Failed to parse okx swap response: {:?}", e);
 			e
 		})
 	}

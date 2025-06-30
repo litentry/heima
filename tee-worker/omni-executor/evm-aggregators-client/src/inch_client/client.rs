@@ -59,7 +59,7 @@ impl InchSwap for InchClient {
 			.send()
 			.await
 			.map_err(|e| {
-				error!("Failed to send add_wallet request: {:?}", e);
+				error!("Failed to send 1inch swap request: {:?}", e);
 				e
 			})?;
 

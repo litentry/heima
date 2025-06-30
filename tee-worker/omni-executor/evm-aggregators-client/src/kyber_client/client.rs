@@ -68,17 +68,17 @@ impl KyberSwap for KyberClient {
 			.send()
 			.await
 			.map_err(|e| {
-				error!("Failed to send add_wallet request: {:?}", e);
+				error!("Failed to send kyber get_swap_route request: {:?}", e);
 				e
 			})?;
 
 		let status = response.status();
 		let response = response.error_for_status().map_err(|e| {
-			error!("add_wallet request failed with status: {}, error: {:?}", status, e);
+			error!("get_swap_route request failed with status: {}, error: {:?}", status, e);
 			e
 		})?;
 		response.json().await.map_err(|e| {
-			error!("Failed to parse 1inch swap response: {:?}", e);
+			error!("Failed to parse get_swap_route response: {:?}", e);
 			e
 		})
 	}
@@ -96,7 +96,7 @@ impl KyberSwap for KyberClient {
 			.send()
 			.await
 			.map_err(|e| {
-				error!("Failed to send add_wallet request: {:?}", e);
+				error!("Failed to send kyber swap request: {:?}", e);
 				e
 			})?;
 
@@ -106,7 +106,7 @@ impl KyberSwap for KyberClient {
 			e
 		})?;
 		response.json().await.map_err(|e| {
-			error!("Failed to parse 1inch swap response: {:?}", e);
+			error!("Failed to parse kyber swap response: {:?}", e);
 			e
 		})
 	}
