@@ -212,6 +212,9 @@ contract Deploy is Script {
         // Create deployment directory if it doesn't exist
         string memory deploymentDir = "deployments";
 
+        // Ensure the deployments directory exists
+        try vm.createDir(deploymentDir, false) {} catch {}
+
         // Create filename based on network
         string memory filename =
             string(abi.encodePacked(deploymentDir, "/", getNetworkFilename(networkConfig.chainId), ".json"));
@@ -247,9 +250,22 @@ contract Deploy is Script {
             )
         );
 
-        // Write to deployment file
-        vm.writeFile(filename, json);
-        console.log("Deployment addresses saved to:", filename);
+        // Write to deployment file (creates file if it doesn't exist)
+        try vm.writeFile(filename, json) {
+            console.log("Deployment addresses saved to:", filename);
+        } catch Error(string memory reason) {
+            console.log("Failed to save deployment file:", reason);
+            console.log("Contract addresses (save manually if needed):");
+            console.log("EntryPoint:         ", entryPointAddress);
+            console.log("OmniAccountFactory: ", factoryAddress);
+            console.log("SimplePaymaster:    ", paymasterAddress);
+        } catch {
+            console.log("Failed to save deployment file (unknown error)");
+            console.log("Contract addresses (save manually if needed):");
+            console.log("EntryPoint:         ", entryPointAddress);
+            console.log("OmniAccountFactory: ", factoryAddress);
+            console.log("SimplePaymaster:    ", paymasterAddress);
+        }
     }
 
     function getNetworkFilename(uint256 chainId) internal pure returns (string memory) {
