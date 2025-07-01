@@ -8,7 +8,6 @@
         "lint": "eslint .",
         "test": "mocha --exit --sort -r ts-node/register --loader=ts-node/esm",
         "check-types": "tsc --noEmit"
-        
     },
     "dependencies": {
         "mocha": "^10.6.0",
