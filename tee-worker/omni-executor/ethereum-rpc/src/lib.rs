@@ -110,18 +110,12 @@ impl RpcProvider for AlloyRpcProvider {
 		let provider = ProviderBuilder::new().connect_http(
 			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
 		);
-		let transaction_count = self
-			.get_transaction_count(address)
-			.await
-			.map_err(|e| error!("Could not get transaction count: {:?}", e))?;
 
-		let pending_transaction_count = provider
+		provider
 			.get_transaction_count(address)
 			.block_id(BlockId::Number(BlockNumberOrTag::Pending))
 			.await
-			.map_err(|e| error!("Could not get balance: {:?}", e))?;
-
-		Ok(transaction_count + pending_transaction_count)
+			.map_err(|e| error!("Could not get pending nonce: {:?}", e))
 	}
 
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()> {
