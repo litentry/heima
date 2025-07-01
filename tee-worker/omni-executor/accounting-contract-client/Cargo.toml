@@ -17,5 +17,8 @@ tracing = { workspace = true }
 [lints]
 workspace = true
 
+[dev-dependencies]
+mock-server = { workspace = true }
+
 [features]
 mocks = []
