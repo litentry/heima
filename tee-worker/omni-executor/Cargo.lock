@@ -42,6 +42,7 @@ dependencies = [
  "alloy",
  "anchor-client",
  "async-trait",
+ "bincode",
  "ethereum-rpc",
  "mock-server",
  "mockall",
