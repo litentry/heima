@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use alloy::primitives::U256;
 use anchor_client::{
-	anchor_lang::AccountDeserialize,
 	solana_sdk::{
 		commitment_config::CommitmentConfig,
 		pubkey::Pubkey,
@@ -15,34 +14,7 @@ use anchor_client::{
 };
 use async_trait::async_trait;
 use sp_core::ed25519;
-use tracing::{error, info, warn};
-
-#[derive(Debug)]
-pub struct NonceAccount {
-	pub nonce: u64,
-}
-
-impl AccountDeserialize for NonceAccount {
-	fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_client::anchor_lang::Result<Self> {
-		if buf.len() < 8 {
-			return Ok(NonceAccount { nonce: 0 });
-		}
-
-		let data = &buf[8..];
-
-		if data.len() < 8 {
-			return Ok(NonceAccount { nonce: 0 });
-		}
-
-		let nonce = u64::from_le_bytes(data[..8].try_into().map_err(|_| {
-			anchor_client::anchor_lang::error::Error::from(
-				anchor_client::anchor_lang::error::ErrorCode::AccountDidNotDeserialize,
-			)
-		})?);
-
-		Ok(NonceAccount { nonce })
-	}
-}
+use tracing::{error, warn};
 
 #[async_trait]
 pub trait AccountingContractApi: Send + Sync {
@@ -150,28 +122,36 @@ impl AccountingContractApi for AccountingContractClient {
 	async fn get_nonce(&self, user: Pubkey) -> Result<u64, ()> {
 		let client = self.create_client()?;
 
-		let (account_nonce, _bump) =
-			Pubkey::find_program_address(&[user.to_bytes().as_ref(), b"nonce"], &self.program_id);
-
 		let program = client.program(self.program_id).map_err(|e| {
 			error!("Failed to create program client: {:?}", e);
 		})?;
 
-		let nonce_account: NonceAccount =
-			tokio::task::spawn_blocking(move || program.account(account_nonce))
-				.await
-				.map_err(|e| {
-					error!("Failed to spawn blocking task: {:?}", e);
-				})?
-				.map_err(|e| {
-					if e.to_string().contains("AccountNotFound") {
-						info!("Nonce account {} not found, returning 0", account_nonce);
-					} else {
-						error!("Failed to get nonce account {}: {:?}", account_nonce, e);
-					}
-				})?;
+		let (account_pubkey, _bump) =
+			Pubkey::find_program_address(&[user.to_bytes().as_ref(), b"nonce"], &self.program_id);
 
-		Ok(nonce_account.nonce)
+		match tokio::task::spawn_blocking(move || program.rpc().get_account(&account_pubkey)).await
+		{
+			// return default nonce 0 when fail to get nonce
+			Ok(result) => match result {
+				Ok(account) => {
+					match bincode::deserialize::<accounting_contract::Nonce>(&account.data[8..]) {
+						Ok(nonce) => Ok(nonce.nonce),
+						Err(e) => {
+							error!("Failed deserialize nonce from account {:?}: {:?}", account, e);
+							Ok(0)
+						},
+					}
+				},
+				Err(e) => {
+					error!("Failed to get_account {:?}", e);
+					Ok(0)
+				},
+			},
+			Err(e) => {
+				error!("Failed to spawn blocking task: {:?}", e);
+				Err(())
+			},
+		}
 	}
 
 	async fn get_balance(&self) -> Result<U256, ()> {
@@ -227,5 +207,71 @@ pub mod mocks {
 
 			async fn get_balance(&self) -> Result<U256, ()>;
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use sp_core::{ed25519, Pair};
+
+	#[tokio::test]
+	async fn test_mock_server_execute_pay_out_request() {
+		// Start mock server and get dynamic URL
+		let mock_url = mock_server::async_run_test_only().await;
+		let param_id = "D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV";
+
+		// has balance
+		// address: AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9
+		let seed = [1u8; 32];
+		let pair = ed25519::Pair::from_seed(&seed);
+		let client = AccountingContractClient::new(
+			pair,
+			format!("{}/solana", mock_url),
+			param_id.to_string(),
+		);
+
+		// Test execute_pay_out_request
+		// base64 encoded tx string (sendTransaction):
+		// AaV8xKPN0GfY3XVuTiQsxFPDOFlZhXhWwbcVMBEGd2kUTgid2Ss9GUNqJ1S01iTyvDKCWea8sRMwlmlZ1A8zDAEBAAMIiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1zG8DcMUx1vBnO2Al4wQ7nCKjwgl/c5iVbUF2HhIwZJ3ez0N0UQ/aETrzeokAeTDaVjdVNHLlFhPu0cKQjhxBso7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9Hx9pMmCdAce72TK7SkfatcvRdHPxk+YN0BruCENR+3BgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAsuuu6Iwn1QSzfnYrRIa2f/i5FCzjnwDv32SN1j4fahTyq0V7Xk41kUInl1rH0tI9eWEbcpDkAbgz89/ZTaRNLMxJDpKM0uOHO7ND/JXaMxecpg9Nv0bCw26RKZ1V1Oa5AQYHAgEABwQDBRiE8aphpOG6LgEAAAAAAAAAAMqaOwAAAAA=
+		let beneficiary_seed = [3u8; 32];
+		let beneficiary_keypair =
+			Keypair::from_seed(&beneficiary_seed).expect("Failed to create beneficiary keypair");
+		let beneficiary = beneficiary_keypair.pubkey();
+		let nonce = 1u64;
+		let amount = U256::from(1000000000u64); // 1 SOL
+		let result = client.execute_pay_out_request(beneficiary, nonce, amount).await;
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[tokio::test]
+	async fn test_mock_server_get_balance() {
+		// Start mock server and get dynamic URL
+		let mock_url = mock_server::async_run_test_only().await;
+		let param_id = "D3S1ZTrFNkfeoHaLSTAjMXZVXnRJvsNnbwh9k5mRYqqV";
+
+		// has balance
+		// address: AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9
+		let seed = [1u8; 32];
+		let pair = ed25519::Pair::from_seed(&seed);
+		let client = AccountingContractClient::new(
+			pair,
+			format!("{}/solana", mock_url),
+			param_id.to_string(),
+		);
+		let balance = client.get_balance().await.expect("Fail to get balance");
+		assert_eq!(balance, U256::from(1000000000u64));
+
+		// has no balance
+		// address: 9hSR6S7WPtxmTojgo6GG3k4yDPecgJY292j7xrsUGWBu
+		let seed = [2u8; 32];
+		let pair = ed25519::Pair::from_seed(&seed);
+		let client = AccountingContractClient::new(
+			pair,
+			format!("{}/solana", mock_url),
+			param_id.to_string(),
+		);
+		let balance = client.get_balance().await.expect("Fail to get balance");
+		assert_eq!(balance, U256::from(0));
 	}
 }
