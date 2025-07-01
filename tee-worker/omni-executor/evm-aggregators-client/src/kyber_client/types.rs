@@ -69,97 +69,70 @@ impl GetSwapRouteRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetSwapRouteResponse {
-	#[serde(rename = "routeSummary")]
 	pub route_summary: RouteSummary,
-
-	#[serde(rename = "routerAddress")]
 	pub router_address: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct RouteSummary {
-	#[serde(rename = "tokenIn")]
 	pub token_in: String,
-	#[serde(rename = "amountIn")]
 	pub amount_in: String,
-	#[serde(rename = "amountInUsd")]
 	pub amount_in_usd: String,
-	#[serde(rename = "tokenInMarketPriceAvailable")]
 	pub token_in_market_price_available: bool,
-	#[serde(rename = "tokenOut")]
 	pub token_out: String,
-	#[serde(rename = "amountOut")]
 	pub amount_out: String,
-	#[serde(rename = "amountOutUsd")]
 	pub amount_out_usd: String,
-	#[serde(rename = "tokenOutMarketPriceAvailable")]
 	pub token_out_market_price_available: bool,
-	#[serde(rename = "gas")]
 	pub gas: String,
-	#[serde(rename = "gasPrice")]
 	pub gas_price: String,
-	#[serde(rename = "gasUsd")]
 	pub gas_usd: String,
-	#[serde(rename = "l1FeeUsd")]
 	pub l1_fee_usd: String,
-	#[serde(rename = "extraFee")]
 	pub extra_fee: ExtraFee,
 	pub route: Vec<Vec<RouteItem>>,
-	#[serde(rename = "routeID")]
 	pub route_id: String,
 	pub checksum: String,
 	pub timestamp: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtraFee {
-	#[serde(rename = "feeAmount")]
 	pub fee_amount: String,
-	#[serde(rename = "chargeFeeBy")]
 	pub charge_fee_by: String,
-	#[serde(rename = "isInBps")]
 	pub is_in_bps: bool,
-	#[serde(rename = "feeReceiver")]
 	pub fee_receiver: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RouteItem {
 	pub pool: String,
-	#[serde(rename = "tokenIn")]
 	pub token_in: String,
-	#[serde(rename = "tokenOut")]
 	pub token_out: String,
-	#[serde(rename = "limitReturnAmount")]
 	pub limit_return_amount: String,
-	#[serde(rename = "swapAmount")]
 	pub swap_amount: String,
-	#[serde(rename = "amountOut")]
 	pub amount_out: String,
 	pub exchange: String,
-	#[serde(rename = "poolLength")]
 	pub pool_length: i32,
-	#[serde(rename = "poolType")]
 	pub pool_type: String,
-	#[serde(rename = "poolExtra")]
 	pub pool_extra: PoolExtra,
 	pub extra: Value,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PoolExtra {
-	#[serde(rename = "blockNumber")]
 	pub block_number: i32,
-	#[serde(rename = "priceLimit")]
-	pub price_limit: String, // or a BigUint if using a crate like `num`
+	pub price_limit: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct SwapRequest {
-	#[serde(rename = "routeSummary")]
 	pub route_summary: RouteSummary,
-
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub sender: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -172,37 +145,28 @@ pub struct SwapRequest {
 	pub referral: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub source: Option<String>,
-	#[serde(rename = "enableGasEstimation", skip_serializing_if = "Option::is_none")]
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub enable_gas_estimation: Option<bool>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub permit: Option<String>,
-	#[serde(rename = "ignoreCappedSlippage", skip_serializing_if = "Option::is_none")]
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub ignore_capped_slippage: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SwapResponse {
-	#[serde(rename = "amountIn")]
 	pub amount_in: String,
-	#[serde(rename = "amountInUsd")]
 	pub amount_in_usd: String,
-	#[serde(rename = "amountOut")]
 	pub amount_out: String,
-	#[serde(rename = "amountOutUsd")]
 	pub amount_out_usd: String,
 	pub gas: String,
-	#[serde(rename = "gasUsd")]
 	pub gas_usd: String,
-	#[serde(rename = "additionalCostUsd")]
 	pub additional_cost_usd: String,
-	#[serde(rename = "additionalCostMessage")]
 	pub additional_cost_message: String,
-	#[serde(rename = "outputChange")]
 	pub output_change: OutputChange,
 	pub data: String,
-	#[serde(rename = "routerAddress")]
 	pub router_address: String,
-	#[serde(rename = "transactionValue")]
 	pub transaction_value: String,
 }
 

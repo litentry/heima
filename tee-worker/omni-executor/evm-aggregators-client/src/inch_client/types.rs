@@ -24,8 +24,8 @@ use std::ops::Mul;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SwapResponse {
-	#[serde(rename = "dstAmount")]
 	pub dst_amount: String,
 	pub tx: TransactionData,
 }
@@ -58,13 +58,13 @@ impl SwapResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TransactionData {
 	pub from: String,
 	pub to: String,
 	pub data: String,
 	pub value: String,
 	pub gas: u64,
-	#[serde(rename = "gasPrice")]
 	pub gas_price: String,
 }
 

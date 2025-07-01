@@ -79,8 +79,8 @@ impl SwapRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SwapResponse {
-	#[serde(rename = "routerResult")]
 	pub router_result: RouterResult,
 	pub tx: Tx,
 }
@@ -113,116 +113,72 @@ impl SwapResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RouterResult {
-	#[serde(rename = "chainId")]
 	pub chain_id: String,
-
-	#[serde(rename = "dexRouterList")]
 	pub dex_router_list: Vec<DexRouter>,
-
-	#[serde(rename = "estimateGasFee")]
 	pub estimate_gas_fee: String,
-
-	#[serde(rename = "fromToken")]
 	pub from_token: Token,
-
-	#[serde(rename = "fromTokenAmount")]
 	pub from_token_amount: String,
-
-	#[serde(rename = "priceImpactPercentage")]
 	pub price_impact_percentage: String,
-
-	#[serde(rename = "quoteCompareList")]
 	pub quote_compare_list: Vec<QuoteCompare>,
-
-	#[serde(rename = "toToken")]
 	pub to_token: Token,
-
-	#[serde(rename = "toTokenAmount")]
 	pub to_token_amount: String,
-
-	#[serde(rename = "tradeFee")]
 	pub trade_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DexRouter {
 	pub router: String,
-
-	#[serde(rename = "routerPercent")]
 	pub router_percent: String,
-
-	#[serde(rename = "subRouterList")]
 	pub sub_router_list: Vec<SubRouter>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubRouter {
-	#[serde(rename = "dexProtocol")]
 	pub dex_protocol: Vec<DexProtocol>,
-
-	#[serde(rename = "fromToken")]
 	pub from_token: Token,
-
-	#[serde(rename = "toToken")]
 	pub to_token: Token,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DexProtocol {
-	#[serde(rename = "dexName")]
 	pub dex_name: String,
-
 	pub percent: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Token {
 	pub decimal: String,
-
-	#[serde(rename = "isHoneyPot")]
 	pub is_honey_pot: bool,
-
-	#[serde(rename = "taxRate")]
 	pub tax_rate: String,
-
-	#[serde(rename = "tokenContractAddress")]
 	pub token_contract_address: String,
-
-	#[serde(rename = "tokenSymbol")]
 	pub token_symbol: String,
-
-	#[serde(rename = "tokenUnitPrice")]
 	pub token_unit_price: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct QuoteCompare {
-	#[serde(rename = "amountOut")]
 	pub amount_out: String,
-
-	#[serde(rename = "dexLogo")]
 	pub dex_logo: String,
-
-	#[serde(rename = "dexName")]
 	pub dex_name: String,
-
-	#[serde(rename = "tradeFee")]
 	pub trade_fee: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Tx {
 	pub data: String,
 	pub from: String,
 	pub gas: String,
-	#[serde(rename = "gasPrice")]
 	pub gas_price: String,
-	#[serde(rename = "maxPriorityFeePerGas")]
 	pub max_priority_fee_per_gas: String,
-	#[serde(rename = "minReceiveAmount")]
 	pub min_receive_amount: String,
-	#[serde(rename = "signatureData")]
 	pub signature_data: Vec<String>,
 	pub slippage: String,
 	pub to: String,
@@ -230,27 +186,22 @@ pub struct Tx {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetGasPriceResp {
 	pub normal: String,
 	pub min: String,
 	pub max: String,
-	#[serde(rename = "supportEip1559")]
 	pub support_eip1559: bool,
-	#[serde(rename = "erc1599Protocol")]
 	pub erc1599_protocol: Erc1599Protocol,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Erc1599Protocol {
-	#[serde(rename = "suggestBaseFee")]
 	pub suggest_base_fee: String,
-	#[serde(rename = "baseFee")]
 	pub base_fee: String,
-	#[serde(rename = "proposePriorityFee")]
 	pub propose_priority_fee: String,
-	#[serde(rename = "safePriorityFee")]
 	pub safe_priority_fee: String,
-	#[serde(rename = "fastPriorityFee")]
 	pub fast_priority_fee: String,
 }
 
