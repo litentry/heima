@@ -60,7 +60,7 @@ services:
     container_name: heima-node
     ports:
       - "9944:9944"
-    command: ["--dev", "--rpc-external", "--rpc-port", "9944"]
+    command: ["--dev", "--rpc-external", "--pool-type=fork-aware", "--rpc-port", "9944"]
     networks:
       - litentry-test-network
     restart: unless-stopped
