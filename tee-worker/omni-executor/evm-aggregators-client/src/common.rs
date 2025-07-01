@@ -124,26 +124,15 @@ lazy_static! {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateMarketTx {
-	pub omni_account: String,
-	pub user_id: u64,
 	pub chain_id: u64,
-	pub user_wallet_id: u32,
 	pub user_wallet_address: String,
 	pub amount_in: String,
-	pub is_anti_mev: bool,
-	pub is_auto_slippage: bool,
 	pub slippage: u32,
 	pub gas_type: i32,
 	pub trade_pool_name: String,
 	pub in_decimal: u8,
-	pub out_decimal: u8,
 	pub in_token_ca: String,
 	pub out_token_ca: String,
-	pub pair_addr: String,
-	pub price: String,
-	pub use_price_limit: bool,
-	pub in_token_program: String,
-	pub out_token_program: String,
 	pub is_pre_cross: bool,
 }
 
