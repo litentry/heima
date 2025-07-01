@@ -186,7 +186,7 @@ pub async fn get_binance_deposit_info<BinanceClient: BinanceApi>(
 	};
 
 	let deposit_address = WalletApi::new(binance_api.as_ref())
-		.get_deposit_address(&binance_asset.coin.name(), &binance_asset.network.name())
+		.get_deposit_address(binance_asset.coin.name(), binance_asset.network.name())
 		.await
 		.map_err(|e| {
 			error!("Failed to get deposit address, {:?}", e);
