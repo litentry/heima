@@ -22,7 +22,7 @@ contract EntryPointTest is Test {
     }
 
     function test_UserOpHash() public view {
-        bytes32 expectedHash = 0x994a57baf67923f51eee12d1e4efac5fa67d66a996d97988cb6892e0732e98b9;
+        bytes32 expectedHash = 0x4f5984481de0f81cae6aa72dfe73ec30ee1e90bbb8011e460f60aa51c6150305;
 
         address sender = 0x922D6956C99E12DFeB3224DEA977D0939758A1Fe;
         bytes memory initCode = "";

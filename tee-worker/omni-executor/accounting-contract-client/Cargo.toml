@@ -8,6 +8,7 @@ accounting-contract = { workspace = true }
 alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
 anchor-client = { workspace = true }
 async-trait = { workspace = true }
+bincode = { workspace = true }
 ethereum-rpc = { workspace = true }
 mockall = { workspace = true }
 sp-core = { workspace = true }
@@ -16,6 +17,9 @@ tracing = { workspace = true }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+mock-server = { workspace = true }
 
 [features]
 mocks = []
