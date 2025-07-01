@@ -215,7 +215,7 @@ pub enum PumpxOrderType {
 #[derive(Deserialize, Debug, Clone)]
 pub enum SingleChainSwapProvider {
 	Pumpx(PumpxConfig),
-	Omni
+	Omni,
 }
 
 impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
@@ -235,7 +235,7 @@ impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum OnChainSingleChainSwapProvider {
 	Pumpx(OnChainPumpxConfig),
-	Omni
+	Omni,
 }
 
 impl TryFrom<SingleChainSwapProvider> for OnChainSingleChainSwapProvider {
