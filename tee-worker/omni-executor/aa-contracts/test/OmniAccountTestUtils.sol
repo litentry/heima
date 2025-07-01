@@ -3,25 +3,25 @@ pragma solidity ^0.8.13;
 
 import {Counter} from "../src/Counter.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {SmartAccount} from "../src/accounts/SmartAccount.sol";
+import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestUtils} from "./TestUtils.sol";
 
-library SmartAccountTestUtils {
-    function setUp(address ownerAddress, bytes32 clientId, address rootAddress)
+library OmniAccountTestUtils {
+    function setUp(address ownerAddress, bytes memory clientId, address rootAddress)
         external
-        returns (Counter, EntryPoint, SmartAccount)
+        returns (Counter, EntryPoint, OmniAccount)
     {
         Counter counter = new Counter();
         EntryPoint entryPoint = new EntryPoint();
-        SmartAccount accountImpl = new SmartAccount(entryPoint);
+        OmniAccount accountImpl = new OmniAccount(entryPoint);
         bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
-        SmartAccount account = SmartAccount(
+        OmniAccount account = OmniAccount(
             payable(
                 new ERC1967Proxy{salt: oa}(
-                    address(accountImpl), abi.encodeCall(SmartAccount.initialize, (oa, clientId, rootAddress))
+                    address(accountImpl), abi.encodeCall(OmniAccount.initialize, (oa, clientId, rootAddress))
                 )
             )
         );
@@ -29,14 +29,14 @@ library SmartAccountTestUtils {
         return (counter, entryPoint, account);
     }
 
-    function performExecuteTestAs(Vm vm, address asAccount, SmartAccount account, Counter counter) internal {
+    function performExecuteTestAs(Vm vm, address asAccount, OmniAccount account, Counter counter) internal {
         uint256 number = counter.number();
         vm.prank(asAccount);
         account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
         vm.assertEq(number + 1, counter.number());
     }
 
-    function performExecuteBatchTestAs(Vm vm, address asAccount, SmartAccount account, Counter counter) internal {
+    function performExecuteBatchTestAs(Vm vm, address asAccount, OmniAccount account, Counter counter) internal {
         uint256 number = counter.number();
         vm.prank(asAccount);
         BaseAccount.Call[] memory calls = new BaseAccount.Call[](2);
