@@ -107,7 +107,7 @@ where
 			..Default::default()
 		};
 
-		if is_native_token(&create_market_tx.out_token_ca.into_bytes()) {
+		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
 			swap_request.from_token_address = NATIVE_ADDRESS.to_string();
 		} else {
 			swap_request.to_token_address = NATIVE_ADDRESS.to_string();
