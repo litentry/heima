@@ -42,6 +42,7 @@ impl BinanceNetwork {
 pub enum BinanceCoin {
 	Bnb,
 	Sol,
+	Fc,
 	Usdc,
 	Usdt,
 }
@@ -50,6 +51,7 @@ impl BinanceCoin {
 	// Biannce coin names
 	const BNB: &'static str = "BNB";
 	const SOL: &'static str = "SOL";
+	const FC: &'static str = "FC";
 	const USDC: &'static str = "USDC";
 	const USDT: &'static str = "USDT";
 
@@ -57,6 +59,7 @@ impl BinanceCoin {
 		match self {
 			Self::Bnb => Self::BNB,
 			Self::Sol => Self::SOL,
+			Self::Fc => Self::FC,
 			Self::Usdc => Self::USDC,
 			Self::Usdt => Self::USDT,
 		}
@@ -64,7 +67,7 @@ impl BinanceCoin {
 
 	pub fn decimals(&self) -> u32 {
 		match self {
-			BinanceCoin::Bnb => 18,
+			BinanceCoin::Fc | BinanceCoin::Bnb => 18,
 			BinanceCoin::Sol => 9,
 			BinanceCoin::Usdc | BinanceCoin::Usdt => 6,
 		}
@@ -77,6 +80,7 @@ impl BinanceCoin {
 
 pub trait FromBscTokenAddress {
 	// Bsc token addresss
+	const BSC_TOKEN_ADDRESS_FC: &'static str = "4C3617A56a5E0Ca1D8CDd629695b0a8BE669971A";
 	const BSC_TOKEN_ADDRESS_USDC: &'static str = "8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
 	const BSC_TOKEN_ADDRESS_USDT: &'static str = "55d398326f99059fF775485246999027B3197955";
 
@@ -86,6 +90,7 @@ pub trait FromBscTokenAddress {
 impl FromBscTokenAddress for BinanceCoin {
 	fn from_bsc_token_address(address: &str) -> Result<BinanceCoin, ()> {
 		match address {
+			Self::BSC_TOKEN_ADDRESS_FC => Ok(Self::Fc),
 			Self::BSC_TOKEN_ADDRESS_USDC => Ok(Self::Usdc),
 			Self::BSC_TOKEN_ADDRESS_USDT => Ok(Self::Usdt),
 			_ => {

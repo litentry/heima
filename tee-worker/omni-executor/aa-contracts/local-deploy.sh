@@ -13,6 +13,7 @@ echo "🚀 Starting AA Contracts deployment..."
 # Default values
 ANVIL_PORT=8545
 ANVIL_HOST=127.0.0.1
+CHAIN_ID=1337
 DEPLOYER_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 OMNI_EXECUTOR_SIGNER="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
 
@@ -39,49 +40,45 @@ wait_for_anvil() {
 
 # Function to deploy contracts
 deploy_contracts() {
-    echo "📦 Deploying EntryPoint contract..."
-    ENTRYPOINT_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast EntryPoint)
-    ENTRYPOINT_ADDRESS=$(echo "$ENTRYPOINT_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
+    echo "📦 Deploying contracts using Foundry script..."
     
-    if [ -z "$ENTRYPOINT_ADDRESS" ]; then
-        echo "❌ Failed to deploy EntryPoint contract"
+    # Export environment variables for the script
+    export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"  # Anvil's first private key
+    export OMNI_EXECUTOR_SIGNER=$OMNI_EXECUTOR_SIGNER
+    
+    # Run the deployment script
+    DEPLOY_OUTPUT=$(forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://$ANVIL_HOST:$ANVIL_PORT --broadcast --legacy)
+    
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to deploy contracts"
+        echo "$DEPLOY_OUTPUT"
         exit 1
     fi
     
-    echo "✅ EntryPoint deployed at: $ENTRYPOINT_ADDRESS"
+    echo "$DEPLOY_OUTPUT"
     
-    echo "📦 Deploying OmniAccountFactory contract..."
-    FACTORY_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast OmniAccountFactory --constructor-args $ENTRYPOINT_ADDRESS)
-    FACTORY_ADDRESS=$(echo "$FACTORY_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
+    # Extract addresses from the broadcast file
+    BROADCAST_FILE="$SCRIPT_DIR/broadcast/DeployLocal.s.sol/$CHAIN_ID/run-latest.json"
     
-    if [ -z "$FACTORY_ADDRESS" ]; then
-        echo "❌ Failed to deploy OmniAccountFactory contract"
-        exit 1
+    if [ -f "$BROADCAST_FILE" ]; then
+        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        
+        echo ""
+        echo "🎉 All contracts deployed successfully!"
+        echo ""
+        echo "Contract Addresses:"
+        echo "==================="
+        echo "EntryPoint:         $ENTRYPOINT_ADDRESS"
+        echo "OmniAccountFactory: $FACTORY_ADDRESS"
+        echo "SimplePaymaster:    $PAYMASTER_ADDRESS"
+        echo ""
+        echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"
+    else
+        echo "⚠️  Contracts deployed but broadcast file not found"
+        echo "Check the output above for contract addresses"
     fi
-    
-    echo "✅ OmniAccountFactory deployed at: $FACTORY_ADDRESS"
-    
-    echo "📦 Deploying SimplePaymaster contract..."
-    PAYMASTER_OUTPUT=$(forge create --from $DEPLOYER_ADDRESS --unlocked --broadcast SimplePaymaster --constructor-args $ENTRYPOINT_ADDRESS $OMNI_EXECUTOR_SIGNER)
-    PAYMASTER_ADDRESS=$(echo "$PAYMASTER_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
-    
-    if [ -z "$PAYMASTER_ADDRESS" ]; then
-        echo "❌ Failed to deploy SimplePaymaster contract"
-        exit 1
-    fi
-    
-    echo "✅ SimplePaymaster deployed at: $PAYMASTER_ADDRESS"
-    
-    echo ""
-    echo "🎉 All contracts deployed successfully!"
-    echo ""
-    echo "Contract Addresses:"
-    echo "==================="
-    echo "EntryPoint:         $ENTRYPOINT_ADDRESS"
-    echo "OmniAccountFactory:  $FACTORY_ADDRESS"
-    echo "SimplePaymaster:    $PAYMASTER_ADDRESS"
-    echo ""
-    echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"
 }
 
 # Function to cleanup
@@ -103,7 +100,7 @@ if check_anvil; then
     ANVIL_RUNNING=true
 else
     echo "🔧 Starting Anvil node..."
-    anvil --host $ANVIL_HOST --port $ANVIL_PORT &
+    anvil --host $ANVIL_HOST --chain-id $CHAIN_ID --port $ANVIL_PORT &
     ANVIL_PID=$!
     ANVIL_RUNNING=false
     wait_for_anvil
@@ -123,7 +120,7 @@ if [ "$ANVIL_RUNNING" = false ]; then
     echo "   Press Ctrl+C to stop the deployment script and Anvil"
     echo "   Or run 'kill $ANVIL_PID' to stop Anvil manually"
     echo ""
-    
+
     # Wait for interrupt
     wait $ANVIL_PID
 fi
