@@ -1,3 +1,19 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::*;
 use tracing::debug;
 
@@ -18,11 +34,13 @@ impl<
 		to_asset: ChainAsset,
 	) -> Result<Vec<u8>, ()> {
 		debug!("executing omni single chain swap");
-		debug!("intent_id: {}, amount: {}, from_address: {}, to_address: {}", 
-			intent_id, amount, from_address, to_address);
-		
+		debug!(
+			"intent_id: {}, amount: {}, from_address: {}, to_address: {}",
+			intent_id, amount, from_address, to_address
+		);
+
 		debug!("Omni single chain swap from {:?} to {:?}", from_asset, to_asset);
-		
+
 		// For omni single chain swaps, we implement DEX integrations
 		match &from_asset {
 			ChainAsset::Ethereum(chain_id, _) => {
@@ -35,7 +53,8 @@ impl<
 					&to_address,
 					&from_asset,
 					&to_asset,
-				).await
+				)
+				.await
 			},
 			ChainAsset::Solana(_) => {
 				debug!("Executing Solana DEX swap");
@@ -47,7 +66,8 @@ impl<
 					&to_address,
 					&from_asset,
 					&to_asset,
-				).await
+				)
+				.await
 			},
 		}
 	}
@@ -63,15 +83,18 @@ impl<
 		to_asset: &ChainAsset,
 	) -> Result<Vec<u8>, ()> {
 		debug!("Executing omni Ethereum DEX swap");
-		debug!("Swap {} of {:?} to {:?} from {} to {}", amount, from_asset, to_asset, from_address, to_address);
-		
+		debug!(
+			"Swap {} of {:?} to {:?} from {} to {}",
+			amount, from_asset, to_asset, from_address, to_address
+		);
+
 		// TODO: Implement Uniswap/1inch/other DEX integration for omni
 		// This would include:
 		// 1. Get optimal swap route
 		// 2. Build swap transaction
 		// 3. Execute swap via DEX contract
 		// 4. Handle slippage and fees
-		
+
 		let tx_hash = format!("omni_eth_dex_{}_{}", intent_id, amount);
 		Ok(tx_hash.as_bytes().to_vec())
 	}
@@ -87,15 +110,18 @@ impl<
 		to_asset: &ChainAsset,
 	) -> Result<Vec<u8>, ()> {
 		debug!("Executing omni Solana DEX swap");
-		debug!("Swap {} of {:?} to {:?} from {} to {}", amount, from_asset, to_asset, from_address, to_address);
-		
+		debug!(
+			"Swap {} of {:?} to {:?} from {} to {}",
+			amount, from_asset, to_asset, from_address, to_address
+		);
+
 		// TODO: Implement Raydium/Jupiter/other Solana DEX integration for omni
 		// This would include:
 		// 1. Get optimal swap route from Jupiter aggregator
 		// 2. Build swap transaction
 		// 3. Execute swap via DEX program
 		// 4. Handle slippage and fees
-		
+
 		let tx_hash = format!("omni_sol_dex_{}_{}", intent_id, amount);
 		Ok(tx_hash.as_bytes().to_vec())
 	}

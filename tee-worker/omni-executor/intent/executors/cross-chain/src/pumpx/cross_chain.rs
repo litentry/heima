@@ -1,12 +1,14 @@
 // TODO: put it into a mod for potential different providers (other than binance)
 
+use crate::utils::{
+	estimate_asset_value_in_usdt, get_binance_deposit_info, get_token_available_amount,
+};
 use crate::*;
-use crate::utils::{get_binance_deposit_info, get_token_available_amount, estimate_asset_value_in_usdt};
+use ::pumpx::methods::common::SwapType;
+use ::pumpx::methods::create_cross_order::{CreateCrossOrderBody, CrossOrderInfo};
 use executor_primitives::SwapOrder;
 use executor_storage::PumpxProfileStorage;
 use heima_primitives::PumpxConfig;
-use ::pumpx::methods::create_cross_order::{CreateCrossOrderBody, CrossOrderInfo};
-use ::pumpx::methods::common::{SwapType};
 use std::str::FromStr;
 use tracing::{debug, error, info};
 
@@ -85,11 +87,12 @@ impl<
 
 		if instant {
 			let available_amount = get_token_available_amount(
-				&swap_order.from_asset, 
+				&swap_order.from_asset,
 				from_wallet,
 				&self.rpc_endpoint_registry,
 				&self.solana_client,
-			).await?;
+			)
+			.await?;
 
 			self.account_asset_lock.check_and_insert(
 				account_id.clone(),
@@ -290,8 +293,7 @@ impl<
 		should_wait_for_deposit_confirm: bool,
 	) -> Result<(String, U256), ()> {
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount)
-				.await?;
+			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount).await?;
 
 		let binance_network = binance_asset.network;
 		let binance_coin = binance_asset.coin;
@@ -431,8 +433,7 @@ impl<
 		should_wait_for_deposit_confirm: bool,
 	) -> Result<(String, U256), ()> {
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount)
-				.await?;
+			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount).await?;
 
 		let binance_network = binance_asset.network;
 		let binance_coin = binance_asset.coin;
@@ -848,7 +849,6 @@ impl<
 
 		calculate_amount_in(payout_amount, gas_fee, payout_coin.decimals())
 	}
-
 }
 
 pub(crate) fn determine_trade_symbol_and_order_side(
@@ -922,7 +922,6 @@ pub(crate) async fn estimate_payout_amount<BinanceClient: BinanceApi>(
 
 	Ok(payout_amount.to_string())
 }
-
 
 fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Result<String, ()> {
 	let amount = Decimal::from_str(amount).map_err(|_| ())?;

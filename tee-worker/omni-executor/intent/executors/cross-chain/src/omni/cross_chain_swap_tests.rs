@@ -25,7 +25,7 @@ async fn placeholder_omni_cross_chain_swap_sol_to_bsc_test() {
 
 #[test(tokio::test)]
 async fn placeholder_omni_cross_chain_swap_bsc_to_sol_test() {
-	// TODO: Implement omni cross chain swap tests  
+	// TODO: Implement omni cross chain swap tests
 	// This is a placeholder test for BSC to SOL swap
 	assert!(true, "Placeholder test for omni cross chain swap BSC to SOL");
 }

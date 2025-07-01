@@ -1,17 +1,33 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
 use crate::*;
-use rust_decimal::Decimal;
-use std::str::FromStr;
-use tracing::{debug, error};
 use accounting_contract_client::{
 	solana::AccountingContractApi as SolanaAccountingContractApi,
 	AccountingContractApi as EvmAccountingContractApi,
 };
 use alloy::primitives::Address;
-use solana_sdk::pubkey::Pubkey;
-use std::sync::Arc;
-use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
 use ethereum_rpc::AlloyRpcProvider;
+use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
+use rust_decimal::Decimal;
+use solana_sdk::pubkey::Pubkey;
 use std::ops::Deref;
+use std::str::FromStr;
+use std::sync::Arc;
+use tracing::{debug, error};
 
 pub async fn estimate_asset_value_in_usdt<BinanceClient: BinanceApi>(
 	binance_api: &Arc<BinanceClient>,
@@ -95,7 +111,10 @@ pub fn determine_trade_symbol_and_order_side(
 			Ok(("SOLUSDT".to_string(), BinanceOrderSide::BUY))
 		},
 		_ => {
-			error!("Unsupported trade pair: {:?} {:?} -> {:?}", from_network, from_coin, to_network);
+			error!(
+				"Unsupported trade pair: {:?} {:?} -> {:?}",
+				from_network, from_coin, to_network
+			);
 			Err(())
 		},
 	}
@@ -147,8 +166,7 @@ pub async fn get_binance_deposit_info<BinanceClient: BinanceApi>(
 		binance_asset.address
 	);
 
-	let Some(binance_coin_info) =
-		coins_info.iter().find(|c| c.coin == binance_asset.coin.name())
+	let Some(binance_coin_info) = coins_info.iter().find(|c| c.coin == binance_asset.coin.name())
 	else {
 		error!("Coin not found: {}", binance_asset.coin.name());
 		return Err(());
@@ -193,10 +211,8 @@ pub async fn do_payout_sol_to_bsc(
 	evm_accounting_contract_client: &Arc<Box<dyn EvmAccountingContractApi>>,
 ) -> Result<(), ()> {
 	debug!("Getting {:?} nonce for payout request", payout_address);
-	let user_nonce = evm_accounting_contract_client
-		.get_nonce(*payout_address)
-		.await
-		.map_err(|_| {
+	let user_nonce =
+		evm_accounting_contract_client.get_nonce(*payout_address).await.map_err(|_| {
 			error!("Failed to get nonce");
 		})?;
 
@@ -222,11 +238,9 @@ pub async fn do_payout_bsc_to_sol(
 ) -> Result<(), ()> {
 	debug!("Getting {:?} nonce for payout request", payout_address);
 	let user_nonce =
-		solana_accounting_contract_client.get_nonce(payout_address).await.map_err(
-			|_| {
-				error!("Failed to get nonce");
-			},
-		)?;
+		solana_accounting_contract_client.get_nonce(payout_address).await.map_err(|_| {
+			error!("Failed to get nonce");
+		})?;
 
 	debug!("Received {:?} nonce", user_nonce);
 	let user_nonce = user_nonce + 1u64;
