@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use alloy::primitives::U256;
 use anchor_client::{
-	anchor_lang::AccountDeserialize,
 	solana_sdk::{
 		commitment_config::CommitmentConfig,
 		pubkey::Pubkey,
@@ -16,33 +15,6 @@ use anchor_client::{
 use async_trait::async_trait;
 use sp_core::ed25519;
 use tracing::{error, warn};
-
-#[derive(Debug)]
-pub struct NonceAccount {
-	pub nonce: u64,
-}
-
-impl AccountDeserialize for NonceAccount {
-	fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_client::anchor_lang::Result<Self> {
-		if buf.len() < 8 {
-			return Ok(NonceAccount { nonce: 0 });
-		}
-
-		let data = &buf[8..];
-
-		if data.len() < 8 {
-			return Ok(NonceAccount { nonce: 0 });
-		}
-
-		let nonce = u64::from_le_bytes(data[..8].try_into().map_err(|_| {
-			anchor_client::anchor_lang::error::Error::from(
-				anchor_client::anchor_lang::error::ErrorCode::AccountDidNotDeserialize,
-			)
-		})?);
-
-		Ok(NonceAccount { nonce })
-	}
-}
 
 #[async_trait]
 pub trait AccountingContractApi: Send + Sync {
@@ -154,17 +126,32 @@ impl AccountingContractApi for AccountingContractClient {
 			error!("Failed to create program client: {:?}", e);
 		})?;
 
-		let nonce_account: NonceAccount =
-			tokio::task::spawn_blocking(move || program.account(user))
-				.await
-				.map_err(|e| {
-					error!("Failed to spawn blocking task: {:?}", e);
-				})?
-				.map_err(|e| {
-					error!("Failed to get nonce account {}: {:?}", user, e);
-				})?;
+		let (account_pubkey, _bump) =
+			Pubkey::find_program_address(&[user.to_bytes().as_ref(), b"nonce"], &self.program_id);
 
-		Ok(nonce_account.nonce)
+		match tokio::task::spawn_blocking(move || program.rpc().get_account(&account_pubkey)).await
+		{
+			// return default nonce 0 when fail to get nonce
+			Ok(result) => match result {
+				Ok(account) => {
+					match bincode::deserialize::<accounting_contract::Nonce>(&account.data[8..]) {
+						Ok(nonce) => Ok(nonce.nonce),
+						Err(e) => {
+							error!("Failed deserialize nonce from account {:?}: {:?}", account, e);
+							Ok(0)
+						},
+					}
+				},
+				Err(e) => {
+					error!("Failed to get_account {:?}", e);
+					Ok(0)
+				},
+			},
+			Err(e) => {
+				error!("Failed to spawn blocking task: {:?}", e);
+				Err(())
+			},
+		}
 	}
 
 	async fn get_balance(&self) -> Result<U256, ()> {

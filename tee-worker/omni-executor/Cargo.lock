@@ -28,6 +28,7 @@ dependencies = [
  "alloy",
  "anchor-client",
  "async-trait",
+ "bincode",
  "ethereum-rpc",
  "mockall",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",

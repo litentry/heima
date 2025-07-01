@@ -67,9 +67,9 @@ impl BinanceCoin {
 
 	pub fn decimals(&self) -> u32 {
 		match self {
-			BinanceCoin::Bnb => 18,
+			BinanceCoin::Fc | BinanceCoin::Bnb => 18,
 			BinanceCoin::Sol => 9,
-			BinanceCoin::Fc | BinanceCoin::Usdc | BinanceCoin::Usdt => 6,
+			BinanceCoin::Usdc | BinanceCoin::Usdt => 6,
 		}
 	}
 
