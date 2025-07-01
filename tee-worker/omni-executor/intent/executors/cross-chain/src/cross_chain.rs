@@ -878,6 +878,9 @@ pub(crate) fn determine_trade_symbol_and_order_side(
 	to_network: BinanceNetwork,
 ) -> Result<(String, BinanceOrderSide), ()> {
 	match (binance_network.clone(), binance_coin.clone(), to_network.clone()) {
+		(BinanceNetwork::Sol, BinanceCoin::Fc, BinanceNetwork::Bsc) => {
+			Ok(("BNBFC".to_string(), BinanceOrderSide::BUY))
+		},
 		(BinanceNetwork::Sol, BinanceCoin::Usdc, BinanceNetwork::Bsc) => {
 			Ok(("BNBUSDC".to_string(), BinanceOrderSide::BUY))
 		},
