@@ -14,11 +14,11 @@
         "@polkadot/util-crypto": "^13.0.2"
     },
     "devDependencies": {
-        "@types/node": "^18.15.11",
+        "@types/node": "^24.0.8",
         "colors": "^1.4.0",
         "ethers": "^6.13.2",
         "exceljs": "^4.3.0",
-        "prettier": "^2.8.7",
+        "prettier": "^3.6.2",
         "ts-node": "^10.9.1",
         "typescript": "^5.0.4"
     },
