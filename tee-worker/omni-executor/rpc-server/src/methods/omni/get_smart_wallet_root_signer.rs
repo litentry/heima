@@ -41,7 +41,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 
 			let wallet = ctx
 				.signer_client
-				.request_wallet(params.chain_type, params.index, address.as_ref().clone())
+				.request_wallet(params.chain_type, params.index, address.as_ref().to_owned())
 				.await
 				.map_err(|_| {
 					error!("Failed to request wallet from signer client");
