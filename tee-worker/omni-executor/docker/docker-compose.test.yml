@@ -1,20 +1,7 @@
 services:
   omni-executor:
-    environment:
-      - RUST_LOG=debug
-      - OE_PARENTCHAIN_URL=ws://heima-node:9944
-      - OE_ETHEREUM_URL=http://ethereum-node:8545
-      - OE_SOLANA_URL=https://api.devnet.solana.com
-      - OE_PUMPX_WORKER_URL=ws://omni-executor:2100
-      - BINANCE_API_BASE_URL=http://localhost:3456/binance
-      - PUMPX_API_BASE_URL=http://localhost:3456/pumpx
-      - BINANCE_API_KEY=test_api_key
-      - BINANCE_API_SECRET=test_api_secret
-      # SendGrid configuration for mock server
-      - OE_SENDGRID_API_HOST=http://localhost:3456
-      - OE_SENDGRID_API_KEY=test_api_key
-      - OE_SENDGRID_FROM_EMAIL=test@example.com
-      - OE_SENDGRID_FROM_NAME=Test Sender
+    env_file:
+      - ../.env.test
     command: ["executor-worker", "run", "--parentchain-sync", "--enable-mock-server"]
     ports:
       - "2100:2100"
