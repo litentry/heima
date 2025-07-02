@@ -34,7 +34,7 @@ mod test {
 	use native_task_handler::NativeTaskChannelType;
 	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-	use signer_client::mocks::MockSignerClient;
+	use signer_client::{mocks::MockSignerClient, SignerClient};
 	use std::sync::Arc;
 	use tempfile::tempdir;
 	use tokio::sync::mpsc;
@@ -53,7 +53,7 @@ mod test {
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
-		let signer_client = Arc::new(Box::new(MockSignerClient::new()));
+		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
 		start_server(
 			port,
