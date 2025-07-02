@@ -4028,6 +4028,7 @@ dependencies = [
 name = "executor-worker"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
  "accounting-contract-client",
  "alloy",
  "binance-api",
@@ -5830,7 +5831,7 @@ checksum = "03343451ff899767262ec32146f6d559dd759fdadf42ff0e227c7c48f72594b4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.103",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -6698,7 +6699,10 @@ dependencies = [
 name = "native-task-handler"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
+ "alloy",
  "chrono",
+ "ethereum-rpc",
  "executor-core",
  "executor-crypto",
  "executor-primitives",
@@ -8550,6 +8554,8 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
+ "alloy",
  "alloy-signer",
  "alloy-signer-local",
  "base58",

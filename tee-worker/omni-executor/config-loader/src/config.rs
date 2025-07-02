@@ -34,6 +34,8 @@ const DEFAULT_PUMPX_WORKER_URL: &str = "wss://dev-dex-worker.heima.network";
 const DEFAULT_BINANCE_API_KEY: &str = "";
 const DEFAULT_BINANCE_API_SECRET: &str = "";
 const DEFAULT_BINANCE_API_BASE_URL: &str = "https://api.binance.com";
+const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
+const DEFAULT_OMNI_IMPLEMENTATION_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
@@ -54,6 +56,8 @@ pub struct ConfigLoader {
 	pub binance_api_key: String,
 	pub binance_api_secret: String,
 	pub binance_api_base_url: String,
+	pub omni_factory_address: String,
+	pub omni_implementation_address: String,
 }
 
 struct EnvVar {
@@ -233,6 +237,24 @@ impl ConfigLoader {
 					optional: false,
 				},
 			),
+			(
+				"omni_factory_address",
+				EnvVar {
+					env_key: "OE_OMNI_FACTORY_ADDRESS",
+					default: DEFAULT_OMNI_FACTORY_ADDRESS,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"omni_implementation_address",
+				EnvVar {
+					env_key: "OE_OMNI_IMPLEMENTATION_ADDRESS",
+					default: DEFAULT_OMNI_IMPLEMENTATION_ADDRESS,
+					sensitive: false,
+					optional: false,
+				},
+			),
 		]);
 
 		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
@@ -265,6 +287,8 @@ impl ConfigLoader {
 			binance_api_key: get("binance_api_key"),
 			binance_api_secret: get("binance_api_secret"),
 			binance_api_base_url: get("binance_api_base_url"),
+			omni_factory_address: get("omni_factory_address"),
+			omni_implementation_address: get("omni_implementation_address"),
 		}
 	}
 }

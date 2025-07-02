@@ -34,6 +34,7 @@ pub const POST_HEIMA_LOGIN_FAILED_CODE: i32 = -32041;
 const PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE: i32 = -32050;
 
 const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32060;
+const UNSUPPORTED_CHAIN_ERROR_CODE: i32 = -32061;
 
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
@@ -68,5 +69,6 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			-32099
 		},
 		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
+		NativeTaskError::UnsupportedChain => UNSUPPORTED_CHAIN_ERROR_CODE,
 	}
 }

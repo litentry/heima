@@ -1,5 +1,7 @@
+use crate::types::SerializablePackedUserOperation;
 use executor_primitives::{
-	AccountId, Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth, ValidationData,
+	AccountId, Chain, Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth,
+	ValidationData,
 };
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::fmt::Debug;
@@ -69,6 +71,10 @@ pub enum NativeTask {
 	),
 	#[codec(index = 25)]
 	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
+
+	// omni-specific tasks, starting from index 30
+	#[codec(index = 30)]
+	OmniSubmitUserOp(AccountId, SerializablePackedUserOperation, Chain),
 }
 
 impl NativeTaskTrait for NativeTask {

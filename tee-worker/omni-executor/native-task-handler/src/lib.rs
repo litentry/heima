@@ -1,17 +1,22 @@
 mod aes256_key_store;
 mod types;
 
+use aa_contracts_client::calculate_user_operation_hash;
+use aa_contracts_client::EntryPointClient;
+use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use chrono::{Days, Utc};
+use ethereum_rpc::AlloyRpcProvider;
 use executor_core::{
 	intent_executor::IntentExecutor,
 	native_task::{NativeTask, NativeTaskWrapper},
+	types::SerializablePackedUserOperation,
 };
 use executor_crypto::{
 	aes256::{aes_decrypt, aes_encrypt_default, Aes256Key},
 	jwt,
 };
 use executor_primitives::{
-	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, MemberAccount,
+	utils::hex::ToHexPrefixed, AccountId, Chain, Identity, Intent, IntentId, MemberAccount,
 	OmniAccountAuthType, PumpxAccountProfile, ValidationData, Web2IdentityType,
 };
 use executor_storage::{
@@ -43,7 +48,7 @@ use pumpx::{
 	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
 };
 use signer_client::{ChainType, SignerClient};
-use std::{marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot, Semaphore};
 use tracing::{debug, error, info, span, Instrument, Level};
 
@@ -84,6 +89,7 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -117,6 +123,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -129,8 +136,20 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
+			entry_point_clients,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
+		}
+	}
+
+	/// Get EntryPoint client for a specific chain
+	pub fn get_entry_point_client(
+		&self,
+		chain: &Chain,
+	) -> Option<Arc<EntryPointClient<AlloyRpcProvider>>> {
+		match chain {
+			Chain::Evm(chain_id) => self.entry_point_clients.get(chain_id).cloned(),
+			_ => None,
 		}
 	}
 }
@@ -973,6 +992,128 @@ async fn handle_native_task<
 			.await;
 			return;
 		},
+		NativeTask::OmniSubmitUserOp(omni_account, serializable_user_op, chain) => {
+			// Only support EVM chains for now
+			if !chain.is_evm() {
+				send_error(
+					format!(
+						"Unsupported chain type: {:?}. Only EVM chains are currently supported.",
+						chain
+					),
+					response_sender,
+					NativeTaskError::UnsupportedChain,
+				);
+				return;
+			}
+
+			let chain_id = chain.evm_chain_id().unwrap(); // Safe to unwrap since we checked is_evm() above
+			info!(
+				"Processing OmniSubmitUserOp for EVM chain: {} (chain_id: {})",
+				chain.name(),
+				chain_id
+			);
+
+			// Get EntryPoint client for this chain (needed for both signing and submission)
+			let entry_point_client = match ctx.get_entry_point_client(&chain) {
+				Some(client) => client,
+				None => {
+					send_error(
+						format!("No EntryPoint client configured for chain: {:?}", chain),
+						response_sender,
+						NativeTaskError::UnsupportedChain,
+					);
+					return;
+				},
+			};
+
+			// Convert SerializablePackedUserOperation to PackedUserOperation
+			let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone());
+
+			// Check if UserOperation is signed
+			if packed_user_op.signature.is_empty() {
+				// UserOp is unsigned, need to sign it using pumpx signer
+				info!("UserOperation is unsigned, requesting signature from pumpx signer");
+
+				// Get EntryPoint address from client for hash calculation
+				let entry_point_address = entry_point_client.entry_point_address();
+
+				let user_op_hash_bytes =
+					calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+				let _user_op_hash = format!("0x{}", hex::encode(user_op_hash_bytes));
+				let message_to_sign = user_op_hash_bytes.to_vec();
+
+				// Request signature from pumpx signer for EVM chain
+				let signature_result = ctx
+					.pumpx_signer_client
+					.request_signature(
+						ChainType::Evm,
+						0, // wallet_index
+						omni_account.clone().into(),
+						message_to_sign,
+					)
+					.await;
+
+				let signature = match signature_result {
+					Ok(sig) => sig,
+					Err(_) => {
+						send_error(
+							"Failed to sign user operation".to_string(),
+							response_sender,
+							NativeTaskError::PumpxSignerError(
+								PumpxSignerError::RequestSignatureFailed,
+							),
+						);
+						return;
+					},
+				};
+
+				// Apply signature to user_op
+				packed_user_op.signature = Bytes::from(signature);
+				info!("UserOperation signed successfully");
+			}
+
+			// Use the EntryPoint client we already retrieved above
+
+			// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
+			let aa_user_op = aa_contracts_client::PackedUserOperation {
+				sender: packed_user_op.sender,
+				nonce: packed_user_op.nonce,
+				initCode: packed_user_op.initCode.clone(),
+				callData: packed_user_op.callData.clone(),
+				accountGasLimits: packed_user_op.accountGasLimits,
+				preVerificationGas: packed_user_op.preVerificationGas,
+				gasFees: packed_user_op.gasFees,
+				paymasterAndData: packed_user_op.paymasterAndData.clone(),
+				sessionAccount: packed_user_op.sessionAccount,
+				sessionExpiration: packed_user_op.sessionExpiration,
+				sessionAccountProof: packed_user_op.sessionAccountProof.clone(),
+				signature: packed_user_op.signature.clone(),
+			};
+
+			// TODO: Configure beneficiary address (should be from config or a default bundler address)
+			let beneficiary = Address::ZERO; // For now, use zero address
+
+			// Submit UserOperation via EntryPoint.handleOps()
+			let transaction_hash =
+				match entry_point_client.handle_ops(&[aa_user_op], beneficiary).await {
+					Ok(_) => {
+						// TODO: Get actual transaction hash from handle_ops result
+						Some(format!("0x{}", hex::encode("entrypoint_tx_hash")))
+					},
+					Err(_) => {
+						send_error(
+							"Failed to submit UserOperation to EntryPoint via handleOps"
+								.to_string(),
+							response_sender,
+							NativeTaskError::InternalError,
+						);
+						return;
+					},
+				};
+
+			send_ok(response_sender, NativeTaskOk::OmniSubmitUserOp(transaction_hash));
+			return;
+		},
 	};
 
 	match rpc_client.submit_and_watch_tx_until(&tx, XtStatus::Finalized).await {
@@ -1126,4 +1267,24 @@ async fn verify_google_code(
 			)
 		},
 	)
+}
+
+/// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
+fn convert_to_packed_user_op(
+	user_op: SerializablePackedUserOperation,
+) -> aa_contracts_client::PackedUserOperation {
+	aa_contracts_client::PackedUserOperation {
+		sender: Address::from_slice(&user_op.sender),
+		nonce: U256::from_be_bytes(user_op.nonce),
+		initCode: Bytes::from(user_op.init_code),
+		callData: Bytes::from(user_op.call_data),
+		accountGasLimits: FixedBytes::from_slice(&user_op.account_gas_limits),
+		preVerificationGas: U256::from_be_bytes(user_op.pre_verification_gas),
+		gasFees: FixedBytes::from_slice(&user_op.gas_fees),
+		paymasterAndData: Bytes::from(user_op.paymaster_and_data),
+		sessionAccount: Address::from_slice(&user_op.session_account),
+		sessionExpiration: U256::from_be_bytes(user_op.session_expiration),
+		sessionAccountProof: Bytes::from(user_op.session_account_proof),
+		signature: Bytes::from(user_op.signature),
+	}
 }

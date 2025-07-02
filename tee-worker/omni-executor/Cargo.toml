@@ -104,6 +104,7 @@ uuid = "1.16.0"
 
 
 # Local dependencies
+aa-contracts-client = { path = "aa-contracts-client" }
 accounting-contract = { path = "accounting-contract/solana/programs/accounting-contract", features = ["no-entrypoint"] }
 accounting-contract-client = { path = "accounting-contract-client" }
 binance-api = { path = "binance-api" }

@@ -78,3 +78,93 @@ impl GetEventId<EventId> for BlockEvent {
 pub struct PumpxAccountProfile {
 	pub wallet_exported: bool,
 }
+
+/// Represents supported blockchain networks for omni operations
+#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum Chain {
+	Evm(u64),
+	Solana,
+}
+
+impl Chain {
+	pub fn evm_chain_id(&self) -> Option<u64> {
+		match self {
+			Chain::Evm(chain_id) => Some(*chain_id),
+			Chain::Solana => None,
+		}
+	}
+
+	pub fn is_evm(&self) -> bool {
+		matches!(self, Chain::Evm(_))
+	}
+
+	pub fn is_solana(&self) -> bool {
+		matches!(self, Chain::Solana)
+	}
+
+	pub fn name(&self) -> String {
+		match self {
+			Chain::Evm(chain_id) => match *chain_id {
+				1 => "Ethereum Mainnet".to_string(),
+				11155111 => "Ethereum Sepolia".to_string(),
+				56 => "BNB Smart Chain".to_string(),
+				137 => "Polygon".to_string(),
+				42161 => "Arbitrum One".to_string(),
+				10 => "Optimism".to_string(),
+				31337 => "Local Hardhat".to_string(),
+				_ => format!("EVM Chain {}", chain_id),
+			},
+			Chain::Solana => "Solana".to_string(),
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_chain_evm_variants() {
+		let eth_mainnet = Chain::Evm(1);
+		let sepolia = Chain::Evm(11155111);
+		let local = Chain::Evm(31337);
+
+		assert!(eth_mainnet.is_evm());
+		assert_eq!(eth_mainnet.evm_chain_id(), Some(1));
+		assert_eq!(eth_mainnet.name(), "Ethereum Mainnet");
+
+		assert!(sepolia.is_evm());
+		assert_eq!(sepolia.evm_chain_id(), Some(11155111));
+		assert_eq!(sepolia.name(), "Ethereum Sepolia");
+
+		assert!(local.is_evm());
+		assert_eq!(local.evm_chain_id(), Some(31337));
+		assert_eq!(local.name(), "Local Hardhat");
+	}
+
+	#[test]
+	fn test_chain_solana_variant() {
+		let solana = Chain::Solana;
+
+		assert!(solana.is_solana());
+		assert!(!solana.is_evm());
+		assert_eq!(solana.evm_chain_id(), None);
+		assert_eq!(solana.name(), "Solana");
+	}
+
+	#[test]
+	fn test_chain_serialization() {
+		let eth_mainnet = Chain::Evm(1);
+		let solana = Chain::Solana;
+
+		// Test that serialization/deserialization works
+		let eth_json = serde_json::to_string(&eth_mainnet).unwrap();
+		let solana_json = serde_json::to_string(&solana).unwrap();
+
+		let eth_deserialized: Chain = serde_json::from_str(&eth_json).unwrap();
+		let solana_deserialized: Chain = serde_json::from_str(&solana_json).unwrap();
+
+		assert_eq!(eth_mainnet, eth_deserialized);
+		assert_eq!(solana, solana_deserialized);
+	}
+}

@@ -18,6 +18,7 @@ tracing-subscriber = { workspace = true }
 url = { workspace = true }
 
 # Local dependencies
+aa-contracts-client = { workspace = true }
 accounting-contract-client = { workspace = true }
 binance-api = { workspace = true }
 config-loader = { workspace = true }

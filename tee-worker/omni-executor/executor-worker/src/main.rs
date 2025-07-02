@@ -315,6 +315,91 @@ async fn main() -> Result<(), ()> {
 				Decimal::from_str(&args.instant_payout_threshold).unwrap(),
 			)?;
 
+			// Create EntryPoint clients registry
+			let mut entry_point_clients = HashMap::new();
+
+			// Helper function to get EntryPoint address for chain
+			let get_entry_point_address = |chain_id: u64| -> alloy::primitives::Address {
+				use alloy::primitives::Address;
+				use hex;
+				match chain_id {
+					// Local development
+					31337 => Address::from_slice(
+						&hex::decode("5FbDB2315678afecb367f032d93F642f64180aa3").unwrap(),
+					),
+					// Ethereum Mainnet
+					1 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// Ethereum Sepolia
+					11155111 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// Polygon
+					137 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// Arbitrum One
+					42161 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// Optimism
+					10 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// BNB Smart Chain
+					56 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// BSC Testnet
+					97 => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+					// Default to the canonical EntryPoint v0.6 address
+					_ => Address::from_slice(
+						&hex::decode("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789").unwrap(),
+					),
+				}
+			};
+
+			// Add BSC (BNB Chain)
+			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url));
+			let bsc_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
+				get_entry_point_address(56),
+				bsc_rpc,
+			));
+			entry_point_clients.insert(56, bsc_entry_point);
+
+			// Add BSC Testnet if configured
+			if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
+				let bsc_testnet_rpc =
+					Arc::new(ethereum_rpc::AlloyRpcProvider::new(bsc_testnet_url));
+				let bsc_testnet_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
+					get_entry_point_address(97),
+					bsc_testnet_rpc,
+				));
+				entry_point_clients.insert(97, bsc_testnet_entry_point);
+			}
+
+			// Add Ethereum Mainnet
+			let ethereum_rpc =
+				Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.ethereum_url));
+			let ethereum_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
+				get_entry_point_address(1),
+				ethereum_rpc,
+			));
+			entry_point_clients.insert(1, ethereum_entry_point);
+
+			// Add local development chain
+			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new("http://localhost:8545"));
+			let local_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
+				get_entry_point_address(31337),
+				local_rpc,
+			));
+			entry_point_clients.insert(31337, local_entry_point);
+
+			let entry_point_clients = Arc::new(entry_point_clients);
+
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -326,6 +411,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(cross_chain_intent_executor),
 				pumpx_api.clone(),
 				pumpx_signer_client.clone(),
+				entry_point_clients,
 			);
 			// TODO: make buffer size configurable
 			let native_task_sender =

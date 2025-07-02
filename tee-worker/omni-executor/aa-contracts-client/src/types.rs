@@ -33,6 +33,30 @@ sol! {
 		bytes signature;
 	}
 
+	// EIP-712 domain separator struct for hash calculation
+	struct EIP712Domain {
+		bytes32 name;
+		bytes32 version;
+		uint256 chainId;
+		address verifyingContract;
+	}
+
+	// PackedUserOperation struct for EIP-712 hashing (with typehash)
+	struct PackedUserOperationForHashing {
+		bytes32 typeHash;
+		address sender;
+		uint256 nonce;
+		bytes32 initCode;
+		bytes32 callData;
+		bytes32 accountGasLimits;
+		uint256 preVerificationGas;
+		bytes32 gasFees;
+		bytes32 paymasterAndData;
+		address sessionAccount;
+		uint256 sessionExpiration;
+		bytes32 sessionAccountProof;
+	}
+
 	// entry point
 	function handleOps(PackedUserOperation[] calldata ops, address payable beneficiary) external;
 	function getSenderAddress(bytes calldata initCode) external;
