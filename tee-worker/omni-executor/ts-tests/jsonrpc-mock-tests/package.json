@@ -1,5 +1,5 @@
 {
-    "name": "jsonrpc-tests",
+    "name": "jsonrpc-mock-tests",
     "license": "ISC",
     "type": "module",
     "scripts": {
