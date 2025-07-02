@@ -14,10 +14,4 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod common;
-pub mod inch_client;
-pub mod kyber_client;
-pub mod okx_client;
-pub mod four_meme;
-
-pub mod evm_tx_manager;
+pub mod client;

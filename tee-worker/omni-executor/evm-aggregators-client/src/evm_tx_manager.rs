@@ -14,12 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::common::{
-	is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT,
-	DECIMALS_TO_VALUE, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS,
-	KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS,
-	SERVICE_FEE_BPS, SERVICE_FEE_PERCENT,
-};
+use crate::common::{is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, FOUR_MEME, FOUR_MEME_HELPER, FOUR_MEME_MANAGER, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT};
 use crate::inch_client::client::InchSwap;
 use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
 use crate::kyber_client::client::KyberSwap;
@@ -31,19 +26,47 @@ use std::sync::Arc;
 
 use crate::kyber_client::types::GetSwapRouteRequest;
 use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level};
-use alloy::primitives::Uint;
+use alloy::primitives::{Uint, U256};
 use alloy::{
+	sol,
 	primitives::{Address, TxKind},
 	rpc::types::{TransactionInput, TransactionRequest},
+	sol_types::{SolValue},
 };
+use alloy::sol_types::{SolCall, SolEnum, SolEvent, SolInterface, SolStruct, SolType};
+use alloy::sol_types::private::SolTypeValue;
 use async_trait::async_trait;
 use ethereum_rpc::client::EthereumClient;
 use hex::FromHex;
 use log::error;
+use crate::evm_tx_manager::FourMemeContract::FourMemeContractCalls;
+use crate::evm_tx_manager::FourMemeHelperContract::{tryBuyReturn, FourMemeHelperContractCalls};
+use crate::evm_tx_manager::FourMemeManagerContract::FourMemeManagerContractCalls;
+
+sol!(
+	#[allow(missing_docs)]
+	#[sol(rpc)]
+	FourMemeContract,
+	"./four_meme_abi.json"
+);
+
+sol!(
+	#[allow(missing_docs)]
+	#[sol(rpc)]
+	FourMemeManagerContract,
+	"./four_meme_manager_abi.json"
+);
+
+sol!(
+	#[allow(missing_docs)]
+	#[sol(rpc)]
+	FourMemeHelperContract,
+	"./four_meme_helper_abi.json"
+);
 
 /// EVM Transaction Manager
 pub struct EvmTxManager<
-	EthClient: RpcProvider + ?Sized,
+	EthClient: RpcProvider<Transaction = TransactionRequest>  + ?Sized,
 	InchClient: InchSwap + ?Sized,
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
@@ -75,17 +98,62 @@ pub trait ConstructEvmTx: Send + Sync {
 		nonce: u64,
 		amount_decimal: Decimal,
 	) -> Result<TransactionRequest, ()>;
+	async fn construct_four_meme_v2_tx(
+		&self,
+		create_market_tx: CreateMarketTx,
+		nonce: u64,
+		amount_decimal: Decimal,
+	) -> Result<TransactionRequest, ()>;
 }
 
 #[async_trait]
 impl<EthClient, InchClient, KyberClient, OkxClient> ConstructEvmTx
 	for EvmTxManager<EthClient, InchClient, KyberClient, OkxClient>
 where
-	EthClient: RpcProvider + ?Sized,
+	EthClient: RpcProvider<Transaction = TransactionRequest>  + ?Sized,
 	InchClient: InchSwap + ?Sized,
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
 {
+	async fn construct_four_meme_v2_tx(&self, create_market_tx: CreateMarketTx, nonce: u64, amount_decimal: Decimal) -> Result<TransactionRequest, ()> {
+		let to = FOUR_MEME;
+		let from = Address::from_str(&create_market_tx.user_wallet_address).map_err(|e| {
+			error!("Error converting user wallet address into Ethereum Address: {}", e);
+		})?;
+		let chain_id = create_market_tx.chain_id;
+		let is_buy = is_native_token(create_market_tx.in_token_ca.as_ref());
+
+		if is_buy {
+			let value_decimal = amount_decimal;
+			let target_token = Address::from_str(&create_market_tx.out_token_ca).map_err(|e| {
+				error!("Error converting token contract to Ethereum Address: {}", e);
+			})?;
+			// TODO: Calculate Min Amount
+			// TODO: Calculate Input for Four Meme Contract Transaction
+		} else {
+			let to = Address::from_str(FOUR_MEME_MANAGER).map_err(|e| {
+				error!("Error converting four meme manager address into Ethereum Address: {}", e);
+			})?;
+			let target_token = Address::from_str(&create_market_tx.in_token_ca).map_err(|e| {
+				error!("Error converting token contract to Ethereum Address: {}", e);
+			})?;
+			// TODO: Calculate Min Amount
+			// TODO: Calculate Input for Four Meme Manager Transaction
+		}
+
+		let gas_price = self
+			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
+			.await
+			.map_err(|_| {
+				error!("Failed to get gas gas price by level");
+			})?;
+
+		// TODO: Construct Ethereum Transaction
+		// TODO: Estimate gas fees for the transaction and increase it by 50%
+		// TODO: Add the gas fees back to the transaction and return it
+
+		todo!()
+	}
 	async fn construct_inch_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
@@ -297,7 +365,7 @@ where
 impl<EthClient, InchClient, KyberClient, OkxClient>
 	EvmTxManager<EthClient, InchClient, KyberClient, OkxClient>
 where
-	EthClient: RpcProvider + ?Sized,
+	EthClient: RpcProvider<Transaction = TransactionRequest>  + ?Sized,
 	InchClient: InchSwap + ?Sized,
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
@@ -322,12 +390,46 @@ where
 			},
 		}
 	}
+
+	pub async fn calculate_min_amount(&self, token: Address, amount_decimal: Decimal, slippage: i64, is_buy: bool ) {
+		let four_meme_helper = Address::from_str(&FOUR_MEME_HELPER).map_err(|e| {
+			error!("Failed to get four meme helper ethereum address due to: {:?}", e);
+		}).unwrap();
+		if is_buy {
+			let call = FourMemeHelperContractCalls::tryBuy(
+				crate::evm_tx_manager::FourMemeHelperContract::tryBuyCall {
+					token,
+					amount: Default::default(),
+					funds: Default::default(),
+				}
+			).abi_encode();
+			let tx = TransactionRequest {
+				to: Some(TxKind::Call(four_meme_helper)),
+				input: TransactionInput { data: Some(call.into()), ..Default::default() },
+				..Default::default()
+			};
+			// TODO: Fix decoding this
+			let result = self.eth_client.call(tx).await.map_or(Err(()), |outro| {
+				let outro = <tryBuyReturn as Sol>::abi_decode(&outro);
+				Ok(outro)
+			});
+		} else {
+			let call = FourMemeHelperContractCalls::trySell(
+				crate::evm_tx_manager::FourMemeHelperContract::trySellCall {
+					token,
+					amount: Default::default(),
+				}
+			);
+		}
+
+		todo!()
+	}
 }
 
 impl<EthClient, InchClient, KyberClient, OkxClient>
 	EvmTxManager<EthClient, InchClient, KyberClient, OkxClient>
 where
-	EthClient: RpcProvider<Addr = Address> + ?Sized + EthereumClient,
+	EthClient: RpcProvider<Addr = Address, Transaction = TransactionRequest> + ?Sized + EthereumClient,
 	InchClient: InchSwap + ?Sized,
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
