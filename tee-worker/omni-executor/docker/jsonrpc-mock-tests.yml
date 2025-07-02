@@ -1,9 +1,10 @@
 services:
-  jsonrpc-tests:
+  jsonrpc-mock-tests:
     image: litentry/omni-executor:latest
     container_name: litentry-jsonrpc-mock-tests
     volumes:
       - ../ts-tests:/ts-tests
+      - ../cli:/usr/local/executor-worker-cli
     build:
       context: ${PWD}/../../
       dockerfile: tee-worker/omni-executor/Dockerfile
@@ -14,7 +15,7 @@ services:
         restart: true
     networks:
       - litentry-test-network
-    entrypoint: "sh -c '/usr/local/executor-worker-cli/ts_jsonrpc_mock_tests.sh 3>&1' "
+    entrypoint: "sh -c '/usr/local/executor-worker-cli/ts_jsonrpc_mock_test.sh 3>&1' "
     restart: "no"
 networks:
   litentry-test-network:
