@@ -4,9 +4,10 @@ use crate::{
 	server::RpcContext,
 	ErrorCode,
 };
-use executor_primitives::utils::hex::{hex_encode, FromHexPrefixed};
+use executor_primitives::utils::hex::FromHexPrefixed;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
+use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use tracing::{debug, error};
@@ -39,7 +40,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
-			let wallet = ctx
+			let pubkey = ctx
 				.signer_client
 				.request_wallet(params.chain_type, params.index, address.as_ref().to_owned())
 				.await
@@ -50,7 +51,14 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 					))
 				})?;
 
-			Ok::<String, _>(hex_encode(&wallet))
+			let address = pubkey_to_address(params.chain_type, &pubkey).map_err(|_| {
+				error!("Failed to convert pubkey to address");
+				PumpxRpcError::from_error_code(ErrorCode::ServerError(
+					PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
+				))
+			})?;
+
+			Ok::<String, _>(address)
 		})
 		.expect("Failed to register omni_addWallet method");
 }
