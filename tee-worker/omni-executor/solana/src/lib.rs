@@ -253,3 +253,30 @@ pub mod mocks {
 
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use solana_sdk::{signature::SeedDerivable, signer::keypair::Keypair};
+
+	#[tokio::test]
+	async fn test_mock_server_get_balance() {
+		// Start mock server and get dynamic URL
+		let mock_url = mock_server::async_run_test_only().await;
+		let client = SolanaRpcClient::new(format!("{}/solana", mock_url).as_str());
+
+		// has balance
+		// address: AKnL4NNf3DGWZJS6cPknBuEGnVsV4A4m5tgebLHaRSZ9
+		let seed = [1u8; 32];
+		let keypair = Keypair::from_seed(&seed).expect("Failed to create keypair from seed");
+		let balance = client.get_balance(&keypair.pubkey()).await.expect("Fail to get balance");
+		assert_eq!(balance, 1000000000u64);
+
+		// has no balance
+		// address: 9hSR6S7WPtxmTojgo6GG3k4yDPecgJY292j7xrsUGWBu
+		let seed = [2u8; 32];
+		let keypair = Keypair::from_seed(&seed).expect("Failed to create keypair from seed");
+		let balance = client.get_balance(&keypair.pubkey()).await.expect("Fail to get balance");
+		assert_eq!(balance, 0u64);
+	}
+}

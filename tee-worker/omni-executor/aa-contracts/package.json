@@ -1,0 +1,12 @@
+{
+  "name": "aa-contracts-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for AA contracts",
+  "type": "commonjs",
+  "scripts": {
+    "check-root": "node check-root-signer.js"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0"
+  }
+}
