@@ -298,15 +298,15 @@ pub mod mocks {
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::Address;
 	use alloy::primitives::U256;
+	use alloy::providers::fillers::{
+		BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+	};
+	use alloy::providers::{Identity, RootProvider};
 	use alloy::rpc::types::TransactionRequest;
 	use async_trait::async_trait;
 	use mockall::mock;
 	use std::cell::RefCell;
 	use std::collections::HashMap;
-	use alloy::providers::fillers::{
-		BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
-	};
-	use alloy::providers::{Identity, RootProvider};
 
 	mock! {
 		pub RpcProvider {}
