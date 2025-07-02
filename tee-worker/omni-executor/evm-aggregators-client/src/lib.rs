@@ -15,8 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod common;
+pub mod evm_tx_manager;
 pub mod inch_client;
 pub mod kyber_client;
 pub mod okx_client;
-
-pub mod evm_tx_manager;

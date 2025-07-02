@@ -15,23 +15,26 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::common::{
-	is_native_token, CreateMarketTx, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT,
-	DECIMALS_TO_VALUE, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS,
-	KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS,
-	SERVICE_FEE_BPS, SERVICE_FEE_PERCENT,
+	is_native_token, CreateMarketTx, ALL_BP_DECIMAL, APPROVE_FUND, CROSS_SERVICE_FEE_BPS,
+	CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, FEE_IN_BPS, FEE_ON_DST, GAS_LIMIT, HEIMA_ROUTER,
+	INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS, KYBER_SWAP_DEX_ID_MAP,
+	NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS, SERVICE_FEE_BPS,
+	SERVICE_FEE_PERCENT, SHOULD_CLAIM,
 };
 use crate::inch_client::client::InchSwap;
 use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
 use crate::kyber_client::client::KyberSwap;
 use crate::okx_client::client::OkxSwap;
 use ethereum_rpc::RpcProvider;
-use rust_decimal::prelude::{Decimal, ToPrimitive};
+use rust_decimal::prelude::{Decimal, FromPrimitive, ToPrimitive};
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::common::HeimaRouterContract::HeimaRouterContractInstance;
+use crate::common::IRouter::{SwapDescription, SwapExecutionParams};
 use crate::kyber_client::types::GetSwapRouteRequest;
 use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level};
-use alloy::primitives::Uint;
+use alloy::primitives::{Bytes, Uint, U256};
 use alloy::{
 	primitives::{Address, TxKind},
 	rpc::types::{TransactionInput, TransactionRequest},
@@ -70,6 +73,12 @@ pub trait ConstructEvmTx: Send + Sync {
 		amount_decimal: Decimal,
 	) -> Result<TransactionRequest, ()>;
 	async fn construct_kyber_tx(
+		&self,
+		create_market_tx: CreateMarketTx,
+		nonce: u64,
+		amount_decimal: Decimal,
+	) -> Result<TransactionRequest, ()>;
+	async fn create_heima_swap_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
@@ -292,6 +301,190 @@ where
 
 		Ok(tx)
 	}
+
+	async fn create_heima_swap_tx(
+		&self,
+		create_market_tx: CreateMarketTx,
+		nonce: u64,
+		amount_decimal: Decimal,
+	) -> Result<TransactionRequest, ()> {
+		let chain_id = create_market_tx.chain_id;
+		let mut fee_bps = SERVICE_FEE_BPS.to_string();
+		if create_market_tx.is_pre_cross {
+			fee_bps = CROSS_SERVICE_FEE_BPS.to_string();
+		}
+		let is_buy = is_native_token(&create_market_tx.in_token_ca.clone().into_bytes());
+		let fee_receiver = Address::from_str(&self.fee_receiver)
+			.map_err(|e| error!("Failed to convert fee receiver to ethereum address: {}", e))?;
+		let mut fee_receivers = vec![fee_receiver];
+		let mut fee_amounts = vec![U256::from_str(&fee_bps)
+			.map_err(|e| error!("Failed to convert fee bps to uint: {}", e))?];
+
+		if create_market_tx.fee_receiver.len() != create_market_tx.fee_bps.len() {
+			error!("Fee receivers length and fee bps length mismatch");
+			return Err(());
+		}
+
+		let mut total_fee = i64::from_str(&fee_bps)
+			.map_err(|e| error!("Failed to convert fee bps to uint: {}", e))?;
+
+		for (receiver, fee) in
+			create_market_tx.fee_receiver.iter().zip(create_market_tx.fee_bps.iter())
+		{
+			fee_receivers.push(
+				Address::from_str(receiver)
+					.map_err(|e| error!("Failed to get receiver ethereum address: {}", e))?,
+			);
+			fee_amounts.push(U256::from::<i64>(*fee));
+			total_fee += fee;
+		}
+
+		let mut in_token = create_market_tx.in_token_ca;
+		let mut out_token = create_market_tx.out_token_ca;
+
+		let mut dex_amount_decimal = amount_decimal;
+		let mut value_decimal = Decimal::new(0, 0);
+		if is_buy {
+			value_decimal = amount_decimal;
+			dex_amount_decimal = value_decimal
+				* (*ALL_BP_DECIMAL - Decimal::from_i64(total_fee).unwrap())
+				/ *ALL_BP_DECIMAL;
+			in_token = NATIVE_ADDRESS.to_string();
+		} else {
+			out_token = NATIVE_ADDRESS.to_string();
+		}
+
+		// TODO: Handle Four meme P-1591
+
+		let swap_route_request = GetSwapRouteRequest {
+			chain_id,
+			amount: dex_amount_decimal.to_string(),
+			from_token_address: in_token.clone(),
+			to_token_address: out_token.clone(),
+			fee_bps,
+			referrer: self.fee_receiver.clone(),
+			dex_ids: KYBER_SWAP_DEX_ID_MAP[&create_market_tx.trade_pool_name].to_string(),
+			is_from_token_referrer: is_buy,
+		};
+
+		let swap_route_response = self
+			.kyber_client
+			.get_swap_route(chain_id, swap_route_request)
+			.await
+			.map_err(|e| {
+				error!("Failed to get swap route response from kyber: {}", e);
+			})?;
+
+		let mut swap_request = crate::kyber_client::types::SwapRequest {
+			route_summary: swap_route_response.route_summary,
+			sender: Some(create_market_tx.user_wallet_address.clone()),
+			recipient: Some(create_market_tx.user_wallet_address.clone()),
+			deadline: Some(
+				(std::time::SystemTime::now()
+					.duration_since(std::time::UNIX_EPOCH)
+					.expect("Time went backwards")
+					.as_secs() + 60) as i64,
+			),
+			slippage_bps: create_market_tx.slippage.to_i64(),
+			enable_gas_estimation: Some(false),
+			ignore_capped_slippage: Some(true),
+			..Default::default()
+		};
+
+		if !is_buy {
+			swap_request.recipient = Some(HEIMA_ROUTER.to_string());
+		}
+
+		let swap_response = self.kyber_client.swap(chain_id, swap_request).await.map_err(|e| {
+			error!("Failed to get swap response from kyber: {}", e);
+		})?;
+
+		let call_target = Address::from_hex(swap_response.router_address)
+			.map_err(|e| error!("Failed to get router ethereum address: {}", e))?;
+		let target_data = Bytes::from_hex(swap_response.data)
+			.map_err(|e| error!("Failed to get target data in bytes: {}", e))?;
+		let mut dst_receiver =
+			Address::from_str(&create_market_tx.user_wallet_address).map_err(|e| {
+				error!("Failed to convert user wallet address to ethereum address: {}", e)
+			})?;
+		if create_market_tx.recipient_address.is_empty()
+			&& create_market_tx.recipient_address != create_market_tx.user_wallet_address
+		{
+			dst_receiver = Address::from_str(&create_market_tx.recipient_address).map_err(|e| {
+				error!("Failed to convert recipient address to ethereum address: {}", e)
+			})?;
+		}
+
+		let approve_target = call_target;
+		let mut flags = 0;
+		flags |= FEE_IN_BPS;
+		if !is_buy {
+			flags |= FEE_ON_DST | APPROVE_FUND | SHOULD_CLAIM;
+		}
+
+		let heima_contract = HeimaRouterContractInstance::new(
+			Address::from_str(HEIMA_ROUTER)
+				.map_err(|e| error!("Failed to parse HEIMA router: {}", e))?,
+			self.eth_client
+				.get_provider()
+				.await
+				.map_err(|_| error!("Failed to get provider"))?,
+		);
+
+		let swap_call = heima_contract
+			.swap(SwapExecutionParams {
+				callTarget: call_target,
+				approveTarget: approve_target,
+				targetData: target_data,
+				desc: SwapDescription {
+					srcToken: Address::from_str(&in_token)
+						.map_err(|e| error!("Failed to get token address: {}", e))?,
+					dstToken: Address::from_str(&out_token)
+						.map_err(|e| error!("Failed to get token address: {}", e))?,
+					srcReceivers: vec![],
+					srcAmounts: vec![],
+					feeReceivers: fee_receivers,
+					feeAmounts: fee_amounts,
+					dstReceiver: dst_receiver,
+					amount: U256::from_str(&amount_decimal.trunc().to_string())
+						.map_err(|e| error!("Failed to parse amount decimal: {}", e))?,
+					minReturnAmount: Default::default(),
+					flags: U256::from(flags),
+					permit: Default::default(),
+				},
+			})
+			.into_transaction_request()
+			.input;
+
+		let gas = *GAS_LIMIT;
+		let gas_price = self
+			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
+			.await
+			.map_err(|_| {
+				error!("Failed to get gas gas price by level");
+			})?;
+		let gas_price = gas_price.to_u128().ok_or_else(|| {
+			error!("Failed to convert gas price to u128");
+		})?;
+
+		let tx = TransactionRequest {
+			nonce: Some(nonce),
+			value: Some(
+				U256::from_str(&value_decimal.trunc().to_string())
+					.map_err(|e| error!("Failed to convert value: {}", e))?,
+			),
+			to: Some(TxKind::Call(
+				Address::from_str(HEIMA_ROUTER)
+					.map_err(|e| error!("Failed to parse HEIMA router: {}", e))?,
+			)),
+			input: swap_call,
+			gas: Some(gas),
+			gas_price: Some(gas_price),
+			..Default::default()
+		};
+
+		Ok(tx)
+	}
 }
 
 impl<EthClient, InchClient, KyberClient, OkxClient>
@@ -419,6 +612,100 @@ where
 				})?
 			},
 		};
+
+		let gas = unsigned_tx.gas.ok_or_else(|| {
+			error!("Gas not set in transaction");
+		})?;
+
+		let gas_price_u64 = unsigned_tx
+			.gas_price
+			.ok_or_else(|| {
+				error!("Gas price not set in transaction");
+			})?
+			.to_u64()
+			.ok_or_else(|| {
+				error!("Failed to convert gas price to u64");
+			})?;
+
+		let gas_fee_u128 = gas.checked_mul(gas_price_u64).ok_or_else(|| {
+			error!("Gas fee multiplication overflow");
+		})?;
+
+		let gas_fee = Uint::try_from(gas_fee_u128).map_err(|e| {
+			error!("Failed to convert gas fee to Uint: {:?}", e);
+		})?;
+
+		if balance < gas_fee {
+			error!("Balance is too low for gas fee");
+			return Err(());
+		}
+
+		transactions.push(unsigned_tx);
+		Ok(transactions)
+	}
+
+	#[allow(dead_code)]
+	async fn construct_heima_unsigned_tx(
+		&self,
+		tx: CreateMarketTx,
+	) -> Result<Vec<TransactionRequest>, ()> {
+		let amount_decimal = Decimal::from_str(&tx.amount_in).unwrap();
+		let multiplier = DECIMALS_TO_VALUE.get(&tx.in_decimal).cloned().unwrap_or(1);
+		let amount_decimal = amount_decimal * Decimal::from(multiplier);
+
+		let from = Address::from_hex(&tx.user_wallet_address)
+			.map_err(|e| error!("Failed to convert user wallet to address: {}", e))?;
+
+		let mut balance = self.eth_client.get_balance(from).await.map_err(|_| {
+			error!("Couldn't get balance");
+		})?;
+
+		let mut nonce = self.eth_client.get_pending_nonce(from).await.map_err(|_| {
+			error!("Couldn't get pending nonce");
+		})?;
+
+		let is_buy = is_native_token(&tx.in_token_ca.clone().into_bytes());
+
+		let amount_u128 = amount_decimal.to_u128().ok_or_else(|| {
+			error!("amount_decimal could not be converted to u128: {}", amount_decimal);
+		})?;
+
+		let amount = Uint::try_from(amount_u128).map_err(|e| {
+			error!("Failed to convert amount_u128 to Uint: {:?}", e);
+		})?;
+
+		let mut transactions: Vec<TransactionRequest> = Vec::new();
+
+		if is_buy {
+			if balance < amount {
+				error!("Balance is too low");
+				return Err(());
+			}
+			balance -= amount;
+		} else {
+			let approve_addr = Address::from_str(HEIMA_ROUTER).map_err(|e| {
+				error!("Failed to convert address from hex to Address: {}", e);
+			})?;
+
+			let approve_tx = self
+				.eth_client
+				.construct_approve_erc20_tx(
+					approve_addr,
+					amount,
+					Address::from_hex(tx.in_token_ca.clone()).unwrap(),
+					nonce,
+				)
+				.await
+				.map_err(|_| {
+					error!("Failed to create approve tx");
+				})?;
+
+			transactions.push(approve_tx);
+			nonce += 1;
+		}
+
+		let unsigned_tx: TransactionRequest =
+			self.create_heima_swap_tx(tx, nonce, amount_decimal).await?;
 
 		let gas = unsigned_tx.gas.ok_or_else(|| {
 			error!("Gas not set in transaction");

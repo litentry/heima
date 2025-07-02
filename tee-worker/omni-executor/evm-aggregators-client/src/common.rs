@@ -14,10 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use alloy::sol;
 use lazy_static::lazy_static;
+use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+sol!(
+	#[allow(missing_docs)]
+	#[sol(rpc)]
+	HeimaRouterContract,
+	"./abi/heima_router_abi.json"
+);
 
 pub const WRAPPED_MAINNET_ETH: &[u8] = b"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 pub const WRAPPPED_BASE_ETH: &[u8] = b"0x4200000000000000000000000000000000000006";
@@ -35,11 +44,24 @@ pub const CROSS_SERVICE_FEE_BPS: &str = "110";
 pub const KYBER_SWAP_APPROVE_ADDRESS: &str = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5";
 pub const INCH_SWAP_APPROVE_ADDRESS: &str = "0x111111125421cA6dc452d289314280a0f8842A65";
 pub const OKX_SWAP_APPROVE_ADDRESS: &str = "0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6";
+pub const HEIMA_ROUTER: &str = "0x0fab18e939827a2fe5b098c478667eac12c3cb28";
+
+// Flags for Heima Router
+pub const PARTIAL_FILL: i64 = 1 << 0;
+pub const REQUIRES_EXTRA_ETH: i64 = 1 << 1;
+pub const SHOULD_CLAIM: i64 = 1 << 2;
+pub const BURN_FROM_MSG_SENDER: i64 = 1 << 3;
+pub const BURN_FROM_TX_ORIGIN: i64 = 1 << 4;
+pub const SIMPLE_SWAP: i64 = 1 << 5;
+pub const FEE_ON_DST: i64 = 1 << 6;
+pub const FEE_IN_BPS: i64 = 1 << 7;
+pub const APPROVE_FUND: i64 = 1 << 8;
 
 lazy_static! {
 	pub static ref GAS_LIMIT: u64 = 450_000u64;
 	pub static ref GWEI_DECIMAL: Decimal = Decimal::from(1_000_000_000u64);
 	pub static ref WEI_DECIMAL: Decimal = Decimal::from(1_000_000_000_000_000_000u128);
+	pub static ref ALL_BP_DECIMAL: Decimal = Decimal::from_i64(10000).unwrap();
 }
 
 lazy_static! {
@@ -134,6 +156,9 @@ pub struct CreateMarketTx {
 	pub in_token_ca: String,
 	pub out_token_ca: String,
 	pub is_pre_cross: bool,
+	pub recipient_address: String,
+	pub fee_receiver: Vec<String>,
+	pub fee_bps: Vec<i64>,
 }
 
 pub fn is_native_token(token: &[u8]) -> bool {
