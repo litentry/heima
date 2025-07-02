@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use mockall::mock;
 
 mock! {
-
 	pub SignerClient {}
 
 	#[async_trait]
@@ -42,6 +41,4 @@ mock! {
 			wallet_address: String,
 		) -> Result<executor_crypto::aes256::AesOutput, ()>;
 	}
-
-
 }
