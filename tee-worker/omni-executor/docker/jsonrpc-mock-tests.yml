@@ -4,6 +4,7 @@ services:
     container_name: litentry-jsonrpc-mock-tests
     volumes:
       - ../ts-tests:/ts-tests
+      - ../../client-api:/client-api
       - ../cli:/usr/local/executor-worker-cli
     build:
       context: ${PWD}/../../
