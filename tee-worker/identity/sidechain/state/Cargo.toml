@@ -16,7 +16,7 @@ thiserror_sgx = { workspace = true, optional = true }
 itp-sgx-externalities = { workspace = true }
 itp-storage = { workspace = true }
 its-primitives = { workspace = true }
-sp-io = { path = "../../../common/core-primitives/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
+sp-io = { path = "../../core-primitives/substrate-sgx/sp-io", default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], optional = true }
 
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }

@@ -14,6 +14,7 @@ use warp::Filter;
 mod binance;
 mod pumpx;
 mod sendgrid;
+mod solana;
 
 // It should only works on UNIX.
 async fn shutdown_signal() {
@@ -32,19 +33,31 @@ async fn shutdown_signal() {
 	log::info!("Shutdown signal received, stopping server...");
 }
 
-pub fn run(port: u16) -> Result<String, Box<dyn std::error::Error>> {
+pub fn run(port: u16) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+	run_with_shutdown_control(port, true)
+}
+
+pub fn run_with_shutdown_control(
+	port: u16,
+	wait_for_shutdown: bool,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
 	let (result_in, result_out) = channel();
 	let (shutdown_in, shutdown_out) = channel();
 
 	thread::spawn(move || {
 		let runtime = Builder::new_current_thread().enable_all().build().unwrap();
 		LocalSet::new().block_on(&runtime, async {
-			let (addr, srv) =
-				warp::serve(binance::handle().or(pumpx::handle()).or(sendgrid::handle()).boxed())
-					.bind_with_graceful_shutdown(([0, 0, 0, 0], port), async {
-						shutdown_signal().await;
-						let _ = shutdown_in.send(());
-					});
+			let (addr, srv) = warp::serve(
+				binance::handle()
+					.or(pumpx::handle())
+					.or(sendgrid::handle())
+					.or(solana::handle())
+					.boxed(),
+			)
+			.bind_with_graceful_shutdown(([0, 0, 0, 0], port), async {
+				shutdown_signal().await;
+				let _ = shutdown_in.send(());
+			});
 
 			log::info!("mock-server listen on addr:{:?}", addr);
 			let _ = result_in.send(format!("http://{:?}", addr));
@@ -57,7 +70,19 @@ pub fn run(port: u16) -> Result<String, Box<dyn std::error::Error>> {
 
 	let url = result_out.blocking_recv()?;
 
-	let _ = shutdown_out.blocking_recv();
+	if wait_for_shutdown {
+		let _ = shutdown_out.blocking_recv();
+	}
 
 	Ok(url)
+}
+
+/// Helper function to start a mock server for testing purposes.
+/// Returns the server URL as a String.
+/// The server will be started on a random available port.
+pub async fn async_run_test_only() -> String {
+	tokio::task::spawn_blocking(move || run_with_shutdown_control(0, false))
+		.await
+		.expect("Fail to start mock server")
+		.expect("Failed to get server URL")
 }

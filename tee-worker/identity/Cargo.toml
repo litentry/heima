@@ -1,84 +1,86 @@
 [workspace]
 resolver = "2"
 members = [
-    # common
-    "common/core-primitives/sgx/crypto",
-    "common/core-primitives/sgx/io",
-    "common/core-primitives/sgx/temp-dir",
-    "common/core-primitives/substrate-sgx/environmental",
-    "common/core-primitives/substrate-sgx/externalities",
-    "common/core-primitives/substrate-sgx/sp-io",
-    "common/core-primitives/node-api",
-    "common/core-primitives/node-api/api-client-extensions",
-    "common/core-primitives/node-api/api-client-types",
-    "common/core-primitives/node-api/factory",
-    "common/core-primitives/node-api/metadata",
-    "common/core-primitives/node-api/metadata-provider",
-    "common/core-primitives/*",
+    # moved from common - core-primitives
+    "core-primitives/sgx/crypto",
+    "core-primitives/sgx/io",
+    "core-primitives/sgx/temp-dir",
+    "core-primitives/substrate-sgx/environmental",
+    "core-primitives/substrate-sgx/externalities",
+    "core-primitives/substrate-sgx/sp-io",
+    "core-primitives/node-api",
+    "core-primitives/node-api/api-client-extensions",
+    "core-primitives/node-api/api-client-types",
+    "core-primitives/node-api/factory",
+    "core-primitives/node-api/metadata",
+    "core-primitives/node-api/metadata-provider",
+    "core-primitives/*",
 
-    "common/litentry/core/parachain-extrinsic-task/sender",
-    "common/litentry/core/parachain-extrinsic-task/receiver",
-    "common/litentry/core/teebag-storage",
-    "common/litentry/pallets/*",
-    "common/litentry/primitives",
+    # moved from common - litentry
+    "litentry/core/parachain-extrinsic-task/sender",
+    "litentry/core/parachain-extrinsic-task/receiver",
+    "litentry/core/teebag-storage",
+    "litentry/pallets/*",
+    "litentry/primitives",
 
-    "common/core/parentchain/light-client",
-    "common/core/parentchain/test",
-    "common/core/rest-client",
-    "common/core/rpc-client",
-    "common/core/system-version",
-    "common/core/tls-websocket-server",
+    # moved from common - core
+    "core/parentchain/light-client",
+    "core/parentchain/test",
+    "core/rest-client",
+    "core/rpc-client",
+    "core/system-version",
+    "core/tls-websocket-server",
 
     # identity-worker
-    "identity/app-libs/*",
-    "identity/cli",
-    "identity/core/parentchain/block-import-dispatcher",
-    "identity/core/parentchain/block-importer",
-    "identity/core/parentchain/indirect-calls-executor",
-    "identity/core/parentchain/parentchain-crate",
-    "identity/core/direct-rpc-client",
-    "identity/core/direct-rpc-server",
-    "identity/core/offchain-worker-executor",
-    "identity/core/peer-top-broadcaster",
-    "identity/core/rpc-server",
-    "identity/core-primitives/stf-executor",
-    "identity/core-primitives/top-pool",
-    "identity/core-primitives/top-pool-author",
-    "identity/core-primitives/enclave-api",
-    "identity/core-primitives/enclave-api/ffi",
-    "identity/service",
-    "identity/litentry/core/assertion-build",
-    "identity/litentry/core/assertion-build-v2",
-    "identity/litentry/core/common",
-    "identity/litentry/core/data-providers",
-    "identity/litentry/core/vc-task/sender",
-    "identity/litentry/core/vc-task/receiver",
-    "identity/litentry/core/authentication",
-    "identity/litentry/core/native-task/sender",
-    "identity/litentry/core/native-task/receiver",
-    "identity/litentry/core/identity-verification",
-    "identity/litentry/core/omni-account",
-    "identity/litentry/core/stf-task/sender",
-    "identity/litentry/core/stf-task/receiver",
-    "identity/litentry/core/service",
-    "identity/litentry/core/mock-server",
-    "identity/litentry/core/credentials-v2",
-    "identity/litentry/core/credentials",
-    "identity/litentry/core/dynamic-assertion",
-    "identity/litentry/core/evm-dynamic-assertions",
-    "identity/sidechain/*",
-    "identity/sidechain/consensus/slots",
-    "identity/sidechain/consensus/common",
-    "identity/sidechain/consensus/aura",
+    "app-libs/*",
+    "cli",
+    "core/parentchain/block-import-dispatcher",
+    "core/parentchain/block-importer",
+    "core/parentchain/indirect-calls-executor",
+    "core/parentchain/parentchain-crate",
+    "core/direct-rpc-client",
+    "core/direct-rpc-server",
+    "core/offchain-worker-executor",
+    "core/peer-top-broadcaster",
+    "core/rpc-server",
+    "core-primitives/stf-executor",
+    "core-primitives/top-pool",
+    "core-primitives/top-pool-author",
+    "core-primitives/enclave-api",
+    "core-primitives/enclave-api/ffi",
+    "service",
+    "litentry/core/assertion-build",
+    "litentry/core/assertion-build-v2",
+    "litentry/core/common",
+    "litentry/core/data-providers",
+    "litentry/core/vc-task/sender",
+    "litentry/core/vc-task/receiver",
+    "litentry/core/authentication",
+    "litentry/core/native-task/sender",
+    "litentry/core/native-task/receiver",
+    "litentry/core/identity-verification",
+    "litentry/core/omni-account",
+    "litentry/core/stf-task/sender",
+    "litentry/core/stf-task/receiver",
+    "litentry/core/service",
+    "litentry/core/mock-server",
+    "litentry/core/credentials-v2",
+    "litentry/core/credentials",
+    "litentry/core/dynamic-assertion",
+    "litentry/core/evm-dynamic-assertions",
+    "sidechain/*",
+    "sidechain/consensus/slots",
+    "sidechain/consensus/common",
+    "sidechain/consensus/aura",
 ]
 
 exclude = [
-    "common/core-primitives/sgx",
-    "common/core-primitives/substrate-sgx",
-    "identity/sidechain/consensus",
+    "core-primitives/sgx",
+    "core-primitives/substrate-sgx",
+    "sidechain/consensus",
 
     # enclave-runtime needs to have its own workspace root for patching
-    "identity/enclave-runtime",
+    "enclave-runtime",
 ]
 
 [workspace.dependencies]
@@ -214,95 +216,95 @@ mio-extras = { git = "https://github.com/integritee-network/mio-extras-sgx", rev
 tungstenite_sgx = { package = "tungstenite", git = "https://github.com/integritee-network/tungstenite-rs-sgx", branch = "sgx-experimental", features = ["rustls-tls-webpki-roots"] }
 
 # local
-itc-parentchain-light-client = { path = "common/core/parentchain/light-client", default-features = false }
-itc-parentchain-test = { path = "common/core/parentchain/test", default-features = false }
-itc-rest-client = { path = "common/core/rest-client", default-features = false }
-itc-rpc-client = { path = "common/core/rpc-client" }
-itc-tls-websocket-server = { path = "common/core/tls-websocket-server", default-features = false }
-itc-system-version = { path = "common/core/system-version", default-features = false }
+itc-parentchain-light-client = { path = "core/parentchain/light-client", default-features = false }
+itc-parentchain-test = { path = "core/parentchain/test", default-features = false }
+itc-rest-client = { path = "core/rest-client", default-features = false }
+itc-rpc-client = { path = "core/rpc-client" }
+itc-tls-websocket-server = { path = "core/tls-websocket-server", default-features = false }
+itc-system-version = { path = "core/system-version", default-features = false }
 
-itp-attestation-handler = { path = "common/core-primitives/attestation-handler", default-features = false }
-itp-import-queue = { path = "common/core-primitives/import-queue", default-features = false }
-itp-storage = { path = "common/core-primitives/storage", default-features = false }
-itp-types = { path = "common/core-primitives/types", default-features = false }
-itp-utils = { path = "common/core-primitives/utils", default-features = false }
-itp-sgx-crypto = { path = "common/core-primitives/sgx/crypto", default-features = false }
-itp-sgx-io = { path = "common/core-primitives/sgx/io", default-features = false }
-itp-sgx-temp-dir = { path = "common/core-primitives/sgx/temp-dir", default-features = false }
-itp-sgx-externalities = { path = "common/core-primitives/substrate-sgx/externalities", default-features = false }
-itp-stf-primitives = { path = "common/core-primitives/stf-primitives", default-features = false }
-itp-sgx-runtime-primitives = { path = "common/core-primitives/sgx-runtime-primitives", default-features = false }
-itp-time-utils = { path = "common/core-primitives/time-utils", default-features = false }
-itp-settings = { path = "common/core-primitives/settings" }
-itp-ocall-api = { path = "common/core-primitives/ocall-api", default-features = false }
-itp-binary-merkle-tree = { path = "common/core-primitives/binary-merkle-tree", default-features = false }
-itp-component-container = { path = "common/core-primitives/component-container", default-features = false }
-itp-rpc = { path = "common/core-primitives/rpc", default-features = false }
-itp-hashing = { path = "common/core-primitives/hashing", default-features = false }
-itp-enclave-metrics = { path = "common/core-primitives/enclave-metrics", default-features = false }
-itp-extrinsics-factory = { path = "common/core-primitives/extrinsics-factory", default-features = false }
-itp-nonce-cache = { path = "common/core-primitives/nonce-cache", default-features = false }
-itp-node-api = { path = "common/core-primitives/node-api", default-features = false }
-itp-api-client-extensions = { path = "common/core-primitives/node-api/api-client-extensions" }
-itp-api-client-types = { path = "common/core-primitives/node-api/api-client-types", default-features = false }
-itp-node-api-factory = { path = "common/core-primitives/node-api/factory" }
-itp-node-api-metadata = { path = "common/core-primitives/node-api/metadata", default-features = false }
-itp-node-api-metadata-provider = { path = "common/core-primitives/node-api/metadata-provider", default-features = false }
-itp-networking-utils = { path = "common/core-primitives/networking-utils", default-features = false }
-itp-primitives-cache = { path = "common/core-primitives/primitives-cache", default-features = false }
-itp-stf-interface = { path = "common/core-primitives/stf-interface", default-features = false }
-itp-stf-state-handler = { path = "common/core-primitives/stf-state-handler", default-features = false }
-itp-stf-state-observer = { path = "common/core-primitives/stf-state-observer", default-features = false }
-itp-test = { path = "common/core-primitives/test", default-features = false }
+itp-attestation-handler = { path = "core-primitives/attestation-handler", default-features = false }
+itp-import-queue = { path = "core-primitives/import-queue", default-features = false }
+itp-storage = { path = "core-primitives/storage", default-features = false }
+itp-types = { path = "core-primitives/types", default-features = false }
+itp-utils = { path = "core-primitives/utils", default-features = false }
+itp-sgx-crypto = { path = "core-primitives/sgx/crypto", default-features = false }
+itp-sgx-io = { path = "core-primitives/sgx/io", default-features = false }
+itp-sgx-temp-dir = { path = "core-primitives/sgx/temp-dir", default-features = false }
+itp-sgx-externalities = { path = "core-primitives/substrate-sgx/externalities", default-features = false }
+itp-stf-primitives = { path = "core-primitives/stf-primitives", default-features = false }
+itp-sgx-runtime-primitives = { path = "core-primitives/sgx-runtime-primitives", default-features = false }
+itp-time-utils = { path = "core-primitives/time-utils", default-features = false }
+itp-settings = { path = "core-primitives/settings" }
+itp-ocall-api = { path = "core-primitives/ocall-api", default-features = false }
+itp-binary-merkle-tree = { path = "core-primitives/binary-merkle-tree", default-features = false }
+itp-component-container = { path = "core-primitives/component-container", default-features = false }
+itp-rpc = { path = "core-primitives/rpc", default-features = false }
+itp-hashing = { path = "core-primitives/hashing", default-features = false }
+itp-enclave-metrics = { path = "core-primitives/enclave-metrics", default-features = false }
+itp-extrinsics-factory = { path = "core-primitives/extrinsics-factory", default-features = false }
+itp-nonce-cache = { path = "core-primitives/nonce-cache", default-features = false }
+itp-node-api = { path = "core-primitives/node-api", default-features = false }
+itp-api-client-extensions = { path = "core-primitives/node-api/api-client-extensions" }
+itp-api-client-types = { path = "core-primitives/node-api/api-client-types", default-features = false }
+itp-node-api-factory = { path = "core-primitives/node-api/factory" }
+itp-node-api-metadata = { path = "core-primitives/node-api/metadata", default-features = false }
+itp-node-api-metadata-provider = { path = "core-primitives/node-api/metadata-provider", default-features = false }
+itp-networking-utils = { path = "core-primitives/networking-utils", default-features = false }
+itp-primitives-cache = { path = "core-primitives/primitives-cache", default-features = false }
+itp-stf-interface = { path = "core-primitives/stf-interface", default-features = false }
+itp-stf-state-handler = { path = "core-primitives/stf-state-handler", default-features = false }
+itp-stf-state-observer = { path = "core-primitives/stf-state-observer", default-features = false }
+itp-test = { path = "core-primitives/test", default-features = false }
 
 # litentry
-litentry-primitives = { path = "common/litentry/primitives", default-features = false }
-pallet-parentchain = { path = "common/litentry/pallets/parentchain", default-features = false }
-pallet-identity-management-tee = { path = "common/litentry/pallets/identity-management", default-features = false }
-lc-teebag-storage = { path = "common/litentry/core/teebag-storage", default-features = false }
-lc-parachain-extrinsic-task-sender = { path = "common/litentry/core/parachain-extrinsic-task/sender", default-features = false }
-lc-parachain-extrinsic-task-receiver = { path = "common/litentry/core/parachain-extrinsic-task/receiver", default-features = false }
-heima-utils = { path = "../parachain/utils", default-features = false }
-heima-primitives = { path = "../parachain/primitives", default-features = false }
+litentry-primitives = { path = "litentry/primitives", default-features = false }
+pallet-parentchain = { path = "litentry/pallets/parentchain", default-features = false }
+pallet-identity-management-tee = { path = "litentry/pallets/identity-management", default-features = false }
+lc-teebag-storage = { path = "litentry/core/teebag-storage", default-features = false }
+lc-parachain-extrinsic-task-sender = { path = "litentry/core/parachain-extrinsic-task/sender", default-features = false }
+lc-parachain-extrinsic-task-receiver = { path = "litentry/core/parachain-extrinsic-task/receiver", default-features = false }
+heima-utils = { path = "../../parachain/utils", default-features = false }
+heima-primitives = { path = "../../parachain/primitives", default-features = false }
 
 # identity
-lc-assertion-build = { path = "identity/litentry/core/assertion-build", default-features = false }
-lc-assertion-build-v2 = { path = "identity/litentry/core/assertion-build-v2", default-features = false }
-lc-common = { path = "identity/litentry/core/common", default-features = false }
-lc-credentials = { path = "identity/litentry/core/credentials", default-features = false }
-lc-credentials-v2 = { path = "identity/litentry/core/credentials-v2", default-features = false }
-lc-data-providers = { path = "identity/litentry/core/data-providers", default-features = false }
-lc-dynamic-assertion = { path = "identity/litentry/core/dynamic-assertion", default-features = false }
-lc-evm-dynamic-assertions = { path = "identity/litentry/core/evm-dynamic-assertions", default-features = false }
-lc-identity-verification = { path = "identity/litentry/core/identity-verification", default-features = false }
-lc-mock-server = { path = "identity/litentry/core/mock-server" }
-lc-service = { path = "identity/litentry/core/service", default-features = false }
-lc-stf-task-sender = { path = "identity/litentry/core/stf-task/sender", default-features = false }
-lc-stf-task-receiver = { path = "identity/litentry/core/stf-task/receiver", default-features = false }
-lc-vc-task-sender = { path = "identity/litentry/core/vc-task/sender", default-features = false }
-lc-vc-task-receiver = { path = "identity/litentry/core/vc-task/receiver", default-features = false }
-lc-omni-account = { path = "identity/litentry/core/omni-account", default-features = false }
-lc-native-task-sender = { path = "identity/litentry/core/native-task/sender", default-features = false }
-lc-native-task-receiver = { path = "identity/litentry/core/native-task/receiver", default-features = false }
-lc-authentication = { path = "identity/litentry/core/authentication", default-features = false }
+lc-assertion-build = { path = "litentry/core/assertion-build", default-features = false }
+lc-assertion-build-v2 = { path = "litentry/core/assertion-build-v2", default-features = false }
+lc-common = { path = "litentry/core/common", default-features = false }
+lc-credentials = { path = "litentry/core/credentials", default-features = false }
+lc-credentials-v2 = { path = "litentry/core/credentials-v2", default-features = false }
+lc-data-providers = { path = "litentry/core/data-providers", default-features = false }
+lc-dynamic-assertion = { path = "litentry/core/dynamic-assertion", default-features = false }
+lc-evm-dynamic-assertions = { path = "litentry/core/evm-dynamic-assertions", default-features = false }
+lc-identity-verification = { path = "litentry/core/identity-verification", default-features = false }
+lc-mock-server = { path = "litentry/core/mock-server" }
+lc-service = { path = "litentry/core/service", default-features = false }
+lc-stf-task-sender = { path = "litentry/core/stf-task/sender", default-features = false }
+lc-stf-task-receiver = { path = "litentry/core/stf-task/receiver", default-features = false }
+lc-vc-task-sender = { path = "litentry/core/vc-task/sender", default-features = false }
+lc-vc-task-receiver = { path = "litentry/core/vc-task/receiver", default-features = false }
+lc-omni-account = { path = "litentry/core/omni-account", default-features = false }
+lc-native-task-sender = { path = "litentry/core/native-task/sender", default-features = false }
+lc-native-task-receiver = { path = "litentry/core/native-task/receiver", default-features = false }
+lc-authentication = { path = "litentry/core/authentication", default-features = false }
 
-itc-peer-top-broadcaster = { path = "identity/core/peer-top-broadcaster", default-features = false }
-itc-rpc-server = { path = "identity/core/rpc-server", default-features = false }
+itc-peer-top-broadcaster = { path = "core/peer-top-broadcaster", default-features = false }
+itc-rpc-server = { path = "core/rpc-server", default-features = false }
 
-its-block-composer = { path = "identity/sidechain/block-composer", default-features = false }
-its-block-verification = { path = "identity/sidechain/block-verification", default-features = false }
-its-consensus-common = { path = "identity/sidechain/consensus/common", default-features = false }
-its-consensus-aura = { path = "identity/sidechain/consensus/aura", default-features = false }
-its-consensus-slots = { path = "identity/sidechain/consensus/slots", default-features = false }
-fork-tree = { path = "identity/sidechain/fork-tree", default-features = false }
-its-peer-fetch = { path = "identity/sidechain/peer-fetch", default-features = false }
-its-primitives = { path = "identity/sidechain/primitives", default-features = false, features = ["full_crypto"] }
-its-rpc-handler = { path = "identity/sidechain/rpc-handler", default-features = false }
-its-sidechain = { path = "identity/sidechain/sidechain-crate", default-features = false }
-its-state = { path = "identity/sidechain/state", default-features = false }
-its-storage = { path = "identity/sidechain/storage" }
-its-test = { path = "identity/sidechain/test", default-features = false }
-its-validateer-fetch = { path = "identity/sidechain/validateer-fetch", default-features = false }
+its-block-composer = { path = "sidechain/block-composer", default-features = false }
+its-block-verification = { path = "sidechain/block-verification", default-features = false }
+its-consensus-common = { path = "sidechain/consensus/common", default-features = false }
+its-consensus-aura = { path = "sidechain/consensus/aura", default-features = false }
+its-consensus-slots = { path = "sidechain/consensus/slots", default-features = false }
+fork-tree = { path = "sidechain/fork-tree", default-features = false }
+its-peer-fetch = { path = "sidechain/peer-fetch", default-features = false }
+its-primitives = { path = "sidechain/primitives", default-features = false, features = ["full_crypto"] }
+its-rpc-handler = { path = "sidechain/rpc-handler", default-features = false }
+its-sidechain = { path = "sidechain/sidechain-crate", default-features = false }
+its-state = { path = "sidechain/state", default-features = false }
+its-storage = { path = "sidechain/storage" }
+its-test = { path = "sidechain/test", default-features = false }
+its-validateer-fetch = { path = "sidechain/validateer-fetch", default-features = false }
 
 [patch."https://github.com/paritytech/polkadot-sdk"]
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }

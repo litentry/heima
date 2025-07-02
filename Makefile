@@ -103,14 +103,14 @@ fmt: fmt-cargo fmt-taplo fmt-ts
 .PHONY: fmt-cargo ## cargo fmt
 fmt-cargo:
 	@cd parachain && cargo fmt
-	@cd tee-worker && cargo fmt
+	@cd tee-worker/identity && cargo fmt
 	@cd tee-worker/identity/enclave-runtime && cargo fmt
 	@cd tee-worker/omni-executor && cargo fmt
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:
 	@cd parachain && RUST_LOG=error taplo fmt
-	@cd tee-worker && RUST_LOG=error taplo fmt
+	@cd tee-worker/identity && RUST_LOG=error taplo fmt
 	@cd tee-worker/omni-executor && RUST_LOG=error taplo fmt
 
 .PHONY: fmt-ts ## ts fmt
