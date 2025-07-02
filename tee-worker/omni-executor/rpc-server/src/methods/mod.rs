@@ -15,7 +15,7 @@ pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_submitSwapOrder",
 	"omni_transferWithdraw",
 	"omni_exportWallet",
-	"omni_getWallet",
+	"omni_getSmartWalletRootSigner",
 ];
 
 pub fn register_methods(module: &mut RpcModule<RpcContext>) {

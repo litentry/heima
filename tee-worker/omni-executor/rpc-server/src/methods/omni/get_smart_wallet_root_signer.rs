@@ -1,20 +1,13 @@
-use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
 	ErrorCode,
 };
-use executor_core::native_task::*;
-use executor_primitives::{
-	utils::hex::{hex_encode, FromHexPrefixed},
-	AccountId,
-};
+use executor_primitives::utils::hex::{hex_encode, FromHexPrefixed};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
-use pumpx::methods::add_wallet::AddWalletResponse;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use tracing::{debug, error};
 
@@ -48,7 +41,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 
 			let wallet = ctx
 				.signer_client
-				.request_wallet(params.chain_type, params.index, address.into())
+				.request_wallet(params.chain_type, params.index, address.as_ref().clone())
 				.await
 				.map_err(|_| {
 					error!("Failed to request wallet from signer client");
@@ -57,7 +50,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 					))
 				})?;
 
-			Ok::<String, ErrorObject>(hex_encode(&wallet))
+			Ok::<String, _>(hex_encode(&wallet))
 		})
 		.expect("Failed to register omni_addWallet method");
 }
