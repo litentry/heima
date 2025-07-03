@@ -1,11 +1,13 @@
 import EntryPointArtifact from "@/contracts/abis/EntryPoint.json";
 import OmniAccountArtifact from "@/contracts/abis/OmniAccount.json";
 import OmniAccountFactoryArtifact from "@/contracts/abis/OmniAccountFactory.json";
+import TestTokenArtifact from "@/contracts/abis/TestToken.json";
 
 // Extract ABIs from artifacts
 const EntryPointABI = (EntryPointArtifact as any).abi || EntryPointArtifact;
 const OmniAccountABI = (OmniAccountArtifact as any).abi || OmniAccountArtifact;
 const OmniAccountFactoryABI = (OmniAccountFactoryArtifact as any).abi || OmniAccountFactoryArtifact;
+const TestTokenABI = (TestTokenArtifact as any).abi || TestTokenArtifact;
 
 // Contract addresses - update these after running deploy-local.sh
 // Default addresses are for chainId 31337 (Hardhat)
@@ -74,3 +76,36 @@ export const SOLANA_CONFIG = {
 	network: "devnet" as "devnet" | "testnet" | "mainnet-beta",
 	rpcUrl: "https://api.devnet.solana.com",
 };
+
+// Test Token configurations
+export const TEST_TOKENS = {
+	USDC: {
+		address: (process.env.NEXT_PUBLIC_TEST_USDC_ADDRESS ||
+			"0x0000000000000000000000000000000000000000") as `0x${string}`,
+		symbol: "USDC",
+		name: "Test USDC",
+		decimals: 6,
+		abi: TestTokenABI,
+	},
+	USDT: {
+		address: (process.env.NEXT_PUBLIC_TEST_USDT_ADDRESS ||
+			"0x0000000000000000000000000000000000000000") as `0x${string}`,
+		symbol: "USDT",
+		name: "Test USDT",
+		decimals: 6,
+		abi: TestTokenABI,
+	},
+} as const;
+
+// Token list for UI
+export const SUPPORTED_TOKENS = [
+	{
+		symbol: "ETH",
+		name: "Ethereum",
+		decimals: 18,
+		address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+		isNative: true,
+	},
+	TEST_TOKENS.USDC,
+	TEST_TOKENS.USDT,
+] as const;
