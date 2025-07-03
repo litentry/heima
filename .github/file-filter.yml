@@ -24,8 +24,8 @@ coverage_src: &coverage_src
 
 identity_src: &identity_src
   - "parachain/primitives/**"
-  - "tee-worker/Cargo.toml"
-  - "tee-worker/Cargo.lock"
+  - "tee-worker/identity/Cargo.toml"
+  - "tee-worker/identity/Cargo.lock"
   - "tee-worker/identity/**/*.rs"
   - "tee-worker/identity/**/rust-toolchain.toml"
   - "tee-worker/identity/build.Dockerfile"

@@ -25,23 +25,12 @@ use subxt_core::Config;
 
 pub type IntentEventId = EventId;
 
-pub type ParentchainListener<
-	RpcClient,
-	RpcClientFactory,
-	CheckpointRepository,
-	ChainConfig,
-	AccountStoreStorage,
-	MemberAccountStorage,
-> = Listener<
-	Fetcher<<ChainConfig as Config>::Header, RpcClient, RpcClientFactory>,
-	SyncCheckpoint,
-	CheckpointRepository,
-	IntentEventId,
-	BlockEvent,
-	EventHandler<
-		Metadata,
-		SubxtMetadataProvider<ChainConfig>,
-		AccountStoreStorage,
-		MemberAccountStorage,
-	>,
->;
+pub type ParentchainListener<RpcClient, RpcClientFactory, CheckpointRepository, ChainConfig> =
+	Listener<
+		Fetcher<<ChainConfig as Config>::Header, RpcClient, RpcClientFactory>,
+		SyncCheckpoint,
+		CheckpointRepository,
+		IntentEventId,
+		BlockEvent,
+		EventHandler<Metadata, SubxtMetadataProvider<ChainConfig>>,
+	>;
