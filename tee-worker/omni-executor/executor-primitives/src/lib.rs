@@ -103,22 +103,6 @@ impl Chain {
 	pub fn is_solana(&self) -> bool {
 		matches!(self, Chain::Solana)
 	}
-
-	pub fn name(&self) -> String {
-		match self {
-			Chain::Evm(chain_id) => match *chain_id {
-				1 => "Ethereum Mainnet".to_string(),
-				11155111 => "Ethereum Sepolia".to_string(),
-				56 => "BNB Smart Chain".to_string(),
-				137 => "Polygon".to_string(),
-				42161 => "Arbitrum One".to_string(),
-				10 => "Optimism".to_string(),
-				31337 => "Local Hardhat".to_string(),
-				_ => format!("EVM Chain {}", chain_id),
-			},
-			Chain::Solana => "Solana".to_string(),
-		}
-	}
 }
 
 #[cfg(test)]
@@ -133,15 +117,12 @@ mod tests {
 
 		assert!(eth_mainnet.is_evm());
 		assert_eq!(eth_mainnet.evm_chain_id(), Some(1));
-		assert_eq!(eth_mainnet.name(), "Ethereum Mainnet");
 
 		assert!(sepolia.is_evm());
 		assert_eq!(sepolia.evm_chain_id(), Some(11155111));
-		assert_eq!(sepolia.name(), "Ethereum Sepolia");
 
 		assert!(local.is_evm());
 		assert_eq!(local.evm_chain_id(), Some(31337));
-		assert_eq!(local.name(), "Local Hardhat");
 	}
 
 	#[test]
@@ -151,7 +132,6 @@ mod tests {
 		assert!(solana.is_solana());
 		assert!(!solana.is_evm());
 		assert_eq!(solana.evm_chain_id(), None);
-		assert_eq!(solana.name(), "Solana");
 	}
 
 	#[test]

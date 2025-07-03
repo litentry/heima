@@ -1008,9 +1008,9 @@ async fn handle_native_task<
 
 			let chain_id = chain.evm_chain_id().unwrap(); // Safe to unwrap since we checked is_evm() above
 			info!(
-				"Processing SubmitUserOp for {} UserOperations on EVM chain: {} (chain_id: {})",
+				"Processing SubmitUserOp for {} UserOperations on chain: {:?} (chain_id: {})",
 				serializable_user_ops.len(),
-				chain.name(),
+				chain,
 				chain_id
 			);
 
