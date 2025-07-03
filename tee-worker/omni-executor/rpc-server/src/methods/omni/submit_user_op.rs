@@ -32,13 +32,13 @@ use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpParams {
-	pub user_operation: SerializablePackedUserOperation,
+	pub user_operations: Vec<SerializablePackedUserOperation>,
 	pub chain: Chain,
 }
 
 #[derive(Serialize, Clone)]
 pub struct SubmitUserOpResponse {
-	pub user_op_hash: String,
+	pub user_op_hashes: Vec<String>,
 	pub transaction_hash: Option<String>,
 }
 
@@ -64,22 +64,26 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
 
-			// Validate that the user owns the UserOp sender address
+			// Validate that all UserOperations belong to the authenticated user
 			let expected_omni_address = calculate_expected_omni_address(&user, &ctx).await?;
-			let sender_address: [u8; 20] = params.user_operation.sender;
 			let expected_address: [u8; 20] = expected_omni_address.into();
-			if sender_address != expected_address {
-				error!(
-					"User operation sender mismatch: expected {:?}, got {:?}",
-					expected_omni_address, sender_address
-				);
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(-32010))); // Unauthorized sender
+
+			for (index, user_op) in params.user_operations.iter().enumerate() {
+				let sender_address: [u8; 20] = user_op.sender;
+				if sender_address != expected_address {
+					error!(
+						"User operation {} sender mismatch: expected {:?}, got {:?}",
+						index, expected_omni_address, sender_address
+					);
+					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(-32010)));
+					// Unauthorized sender
+				}
 			}
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::OmniSubmitUserOp(
 					AccountId::from(address),
-					params.user_operation.clone(),
+					params.user_operations.clone(),
 					params.chain.clone(),
 				),
 				None,
@@ -88,8 +92,8 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::OmniSubmitUserOp(transaction_hash) => {
-					Ok(SubmitUserOpResponse { user_op_hash: "".to_string(), transaction_hash })
+				NativeTaskOk::OmniSubmitUserOp(user_op_hashes, transaction_hash) => {
+					Ok(SubmitUserOpResponse { user_op_hashes, transaction_hash })
 				},
 				_ => {
 					error!("Unexpected response type");

@@ -30,7 +30,7 @@ pub enum NativeTaskOk {
 	PumpxSignLimitOrder(Vec<Vec<u8>>),
 	PumpxTransferWithdraw(CreateTransferTxResponse),
 	PumpxNotifyLimitOrderResult,
-	OmniSubmitUserOp(Option<String>), // transaction_hash
+	OmniSubmitUserOp(Vec<String>, Option<String>), // user_op_hashes, transaction_hash
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

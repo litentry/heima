@@ -74,7 +74,7 @@ pub enum NativeTask {
 
 	// omni-specific tasks, starting from index 30
 	#[codec(index = 30)]
-	OmniSubmitUserOp(AccountId, SerializablePackedUserOperation, Chain),
+	OmniSubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain),
 }
 
 impl NativeTaskTrait for NativeTask {

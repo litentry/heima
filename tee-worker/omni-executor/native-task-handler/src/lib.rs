@@ -992,7 +992,7 @@ async fn handle_native_task<
 			.await;
 			return;
 		},
-		NativeTask::OmniSubmitUserOp(omni_account, serializable_user_op, chain) => {
+		NativeTask::OmniSubmitUserOp(omni_account, serializable_user_ops, chain) => {
 			// Only support EVM chains for now
 			if !chain.is_evm() {
 				send_error(
@@ -1008,7 +1008,8 @@ async fn handle_native_task<
 
 			let chain_id = chain.evm_chain_id().unwrap(); // Safe to unwrap since we checked is_evm() above
 			info!(
-				"Processing OmniSubmitUserOp for EVM chain: {} (chain_id: {})",
+				"Processing OmniSubmitUserOp for {} UserOperations on EVM chain: {} (chain_id: {})",
+				serializable_user_ops.len(),
 				chain.name(),
 				chain_id
 			);
@@ -1026,83 +1027,107 @@ async fn handle_native_task<
 				},
 			};
 
-			// Convert SerializablePackedUserOperation to PackedUserOperation
-			let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone());
+			// Process each UserOperation in the batch
+			let mut user_op_hashes = Vec::new();
+			let mut aa_user_ops = Vec::new();
 
-			// Check if UserOperation is signed
-			if packed_user_op.signature.is_empty() {
-				// UserOp is unsigned, need to sign it using pumpx signer
-				info!("UserOperation is unsigned, requesting signature from pumpx signer");
+			for (index, serializable_user_op) in serializable_user_ops.iter().enumerate() {
+				// Convert SerializablePackedUserOperation to PackedUserOperation
+				let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone());
 
-				// Get EntryPoint address from client for hash calculation
-				let entry_point_address = entry_point_client.entry_point_address();
+				// Check if UserOperation is signed
+				if packed_user_op.signature.is_empty() {
+					// UserOp is unsigned, need to sign it using pumpx signer
+					info!(
+						"UserOperation {} is unsigned, requesting signature from pumpx signer",
+						index
+					);
 
-				let user_op_hash_bytes =
-					calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
-				let _user_op_hash = format!("0x{}", hex::encode(user_op_hash_bytes));
-				let message_to_sign = user_op_hash_bytes.to_vec();
+					// Get EntryPoint address from client for hash calculation
+					let entry_point_address = entry_point_client.entry_point_address();
 
-				// Request signature from pumpx signer for EVM chain
-				let signature_result = ctx
-					.pumpx_signer_client
-					.request_signature(
-						ChainType::Evm,
-						0, // wallet_index
-						omni_account.clone().into(),
-						message_to_sign,
-					)
-					.await;
+					let user_op_hash_bytes = calculate_user_operation_hash(
+						&packed_user_op,
+						entry_point_address,
+						chain_id,
+					);
+					let user_op_hash = format!("0x{}", hex::encode(user_op_hash_bytes));
+					let message_to_sign = user_op_hash_bytes.to_vec();
 
-				let signature = match signature_result {
-					Ok(sig) => sig,
-					Err(_) => {
-						send_error(
-							"Failed to sign user operation".to_string(),
-							response_sender,
-							NativeTaskError::PumpxSignerError(
-								PumpxSignerError::RequestSignatureFailed,
-							),
-						);
-						return;
-					},
+					// Request signature from pumpx signer for EVM chain
+					let signature_result = ctx
+						.pumpx_signer_client
+						.request_signature(
+							ChainType::Evm,
+							0, // wallet_index
+							omni_account.clone().into(),
+							message_to_sign,
+						)
+						.await;
+
+					let signature = match signature_result {
+						Ok(sig) => sig,
+						Err(_) => {
+							send_error(
+								format!("Failed to sign user operation {}", index),
+								response_sender,
+								NativeTaskError::PumpxSignerError(
+									PumpxSignerError::RequestSignatureFailed,
+								),
+							);
+							return;
+						},
+					};
+
+					// Apply signature to user_op
+					packed_user_op.signature = Bytes::from(signature);
+					info!("UserOperation {} signed successfully", index);
+
+					// Add the hash to our collection
+					user_op_hashes.push(user_op_hash);
+				} else {
+					// UserOp is already signed, calculate hash for response
+					let entry_point_address = entry_point_client.entry_point_address();
+					let user_op_hash_bytes = calculate_user_operation_hash(
+						&packed_user_op,
+						entry_point_address,
+						chain_id,
+					);
+					let user_op_hash = format!("0x{}", hex::encode(user_op_hash_bytes));
+					user_op_hashes.push(user_op_hash);
+				}
+
+				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
+				let aa_user_op = aa_contracts_client::PackedUserOperation {
+					sender: packed_user_op.sender,
+					nonce: packed_user_op.nonce,
+					initCode: packed_user_op.initCode.clone(),
+					callData: packed_user_op.callData.clone(),
+					accountGasLimits: packed_user_op.accountGasLimits,
+					preVerificationGas: packed_user_op.preVerificationGas,
+					gasFees: packed_user_op.gasFees,
+					paymasterAndData: packed_user_op.paymasterAndData.clone(),
+					sessionAccount: packed_user_op.sessionAccount,
+					sessionExpiration: packed_user_op.sessionExpiration,
+					sessionAccountProof: packed_user_op.sessionAccountProof.clone(),
+					signature: packed_user_op.signature.clone(),
 				};
-
-				// Apply signature to user_op
-				packed_user_op.signature = Bytes::from(signature);
-				info!("UserOperation signed successfully");
+				aa_user_ops.push(aa_user_op);
 			}
-
-			// Use the EntryPoint client we already retrieved above
-
-			// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
-			let aa_user_op = aa_contracts_client::PackedUserOperation {
-				sender: packed_user_op.sender,
-				nonce: packed_user_op.nonce,
-				initCode: packed_user_op.initCode.clone(),
-				callData: packed_user_op.callData.clone(),
-				accountGasLimits: packed_user_op.accountGasLimits,
-				preVerificationGas: packed_user_op.preVerificationGas,
-				gasFees: packed_user_op.gasFees,
-				paymasterAndData: packed_user_op.paymasterAndData.clone(),
-				sessionAccount: packed_user_op.sessionAccount,
-				sessionExpiration: packed_user_op.sessionExpiration,
-				sessionAccountProof: packed_user_op.sessionAccountProof.clone(),
-				signature: packed_user_op.signature.clone(),
-			};
 
 			// TODO: Configure beneficiary address (should be from config or a default bundler address)
 			let beneficiary = Address::ZERO; // For now, use zero address
 
-			// Submit UserOperation via EntryPoint.handleOps()
+			// Submit all UserOperations via EntryPoint.handleOps()
 			let transaction_hash =
-				match entry_point_client.handle_ops(&[aa_user_op], beneficiary).await {
+				match entry_point_client.handle_ops(&aa_user_ops, beneficiary).await {
 					Ok(_) => {
 						// TODO: Get actual transaction hash from handle_ops result
 						Some(format!("0x{}", hex::encode("entrypoint_tx_hash")))
 					},
 					Err(_) => {
 						send_error(
-							"Failed to submit UserOperation to EntryPoint via handleOps"
+							"Failed to submit UserOperations to EntryPoint via handleOps"
 								.to_string(),
 							response_sender,
 							NativeTaskError::InternalError,
@@ -1111,7 +1136,10 @@ async fn handle_native_task<
 					},
 				};
 
-			send_ok(response_sender, NativeTaskOk::OmniSubmitUserOp(transaction_hash));
+			send_ok(
+				response_sender,
+				NativeTaskOk::OmniSubmitUserOp(user_op_hashes, transaction_hash),
+			);
 			return;
 		},
 	};
