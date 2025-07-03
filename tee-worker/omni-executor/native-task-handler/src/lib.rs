@@ -1037,13 +1037,11 @@ async fn handle_native_task<
 
 				// Check if UserOperation is signed
 				if packed_user_op.signature.is_empty() {
-					// UserOp is unsigned, need to sign it using pumpx signer
 					info!(
 						"UserOperation {} is unsigned, requesting signature from pumpx signer",
 						index
 					);
 
-					// Get EntryPoint address from client for hash calculation
 					let entry_point_address = entry_point_client.entry_point_address();
 
 					let user_op_hash_bytes = calculate_user_operation_hash(
@@ -1079,7 +1077,6 @@ async fn handle_native_task<
 						},
 					};
 
-					// Apply signature to user_op
 					packed_user_op.signature = Bytes::from(signature);
 					info!("UserOperation {} signed successfully", index);
 
@@ -1115,8 +1112,18 @@ async fn handle_native_task<
 				aa_user_ops.push(aa_user_op);
 			}
 
-			// TODO: Configure beneficiary address (should be from config or a default bundler address)
-			let beneficiary = Address::ZERO; // For now, use zero address
+			// Get beneficiary address from the EntryPoint client's wallet
+			let beneficiary = match entry_point_client.get_wallet_address().await {
+				Ok(address) => address,
+				Err(_) => {
+					send_error(
+						"Failed to get wallet address from EntryPoint client".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
+			};
 
 			// Submit all UserOperations via EntryPoint.handleOps()
 			let transaction_hash =

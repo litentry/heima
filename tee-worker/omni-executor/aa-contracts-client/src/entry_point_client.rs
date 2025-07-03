@@ -40,9 +40,12 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		Self { entry_point_address, rpc_client }
 	}
 
-	/// Get the EntryPoint contract address
 	pub fn entry_point_address(&self) -> Address {
 		self.entry_point_address
+	}
+
+	pub async fn get_wallet_address(&self) -> Result<Address, ()> {
+		self.rpc_client.get_wallet_address().await
 	}
 
 	pub async fn handle_ops(
