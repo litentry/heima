@@ -183,7 +183,7 @@ export function createUserOperation(params: {
 	nonce?: bigint;
 	callData?: `0x${string}`;
 	initCode?: `0x${string}`;
-}): Partial<UserOperation> {
+}): UserOperation {
 	return {
 		sender: params.sender,
 		nonce: params.nonce || BigInt(0),
@@ -380,5 +380,84 @@ export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 	});
 
 	return packed;
+}
+
+/**
+ * Sign a UserOperation using EIP-712 typed data signing
+ */
+export async function signUserOperation(
+	walletClient: any,
+	address: Address,
+	userOp: UserOperation,
+	entryPointAddress: Address,
+	chainId: bigint,
+): Promise<`0x${string}`> {
+	// Convert UserOperation to PackedUserOperation for signing
+	const packedOp = packUserOperation(userOp);
+	
+	// EIP-712 domain
+	const domain = {
+		name: 'ERC4337',
+		version: '1', 
+		chainId: Number(chainId),
+		verifyingContract: entryPointAddress,
+	};
+
+	// EIP-712 types for PackedUserOperation
+	const types = {
+		PackedUserOperation: [
+			{ name: 'sender', type: 'address' },
+			{ name: 'nonce', type: 'uint256' },
+			{ name: 'initCode', type: 'bytes' },
+			{ name: 'callData', type: 'bytes' },
+			{ name: 'accountGasLimits', type: 'bytes32' },
+			{ name: 'preVerificationGas', type: 'uint256' },
+			{ name: 'gasFees', type: 'bytes32' },
+			{ name: 'paymasterAndData', type: 'bytes' },
+			{ name: 'sessionAccount', type: 'address' },
+			{ name: 'sessionExpiration', type: 'uint256' },
+			{ name: 'sessionAccountProof', type: 'bytes' },
+		],
+	};
+
+	// Message to sign (without signature field)
+	const message = {
+		sender: packedOp.sender,
+		nonce: packedOp.nonce,
+		initCode: packedOp.initCode,
+		callData: packedOp.callData,
+		accountGasLimits: packedOp.accountGasLimits,
+		preVerificationGas: packedOp.preVerificationGas,
+		gasFees: packedOp.gasFees,
+		paymasterAndData: packedOp.paymasterAndData,
+		sessionAccount: packedOp.sessionAccount,
+		sessionExpiration: packedOp.sessionExpiration,
+		sessionAccountProof: packedOp.sessionAccountProof,
+	};
+
+	try {
+		console.log("Signing PackedUserOperation with EIP-712...");
+		const signature = await walletClient.signTypedData({
+			account: address,
+			domain,
+			types,
+			primaryType: 'PackedUserOperation',
+			message,
+		});
+		console.log("Successfully signed with EIP-712");
+		return signature;
+	} catch (e) {
+		console.error("EIP-712 signing failed:", e);
+		
+		// Fallback: Use personal_sign (adds message prefix)
+		const userOpHash = getUserOpHash(userOp, entryPointAddress, Number(chainId));
+		const signature = await walletClient.signMessage({
+			account: address,
+			message: { raw: userOpHash },
+		});
+		
+		console.warn("WARNING: Using personal_sign which adds message prefix");
+		return signature;
+	}
 }
 

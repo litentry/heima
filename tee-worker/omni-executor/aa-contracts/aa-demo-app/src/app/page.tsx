@@ -6,6 +6,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { AAWalletInfo } from "@/components/AAWalletInfo";
 import { FundingGuide } from "@/components/FundingGuide";
 import { RootKeyAuthorization } from "@/components/RootKeyAuthorization";
+import { AuthorizedSigners } from "@/components/AuthorizedSigners";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronRight, Check } from "lucide-react";
 
@@ -230,9 +231,12 @@ function HomeContent() {
 								</h3>
 								<ul className="text-sm text-purple-700 space-y-1">
 									<li>• Multi-chain wallet support</li>
-									<li>• Omni Account calculation</li>
+									<li>• ERC20 token support (USDC, USDT)</li>
+									<li>• Multiple signer management</li>
+									<li>• View authorized signers list</li>
+									<li>• Test token minting</li>
+									<li>• Token balance monitoring</li>
 									<li>• Root key delegation</li>
-									<li>• EIP-7702 research notes</li>
 									<li>• Worker integration ready</li>
 								</ul>
 							</div>
@@ -275,8 +279,8 @@ function HomeContent() {
 										Step 3: Fund Your Omni Account
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Send some ETH to your Omni Account address to enable
-										Account Abstraction features.
+										Send some ETH to your Omni Account address to enable Account
+										Abstraction features.
 									</p>
 									<FundingGuide
 										aaWalletAddress={aaWalletAddress}
@@ -301,6 +305,16 @@ function HomeContent() {
 										aaWalletAddress={aaWalletAddress}
 										isFunded={!!isFunded}
 										onAuthorizationComplete={() => setIsAuthorized(true)}
+									/>
+								</div>
+							)}
+
+							{/* Show authorized signers only after account is funded and deployed */}
+							{isFunded && hasContract && aaWalletAddress && (
+								<div className="mt-8">
+									<AuthorizedSigners
+										aaWalletAddress={aaWalletAddress}
+										isDeployed={hasContract}
 									/>
 								</div>
 							)}
@@ -390,4 +404,3 @@ export default function Home() {
 		</ClientOnly>
 	);
 }
-
