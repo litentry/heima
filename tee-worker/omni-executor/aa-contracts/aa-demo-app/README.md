@@ -6,9 +6,19 @@ A Next.js application demonstrating Account Abstraction (ERC-4337) functionality
 
 This application demonstrates:
 - **Account Abstraction (AA)**: Create smart contract wallets (OmniAccounts) that can be controlled by multiple signers
-- **Root Key Authorization**: Add authorized signers to control the smart account
+- **Multi-Signer Management**: Add and remove authorized signers to control the smart account
+- **ERC20 Token Support**: Fund accounts with both ETH and ERC20 tokens (USDC, USDT)
+- **Test Token Minting**: Mint test tokens for easy demonstration
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
+
+## Key Features
+
+- **Multi-Token Support**: Send and receive ETH, USDC, and USDT to your OmniAccount
+- **Signer Management**: View, add, and remove authorized signers through the UI
+- **Token Balance Display**: Monitor all token balances in real-time
+- **Test Token Faucet**: Mint test tokens directly from the UI
+- **Root Key Delegation**: Authorize multiple signers to control your smart account
 
 ## Prerequisites
 
@@ -44,6 +54,11 @@ Contract Addresses:
 EntryPoint:         0x5fbdb2315678afecb367f032d93f642f64180aa3
 OmniAccountFactory: 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
 SimplePaymaster:    0x...
+
+Test Token Addresses:
+====================
+Test USDC:          0x...
+Test USDT:          0x...
 ```
 
 ### 2. Update Demo App Configuration
@@ -84,17 +99,24 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 2. **View Your OmniAccount**: After connecting, you'll see your pre-calculated OmniAccount address
 
-3. **Fund Your Account**: Send some ETH to your OmniAccount address
-   - Use MetaMask to send ETH to the displayed address
-   - Or use Anvil's funded accounts
+3. **Fund Your Account**: Send ETH or tokens to your OmniAccount address
+   - Select the token type (ETH, USDC, or USDT)
+   - Use the "Mint Test Tokens" button to get test USDC/USDT
+   - Send tokens to the displayed address
+   - Monitor all token balances in real-time
 
 4. **Authorize Root Key**: Once funded, authorize your wallet as a root signer
    - This deploys your OmniAccount contract
    - Adds your wallet as an authorized signer
 
+5. **Manage Signers**: After deployment, manage authorized signers
+   - View all current authorized signers
+   - Add new signers by entering their address
+   - Remove existing signers (except yourself while connected)
+
 ## Verifying On-Chain
 
-To verify your OmniAccount was created and the root signer was added:
+To verify your OmniAccount was created and signers were added:
 
 ```bash
 # From the aa-contracts directory
@@ -108,8 +130,11 @@ cast code $ACCOUNT --rpc-url http://localhost:8545
 # Should return bytecode (not "0x")
 
 # Check if your wallet is a root signer
-cast call $ACCOUNT "isRootSigner(address)(bool)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localhost:8545
+cast call $ACCOUNT "isRootSigner(address)(bool)" YOUR_WALLET_ADDRESS --rpc-url http://localhost:8545
 # Should return "true"
+
+# Check ERC20 token balance
+cast call 0xTOKEN_ADDRESS "balanceOf(address)(uint256)" $ACCOUNT --rpc-url http://localhost:8545
 
 # Check the owner
 cast call $ACCOUNT "owner()(bytes32)" --rpc-url http://localhost:8545
@@ -126,13 +151,14 @@ aa-demo-app/
 │   ├── app/              # Next.js app router pages
 │   ├── components/       # React components
 │   │   ├── AAWalletInfo.tsx         # Displays OmniAccount information
-│   │   ├── FundingGuide.tsx         # Guide for funding the account
+│   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
+│   │   ├── FundingGuide.tsx         # Multi-token funding guide
 │   │   ├── RootKeyAuthorization.tsx # Root key authorization flow
 │   │   └── WalletConnect.tsx        # Wallet connection component
-│   ├── contracts/        # Contract ABIs
+│   ├── contracts/        # Contract ABIs including TestToken
 │   └── lib/             # Utilities and configuration
 │       ├── aa-utils.ts  # Account abstraction utilities
-│       ├── constants.ts # Contract addresses and ABIs
+│       ├── constants.ts # Contract addresses and token configs
 │       └── wagmi.ts     # Web3 configuration
 └── public/              # Static assets
 ```
@@ -145,9 +171,14 @@ aa-demo-app/
 - Verify contracts are deployed (check Anvil terminal)
 
 ### Transaction Failures
-- Ensure your OmniAccount is funded with ETH
+- Ensure your OmniAccount is funded with ETH (for gas)
 - Check Anvil is still running
 - Verify you're using the correct network
+
+### Token Operations
+- Make sure test tokens are deployed (check deploy output)
+- Ensure you have ETH for gas fees
+- Check token addresses in .env.local match deployment
 
 ### Anvil Errors
 You might see errors like `execution reverted` for `symbol()` or `decimals()` calls. These are harmless - they're from wallets trying to detect if addresses are ERC20 tokens.
@@ -159,7 +190,11 @@ The app uses these environment variables (set automatically by `update-demo-addr
 - `NEXT_PUBLIC_CHAIN_ID`: Network chain ID (1337 for Anvil)
 - `NEXT_PUBLIC_ENTRYPOINT_ADDRESS`: EntryPoint contract address
 - `NEXT_PUBLIC_FACTORY_ADDRESS`: OmniAccountFactory contract address
+- `NEXT_PUBLIC_TEST_USDC_ADDRESS`: Test USDC token address
+- `NEXT_PUBLIC_TEST_USDT_ADDRESS`: Test USDT token address
 - `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545)
+
+You can also copy `.env.local.example` to `.env.local` and update manually.
 
 ## Development
 
@@ -170,7 +205,21 @@ To modify the app:
 3. Update addresses: Run `./update-demo-addresses.sh`
 4. The app hot-reloads automatically
 
+### Adding New ERC20 Tokens
+
+1. Deploy your token contract
+2. Update `src/lib/constants.ts` with token details
+3. Add to `SUPPORTED_TOKENS` array
+4. The FundingGuide component will automatically include it
+
+### Testing Signer Management
+
+1. Deploy and fund an OmniAccount
+2. Use the AuthorizedSigners component to add signers
+3. Test from different wallets to verify permissions
+
 ## Learn More
 
 - [ERC-4337 Specification](https://eips.ethereum.org/EIPS/eip-4337)
 - [Foundry Book](https://book.getfoundry.sh/)
+- [ERC20 Token Standard](https://eips.ethereum.org/EIPS/eip-20)
