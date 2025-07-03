@@ -44,6 +44,7 @@ lazy_static! {
 	pub static ref GAS_LIMIT: u64 = 450_000u64;
 	pub static ref GWEI_DECIMAL: Decimal = Decimal::from(1_000_000_000u64);
 	pub static ref WEI_DECIMAL: Decimal = Decimal::from(1_000_000_000_000_000_000u128);
+	pub static ref ALL_BP_DECIMAL: Decimal = Decimal::from(10000);
 }
 
 lazy_static! {
@@ -137,6 +138,7 @@ pub struct CreateMarketTx {
 	pub in_decimal: u8,
 	pub in_token_ca: String,
 	pub out_token_ca: String,
+	pub recipient_address: String,
 	pub is_pre_cross: bool,
 }
 

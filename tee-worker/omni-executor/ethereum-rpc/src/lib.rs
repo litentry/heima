@@ -24,8 +24,11 @@ use alloy::network::EthereumWallet;
 use alloy::network::NetworkWallet;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
-use alloy::providers::Provider;
+use alloy::providers::fillers::{
+	BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+};
 use alloy::providers::ProviderBuilder;
+use alloy::providers::{Identity, Provider, RootProvider};
 use alloy::rpc::types::TransactionRequest;
 use alloy::transports::RpcError;
 use async_trait::async_trait;
@@ -57,7 +60,18 @@ impl RpcProviderFactory for AlloyRpcProviderFactory {
 pub trait RpcProvider: Send + Sync {
 	type Addr;
 	type Transaction;
-
+	async fn get_provider(
+		&self,
+	) -> Result<
+		FillProvider<
+			JoinFill<
+				Identity,
+				JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+			>,
+			RootProvider,
+		>,
+		(),
+	>;
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()>;
 	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()>;
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()>;
@@ -96,6 +110,22 @@ impl RpcProvider for AlloyRpcProvider {
 	type Addr = Address;
 	type Transaction = TransactionRequest;
 
+	async fn get_provider(
+		&self,
+	) -> Result<
+		FillProvider<
+			JoinFill<
+				Identity,
+				JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+			>,
+			RootProvider,
+		>,
+		(),
+	> {
+		Ok(ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		))
+	}
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()> {
 		let provider = ProviderBuilder::new().connect_http(
 			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
