@@ -14,6 +14,7 @@ This application demonstrates:
 
 ## Key Features
 
+- **Separated Funding Flow**: Fund with ETH first for gas, then optionally add ERC20 tokens
 - **Multi-Token Support**: Send and receive ETH, USDC, and USDT to your OmniAccount
 - **Signer Management**: View, add, and remove authorized signers through the UI
 - **Token Balance Display**: Monitor all token balances in real-time
@@ -99,17 +100,22 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 2. **View Your OmniAccount**: After connecting, you'll see your pre-calculated OmniAccount address
 
-3. **Fund Your Account**: Send ETH or tokens to your OmniAccount address
-   - Select the token type (ETH, USDC, or USDT)
-   - Use the "Mint Test Tokens" button to get test USDC/USDT
-   - Send tokens to the displayed address
-   - Monitor all token balances in real-time
+3. **Fund with ETH**: Send ETH to your OmniAccount address for gas fees
+   - Copy the displayed address or scan the QR code
+   - Send at least 0.01 ETH (recommended)
+   - The app will automatically detect when funded
 
-4. **Authorize Root Key**: Once funded, authorize your wallet as a root signer
+4. **Authorize Root Key**: Once ETH is received, authorize your wallet as a root signer
    - This deploys your OmniAccount contract
    - Adds your wallet as an authorized signer
 
-5. **Manage Signers**: After deployment, manage authorized signers
+5. **Add ERC20 Tokens** (Optional): Add USDC or USDT for token swaps
+   - Select the token type (USDC or USDT)
+   - Use the "Mint Test Tokens" button to get test tokens
+   - Send tokens to your OmniAccount address
+   - Monitor all token balances in real-time
+
+6. **Manage Signers**: After deployment, manage authorized signers
    - View all current authorized signers
    - Add new signers by entering their address
    - Remove existing signers (except yourself while connected)
@@ -152,7 +158,8 @@ aa-demo-app/
 │   ├── components/       # React components
 │   │   ├── AAWalletInfo.tsx         # Displays OmniAccount information
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
-│   │   ├── FundingGuide.tsx         # Multi-token funding guide
+│   │   ├── FundingGuide.tsx         # ETH funding guide
+│   │   ├── ERC20FundingGuide.tsx    # ERC20 token funding guide
 │   │   ├── RootKeyAuthorization.tsx # Root key authorization flow
 │   │   └── WalletConnect.tsx        # Wallet connection component
 │   ├── contracts/        # Contract ABIs including TestToken
@@ -177,7 +184,8 @@ aa-demo-app/
 
 ### Token Operations
 - Make sure test tokens are deployed (check deploy output)
-- Ensure you have ETH for gas fees
+- Ensure you have ETH for gas fees before adding ERC20 tokens
+- ERC20 token funding is only available after root key authorization
 - Check token addresses in .env.local match deployment
 
 ### Anvil Errors
@@ -210,7 +218,7 @@ To modify the app:
 1. Deploy your token contract
 2. Update `src/lib/constants.ts` with token details
 3. Add to `SUPPORTED_TOKENS` array
-4. The FundingGuide component will automatically include it
+4. The ERC20FundingGuide component will automatically include it
 
 ### Testing Signer Management
 
