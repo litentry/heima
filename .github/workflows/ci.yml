@@ -618,6 +618,8 @@ jobs:
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:latest
           target: executor-worker
+          build-args: |
+            CARGO_FEATURES=mock-server
 
       - name: Pull omni-executor image optionally
         if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
