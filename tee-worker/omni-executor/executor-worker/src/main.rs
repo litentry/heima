@@ -25,7 +25,7 @@ use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::*;
 use config_loader::ConfigLoader;
-use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
+use cross_chain_intent_executor::{CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
@@ -39,6 +39,7 @@ use executor_core::wallet_metrics::{
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
+use executor_primitives::Chain;
 use executor_storage::{init_storage, StorageDB};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
@@ -230,10 +231,10 @@ async fn main() -> Result<(), ()> {
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
 			rpc_endpoint_registry.insert(Chain::Solana, config_loader.solana_url.to_string());
-			rpc_endpoint_registry.insert(Chain::Ethereum(56), config_loader.bsc_url.to_string());
+			rpc_endpoint_registry.insert(Chain::Evm(56), config_loader.bsc_url.to_string());
 
 			if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
-				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
+				rpc_endpoint_registry.insert(Chain::Evm(97), bsc_testnet_url.to_owned());
 			}
 
 			let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(PumpxApiClient::new(

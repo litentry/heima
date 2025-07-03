@@ -1,15 +1,9 @@
 use base58::ToBase58;
-use executor_primitives::{ChainAsset, EthereumToken, SolanaToken};
+use executor_primitives::{Chain, ChainAsset, EthereumToken, SolanaToken};
 use std::collections::HashMap;
 
 use rust_decimal::Decimal;
 use tracing::error;
-
-#[derive(PartialEq, Hash, Eq)]
-pub enum Chain {
-	Ethereum(u32),
-	Solana,
-}
 
 pub type RpcEndpointRegistry = HashMap<Chain, String>;
 

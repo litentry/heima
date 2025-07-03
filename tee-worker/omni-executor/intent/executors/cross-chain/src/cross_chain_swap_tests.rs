@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Chain;
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
 use crate::U256;
@@ -25,6 +24,7 @@ use alloy::primitives::Address;
 use binance_api::spot_trading_api::types::SymbolPrice;
 use binance_api::wallet_api::types::{CoinInfo, DepositAddress, NetworkInfo};
 use executor_core::intent_executor::IntentExecutor;
+use executor_primitives::Chain;
 use executor_primitives::ChainAsset;
 use executor_primitives::Identity;
 use executor_primitives::Intent;

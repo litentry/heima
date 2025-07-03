@@ -80,7 +80,9 @@ pub struct PumpxAccountProfile {
 }
 
 /// Represents supported blockchain networks for omni operations
-#[derive(Clone, Debug, Encode, Decode, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(
+	Clone, Debug, Hash, Encode, Decode, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
 pub enum Chain {
 	Evm(u64),
 	Solana,

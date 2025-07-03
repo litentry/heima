@@ -1,7 +1,7 @@
 // TODO: put it into a mod for potential different providers (other than binance)
 
 use super::*;
-use executor_primitives::SwapOrder;
+use executor_primitives::{Chain, SwapOrder};
 use executor_storage::PumpxProfileStorage;
 use heima_primitives::PumpxConfig;
 use intent_token_query::query_ethereum;
@@ -855,7 +855,7 @@ impl<
 			ChainAsset::Ethereum(chain_id, token) => {
 				let rpc_url = self
 					.rpc_endpoint_registry
-					.get(&Chain::Ethereum(*chain_id))
+					.get(&Chain::Evm(*chain_id as u64))
 					.ok_or(error!("No RPC endpoint in registry for Ethereum chain"))?;
 				let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
 				query_ethereum(&provider, EthereumAddress::from_slice(&address), token).await
