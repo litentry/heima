@@ -35,7 +35,8 @@ const DEFAULT_BINANCE_API_KEY: &str = "";
 const DEFAULT_BINANCE_API_SECRET: &str = "";
 const DEFAULT_BINANCE_API_BASE_URL: &str = "https://api.binance.com";
 const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
-const DEFAULT_OMNI_IMPLEMENTATION_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
+const DEFAULT_OMNI_WALLET_IMPLEMENTATION_ADDRESS: &str =
+	"0x0000000000000000000000000000000000000000";
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
@@ -57,7 +58,7 @@ pub struct ConfigLoader {
 	pub binance_api_secret: String,
 	pub binance_api_base_url: String,
 	pub omni_factory_address: String,
-	pub omni_implementation_address: String,
+	pub omni_wallet_implementation_address: String,
 }
 
 struct EnvVar {
@@ -247,10 +248,10 @@ impl ConfigLoader {
 				},
 			),
 			(
-				"omni_implementation_address",
+				"omni_wallet_implementation_address",
 				EnvVar {
-					env_key: "OE_OMNI_IMPLEMENTATION_ADDRESS",
-					default: DEFAULT_OMNI_IMPLEMENTATION_ADDRESS,
+					env_key: "OE_OMNI_WALLET_IMPLEMENTATION_ADDRESS",
+					default: DEFAULT_OMNI_WALLET_IMPLEMENTATION_ADDRESS,
 					sensitive: false,
 					optional: false,
 				},
@@ -288,7 +289,7 @@ impl ConfigLoader {
 			binance_api_secret: get("binance_api_secret"),
 			binance_api_base_url: get("binance_api_base_url"),
 			omni_factory_address: get("omni_factory_address"),
-			omni_implementation_address: get("omni_implementation_address"),
+			omni_wallet_implementation_address: get("omni_wallet_implementation_address"),
 		}
 	}
 }

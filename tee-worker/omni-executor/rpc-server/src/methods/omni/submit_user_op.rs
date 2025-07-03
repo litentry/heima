@@ -116,7 +116,7 @@ async fn calculate_expected_omni_address(
 	})?;
 
 	let implementation_address =
-		ctx.omni_implementation_address.parse::<Address>().map_err(|_| {
+		ctx.omni_wallet_implementation_address.parse::<Address>().map_err(|_| {
 			error!("Failed to parse implementation address from configuration");
 			PumpxRpcError::from_error_code(ErrorCode::InternalError)
 		})?;
