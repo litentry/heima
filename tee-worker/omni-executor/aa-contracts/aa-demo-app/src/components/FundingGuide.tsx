@@ -1,12 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, usePublicClient } from "wagmi";
-import { QrCode, Copy, AlertCircle, CheckCircle, Wallet } from "lucide-react";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import {
+	QrCode,
+	Copy,
+	AlertCircle,
+	CheckCircle,
+	Wallet,
+	ChevronDown,
+	Coins,
+} from "lucide-react";
+import { formatUnits, parseUnits } from "viem";
+import { SUPPORTED_TOKENS, TEST_TOKENS } from "@/lib/constants";
 
 interface FundingGuideProps {
 	aaWalletAddress?: string;
 	onFundingComplete?: () => void;
+}
+
+interface TokenBalance {
+	symbol: string;
+	balance: bigint;
+	decimals: number;
 }
 
 export function FundingGuide({
@@ -15,45 +31,87 @@ export function FundingGuide({
 }: FundingGuideProps) {
 	const { address: evmAddress } = useAccount();
 	const publicClient = usePublicClient();
+	const { data: walletClient } = useWalletClient();
 	const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 	const [fundingComplete, setFundingComplete] = useState(false);
-	const [hasContract, setHasContract] = useState(false);
+	const [selectedToken, setSelectedToken] = useState(SUPPORTED_TOKENS[0]);
+	const [showTokenDropdown, setShowTokenDropdown] = useState(false);
+	const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+	const [isMinting, setIsMinting] = useState(false);
 
-	// Check if contract exists before monitoring balance
-	useEffect(() => {
-		const checkContract = async () => {
-			if (!aaWalletAddress || !publicClient) {
-				setHasContract(false);
-				return;
-			}
-
-			try {
-				const code = await publicClient.getBytecode({
-					address: aaWalletAddress as `0x${string}`,
-				});
-				setHasContract(!!code && code !== "0x");
-			} catch (error) {
-				console.error("Error checking contract:", error);
-				setHasContract(false);
-			}
-		};
-
-		checkContract();
-	}, [aaWalletAddress, publicClient]);
-
-	// Monitor AA wallet ETH balance using eth_getBalance instead of balance()
-	const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0));
-
-	const fetchEthBalance = async () => {
+	// Fetch all token balances
+	const fetchTokenBalances = async () => {
 		if (!aaWalletAddress || !publicClient) return;
 
+		const balances: TokenBalance[] = [];
+
+		for (const token of SUPPORTED_TOKENS) {
+			try {
+				let balance: bigint;
+
+				if (token.isNative) {
+					// Native ETH balance
+					balance = await publicClient.getBalance({
+						address: aaWalletAddress as `0x${string}`,
+					});
+				} else {
+					// ERC20 token balance
+					balance = (await publicClient.readContract({
+						address: token.address,
+						abi: token.abi!,
+						functionName: "balanceOf",
+						args: [aaWalletAddress],
+					})) as bigint;
+				}
+
+				balances.push({
+					symbol: token.symbol,
+					balance,
+					decimals: token.decimals,
+				});
+			} catch (error) {
+				console.error(`Error fetching ${token.symbol} balance:`, error);
+				balances.push({
+					symbol: token.symbol,
+					balance: BigInt(0),
+					decimals: token.decimals,
+				});
+			}
+		}
+
+		setTokenBalances(balances);
+	};
+
+	// Mint test tokens
+	const mintTestTokens = async (tokenSymbol: string) => {
+		if (!walletClient || !evmAddress) return;
+
+		setIsMinting(true);
 		try {
-			const balance = await publicClient.getBalance({
-				address: aaWalletAddress as `0x${string}`,
+			const token =
+				tokenSymbol === "USDC" ? TEST_TOKENS.USDC : TEST_TOKENS.USDT;
+			const amount = parseUnits("1000", token.decimals); // Mint 1000 tokens
+
+			const hash = await walletClient.writeContract({
+				address: token.address,
+				abi: token.abi,
+				functionName: "mint",
+				args: [evmAddress, amount],
 			});
-			setEthBalance(balance);
+
+			// Wait for transaction
+			await publicClient?.waitForTransactionReceipt({ hash });
+
+			// Refresh balances
+			fetchTokenBalances();
+
+			// Show success message (you could use a toast here)
+			alert(`Successfully minted 1000 ${tokenSymbol} to your wallet!`);
 		} catch (error) {
-			console.error("Error fetching balance:", error);
+			console.error("Error minting tokens:", error);
+			alert(`Failed to mint ${tokenSymbol}. Please try again.`);
+		} finally {
+			setIsMinting(false);
 		}
 	};
 
@@ -68,27 +126,24 @@ export function FundingGuide({
 
 	// Initial balance fetch
 	useEffect(() => {
-		fetchEthBalance();
+		fetchTokenBalances();
 	}, [aaWalletAddress, publicClient]);
 
-	// Check if wallet is funded
+	// Check if wallet is funded (has any token balance)
 	useEffect(() => {
-		if (ethBalance > BigInt(0)) {
-			setFundingComplete(true);
-			// Notify parent component
-			if (onFundingComplete) {
-				onFundingComplete();
-			}
-		} else {
-			setFundingComplete(false);
-		}
-	}, [ethBalance, onFundingComplete]);
+		const hasFunds = tokenBalances.some((tb) => tb.balance > BigInt(0));
+		setFundingComplete(hasFunds);
 
-	// Poll balance every 10 seconds
+		if (hasFunds && onFundingComplete) {
+			onFundingComplete();
+		}
+	}, [tokenBalances, onFundingComplete]);
+
+	// Poll balances every 10 seconds
 	useEffect(() => {
 		if (aaWalletAddress) {
 			const interval = setInterval(() => {
-				fetchEthBalance();
+				fetchTokenBalances();
 			}, 10000);
 
 			return () => clearInterval(interval);
@@ -143,11 +198,34 @@ export function FundingGuide({
 				{fundingComplete ? (
 					<CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
 				) : (
-					<QrCode className="mx-auto h-12 w-12 text-blue-500 mb-4" />
+					<Coins className="mx-auto h-12 w-12 text-blue-500 mb-4" />
 				)}
 				<h2 className="text-2xl font-bold">
 					{fundingComplete ? "Wallet Funded!" : "Fund Your Omni Account"}
 				</h2>
+				<p className="text-gray-600 mt-2">
+					{fundingComplete
+						? "Your Omni Account has funds and is ready to use"
+						: "Send ETH or tokens to your Omni Account to get started"}
+				</p>
+			</div>
+
+			{/* Token Balances Section */}
+			<div className="mb-6">
+				<h3 className="text-lg font-semibold mb-3">Account Balances</h3>
+				<div className="space-y-2">
+					{tokenBalances.map((tb) => (
+						<div
+							key={tb.symbol}
+							className="bg-gray-50 p-3 rounded-lg flex justify-between items-center"
+						>
+							<span className="font-medium">{tb.symbol}</span>
+							<span className="font-mono text-sm">
+								{formatUnits(tb.balance, tb.decimals)} {tb.symbol}
+							</span>
+						</div>
+					))}
+				</div>
 			</div>
 
 			{fundingComplete ? (
@@ -160,17 +238,16 @@ export function FundingGuide({
 							</span>
 						</div>
 						<p className="text-green-600 text-sm mt-2">
-							Your Omni Account has been funded with{" "}
-							{(Number(ethBalance) / 1e18).toFixed(6)} ETH. You can now proceed
-							to authorize your root key.
+							Your Omni Account has been funded. You can now proceed to
+							authorize your root key.
 						</p>
 					</div>
 
 					<button
-						onClick={() => fetchEthBalance()}
+						onClick={() => fetchTokenBalances()}
 						className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
 					>
-						Refresh Balance
+						Refresh Balances
 					</button>
 
 					{onFundingComplete && (
@@ -184,6 +261,44 @@ export function FundingGuide({
 				</div>
 			) : (
 				<div className="space-y-6">
+					{/* Token Selection Dropdown */}
+					<div className="relative">
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+							Select Token to Send
+						</label>
+						<button
+							onClick={() => setShowTokenDropdown(!showTokenDropdown)}
+							className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50"
+						>
+							<span className="font-medium">
+								{selectedToken.symbol} - {selectedToken.name}
+							</span>
+							<ChevronDown className="h-5 w-5 text-gray-400" />
+						</button>
+
+						{showTokenDropdown && (
+							<div className="absolute top-full mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+								{SUPPORTED_TOKENS.map((token) => (
+									<button
+										key={token.symbol}
+										onClick={() => {
+											setSelectedToken(token);
+											setShowTokenDropdown(false);
+										}}
+										className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between"
+									>
+										<span>
+											{token.symbol} - {token.name}
+										</span>
+										{token.symbol === selectedToken.symbol && (
+											<CheckCircle className="h-4 w-4 text-blue-500" />
+										)}
+									</button>
+								))}
+							</div>
+						)}
+					</div>
+
 					{qrCodeUrl && (
 						<div className="text-center">
 							<img
@@ -200,7 +315,9 @@ export function FundingGuide({
 					)}
 
 					<div className="space-y-3">
-						<h3 className="text-lg font-semibold">Send ETH to this address:</h3>
+						<h3 className="text-lg font-semibold">
+							Send {selectedToken.symbol} to this address:
+						</h3>
 						<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
 							<div className="flex items-center justify-between">
 								<span className="text-sm font-mono text-blue-800 break-all flex-1 mr-2">
@@ -216,6 +333,28 @@ export function FundingGuide({
 						</div>
 					</div>
 
+					{/* Test Token Minting Section */}
+					{!selectedToken.isNative && (
+						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+							<h4 className="font-medium text-blue-800 mb-2">
+								Get Test Tokens
+							</h4>
+							<p className="text-sm text-blue-700 mb-3">
+								For testing purposes, you can mint test tokens directly to your
+								wallet.
+							</p>
+							<button
+								onClick={() => mintTestTokens(selectedToken.symbol)}
+								disabled={isMinting}
+								className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								{isMinting
+									? "Minting..."
+									: `Mint 1000 Test ${selectedToken.symbol}`}
+							</button>
+						</div>
+					)}
+
 					<div className="space-y-3">
 						<h3 className="text-lg font-semibold">Instructions:</h3>
 						<ol className="text-sm text-gray-700 space-y-2">
@@ -224,7 +363,7 @@ export function FundingGuide({
 									1
 								</span>
 								<span>
-									Copy the Omni Account address above or scan the QR code
+									Select the token you want to send from the dropdown above
 								</span>
 							</li>
 							<li className="flex">
@@ -232,7 +371,9 @@ export function FundingGuide({
 									2
 								</span>
 								<span>
-									Send some ETH (minimum 0.01 ETH recommended) to this address
+									{selectedToken.isNative
+										? "Send some ETH (minimum 0.01 ETH recommended) to the address"
+										: `Send some ${selectedToken.symbol} tokens to the address`}
 								</span>
 							</li>
 							<li className="flex">
@@ -255,22 +396,11 @@ export function FundingGuide({
 						</ol>
 					</div>
 
-					<div className="bg-gray-50 p-4 rounded-lg">
-						<div className="flex justify-between items-center">
-							<span className="text-gray-700">Current Balance:</span>
-							<span className="font-mono">
-								{ethBalance > BigInt(0)
-									? `${(Number(ethBalance) / 1e18).toFixed(6)} ETH`
-									: "0 ETH"}
-							</span>
-						</div>
-					</div>
-
 					<button
-						onClick={() => fetchEthBalance()}
+						onClick={() => fetchTokenBalances()}
 						className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
 					>
-						Check Balance
+						Check Balances
 					</button>
 
 					<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -279,9 +409,9 @@ export function FundingGuide({
 							<div className="text-sm text-yellow-700">
 								<p className="font-medium mb-1">Important:</p>
 								<p>
-									Make sure you're sending ETH on the correct network. This
-									Omni Account will only work on the network where the
-									contracts are deployed.
+									Make sure you're sending tokens on the correct network. This
+									Omni Account will only work on the network where the contracts
+									are deployed.
 								</p>
 							</div>
 						</div>
