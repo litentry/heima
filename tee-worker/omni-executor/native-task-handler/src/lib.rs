@@ -992,7 +992,7 @@ async fn handle_native_task<
 			.await;
 			return;
 		},
-		NativeTask::OmniSubmitUserOp(omni_account, serializable_user_ops, chain) => {
+		NativeTask::SubmitUserOp(omni_account, serializable_user_ops, chain) => {
 			// Only support EVM chains for now
 			if !chain.is_evm() {
 				send_error(
@@ -1008,7 +1008,7 @@ async fn handle_native_task<
 
 			let chain_id = chain.evm_chain_id().unwrap(); // Safe to unwrap since we checked is_evm() above
 			info!(
-				"Processing OmniSubmitUserOp for {} UserOperations on EVM chain: {} (chain_id: {})",
+				"Processing SubmitUserOp for {} UserOperations on EVM chain: {} (chain_id: {})",
 				serializable_user_ops.len(),
 				chain.name(),
 				chain_id
@@ -1143,10 +1143,7 @@ async fn handle_native_task<
 					},
 				};
 
-			send_ok(
-				response_sender,
-				NativeTaskOk::OmniSubmitUserOp(user_op_hashes, transaction_hash),
-			);
+			send_ok(response_sender, NativeTaskOk::SubmitUserOp(user_op_hashes, transaction_hash));
 			return;
 		},
 	};

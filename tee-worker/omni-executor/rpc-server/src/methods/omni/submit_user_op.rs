@@ -81,7 +81,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			}
 
 			let wrapper = NativeTaskWrapper::new(
-				NativeTask::OmniSubmitUserOp(
+				NativeTask::SubmitUserOp(
 					AccountId::from(address),
 					params.user_operations.clone(),
 					params.chain.clone(),
@@ -92,7 +92,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::OmniSubmitUserOp(user_op_hashes, transaction_hash) => {
+				NativeTaskOk::SubmitUserOp(user_op_hashes, transaction_hash) => {
 					Ok(SubmitUserOpResponse { user_op_hashes, transaction_hash })
 				},
 				_ => {

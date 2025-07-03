@@ -47,6 +47,7 @@ pub enum NativeTask {
 	RemoveAccounts(Identity, Vec<Identity>),
 	PublicizeAccount(Identity, Identity),
 	SetPermissions(Identity, Identity, Vec<OmniAccountPermission>),
+	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain),
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
@@ -71,10 +72,6 @@ pub enum NativeTask {
 	),
 	#[codec(index = 25)]
 	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
-
-	// omni-specific tasks, starting from index 30
-	#[codec(index = 30)]
-	OmniSubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain),
 }
 
 impl NativeTaskTrait for NativeTask {
