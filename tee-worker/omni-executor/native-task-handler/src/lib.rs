@@ -1028,7 +1028,6 @@ async fn handle_native_task<
 			};
 
 			// Process each UserOperation in the batch
-			let mut user_op_hashes = Vec::new();
 			let mut aa_user_ops = Vec::new();
 
 			for (index, serializable_user_op) in serializable_user_ops.iter().enumerate() {
@@ -1049,7 +1048,6 @@ async fn handle_native_task<
 						entry_point_address,
 						chain_id,
 					);
-					let user_op_hash = format!("0x{}", hex::encode(user_op_hash_bytes));
 					let message_to_sign = user_op_hash_bytes.to_vec();
 
 					// Request signature from pumpx signer for EVM chain
@@ -1079,19 +1077,6 @@ async fn handle_native_task<
 
 					packed_user_op.signature = Bytes::from(signature);
 					info!("UserOperation {} signed successfully", index);
-
-					// Add the hash to our collection
-					user_op_hashes.push(user_op_hash);
-				} else {
-					// UserOp is already signed, calculate hash for response
-					let entry_point_address = entry_point_client.entry_point_address();
-					let user_op_hash_bytes = calculate_user_operation_hash(
-						&packed_user_op,
-						entry_point_address,
-						chain_id,
-					);
-					let user_op_hash = format!("0x{}", hex::encode(user_op_hash_bytes));
-					user_op_hashes.push(user_op_hash);
 				}
 
 				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
@@ -1143,7 +1128,7 @@ async fn handle_native_task<
 					},
 				};
 
-			send_ok(response_sender, NativeTaskOk::SubmitUserOp(user_op_hashes, transaction_hash));
+			send_ok(response_sender, NativeTaskOk::SubmitUserOp(transaction_hash));
 			return;
 		},
 	};

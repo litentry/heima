@@ -38,7 +38,6 @@ pub struct SubmitUserOpParams {
 
 #[derive(Serialize, Clone)]
 pub struct SubmitUserOpResponse {
-	pub user_op_hashes: Vec<String>,
 	pub transaction_hash: Option<String>,
 }
 
@@ -92,8 +91,8 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::SubmitUserOp(user_op_hashes, transaction_hash) => {
-					Ok(SubmitUserOpResponse { user_op_hashes, transaction_hash })
+				NativeTaskOk::SubmitUserOp(transaction_hash) => {
+					Ok(SubmitUserOpResponse { transaction_hash })
 				},
 				_ => {
 					error!("Unexpected response type");
