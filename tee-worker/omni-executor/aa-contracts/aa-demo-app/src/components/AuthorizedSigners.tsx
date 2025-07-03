@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { usePublicClient, useWalletClient, useAccount } from "wagmi";
 import {
 	Users,
@@ -18,131 +18,36 @@ import {
 	packUserOperation,
 	type UserOperation,
 } from "@/lib/aa-utils";
-import { DebugUserOp } from "./DebugUserOp";
 
 interface AuthorizedSignersProps {
 	aaWalletAddress?: string;
 	isDeployed?: boolean;
+	signers: string[];
+	isLoading: boolean;
+	refreshSigners: () => void;
 }
 
 export function AuthorizedSigners({
 	aaWalletAddress,
 	isDeployed,
+	signers,
+	isLoading,
+	refreshSigners,
 }: AuthorizedSignersProps) {
 	const { address: evmAddress } = useAccount();
 	const publicClient = usePublicClient();
 	const { data: walletClient } = useWalletClient();
-	const [signers, setSigners] = useState<string[]>([]);
 	const [newSignerAddress, setNewSignerAddress] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
 	const [isAddingSigner, setIsAddingSigner] = useState(false);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [lastTxHash, setLastTxHash] = useState<string>("");
 
-	// Fetch all root signers by monitoring events
-	const fetchSigners = useCallback(async () => {
-		if (!aaWalletAddress || !publicClient || !isDeployed) return;
-
-		console.log("Fetching signers for account:", aaWalletAddress);
-		setIsLoading(true);
-		try {
-			// Get all RootSignerAdded and RootSignerRemoved events
-			const addedLogs = await publicClient.getLogs({
-				address: aaWalletAddress as `0x${string}`,
-				event: {
-					type: "event",
-					name: "RootSignerAdded",
-					inputs: [{ name: "root", type: "address", indexed: false }],
-				},
-				fromBlock: "earliest",
-				toBlock: "latest",
-			});
-			console.log("RootSignerAdded events:", addedLogs);
-
-			const removedLogs = await publicClient.getLogs({
-				address: aaWalletAddress as `0x${string}`,
-				event: {
-					type: "event",
-					name: "RootSignerRemoved",
-					inputs: [{ name: "root", type: "address", indexed: false }],
-				},
-				fromBlock: "earliest",
-				toBlock: "latest",
-			});
-			console.log("RootSignerRemoved events:", removedLogs);
-
-			// Also get the initial signer from AccountInitialized event
-			const initLogs = await publicClient.getLogs({
-				address: aaWalletAddress as `0x${string}`,
-				event: {
-					type: "event",
-					name: "AccountInitialized",
-					inputs: [
-						{ name: "entryPoint", type: "address", indexed: true },
-						{ name: "owner", type: "bytes32", indexed: true },
-						{ name: "clientId", type: "bytes", indexed: false },
-						{ name: "root", type: "address", indexed: true },
-					],
-				},
-				fromBlock: "earliest",
-				toBlock: "latest",
-			});
-			console.log("AccountInitialized events:", initLogs);
-
-			// Build current signer list
-			const signerMap = new Map<string, boolean>();
-
-			// Add initial signer
-			console.log("Processing initLogs:", initLogs);
-			initLogs.forEach((log) => {
-				console.log("Init log:", log);
-				const root = log.args?.root as string;
-				if (root) {
-					console.log("Initial signer from AccountInitialized:", root);
-					signerMap.set(root.toLowerCase(), true);
-				} else {
-					console.log("No root found in log args:", log.args);
-				}
-			});
-
-			// Process added signers
-			addedLogs.forEach((log) => {
-				const root = log.args?.root as string;
-				if (root) {
-					console.log("Added signer from RootSignerAdded:", root);
-					signerMap.set(root.toLowerCase(), true);
-				}
-			});
-
-			// Process removed signers
-			removedLogs.forEach((log) => {
-				const root = log.args?.root as string;
-				if (root) {
-					console.log("Removed signer from RootSignerRemoved:", root);
-					signerMap.delete(root.toLowerCase());
-				}
-			});
-
-			// Convert to array
-			const currentSigners = Array.from(signerMap.keys()).filter((s) =>
-				signerMap.get(s),
-			);
-			console.log("Final signer list:", currentSigners);
-			setSigners(currentSigners);
-		} catch (error) {
-			console.error("Error fetching signers:", error);
-		} finally {
-			setIsLoading(false);
-		}
-	}, [aaWalletAddress, publicClient, isDeployed]);
-
-	// Manual refresh function
-	const refreshSigners = useCallback(async () => {
+	const handleRefresh = async () => {
 		setIsRefreshing(true);
-		await fetchSigners();
+		await refreshSigners();
 		setIsRefreshing(false);
-	}, [fetchSigners]);
+	};
 
 	// Add a new root signer
 	const addSigner = async () => {
@@ -240,7 +145,7 @@ export function AuthorizedSigners({
 			await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
 
 			// Refresh signers list
-			await fetchSigners();
+			await refreshSigners();
 
 			// Clear form
 			setNewSignerAddress("");
@@ -352,7 +257,7 @@ export function AuthorizedSigners({
 			await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
 
 			// Refresh signers list
-			await fetchSigners();
+			await refreshSigners();
 
 			alert("Signer removed successfully!");
 		} catch (error) {
@@ -368,11 +273,6 @@ export function AuthorizedSigners({
 			console.error("Failed to copy text: ", err);
 		}
 	};
-
-	// Initial fetch
-	useEffect(() => {
-		fetchSigners();
-	}, [aaWalletAddress, publicClient, isDeployed]);
 
 	if (!aaWalletAddress) {
 		return null;
@@ -403,7 +303,7 @@ export function AuthorizedSigners({
 				</div>
 				<div className="flex items-center gap-2">
 					<button
-						onClick={refreshSigners}
+						onClick={handleRefresh}
 						disabled={isRefreshing || isLoading}
 						className="flex items-center px-3 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
 						title="Refresh signer list"
@@ -464,7 +364,7 @@ export function AuthorizedSigners({
 				</div>
 			) : (
 				<div className="space-y-3">
-					{signers.map((signer, index) => (
+					{signers.map((signer) => (
 						<div
 							key={signer}
 							className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
@@ -511,13 +411,6 @@ export function AuthorizedSigners({
 					</div>
 				</div>
 			</div>
-
-			{/* Debug component for troubleshooting */}
-			{lastTxHash && (
-				<div className="mt-6">
-					<DebugUserOp txHash={lastTxHash} />
-				</div>
-			)}
 		</div>
 	);
 }
