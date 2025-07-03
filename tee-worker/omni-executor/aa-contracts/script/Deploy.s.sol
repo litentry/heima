@@ -19,6 +19,10 @@ contract Deploy is Script {
     address public initialBundler;
     bool public saveDeploymentFile;
 
+    // Deploy setup - we use a common salt for now
+    address public deployer;
+    bytes32 public salt;
+
     // Contract addresses will be stored here after deployment
     address public entryPointAddress;
     address public factoryAddress;
@@ -34,7 +38,7 @@ contract Deploy is Script {
     function run() external {
         // Get deployment parameters
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        deployer = vm.addr(deployerPrivateKey);
 
         // Load configuration
         loadConfiguration();
@@ -90,12 +94,14 @@ contract Deploy is Script {
     }
 
     function loadConfiguration() internal {
+        // set salt, manually change it if you want a different address
+        salt = keccak256(abi.encodePacked("wildmeta v0"));
+
         // Load paymaster deposit amount (default: 1 ETH, can be 0 to skip initialization)
         paymasterInitialDeposit = vm.envOr("PAYMASTER_INITIAL_DEPOSIT", uint256(1 ether));
         shouldInitializePaymaster = vm.envOr("INITIALIZE_PAYMASTER", true);
 
         // Load initial bundler (default: deployer address)
-        address deployer = msg.sender;
         initialBundler = vm.envOr("INITIAL_BUNDLER", deployer);
 
         // Load save deployment file flag (default: false for testing, true for production)
@@ -136,9 +142,16 @@ contract Deploy is Script {
     }
 
     function deployEntryPoint() internal {
+        bytes memory initCode = abi.encodePacked(type(EntryPoint).creationCode);
+
+        console.log("Checking if Entrypoint is deployed...");
+        if (checkDeployed(initCode)) {
+            return;
+        }
+
         console.log("Deploying EntryPoint...");
 
-        EntryPoint entryPoint = new EntryPoint();
+        EntryPoint entryPoint = new EntryPoint{salt: salt}();
         entryPointAddress = address(entryPoint);
 
         console.log("EntryPoint deployed at:", entryPointAddress);
@@ -146,9 +159,16 @@ contract Deploy is Script {
     }
 
     function deployFactory() internal {
+        bytes memory initCode = abi.encodePacked(type(EntryPoint).creationCode, IEntryPoint(entryPointAddress));
+
+        console.log("Checking if OmniAccountFactory is deployed...");
+        if (checkDeployed(initCode)) {
+            return;
+        }
+
         console.log("Deploying OmniAccountFactory...");
 
-        OmniAccountFactory factory = new OmniAccountFactory(IEntryPoint(entryPointAddress));
+        OmniAccountFactory factory = new OmniAccountFactory{salt: salt}(IEntryPoint(entryPointAddress));
         factoryAddress = address(factory);
 
         console.log("OmniAccountFactory deployed at:", factoryAddress);
@@ -157,15 +177,45 @@ contract Deploy is Script {
     }
 
     function deployPaymaster() internal {
+        bytes memory initCode =
+            abi.encodePacked(type(EntryPoint).creationCode, IEntryPoint(entryPointAddress), initialBundler);
+
+        console.log("Checking if SimplePaymaster is deployed...");
+        if (checkDeployed(initCode)) {
+            return;
+        }
+
         console.log("Deploying SimplePaymaster...");
 
-        SimplePaymaster paymaster = new SimplePaymaster(IEntryPoint(entryPointAddress), initialBundler);
+        SimplePaymaster paymaster = new SimplePaymaster{salt: salt}(IEntryPoint(entryPointAddress), initialBundler);
         paymasterAddress = address(paymaster);
 
         console.log("SimplePaymaster deployed at:", paymasterAddress);
         console.log("EntryPoint reference:", entryPointAddress);
         console.log("Initial bundler:", initialBundler);
         console.log("");
+    }
+
+    function checkDeployed(bytes memory initCode) internal view returns (bool) {
+        // calculate expected address
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, keccak256(initCode)));
+        address expected = address(uint160(uint256(hash)));
+
+        console.log("Expected address:", expected);
+
+        // check if already deployed
+        uint256 codeSize;
+        assembly {
+            codeSize := extcodesize(expected)
+        }
+
+        if (codeSize > 0) {
+            console.log("Contract already deployed at:", expected);
+            return true;
+        } else {
+            console.log("Contract not deployed at:", expected);
+            return false;
+        }
     }
 
     function initializePaymaster() internal {
