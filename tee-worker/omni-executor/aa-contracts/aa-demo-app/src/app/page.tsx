@@ -5,6 +5,7 @@ import { useAccount, usePublicClient } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
 import { AAWalletInfo } from "@/components/AAWalletInfo";
 import { FundingGuide } from "@/components/FundingGuide";
+import { ERC20FundingGuide } from "@/components/ERC20FundingGuide";
 import { RootKeyAuthorization } from "@/components/RootKeyAuthorization";
 import { AuthorizedSigners } from "@/components/AuthorizedSigners";
 import { ClientOnly } from "@/components/ClientOnly";
@@ -17,6 +18,9 @@ function HomeContent() {
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isAuthorized, setIsAuthorized] = useState(false);
 	const [hasContract, setHasContract] = useState(false);
+	const [authorizedSigners, setAuthorizedSigners] = useState<string[]>([]);
+	const [isLoadingSigners, setIsLoadingSigners] = useState(false);
+	const [hasERC20Tokens, setHasERC20Tokens] = useState(false);
 
 	// Debug logging
 	useEffect(() => {
@@ -51,6 +55,94 @@ function HomeContent() {
 
 		checkContract();
 	}, [aaWalletAddress, publicClient, isAuthorized]);
+
+	// Fetch all root signers by monitoring events
+	const fetchSigners = useCallback(async () => {
+		if (!aaWalletAddress || !publicClient || !hasContract) return;
+
+		console.log("Fetching signers for account:", aaWalletAddress);
+		setIsLoadingSigners(true);
+		try {
+			// Get all RootSignerAdded and RootSignerRemoved events
+			const addedLogs = await publicClient.getLogs({
+				address: aaWalletAddress as `0x${string}`,
+				event: {
+					type: "event",
+					name: "RootSignerAdded",
+					inputs: [{ name: "root", type: "address", indexed: false }],
+				},
+				fromBlock: "earliest",
+				toBlock: "latest",
+			});
+
+			const removedLogs = await publicClient.getLogs({
+				address: aaWalletAddress as `0x${string}`,
+				event: {
+					type: "event",
+					name: "RootSignerRemoved",
+					inputs: [{ name: "root", type: "address", indexed: false }],
+				},
+				fromBlock: "earliest",
+				toBlock: "latest",
+			});
+
+			// Also get the initial signer from AccountInitialized event
+			const initLogs = await publicClient.getLogs({
+				address: aaWalletAddress as `0x${string}`,
+				event: {
+					type: "event",
+					name: "AccountInitialized",
+					inputs: [
+						{ name: "entryPoint", type: "address", indexed: true },
+						{ name: "owner", type: "bytes32", indexed: true },
+						{ name: "clientId", type: "bytes", indexed: false },
+						{ name: "root", type: "address", indexed: true },
+					],
+				},
+				fromBlock: "earliest",
+				toBlock: "latest",
+			});
+
+			// Build current signer list
+			const signerMap = new Map<string, boolean>();
+
+			initLogs.forEach((log) => {
+				const root = log.args?.root as string;
+				if (root) {
+					signerMap.set(root.toLowerCase(), true);
+				}
+			});
+
+			addedLogs.forEach((log) => {
+				const root = log.args?.root as string;
+				if (root) {
+					signerMap.set(root.toLowerCase(), true);
+				}
+			});
+
+			removedLogs.forEach((log) => {
+				const root = log.args?.root as string;
+				if (root) {
+					signerMap.delete(root.toLowerCase());
+				}
+			});
+
+			const currentSigners = Array.from(signerMap.keys()).filter((s) =>
+				signerMap.get(s),
+			);
+			setAuthorizedSigners(currentSigners);
+		} catch (error) {
+			console.error("Error fetching signers:", error);
+		} finally {
+			setIsLoadingSigners(false);
+		}
+	}, [aaWalletAddress, publicClient, hasContract]);
+
+	useEffect(() => {
+		if (hasContract) {
+			fetchSigners();
+		}
+	}, [hasContract, fetchSigners]);
 
 	// Monitor AA wallet ETH balance
 	const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0));
@@ -107,16 +199,22 @@ function HomeContent() {
 
 	// Update current step based on completion status
 	useEffect(() => {
+		if (authorizedSigners.length > 0) {
+			setIsAuthorized(true);
+		}
+
 		if (!evmAddress) {
 			setCurrentStep(1);
 		} else if (!isFunded) {
 			setCurrentStep(3);
 		} else if (!isAuthorized) {
 			setCurrentStep(4);
-		} else {
+		} else if (!hasERC20Tokens) {
 			setCurrentStep(5);
+		} else {
+			setCurrentStep(6);
 		}
-	}, [evmAddress, isFunded, isAuthorized]);
+	}, [evmAddress, isFunded, isAuthorized, authorizedSigners, hasERC20Tokens]);
 
 	const steps = [
 		{
@@ -133,8 +231,8 @@ function HomeContent() {
 		},
 		{
 			id: 3,
-			title: "Fund Wallet",
-			description: "Send ETH to your Omni Account",
+			title: "Fund with ETH",
+			description: "Send ETH to your Omni Account for gas",
 			completed: !!isFunded,
 		},
 		{
@@ -145,11 +243,21 @@ function HomeContent() {
 		},
 		{
 			id: 5,
+			title: "Add ERC20 Tokens",
+			description: "Fund your account with USDC or USDT",
+			completed: hasERC20Tokens,
+		},
+		{
+			id: 6,
 			title: "Ready to Swap",
 			description: "Send swap requests to the worker",
 			completed: false,
 		},
 	];
+
+	const filteredSteps = steps.filter(
+		(step) => !(step.id === 4 && isAuthorized && authorizedSigners.length > 0),
+	);
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -166,7 +274,7 @@ function HomeContent() {
 							</p>
 						</div>
 						<div className="text-sm text-gray-500">
-							Step {currentStep} of {steps.length}
+							Step {currentStep} of {filteredSteps.length}
 						</div>
 					</div>
 				</div>
@@ -179,7 +287,7 @@ function HomeContent() {
 						<div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
 							<h2 className="text-lg font-semibold mb-6">Setup Progress</h2>
 							<div className="space-y-4">
-								{steps.map((step, index) => (
+								{filteredSteps.map((step) => (
 									<div
 										key={step.id}
 										className={`flex items-start space-x-3 p-3 rounded-lg transition-colors ${
@@ -276,16 +384,15 @@ function HomeContent() {
 							{currentStep >= 3 && currentStep <= 3 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 3: Fund Your Omni Account
+										Step 3: Fund Your Omni Account with ETH
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Send some ETH to your Omni Account address to enable Account
-										Abstraction features.
+										Send ETH to your Omni Account address to pay for gas fees.
 									</p>
 									<FundingGuide
 										aaWalletAddress={aaWalletAddress}
 										onFundingComplete={() => {
-											console.log("Funding complete callback triggered");
+											console.log("ETH funding complete callback triggered");
 											fetchEthBalance();
 										}}
 									/>
@@ -304,7 +411,10 @@ function HomeContent() {
 									<RootKeyAuthorization
 										aaWalletAddress={aaWalletAddress}
 										isFunded={!!isFunded}
-										onAuthorizationComplete={() => setIsAuthorized(true)}
+										onAuthorizationComplete={() => {
+											setIsAuthorized(true);
+											fetchSigners();
+										}}
 									/>
 								</div>
 							)}
@@ -315,14 +425,35 @@ function HomeContent() {
 									<AuthorizedSigners
 										aaWalletAddress={aaWalletAddress}
 										isDeployed={hasContract}
+										signers={authorizedSigners}
+										isLoading={isLoadingSigners}
+										refreshSigners={fetchSigners}
 									/>
 								</div>
 							)}
 
-							{currentStep >= 5 && (
+							{currentStep >= 5 && currentStep <= 5 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 5: Start Swapping
+										Step 5: Add ERC20 Tokens
+									</h2>
+									<p className="text-gray-600 mb-6">
+										Optionally add USDC or USDT to your Omni Account for token swaps.
+									</p>
+									<ERC20FundingGuide
+										aaWalletAddress={aaWalletAddress}
+										onTokensAdded={() => {
+											console.log("ERC20 tokens added");
+											setHasERC20Tokens(true);
+										}}
+									/>
+								</div>
+							)}
+
+							{currentStep >= 6 && (
+								<div>
+									<h2 className="text-xl font-semibold mb-4">
+										Step 6: Start Swapping
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Your Omni Account is ready! Send swap requests to the TEE
@@ -383,6 +514,24 @@ function HomeContent() {
 												</span>
 											</div>
 											<span className="text-sm text-gray-500">
+												Ready for tokens
+											</span>
+										</div>
+									</div>
+								)}
+
+								{hasERC20Tokens && (
+									<div className="bg-white rounded-lg shadow p-4">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center space-x-3">
+												<div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+													<Check className="w-4 h-4 text-white" />
+												</div>
+												<span className="font-medium text-green-700">
+													ERC20 Tokens Added
+												</span>
+											</div>
+											<span className="text-sm text-gray-500">
 												Ready for swaps
 											</span>
 										</div>
@@ -404,3 +553,4 @@ export default function Home() {
 		</ClientOnly>
 	);
 }
+
