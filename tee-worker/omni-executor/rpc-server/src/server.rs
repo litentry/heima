@@ -4,12 +4,13 @@ use crate::{
 	ShieldingKey,
 };
 use config_loader::ConfigLoader;
+use ethereum_rpc::AlloyRpcProvider;
 use executor_storage::StorageDB;
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use pumpx::PumpxApi;
-use std::{env, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 use tracing::info;
 
 pub(crate) struct RpcContext {
@@ -23,6 +24,7 @@ pub(crate) struct RpcContext {
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pub omni_factory_address: String,
 	pub omni_wallet_implementation_address: String,
+	pub rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 }
 
 impl RpcContext {
@@ -38,6 +40,7 @@ impl RpcContext {
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		omni_factory_address: String,
 		omni_wallet_implementation_address: String,
+		rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -50,6 +53,7 @@ impl RpcContext {
 			pumpx_api,
 			omni_factory_address,
 			omni_wallet_implementation_address,
+			rpc_clients,
 		}
 	}
 }
@@ -62,6 +66,7 @@ pub async fn start_server(
 	storage_db: Arc<StorageDB>,
 	jwt_rsa_private_key: Vec<u8>,
 	config_loader: &ConfigLoader,
+	rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let mailer = Mailer::new(
 		config_loader.mailer_api_host.clone(),
@@ -81,6 +86,7 @@ pub async fn start_server(
 		pumpx_api,
 		config_loader.omni_factory_address.clone(),
 		config_loader.omni_wallet_implementation_address.clone(),
+		rpc_clients,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

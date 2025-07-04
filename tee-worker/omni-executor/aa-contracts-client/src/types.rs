@@ -73,6 +73,7 @@ sol! {
 	function addRootSigner(address root) public;
 	function removeRootSigner(address root) public;
 	function initialize(bytes32 oa, bytes memory clientId, address root) public;
+	function getOwner() public view returns (bytes32);
 
 	// paymaster
 	function deposit() public payable;

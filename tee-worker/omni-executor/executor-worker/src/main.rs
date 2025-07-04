@@ -317,6 +317,35 @@ async fn main() -> Result<(), ()> {
 			)?;
 
 			// Create EntryPoint clients registry
+			// Create RPC clients registry first
+			let mut rpc_clients: HashMap<u64, Arc<ethereum_rpc::AlloyRpcProvider>> = HashMap::new();
+
+			// Add BSC (BNB Chain)
+			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url));
+			rpc_clients.insert(56, bsc_rpc.clone());
+
+			// Add BSC Testnet if configured
+			let bsc_testnet_rpc = if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
+				let bsc_testnet_rpc =
+					Arc::new(ethereum_rpc::AlloyRpcProvider::new(bsc_testnet_url));
+				rpc_clients.insert(97, bsc_testnet_rpc.clone());
+				Some(bsc_testnet_rpc)
+			} else {
+				None
+			};
+
+			// Add Ethereum Mainnet
+			let ethereum_rpc =
+				Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.ethereum_url));
+			rpc_clients.insert(1, ethereum_rpc.clone());
+
+			// Add local development chain
+			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new("http://localhost:8545"));
+			rpc_clients.insert(31337, local_rpc.clone());
+
+			let rpc_clients = Arc::new(rpc_clients);
+
+			// Create EntryPoint clients using the shared RPC clients
 			let mut entry_point_clients = HashMap::new();
 
 			// Parse EntryPoint address from configuration
@@ -326,15 +355,12 @@ async fn main() -> Result<(), ()> {
 				.expect("Invalid entry point address in configuration");
 
 			// Add BSC (BNB Chain)
-			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url));
 			let bsc_entry_point =
 				Arc::new(aa_contracts_client::EntryPointClient::new(entry_point_address, bsc_rpc));
 			entry_point_clients.insert(56, bsc_entry_point);
 
 			// Add BSC Testnet if configured
-			if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
-				let bsc_testnet_rpc =
-					Arc::new(ethereum_rpc::AlloyRpcProvider::new(bsc_testnet_url));
+			if let Some(bsc_testnet_rpc) = bsc_testnet_rpc {
 				let bsc_testnet_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
 					entry_point_address,
 					bsc_testnet_rpc,
@@ -343,8 +369,6 @@ async fn main() -> Result<(), ()> {
 			}
 
 			// Add Ethereum Mainnet
-			let ethereum_rpc =
-				Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.ethereum_url));
 			let ethereum_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
 				entry_point_address,
 				ethereum_rpc,
@@ -352,7 +376,6 @@ async fn main() -> Result<(), ()> {
 			entry_point_clients.insert(1, ethereum_entry_point);
 
 			// Add local development chain
-			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new("http://localhost:8545"));
 			let local_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
 				entry_point_address,
 				local_rpc,
@@ -373,6 +396,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_api.clone(),
 				pumpx_signer_client.clone(),
 				entry_point_clients,
+				rpc_clients.clone(),
 			);
 			// TODO: make buffer size configurable
 			let native_task_sender =
@@ -417,6 +441,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				jwt_rsa_private_key,
 				&config_loader,
+				rpc_clients,
 			)
 			.await
 			.map_err(|e| {

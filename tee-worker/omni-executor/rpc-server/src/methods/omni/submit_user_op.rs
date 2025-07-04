@@ -23,10 +23,10 @@ use crate::ErrorCode;
 use alloy::primitives::{Address, FixedBytes};
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId, Chain};
-use heima_primitives::Address32;
+use executor_primitives::{AccountId, Chain};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
@@ -58,30 +58,46 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received omni_submitUserOp, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
+			let address_bytes =
+				hex::decode(user.omni_account.strip_prefix("0x").unwrap_or(&user.omni_account))
+					.map_err(|_| {
+						error!("Failed to decode omni account hex string");
+						PumpxRpcError::from_error_code(ErrorCode::InternalError)
+					})?;
+
+			if address_bytes.len() != 32 {
+				error!(
+					"Invalid omni account length: expected 32 bytes, got {}",
+					address_bytes.len()
+				);
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			};
+			}
+
+			let mut address = [0u8; 32];
+			address.copy_from_slice(&address_bytes);
 
 			// Validate that all UserOperations belong to the authenticated user
-			let expected_omni_address = calculate_expected_omni_address(&user, &ctx).await?;
-			let expected_address: [u8; 20] = expected_omni_address.into();
-
+			// by comparing the OA (bytes32) stored in each contract with expected OA
 			for (index, user_op) in params.user_operations.iter().enumerate() {
-				let sender_address: [u8; 20] = user_op.sender;
-				if sender_address != expected_address {
+				let sender_address = Address::from(user_op.sender);
+				if let Err(e) =
+					validate_user_operation_ownership(&user, &sender_address, &params.chain, &ctx)
+						.await
+				{
 					error!(
-						"User operation {} sender mismatch: expected {:?}, got {:?}",
-						index, expected_omni_address, sender_address
+						"User operation {} ownership validation failed for sender {:?}",
+						index, sender_address
 					);
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(-32010)));
-					// Unauthorized sender
+					return Err(e);
 				}
 			}
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(
-					AccountId::from(address),
+					AccountId::decode(&mut &address[..]).map_err(|_| {
+						error!("Failed to decode AccountId from bytes");
+						PumpxRpcError::from_error_code(ErrorCode::InternalError)
+					})?,
 					params.user_operations.clone(),
 					params.chain.clone(),
 				),
@@ -104,39 +120,65 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register omni_submitUserOp method");
 }
 
-async fn calculate_expected_omni_address(
+async fn validate_user_operation_ownership(
 	user: &crate::methods::omni::common::User,
+	sender_address: &Address,
+	chain: &Chain,
 	ctx: &RpcContext,
-) -> Result<Address, PumpxRpcError> {
-	// Parse factory and implementation addresses from configuration
-	let factory_address = ctx.omni_factory_address.parse::<Address>().map_err(|_| {
-		error!("Failed to parse factory address from configuration");
+) -> Result<(), PumpxRpcError> {
+	// Calculate the expected OA from the user's identity
+	let expected_oa_bytes = hex::decode(
+		user.omni_account.strip_prefix("0x").unwrap_or(&user.omni_account),
+	)
+	.map_err(|_| {
+		error!("Failed to decode omni account hex string");
 		PumpxRpcError::from_error_code(ErrorCode::InternalError)
 	})?;
 
-	let implementation_address =
-		ctx.omni_wallet_implementation_address.parse::<Address>().map_err(|_| {
-			error!("Failed to parse implementation address from configuration");
-			PumpxRpcError::from_error_code(ErrorCode::InternalError)
-		})?;
+	if expected_oa_bytes.len() != 32 {
+		error!("Invalid omni account length: expected 32 bytes, got {}", expected_oa_bytes.len());
+		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+	}
 
-	let root_address = Address::ZERO; // TODO: Get from configuration or derive from user
+	let expected_oa = FixedBytes::<32>::from_slice(&expected_oa_bytes);
 
-	let Ok(address) = Address32::from_hex(&user.omni_account) else {
-		error!("Failed to parse omni account address");
+	// Get the chain ID from the chain enum
+	let chain_id = match chain {
+		Chain::Evm(id) => *id,
+		_ => {
+			error!("Unsupported chain type for omni account validation: {:?}", chain);
+			return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+		},
+	};
+
+	// Get the RPC client for the chain
+	let Some(rpc_client) = ctx.rpc_clients.get(&chain_id) else {
+		error!("No RPC client found for chain ID: {}", chain_id);
 		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 	};
 
-	let omni_account_bytes: FixedBytes<32> = FixedBytes::from_slice(address.as_ref());
-	let client_id_bytes = user.client_id.as_bytes();
+	// Create a new client with the specific wallet address
+	let omni_client =
+		aa_contracts_client::OmniAccountClient::new(*sender_address, rpc_client.clone());
 
-	let calculated_address = aa_contracts_client::calculate_omni_account_address(
-		factory_address,
-		implementation_address,
-		omni_account_bytes,
-		client_id_bytes,
-		root_address,
-	);
+	// Query the OmniWallet contract directly to get its stored OA
+	let stored_oa = match omni_client.get_owner().await {
+		Ok(oa) => oa,
+		Err(e) => {
+			error!("Failed to query OmniWallet owner: {:?}", e);
+			return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+		},
+	};
 
-	Ok(calculated_address)
+	// Compare stored OA with expected OA
+	if stored_oa != expected_oa {
+		error!(
+			"OA mismatch: contract has 0x{}, expected 0x{}",
+			hex::encode(stored_oa.as_slice()),
+			hex::encode(expected_oa.as_slice())
+		);
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(-32010)));
+	}
+
+	Ok(())
 }
