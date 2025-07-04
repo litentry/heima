@@ -179,6 +179,12 @@ export function AuthorizedSigners({
 		if (!omniAccountAddress || !publicClient || !walletClient || !evmAddress)
 			return;
 
+		// Check if there's more than one signer
+		if (signers.length <= 1) {
+			alert("Cannot remove the last signer. At least one authorized signer must remain.");
+			return;
+		}
+
 		if (!confirm(`Are you sure you want to remove signer ${signerToRemove}?`))
 			return;
 
@@ -391,8 +397,17 @@ export function AuthorizedSigners({
 								)}
 								<button
 									onClick={() => removeSigner(signer)}
-									className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition-colors"
-									title="Remove signer"
+									disabled={signers.length <= 1}
+									className={`p-2 rounded-lg transition-colors ${
+										signers.length <= 1
+											? "bg-gray-100 text-gray-400 cursor-not-allowed"
+											: "hover:bg-red-100 text-red-600"
+									}`}
+									title={
+										signers.length <= 1
+											? "Cannot remove the last signer"
+											: "Remove signer"
+									}
 								>
 									<Trash2 className="h-4 w-4" />
 								</button>
