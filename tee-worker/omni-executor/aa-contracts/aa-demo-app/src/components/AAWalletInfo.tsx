@@ -58,7 +58,14 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 			contractError,
 			enabled: !!evmAddress && omniAccount !== "0x",
 		});
-	}, [evmAddress, omniAccount, clientIdBytes, rootSigner, aaWalletAddress, contractError]);
+	}, [
+		evmAddress,
+		omniAccount,
+		clientIdBytes,
+		rootSigner,
+		aaWalletAddress,
+		contractError,
+	]);
 
 	// Notify parent when address is calculated
 	useEffect(() => {
@@ -100,7 +107,7 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 
 	return (
 		<div className="w-full p-6 bg-white rounded-lg shadow-lg">
-			<h2 className="text-2xl font-bold mb-6 text-center">AA Wallet Info</h2>
+			<h2 className="text-2xl font-bold mb-6 text-center">Wallet Info</h2>
 
 			<div className="space-y-6">
 				{/* Connected Wallet Info */}
@@ -152,34 +159,6 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 					</div>
 				)}
 
-				{/* Omni Account */}
-				{Boolean(evmAddress && omniAccount && omniAccount.length > 2) && (
-					<div className="space-y-3">
-						<h3 className="text-lg font-semibold text-gray-900">
-							Omni Account
-						</h3>
-						<div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-							<div className="flex items-center justify-between mb-2">
-								<span className="text-sm text-blue-700 font-medium">
-									SHA256 Hash:
-								</span>
-								<button
-									onClick={() => copyToClipboard(omniAccount)}
-									className="p-1 hover:bg-blue-100 rounded"
-								>
-									<Copy className="h-4 w-4 text-blue-600" />
-								</button>
-							</div>
-							<div className="text-xs font-mono text-blue-800 break-all">
-								{omniAccount}
-							</div>
-							<div className="text-xs text-blue-600 mt-2">
-								Formula: sha256(clientId + 'evm' + address)
-							</div>
-						</div>
-					</div>
-				)}
-
 				{/* Client ID */}
 				<div className="space-y-3">
 					<h3 className="text-lg font-semibold text-gray-900">Client ID</h3>
@@ -203,13 +182,13 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 				{aaWalletAddress && (
 					<div className="space-y-3">
 						<h3 className="text-lg font-semibold text-green-700">
-							Omni Account Address
+							Omni Account
 						</h3>
 						<div className="bg-green-50 p-4 rounded-lg border border-green-200">
 							<div className="flex items-center justify-between mb-2">
-								<span className="text-sm text-green-700 font-medium">
-									Counterfactual:
-								</span>
+								<div className="text-sm font-mono text-green-800 break-all">
+									{(aaWalletAddress as string) || "Calculating..."}
+								</div>
 								<div className="flex items-center space-x-2">
 									<button
 										onClick={() => copyToClipboard(aaWalletAddress as string)}
@@ -230,10 +209,7 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 									</button>
 								</div>
 							</div>
-							<div className="text-sm font-mono text-green-800 break-all">
-								{(aaWalletAddress as string) || "Calculating..."}
-							</div>
-							<div className="text-xs text-green-600 mt-2">
+							<div className="text-xs text-green-600 mt-4">
 								This is your Omni Account address - fund this address to start
 								using AA features.
 							</div>
@@ -244,4 +220,3 @@ export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
 		</div>
 	);
 }
-
