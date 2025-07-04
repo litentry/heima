@@ -41,11 +41,10 @@ export function AuthorizedSigners({
 	const [isAddingSigner, setIsAddingSigner] = useState(false);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const [lastTxHash, setLastTxHash] = useState<string>("");
 
-	const handleRefresh = async () => {
+	const handleRefresh = () => {
 		setIsRefreshing(true);
-		await refreshSigners();
+		refreshSigners();
 		setIsRefreshing(false);
 	};
 
@@ -414,4 +413,3 @@ export function AuthorizedSigners({
 		</div>
 	);
 }
-
