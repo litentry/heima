@@ -249,7 +249,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				})?,
 			);
 			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(omni_account, params.intent_id, intent),
+				NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
 				None,
 				None,
 				user.client_id,

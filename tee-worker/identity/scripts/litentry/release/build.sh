@@ -16,7 +16,7 @@ echo "build worker: $1"
 echo "build enclave: $2"
 
 ROOTDIR=$(git rev-parse --show-toplevel)
-WORKERDIR="$ROOTDIR/tee-worker"
+WORKERDIR="$ROOTDIR/tee-worker/identity"
 
 # hardcoded sgx signing key, adjust it accordingly if you call the script manually
 SGX_COMMERCIAL_KEY="/opt/enclave_release/sgx_sign_key.pem"

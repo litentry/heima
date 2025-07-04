@@ -173,6 +173,7 @@ jobs:
           fi
           if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
             run_omni_executor_test=true
+            rebuild_omni_executor=true
           fi
 
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
@@ -209,8 +210,8 @@ jobs:
           cargo fmt -- --check
           taplo fmt --check
 
-      - name: tee-worker fmt check
-        working-directory: ./tee-worker
+      - name: identity-worker fmt check
+        working-directory: ./tee-worker/identity
         run: |
           cargo fmt -- --check
           taplo fmt --check
@@ -327,15 +328,15 @@ jobs:
           echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
 
       - name: Cargo test
-        working-directory: ./tee-worker
+        working-directory: ./tee-worker/identity
         run: |
           cargo test
 
       - name: Check clippy
-        working-directory: ./tee-worker
+        working-directory: ./tee-worker/identity
         shell: bash
         run: |
-          for d in . identity/enclave-runtime; do
+          for d in . enclave-runtime; do
             pushd "$d"
             echo "::group::cargo clippy all"
             cargo clippy -- -D warnings
