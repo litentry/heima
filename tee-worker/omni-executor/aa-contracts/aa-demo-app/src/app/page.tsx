@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
-import { AAWalletInfo } from "@/components/AAWalletInfo";
+import { OmniAccountWalletInfo } from "@/components/OmniAccountWalletInfo";
 import { FundingGuide } from "@/components/FundingGuide";
 import { ERC20FundingGuide } from "@/components/ERC20FundingGuide";
 import { RootKeyAuthorization } from "@/components/RootKeyAuthorization";
@@ -377,7 +377,9 @@ function HomeContent() {
 										Your Omni Account address is pre-calculated using your
 										wallet address and client ID.
 									</p>
-									<AAWalletInfo onAddressCalculated={setAAWalletAddress} />
+									<OmniAccountWalletInfo
+										onAddressCalculated={setAAWalletAddress}
+									/>
 								</div>
 							)}
 

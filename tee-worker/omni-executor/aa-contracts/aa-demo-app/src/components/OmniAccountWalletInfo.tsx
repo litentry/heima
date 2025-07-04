@@ -12,7 +12,9 @@ interface AAWalletInfoProps {
 	onAddressCalculated?: (address: string) => void;
 }
 
-export function AAWalletInfo({ onAddressCalculated }: AAWalletInfoProps = {}) {
+export function OmniAccountWalletInfo({
+	onAddressCalculated,
+}: AAWalletInfoProps = {}) {
 	const { address: evmAddress } = useAccount();
 	const { publicKey: solanaAddress } = useWallet();
 	const [omniAccount, setOmniAccount] = useState<`0x${string}`>("0x");
