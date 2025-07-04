@@ -97,25 +97,24 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
      - RPC URL: http://localhost:8545
      - Chain ID: 1337
      - Currency Symbol: ETH
+   - After connecting, your Omni Account details will be displayed automatically
 
-2. **View Your OmniAccount**: After connecting, you'll see your pre-calculated OmniAccount address
-
-3. **Fund with ETH**: Send ETH to your OmniAccount address for gas fees
+2. **Fund with ETH**: Send ETH to your OmniAccount address for gas fees
    - Copy the displayed address or scan the QR code
    - Send at least 0.01 ETH (recommended)
    - The app will automatically detect when funded
 
-4. **Create Omni Account**: Once ETH is received, create your smart account
+3. **Create Omni Account**: Once ETH is received, create your smart account
    - This deploys your OmniAccount contract
    - Your wallet automatically becomes the initial root signer
 
-5. **Add ERC20 Tokens** (Optional): Add USDC or USDT for token swaps
+4. **Add ERC20 Tokens** (Optional): Add USDC or USDT for token swaps
    - Select the token type (USDC or USDT)
    - Use the "Mint Test Tokens" button to get test tokens
    - Send tokens to your OmniAccount address
    - Monitor all token balances in real-time
 
-6. **Manage Signers**: After deployment, manage authorized signers
+5. **Manage Signers**: After deployment, manage authorized signers
    - View all current authorized signers
    - Add new signers by entering their address
    - Remove existing signers (except yourself while connected)
@@ -156,7 +155,7 @@ aa-demo-app/
 ├── src/
 │   ├── app/              # Next.js app router pages
 │   ├── components/       # React components
-│   │   ├── AAWalletInfo.tsx         # Displays OmniAccount information
+│   │   ├── OmniAccountWalletInfo.tsx # Displays OmniAccount information
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
 │   │   ├── FundingGuide.tsx         # ETH funding guide
 │   │   ├── ERC20FundingGuide.tsx    # ERC20 token funding guide
@@ -172,10 +171,12 @@ aa-demo-app/
 
 ## Troubleshooting
 
-### "AA Wallet Not Ready"
+### "AA Wallet Not Ready" or Balance Not Updating
 - Ensure your wallet is connected
 - Check you're on the correct network (Chain ID: 1337)
 - Verify contracts are deployed (check Anvil terminal)
+- If balance doesn't update after sending funds, try clicking "Check Balance" or refresh the page
+- Clear MetaMask activity data if transactions are being rejected
 
 ### Transaction Failures
 - Ensure your OmniAccount is funded with ETH (for gas)
@@ -185,7 +186,7 @@ aa-demo-app/
 ### Token Operations
 - Make sure test tokens are deployed (check deploy output)
 - Ensure you have ETH for gas fees before adding ERC20 tokens
-- ERC20 token funding is only available after root key authorization
+- ERC20 token funding is only available after creating your Omni Account
 - Check token addresses in .env.local match deployment
 
 ### Anvil Errors
