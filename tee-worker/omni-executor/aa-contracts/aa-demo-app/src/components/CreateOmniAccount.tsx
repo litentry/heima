@@ -1,0 +1,394 @@
+"use client";
+
+import { useState } from "react";
+import { useAccount, useWalletClient, usePublicClient } from "wagmi";
+import {
+	Wallet,
+	AlertTriangle,
+	CheckCircle,
+	Loader2,
+	Info,
+	Plus,
+} from "lucide-react";
+import {
+	calculateOmniAccount,
+	createUserOperation,
+	getUserOpHash,
+	stringToBytes,
+	generateInitCode,
+	packUserOperation,
+	type UserOperation,
+} from "@/lib/aa-utils";
+import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
+
+interface CreateOmniAccountProps {
+	omniAccountAddress?: string;
+	isFunded: boolean;
+	onAccountCreated?: () => void;
+}
+
+export function CreateOmniAccount({
+	omniAccountAddress,
+	isFunded,
+	onAccountCreated,
+}: CreateOmniAccountProps) {
+	const { address: evmAddress, chain } = useAccount();
+	const { data: walletClient } = useWalletClient();
+	const publicClient = usePublicClient();
+
+	const [isProcessing, setIsProcessing] = useState(false);
+	const [accountCreated, setAccountCreated] = useState(false);
+	const [error, setError] = useState("");
+	const [txHash, setTxHash] = useState("");
+
+	const truncateAddress = (address: string) => {
+		if (!address) return "";
+		return `${address.slice(0, 6)}...${address.slice(-4)}`;
+	};
+
+	const handleCreateAccount = async () => {
+		if (
+			!evmAddress ||
+			!omniAccountAddress ||
+			!walletClient ||
+			!publicClient ||
+			!chain
+		) {
+			setError("Missing wallet connection or smart account address");
+			return;
+		}
+
+		setIsProcessing(true);
+		setError("");
+
+		try {
+			// Calculate omni account and client ID bytes32
+			const omniAccount = calculateOmniAccount(
+				evmAddress,
+				DEFAULT_CLIENT_ID,
+				"evm",
+			);
+			const clientIdBytes = stringToBytes(DEFAULT_CLIENT_ID);
+
+			console.log("Creating Omni Account with:", {
+				address: evmAddress,
+				clientId: DEFAULT_CLIENT_ID,
+				omniAccountAddress,
+				omniAccount,
+			});
+
+			// Check if account already exists
+			const code = await publicClient.getBytecode({
+				address: omniAccountAddress as `0x${string}`,
+			});
+
+			const accountExists = !!(code && code !== "0x");
+
+			if (accountExists) {
+				setError("Omni Account already exists at this address");
+				return;
+			}
+
+			// Use the connected wallet as the root signer
+			const rootSigner = evmAddress as `0x${string}`;
+
+			// Generate initCode for Omni Account deployment
+			const initCode = generateInitCode(
+				CONTRACTS.OmniAccountFactory.address,
+				omniAccount,
+				clientIdBytes,
+				rootSigner,
+			) as `0x${string}`;
+
+			console.log("Deployment parameters:", {
+				rootSigner,
+				initCode: initCode.slice(0, 66) + "...",
+			});
+
+			// Create UserOperation for deploying the Omni Account
+			const userOp = createUserOperation({
+				sender: omniAccountAddress as `0x${string}`,
+				nonce: BigInt(0),
+				initCode: initCode,
+				callData: "0x", // No additional operations needed
+			});
+
+			// Sign the UserOperation
+			let signature: `0x${string}`;
+
+			try {
+				// Convert UserOperation to PackedUserOperation for signing
+				const packedOp = packUserOperation(userOp as UserOperation);
+
+				// EIP-712 domain
+				const domain = {
+					name: "ERC4337",
+					version: "1",
+					chainId: chain.id,
+					verifyingContract: CONTRACTS.EntryPoint.address as `0x${string}`,
+				};
+
+				// EIP-712 types for PackedUserOperation
+				const types = {
+					PackedUserOperation: [
+						{ name: "sender", type: "address" },
+						{ name: "nonce", type: "uint256" },
+						{ name: "initCode", type: "bytes" },
+						{ name: "callData", type: "bytes" },
+						{ name: "accountGasLimits", type: "bytes32" },
+						{ name: "preVerificationGas", type: "uint256" },
+						{ name: "gasFees", type: "bytes32" },
+						{ name: "paymasterAndData", type: "bytes" },
+						{ name: "sessionAccount", type: "address" },
+						{ name: "sessionExpiration", type: "uint256" },
+						{ name: "sessionAccountProof", type: "bytes" },
+					],
+				};
+
+				// Message to sign (without signature field)
+				const message = {
+					sender: packedOp.sender,
+					nonce: packedOp.nonce,
+					initCode: packedOp.initCode,
+					callData: packedOp.callData,
+					accountGasLimits: packedOp.accountGasLimits,
+					preVerificationGas: packedOp.preVerificationGas,
+					gasFees: packedOp.gasFees,
+					paymasterAndData: packedOp.paymasterAndData,
+					sessionAccount: packedOp.sessionAccount,
+					sessionExpiration: packedOp.sessionExpiration,
+					sessionAccountProof: packedOp.sessionAccountProof,
+				};
+
+				signature = await walletClient.signTypedData({
+					account: evmAddress,
+					domain,
+					types,
+					primaryType: "PackedUserOperation",
+					message,
+				});
+			} catch (e) {
+				console.error("EIP-712 signing failed:", e);
+
+				// Fallback: Try personal_sign
+				const userOpHash = getUserOpHash(
+					userOp as UserOperation,
+					CONTRACTS.EntryPoint.address,
+					chain.id,
+				);
+				signature = await walletClient.signMessage({
+					account: evmAddress,
+					message: { raw: userOpHash },
+				});
+			}
+
+			// Update the UserOperation with signature
+			const signedUserOp = {
+				...userOp,
+				signature,
+			} as UserOperation;
+
+			// Convert to PackedUserOperation for EntryPoint v0.7
+			const packedUserOp = packUserOperation(signedUserOp);
+
+			console.log("Submitting transaction to create Omni Account...");
+
+			// Simulate first to get better error messages
+			try {
+				await publicClient.simulateContract({
+					address: CONTRACTS.EntryPoint.address,
+					abi: CONTRACTS.EntryPoint.abi,
+					functionName: "handleOps",
+					args: [[packedUserOp], evmAddress],
+					account: evmAddress,
+				});
+			} catch (simError: any) {
+				console.error("Simulation failed:", simError);
+				if (simError.cause?.reason) {
+					throw new Error(`Simulation failed: ${simError.cause.reason}`);
+				}
+				throw simError;
+			}
+
+			// Execute the transaction
+			const tx = await walletClient.writeContract({
+				address: CONTRACTS.EntryPoint.address,
+				abi: CONTRACTS.EntryPoint.abi,
+				functionName: "handleOps",
+				args: [[packedUserOp], evmAddress],
+			});
+
+			console.log("Transaction hash:", tx);
+
+			// Wait for confirmation
+			const receipt = await publicClient.waitForTransactionReceipt({
+				hash: tx,
+			});
+
+			console.log("Transaction receipt:", receipt);
+
+			if (receipt.status === "success") {
+				setTxHash(tx);
+				setAccountCreated(true);
+				if (onAccountCreated) {
+					onAccountCreated();
+				}
+			} else {
+				throw new Error("Transaction reverted");
+			}
+		} catch (err) {
+			console.error("Account creation failed:", err);
+			setError(err instanceof Error ? err.message : "Account creation failed");
+		} finally {
+			setIsProcessing(false);
+		}
+	};
+
+	if (!evmAddress) {
+		return (
+			<div className="w-full p-6 bg-gray-50 rounded-lg border border-gray-200">
+				<div className="text-center">
+					<Wallet className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+					<h3 className="text-lg font-medium text-gray-900 mb-2">
+						Connect Wallet
+					</h3>
+					<p className="text-gray-600">
+						Please connect your wallet to create an Omni Account.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (!isFunded) {
+		return (
+			<div className="w-full p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+				<div className="text-center">
+					<AlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+					<h3 className="text-lg font-medium text-yellow-800 mb-2">
+						Fund Account First
+					</h3>
+					<p className="text-yellow-700">
+						Please fund your Omni Account with ETH before creating the smart
+						contract.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="w-full p-6 bg-white rounded-lg shadow-lg">
+			<div className="text-center mb-6">
+				{accountCreated ? (
+					<CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
+				) : (
+					<Plus className="mx-auto h-12 w-12 text-blue-500 mb-4" />
+				)}
+				<h2 className="text-2xl font-bold">
+					{accountCreated
+						? "Omni Account Created!"
+						: "Create Your Omni Account"}
+				</h2>
+			</div>
+
+			{accountCreated ? (
+				<div className="space-y-4">
+					<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+						<div className="flex items-center mb-2">
+							<CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+							<span className="text-green-700 font-medium">
+								Smart Account Deployed Successfully
+							</span>
+						</div>
+						<p className="text-green-600 text-sm">
+							Your Omni Account has been created with your wallet as the initial
+							root signer:
+							<span className="font-mono text-xs block mt-1 break-all">
+								{evmAddress}
+							</span>
+						</p>
+					</div>
+
+					{txHash && (
+						<div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+							<p className="text-sm text-blue-700">
+								<span className="font-medium">Transaction Hash:</span>
+								<span className="font-mono text-xs block mt-1 break-all">
+									{txHash}
+								</span>
+							</p>
+						</div>
+					)}
+
+					<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+						<h3 className="font-medium text-gray-900 mb-2">What's Next?</h3>
+						<ul className="text-sm text-gray-700 space-y-1">
+							<li>• Your Omni Account is now ready to use</li>
+							<li>• You can add additional signers if needed</li>
+							<li>• Create sessions for delegated access</li>
+							<li>• Execute batch transactions via Account Abstraction</li>
+						</ul>
+					</div>
+				</div>
+			) : (
+				<div className="space-y-6">
+					{/* Information Box */}
+					<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+						<div className="flex items-start">
+							<Info className="h-5 w-5 text-blue-500 mr-3 mt-0.5" />
+							<div>
+								<h3 className="font-medium text-blue-900 mb-2">
+									What happens when you create your Omni Account?
+								</h3>
+								<ul className="text-sm text-blue-700 space-y-1">
+									<li>
+										• A smart contract wallet is deployed to the blockchain
+									</li>
+									<li>
+										• Your connected wallet ({truncateAddress(evmAddress)})
+										becomes the initial root signer
+									</li>
+									<li>
+										• Account Abstraction features are enabled for your account
+									</li>
+									<li>• You can manage multiple signers and create sessions</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+
+					{/* Error Message */}
+					{error && (
+						<div className="bg-red-50 border border-red-200 rounded-lg p-3">
+							<div className="flex">
+								<AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+								<span className="text-sm text-red-700">{error}</span>
+							</div>
+						</div>
+					)}
+
+					{/* Create Button */}
+					<button
+						onClick={handleCreateAccount}
+						disabled={isProcessing}
+						className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+					>
+						{isProcessing ? (
+							<>
+								<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+								Creating Account...
+							</>
+						) : (
+							<>
+								<Wallet className="h-4 w-4 mr-2" />
+								Create Omni Account
+							</>
+						)}
+					</button>
+				</div>
+			)}
+		</div>
+	);
+}
+

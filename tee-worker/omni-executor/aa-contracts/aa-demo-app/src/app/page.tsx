@@ -6,7 +6,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { OmniAccountWalletInfo } from "@/components/OmniAccountWalletInfo";
 import { FundingGuide } from "@/components/FundingGuide";
 import { ERC20FundingGuide } from "@/components/ERC20FundingGuide";
-import { RootKeyAuthorization } from "@/components/RootKeyAuthorization";
+import { CreateOmniAccount } from "@/components/CreateOmniAccount";
 import { AuthorizedSigners } from "@/components/AuthorizedSigners";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronRight, Check } from "lucide-react";
@@ -237,8 +237,8 @@ function HomeContent() {
 		},
 		{
 			id: 4,
-			title: "Authorize Root Key",
-			description: "Set up delegated access permissions",
+			title: "Create Omni Account",
+			description: "Deploy your smart account contract",
 			completed: isAuthorized,
 		},
 		{
@@ -404,16 +404,15 @@ function HomeContent() {
 							{currentStep >= 4 && currentStep <= 4 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 4: Authorize Root Key
+										Step 4: Create Your Omni Account
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Set up a root signer that can create sessions and delegate
-										access to your Omni Account.
+										Deploy your smart account contract on the blockchain.
 									</p>
-									<RootKeyAuthorization
+									<CreateOmniAccount
 										omniAccountAddress={omniAccountAddress}
 										isFunded={!!isFunded}
-										onAuthorizationComplete={() => {
+										onAccountCreated={() => {
 											setIsAuthorized(true);
 											fetchSigners();
 										}}
