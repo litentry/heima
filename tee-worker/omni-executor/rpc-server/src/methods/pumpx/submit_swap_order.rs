@@ -237,7 +237,7 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
 			let omni_account = user_identity.to_omni_account(&client_id);
 			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(omni_account, params.intent_id, intent),
+				NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
 				 None,
 				Some(OmniAuth::AuthToken(params.auth_token)),
 				client_id,

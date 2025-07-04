@@ -17,13 +17,12 @@ export default {
     NativeTask: {
       _enum: {
         RequestAuthToken: "(Identity)",
-        RequestIntent: "(Identity, u32, Intent)",
-        CreateAccountStore: "(Identity)",
-        AddAccount:
-          "(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>)",
-        RemoveAccounts: "(Identity, Vec<Identity>)",
-        PublicizeAccount: "(Identity, Identity)",
-        SetPermissions: "(Identity, Identity, Vec<OmniAccountPermission>)",
+        RequestIntent: "(AccountId32, u32, Intent)",
+        __Unused2: "Null",
+        __Unused3: "Null",
+        __Unused4: "Null",
+        __Unused5: "Null",
+        __Unused6: "Null",
         __Unused7: "Null",
         __Unused8: "Null",
         __Unused9: "Null",
@@ -38,7 +37,16 @@ export default {
         __Unused18: "Null",
         __Unused19: "Null",
         PumpxRequestJwt:
-          "(Identity, String, Option<String>, Option<String>, Option<String>)",
+          "(Identity, String, Option<String>, String, Option<String>)",
+        PumpxExportWallet:
+          "(AccountId32, String, u32, u32, String)",
+        PumpxAddWallet: "(AccountId32)",
+        PumpxSignLimitOrder:
+          "(AccountId32, u32, u32, Vec<Vec<u8>>)",
+        PumpxTransferWidthdraw:
+          "(AccountId32, Option<u32>, u32, u32, String, String, String, String, Option<String>)",
+        PumpxNotifyLimitOrderResult:
+          "(AccountId32, u32, String, Option<String>)",
       },
     },
     OmniAuth: {
@@ -65,6 +73,12 @@ export default {
         AuthToken: "Text",
         PumpxRequestJwt: "PumpxRequestJwt",
         RequestIntentResult: "RequestIntentResult",
+        IntentSwapResponse: "Vec<u8>",
+        PumpxExportWallet: "Vec<u8>",
+        PumpxAddWallet: "PumpxAddWalletResponse",
+        PumpxSignLimitOrder: "Vec<Vec<u8>>",
+        PumpxTransferWithdraw: "PumpxCreateTransferTxResponse",
+        PumpxNotifyLimitOrderResult: "Null",
       },
     },
     RequestIntentResult: {
@@ -120,6 +134,22 @@ export default {
       userId: "Text",
       googleAuthCheck: "bool",
     },
+    PumpxAddWalletResponse: {
+      code: "u32",
+      message: "Text",
+      data: "PumpxAddWalletData",
+    },
+    PumpxAddWalletData: {
+      walletIndex: "u32",
+    },
+    PumpxCreateTransferTxResponse: {
+      code: "u32",
+      message: "Text",
+      data: "PumpxCreateTransferTxData",
+    },
+    PumpxCreateTransferTxData: {
+      requestId: "Text",
+    },
     NativeTaskError: {
       _enum: {
         UnauthorizedSender: "Null",
@@ -128,8 +158,27 @@ export default {
         InvalidMemberIdentity: "Null",
         ValidationDataVerificationFailed: "Null",
         UnsupportedIdentityType: "Null",
-        PumpxApiError: "Null",
+        PumpxApiError: "PumpxApiError",
+        PumpxSignerError: "PumpxSignerError",
         IntentNonceMismatch: "Null",
+      },
+    },
+    PumpxApiError: {
+      _enum: {
+        GoogleCodeVerificationFailed: "Null",
+        UserConnectionFailed: "Null",
+        UnknownError: "Null",
+        InvalidInput: "Null",
+        AddWalletFailed: "Null",
+        CreateTransferUnsignedTxFailed: "Null",
+        SendTransferTxFailed: "Null",
+        CreateTransferTxFailed: "Null",
+        GetAccountUserIdFailed: "Null",
+      },
+    },
+    PumpxSignerError: {
+      _enum: {
+        RequestSignatureFailed: "Null",
       },
     },
     Nonce: "u32",
