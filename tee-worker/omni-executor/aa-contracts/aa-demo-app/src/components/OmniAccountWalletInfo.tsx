@@ -38,7 +38,7 @@ export function OmniAccountWalletInfo({
 		}
 	}, [evmAddress]);
 
-	const { data: aaWalletAddress, error: contractError } = useReadContract({
+	const { data: omniAccountAddress, error: contractError } = useReadContract({
 		address: CONTRACTS.OmniAccountFactory.address,
 		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "getAddress",
@@ -56,7 +56,7 @@ export function OmniAccountWalletInfo({
 			clientIdBytes,
 			rootSigner,
 			factoryAddress: CONTRACTS.OmniAccountFactory.address,
-			aaWalletAddress,
+			omniAccountAddress,
 			contractError,
 			enabled: !!evmAddress && omniAccount !== "0x",
 		});
@@ -65,16 +65,16 @@ export function OmniAccountWalletInfo({
 		omniAccount,
 		clientIdBytes,
 		rootSigner,
-		aaWalletAddress,
+		omniAccountAddress,
 		contractError,
 	]);
 
 	// Notify parent when address is calculated
 	useEffect(() => {
-		if (aaWalletAddress && onAddressCalculated) {
-			onAddressCalculated(aaWalletAddress as string);
+		if (omniAccountAddress && onAddressCalculated) {
+			onAddressCalculated(omniAccountAddress as string);
 		}
-	}, [aaWalletAddress, onAddressCalculated]);
+	}, [omniAccountAddress, onAddressCalculated]);
 
 	const copyToClipboard = async (text: string) => {
 		try {
@@ -112,7 +112,6 @@ export function OmniAccountWalletInfo({
 			<h2 className="text-2xl font-bold mb-6 text-center">Wallet Info</h2>
 
 			<div className="space-y-6">
-				{/* Connected Wallet Info */}
 				{evmAddress && (
 					<div className="space-y-3">
 						<h3 className="text-lg font-semibold text-gray-900">
@@ -161,7 +160,6 @@ export function OmniAccountWalletInfo({
 					</div>
 				)}
 
-				{/* Client ID */}
 				<div className="space-y-3">
 					<h3 className="text-lg font-semibold text-gray-900">Client ID</h3>
 					<div className="bg-gray-50 p-3 rounded-lg">
@@ -180,40 +178,16 @@ export function OmniAccountWalletInfo({
 					</div>
 				</div>
 
-				{/* AA Wallet Address */}
-				{aaWalletAddress && (
+				{omniAccountAddress && (
 					<div className="space-y-3">
 						<h3 className="text-lg font-semibold text-green-700">
 							Omni Account
 						</h3>
 						<div className="bg-green-50 p-4 rounded-lg border border-green-200">
-							<div className="flex items-center justify-between mb-2">
+							<div className="flex items-center justify-center mb-2">
 								<div className="text-sm font-mono text-green-800 break-all">
-									{(aaWalletAddress as string) || "Calculating..."}
+									{(omniAccountAddress as string) || "Calculating..."}
 								</div>
-								<div className="flex items-center space-x-2">
-									<button
-										onClick={() => copyToClipboard(aaWalletAddress as string)}
-										className="p-1 hover:bg-green-100 rounded"
-									>
-										<Copy className="h-4 w-4 text-green-600" />
-									</button>
-									<button
-										onClick={() =>
-											window.open(
-												`https://etherscan.io/address/${aaWalletAddress}`,
-												"_blank",
-											)
-										}
-										className="p-1 hover:bg-green-100 rounded"
-									>
-										<ExternalLink className="h-4 w-4 text-green-600" />
-									</button>
-								</div>
-							</div>
-							<div className="text-xs text-green-600 mt-4">
-								This is your Omni Account address - fund this address to start
-								using AA features.
 							</div>
 						</div>
 					</div>
