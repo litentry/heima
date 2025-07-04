@@ -105,9 +105,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Send at least 0.01 ETH (recommended)
    - The app will automatically detect when funded
 
-4. **Authorize Root Key**: Once ETH is received, authorize your wallet as a root signer
+4. **Create Omni Account**: Once ETH is received, create your smart account
    - This deploys your OmniAccount contract
-   - Adds your wallet as an authorized signer
+   - Your wallet automatically becomes the initial root signer
 
 5. **Add ERC20 Tokens** (Optional): Add USDC or USDT for token swaps
    - Select the token type (USDC or USDT)
@@ -160,7 +160,7 @@ aa-demo-app/
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
 │   │   ├── FundingGuide.tsx         # ETH funding guide
 │   │   ├── ERC20FundingGuide.tsx    # ERC20 token funding guide
-│   │   ├── RootKeyAuthorization.tsx # Root key authorization flow
+│   │   ├── CreateOmniAccount.tsx    # Smart account creation flow
 │   │   └── WalletConnect.tsx        # Wallet connection component
 │   ├── contracts/        # Contract ABIs including TestToken
 │   └── lib/             # Utilities and configuration
