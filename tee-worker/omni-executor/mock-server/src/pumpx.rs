@@ -1,17 +1,8 @@
 #![allow(opaque_hidden_inferred_bound)]
 
-use serde_json::json;
 use warp::{http::Response, Filter};
 
 const BASE_PATH: &str = "pumpx";
-
-fn build_success_response(response: serde_json::Value) -> Response<String> {
-	Response::builder()
-		.status(200)
-		.header("content-type", "application/json")
-		.body(response.to_string())
-		.unwrap()
-}
 
 pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone
 {
