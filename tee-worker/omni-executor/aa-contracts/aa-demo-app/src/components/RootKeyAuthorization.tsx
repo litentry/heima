@@ -23,13 +23,13 @@ import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 interface RootKeyAuthorizationProps {
-	aaWalletAddress?: string;
+	omniAccountAddress?: string;
 	isFunded: boolean;
 	onAuthorizationComplete?: () => void;
 }
 
 export function RootKeyAuthorization({
-	aaWalletAddress,
+	omniAccountAddress,
 	isFunded,
 	onAuthorizationComplete,
 }: RootKeyAuthorizationProps) {
@@ -67,7 +67,7 @@ export function RootKeyAuthorization({
 
 		if (
 			!evmAddress ||
-			!aaWalletAddress ||
+			!omniAccountAddress ||
 			!walletClient ||
 			!publicClient ||
 			!chain
@@ -99,7 +99,7 @@ export function RootKeyAuthorization({
 
 			console.log("Authorization params:", {
 				evmAddress,
-				aaWalletAddress,
+				aaWalletAddress: omniAccountAddress,
 				rootSignerAddress,
 				omniAccount,
 				clientIdBytes,
@@ -108,7 +108,7 @@ export function RootKeyAuthorization({
 
 			// Check if account already exists
 			const code = await publicClient.getBytecode({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 			});
 
 			const accountExists = !!(code && code !== "0x");
@@ -136,7 +136,7 @@ export function RootKeyAuthorization({
 
 			// Create UserOperation for deploying and initializing the Omni Account
 			const userOp = createUserOperation({
-				sender: aaWalletAddress as `0x${string}`,
+				sender: omniAccountAddress as `0x${string}`,
 				nonce: BigInt(0),
 				initCode: initCode,
 				callData: "0x", // No additional operations needed for initialization

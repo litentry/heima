@@ -6,12 +6,12 @@ import { Copy, AlertCircle, CheckCircle, Wallet, Coins } from "lucide-react";
 import { formatEther } from "viem";
 
 interface FundingGuideProps {
-	aaWalletAddress?: string;
+	omniAccountAddress?: string;
 	onFundingComplete?: () => void;
 }
 
 export function FundingGuide({
-	aaWalletAddress,
+	omniAccountAddress,
 	onFundingComplete,
 }: FundingGuideProps) {
 	const { address: evmAddress } = useAccount();
@@ -22,11 +22,11 @@ export function FundingGuide({
 
 	// Fetch ETH balance
 	const fetchEthBalance = async () => {
-		if (!aaWalletAddress || !publicClient) return;
+		if (!omniAccountAddress || !publicClient) return;
 
 		try {
 			const balance = await publicClient.getBalance({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 			});
 			setEthBalance(balance);
 		} catch (error) {
@@ -36,17 +36,17 @@ export function FundingGuide({
 
 	// Generate QR code URL for the AA wallet address
 	useEffect(() => {
-		if (aaWalletAddress) {
+		if (omniAccountAddress) {
 			// Using a simple QR code service
-			const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${aaWalletAddress}`;
+			const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${omniAccountAddress}`;
 			setQrCodeUrl(qrUrl);
 		}
-	}, [aaWalletAddress]);
+	}, [omniAccountAddress]);
 
 	// Initial balance fetch
 	useEffect(() => {
 		fetchEthBalance();
-	}, [aaWalletAddress, publicClient]);
+	}, [omniAccountAddress, publicClient]);
 
 	// Check if wallet is funded
 	useEffect(() => {
@@ -60,14 +60,14 @@ export function FundingGuide({
 
 	// Poll balance every 5 seconds
 	useEffect(() => {
-		if (aaWalletAddress) {
+		if (omniAccountAddress) {
 			const interval = setInterval(() => {
 				fetchEthBalance();
 			}, 5000);
 
 			return () => clearInterval(interval);
 		}
-	}, [aaWalletAddress]);
+	}, [omniAccountAddress]);
 
 	const copyToClipboard = async (text: string) => {
 		try {
@@ -94,7 +94,7 @@ export function FundingGuide({
 		);
 	}
 
-	if (!aaWalletAddress) {
+	if (!omniAccountAddress) {
 		return (
 			<div className="w-full p-6 bg-yellow-50 rounded-lg border border-yellow-200">
 				<div className="text-center">
@@ -187,10 +187,10 @@ export function FundingGuide({
 						<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
 							<div className="flex items-center justify-between">
 								<span className="text-sm font-mono text-blue-800 break-all flex-1 mr-2">
-									{aaWalletAddress}
+									{omniAccountAddress}
 								</span>
 								<button
-									onClick={() => copyToClipboard(aaWalletAddress)}
+									onClick={() => copyToClipboard(omniAccountAddress)}
 									className="p-2 hover:bg-blue-100 rounded flex-shrink-0"
 								>
 									<Copy className="h-4 w-4 text-blue-600" />

@@ -14,7 +14,7 @@ import { formatUnits, parseUnits } from "viem";
 import { SUPPORTED_TOKENS, TEST_TOKENS } from "@/lib/constants";
 
 interface ERC20FundingGuideProps {
-	aaWalletAddress?: string;
+	omniAccountAddress?: string;
 	onTokensAdded?: () => void;
 }
 
@@ -25,13 +25,15 @@ interface TokenBalance {
 }
 
 export function ERC20FundingGuide({
-	aaWalletAddress,
+	omniAccountAddress: omniAccountAddress,
 	onTokensAdded,
 }: ERC20FundingGuideProps) {
 	const { address: evmAddress } = useAccount();
 	const publicClient = usePublicClient();
 	const { data: walletClient } = useWalletClient();
-	const [selectedToken, setSelectedToken] = useState<typeof TEST_TOKENS.USDC | typeof TEST_TOKENS.USDT>(TEST_TOKENS.USDC);
+	const [selectedToken, setSelectedToken] = useState<
+		typeof TEST_TOKENS.USDC | typeof TEST_TOKENS.USDT
+	>(TEST_TOKENS.USDC);
 	const [showTokenDropdown, setShowTokenDropdown] = useState(false);
 	const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
 	const [isMinting, setIsMinting] = useState(false);
@@ -42,7 +44,7 @@ export function ERC20FundingGuide({
 
 	// Fetch all token balances
 	const fetchTokenBalances = async () => {
-		if (!aaWalletAddress || !publicClient) return;
+		if (!omniAccountAddress || !publicClient) return;
 
 		setIsRefreshing(true);
 		const balances: TokenBalance[] = [];
@@ -50,7 +52,7 @@ export function ERC20FundingGuide({
 		// Fetch ETH balance
 		try {
 			const ethBalance = await publicClient.getBalance({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 			});
 			balances.push({
 				symbol: "ETH",
@@ -68,7 +70,7 @@ export function ERC20FundingGuide({
 					address: token.address,
 					abi: token.abi,
 					functionName: "balanceOf",
-					args: [aaWalletAddress],
+					args: [omniAccountAddress],
 				})) as bigint;
 
 				balances.push({
@@ -125,22 +127,22 @@ export function ERC20FundingGuide({
 	// Initial balance fetch
 	useEffect(() => {
 		fetchTokenBalances();
-	}, [aaWalletAddress, publicClient]);
+	}, [omniAccountAddress, publicClient]);
 
 	// Poll balances every 10 seconds
 	useEffect(() => {
-		if (aaWalletAddress) {
+		if (omniAccountAddress) {
 			const interval = setInterval(() => {
 				fetchTokenBalances();
 			}, 10000);
 
 			return () => clearInterval(interval);
 		}
-	}, [aaWalletAddress]);
+	}, [omniAccountAddress]);
 
 	// Check if any ERC20 tokens are present
 	const hasERC20Tokens = tokenBalances.some(
-		(tb) => tb.symbol !== "ETH" && tb.balance > BigInt(0)
+		(tb) => tb.symbol !== "ETH" && tb.balance > BigInt(0),
 	);
 
 	// Notify when tokens are added
@@ -159,7 +161,7 @@ export function ERC20FundingGuide({
 		}
 	};
 
-	if (!aaWalletAddress) {
+	if (!omniAccountAddress) {
 		return (
 			<div className="w-full p-6 bg-yellow-50 rounded-lg border border-yellow-200">
 				<div className="text-center">
@@ -226,8 +228,8 @@ export function ERC20FundingGuide({
 							</span>
 						</div>
 						<p className="text-green-600 text-sm mt-2">
-							Your Omni Account has ERC20 tokens and is ready for swapping.
-							You can add more tokens or proceed to the next step.
+							Your Omni Account has ERC20 tokens and is ready for swapping. You
+							can add more tokens or proceed to the next step.
 						</p>
 					</div>
 				</div>
@@ -280,10 +282,10 @@ export function ERC20FundingGuide({
 					<div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
 						<div className="flex items-center justify-between">
 							<span className="text-sm font-mono text-purple-800 break-all flex-1 mr-2">
-								{aaWalletAddress}
+								{omniAccountAddress}
 							</span>
 							<button
-								onClick={() => copyToClipboard(aaWalletAddress)}
+								onClick={() => copyToClipboard(omniAccountAddress)}
 								className="p-2 hover:bg-purple-100 rounded flex-shrink-0"
 							>
 								<Copy className="h-4 w-4 text-purple-600" />
@@ -294,9 +296,7 @@ export function ERC20FundingGuide({
 
 				{/* Test Token Minting */}
 				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<h4 className="font-medium text-blue-800 mb-2">
-						Get Test Tokens
-					</h4>
+					<h4 className="font-medium text-blue-800 mb-2">Get Test Tokens</h4>
 					<p className="text-sm text-blue-700 mb-3">
 						For testing purposes, you can mint test tokens directly to your
 						wallet, then transfer them to your Omni Account.
@@ -320,9 +320,7 @@ export function ERC20FundingGuide({
 							<span className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
 								1
 							</span>
-							<span>
-								Select the token you want to add (USDC or USDT)
-							</span>
+							<span>Select the token you want to add (USDC or USDT)</span>
 						</li>
 						<li className="flex">
 							<span className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
@@ -336,17 +334,13 @@ export function ERC20FundingGuide({
 							<span className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
 								3
 							</span>
-							<span>
-								Send the tokens to your Omni Account address
-							</span>
+							<span>Send the tokens to your Omni Account address</span>
 						</li>
 						<li className="flex">
 							<span className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
 								4
 							</span>
-							<span>
-								Your balances will update automatically
-							</span>
+							<span>Your balances will update automatically</span>
 						</li>
 					</ol>
 				</div>
@@ -367,3 +361,4 @@ export function ERC20FundingGuide({
 		</div>
 	);
 }
+

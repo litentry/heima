@@ -14,7 +14,7 @@ import { ChevronRight, Check } from "lucide-react";
 function HomeContent() {
 	const { address: evmAddress, chain, isConnected } = useAccount();
 	const publicClient = usePublicClient();
-	const [aaWalletAddress, setAAWalletAddress] = useState<string>("");
+	const [omniAccountAddress, setOmniAccountAddress] = useState<string>("");
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isAuthorized, setIsAuthorized] = useState(false);
 	const [hasContract, setHasContract] = useState(false);
@@ -29,22 +29,22 @@ function HomeContent() {
 			chainId: chain?.id,
 			chainName: chain?.name,
 			isConnected,
-			aaWalletAddress,
+			omniAccountAddress,
 			publicClientChainId: publicClient?.chain?.id,
 		});
-	}, [evmAddress, chain, isConnected, aaWalletAddress, publicClient]);
+	}, [evmAddress, chain, isConnected, omniAccountAddress, publicClient]);
 
 	// Check if Omni Account contract exists
 	useEffect(() => {
 		const checkContract = async () => {
-			if (!aaWalletAddress || !publicClient) {
+			if (!omniAccountAddress || !publicClient) {
 				setHasContract(false);
 				return;
 			}
 
 			try {
 				const code = await publicClient.getBytecode({
-					address: aaWalletAddress as `0x${string}`,
+					address: omniAccountAddress as `0x${string}`,
 				});
 				setHasContract(!!code && code !== "0x");
 			} catch (error) {
@@ -54,18 +54,18 @@ function HomeContent() {
 		};
 
 		checkContract();
-	}, [aaWalletAddress, publicClient, isAuthorized]);
+	}, [omniAccountAddress, publicClient, isAuthorized]);
 
 	// Fetch all root signers by monitoring events
 	const fetchSigners = useCallback(async () => {
-		if (!aaWalletAddress || !publicClient || !hasContract) return;
+		if (!omniAccountAddress || !publicClient || !hasContract) return;
 
-		console.log("Fetching signers for account:", aaWalletAddress);
+		console.log("Fetching signers for account:", omniAccountAddress);
 		setIsLoadingSigners(true);
 		try {
 			// Get all RootSignerAdded and RootSignerRemoved events
 			const addedLogs = await publicClient.getLogs({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 				event: {
 					type: "event",
 					name: "RootSignerAdded",
@@ -76,7 +76,7 @@ function HomeContent() {
 			});
 
 			const removedLogs = await publicClient.getLogs({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 				event: {
 					type: "event",
 					name: "RootSignerRemoved",
@@ -88,7 +88,7 @@ function HomeContent() {
 
 			// Also get the initial signer from AccountInitialized event
 			const initLogs = await publicClient.getLogs({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 				event: {
 					type: "event",
 					name: "AccountInitialized",
@@ -136,7 +136,7 @@ function HomeContent() {
 		} finally {
 			setIsLoadingSigners(false);
 		}
-	}, [aaWalletAddress, publicClient, hasContract]);
+	}, [omniAccountAddress, publicClient, hasContract]);
 
 	useEffect(() => {
 		if (hasContract) {
@@ -148,23 +148,23 @@ function HomeContent() {
 	const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0));
 
 	const fetchEthBalance = useCallback(async () => {
-		if (!aaWalletAddress || !publicClient) return;
+		if (!omniAccountAddress || !publicClient) return;
 
 		try {
 			const balance = await publicClient.getBalance({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 			});
 			setEthBalance(balance);
 			console.log(
 				"Fetched balance:",
 				balance.toString(),
 				"for address:",
-				aaWalletAddress,
+				omniAccountAddress,
 			);
 		} catch (error) {
 			console.error("Error fetching balance:", error);
 		}
-	}, [aaWalletAddress, publicClient]);
+	}, [omniAccountAddress, publicClient]);
 
 	// Fetch balance when address changes or contract is deployed
 	useEffect(() => {
@@ -173,7 +173,7 @@ function HomeContent() {
 
 	// Also poll for balance updates every 5 seconds when on step 3
 	useEffect(() => {
-		if (currentStep === 3 && aaWalletAddress && publicClient) {
+		if (currentStep === 3 && omniAccountAddress && publicClient) {
 			// Immediate check when entering step 3
 			fetchEthBalance();
 
@@ -183,7 +183,7 @@ function HomeContent() {
 
 			return () => clearInterval(interval);
 		}
-	}, [currentStep, fetchEthBalance, aaWalletAddress, publicClient]);
+	}, [currentStep, fetchEthBalance, omniAccountAddress, publicClient]);
 
 	const isFunded = ethBalance > BigInt(0);
 
@@ -193,9 +193,9 @@ function HomeContent() {
 			ethBalance: ethBalance.toString(),
 			isFunded,
 			currentStep,
-			aaWalletAddress,
+			omniAccountAddress,
 		});
-	}, [ethBalance, isFunded, currentStep, aaWalletAddress]);
+	}, [ethBalance, isFunded, currentStep, omniAccountAddress]);
 
 	// Update current step based on completion status
 	useEffect(() => {
@@ -378,7 +378,7 @@ function HomeContent() {
 										wallet address and client ID.
 									</p>
 									<OmniAccountWalletInfo
-										onAddressCalculated={setAAWalletAddress}
+										onAddressCalculated={setOmniAccountAddress}
 									/>
 								</div>
 							)}
@@ -392,7 +392,7 @@ function HomeContent() {
 										Send ETH to your Omni Account address to pay for gas fees.
 									</p>
 									<FundingGuide
-										aaWalletAddress={aaWalletAddress}
+										omniAccountAddress={omniAccountAddress}
 										onFundingComplete={() => {
 											console.log("ETH funding complete callback triggered");
 											fetchEthBalance();
@@ -411,7 +411,7 @@ function HomeContent() {
 										access to your Omni Account.
 									</p>
 									<RootKeyAuthorization
-										aaWalletAddress={aaWalletAddress}
+										omniAccountAddress={omniAccountAddress}
 										isFunded={!!isFunded}
 										onAuthorizationComplete={() => {
 											setIsAuthorized(true);
@@ -422,10 +422,10 @@ function HomeContent() {
 							)}
 
 							{/* Show authorized signers only after account is funded and deployed */}
-							{isFunded && hasContract && aaWalletAddress && (
+							{isFunded && hasContract && omniAccountAddress && (
 								<div className="mt-8">
 									<AuthorizedSigners
-										aaWalletAddress={aaWalletAddress}
+										omniAccountAddress={omniAccountAddress}
 										isDeployed={hasContract}
 										signers={authorizedSigners}
 										isLoading={isLoadingSigners}
@@ -444,7 +444,7 @@ function HomeContent() {
 										swaps.
 									</p>
 									<ERC20FundingGuide
-										aaWalletAddress={aaWalletAddress}
+										omniAccountAddress={omniAccountAddress}
 										onTokensAdded={() => {
 											console.log("ERC20 tokens added");
 											setHasERC20Tokens(true);

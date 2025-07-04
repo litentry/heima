@@ -20,7 +20,7 @@ import {
 } from "@/lib/aa-utils";
 
 interface AuthorizedSignersProps {
-	aaWalletAddress?: string;
+	omniAccountAddress?: string;
 	isDeployed?: boolean;
 	signers: string[];
 	isLoading: boolean;
@@ -28,7 +28,7 @@ interface AuthorizedSignersProps {
 }
 
 export function AuthorizedSigners({
-	aaWalletAddress,
+	omniAccountAddress,
 	isDeployed,
 	signers,
 	isLoading,
@@ -51,7 +51,7 @@ export function AuthorizedSigners({
 	// Add a new root signer
 	const addSigner = async () => {
 		if (
-			!aaWalletAddress ||
+			!omniAccountAddress ||
 			!publicClient ||
 			!walletClient ||
 			!evmAddress ||
@@ -94,7 +94,7 @@ export function AuthorizedSigners({
 					},
 				],
 				functionName: "execute",
-				args: [aaWalletAddress as `0x${string}`, BigInt(0), addSignerData],
+				args: [omniAccountAddress as `0x${string}`, BigInt(0), addSignerData],
 			});
 
 			// Get current nonce for the account
@@ -102,12 +102,12 @@ export function AuthorizedSigners({
 				address: CONTRACTS.EntryPoint.address,
 				abi: CONTRACTS.EntryPoint.abi,
 				functionName: "getNonce",
-				args: [aaWalletAddress as `0x${string}`, BigInt(0)],
+				args: [omniAccountAddress as `0x${string}`, BigInt(0)],
 			})) as bigint;
 
 			// Create UserOperation
 			const userOp = createUserOperation({
-				sender: aaWalletAddress as `0x${string}`,
+				sender: omniAccountAddress as `0x${string}`,
 				nonce,
 				callData,
 				initCode: "0x", // Account already deployed
@@ -152,7 +152,7 @@ export function AuthorizedSigners({
 
 			// Verify the signer was actually added
 			const isSignerAdded = await publicClient.readContract({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 				abi: CONTRACTS.OmniAccountImplementation.abi,
 				functionName: "isRootSigner",
 				args: [newSignerAddress as `0x${string}`],
@@ -176,7 +176,7 @@ export function AuthorizedSigners({
 
 	// Remove a root signer
 	const removeSigner = async (signerToRemove: string) => {
-		if (!aaWalletAddress || !publicClient || !walletClient || !evmAddress)
+		if (!omniAccountAddress || !publicClient || !walletClient || !evmAddress)
 			return;
 
 		if (!confirm(`Are you sure you want to remove signer ${signerToRemove}?`))
@@ -206,7 +206,11 @@ export function AuthorizedSigners({
 					},
 				],
 				functionName: "execute",
-				args: [aaWalletAddress as `0x${string}`, BigInt(0), removeSignerData],
+				args: [
+					omniAccountAddress as `0x${string}`,
+					BigInt(0),
+					removeSignerData,
+				],
 			});
 
 			// Get current nonce for the account
@@ -214,12 +218,12 @@ export function AuthorizedSigners({
 				address: CONTRACTS.EntryPoint.address,
 				abi: CONTRACTS.EntryPoint.abi,
 				functionName: "getNonce",
-				args: [aaWalletAddress as `0x${string}`, BigInt(0)],
+				args: [omniAccountAddress as `0x${string}`, BigInt(0)],
 			})) as bigint;
 
 			// Create UserOperation
 			const userOp = createUserOperation({
-				sender: aaWalletAddress as `0x${string}`,
+				sender: omniAccountAddress as `0x${string}`,
 				nonce,
 				callData,
 				initCode: "0x", // Account already deployed
@@ -273,7 +277,7 @@ export function AuthorizedSigners({
 		}
 	};
 
-	if (!aaWalletAddress) {
+	if (!omniAccountAddress) {
 		return null;
 	}
 
