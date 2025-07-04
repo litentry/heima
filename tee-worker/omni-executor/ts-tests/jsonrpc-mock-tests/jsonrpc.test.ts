@@ -14,7 +14,7 @@ describe('Request Email Verification Code', () => {
 
         const result: RequestEmailVerificationCodeResponse = await omniApi.requestEmailVerificationCode({
             client_id: ClientId.Wildmeta,
-            user_email: 'verin@liteng.io',
+            user_email: 'test@gmail.com',
         });
 
         expect(result).to.be.null;
