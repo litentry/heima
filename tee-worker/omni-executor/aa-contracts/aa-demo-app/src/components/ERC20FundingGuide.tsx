@@ -11,7 +11,7 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { formatUnits, parseUnits } from "viem";
-import { SUPPORTED_TOKENS, TEST_TOKENS } from "@/lib/constants";
+import { TEST_TOKENS } from "@/lib/constants";
 
 interface ERC20FundingGuideProps {
 	omniAccountAddress?: string;
@@ -22,6 +22,11 @@ interface TokenBalance {
 	symbol: string;
 	balance: bigint;
 	decimals: number;
+}
+
+interface WalletTokenBalance extends TokenBalance {
+	address: `0x${string}`;
+	abi: any;
 }
 
 export function ERC20FundingGuide({
@@ -36,13 +41,16 @@ export function ERC20FundingGuide({
 	>(TEST_TOKENS.USDC);
 	const [showTokenDropdown, setShowTokenDropdown] = useState(false);
 	const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+	const [walletTokenBalances, setWalletTokenBalances] = useState<WalletTokenBalance[]>([]);
 	const [isMinting, setIsMinting] = useState(false);
+	const [transferringToken, setTransferringToken] = useState<string | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [isRefreshingWallet, setIsRefreshingWallet] = useState(false);
 
 	// Available ERC20 tokens
 	const availableTokens = [TEST_TOKENS.USDC, TEST_TOKENS.USDT];
 
-	// Fetch all token balances
+	// Fetch Omni Account token balances
 	const fetchTokenBalances = async () => {
 		if (!omniAccountAddress || !publicClient) return;
 
@@ -92,6 +100,46 @@ export function ERC20FundingGuide({
 		setIsRefreshing(false);
 	};
 
+	// Fetch wallet token balances
+	const fetchWalletBalances = async () => {
+		if (!evmAddress || !publicClient) return;
+
+		setIsRefreshingWallet(true);
+		const balances: WalletTokenBalance[] = [];
+
+		// Fetch ERC20 balances for wallet
+		for (const token of availableTokens) {
+			try {
+				const balance = (await publicClient.readContract({
+					address: token.address,
+					abi: token.abi,
+					functionName: "balanceOf",
+					args: [evmAddress],
+				})) as bigint;
+
+				balances.push({
+					symbol: token.symbol,
+					balance,
+					decimals: token.decimals,
+					address: token.address,
+					abi: token.abi,
+				});
+			} catch (error) {
+				console.error(`Error fetching wallet ${token.symbol} balance:`, error);
+				balances.push({
+					symbol: token.symbol,
+					balance: BigInt(0),
+					decimals: token.decimals,
+					address: token.address,
+					abi: token.abi,
+				});
+			}
+		}
+
+		setWalletTokenBalances(balances);
+		setIsRefreshingWallet(false);
+	};
+
 	// Mint test tokens
 	const mintTestTokens = async (token: typeof TEST_TOKENS.USDC) => {
 		if (!walletClient || !evmAddress || !publicClient) return;
@@ -103,19 +151,20 @@ export function ERC20FundingGuide({
 			const hash = await walletClient.writeContract({
 				address: token.address,
 				abi: token.abi,
-				functionName: "mint",
+				functionName: "mint" as const,
 				args: [evmAddress, amount],
-				chain: undefined,
+				chain: walletClient.chain,
+				account: walletClient.account!,
 			});
 
 			// Wait for transaction
 			await publicClient.waitForTransactionReceipt({ hash });
 
-			// Refresh balances
-			await fetchTokenBalances();
+			// Refresh wallet balances
+			await fetchWalletBalances();
 
-			// Show success message (you could use a toast here)
-			alert(`Successfully minted 1000 ${token.symbol} to your wallet!`);
+			// Show success message with clear destination
+			alert(`Successfully minted 1000 ${token.symbol} to your wallet! Now transfer them to your Omni Account.`);
 		} catch (error) {
 			console.error("Error minting tokens:", error);
 			alert(`Failed to mint ${token.symbol}. Please try again.`);
@@ -124,25 +173,63 @@ export function ERC20FundingGuide({
 		}
 	};
 
+	// Transfer tokens from wallet to Omni Account
+	const transferToOmniAccount = async (token: WalletTokenBalance) => {
+		if (!walletClient || !evmAddress || !publicClient || !omniAccountAddress) return;
+
+		setTransferringToken(token.symbol);
+		try {
+			const hash = await walletClient.writeContract({
+				address: token.address,
+				abi: token.abi || TEST_TOKENS.USDC.abi,
+				functionName: "transfer" as const,
+				args: [omniAccountAddress, token.balance],
+				chain: walletClient.chain,
+				account: walletClient.account!,
+			});
+
+			// Wait for transaction
+			await publicClient.waitForTransactionReceipt({ hash });
+
+			// Refresh both balances
+			await Promise.all([fetchTokenBalances(), fetchWalletBalances()]);
+
+			// Show success message
+			alert(`Successfully transferred ${formatUnits(token.balance, token.decimals)} ${token.symbol} to your Omni Account!`);
+		} catch (error) {
+			console.error("Error transferring tokens:", error);
+			alert(`Failed to transfer ${token.symbol}. Please try again.`);
+		} finally {
+			setTransferringToken(null);
+		}
+	};
+
 	// Initial balance fetch
 	useEffect(() => {
 		fetchTokenBalances();
-	}, [omniAccountAddress, publicClient]);
+		fetchWalletBalances();
+	}, [omniAccountAddress, evmAddress, publicClient]);
 
 	// Poll balances every 10 seconds
 	useEffect(() => {
-		if (omniAccountAddress) {
+		if (omniAccountAddress || evmAddress) {
 			const interval = setInterval(() => {
 				fetchTokenBalances();
+				fetchWalletBalances();
 			}, 10000);
 
 			return () => clearInterval(interval);
 		}
-	}, [omniAccountAddress]);
+	}, [omniAccountAddress, evmAddress]);
 
 	// Check if any ERC20 tokens are present
 	const hasERC20Tokens = tokenBalances.some(
 		(tb) => tb.symbol !== "ETH" && tb.balance > BigInt(0),
+	);
+
+	// Check if wallet has tokens that need to be transferred
+	const hasWalletTokens = walletTokenBalances.some(
+		(tb) => tb.balance > BigInt(0),
 	);
 
 	// Notify when tokens are added
@@ -187,10 +274,75 @@ export function ERC20FundingGuide({
 				</p>
 			</div>
 
-			{/* Token Balances Section */}
+			{/* Alert if wallet has tokens but Omni Account doesn't */}
+			{hasWalletTokens && !hasERC20Tokens && (
+				<div className="mb-6">
+					<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+						<div className="flex items-center">
+							<AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />
+							<span className="text-yellow-700 font-medium">
+								Tokens in your wallet need to be transferred
+							</span>
+						</div>
+						<p className="text-yellow-600 text-sm mt-2">
+							You have tokens in your wallet. Use the "Transfer to Omni" button below to move them to your Omni Account.
+						</p>
+					</div>
+				</div>
+			)}
+
+			{/* Wallet Balances Section */}
+			{evmAddress && (
+				<div className="mb-6">
+					<div className="flex items-center justify-between mb-3">
+						<h3 className="text-lg font-semibold">Your Wallet Balances</h3>
+						<button
+							onClick={() => fetchWalletBalances()}
+							disabled={isRefreshingWallet}
+							className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+						>
+							<RefreshCw
+								className={`h-4 w-4 ${isRefreshingWallet ? "animate-spin" : ""}`}
+							/>
+						</button>
+					</div>
+					<div className="space-y-2">
+						{walletTokenBalances.map((tb) => (
+							<div
+								key={tb.symbol}
+								className={`p-3 rounded-lg flex justify-between items-center ${
+									tb.symbol === "USDC" ? "bg-blue-50" : "bg-green-50"
+								}`}
+							>
+								<span className="font-medium">{tb.symbol}</span>
+								<div className="flex items-center gap-2">
+									<span className="font-mono text-sm">
+										{formatUnits(tb.balance, tb.decimals)} {tb.symbol}
+									</span>
+									{tb.balance > BigInt(0) && (
+										<button
+											onClick={() => transferToOmniAccount(tb)}
+											disabled={transferringToken !== null}
+											className={`px-3 py-1 text-white text-sm rounded-md transition-colors disabled:opacity-50 ${
+												tb.symbol === "USDC" 
+													? "bg-blue-600 hover:bg-blue-700" 
+													: "bg-green-600 hover:bg-green-700"
+											}`}
+										>
+											{transferringToken === tb.symbol ? "Transferring..." : "Transfer to Omni"}
+										</button>
+									)}
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Omni Account Balances Section */}
 			<div className="mb-6">
 				<div className="flex items-center justify-between mb-3">
-					<h3 className="text-lg font-semibold">Account Balances</h3>
+					<h3 className="text-lg font-semibold">Omni Account Balances</h3>
 					<button
 						onClick={() => fetchTokenBalances()}
 						disabled={isRefreshing}
@@ -206,7 +358,11 @@ export function ERC20FundingGuide({
 						<div
 							key={tb.symbol}
 							className={`p-3 rounded-lg flex justify-between items-center ${
-								tb.symbol === "ETH" ? "bg-gray-50" : "bg-purple-50"
+								tb.symbol === "ETH" 
+									? "bg-gray-50" 
+									: tb.symbol === "USDC"
+									? "bg-blue-50"
+									: "bg-green-50"
 							}`}
 						>
 							<span className="font-medium">{tb.symbol}</span>
@@ -277,8 +433,11 @@ export function ERC20FundingGuide({
 				{/* Address Display */}
 				<div className="space-y-3">
 					<h3 className="text-lg font-semibold">
-						Send {selectedToken.symbol} to:
+						Step 2: Transfer to Omni Account
 					</h3>
+					<p className="text-sm text-gray-600">
+						Use the "Transfer to Omni" button above, or manually send to:
+					</p>
 					<div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
 						<div className="flex items-center justify-between">
 							<span className="text-sm font-mono text-purple-800 break-all flex-1 mr-2">
@@ -295,16 +454,28 @@ export function ERC20FundingGuide({
 				</div>
 
 				{/* Test Token Minting */}
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<h4 className="font-medium text-blue-800 mb-2">Get Test Tokens</h4>
-					<p className="text-sm text-blue-700 mb-3">
-						For testing purposes, you can mint test tokens directly to your
-						wallet, then transfer them to your Omni Account.
+				<div className={`border rounded-lg p-4 ${
+					selectedToken.symbol === "USDC" 
+						? "bg-blue-50 border-blue-200" 
+						: "bg-green-50 border-green-200"
+				}`}>
+					<h4 className={`font-medium mb-2 ${
+						selectedToken.symbol === "USDC" ? "text-blue-800" : "text-green-800"
+					}`}>Step 1: Get Test Tokens</h4>
+					<p className={`text-sm mb-3 ${
+						selectedToken.symbol === "USDC" ? "text-blue-700" : "text-green-700"
+					}`}>
+						Mint test tokens to <strong>your wallet first</strong>. After minting,
+						you'll need to transfer them to your Omni Account.
 					</p>
 					<button
-						onClick={() => mintTestTokens(selectedToken)}
+						onClick={() => mintTestTokens(selectedToken as typeof TEST_TOKENS.USDC)}
 						disabled={isMinting}
-						className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						className={`w-full text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+							selectedToken.symbol === "USDC" 
+								? "bg-blue-600 hover:bg-blue-700" 
+								: "bg-green-600 hover:bg-green-700"
+						}`}
 					>
 						{isMinting
 							? "Minting..."
@@ -327,20 +498,22 @@ export function ERC20FundingGuide({
 								2
 							</span>
 							<span>
-								Either mint test tokens to your wallet or use existing tokens
+								Mint test tokens to <strong>your wallet</strong> (not Omni Account)
 							</span>
 						</li>
 						<li className="flex">
 							<span className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
 								3
 							</span>
-							<span>Send the tokens to your Omni Account address</span>
+							<span>
+								Transfer tokens from your wallet to <strong>Omni Account</strong> using the transfer button
+							</span>
 						</li>
 						<li className="flex">
 							<span className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
 								4
 							</span>
-							<span>Your balances will update automatically</span>
+							<span>Omni Account balance will update automatically</span>
 						</li>
 					</ol>
 				</div>
@@ -361,4 +534,3 @@ export function ERC20FundingGuide({
 		</div>
 	);
 }
-
