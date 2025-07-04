@@ -2,14 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAccount, usePublicClient } from "wagmi";
-import {
-	QrCode,
-	Copy,
-	AlertCircle,
-	CheckCircle,
-	Wallet,
-	Coins,
-} from "lucide-react";
+import { Copy, AlertCircle, CheckCircle, Wallet, Coins } from "lucide-react";
 import { formatEther } from "viem";
 
 interface FundingGuideProps {
@@ -189,7 +182,7 @@ export function FundingGuide({
 
 					<div className="space-y-3">
 						<h3 className="text-lg font-semibold">
-							Send ETH to this address:
+							Send ETH to your Omni Account:
 						</h3>
 						<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
 							<div className="flex items-center justify-between">
@@ -258,9 +251,9 @@ export function FundingGuide({
 							<div className="text-sm text-yellow-700">
 								<p className="font-medium mb-1">Important:</p>
 								<p>
-									Make sure you're sending ETH on the correct network. This
-									Omni Account will only work on the network where the contracts
-									are deployed.
+									Make sure you're sending ETH on the correct network. This Omni
+									Account will only work on the network where the contracts are
+									deployed.
 								</p>
 							</div>
 						</div>
@@ -270,3 +263,4 @@ export function FundingGuide({
 		</div>
 	);
 }
+
