@@ -132,7 +132,9 @@ export function AuthorizedSigners({
 				address: CONTRACTS.EntryPoint.address,
 				abi: CONTRACTS.EntryPoint.abi,
 				functionName: "handleOps",
-				args: [[packedUserOp], evmAddress],
+				args: [[packedUserOp], evmAddress] as const,
+				chain: walletClient.chain,
+				account: walletClient.account!,
 			});
 
 			// Wait for transaction
@@ -254,7 +256,9 @@ export function AuthorizedSigners({
 				address: CONTRACTS.EntryPoint.address,
 				abi: CONTRACTS.EntryPoint.abi,
 				functionName: "handleOps",
-				args: [[packedUserOp], evmAddress],
+				args: [[packedUserOp], evmAddress] as const,
+				chain: walletClient.chain,
+				account: walletClient.account!,
 			});
 
 			// Wait for transaction

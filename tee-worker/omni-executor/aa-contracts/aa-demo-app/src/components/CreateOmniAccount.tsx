@@ -215,7 +215,9 @@ export function CreateOmniAccount({
 				address: CONTRACTS.EntryPoint.address,
 				abi: CONTRACTS.EntryPoint.abi,
 				functionName: "handleOps",
-				args: [[packedUserOp], evmAddress],
+				args: [[packedUserOp], evmAddress] as const,
+				chain: walletClient.chain,
+				account: walletClient.account!,
 			});
 
 			console.log("Transaction hash:", tx);
