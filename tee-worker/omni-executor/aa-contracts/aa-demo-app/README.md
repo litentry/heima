@@ -15,7 +15,7 @@ This application demonstrates:
 ## Key Features
 
 - **Separated Funding Flow**: Fund with ETH first for gas, then optionally add ERC20 tokens
-- **Multi-Token Support**: Send and receive ETH, USDC, and USDT to your OmniAccount
+- **Multi-Token Support**: Transfer ETH, USDC, and USDT to your OmniAccount
 - **Signer Management**: View, add, and remove authorized signers through the UI
 - **Token Balance Display**: Monitor all token balances in real-time
 - **Test Token Faucet**: Mint test tokens directly from the UI
@@ -108,10 +108,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - This deploys your OmniAccount contract
    - Your wallet automatically becomes the initial root signer
 
-4. **Add ERC20 Tokens** (Optional): Add USDC or USDT for token swaps
-   - Select the token type (USDC or USDT)
-   - Use the "Mint Test Tokens" button to get test tokens
-   - Send tokens to your OmniAccount address
+4. **Transfer ERC20 Tokens** (Optional): Transfer USDC or USDT to your Omni Account
+   - Test tokens are minted directly from the interface
+   - Use "Transfer to Omni" to move tokens from wallet to Omni Account
    - Monitor all token balances in real-time
 
 5. **Manage Signers**: After deployment, manage authorized signers
@@ -158,7 +157,7 @@ aa-demo-app/
 │   │   ├── OmniAccountWalletInfo.tsx # Displays OmniAccount information
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
 │   │   ├── FundingGuide.tsx         # ETH funding guide
-│   │   ├── ERC20FundingGuide.tsx    # ERC20 token funding guide
+│   │   ├── ERC20FundingGuide.tsx    # ERC20 token transfer interface
 │   │   ├── CreateOmniAccount.tsx    # Smart account creation flow
 │   │   └── WalletConnect.tsx        # Wallet connection component
 │   ├── contracts/        # Contract ABIs including TestToken

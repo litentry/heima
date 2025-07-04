@@ -240,8 +240,8 @@ function HomeContent() {
 		},
 		{
 			id: 4,
-			title: "Add ERC20 Tokens",
-			description: "Fund your account with USDC or USDT",
+			title: "Transfer ERC20 Tokens",
+			description: "Transfer test tokens to your Omni Account",
 			completed: hasERC20Tokens,
 		},
 		{
@@ -440,11 +440,10 @@ function HomeContent() {
 							{currentStep >= 4 && currentStep <= 4 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 4: Add ERC20 Tokens
+										Step 4: Transfer ERC20 Tokens
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Optionally add USDC or USDT to your Omni Account for token
-										swaps.
+										Mint and transfer test USDC or USDT to your Omni Account for token swaps.
 									</p>
 									<ERC20FundingGuide
 										omniAccountAddress={omniAccountAddress}
