@@ -225,7 +225,7 @@ function HomeContent() {
 		},
 		{
 			id: 2,
-			title: "View AA Wallet",
+			title: "View Omni Account Wallet",
 			description: "See your pre-calculated Omni Account address",
 			completed: !!evmAddress,
 		},
@@ -438,7 +438,8 @@ function HomeContent() {
 										Step 5: Add ERC20 Tokens
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Optionally add USDC or USDT to your Omni Account for token swaps.
+										Optionally add USDC or USDT to your Omni Account for token
+										swaps.
 									</p>
 									<ERC20FundingGuide
 										aaWalletAddress={aaWalletAddress}
@@ -553,4 +554,3 @@ export default function Home() {
 		</ClientOnly>
 	);
 }
-
