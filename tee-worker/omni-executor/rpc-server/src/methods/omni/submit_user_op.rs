@@ -28,6 +28,7 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -76,17 +77,19 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			let mut address = [0u8; 32];
 			address.copy_from_slice(&address_bytes);
 
-			// Validate that all UserOperations belong to the authenticated user
-			// by comparing the OA (bytes32) stored in each contract with expected OA
-			for (index, user_op) in params.user_operations.iter().enumerate() {
-				let sender_address = Address::from(user_op.sender);
+			// Collect unique sender addresses to avoid redundant validation calls
+			let unique_addresses: HashSet<Address> =
+				params.user_operations.iter().map(|op| Address::from(op.sender)).collect();
+
+			// Validate each unique address once (batch optimization)
+			for sender_address in unique_addresses {
 				if let Err(e) =
 					validate_user_operation_ownership(&user, &sender_address, &params.chain, &ctx)
 						.await
 				{
 					error!(
-						"User operation {} ownership validation failed for sender {:?}",
-						index, sender_address
+						"User operation ownership validation failed for sender {:?}",
+						sender_address
 					);
 					return Err(e);
 				}

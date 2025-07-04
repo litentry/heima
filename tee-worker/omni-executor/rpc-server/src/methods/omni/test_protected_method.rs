@@ -52,6 +52,9 @@ mod test {
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 
+		// Create empty rpc_clients for test
+		let rpc_clients = Arc::new(std::collections::HashMap::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -60,6 +63,7 @@ mod test {
 			Arc::new(db),
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
+			rpc_clients,
 		)
 		.await
 		.unwrap();
