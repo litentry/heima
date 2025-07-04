@@ -166,15 +166,15 @@ function HomeContent() {
 		}
 	}, [omniAccountAddress, publicClient]);
 
-	// Fetch balance when address changes or contract is deployed
+	// Fetch balance when address changes
 	useEffect(() => {
 		fetchEthBalance();
-	}, [fetchEthBalance, hasContract]);
+	}, [fetchEthBalance]);
 
-	// Also poll for balance updates every 5 seconds when on step 3
+	// Also poll for balance updates every 5 seconds when on step 2 (funding)
 	useEffect(() => {
-		if (currentStep === 3 && omniAccountAddress && publicClient) {
-			// Immediate check when entering step 3
+		if (currentStep === 2 && omniAccountAddress && publicClient) {
+			// Immediate check when entering step 2
 			fetchEthBalance();
 
 			const interval = setInterval(() => {
@@ -205,16 +205,19 @@ function HomeContent() {
 
 		if (!evmAddress) {
 			setCurrentStep(1);
+		} else if (!omniAccountAddress) {
+			// Stay on step 1 until we have the omni account address
+			setCurrentStep(1);
 		} else if (!isFunded) {
-			setCurrentStep(3);
+			setCurrentStep(2);
 		} else if (!isAuthorized) {
-			setCurrentStep(4);
+			setCurrentStep(3);
 		} else if (!hasERC20Tokens) {
-			setCurrentStep(5);
+			setCurrentStep(4);
 		} else {
-			setCurrentStep(6);
+			setCurrentStep(5);
 		}
-	}, [evmAddress, isFunded, isAuthorized, authorizedSigners, hasERC20Tokens]);
+	}, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, hasERC20Tokens]);
 
 	const steps = [
 		{
@@ -225,38 +228,36 @@ function HomeContent() {
 		},
 		{
 			id: 2,
-			title: "View Omni Account Wallet",
-			description: "See your pre-calculated Omni Account address",
-			completed: !!evmAddress,
-		},
-		{
-			id: 3,
 			title: "Fund with ETH",
 			description: "Send ETH to your Omni Account for gas",
 			completed: !!isFunded,
 		},
 		{
-			id: 4,
+			id: 3,
 			title: "Create Omni Account",
 			description: "Deploy your smart account contract",
 			completed: isAuthorized,
 		},
 		{
-			id: 5,
+			id: 4,
 			title: "Add ERC20 Tokens",
 			description: "Fund your account with USDC or USDT",
 			completed: hasERC20Tokens,
 		},
 		{
-			id: 6,
+			id: 5,
 			title: "Ready to Swap",
 			description: "Send swap requests to the worker",
 			completed: false,
 		},
 	];
 
+	// For the progress sidebar, we want to show all steps
+	const allSteps = steps;
+	
+	// For the main content, we filter out completed step 3
 	const filteredSteps = steps.filter(
-		(step) => !(step.id === 4 && isAuthorized && authorizedSigners.length > 0),
+		(step) => !(step.id === 3 && isAuthorized && authorizedSigners.length > 0),
 	);
 
 	return (
@@ -274,7 +275,7 @@ function HomeContent() {
 							</p>
 						</div>
 						<div className="text-sm text-gray-500">
-							Step {currentStep} of {filteredSteps.length}
+							Step {currentStep} of {allSteps.length}
 						</div>
 					</div>
 				</div>
@@ -287,7 +288,7 @@ function HomeContent() {
 						<div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
 							<h2 className="text-lg font-semibold mb-6">Setup Progress</h2>
 							<div className="space-y-4">
-								{filteredSteps.map((step) => (
+								{allSteps.map((step) => (
 									<div
 										key={step.id}
 										className={`flex items-start space-x-3 p-3 rounded-lg transition-colors ${
@@ -368,10 +369,11 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 2 && (
-								<div>
+							{/* Show Omni Account details when wallet is connected */}
+							{isConnected && evmAddress && (
+								<div className="mb-8">
 									<h2 className="text-xl font-semibold mb-4">
-										Step 2: View Your Omni Account
+										Omni Account Details
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Your Omni Account address is pre-calculated using your
@@ -383,16 +385,18 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 3 && currentStep <= 3 && (
+							{currentStep >= 2 && currentStep <= 2 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 3: Fund Your Omni Account with ETH
+										Step 2: Fund Your Omni Account with ETH
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Send ETH to your Omni Account address to pay for gas fees.
 									</p>
 									<FundingGuide
 										omniAccountAddress={omniAccountAddress}
+										ethBalance={ethBalance}
+										fetchEthBalance={fetchEthBalance}
 										onFundingComplete={() => {
 											console.log("ETH funding complete callback triggered");
 											fetchEthBalance();
@@ -401,10 +405,10 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 4 && currentStep <= 4 && (
+							{currentStep >= 3 && currentStep <= 3 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 4: Create Your Omni Account
+										Step 3: Create Your Omni Account
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Deploy your smart account contract on the blockchain.
@@ -433,10 +437,10 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 5 && currentStep <= 5 && (
+							{currentStep >= 4 && currentStep <= 4 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 5: Add ERC20 Tokens
+										Step 4: Add ERC20 Tokens
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Optionally add USDC or USDT to your Omni Account for token
@@ -452,10 +456,10 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 6 && (
+							{currentStep >= 5 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 6: Start Swapping
+										Step 5: Start Swapping
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Your Omni Account is ready! Send swap requests to the TEE
@@ -486,7 +490,7 @@ function HomeContent() {
 									</div>
 								)}
 
-								{currentStep > 3 && isFunded && (
+								{currentStep > 2 && isFunded && (
 									<div className="bg-white rounded-lg shadow p-4">
 										<div className="flex items-center justify-between">
 											<div className="flex items-center space-x-3">

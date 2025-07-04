@@ -1,38 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount } from "wagmi";
 import { Copy, AlertCircle, CheckCircle, Wallet, Coins } from "lucide-react";
 import { formatEther } from "viem";
 
 interface FundingGuideProps {
 	omniAccountAddress?: string;
 	onFundingComplete?: () => void;
+	ethBalance: bigint;
+	fetchEthBalance: () => Promise<void>;
 }
 
 export function FundingGuide({
 	omniAccountAddress,
 	onFundingComplete,
+	ethBalance,
+	fetchEthBalance,
 }: FundingGuideProps) {
 	const { address: evmAddress } = useAccount();
-	const publicClient = usePublicClient();
 	const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
-	const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0));
 	const [fundingComplete, setFundingComplete] = useState(false);
-
-	// Fetch ETH balance
-	const fetchEthBalance = async () => {
-		if (!omniAccountAddress || !publicClient) return;
-
-		try {
-			const balance = await publicClient.getBalance({
-				address: omniAccountAddress as `0x${string}`,
-			});
-			setEthBalance(balance);
-		} catch (error) {
-			console.error("Error fetching ETH balance:", error);
-		}
-	};
 
 	// Generate QR code URL for the AA wallet address
 	useEffect(() => {
@@ -45,8 +33,11 @@ export function FundingGuide({
 
 	// Initial balance fetch
 	useEffect(() => {
-		fetchEthBalance();
-	}, [omniAccountAddress, publicClient]);
+		console.log("FundingGuide: omniAccountAddress changed to", omniAccountAddress);
+		if (omniAccountAddress) {
+			fetchEthBalance();
+		}
+	}, [omniAccountAddress, fetchEthBalance]);
 
 	// Check if wallet is funded
 	useEffect(() => {
@@ -60,14 +51,14 @@ export function FundingGuide({
 
 	// Poll balance every 5 seconds
 	useEffect(() => {
-		if (omniAccountAddress) {
+		if (omniAccountAddress && !fundingComplete) {
 			const interval = setInterval(() => {
 				fetchEthBalance();
 			}, 5000);
 
 			return () => clearInterval(interval);
 		}
-	}, [omniAccountAddress]);
+	}, [omniAccountAddress, fundingComplete, fetchEthBalance]);
 
 	const copyToClipboard = async (text: string) => {
 		try {
