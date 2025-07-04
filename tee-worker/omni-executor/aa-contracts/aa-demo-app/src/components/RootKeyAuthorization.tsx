@@ -20,8 +20,6 @@ import {
 } from "@/lib/aa-utils";
 import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
 interface RootKeyAuthorizationProps {
 	omniAccountAddress?: string;
 	isFunded: boolean;
@@ -36,7 +34,6 @@ export function RootKeyAuthorization({
 	const { address: evmAddress, chain } = useAccount();
 	const { data: walletClient } = useWalletClient();
 	const publicClient = usePublicClient();
-	const { signMessageAsync } = useSignMessage();
 
 	// The actual root signer will be set during initialization
 	const [rootSignerAddress, setRootSignerAddress] = useState("");
@@ -80,7 +77,6 @@ export function RootKeyAuthorization({
 		setError("");
 
 		try {
-			console.log("Testing deployment feasibility...");
 			// Calculate omni account and client ID bytes32
 			const omniAccount = calculateOmniAccount(
 				evmAddress,
@@ -145,21 +141,14 @@ export function RootKeyAuthorization({
 			// For deployment operations, we need special handling
 			let signature: `0x${string}`;
 
-			// Import necessary functions  
-			const { keccak256, toHex, encodeAbiParameters } = await import('viem');
-			
-			// Instead of getting the hash and then signing it, we should use EIP-712 signTypedData
-			// to sign the structured data directly
-			console.log("Creating deployment signature using EIP-712...");
-
 			try {
 				// Convert UserOperation to PackedUserOperation for signing
 				const packedOp = packUserOperation(userOp as UserOperation);
-				
+
 				// EIP-712 domain
 				const domain = {
-					name: 'ERC4337',
-					version: '1', 
+					name: "ERC4337",
+					version: "1",
 					chainId: chain.id,
 					verifyingContract: CONTRACTS.EntryPoint.address as `0x${string}`,
 				};
@@ -167,17 +156,17 @@ export function RootKeyAuthorization({
 				// EIP-712 types for PackedUserOperation
 				const types = {
 					PackedUserOperation: [
-						{ name: 'sender', type: 'address' },
-						{ name: 'nonce', type: 'uint256' },
-						{ name: 'initCode', type: 'bytes' },
-						{ name: 'callData', type: 'bytes' },
-						{ name: 'accountGasLimits', type: 'bytes32' },
-						{ name: 'preVerificationGas', type: 'uint256' },
-						{ name: 'gasFees', type: 'bytes32' },
-						{ name: 'paymasterAndData', type: 'bytes' },
-						{ name: 'sessionAccount', type: 'address' },
-						{ name: 'sessionExpiration', type: 'uint256' },
-						{ name: 'sessionAccountProof', type: 'bytes' },
+						{ name: "sender", type: "address" },
+						{ name: "nonce", type: "uint256" },
+						{ name: "initCode", type: "bytes" },
+						{ name: "callData", type: "bytes" },
+						{ name: "accountGasLimits", type: "bytes32" },
+						{ name: "preVerificationGas", type: "uint256" },
+						{ name: "gasFees", type: "bytes32" },
+						{ name: "paymasterAndData", type: "bytes" },
+						{ name: "sessionAccount", type: "address" },
+						{ name: "sessionExpiration", type: "uint256" },
+						{ name: "sessionAccountProof", type: "bytes" },
 					],
 				};
 
@@ -196,28 +185,23 @@ export function RootKeyAuthorization({
 					sessionAccountProof: packedOp.sessionAccountProof,
 				};
 
-				console.log("Signing PackedUserOperation with EIP-712...");
 				signature = await walletClient.signTypedData({
 					account: evmAddress,
 					domain,
 					types,
-					primaryType: 'PackedUserOperation',
+					primaryType: "PackedUserOperation",
 					message,
 				});
 
-				console.log("Successfully signed with EIP-712");
-				
 				// Verify the hash matches what we expect
 				const userOpHash = getUserOpHash(
 					userOp as UserOperation,
 					CONTRACTS.EntryPoint.address,
 					chain.id,
 				);
-				console.log("Expected UserOp hash:", userOpHash);
-				
 			} catch (e) {
 				console.error("EIP-712 signing failed:", e);
-				
+
 				// Fallback: Try raw eth_sign if available
 				try {
 					if (walletClient.request) {
@@ -228,7 +212,7 @@ export function RootKeyAuthorization({
 							chain.id,
 						);
 						signature = await walletClient.request({
-							method: 'eth_sign',
+							method: "eth_sign",
 							params: [evmAddress, userOpHash],
 						});
 						console.log("Successfully used eth_sign");
@@ -237,7 +221,7 @@ export function RootKeyAuthorization({
 					}
 				} catch (ethSignError) {
 					console.error("eth_sign also failed:", ethSignError);
-					
+
 					// Last resort: Use personal_sign (adds message prefix)
 					const userOpHash = getUserOpHash(
 						userOp as UserOperation,
@@ -248,14 +232,13 @@ export function RootKeyAuthorization({
 						account: evmAddress,
 						message: { raw: userOpHash },
 					});
-					
-					console.warn("WARNING: Using personal_sign which adds message prefix");
+
+					console.warn(
+						"WARNING: Using personal_sign which adds message prefix",
+					);
 					console.warn("The contract expects a raw signature, this may fail");
 				}
 			}
-
-			console.log("Signature:", signature);
-			console.log("Signature length:", signature.length);
 
 			// Update the UserOperation with signature
 			const signedUserOp = {
@@ -485,36 +468,6 @@ export function RootKeyAuthorization({
 						</p>
 					</div>
 
-					{/* Current Address Option */}
-					<div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-						<div className="flex items-start">
-							<input
-								id="useCurrentAddress"
-								type="checkbox"
-								checked={rootSignerAddress === evmAddress}
-								onChange={(e) => {
-									if (e.target.checked) {
-										setRootSignerAddress(evmAddress);
-									} else {
-										setRootSignerAddress(ZERO_ADDRESS);
-									}
-								}}
-								className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-							/>
-							<div className="ml-3">
-								<label
-									htmlFor="useCurrentAddress"
-									className="text-sm font-medium text-blue-700"
-								>
-									Use current wallet as root signer
-								</label>
-								<p className="text-xs text-blue-600 mt-1 font-mono break-all">
-									{evmAddress}
-								</p>
-							</div>
-						</div>
-					</div>
-
 					{/* Error Message */}
 					{error && (
 						<div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -569,20 +522,8 @@ export function RootKeyAuthorization({
 							deployment.
 						</p>
 					</div>
-
-					{/* EIP-7702 Note */}
-					<div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-						<h4 className="font-medium text-purple-800 mb-1">
-							Future: EIP-7702 Integration
-						</h4>
-						<p className="text-xs text-purple-700">
-							With EIP-7702, funding and authorization could be combined into a
-							single transaction, improving the user experience significantly.
-						</p>
-					</div>
 				</div>
 			)}
 		</div>
 	);
 }
-
