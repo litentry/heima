@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use alloy::sol;
 use lazy_static::lazy_static;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -39,6 +40,27 @@ pub const OKX_SWAP_APPROVE_ADDRESS: &str = "0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6
 pub const FOUR_MEME: &str = "0x340adE544e468D13840d566Afc18F484c8a50ab4";
 pub const FOUR_MEME_MANAGER: &str = "0x5c952063c7fc8610FFDB798152D69F0B9550762b";
 pub const FOUR_MEME_HELPER: &str = "0xF251F83e40a78868FcfA3FA4599Dad6494E46034";
+
+sol!(
+	#[allow(missing_docs, clippy::too_many_arguments)]
+	#[sol(rpc)]
+	FourMemeContract,
+	"./abi/four_meme_abi.json"
+);
+
+sol!(
+	#[allow(missing_docs, clippy::too_many_arguments)]
+	#[sol(rpc)]
+	FourMemeManagerContract,
+	"./abi/four_meme_manager_abi.json"
+);
+
+sol!(
+	#[allow(missing_docs, clippy::too_many_arguments)]
+	#[sol(rpc)]
+	FourMemeHelperContract,
+	"./abi/four_meme_helper_abi.json"
+);
 
 lazy_static! {
 	pub static ref GAS_LIMIT: u64 = 450_000u64;

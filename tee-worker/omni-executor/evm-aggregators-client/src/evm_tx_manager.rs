@@ -14,60 +14,36 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::ops::Div;
-use crate::common::{is_native_token, CreateMarketTx, ALL_BP_DECIMAL, CROSS_SERVICE_FEE_BPS, CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, FOUR_MEME, FOUR_MEME_HELPER, FOUR_MEME_MANAGER, GAS_LIMIT, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS, KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS, SERVICE_FEE_BPS, SERVICE_FEE_PERCENT};
+use crate::common::FourMemeContract::FourMemeContractInstance;
+use crate::common::FourMemeHelperContract::FourMemeHelperContractInstance;
+use crate::common::FourMemeManagerContract::FourMemeManagerContractInstance;
+use crate::common::{
+	is_native_token, CreateMarketTx, ALL_BP_DECIMAL, CROSS_SERVICE_FEE_BPS,
+	CROSS_SERVICE_FEE_PERCENT, DECIMALS_TO_VALUE, FOUR_MEME, FOUR_MEME_HELPER, FOUR_MEME_MANAGER,
+	GAS_LIMIT, INCH_DEX_IDS_MAP, INCH_SWAP_APPROVE_ADDRESS, KYBER_SWAP_APPROVE_ADDRESS,
+	KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS,
+	SERVICE_FEE_BPS, SERVICE_FEE_PERCENT,
+};
 use crate::inch_client::client::InchSwap;
 use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
 use crate::kyber_client::client::KyberSwap;
-use crate::okx_client::client::OkxSwap;
-use ethereum_rpc::RpcProvider;
-use rust_decimal::prelude::{Decimal, FromPrimitive, ToPrimitive};
-use std::str::FromStr;
-use std::sync::Arc;
-
-use crate::evm_tx_manager::FourMemeContract::{FourMemeContractCalls, FourMemeContractInstance};
-use crate::evm_tx_manager::FourMemeHelperContract::{
-	tryBuyReturn, FourMemeHelperContractCalls, FourMemeHelperContractInstance,
-};
-use crate::evm_tx_manager::FourMemeManagerContract::{
-	FourMemeManagerContractCalls, FourMemeManagerContractInstance,
-};
 use crate::kyber_client::types::GetSwapRouteRequest;
+use crate::okx_client::client::OkxSwap;
 use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level};
 use alloy::primitives::{Uint, U256};
-use alloy::sol_types::private::SolTypeValue;
-use alloy::sol_types::{SolCall, SolEnum, SolEvent, SolInterface, SolStruct, SolType};
 use alloy::{
 	primitives::{Address, TxKind},
 	rpc::types::{TransactionInput, TransactionRequest},
-	sol,
-	sol_types::SolValue,
 };
 use async_trait::async_trait;
 use ethereum_rpc::client::EthereumClient;
+use ethereum_rpc::RpcProvider;
 use hex::FromHex;
 use log::error;
-
-sol!(
-	#[allow(missing_docs)]
-	#[sol(rpc)]
-	FourMemeContract,
-	"./four_meme_abi.json"
-);
-
-sol!(
-	#[allow(missing_docs)]
-	#[sol(rpc)]
-	FourMemeManagerContract,
-	"./four_meme_manager_abi.json"
-);
-
-sol!(
-	#[allow(missing_docs)]
-	#[sol(rpc)]
-	FourMemeHelperContract,
-	"./four_meme_helper_abi.json"
-);
+use rust_decimal::prelude::{Decimal, FromPrimitive, ToPrimitive};
+use std::ops::Div;
+use std::str::FromStr;
+use std::sync::Arc;
 
 /// EVM Transaction Manager
 pub struct EvmTxManager<
@@ -120,128 +96,6 @@ where
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
 {
-	async fn construct_four_meme_v2_tx(
-		&self,
-		create_market_tx: CreateMarketTx,
-		nonce: u64,
-		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()> {
-		let mut to = Address::from_str(FOUR_MEME).map_err(|e| {
-			error!("Error converting user wallet address into Ethereum Address: {}", e);
-		})?;
-		let from = Address::from_str(&create_market_tx.user_wallet_address).map_err(|e| {
-			error!("Error converting user wallet address into Ethereum Address: {}", e);
-		})?;
-		let chain_id = create_market_tx.chain_id;
-		let is_buy = is_native_token(create_market_tx.in_token_ca.as_ref());
-
-		let amount = U256::from_str(&amount_decimal.trunc().to_string()).map_err(|e| {
-			error!("Error converting amount to U256: {}", e);
-		})?;
-		let fee_rate = U256::from_str(SERVICE_FEE_BPS).map_err(|e| {
-			error!("Error converting fee rate to U256: {}", e);
-		})?;
-		let fee_receiver = Address::from_str(&create_market_tx.recipient_address).map_err(|e| {
-			error!("Error converting token contract to Ethereum Address: {}", e);
-		})?;
-		let mut value = U256::from(0);
-
-		let mut call = TransactionRequest::default();
-		if is_buy {
-			value = amount;
-			let target_token = Address::from_str(&create_market_tx.out_token_ca).map_err(|e| {
-				error!("Error converting token contract to Ethereum Address: {}", e);
-			})?;
-			let recipient_address = Address::from_str(&create_market_tx.recipient_address)
-				.map_err(|e| {
-					error!("Error converting token contract to Ethereum Address: {}", e);
-				})?;
-			let min_amount = self
-				.calculate_min_amount(
-					target_token,
-					amount_decimal,
-					i64::from_u32(create_market_tx.slippage).unwrap(),
-					false,
-				)
-				.await?;
-			let four_meme_address = Address::from_str(FOUR_MEME).map_err(|e| {
-				error!("Error converting user wallet address into Ethereum Address: {}", e);
-			})?;
-			let four_meme_contract = FourMemeContractInstance::new(
-				four_meme_address,
-				self.eth_client.get_provider().await?,
-			);
-			call = four_meme_contract
-				.buyTokenAMAP(
-					target_token,
-					recipient_address,
-					amount,
-					min_amount,
-					fee_rate,
-					fee_receiver,
-				)
-				.into_transaction_request();
-		} else {
-			to = Address::from_str(FOUR_MEME_MANAGER).map_err(|e| {
-				error!("Error converting four meme manager address into Ethereum Address: {}", e);
-			})?;
-			let target_token = Address::from_str(&create_market_tx.in_token_ca).map_err(|e| {
-				error!("Error converting token contract to Ethereum Address: {}", e);
-			})?;
-			let min_amount = self
-				.calculate_min_amount(
-					target_token,
-					amount_decimal,
-					i64::from_u32(create_market_tx.slippage).unwrap(),
-					false,
-				)
-				.await?;
-			let four_meme_manager_address = Address::from_str(FOUR_MEME_MANAGER).map_err(|e| {
-				error!("Error converting token contract to Ethereum Address: {}", e);
-			})?;
-			let four_meme_manager_contract = FourMemeManagerContractInstance::new(
-				four_meme_manager_address,
-				self.eth_client.get_provider().await?,
-			);
-			call = four_meme_manager_contract
-				.sellToken(
-					U256::from(0),
-					target_token,
-					from,
-					amount,
-					min_amount,
-					fee_rate,
-					fee_receiver,
-				)
-				.into_transaction_request();
-		}
-
-		let gas_price = self
-			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
-			.await
-			.map_err(|_| {
-				error!("Failed to get gas gas price by level");
-			})?;
-
-		let gas_price = gas_price.to_u128().ok_or_else(|| {
-			error!("Failed to convert gas price to u128");
-		})?;
-
-		call.gas_price = Some(gas_price);
-		call.to = Some(TxKind::Call(to));
-		call.value = Some(value);
-
-		let gas = self.eth_client.estimate_gas(call.clone()).await?;
-
-		let mut adjusted_gas = gas + gas.div(2);
-		if adjusted_gas > *GAS_LIMIT {
-			adjusted_gas = *GAS_LIMIT;
-		}
-
-		call.gas = Some(adjusted_gas);
-		Ok(call)
-
-	}
 	async fn construct_inch_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
@@ -300,7 +154,6 @@ where
 		};
 		Ok(tx)
 	}
-
 	async fn construct_okx_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
@@ -448,6 +301,128 @@ where
 
 		Ok(tx)
 	}
+
+	async fn construct_four_meme_v2_tx(
+		&self,
+		create_market_tx: CreateMarketTx,
+		nonce: u64,
+		amount_decimal: Decimal,
+	) -> Result<TransactionRequest, ()> {
+		let mut to = Address::from_str(FOUR_MEME).map_err(|e| {
+			error!("Error converting user wallet address into Ethereum Address: {}", e);
+		})?;
+		let from = Address::from_str(&create_market_tx.user_wallet_address).map_err(|e| {
+			error!("Error converting user wallet address into Ethereum Address: {}", e);
+		})?;
+		let chain_id = create_market_tx.chain_id;
+		let is_buy = is_native_token(create_market_tx.in_token_ca.as_ref());
+
+		let amount = U256::from_str(&amount_decimal.trunc().to_string()).map_err(|e| {
+			error!("Error converting amount to U256: {}", e);
+		})?;
+		let fee_rate = U256::from_str(SERVICE_FEE_BPS).map_err(|e| {
+			error!("Error converting fee rate to U256: {}", e);
+		})?;
+		let fee_receiver = Address::from_str(&create_market_tx.recipient_address).map_err(|e| {
+			error!("Error converting token contract to Ethereum Address: {}", e);
+		})?;
+		let mut value = U256::from(0);
+
+		let mut call = if is_buy {
+			value = amount;
+			let target_token = Address::from_str(&create_market_tx.out_token_ca).map_err(|e| {
+				error!("Error converting token contract to Ethereum Address: {}", e);
+			})?;
+			let recipient_address = Address::from_str(&create_market_tx.recipient_address)
+				.map_err(|e| {
+					error!("Error converting token contract to Ethereum Address: {}", e);
+				})?;
+			let min_amount = self
+				.calculate_min_amount(
+					target_token,
+					amount_decimal,
+					i64::from_u32(create_market_tx.slippage).unwrap(),
+					is_buy,
+				)
+				.await?;
+			let four_meme_address = Address::from_str(FOUR_MEME).map_err(|e| {
+				error!("Error converting user wallet address into Ethereum Address: {}", e);
+			})?;
+			let four_meme_contract = FourMemeContractInstance::new(
+				four_meme_address,
+				self.eth_client.get_provider().await?,
+			);
+			four_meme_contract
+				.buyTokenAMAP(
+					target_token,
+					recipient_address,
+					amount,
+					min_amount,
+					fee_rate,
+					fee_receiver,
+				)
+				.into_transaction_request()
+		} else {
+			to = Address::from_str(FOUR_MEME_MANAGER).map_err(|e| {
+				error!("Error converting four meme manager address into Ethereum Address: {}", e);
+			})?;
+			let target_token = Address::from_str(&create_market_tx.in_token_ca).map_err(|e| {
+				error!("Error converting token contract to Ethereum Address: {}", e);
+			})?;
+			let min_amount = self
+				.calculate_min_amount(
+					target_token,
+					amount_decimal,
+					i64::from_u32(create_market_tx.slippage).unwrap(),
+					is_buy,
+				)
+				.await?;
+			let four_meme_manager_address = Address::from_str(FOUR_MEME_MANAGER).map_err(|e| {
+				error!("Error converting token contract to Ethereum Address: {}", e);
+			})?;
+			let four_meme_manager_contract = FourMemeManagerContractInstance::new(
+				four_meme_manager_address,
+				self.eth_client.get_provider().await?,
+			);
+			four_meme_manager_contract
+				.sellToken(
+					U256::from(0),
+					target_token,
+					from,
+					amount,
+					min_amount,
+					fee_rate,
+					fee_receiver,
+				)
+				.into_transaction_request()
+		};
+
+		let gas_price = self
+			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
+			.await
+			.map_err(|_| {
+				error!("Failed to get gas gas price by level");
+			})?;
+
+		let gas_price = gas_price.to_u128().ok_or_else(|| {
+			error!("Failed to convert gas price to u128");
+		})?;
+
+		call.gas_price = Some(gas_price);
+		call.to = Some(TxKind::Call(to));
+		call.nonce = Some(nonce);
+		call.value = Some(value);
+
+		let gas = self.eth_client.estimate_gas(call.clone()).await?;
+
+		let mut adjusted_gas = gas + gas.div(2);
+		if adjusted_gas > *GAS_LIMIT {
+			adjusted_gas = *GAS_LIMIT;
+		}
+
+		call.gas = Some(adjusted_gas);
+		Ok(call)
+	}
 }
 
 impl<EthClient, InchClient, KyberClient, OkxClient>
@@ -486,53 +461,48 @@ where
 		slippage: i64,
 		is_buy: bool,
 	) -> Result<U256, ()> {
-		let four_meme_helper = Address::from_str(&FOUR_MEME_HELPER).map_err(|e| {
+		let four_meme_helper = Address::from_str(FOUR_MEME_HELPER).map_err(|e| {
 			error!("Failed to get four meme helper ethereum address due to: {:?}", e);
 		})?;
-		let four_meme_manager = Address::from_str(&FOUR_MEME_MANAGER).map_err(|e| {
+		let four_meme_manager = Address::from_str(FOUR_MEME_MANAGER).map_err(|e| {
 			error!("Failed to get four meme helper ethereum address due to: {:?}", e);
 		})?;
 		let four_meme_contract = FourMemeHelperContractInstance::new(
 			four_meme_helper,
 			self.eth_client.get_provider().await?,
 		);
-		let mut amount_out: U256 = U256::from(0);
-		if is_buy {
-			// TODO: Use correct amounts
-			let try_buy_response = four_meme_contract
-				.tryBuy(token, Default::default(), Default::default())
-				.call()
-				.await
-				.map_err(|e| {
-					error!("Failed to get try_buy call due to: {:?}", e);
-				})?;
+		let amount = U256::from_str(amount_decimal.trunc().to_string().as_str()).map_err(|e| {
+			error!("Failed to get amount due to: {:?}", e);
+		})?;
+		let amount_out: U256 = if is_buy {
+			let try_buy_response =
+				four_meme_contract.tryBuy(token, U256::from(0), amount).call().await.map_err(
+					|e| {
+						error!("Failed to get try_buy call due to: {:?}", e);
+					},
+				)?;
 
 			if try_buy_response.tokenManager != four_meme_manager {
 				error!("invalid token manager");
 				return Err(());
 			}
 
-			amount_out = try_buy_response.estimatedAmount;
+			try_buy_response.estimatedAmount
 		} else {
-			// TODO: Use correct amounts
 			let try_sell_response =
-				four_meme_contract.trySell(token, Default::default()).call().await.map_err(
-					|e| {
-						error!("Failed to get try_buy call due to: {:?}", e);
-					},
-				)?;
+				four_meme_contract.trySell(token, amount).call().await.map_err(|e| {
+					error!("Failed to get try_buy call due to: {:?}", e);
+				})?;
 
 			if try_sell_response.tokenManager != four_meme_manager {
 				error!("invalid token manager");
 				return Err(());
 			}
 
-			amount_out = try_sell_response.funds
-		}
+			try_sell_response.funds
+		};
 
-		let slippage_bp = slippage
-			.try_into()
-			.map_err(|_| error!("Invalid slippage value: {}", slippage))?;
+		let slippage_bp: Decimal = slippage.into();
 
 		let total_bp = *ALL_BP_DECIMAL;
 		let total_bp_u256 = U256::from_str(&ALL_BP_DECIMAL.clone().trunc().to_string()).unwrap();

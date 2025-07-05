@@ -302,6 +302,11 @@ pub mod mocks {
 	use mockall::mock;
 	use std::cell::RefCell;
 	use std::collections::HashMap;
+	use alloy::providers::fillers::{
+		BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+	};
+	use alloy::providers::{Identity, RootProvider};
+
 
 	mock! {
 		pub RpcProvider {}
@@ -311,6 +316,18 @@ pub mod mocks {
 			type Addr = Address;
 			type Transaction = TransactionRequest;
 
+			async fn get_provider(
+				&self,
+			) -> Result<
+				FillProvider<
+					JoinFill<
+						Identity,
+						JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+					>,
+					RootProvider,
+				>,
+				(),
+			>;
 			async fn get_balance(&self, address: Address) -> Result<U256, ()>;
 			async fn get_transaction_count(&self, address: Address) -> Result<u64, ()>;
 			async fn get_pending_nonce(&self, address: Address) -> Result<u64, ()>;
