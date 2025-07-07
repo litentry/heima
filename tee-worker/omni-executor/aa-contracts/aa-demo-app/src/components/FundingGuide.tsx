@@ -218,14 +218,6 @@ export function FundingGuide({
 									automatically)
 								</span>
 							</li>
-							<li className="flex">
-								<span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mr-2 mt-0.5">
-									4
-								</span>
-								<span>
-									Once funded, you can proceed to set up your root key
-								</span>
-							</li>
 						</ol>
 					</div>
 
