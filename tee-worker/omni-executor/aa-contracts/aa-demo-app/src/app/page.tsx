@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
-import { OmniAccountWalletInfo } from "@/components/OmniAccountWalletInfo";
+import { AccountsDashboard } from "@/components/AccountsDashboard";
 import { FundingGuide } from "@/components/FundingGuide";
 import { ERC20FundingGuide } from "@/components/ERC20FundingGuide";
 import { CreateOmniAccount } from "@/components/CreateOmniAccount";
@@ -21,6 +21,17 @@ function HomeContent() {
 	const [authorizedSigners, setAuthorizedSigners] = useState<string[]>([]);
 	const [isLoadingSigners, setIsLoadingSigners] = useState(false);
 	const [hasERC20Tokens, setHasERC20Tokens] = useState(false);
+
+	// Memoized callback for balance updates
+	const handleBalancesUpdate = useCallback((balances: any[]) => {
+		// Check if any ERC20 tokens are present
+		const hasTokens = balances.some(
+			(tb) => tb.symbol !== "ETH" && tb.balance > BigInt(0)
+		);
+		if (hasTokens) {
+			setHasERC20Tokens(true);
+		}
+	}, []);
 
 	// Debug logging
 	useEffect(() => {
@@ -43,7 +54,7 @@ function HomeContent() {
 			}
 
 			try {
-				const code = await publicClient.getBytecode({
+				const code = await publicClient.getCode({
 					address: omniAccountAddress as `0x${string}`,
 				});
 				setHasContract(!!code && code !== "0x");
@@ -254,11 +265,6 @@ function HomeContent() {
 
 	// For the progress sidebar, we want to show all steps
 	const allSteps = steps;
-	
-	// For the main content, we filter out completed step 3
-	const filteredSteps = steps.filter(
-		(step) => !(step.id === 3 && isAuthorized && authorizedSigners.length > 0),
-	);
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -372,15 +378,11 @@ function HomeContent() {
 							{/* Show Omni Account details when wallet is connected */}
 							{isConnected && evmAddress && (
 								<div className="mb-8">
-									<h2 className="text-xl font-semibold mb-4">
-										Omni Account Details
-									</h2>
-									<p className="text-gray-600 mb-6">
-										Your Omni Account address is pre-calculated using your
-										wallet address and client ID.
-									</p>
-									<OmniAccountWalletInfo
+									<AccountsDashboard
 										onAddressCalculated={setOmniAccountAddress}
+										ethBalance={ethBalance}
+										onBalancesUpdate={handleBalancesUpdate}
+										isAccountCreated={isAuthorized}
 									/>
 								</div>
 							)}
@@ -447,6 +449,7 @@ function HomeContent() {
 									</p>
 									<ERC20FundingGuide
 										omniAccountAddress={omniAccountAddress}
+										hasERC20Tokens={hasERC20Tokens}
 										onTokensAdded={() => {
 											console.log("ERC20 tokens added");
 											setHasERC20Tokens(true);
