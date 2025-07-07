@@ -1116,9 +1116,9 @@ async fn handle_native_task<
 			// Submit all UserOperations via EntryPoint.handleOps()
 			let transaction_hash =
 				match entry_point_client.handle_ops(&aa_user_ops, beneficiary).await {
-					Ok(_) => {
-						// TODO: Get actual transaction hash from handle_ops result
-						Some(format!("0x{}", hex::encode("entrypoint_tx_hash")))
+					Ok(tx_hash) => {
+						// Return the actual transaction hash from handle_ops
+						Some(tx_hash)
 					},
 					Err(_) => {
 						send_error(

@@ -119,7 +119,7 @@ pub mod test {
 			.expect_send_transaction()
 			.with(mockall::predicate::always())
 			.times(1)
-			.returning(|_| Ok(()));
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let client = OmniAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.add_root_signer(root_signer).await;
@@ -138,7 +138,7 @@ pub mod test {
 			.expect_send_transaction()
 			.with(mockall::predicate::always())
 			.times(1)
-			.returning(|_| Ok(()));
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let client = OmniAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.remove_root_signer(root_signer).await;

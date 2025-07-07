@@ -59,7 +59,7 @@ pub trait RpcProvider: Send + Sync {
 
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()>;
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()>;
-	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()>;
+	async fn send_transaction(&self, tx: Self::Transaction) -> Result<String, ()>;
 	async fn send_transaction_with_wallet(
 		&self,
 		wallet: &EthereumWallet,
@@ -114,15 +114,13 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get transaction count: {:?}", e))
 	}
 
-	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<(), ()> {
+	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<String, ()> {
 		let Some(ref wallet) = self.wallet else {
 			error!("Provider without a wallet cannot send transactions");
 			return Err(());
 		};
 
-		self.send_transaction_with_wallet(wallet, raw_tx).await?;
-
-		Ok(())
+		self.send_transaction_with_wallet(wallet, raw_tx).await
 	}
 
 	async fn send_transaction_with_wallet(
@@ -269,7 +267,7 @@ pub mod mocks {
 
 			async fn get_balance(&self, address: Address) -> Result<U256, ()>;
 			async fn get_transaction_count(&self, address: Address) -> Result<u64, ()>;
-			async fn send_transaction(&self, tx: TransactionRequest) -> Result<(), ()>;
+			async fn send_transaction(&self, tx: TransactionRequest) -> Result<String, ()>;
 			async fn send_transaction_with_wallet(&self, wallet: &EthereumWallet, tx: TransactionRequest) -> Result<String, ()>;
 			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;
 			async fn get_gas_price(&self) -> Result<u128, ()>;

@@ -52,15 +52,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		user_ops: &[PackedUserOperation],
 		beneficiary: Address,
-	) -> Result<(), ()> {
+	) -> Result<String, ()> {
 		let ops = user_ops.to_vec();
 		let call_data = handleOpsCall { ops, beneficiary }.abi_encode();
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		self.rpc_client
 			.send_transaction(tx)
 			.await
-			.map_err(|_| error!("Could not send tx"))?;
-		Ok(())
+			.map_err(|_| error!("Could not send tx"))
 	}
 
 	pub async fn get_sender_address(&self, init_code: Bytes) -> Result<Address, ()> {
@@ -93,14 +92,13 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		calculate_omni_account_address(factory_address, account_implementation, oa, client_id, root)
 	}
 
-	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<(), ()> {
+	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<String, ()> {
 		let call_data = depositToCall { account }.abi_encode();
 		let tx = build_payable_transaction(self.entry_point_address, call_data, amount);
 		self.rpc_client
 			.send_transaction(tx)
 			.await
-			.map_err(|_| error!("Could not send tx"))?;
-		Ok(())
+			.map_err(|_| error!("Could not send tx"))
 	}
 
 	pub async fn get_user_op_hash(
@@ -484,7 +482,9 @@ pub mod test {
 			.unwrap();
 
 		// Execute user operation with paymaster sponsorship
-		entrypoint_client.handle_ops(&vec![user_op], entrypoint_address).await.unwrap();
+		let tx_hash =
+			entrypoint_client.handle_ops(&vec![user_op], entrypoint_address).await.unwrap();
+		println!("Transaction hash: {}", tx_hash);
 	}
 
 	/// Integration test to verify that local CREATE2 calculation matches EntryPoint.getSenderAddress

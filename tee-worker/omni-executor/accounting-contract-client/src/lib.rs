@@ -67,7 +67,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 			..Default::default()
 		};
 
-		self.provider.send_transaction(tx).await
+		self.provider.send_transaction(tx).await.map(|_| ())
 	}
 
 	async fn get_nonce(&self, user: Address) -> Result<U256, ()> {

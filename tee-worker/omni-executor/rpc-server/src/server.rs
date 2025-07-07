@@ -52,6 +52,7 @@ impl RpcContext {
 	}
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn start_server(
 	port: u16,
 	shielding_key: ShieldingKey,
