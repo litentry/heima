@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../core/BaseAccount.sol";
+import "../core/Primitives.sol";
 import "../core/Helpers.sol";
 import "./callback/TokenCallbackHandler.sol";
 
@@ -102,23 +103,56 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         override
         returns (uint256 validationData)
     {
-        // UserOpHash can be generated using eth_signTypedData_v4
-        address signer = ECDSA.recover(userOpHash, userOp.signature);
-        if (owner == _determineOa(signer) || isRootSigner(signer)) {
-            return SIG_VALIDATION_SUCCESS;
-        }
-        if (signer == userOp.sessionAccount) {
-            if (block.timestamp > userOp.sessionExpiration) {
-                return SIG_VALIDATION_FAILED;
-            }
-            // validate session_proof was signed by root
-            bytes32 sessionDigest = sha256(abi.encodePacked(userOp.sessionAccount, userOp.sessionExpiration));
-            address sessionProofSigner = ECDSA.recover(sessionDigest, userOp.sessionAccountProof);
+        require(userOp.signature.length >= 1, "signature too short");
 
-            if (isRootSigner(sessionProofSigner)) {
-                return SIG_VALIDATION_SUCCESS;
-            }
+        UserOpSigType sigType = UserOpSigType(uint8(userOp.signature[0]));
+        bytes calldata sig = userOp.signature[1:];
+
+        if (sigType == UserOpSigType.EOA) {
+            return _validateEOA(userOpHash, sig);
+        } else if (sigType == UserOpSigType.RootKey) {
+            return _validateRootKey(userOpHash, sig);
+        } else if (sigType == UserOpSigType.SessionKey) {
+            return _validateSessionKey(userOpHash, sig);
+        } else if (sigType == UserOpSigType.Passkey) {
+            return _validatePasskey(userOpHash, sig);
+        } else {
+            revert("unsupported signature type");
         }
+    }
+
+    function _validateEOA(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+        require(sig.length == 64, "EOA signature length invalid");
+        address signer = ECDSA.recover(userOpHash, sig);
+        return owner == _determineOa(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
+    }
+
+    function _validateRootKey(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+        require(sig.length == 64, "RootKey signature length invalid");
+        address signer = ECDSA.recover(userOpHash, sig);
+        return isRootSigner(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
+    }
+
+    function _validateSessionKey(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+        require(sig.length == 160, "SessionKey signature length invalid");
+        bytes memory sessionSig = sig[:64];
+        address sessionKey = ECDSA.recover(userOpHash, sessionSig);
+        uint256 sessionExpiration = uint256(bytes32(sig[64:96]));
+
+        if (block.timestamp > sessionExpiration) {
+            return SIG_VALIDATION_FAILED;
+        }
+
+        // validate sessionProof was signed by RootKey
+        bytes memory sessionProof = sig[96:160];
+        bytes32 sessionDigest = sha256(abi.encodePacked(sessionKey, sessionExpiration));
+        address sessionProofSigner = ECDSA.recover(sessionDigest, sessionProof);
+
+        return isRootSigner(sessionProofSigner) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
+    }
+
+    function _validatePasskey(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+        // TODO
         return SIG_VALIDATION_FAILED;
     }
 
