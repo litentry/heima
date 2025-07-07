@@ -61,4 +61,5 @@ pub enum PumpxApiError {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum PumpxSignerError {
 	RequestSignatureFailed,
+	RequestWalletFailed,
 }
