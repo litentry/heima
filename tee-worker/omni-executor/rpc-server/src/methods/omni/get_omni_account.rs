@@ -28,7 +28,7 @@ pub struct GetOmniAccountParams {
 	pub user_email: String,
 }
 
-// TODO: the omni-account needs to be read from AccountStore once we enable it
+// Directly converts Identity to OmniAccount using 1:1 mapping
 pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
 	module
 		.register_async_method("omni_getOmniAccount", |params, _, _| async move {
