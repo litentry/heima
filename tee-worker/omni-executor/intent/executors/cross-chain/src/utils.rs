@@ -140,6 +140,7 @@ pub async fn estimate_payout_amount<BinanceClient: BinanceApi>(
 	let payout_amount = match binance_coin {
 		BinanceCoin::Sol => from_amount_decimal * price,
 		BinanceCoin::Bnb => from_amount_decimal / price,
+		BinanceCoin::Fc => from_amount_decimal * price,
 		BinanceCoin::Usdc | BinanceCoin::Usdt => from_amount_decimal * price,
 	};
 

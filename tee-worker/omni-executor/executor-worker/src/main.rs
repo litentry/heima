@@ -377,6 +377,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				jwt_rsa_private_key,
 				&config_loader,
+				pumpx_signer_client,
 			)
 			.await
 			.map_err(|e| {
