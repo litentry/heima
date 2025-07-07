@@ -78,4 +78,44 @@ sol! {
 	// paymaster
 	function deposit() public payable;
 	function setAuthorizedBundler(address bundler, bool authorized) external;
+
+	// simulation types
+	struct StakeInfo {
+		uint256 stake;
+		uint256 unstakeDelaySec;
+	}
+
+	struct ReturnInfo {
+		uint256 preOpGas;
+		uint256 prefund;
+		uint256 accountValidationData;
+		uint256 paymasterValidationData;
+		bytes context;
+	}
+
+	struct AggregatorStakeInfo {
+		address aggregator;
+		StakeInfo stakeInfo;
+	}
+
+	struct ValidationResult {
+		ReturnInfo returnInfo;
+		StakeInfo senderInfo;
+		StakeInfo factoryInfo;
+		StakeInfo paymasterInfo;
+		AggregatorStakeInfo aggregatorInfo;
+	}
+
+	struct ExecutionResult {
+		uint256 preOpGas;
+		uint256 paid;
+		uint256 accountValidationData;
+		uint256 paymasterValidationData;
+		bool targetSuccess;
+		bytes targetResult;
+	}
+
+	// simulation functions
+	function simulateValidation(PackedUserOperation calldata userOp) external returns (ValidationResult memory);
+	function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData) external returns (ExecutionResult memory);
 }

@@ -16,16 +16,19 @@
 
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	SenderAddressResult,
+	simulateValidationCall, SenderAddressResult, ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
 };
 use crate::{OmniAccountClient, PackedUserOperation};
+use alloy::hex;
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
 use ethereum_rpc::RpcProvider;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::error;
 
@@ -46,6 +49,64 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 	pub async fn get_wallet_address(&self) -> Result<Address, ()> {
 		self.rpc_client.get_wallet_address().await
+	}
+
+	/// Load EntryPointSimulations deployed bytecode from file
+	fn load_simulation_bytecode() -> Result<String, ()> {
+		// Use deployed bytecode, not creation bytecode
+		let bytecode_path = concat!(
+			env!("CARGO_MANIFEST_DIR"),
+			"/src/bytecode/EntryPointSimulations_deployed_bytecode.hex"
+		);
+
+		std::fs::read_to_string(bytecode_path)
+			.map_err(|_| error!("Could not read EntryPointSimulations deployed bytecode file"))
+			.map(|s| s.trim().to_string())
+	}
+
+	/// Simulate user operation validation using EntryPointSimulations contract
+	/// This function uses state override to temporarily deploy the simulation contract
+	pub async fn simulate_validation(
+		&self,
+		user_op: PackedUserOperation,
+	) -> Result<ValidationResult, ()> {
+		// Load EntryPointSimulations contract bytecode from file
+		let simulation_bytecode = Self::load_simulation_bytecode()?;
+
+		// Create state override to deploy simulation contract at EntryPoint address
+		let mut state_override = HashMap::new();
+		state_override.insert(
+			self.entry_point_address,
+			AccountOverride {
+				code: Some(hex::decode(&simulation_bytecode).map_err(|_| ())?.into()),
+				..Default::default()
+			},
+		);
+
+		// Build call to simulateValidation
+		let call_data = simulateValidationCall { userOp: user_op }.abi_encode();
+		let tx = build_call_transaction(self.entry_point_address, call_data);
+
+		// Make the call with state override
+		// EntryPointSimulations.simulateValidation() returns ValidationResult on success
+		match self.rpc_client.call_with_state_override(tx, state_override).await {
+			Ok(result) => {
+				// Decode the ValidationResult from the successful response
+				ValidationResult::abi_decode(&result).map_err(|_| {
+					error!("Could not decode ValidationResult from response");
+				})
+			},
+			Err(Some(revert_data)) => {
+				// In some cases, the simulation might revert with ValidationResult data
+				ValidationResult::abi_decode(&revert_data).map_err(|_| {
+					error!("Could not decode ValidationResult from revert data");
+				})
+			},
+			Err(None) => {
+				error!("Simulation failed with no data");
+				Err(())
+			},
+		}
 	}
 
 	pub async fn handle_ops(
@@ -480,6 +541,12 @@ pub mod test {
 			.send_transaction(paymaster_deposit_tx)
 			.await
 			.unwrap();
+
+		// Test simulate_validation before executing the user operation
+		let _validation_result = entrypoint_client
+			.simulate_validation(user_op.clone())
+			.await
+			.expect("simulate_validation should succeed");
 
 		// Execute user operation with paymaster sponsorship
 		let tx_hash =

@@ -1113,6 +1113,30 @@ async fn handle_native_task<
 				},
 			};
 
+			// Run simulation for each UserOperation before submission
+			for (index, aa_user_op) in aa_user_ops.iter().enumerate() {
+				info!("Running simulation for UserOperation {}", index);
+				match entry_point_client.simulate_validation(aa_user_op.clone()).await {
+					Ok(validation_result) => {
+						info!(
+							"UserOperation {} simulation successful. PreOpGas: {}, Prefund: {}",
+							index,
+							validation_result.returnInfo.preOpGas,
+							validation_result.returnInfo.prefund
+						);
+					},
+					Err(_) => {
+						send_error(
+							format!("UserOperation {} simulation failed", index),
+							response_sender,
+							NativeTaskError::InternalError,
+						);
+						return;
+					},
+				}
+			}
+			info!("All UserOperations passed simulation checks");
+
 			// Submit all UserOperations via EntryPoint.handleOps()
 			let transaction_hash =
 				match entry_point_client.handle_ops(&aa_user_ops, beneficiary).await {
