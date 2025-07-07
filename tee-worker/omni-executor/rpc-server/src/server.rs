@@ -22,8 +22,6 @@ pub(crate) struct RpcContext {
 	pub google_client_id: String,
 	pub google_client_secret: String,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
-	pub omni_factory_address: String,
-	pub omni_wallet_implementation_address: String,
 	pub rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 }
 
@@ -38,8 +36,6 @@ impl RpcContext {
 		google_client_id: String,
 		google_client_secret: String,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
-		omni_factory_address: String,
-		omni_wallet_implementation_address: String,
 		rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	) -> Self {
 		Self {
@@ -51,8 +47,6 @@ impl RpcContext {
 			google_client_id,
 			google_client_secret,
 			pumpx_api,
-			omni_factory_address,
-			omni_wallet_implementation_address,
 			rpc_clients,
 		}
 	}
@@ -84,8 +78,6 @@ pub async fn start_server(
 		config_loader.google_client_id.clone(),
 		config_loader.google_client_secret.clone(),
 		pumpx_api,
-		config_loader.omni_factory_address.clone(),
-		config_loader.omni_wallet_implementation_address.clone(),
 		rpc_clients,
 	);
 	let mut module = RpcModule::new(ctx);

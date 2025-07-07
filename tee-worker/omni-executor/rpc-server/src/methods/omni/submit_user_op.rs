@@ -81,7 +81,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			let unique_addresses: HashSet<Address> =
 				params.user_operations.iter().map(|op| Address::from(op.sender)).collect();
 
-			// Validate each unique address once (batch optimization)
+			// Validate each unique address once
 			for sender_address in unique_addresses {
 				if let Err(e) =
 					validate_user_operation_ownership(&user, &sender_address, &params.chain, &ctx)
