@@ -154,7 +154,7 @@ aa-demo-app/
 ├── src/
 │   ├── app/              # Next.js app router pages
 │   ├── components/       # React components
-│   │   ├── OmniAccountWalletInfo.tsx # Displays OmniAccount information
+│   │   ├── AccountsDashboard.tsx    # Displays wallet and OmniAccount balances
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
 │   │   ├── FundingGuide.tsx         # ETH funding guide
 │   │   ├── ERC20FundingGuide.tsx    # ERC20 token transfer interface
