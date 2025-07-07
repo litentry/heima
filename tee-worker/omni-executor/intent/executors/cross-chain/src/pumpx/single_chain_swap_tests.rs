@@ -19,6 +19,7 @@ use crate::RpcEndpointRegistry;
 use accounting_contract_client::{
 	solana::AccountingContractApi as SolanaAccountingContractApi, AccountingContractApi,
 };
+use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
@@ -153,6 +154,10 @@ async fn simple_single_chain_swap() {
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
 		Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -165,6 +170,8 @@ async fn simple_single_chain_swap() {
 		accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("1").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
