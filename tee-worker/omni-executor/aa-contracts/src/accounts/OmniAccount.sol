@@ -121,19 +121,23 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         }
     }
 
-    function _validateEOA(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+    function _validateEOA(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
         require(sig.length == 64, "EOA signature length invalid");
         address signer = ECDSA.recover(userOpHash, sig);
         return owner == _determineOa(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validateRootKey(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+    function _validateRootKey(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
         require(sig.length == 64, "RootKey signature length invalid");
         address signer = ECDSA.recover(userOpHash, sig);
         return isRootSigner(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validateSessionKey(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+    function _validateSessionKey(bytes32 userOpHash, bytes calldata sig)
+        internal
+        view
+        returns (uint256 validationData)
+    {
         require(sig.length == 160, "SessionKey signature length invalid");
         bytes memory sessionSig = sig[:64];
         address sessionKey = ECDSA.recover(userOpHash, sessionSig);
@@ -151,7 +155,11 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         return isRootSigner(sessionProofSigner) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validatePasskey(bytes32 userOpHash, bytes sig) internal returns (uint256 validationData) {
+    function _validatePasskey(bytes32, /* userOpHash */ bytes calldata /* sig */ )
+        internal
+        pure
+        returns (uint256 validationData)
+    {
         // TODO
         return SIG_VALIDATION_FAILED;
     }

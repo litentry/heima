@@ -50,10 +50,7 @@ contract OmniAccountAsOwner is Test {
 
         bytes memory initCode = "";
 
-        address sessionAccount = 0x0000000000000000000000000000000000000000;
-        bytes memory sessionAccountProof = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, sessionAccount, 2, sessionAccountProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, packedOpHash);

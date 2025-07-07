@@ -39,10 +39,7 @@ contract OmniAccountAsRoot is Test {
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
 
-        address sessionAccount = 0x0000000000000000000000000000000000000000;
-        bytes memory sessionAccountProof = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, sessionAccount, 2, sessionAccountProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
@@ -64,8 +61,7 @@ contract OmniAccountAsRoot is Test {
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, session, sessionExpiration, sessionProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
@@ -87,8 +83,7 @@ contract OmniAccountAsRoot is Test {
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, session, sessionExpiration, sessionProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
@@ -112,8 +107,7 @@ contract OmniAccountAsRoot is Test {
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, session, sessionExpiration, sessionProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
