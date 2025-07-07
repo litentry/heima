@@ -7,7 +7,7 @@ use pumpx::*;
 mod omni;
 use omni::*;
 
-pub const PROTECTED_METHODS: [&str; 7] = [
+pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",
 	"omni_addWallet",
 	"omni_notifyLimitOrderResult",
@@ -15,6 +15,7 @@ pub const PROTECTED_METHODS: [&str; 7] = [
 	"omni_submitSwapOrder",
 	"omni_transferWithdraw",
 	"omni_exportWallet",
+	"omni_getSmartWalletRootSigner",
 ];
 
 pub fn register_methods(module: &mut RpcModule<RpcContext>) {

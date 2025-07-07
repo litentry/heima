@@ -22,7 +22,15 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 			Response::builder().status(200).body("").unwrap()
 		});
 
+	let post_heima_login = warp::post()
+		.and(warp::path(BASE_PATH))
+		.and(warp::path!("v3" / "account" / "post_heima_login"))
+		.map(|| {
+			// TODO implements your response logic
+			Response::builder().status(200).body("").unwrap()
+		});
+
 	// mock other APIs you need here
 
-	user_connect.or(verify_google_code)
+	user_connect.or(verify_google_code).or(post_heima_login)
 }

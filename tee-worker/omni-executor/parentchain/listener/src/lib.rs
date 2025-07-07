@@ -24,7 +24,7 @@ use crate::fetcher::Fetcher;
 use crate::listener::ParentchainListener;
 use executor_core::listener::Listener;
 use executor_core::sync_checkpoint_repository::FileCheckpointRepository;
-use executor_storage::{AccountStoreStorage, MemberOmniAccountStorage, StorageDB};
+use executor_storage::StorageDB;
 use parentchain_rpc_client::{
 	metadata::SubxtMetadataProvider, CustomConfig, SubxtClient, SubxtClientFactory,
 };
@@ -38,7 +38,7 @@ pub async fn create_listener(
 	handle: Handle,
 	ws_rpc_endpoint: &str,
 	stop_signal: Receiver<()>,
-	storage_db: Arc<StorageDB>,
+	_storage_db: Arc<StorageDB>,
 	log_path: &str,
 ) -> Result<
 	ParentchainListener<
@@ -46,8 +46,6 @@ pub async fn create_listener(
 		SubxtClientFactory<CustomConfig>,
 		FileCheckpointRepository,
 		CustomConfig,
-		AccountStoreStorage,
-		MemberOmniAccountStorage,
 	>,
 	(),
 > {
@@ -60,11 +58,7 @@ pub async fn create_listener(
 	let metadata_provider =
 		Arc::new(SubxtMetadataProvider::new(SubxtClientFactory::new(ws_rpc_endpoint)));
 
-	let account_store_storage = Arc::new(AccountStoreStorage::new(storage_db.clone()));
-	let member_account_storage = Arc::new(MemberOmniAccountStorage::new(storage_db.clone()));
-
-	let event_handler =
-		EventHandler::new(metadata_provider, account_store_storage, member_account_storage);
+	let event_handler = EventHandler::new(metadata_provider);
 
 	Listener::new(id, handle, fetcher, event_handler, stop_signal, last_processed_log_repository)
 }
