@@ -31,7 +31,9 @@ pub const PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE: i32 = -32039;
 pub const PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE: i32 = -32040;
 pub const POST_HEIMA_LOGIN_FAILED_CODE: i32 = -32041;
 
-const PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE: i32 = -32050;
+pub const PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE: i32 = -32050;
+pub const PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE: i32 = -32051;
+pub const PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE: i32 = -32052;
 
 const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32060;
 
@@ -61,7 +63,9 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 		},
 		NativeTaskError::PumpxSignerError(signer_error) => match signer_error {
 			PumpxSignerError::RequestSignatureFailed => PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE,
+			PumpxSignerError::RequestWalletFailed => PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
 		},
+
 		NativeTaskError::InternalError => {
 			error!("Internal error: {:?}", error);
 			// This should not happen, we return the generic interal error code already from the api
