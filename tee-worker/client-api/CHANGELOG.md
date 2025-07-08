@@ -15,8 +15,6 @@ This package is a refactor of [parachain-api](https://www.npmjs.com/package/@hei
 - Added `NativeTask` enum with task types:
   - `RequestIntent` for intent-based operations
   - `PumpxRequestJwt`, `PumpxExportWallet`, `PumpxAddWallet`, `PumpxSignLimitOrder`, `PumpxTransferWidthdraw`, `PumpxNotifyLimitOrderResult` for PumpX integration
-- Added `OmniAuth` enum with `Web3`, `Email`, `AuthToken`, and `OAuth2` authentication methods
-- Added `TxStatus` enum with transaction states: `Future`, `Ready`, `Broadcast`, `InBlock`, `Retracted`, `FinalityTimeout`, `Finalized`, `Usurped`, `Dropped`, `Invalid`
 - Added response types: `PumpxAddWalletResponse`, `PumpxCreateTransferTxResponse`, `PumpxRequestJwt`
 - Added data types: `PumpxCreateTransferTxData`, `PumpxAddWalletData`
 - Added error types: `PumpxApiError`, `PumpxSignerError`
