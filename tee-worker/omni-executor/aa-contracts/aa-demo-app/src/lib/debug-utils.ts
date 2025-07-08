@@ -69,14 +69,14 @@ export async function debugTransaction(
     logs: receipt.logs,
   });
   
-  const userOpEvent = entryPointEvents.find(e => e.eventName === "UserOperationEvent");
-  const revertEvent = entryPointEvents.find(e => e.eventName === "UserOperationRevertReason");
+  const userOpEvent = entryPointEvents.find(e => (e as any).eventName === "UserOperationEvent");
+  const revertEvent = entryPointEvents.find(e => (e as any).eventName === "UserOperationRevertReason");
   
   return {
     receipt,
     events: entryPointEvents,
-    userOpSuccess: userOpEvent?.args?.success,
-    revertReason: revertEvent?.args?.revertReason,
+    userOpSuccess: (userOpEvent as any)?.args?.success,
+    revertReason: (revertEvent as any)?.args?.revertReason,
     userOpEvent,
     revertEvent,
   };
