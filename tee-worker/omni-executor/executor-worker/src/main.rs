@@ -442,6 +442,7 @@ async fn main() -> Result<(), ()> {
 				jwt_rsa_private_key,
 				&config_loader,
 				rpc_clients,
+				pumpx_signer_client,
 			)
 			.await
 			.map_err(|e| {

@@ -10,6 +10,7 @@ use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use pumpx::PumpxApi;
+use signer_client::SignerClient;
 use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 use tracing::info;
 
@@ -23,6 +24,9 @@ pub(crate) struct RpcContext {
 	pub google_client_secret: String,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pub rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
+	// we could save copying client (and other objects) around when P-1527 is done
+	// there could some a single `handler` that wraps up all accessible member variables
+	pub signer_client: Arc<Box<dyn SignerClient>>,
 }
 
 impl RpcContext {
@@ -37,6 +41,7 @@ impl RpcContext {
 		google_client_secret: String,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
+		signer_client: Arc<Box<dyn SignerClient>>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -48,6 +53,7 @@ impl RpcContext {
 			google_client_secret,
 			pumpx_api,
 			rpc_clients,
+			signer_client,
 		}
 	}
 }
@@ -62,6 +68,7 @@ pub async fn start_server(
 	jwt_rsa_private_key: Vec<u8>,
 	config_loader: &ConfigLoader,
 	rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
+	signer_client: Arc<Box<dyn SignerClient>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let mailer = Mailer::new(
 		config_loader.mailer_api_host.clone(),
@@ -80,6 +87,7 @@ pub async fn start_server(
 		config_loader.google_client_secret.clone(),
 		pumpx_api,
 		rpc_clients,
+		signer_client,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

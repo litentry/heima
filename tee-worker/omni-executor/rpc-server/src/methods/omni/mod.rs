@@ -49,6 +49,9 @@ use transfer_widthdraw::*;
 mod get_omni_account;
 use get_omni_account::*;
 
+mod get_smart_wallet_root_signer;
+use get_smart_wallet_root_signer::*;
+
 mod submit_user_op;
 use submit_user_op::*;
 
@@ -76,6 +79,7 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_sign_limit_order_params(module);
 	register_notify_limit_order_result(module);
 	register_get_omni_account(module);
+	register_get_smart_wallet_root_signer(module);
 	register_submit_user_op(module);
 
 	#[cfg(test)]

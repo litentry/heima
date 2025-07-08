@@ -1,8 +1,5 @@
 use crate::types::SerializablePackedUserOperation;
-use executor_primitives::{
-	AccountId, Chain, Identity, Intent, IntentId, Nonce, OmniAccountPermission, OmniAuth,
-	ValidationData,
-};
+use executor_primitives::{AccountId, Chain, Identity, Intent, IntentId, Nonce, OmniAuth};
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::fmt::Debug;
 use std::vec::Vec;
@@ -41,12 +38,7 @@ pub type PumpxChainId = u32;
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
-	RequestIntent(AccountId, IntentId, Intent),
-	CreateAccountStore(Identity),
-	AddAccount(Identity, Identity, ValidationData, bool, Option<Vec<OmniAccountPermission>>),
-	RemoveAccounts(Identity, Vec<Identity>),
-	PublicizeAccount(Identity, Identity),
-	SetPermissions(Identity, Identity, Vec<OmniAccountPermission>),
+	RequestIntent(AccountId, IntentId, Box<Intent>),
 	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain),
 
 	// pumpx specific, starting from index 20
