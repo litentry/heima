@@ -9,6 +9,18 @@ This package is a refactor of [parachain-api](https://www.npmjs.com/package/@hei
 
 ## [Unreleased]
 
+## [0.0.3] - 2025-07-08
+### Added
+- Added Omni Executor interface definitions for task execution and authentication
+- Added `NativeTask` enum with task types:
+  - `RequestIntent` for intent-based operations
+  - `PumpxRequestJwt`, `PumpxExportWallet`, `PumpxAddWallet`, `PumpxSignLimitOrder`, `PumpxTransferWidthdraw`, `PumpxNotifyLimitOrderResult` for PumpX integration
+- Added `OmniAuth` enum with `Web3`, `Email`, `AuthToken`, and `OAuth2` authentication methods
+- Added `TxStatus` enum with transaction states: `Future`, `Ready`, `Broadcast`, `InBlock`, `Retracted`, `FinalityTimeout`, `Finalized`, `Usurped`, `Dropped`, `Invalid`
+- Added response types: `PumpxAddWalletResponse`, `PumpxCreateTransferTxResponse`, `PumpxRequestJwt`
+- Added data types: `PumpxCreateTransferTxData`, `PumpxAddWalletData`
+- Added error types: `PumpxApiError`, `PumpxSignerError`
+
 ## [0.0.2] - 2025-06-05
 ### Changed
 - Change `CorePrimitivesIdentity` to `HeimaPrimitivesIdentity`
