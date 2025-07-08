@@ -8,6 +8,7 @@ import { FundingGuide } from "@/components/FundingGuide";
 import { ERC20FundingGuide } from "@/components/ERC20FundingGuide";
 import { CreateOmniAccount } from "@/components/CreateOmniAccount";
 import { AuthorizedSigners } from "@/components/AuthorizedSigners";
+import { AuthorizeTEEWorker } from "@/components/AuthorizeTEEWorker";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronRight, Check } from "lucide-react";
 
@@ -15,12 +16,15 @@ function HomeContent() {
 	const { address: evmAddress, chain, isConnected } = useAccount();
 	const publicClient = usePublicClient();
 	const [omniAccountAddress, setOmniAccountAddress] = useState<string>("");
+	const [omniAccountHash, setOmniAccountHash] = useState<string>("");
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isAuthorized, setIsAuthorized] = useState(false);
 	const [hasContract, setHasContract] = useState(false);
 	const [authorizedSigners, setAuthorizedSigners] = useState<string[]>([]);
 	const [isLoadingSigners, setIsLoadingSigners] = useState(false);
 	const [hasERC20Tokens, setHasERC20Tokens] = useState(false);
+	const [teeWorkerAddress, setTeeWorkerAddress] = useState<string | null>(null);
+	const [isTeeWorkerAuthorized, setIsTeeWorkerAuthorized] = useState(false);
 
 	// Memoized callback for balance updates
 	const handleBalancesUpdate = useCallback((balances: any[]) => {
@@ -223,12 +227,14 @@ function HomeContent() {
 			setCurrentStep(2);
 		} else if (!isAuthorized) {
 			setCurrentStep(3);
-		} else if (!hasERC20Tokens) {
+		} else if (!isTeeWorkerAuthorized) {
 			setCurrentStep(4);
-		} else {
+		} else if (!hasERC20Tokens) {
 			setCurrentStep(5);
+		} else {
+			setCurrentStep(6);
 		}
-	}, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, hasERC20Tokens]);
+	}, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, isTeeWorkerAuthorized, hasERC20Tokens]);
 
 	const steps = [
 		{
@@ -251,12 +257,18 @@ function HomeContent() {
 		},
 		{
 			id: 4,
+			title: "Authorize TEE Worker",
+			description: "Add TEE worker as authorized signer",
+			completed: isTeeWorkerAuthorized,
+		},
+		{
+			id: 5,
 			title: "Transfer ERC20 Tokens",
 			description: "Transfer test tokens to your Omni Account",
 			completed: hasERC20Tokens,
 		},
 		{
-			id: 5,
+			id: 6,
 			title: "Ready to Swap",
 			description: "Send swap requests to the worker",
 			completed: false,
@@ -380,6 +392,7 @@ function HomeContent() {
 								<div className="mb-8">
 									<AccountsDashboard
 										onAddressCalculated={setOmniAccountAddress}
+										onOmniAccountCalculated={setOmniAccountHash}
 										ethBalance={ethBalance}
 										onBalancesUpdate={handleBalancesUpdate}
 										isAccountCreated={isAuthorized}
@@ -435,6 +448,7 @@ function HomeContent() {
 										signers={authorizedSigners}
 										isLoading={isLoadingSigners}
 										refreshSigners={fetchSigners}
+										teeWorkerAddress={teeWorkerAddress}
 									/>
 								</div>
 							)}
@@ -442,7 +456,30 @@ function HomeContent() {
 							{currentStep >= 4 && currentStep <= 4 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 4: Transfer ERC20 Tokens
+										Step 4: Authorize TEE Worker
+									</h2>
+									<p className="text-gray-600 mb-6">
+										Authorize the TEE worker to execute transactions on behalf of your Omni Account.
+									</p>
+									<AuthorizeTEEWorker
+										omniAccountAddress={omniAccountAddress}
+										omniAccountHash={omniAccountHash}
+										isDeployed={hasContract}
+										onWorkerAuthorized={(address) => {
+											setTeeWorkerAddress(address);
+											setIsTeeWorkerAuthorized(true);
+										}}
+										onComplete={() => {
+											fetchSigners();
+										}}
+									/>
+								</div>
+							)}
+
+							{currentStep >= 5 && currentStep <= 5 && (
+								<div>
+									<h2 className="text-xl font-semibold mb-4">
+										Step 5: Transfer ERC20 Tokens
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Mint and transfer test USDC or USDT to your Omni Account for token swaps.
@@ -458,10 +495,10 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 5 && (
+							{currentStep >= 6 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 5: Start Swapping
+										Step 6: Start Swapping
 									</h2>
 									<p className="text-gray-600 mb-6">
 										Your Omni Account is ready! Send swap requests to the TEE
@@ -518,11 +555,29 @@ function HomeContent() {
 													<Check className="w-4 h-4 text-white" />
 												</div>
 												<span className="font-medium text-green-700">
-													Root Key Authorized
+													Omni Account Created
 												</span>
 											</div>
 											<span className="text-sm text-gray-500">
-												Ready for tokens
+												Account deployed
+											</span>
+										</div>
+									</div>
+								)}
+
+								{isTeeWorkerAuthorized && (
+									<div className="bg-white rounded-lg shadow p-4">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center space-x-3">
+												<div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+													<Check className="w-4 h-4 text-white" />
+												</div>
+												<span className="font-medium text-green-700">
+													TEE Worker Authorized
+												</span>
+											</div>
+											<span className="text-sm text-gray-500">
+												{teeWorkerAddress && `${teeWorkerAddress.slice(0, 6)}...${teeWorkerAddress.slice(-4)}`}
 											</span>
 										</div>
 									</div>

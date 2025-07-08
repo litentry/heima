@@ -11,6 +11,7 @@ This application demonstrates:
 - **Test Token Minting**: Mint test tokens for easy demonstration
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
+- **TEE Worker Integration**: Authorize trusted execution environment workers to execute transactions securely
 
 ## Key Features
 
@@ -20,6 +21,7 @@ This application demonstrates:
 - **Token Balance Display**: Monitor all token balances in real-time
 - **Test Token Faucet**: Mint test tokens directly from the UI
 - **Root Key Delegation**: Authorize multiple signers to control your smart account
+- **TEE Worker Authorization**: Delegate transaction execution to secure TEE workers
 
 ## Prerequisites
 
@@ -108,12 +110,18 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - This deploys your OmniAccount contract
    - Your wallet automatically becomes the initial root signer
 
-4. **Transfer ERC20 Tokens** (Optional): Transfer USDC or USDT to your Omni Account
+4. **Authorize TEE Worker** (Optional): Authorize the TEE worker to execute transactions
+   - Click "Authorize TEE Worker" to authenticate with the TEE service
+   - The worker will be added as an authorized signer
+   - Enables secure delegated transaction execution
+   - The worker address will be tagged in the signers list
+
+5. **Transfer ERC20 Tokens** (Optional): Transfer USDC or USDT to your Omni Account
    - Test tokens are minted directly from the interface
    - Use "Transfer to Omni" to move tokens from wallet to Omni Account
    - Monitor all token balances in real-time
 
-5. **Manage Signers**: After deployment, manage authorized signers
+6. **Manage Signers**: After deployment, manage authorized signers
    - View all current authorized signers
    - Add new signers by entering their address
    - Remove existing signers (except yourself while connected)
@@ -156,6 +164,7 @@ aa-demo-app/
 │   ├── components/       # React components
 │   │   ├── AccountsDashboard.tsx    # Displays wallet and OmniAccount balances
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
+│   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow
 │   │   ├── FundingGuide.tsx         # ETH funding guide
 │   │   ├── ERC20FundingGuide.tsx    # ERC20 token transfer interface
 │   │   ├── CreateOmniAccount.tsx    # Smart account creation flow
@@ -164,6 +173,7 @@ aa-demo-app/
 │   └── lib/             # Utilities and configuration
 │       ├── aa-utils.ts  # Account abstraction utilities
 │       ├── constants.ts # Contract addresses and token configs
+│       ├── tee-worker-client.ts # TEE Worker RPC client utilities
 │       └── wagmi.ts     # Web3 configuration
 └── public/              # Static assets
 ```
@@ -191,6 +201,12 @@ aa-demo-app/
 ### Anvil Errors
 You might see errors like `execution reverted` for `symbol()` or `decimals()` calls. These are harmless - they're from wallets trying to detect if addresses are ERC20 tokens.
 
+### TEE Worker Authorization Issues
+- **Parse errors**: Ensure you're using the correct client ID ("wildmeta" for staging)
+- **Authentication failures**: The TEE worker uses Web3 message signing for authentication
+- **Server errors**: Check that the TEE Worker RPC URL is accessible
+- **Worker not added**: Ensure your Omni Account is deployed before authorizing
+
 ## Environment Variables
 
 The app uses these environment variables (set automatically by `update-demo-addresses.sh`):
@@ -201,6 +217,7 @@ The app uses these environment variables (set automatically by `update-demo-addr
 - `NEXT_PUBLIC_TEST_USDC_ADDRESS`: Test USDC token address
 - `NEXT_PUBLIC_TEST_USDT_ADDRESS`: Test USDT token address
 - `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545)
+- `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint (default: https://staging-dex-worker.heima.network)
 
 You can also copy `.env.local.example` to `.env.local` and update manually.
 
