@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
-import {UserOpSigType} from "../src/interfaces/UserOpSigType.sol";
+import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
 import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
@@ -53,7 +53,7 @@ contract EntryPointTest is Test {
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, packedOpHash);
-        packedOp.signature = abi.encodePacked(uint8(UserOpSigType.EOA), r, s, v);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
 
         ops[0] = packedOp;
         entryPoint.handleOps(ops, beneficiary);

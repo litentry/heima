@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../core/BaseAccount.sol";
-import "../interfaces/UserOpSigType.sol";
+import "../interfaces/UserOpSigner.sol";
 import "../core/Helpers.sol";
 import "./callback/TokenCallbackHandler.sol";
 
@@ -105,24 +105,24 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     {
         require(userOp.signature.length >= 1, "signature too short");
 
-        UserOpSigType sigType = UserOpSigType(uint8(userOp.signature[0]));
+        UserOpSigner signer = UserOpSigner(uint8(userOp.signature[0]));
         bytes calldata sig = userOp.signature[1:];
 
-        if (sigType == UserOpSigType.EOA) {
-            return _validateEOA(userOpHash, sig);
-        } else if (sigType == UserOpSigType.RootKey) {
+        if (signer == UserOpSigner.Owner) {
+            return _validateOwner(userOpHash, sig);
+        } else if (signer == UserOpSigner.RootKey) {
             return _validateRootKey(userOpHash, sig);
-        } else if (sigType == UserOpSigType.SessionKey) {
+        } else if (signer == UserOpSigner.SessionKey) {
             return _validateSessionKey(userOpHash, sig);
-        } else if (sigType == UserOpSigType.Passkey) {
+        } else if (signer == UserOpSigner.Passkey) {
             return _validatePasskey(userOpHash, sig);
         } else {
-            revert("unsupported signature type");
+            revert("unsupported signer type");
         }
     }
 
-    function _validateEOA(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
-        require(sig.length == 65, "EOA signature length invalid");
+    function _validateOwner(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
+        require(sig.length == 65, "Owner signature length invalid");
         address signer = ECDSA.recover(userOpHash, sig);
         return owner == _determineOa(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }

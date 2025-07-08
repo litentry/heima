@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
-import {UserOpSigType} from "../src/interfaces/UserOpSigType.sol";
+import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
 import {Counter} from "../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
@@ -44,14 +44,14 @@ contract OmniAccountAsRoot is Test {
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
-        packedOp.signature = abi.encodePacked(uint8(UserOpSigType.RootKey), r, s, v);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
 
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
         assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
-    function test_validateOpFailsWithWrongSigType() public {
+    function test_validateOpFailsWithWrongSigner() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
@@ -62,7 +62,7 @@ contract OmniAccountAsRoot is Test {
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
-        packedOp.signature = abi.encodePacked(uint8(UserOpSigType.EOA), r, s, v); // The SigType is wrong here
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v); // The signer is wrong here
 
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
@@ -84,7 +84,7 @@ contract OmniAccountAsRoot is Test {
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
-        packedOp.signature = abi.encodePacked(uint8(UserOpSigType.SessionKey), r, s, v, sessionExpiration, sessionProof);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
 
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
@@ -106,7 +106,7 @@ contract OmniAccountAsRoot is Test {
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
-        packedOp.signature = abi.encodePacked(uint8(UserOpSigType.SessionKey), r, s, v, sessionExpiration, sessionProof);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
 
         vm.prank(address(entryPoint));
 
@@ -130,7 +130,7 @@ contract OmniAccountAsRoot is Test {
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
-        packedOp.signature = abi.encodePacked(uint8(UserOpSigType.SessionKey), r, s, v, sessionExpiration, sessionProof);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
 
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
