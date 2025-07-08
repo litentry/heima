@@ -35,6 +35,7 @@ use tracing::{debug, error};
 pub struct SubmitUserOpParams {
 	pub user_operations: Vec<SerializablePackedUserOperation>,
 	pub chain: Chain,
+	pub wallet_index: u32,
 }
 
 #[derive(Serialize, Clone)]
@@ -103,6 +104,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 					})?,
 					params.user_operations.clone(),
 					params.chain.clone(),
+					params.wallet_index,
 				),
 				None,
 				None,

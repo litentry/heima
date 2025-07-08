@@ -810,7 +810,7 @@ async fn handle_native_task<
 			)
 			.await;
 		},
-		NativeTask::SubmitUserOp(omni_account, serializable_user_ops, chain) => {
+		NativeTask::SubmitUserOp(omni_account, serializable_user_ops, chain, wallet_index) => {
 			// Only support EVM chains for now
 			if !chain.is_evm() {
 				send_error(
@@ -873,7 +873,7 @@ async fn handle_native_task<
 						.pumpx_signer_client
 						.request_signature(
 							ChainType::Evm,
-							0, // wallet_index
+							wallet_index,
 							omni_account.clone().into(),
 							message_to_sign,
 						)

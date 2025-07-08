@@ -39,7 +39,7 @@ pub type PumpxChainId = u32;
 pub enum NativeTask {
 	RequestAuthToken(Identity),
 	RequestIntent(AccountId, IntentId, Box<Intent>),
-	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain),
+	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain, u32),
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]
