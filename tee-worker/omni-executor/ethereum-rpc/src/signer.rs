@@ -7,6 +7,7 @@ use tracing::error;
 
 /// A remote signer implementation for EVM-compatible chains
 /// that delegates signing operations to a remote signing service
+#[derive(Clone)]
 pub struct RemoteSigner {
 	/// The client used to communicate with the remote signing service
 	signer_client: Arc<Box<dyn SignerClient>>,
