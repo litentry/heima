@@ -47,6 +47,5 @@ pnpm run build
 
 ```
 pnpm run generate
-pnpm run build
-pnpm run publish
+pnpm run build-publish
 ```
