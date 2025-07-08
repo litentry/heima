@@ -69,7 +69,15 @@ export const getActiveChain = () => {
 };
 
 // Default client ID for demo
-export const DEFAULT_CLIENT_ID = "heima";
+export const DEFAULT_CLIENT_ID = "wildmeta";
+
+// TEE Worker configuration
+export const TEE_WORKER_CONFIG = {
+	rpcUrl: process.env.NEXT_PUBLIC_TEE_WORKER_RPC_URL || "http://localhost:3000",
+	clientId: "wildmeta",
+	chainType: "Evm" as const,
+	signerIndex: 0,
+};
 
 // Solana configuration
 export const SOLANA_CONFIG = {
