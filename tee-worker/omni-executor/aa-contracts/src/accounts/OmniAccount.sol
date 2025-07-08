@@ -122,13 +122,13 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     }
 
     function _validateEOA(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
-        require(sig.length == 64, "EOA signature length invalid");
+        require(sig.length == 65, "EOA signature length invalid");
         address signer = ECDSA.recover(userOpHash, sig);
         return owner == _determineOa(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
     function _validateRootKey(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
-        require(sig.length == 64, "RootKey signature length invalid");
+        require(sig.length == 65, "RootKey signature length invalid");
         address signer = ECDSA.recover(userOpHash, sig);
         return isRootSigner(signer) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
@@ -138,17 +138,17 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         view
         returns (uint256 validationData)
     {
-        require(sig.length == 160, "SessionKey signature length invalid");
-        bytes memory sessionSig = sig[:64];
+        require(sig.length == 162, "SessionKey signature length invalid");
+        bytes memory sessionSig = sig[:65];
         address sessionKey = ECDSA.recover(userOpHash, sessionSig);
-        uint256 sessionExpiration = uint256(bytes32(sig[64:96]));
+        uint256 sessionExpiration = uint256(bytes32(sig[65:97]));
 
         if (block.timestamp > sessionExpiration) {
             return SIG_VALIDATION_FAILED;
         }
 
         // validate sessionProof was signed by RootKey
-        bytes memory sessionProof = sig[96:160];
+        bytes memory sessionProof = sig[97:162];
         bytes32 sessionDigest = sha256(abi.encodePacked(sessionKey, sessionExpiration));
         address sessionProofSigner = ECDSA.recover(sessionDigest, sessionProof);
 

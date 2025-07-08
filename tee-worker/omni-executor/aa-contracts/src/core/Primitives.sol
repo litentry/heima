@@ -12,8 +12,8 @@ pragma solidity ^0.8.28;
  * @param RootKey            - Signed by an authorised evm signer
  * @param SessionKey         - Signed by a short-lived session key, additional authorisation proof
  *                             (by RootKey) must be provided along. The concatenated signature length
- *                             should be 160 bytes excluding the leading UserOpSigType byte:
- *                             sessionSig (64) | sessionExpiration (32 = uint256) | sessionProof (64)
+ *                             should be 162 bytes excluding the leading UserOpSigType byte:
+ *                             sessionSig (65) | sessionExpiration (32 = uint256) | sessionProof (65)
  * @param Passkey            - Signed by an authorised Passkey
  *                             Note it's Passkey not PassKey as it's an integral term
  */
