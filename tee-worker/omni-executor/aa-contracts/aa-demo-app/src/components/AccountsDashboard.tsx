@@ -17,6 +17,7 @@ interface TokenBalance {
 
 interface AccountsDashboardProps {
 	onAddressCalculated?: (address: string) => void;
+	onOmniAccountCalculated?: (omniAccount: string) => void;
 	ethBalance?: bigint;
 	onBalancesUpdate?: (balances: TokenBalance[]) => void;
 	isAccountCreated?: boolean;
@@ -24,6 +25,7 @@ interface AccountsDashboardProps {
 
 export function AccountsDashboard({
 	onAddressCalculated,
+	onOmniAccountCalculated,
 	ethBalance: propEthBalance,
 	onBalancesUpdate,
 	isAccountCreated = false,
@@ -99,6 +101,13 @@ export function AccountsDashboard({
 			onAddressCalculated(omniAccountAddress as string);
 		}
 	}, [omniAccountAddress, onAddressCalculated]);
+
+	// Notify parent when omni account hash is calculated
+	useEffect(() => {
+		if (omniAccount && omniAccount !== "0x" && onOmniAccountCalculated) {
+			onOmniAccountCalculated(omniAccount);
+		}
+	}, [omniAccount, onOmniAccountCalculated]);
 
 	// Available ERC20 tokens
 	const availableTokens = [TEST_TOKENS.USDC, TEST_TOKENS.USDT];
