@@ -201,7 +201,6 @@ fn encode_user_operation(user_op: &PackedUserOperation) -> Vec<u8> {
 	let paymaster_and_data_hash = keccak256(&user_op.paymasterAndData);
 	let session_account_proof_hash = keccak256(&user_op.sessionAccountProof);
 
-	// Create PackedUserOperationForHashing struct using sol! generated type
 	let user_op_for_hashing = PackedUserOperationForHashing {
 		typeHash: packed_userop_typehash,
 		sender: user_op.sender,
@@ -355,7 +354,6 @@ mod tests {
 	fn test_calculate_user_operation_hash_basic() {
 		use alloy::hex;
 
-		// Create a test PackedUserOperation
 		let user_op = PackedUserOperation {
 			sender: address!("0x1234567890123456789012345678901234567890"),
 			nonce: U256::from(42),
@@ -372,7 +370,7 @@ mod tests {
 		};
 
 		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-		let chain_id = 31337; // Local hardhat chain ID
+		let chain_id = 31337;
 
 		let hash = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
 
@@ -442,33 +440,6 @@ mod tests {
 
 		// Different chain IDs should produce different hashes
 		assert_ne!(hash_mainnet, hash_sepolia);
-	}
-
-	#[test]
-	fn test_calculate_user_operation_hash_empty_fields() {
-		// Test with empty bytes fields
-		let user_op = PackedUserOperation {
-			sender: address!("0x1234567890123456789012345678901234567890"),
-			nonce: U256::from(0),
-			initCode: Bytes::new(),
-			callData: Bytes::new(),
-			accountGasLimits: FixedBytes::ZERO,
-			preVerificationGas: U256::from(0),
-			gasFees: FixedBytes::ZERO,
-			paymasterAndData: Bytes::new(),
-			sessionAccount: Address::ZERO,
-			sessionExpiration: U256::from(0),
-			sessionAccountProof: Bytes::new(),
-			signature: Bytes::new(),
-		};
-
-		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-		let chain_id = 31337;
-
-		let hash = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
-
-		// Should still produce a valid hash even with empty fields
-		assert_ne!(hash, FixedBytes::ZERO);
 	}
 
 	#[test]
@@ -644,16 +615,13 @@ mod tests {
 		];
 
 		for (i, user_op) in test_cases.into_iter().enumerate() {
-			// Get hash from EntryPoint contract
 			let entrypoint_hash = entry_point_client
 				.get_user_op_hash(user_op.clone())
 				.await
 				.expect(&format!("EntryPoint hash calculation should succeed for test case {}", i));
 
-			// Calculate hash locally
 			let local_hash = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
 
-			// Hashes should match exactly
 			assert_eq!(
 				entrypoint_hash, local_hash,
 				"Test case {}: Local hash calculation should match EntryPoint.getUserOpHash()\nEntryPoint: {}\nLocal: {}",

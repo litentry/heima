@@ -15,13 +15,13 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use executor_primitives::Chain;
 use accounting_contract_client::{
 	solana::AccountingContractApi as SolanaAccountingContractApi,
 	AccountingContractApi as EvmAccountingContractApi,
 };
 use alloy::primitives::Address;
 use ethereum_rpc::AlloyRpcProvider;
+use executor_primitives::Chain;
 use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
 use rust_decimal::Decimal;
 use solana_sdk::pubkey::Pubkey;
