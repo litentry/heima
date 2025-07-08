@@ -3581,6 +3581,7 @@ dependencies = [
  "executor-core",
  "hex-literal",
  "libsecp256k1 0.7.2",
+ "mock-server",
  "mockall",
  "serde_json",
  "signer-client",
