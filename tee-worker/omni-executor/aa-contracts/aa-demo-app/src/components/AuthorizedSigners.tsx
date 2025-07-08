@@ -25,6 +25,7 @@ interface AuthorizedSignersProps {
 	signers: string[];
 	isLoading: boolean;
 	refreshSigners: () => void;
+	teeWorkerAddress?: string | null;
 }
 
 export function AuthorizedSigners({
@@ -33,6 +34,7 @@ export function AuthorizedSigners({
 	signers,
 	isLoading,
 	refreshSigners,
+	teeWorkerAddress,
 }: AuthorizedSignersProps) {
 	const { address: evmAddress } = useAccount();
 	const publicClient = usePublicClient();
@@ -397,6 +399,11 @@ export function AuthorizedSigners({
 								{evmAddress?.toLowerCase() === signer.toLowerCase() && (
 									<span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
 										Current Wallet
+									</span>
+								)}
+								{teeWorkerAddress?.toLowerCase() === signer.toLowerCase() && (
+									<span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+										TEE Worker
 									</span>
 								)}
 								<button
