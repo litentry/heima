@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
-import {UserOpSigType} from "../src/core/Primitives.sol";
+import {UserOpSigType} from "../src/interfaces/UserOpSigType.sol";
 import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";

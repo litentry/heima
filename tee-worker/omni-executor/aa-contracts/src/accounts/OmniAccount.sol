@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../core/BaseAccount.sol";
-import "../core/Primitives.sol";
+import "../interfaces/UserOpSigType.sol";
 import "../core/Helpers.sol";
 import "./callback/TokenCallbackHandler.sol";
 

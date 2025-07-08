@@ -5,7 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
-import {UserOpSigType} from "../src/core/Primitives.sol";
+import {UserOpSigType} from "../src/interfaces/UserOpSigType.sol";
 import {Counter} from "../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
