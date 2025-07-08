@@ -29,8 +29,12 @@ use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
 use ethereum_rpc::RpcProvider;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, Once};
 use tracing::error;
+
+/// Cached simulation bytecode to avoid repeated filesystem reads
+static SIMULATION_BYTECODE: Mutex<Option<String>> = Mutex::new(None);
+static SIMULATION_BYTECODE_ONCE: Once = Once::new();
 
 /// Client for interacting with on-chain EntryPoint instance
 pub struct EntryPointClient<P: RpcProvider<Transaction = TransactionRequest>> {
@@ -51,17 +55,39 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		self.rpc_client.get_wallet_address().await
 	}
 
-	/// Load EntryPointSimulations deployed bytecode from file
-	fn load_simulation_bytecode() -> Result<String, ()> {
-		// Use deployed bytecode, not creation bytecode
-		let bytecode_path = concat!(
-			env!("CARGO_MANIFEST_DIR"),
-			"/src/bytecode/EntryPointSimulations_deployed_bytecode.hex"
-		);
+	/// Get EntryPointSimulations deployed bytecode (cached on first access)
+	///
+	/// This function loads the bytecode from the filesystem on first call and caches it
+	/// in memory for subsequent calls, improving performance.
+	fn get_simulation_bytecode() -> Result<String, ()> {
+		SIMULATION_BYTECODE_ONCE.call_once(|| {
+			// Use deployed bytecode, not creation bytecode
+			let bytecode_path = concat!(
+				env!("CARGO_MANIFEST_DIR"),
+				"/src/bytecode/EntryPointSimulations_deployed_bytecode.hex"
+			);
 
-		std::fs::read_to_string(bytecode_path)
-			.map_err(|_| error!("Could not read EntryPointSimulations deployed bytecode file"))
-			.map(|s| s.trim().to_string())
+			match std::fs::read_to_string(bytecode_path) {
+				Ok(content) => {
+					let trimmed = content.trim().to_string();
+					if let Ok(mut cache) = SIMULATION_BYTECODE.lock() {
+						*cache = Some(trimmed);
+					}
+				},
+				Err(e) => {
+					error!("Could not read EntryPointSimulations deployed bytecode file: {}", e);
+				},
+			}
+		});
+
+		// Return the cached value
+		match SIMULATION_BYTECODE.lock() {
+			Ok(cache) => cache.as_ref().cloned().ok_or(()),
+			Err(_) => {
+				error!("Failed to acquire lock on simulation bytecode cache");
+				Err(())
+			},
+		}
 	}
 
 	/// Simulate user operation validation using EntryPointSimulations contract
@@ -70,8 +96,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		user_op: PackedUserOperation,
 	) -> Result<ValidationResult, ()> {
-		// Load EntryPointSimulations contract bytecode from file
-		let simulation_bytecode = Self::load_simulation_bytecode()?;
+		// Get EntryPointSimulations contract bytecode (cached)
+		let simulation_bytecode = Self::get_simulation_bytecode()?;
 
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
