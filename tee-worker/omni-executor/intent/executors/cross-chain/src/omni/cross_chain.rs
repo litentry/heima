@@ -15,8 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::utils::{
-	calculate_amount_in, do_binance_swap_bsc_to_sol, do_binance_swap_sol_to_bsc,
-	do_payout_bsc_to_sol, do_payout_sol_to_bsc, estimate_asset_value_in_usdt,
+	calculate_amount_in, do_binance_swap, do_payout, estimate_asset_value_in_usdt,
 	get_binance_deposit_info, get_token_available_amount,
 };
 use crate::*;
@@ -54,8 +53,7 @@ impl<
 			swap_order.from_asset, swap_order.to_asset
 		);
 
-		let from_asset_binance_coin_name =
-			BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin.name();
+		let from_asset_binance_coin = BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin;
 
 		let from_amount_decimal = Decimal::from_str(&from_amount).map_err(|_| {
 			error!("Failed to parse from_amount_string");
@@ -69,7 +67,7 @@ impl<
 		let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
 			&self.binance_api,
 			usdt_trade_symbol,
-			from_asset_binance_coin_name,
+			from_asset_binance_coin.name(),
 			from_amount_decimal,
 		)
 		.await?;
@@ -83,7 +81,7 @@ impl<
 		debug!("Instant: {:?}", instant);
 
 		let amount_to_lock = AmountType::from_str(
-			&Self::calculate_amount_decimal(from_amount_decimal, from_asset_binance_coin_name)?
+			&(from_amount_decimal * from_asset_binance_coin.decimal_value())
 				.normalize()
 				.to_string(),
 		)
@@ -154,18 +152,20 @@ impl<
 						}),
 					))
 				} else {
-					let (payout_amount, payout_amount_u256) = do_binance_swap_sol_to_bsc(
+					let (payout_amount, payout_amount_u256) = do_binance_swap(
 						self.binance_api.clone(),
 						&self.evm_accounting_contract_client,
 						swap_order.from_asset.clone(),
 						from_amount.clone(),
+						BinanceNetwork::Bsc,
+						BinanceCoin::Bnb,
 					)
 					.await?;
 
-					do_payout_sol_to_bsc(
-						&payout_address,
-						&payout_amount_u256,
+					do_payout(
 						&self.evm_accounting_contract_client,
+						payout_address,
+						payout_amount_u256,
 					)
 					.await?;
 
@@ -184,18 +184,20 @@ impl<
 				})?;
 				debug!("omni cross chain swap details: intent_id: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, from_amount, from_address, payout_address);
 
-				let (payout_amount, payout_amount_u256) = do_binance_swap_bsc_to_sol(
+				let (payout_amount, payout_amount_u256) = do_binance_swap(
 					self.binance_api.clone(),
 					&self.solana_accounting_contract_client,
 					swap_order.from_asset.clone(),
 					from_amount.clone(),
+					BinanceNetwork::Sol,
+					BinanceCoin::Sol,
 				)
 				.await?;
 
-				do_payout_bsc_to_sol(
+				do_payout(
+					&self.solana_accounting_contract_client,
 					payout_address,
 					payout_amount_u256,
-					&self.solana_accounting_contract_client,
 				)
 				.await?;
 

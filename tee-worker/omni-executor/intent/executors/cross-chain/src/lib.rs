@@ -26,10 +26,7 @@ use ::pumpx::methods::cross_fail::CrossFailBody;
 use ::pumpx::methods::send_order_tx::SendOrderTxBody;
 use ::pumpx::signer_client::PumpxChainId;
 use aa_contracts_client::calculate_omni_account_address;
-use accounting_contract_client::{
-	solana::AccountingContractApi as SolanaAccountingContractApi,
-	AccountingContractApi as EvmAccountingContractApi,
-};
+use accounting_contract_client::AccountingContractApi;
 use alloy::consensus::{SignableTransaction, TxLegacy};
 use alloy::network::TxSigner as AlloyTxSigner;
 use alloy::primitives::private::alloy_rlp::Decodable;
@@ -71,7 +68,6 @@ use rust_decimal::Decimal;
 use signer_client::{ChainType, SignerClient};
 use solana::{signer::RemoteSigner as RemoteSolanaSigner, SolanaClient as SolanaClientTrait};
 use solana_sdk::pubkey::Pubkey;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::{
 	runtime::Handle,
@@ -113,8 +109,8 @@ pub struct CrossChainIntentExecutor<
 	binance_api: Arc<BinanceClient>,
 	bsc_client: Arc<EthereumClient>,
 	solana_client: Arc<SolanaClient>,
-	evm_accounting_contract_client: Arc<Box<dyn EvmAccountingContractApi>>,
-	solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>>,
+	evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>>,
+	solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>>,
 	instant_payout_threshold: Decimal,
 	// AA contracts configuration
 	omni_account_factory_address: Address,
@@ -137,8 +133,8 @@ impl<
 		binance_api: Arc<BinanceClient>,
 		bsc_client: Arc<EthereumClient>,
 		solana_client: Arc<SolanaClient>,
-		evm_accounting_contract_client: Arc<Box<dyn EvmAccountingContractApi>>,
-		solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>>,
+		evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>>,
+		solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>>,
 		instant_payout_threshold: Decimal,
 		omni_account_factory_address: Address,
 		omni_account_implementation_address: Address,
@@ -486,8 +482,8 @@ pub struct InstantFlowDetails {
 
 impl<
 		BinanceClient: BinanceApi,
-		EthereumClient: EthereumClientTrait,
-		SolanaClient: SolanaClientTrait,
+		EthereumClient: EthereumClientTrait + 'static,
+		SolanaClient: SolanaClientTrait + 'static,
 	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
 	async fn do_omni_binance_deposit(
@@ -684,23 +680,6 @@ impl<
 			payout_amount_u256 = result.1;
 		};
 		Ok((payout_amount, payout_amount_u256))
-	}
-
-	fn calculate_amount_decimal(
-		from_amount: Decimal,
-		binance_coin_name: &str,
-	) -> Result<Decimal, ()> {
-		let asset_decimal_multiplier = match binance_coin_name {
-			"USDC" => Decimal::from(1_000_000),    // 10^6
-			"USDT" => Decimal::from(1_000_000),    // 10^6
-			"SOL" => Decimal::from(1_000_000_000), // 10^9  TODO: double check this
-			"BNB" => Decimal::from_str("1_000_000_000_000_000_000").unwrap(), // 10^18
-			_ => {
-				error!("Unsupported asset: {:?}", binance_coin_name);
-				return Err(());
-			},
-		};
-		Ok(from_amount * asset_decimal_multiplier)
 	}
 }
 
