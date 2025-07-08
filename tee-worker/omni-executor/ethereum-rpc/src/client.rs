@@ -155,3 +155,58 @@ pub mod mocks {
 
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use alloy::network::TxSigner;
+	use alloy::signers::local::PrivateKeySigner;
+	use std::str::FromStr;
+
+	#[tokio::test]
+	async fn test_mock_server_transfer() {
+		// Start mock server and get dynamic URL
+		let mock_url = mock_server::async_run_test_only().await;
+		let evm_rpc_url = format!("{}/evm/eth", mock_url);
+
+		// Create a test wallet and signer
+		let private_key = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+		let signer = PrivateKeySigner::from_str(private_key).expect("Invalid private key");
+		let signer_box: Box<dyn TxSigner<Signature> + Send + Sync> = Box::new(signer);
+
+		// Create Ethereum client
+		let client = EthereumRpcClient::new(&evm_rpc_url);
+
+		// Test parameters
+		let to_address = "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6";
+		let amount = U256::from(1000000000000000000u64); // 1 ETH
+
+		// Execute transfer
+		let result = client.transfer(to_address, amount, signer_box).await;
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[tokio::test]
+	async fn test_mock_server_transfer_erc20() {
+		// Start mock server and get dynamic URL
+		let mock_url = mock_server::async_run_test_only().await;
+		let evm_rpc_url = format!("{}/evm/bsc", mock_url);
+
+		// Create a test wallet and signer
+		let private_key = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+		let signer = PrivateKeySigner::from_str(private_key).expect("Invalid private key");
+		let signer_box: Box<dyn TxSigner<Signature> + Send + Sync> = Box::new(signer);
+
+		// Create Ethereum client
+		let client = EthereumRpcClient::new(&evm_rpc_url);
+
+		// Test parameters
+		let to_address = "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6";
+		let token_address = "0xA0b86a33E6441e6e80D0c4C6C7527d72e1d0c4e6";
+		let amount = U256::from(1000000000000000000u64); // 1 token (assuming 18 decimals)
+
+		// Execute ERC20 transfer
+		let result = client.transfer_erc20(to_address, amount, token_address, signer_box).await;
+		assert_eq!(result.is_ok(), true);
+	}
+}
