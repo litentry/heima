@@ -2679,6 +2679,7 @@ dependencies = [
 name = "cross-chain-intent-executor"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
  "accounting-contract-client",
  "alloy",
  "alloy-rlp",
@@ -2696,19 +2697,16 @@ dependencies = [
  "intent-asset-lock",
  "intent-token-query",
  "mockall",
- "parentchain-api-interface",
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
  "pumpx",
- "rand 0.8.5",
  "reqwest 0.12.22",
  "rust_decimal",
  "serde_json",
  "signer-client",
  "solana",
  "solana-sdk",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
  "test-log",
  "tokio",

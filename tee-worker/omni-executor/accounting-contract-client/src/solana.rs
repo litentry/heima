@@ -241,7 +241,7 @@ mod tests {
 		let nonce = 1u64;
 		let amount = U256::from(1000000000u64); // 1 SOL
 		let result = client.execute_pay_out_request(beneficiary, nonce, amount).await;
-		assert_eq!(result.is_ok(), true);
+		assert!(result.is_ok());
 	}
 
 	#[tokio::test]

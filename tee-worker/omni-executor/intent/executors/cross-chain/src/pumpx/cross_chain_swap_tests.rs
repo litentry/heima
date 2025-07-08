@@ -342,6 +342,10 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock,
 		rpc_endpoint_registry,
@@ -354,6 +358,8 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from(1),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
@@ -631,6 +637,10 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -643,6 +653,8 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("1").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
@@ -934,6 +946,10 @@ async fn instant_payout_cross_chain_swap() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -946,6 +962,8 @@ async fn instant_payout_cross_chain_swap() {
 		accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("100000").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
@@ -1244,6 +1262,10 @@ async fn no_instant_payout_if_exported_wallet() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -1256,6 +1278,8 @@ async fn no_instant_payout_if_exported_wallet() {
 		accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("100000").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 

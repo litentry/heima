@@ -20,6 +20,7 @@ use accounting_contract_client::{
 	AccountingContractClient as EthereumAccountingContractClient,
 };
 use alloy::network::EthereumWallet;
+use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
@@ -302,6 +303,10 @@ async fn main() -> Result<(), ()> {
 			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
 				Arc::new(AccountAssetLocks::new(storage_db.clone()));
 
+			// TODO: Make these configurable via CLI args or config file
+			let omni_account_factory_address = Address::from_slice(&[0u8; 20]);
+			let omni_account_implementation_address = Address::from_slice(&[1u8; 20]);
+
 			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
 				account_assets_lock,
 				rpc_endpoint_registry,
@@ -314,6 +319,8 @@ async fn main() -> Result<(), ()> {
 				Arc::new(Box::new(evm_accounting_contract_client)),
 				Arc::new(Box::new(solana_accounting_contract_client)),
 				Decimal::from_str(&args.instant_payout_threshold).unwrap(),
+				omni_account_factory_address,
+				omni_account_implementation_address,
 			)?;
 
 			// Create EntryPoint clients registry
