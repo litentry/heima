@@ -13,6 +13,7 @@ import {
     ExportWalletResponse,
     encrypt,
     decryptWithAes,
+    AddWalletResponse,
 } from './utils';
 import { signMessage } from 'viem/accounts';
 import { u8aToHex } from '@polkadot/util';
@@ -162,12 +163,17 @@ describe('Omni JsonRpc Mock Tests', function () {
     });
 
     it('should add wallet successfully', async function () {
-        const result: null = await omniApi.addWallet(id_token);
+        const result: AddWalletResponse = await omniApi.addWallet(id_token);
 
         // expected result:
-        // {}
+        //    "backend_response": {
+        //     "code": 10000,
+        //     "message": "OK",
+        //     "data": {}
+        // }
 
-        expect(result).to.be.null;
+        expect(result.backend_response.code).to.be.equal(10000);
+        expect(result.backend_response.message).to.be.equal('OK');
     });
 
     it('should export wallet successfully', async function () {

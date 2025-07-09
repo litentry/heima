@@ -14,6 +14,7 @@ import {
     GetWeb3SignInMessageResponse,
     GetNextIntentIdResponse,
     ExportWalletResponse,
+    AddWalletResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -63,7 +64,7 @@ export class OmniApi {
         return response;
     }
 
-    async addWallet(token: string): Promise<null> {
+    async addWallet(token: string): Promise<AddWalletResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniAddWallet, {}, token);
 
         return response;

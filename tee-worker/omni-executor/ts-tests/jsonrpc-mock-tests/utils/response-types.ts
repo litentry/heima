@@ -30,11 +30,11 @@ export interface GetWeb3SignInMessageResponse {
     message_code: string;
 }
 
-interface AddWalletResponse {
+export interface AddWalletResponse {
     backend_response: {
         code: number; // 10000 for success
         message: string; // "OK" for success
-        data: object; // Additional data (usually empty for add wallet)
+        data: {}; // Additional data (usually empty for add wallet)
     };
 }
 
