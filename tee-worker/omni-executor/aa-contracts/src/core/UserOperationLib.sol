@@ -27,7 +27,7 @@ library UserOperationLib {
     }
 
     bytes32 internal constant PACKED_USEROP_TYPEHASH = keccak256(
-        "PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData,address sessionAccount,uint256 sessionExpiration,bytes sessionAccountProof)"
+        "PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)"
     );
 
     /**
@@ -58,10 +58,7 @@ library UserOperationLib {
             accountGasLimits,
             preVerificationGas,
             gasFees,
-            hashPaymasterAndData,
-            userOp.sessionAccount,
-            userOp.sessionExpiration,
-            calldataKeccak(userOp.sessionAccountProof)
+            hashPaymasterAndData
         );
     }
 
