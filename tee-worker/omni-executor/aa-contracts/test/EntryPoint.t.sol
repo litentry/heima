@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
 import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
@@ -22,15 +23,12 @@ contract EntryPointTest is Test {
     }
 
     function test_UserOpHash() public view {
-        bytes32 expectedHash = 0x4f5984481de0f81cae6aa72dfe73ec30ee1e90bbb8011e460f60aa51c6150305;
+        bytes32 expectedHash = 0x994a57baf67923f51eee12d1e4efac5fa67d66a996d97988cb6892e0732e98b9;
 
         address sender = 0x922D6956C99E12DFeB3224DEA977D0939758A1Fe;
         bytes memory initCode = "";
 
-        address sessionAccount = 0x0000000000000000000000000000000000000000;
-        bytes memory sessionAccountProof = "";
-        PackedUserOperation memory op =
-            TestUtils.preparePackedOp(sender, initCode, sessionAccount, 2, sessionAccountProof);
+        PackedUserOperation memory op = TestUtils.preparePackedOp(sender, initCode);
         assertEq(entryPoint.getUserOpHash(op), expectedHash);
     }
 
@@ -51,14 +49,11 @@ contract EntryPointTest is Test {
         address payable beneficiary = payable(0x0000000000000000000000000000000000000002);
 
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
-        address sessionAccount = 0x0000000000000000000000000000000000000000;
-        bytes memory sessionAccountProof = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, sessionAccount, 2, sessionAccountProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePk, packedOpHash);
-        packedOp.signature = abi.encodePacked(r, s, v);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
 
         ops[0] = packedOp;
         entryPoint.handleOps(ops, beneficiary);

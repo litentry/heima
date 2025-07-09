@@ -1,11 +1,13 @@
 // TODO: put it into a mod for potential different providers (other than binance)
 
 use crate::utils::{
-	estimate_asset_value_in_usdt, get_binance_deposit_info, get_token_available_amount,
+	calculate_amount_in, determine_trade_symbol_and_order_side, estimate_asset_value_in_usdt,
+	get_binance_deposit_info, get_token_available_amount, str_to_u256,
 };
 use crate::*;
 use ::pumpx::methods::common::SwapType;
 use ::pumpx::methods::create_cross_order::{CreateCrossOrderBody, CrossOrderInfo};
+use accounting_contract_client::Plus;
 use executor_primitives::SwapOrder;
 use executor_storage::PumpxProfileStorage;
 use heima_primitives::PumpxConfig;
@@ -14,8 +16,8 @@ use tracing::{debug, error, info};
 
 impl<
 		BinanceClient: BinanceApi,
-		EthereumClient: EthereumClientTrait,
-		SolanaClient: SolanaClientTrait,
+		EthereumClient: EthereumClientTrait + 'static,
+		SolanaClient: SolanaClientTrait + 'static,
 	> CrossChainIntentExecutor<BinanceClient, EthereumClient, SolanaClient>
 {
 	pub async fn execute_cross_chain_swap(
@@ -37,8 +39,7 @@ impl<
 			return Err(());
 		}
 
-		let from_asset_binance_coin_name =
-			BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin.name();
+		let from_asset_binance_coin = BinanceAsset::from_chain_asset(&swap_order.from_asset)?.coin;
 
 		let from_amount_decimal = Decimal::from_str(&pumpx_config.from_amount).map_err(|_| {
 			error!("Failed to parse from_amount_string");
@@ -65,7 +66,7 @@ impl<
 			let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
 				&self.binance_api,
 				usdt_trade_symbol,
-				from_asset_binance_coin_name,
+				from_asset_binance_coin.name(),
 				from_amount_decimal,
 			)
 			.await?;
@@ -79,7 +80,7 @@ impl<
 		};
 
 		let amount_to_lock = AmountType::from_str(
-			&Self::calculate_amount_decimal(from_amount_decimal, from_asset_binance_coin_name)?
+			&(from_amount_decimal * from_asset_binance_coin.decimal_value())
 				.normalize()
 				.to_string(),
 		)
@@ -125,13 +126,12 @@ impl<
 				if instant {
 					// todo: can we reuse existing code ?
 
-					let (_, binance_asset, from_amount_decimal, _) =
-						Self::get_binance_deposit_info(
-							self.binance_api.clone(),
-							&swap_order.from_asset,
-							&pumpx_config.from_amount,
-						)
-						.await?;
+					let (_, binance_asset, from_amount_decimal, _) = get_binance_deposit_info(
+						self.binance_api.clone(),
+						&swap_order.from_asset,
+						&pumpx_config.from_amount,
+					)
+					.await?;
 
 					let binance_network = binance_asset.network;
 					let binance_coin = binance_asset.coin;
@@ -170,19 +170,34 @@ impl<
 						}),
 					))
 				} else {
-					// TODO: this should be abstracted away
-					let (payout_amount, payout_amount_u256) = self
-						.do_binance_swap_sol_to_bsc(
+					let chain_transfer_client = Arc::new(Box::new(SolanaTransferClient::new(
+						self.solana_client.clone(),
+						RemoteSolanaSigner::new(
+							self.pumpx_signer_client.clone(),
+							pumpx_config.wallet_index,
 							omni_account,
+							Handle::current(),
+						),
+					)) as Box<dyn ChainTransferClient>);
+					let (payout_amount, payout_amount_u256) = self
+						.do_binance_swap(
+							&self.evm_accounting_contract_client,
+							&chain_transfer_client,
 							swap_order.from_asset.clone(),
 							pumpx_config.from_amount.clone(),
 							from_address,
-							pumpx_config.wallet_index,
+							BinanceNetwork::Bsc,
+							BinanceCoin::Bnb,
 							false,
 						)
 						.await?;
 
-					self.do_payout_sol_to_bsc(&payout_address, &payout_amount_u256).await?;
+					self.do_payout(
+						&self.evm_accounting_contract_client,
+						payout_address,
+						payout_amount_u256,
+					)
+					.await?;
 
 					Ok((
 						self.apply_gas_fee(
@@ -204,19 +219,38 @@ impl<
 				})?;
 				debug!("cross chain swap details: intent_id: {}, from_token_ca: {}, to_token_ca: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, pumpx_config.from_token_ca, pumpx_config.to_token_ca, pumpx_config.from_amount, from_address, payout_address);
 
-				// TODO: this should be abstracted away
+				let remote_signer = RemoteEvmSigner::new(
+					self.pumpx_signer_client.clone(),
+					pumpx_config.wallet_index,
+					omni_account,
+				)
+				.await
+				.map_err(|err| {
+					error!("Failed to create RemoteEvmSigner: {}", err);
+				})?;
+				let chain_transfer_client = Arc::new(Box::new(EvmTransferClient::new(
+					self.bsc_client.clone(),
+					remote_signer,
+				)) as Box<dyn ChainTransferClient>);
 				let (payout_amount, payout_amount_u256) = self
-					.do_binance_swap_bsc_to_sol(
-						omni_account,
+					.do_binance_swap(
+						&self.solana_accounting_contract_client,
+						&chain_transfer_client,
 						swap_order.from_asset.clone(),
 						pumpx_config.from_amount.clone(),
 						from_address,
-						pumpx_config.wallet_index,
+						BinanceNetwork::Sol,
+						BinanceCoin::Sol,
 						false,
 					)
 					.await?;
 
-				self.do_payout_bsc_to_sol(payout_address, payout_amount_u256).await?;
+				self.do_payout(
+					&self.solana_accounting_contract_client,
+					payout_address,
+					payout_amount_u256,
+				)
+				.await?;
 
 				Ok((
 					self.apply_gas_fee(
@@ -283,15 +317,21 @@ impl<
 	}
 
 	// TODO: move `should_wait_for_deposit_confirm` to provider config
-	pub async fn do_binance_swap_sol_to_bsc(
+	async fn do_binance_swap<A, N>(
 		&self,
-		omni_account: [u8; 32],
+		contract_client: &Arc<Box<dyn AccountingContractApi<A, N>>>,
+		chain_transfer_client: &Arc<Box<dyn ChainTransferClient>>,
 		from_asset: ChainAsset,
 		from_amount: String,
 		from_address: String,
-		wallet_index: u32,
+		to_network: BinanceNetwork,
+		payout_coin: BinanceCoin,
 		should_wait_for_deposit_confirm: bool,
-	) -> Result<(String, U256), ()> {
+	) -> Result<(String, U256), ()>
+	where
+		A: Send + Sync + std::fmt::Debug + std::marker::Copy,
+		N: Plus<u64, Output = N> + std::fmt::Debug,
+	{
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
 			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount).await?;
 
@@ -299,15 +339,10 @@ impl<
 		let binance_coin = binance_asset.coin;
 		let binance_address = binance_asset.address;
 
-		let Some(amount_to_transfer) = amount_to_transfer_decimal.to_u64() else {
-			error!("Failed to convert amount to transfer to u64");
-			return Err(());
-		};
-
 		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
 			binance_network.clone(),
 			binance_coin.clone(),
-			BinanceNetwork::Bsc,
+			to_network,
 		)?;
 
 		// init `payout_amount` with estimated-amount-to-receive
@@ -319,10 +354,10 @@ impl<
 		)
 		.await?;
 
-		let mut payout_amount_u256 = str_to_u256(&payout_amount, BinanceCoin::Bnb.decimals())?;
+		let mut payout_amount_u256 = str_to_u256(&payout_amount, payout_coin.decimals())?;
 
 		// Fetch contract balance
-		let balance = self.evm_accounting_contract_client.get_balance().await?;
+		let balance = contract_client.get_balance().await?;
 		if balance < payout_amount_u256 {
 			error!(
 				"There is not enough balance in the accounting contract, {} < {}",
@@ -331,47 +366,35 @@ impl<
 			return Err(());
 		}
 
-		let remote_signer: Box<dyn solana_sdk::signer::Signer + Send + Sync> =
-			Box::new(RemoteSolanaSigner::new(
-				self.pumpx_signer_client.clone(),
-				wallet_index,
-				omni_account,
-				Handle::current(),
-			));
+		let amount_to_transfer = decimal_to_u256(amount_to_transfer_decimal).map_err(|err| {
+			error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
+		})?;
 
-		let mut tx_id: Option<String> = None;
-		// TODO: change this when adding support for more tokens/chains
-		if binance_coin.clone() == BinanceCoin::Sol {
-			// Native transfer
-			debug!("Transfering {:?} SOL to {:?}", amount_to_transfer, deposit_address);
-			let signature = self
-				.solana_client
-				.transfer_sol(&deposit_address, amount_to_transfer, &remote_signer)
-				.await
-				.map_err(|_| {
-					error!("Failed to transfer SOL");
-				})?;
-			tx_id = Some(signature);
-		} else {
-			debug!(
-				"Transfering {:?} {:?} to {:?}",
-				amount_to_transfer, binance_address, deposit_address
-			);
-			// SPL transfer
-			let signature = self
-				.solana_client
-				.transfer_spl(
-					&deposit_address,
+		// Handle transfer based on network and coin type
+		let tx_id: Option<String> = match (binance_network.clone(), binance_coin.clone()) {
+			(BinanceNetwork::Sol, BinanceCoin::Sol) | (BinanceNetwork::Bsc, BinanceCoin::Bnb) => {
+				debug!(
+					"Transfering {:?} {:?} to {:?}",
 					amount_to_transfer,
-					&binance_address,
-					&remote_signer,
-				)
-				.await
-				.map_err(|_| {
-					error!("Failed to transfer SPL");
-				})?;
-			tx_id = Some(signature);
-		}
+					binance_coin.clone(),
+					deposit_address
+				);
+				let signature = chain_transfer_client
+					.transfer_native(&deposit_address, amount_to_transfer)
+					.await?;
+				Some(signature)
+			},
+			_ => {
+				debug!(
+					"Transfering {:?} {:?} to {:?}",
+					amount_to_transfer, binance_address, deposit_address
+				);
+				let signature = chain_transfer_client
+					.transfer(&deposit_address, amount_to_transfer, &binance_address)
+					.await?;
+				Some(signature)
+			},
+		};
 
 		if should_wait_for_deposit_confirm {
 			let result = Self::wait_for_deposit_confirm(
@@ -382,7 +405,7 @@ impl<
 				trade_symbol.clone(),
 				order_side,
 				from_amount,
-				BinanceCoin::Bnb,
+				payout_coin,
 				self.binance_api.clone(),
 			)
 			.await?;
@@ -393,233 +416,34 @@ impl<
 		Ok((payout_amount, payout_amount_u256))
 	}
 
-	async fn do_payout_sol_to_bsc(
+	async fn do_payout<A, N>(
 		&self,
-		payout_address: &Address,
-		payout_amount: &U256,
-	) -> Result<(), ()> {
+		client: &Arc<Box<dyn AccountingContractApi<A, N>>>,
+		payout_address: A,
+		payout_amount: U256,
+	) -> Result<(), ()>
+	where
+		A: Send + Sync + std::fmt::Debug + std::marker::Copy,
+		N: Plus<u64, Output = N> + std::fmt::Debug,
+	{
 		debug!("Getting {:?} nonce for payout request", payout_address);
-		let user_nonce = self
-			.evm_accounting_contract_client
-			.get_nonce(*payout_address)
-			.await
-			.map_err(|_| {
-				error!("Failed to get nonce");
-			})?;
-
-		debug!("Received {:?} nonce", user_nonce);
-		let user_nonce = user_nonce + U256::from(1u64);
-		debug!(
-			"Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}",
-			payout_address, user_nonce, payout_amount
-		);
-
-		self.evm_accounting_contract_client
-			.execute_pay_out_request(*payout_address, user_nonce, *payout_amount)
-			.await
-			.map_err(|_| {
-				error!("Failed to execute pay out request");
-			})
-	}
-
-	// TODO: move `should_wait_for_deposit_confirm` to provider config
-	async fn do_binance_swap_bsc_to_sol(
-		&self,
-		omni_account: [u8; 32],
-		from_asset: ChainAsset,
-		from_amount: String,
-		from_address: String,
-		wallet_index: u32,
-		should_wait_for_deposit_confirm: bool,
-	) -> Result<(String, U256), ()> {
-		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount).await?;
-
-		let binance_network = binance_asset.network;
-		let binance_coin = binance_asset.coin;
-		let binance_address = binance_asset.address;
-
-		let amount_to_transfer = decimal_to_u256(amount_to_transfer_decimal).map_err(|err| {
-			error!("Failed to convert amount_to_transfer_decimal to U256: {:?}", err);
+		let user_nonce = client.get_nonce(payout_address).await.map_err(|_| {
+			error!("Failed to get nonce");
 		})?;
 
-		let (trade_symbol, order_side) = determine_trade_symbol_and_order_side(
-			binance_network.clone(),
-			binance_coin.clone(),
-			BinanceNetwork::Sol,
-		)?;
-
-		// init `payout_amount` with estimated-amount-to-receive
-		let mut payout_amount = estimate_payout_amount(
-			&self.binance_api,
-			&trade_symbol,
-			binance_coin.clone(),
-			from_amount_decimal,
-		)
-		.await?;
-
-		let mut payout_amount_u256 = str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
-
-		// Fetch contract balance
-		let balance = self.solana_accounting_contract_client.get_balance().await?;
-		if balance < payout_amount_u256 {
-			error!(
-				"There is not enough balance in the accounting contract, {} < {}",
-				balance, payout_amount_u256
-			);
-			return Err(());
-		}
-
-		let remote_signer =
-			RemoteEvmSigner::new(self.pumpx_signer_client.clone(), wallet_index, omni_account)
-				.await
-				.map_err(|err| {
-					error!("Failed to create RemoteEvmSigner: {}", err);
-				})?;
-		let remote_signer: Box<dyn AlloyTxSigner<Signature> + Send + Sync> =
-			Box::new(remote_signer);
-
-		let mut tx_id: Option<String> = None;
-		// TODO: change this when adding support for more tokens/chains
-		if binance_coin.clone() == BinanceCoin::Bnb {
-			// Native transfer
-			debug!("Transfering {:?} BNB to {:?}", amount_to_transfer, deposit_address);
-			let signature = self
-				.bsc_client
-				.transfer(&deposit_address, amount_to_transfer, remote_signer)
-				.await
-				.map_err(|_| {
-					error!("Failed to transfer BNB");
-				})?;
-			tx_id = Some(signature);
-		} else {
-			debug!(
-				"Transfering {:?} {:?} to {:?}",
-				amount_to_transfer, binance_address, deposit_address
-			);
-			// SPL transfer
-			let signature = self
-				.bsc_client
-				.transfer_erc20(
-					&deposit_address,
-					amount_to_transfer,
-					&binance_address,
-					remote_signer,
-				)
-				.await
-				.map_err(|_| {
-					error!("Failed to transfer ERC20");
-				})?;
-			tx_id = Some(signature);
-		}
-
-		if should_wait_for_deposit_confirm {
-			let result = Self::wait_for_deposit_confirm(
-				from_address,
-				tx_id.clone(),
-				binance_network.clone(),
-				binance_coin,
-				trade_symbol.clone(),
-				order_side,
-				from_amount,
-				BinanceCoin::Sol,
-				self.binance_api.clone(),
-			)
-			.await?;
-			payout_amount = result.0;
-			payout_amount_u256 = result.1;
-		}
-
-		Ok((payout_amount, payout_amount_u256))
-	}
-
-	async fn do_payout_bsc_to_sol(
-		&self,
-		payout_address: Pubkey,
-		payout_amount: U256,
-	) -> Result<(), ()> {
-		debug!("Getting {:?} nonce for payout request", payout_address);
-		let user_nonce =
-			self.solana_accounting_contract_client.get_nonce(payout_address).await.map_err(
-				|_| {
-					error!("Failed to get nonce");
-				},
-			)?;
-
 		debug!("Received {:?} nonce", user_nonce);
-		let user_nonce = user_nonce + 1u64;
+		let user_nonce = user_nonce.plus(1u64);
 		debug!(
 			"Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}",
 			payout_address, user_nonce, payout_amount
 		);
 
-		self.solana_accounting_contract_client
+		client
 			.execute_pay_out_request(payout_address, user_nonce, payout_amount)
 			.await
 			.map_err(|_| {
 				error!("Failed to execute pay out request");
 			})
-	}
-
-	pub(crate) async fn get_binance_deposit_info(
-		binance_api: Arc<BinanceClient>,
-		swap_order_from_asset: &ChainAsset,
-		from_amount: &str,
-	) -> Result<(String, BinanceAsset, Decimal, Decimal), ()> {
-		let coins_info =
-			WalletApi::new(binance_api.as_ref()).get_all_coins_info().await.map_err(|e| {
-				error!("Failed to get all coins info, {:?}", e);
-			})?;
-
-		let binance_asset = BinanceAsset::from_chain_asset(swap_order_from_asset)?;
-
-		debug!(
-			"from_network_name: {}, binance_coin_name: {}, token_address: {}",
-			binance_asset.network.name(),
-			binance_asset.coin.name(),
-			binance_asset.address
-		);
-
-		let Some(binance_coin_info) =
-			coins_info.iter().find(|c| c.coin == binance_asset.coin.name())
-		else {
-			error!(
-				"Failed to find binance network list for asset: {:?}",
-				binance_asset.coin.name()
-			);
-			return Err(());
-		};
-		let Some(_binance_network_info) = binance_coin_info
-			.network_list
-			.iter()
-			.find(|n| n.network == binance_asset.network.name())
-		else {
-			error!(
-				"Failed to find binance network list for asset: {:?}",
-				binance_asset.coin.name()
-			);
-			return Err(());
-		};
-
-		let deposit_address = WalletApi::new(binance_api.as_ref())
-			.get_deposit_address(binance_asset.coin.name(), binance_asset.network.name())
-			.await
-			.map_err(|_| {
-				error!("Failed to get deposit address");
-			})?;
-
-		let from_amount_decimal = Decimal::from_str(from_amount).map_err(|_| {
-			error!("Failed to parse from_amount_string");
-		})?;
-
-		debug!("Binance deposit address: {}, from_amount: {}", deposit_address, from_amount);
-
-		let asset_decimal_multiplier = binance_asset.coin.decimal_value();
-
-		// Convert from human readable amount to raw token amount
-		let amount_to_transfer = from_amount_decimal * asset_decimal_multiplier;
-
-		Ok((deposit_address, binance_asset, from_amount_decimal, amount_to_transfer))
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -851,40 +675,6 @@ impl<
 	}
 }
 
-pub(crate) fn determine_trade_symbol_and_order_side(
-	binance_network: BinanceNetwork,
-	binance_coin: BinanceCoin,
-	to_network: BinanceNetwork,
-) -> Result<(String, BinanceOrderSide), ()> {
-	match (binance_network.clone(), binance_coin.clone(), to_network.clone()) {
-		(BinanceNetwork::Sol, BinanceCoin::Fc, BinanceNetwork::Bsc) => {
-			Ok(("BNBFC".to_string(), BinanceOrderSide::BUY))
-		},
-		(BinanceNetwork::Sol, BinanceCoin::Usdc, BinanceNetwork::Bsc) => {
-			Ok(("BNBUSDC".to_string(), BinanceOrderSide::BUY))
-		},
-		(BinanceNetwork::Sol, BinanceCoin::Usdt, BinanceNetwork::Bsc) => {
-			Ok(("BNBUSDT".to_string(), BinanceOrderSide::BUY))
-		},
-		(BinanceNetwork::Sol, BinanceCoin::Sol, BinanceNetwork::Bsc) => {
-			Ok(("SOLBNB".to_string(), BinanceOrderSide::SELL))
-		},
-		(BinanceNetwork::Bsc, BinanceCoin::Usdc, BinanceNetwork::Sol) => {
-			Ok(("SOLUSDC".to_string(), BinanceOrderSide::BUY))
-		},
-		(BinanceNetwork::Bsc, BinanceCoin::Usdt, BinanceNetwork::Sol) => {
-			Ok(("SOLUSDT".to_string(), BinanceOrderSide::BUY))
-		},
-		(BinanceNetwork::Bsc, BinanceCoin::Bnb, BinanceNetwork::Sol) => {
-			Ok(("SOLBNB".to_string(), BinanceOrderSide::BUY))
-		},
-		_ => {
-			error!("Unsupported binance_network_name: {:?}, binance_coin_name: {:?}, to_network_name: {:?}", binance_network.name(), binance_coin.name(), to_network.name());
-			Err(())
-		},
-	}
-}
-
 pub(crate) async fn estimate_payout_amount<BinanceClient: BinanceApi>(
 	binance_api: &Arc<BinanceClient>,
 	trade_symbol: &str,
@@ -924,25 +714,6 @@ pub(crate) async fn estimate_payout_amount<BinanceClient: BinanceApi>(
 	debug!("estimated: {}, after 0.1% fee: {}", estimated, payout_amount);
 
 	Ok(payout_amount.to_string())
-}
-
-fn calculate_amount_in(amount: &str, gas: &str, decimals: u32) -> Result<String, ()> {
-	let amount = Decimal::from_str(amount).map_err(|_| ())?;
-	let gas = Decimal::from_str(gas).map_err(|_| ())?;
-	if amount <= gas {
-		Err(())
-	} else {
-		let amount = amount - gas;
-		Ok(amount.trunc_with_scale(decimals).to_string())
-	}
-}
-
-pub(crate) fn str_to_u256(amount: &str, decimals: u32) -> Result<U256, ()> {
-	let amount = Decimal::from_str(amount).map_err(|_| ())?;
-	let factor = Decimal::from(10u64.pow(decimals));
-	let scaled = amount * factor;
-	let int_str = scaled.trunc().to_string();
-	U256::from_str(&int_str).map_err(|_| ())
 }
 
 #[cfg(test)]
