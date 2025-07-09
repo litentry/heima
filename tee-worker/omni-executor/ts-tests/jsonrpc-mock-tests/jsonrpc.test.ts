@@ -179,7 +179,7 @@ describe('Omni JsonRpc Mock Tests', function () {
                     google_code: '',
                     chain_id: 1, // get from backend
                     wallet_index: 0, // get from backend
-                    wallet_address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // We do not currently know the logic for generating the backend address, so we can only use a hardcode here.
+                    wallet_address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // We do not currently know the logic for generating the backend address, so we can only use a hardcode here temporarily.
                 },
                 id_token
             );
