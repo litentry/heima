@@ -17,22 +17,52 @@ sol!(
 	"./abi/AccountingContract.json"
 );
 
+pub trait Plus<RHS = Self> {
+	type Output;
+
+	fn plus(self, rhs: RHS) -> Self::Output;
+}
+
+impl Plus<u64> for U256 {
+	type Output = U256;
+
+	fn plus(self, rhs: u64) -> Self::Output {
+		self + U256::from(rhs)
+	}
+}
+
+impl Plus<u64> for u64 {
+	type Output = u64;
+
+	fn plus(self, rhs: u64) -> Self::Output {
+		self + rhs
+	}
+}
+
 #[async_trait]
-pub trait AccountingContractApi: Send + Sync {
+pub trait AccountingContractApi<A, N>: Send + Sync
+where
+	A: Send + Sync,
+	N: Plus<u64, Output = N> + std::fmt::Debug,
+{
 	async fn execute_pay_out_request(
 		&self,
-		beneficiary: Address,
-		nonce: U256,
+		beneficiary: A,
+		nonce: N,
 		amount: U256,
 	) -> Result<(), ()>;
 
-	async fn get_nonce(&self, user: Address) -> Result<U256, ()>;
+	async fn get_nonce(&self, user: A) -> Result<N, ()>;
 
 	async fn get_balance(&self) -> Result<U256, ()>;
 
-	async fn get_address(&self) -> Address;
+	async fn get_address(&self) -> A {
+		unimplemented!("Please provide contract address in implementation")
+	}
 
-	async fn get_signer_address(&self) -> Address;
+	async fn get_signer_address(&self) -> A {
+		unimplemented!("Please provide signer address in implementation")
+	}
 }
 
 pub struct AccountingContractClient<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
@@ -48,8 +78,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingC
 }
 
 #[async_trait]
-impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync> AccountingContractApi
-	for AccountingContractClient<P>
+impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
+	AccountingContractApi<Address, U256> for AccountingContractClient<P>
 {
 	async fn execute_pay_out_request(
 		&self,
@@ -120,7 +150,7 @@ pub mod mocks {
 		pub AccountingContractClient {}
 
 		#[async_trait]
-		impl AccountingContractApi for AccountingContractClient {
+		impl AccountingContractApi<Address, U256> for AccountingContractClient {
 
 			async fn execute_pay_out_request(
 				&self,

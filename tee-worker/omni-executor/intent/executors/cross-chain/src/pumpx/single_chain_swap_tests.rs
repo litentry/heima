@@ -16,10 +16,9 @@
 
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
-use accounting_contract_client::{
-	solana::AccountingContractApi as SolanaAccountingContractApi, AccountingContractApi,
-};
+use accounting_contract_client::AccountingContractApi;
 use alloy::primitives::Address;
+use alloy::primitives::U256;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
@@ -48,6 +47,7 @@ use pumpx::methods::create_limit_order::CreateLimitOrderBody;
 use pumpx::PumpxApi;
 use rust_decimal::Decimal;
 use signer_client::{ChainType, SignerClient};
+use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use std::sync::Arc;
 use tempfile::tempdir;
@@ -145,11 +145,12 @@ async fn simple_single_chain_swap() {
 	let binance_api = Arc::new(binance_api::mocks::MockBinanceApiClient::new());
 	let bsc_client = Arc::new(ethereum_rpc::client::mocks::MockEthereumRpcClient::new());
 	let solana_client = Arc::new(solana::mocks::MockSolanaRpcClient::new());
-	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
+	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
 		Arc::new(Box::new(accounting_contract_client::mocks::MockAccountingContractClient::new()));
-	let solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>> = Arc::new(
-		Box::new(accounting_contract_client::solana::mocks::MockAccountingContractClient::new()),
-	);
+	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
+		Arc::new(Box::new(
+			accounting_contract_client::solana::mocks::MockAccountingContractClient::new(),
+		));
 
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
 		Arc::new(AccountAssetLocks::new(storage_db.clone()));
@@ -167,7 +168,7 @@ async fn simple_single_chain_swap() {
 		binance_api,
 		bsc_client,
 		solana_client,
-		accounting_contract_client,
+		evm_accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("1").unwrap(),
 		factory_address,

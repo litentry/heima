@@ -15,16 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use accounting_contract_client::{
-	solana::AccountingContractApi as SolanaAccountingContractApi,
-	AccountingContractApi as EvmAccountingContractApi,
-};
-use alloy::primitives::Address;
+use accounting_contract_client::{AccountingContractApi, Plus};
 use ethereum_rpc::AlloyRpcProvider;
 use executor_primitives::Chain;
 use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
 use rust_decimal::Decimal;
-use solana_sdk::pubkey::Pubkey;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -92,6 +87,9 @@ pub fn determine_trade_symbol_and_order_side(
 ) -> Result<(String, BinanceOrderSide), ()> {
 	match (&from_network, &from_coin, &to_network) {
 		// SOL to BSC
+		(BinanceNetwork::Sol, BinanceCoin::Fc, BinanceNetwork::Bsc) => {
+			Ok(("BNBFC".to_string(), BinanceOrderSide::BUY))
+		},
 		(BinanceNetwork::Sol, BinanceCoin::Sol, BinanceNetwork::Bsc) => {
 			Ok(("SOLBNB".to_string(), BinanceOrderSide::SELL))
 		},
@@ -207,51 +205,28 @@ pub async fn get_binance_deposit_info<BinanceClient: BinanceApi>(
 	Ok((deposit_address, binance_asset, from_amount_decimal, amount_to_transfer))
 }
 
-pub async fn do_payout_sol_to_bsc(
-	payout_address: &Address,
-	payout_amount: &U256,
-	evm_accounting_contract_client: &Arc<Box<dyn EvmAccountingContractApi>>,
-) -> Result<(), ()> {
-	debug!("Getting {:?} nonce for payout request", payout_address);
-	let user_nonce =
-		evm_accounting_contract_client.get_nonce(*payout_address).await.map_err(|_| {
-			error!("Failed to get nonce");
-		})?;
-
-	debug!("Received {:?} nonce", user_nonce);
-	let user_nonce = user_nonce + U256::from(1u64);
-	debug!(
-		"Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}",
-		payout_address, user_nonce, payout_amount
-	);
-
-	evm_accounting_contract_client
-		.execute_pay_out_request(*payout_address, user_nonce, *payout_amount)
-		.await
-		.map_err(|_| {
-			error!("Failed to execute pay out request");
-		})
-}
-
-pub async fn do_payout_bsc_to_sol(
-	payout_address: Pubkey,
+pub async fn do_payout<A, N>(
+	client: &Arc<Box<dyn AccountingContractApi<A, N>>>,
+	payout_address: A,
 	payout_amount: U256,
-	solana_accounting_contract_client: &Arc<Box<dyn SolanaAccountingContractApi>>,
-) -> Result<(), ()> {
+) -> Result<(), ()>
+where
+	A: Send + Sync + std::fmt::Debug + std::marker::Copy,
+	N: Plus<u64, Output = N> + std::fmt::Debug,
+{
 	debug!("Getting {:?} nonce for payout request", payout_address);
-	let user_nonce =
-		solana_accounting_contract_client.get_nonce(payout_address).await.map_err(|_| {
-			error!("Failed to get nonce");
-		})?;
+	let user_nonce = client.get_nonce(payout_address).await.map_err(|_| {
+		error!("Failed to get nonce");
+	})?;
 
 	debug!("Received {:?} nonce", user_nonce);
-	let user_nonce = user_nonce + 1u64;
+	let user_nonce = user_nonce.plus(1u64);
 	debug!(
 		"Calling accounting contract payout with address {:?}, nonce {:?} and amount {:?}",
 		payout_address, user_nonce, payout_amount
 	);
 
-	solana_accounting_contract_client
+	client
 		.execute_pay_out_request(payout_address, user_nonce, payout_amount)
 		.await
 		.map_err(|_| {
@@ -259,12 +234,18 @@ pub async fn do_payout_bsc_to_sol(
 		})
 }
 
-pub async fn do_binance_swap_sol_to_bsc<BinanceClient: BinanceApi>(
+pub async fn do_binance_swap<A, N, BinanceClient: BinanceApi>(
 	binance_api: Arc<BinanceClient>,
-	evm_accounting_contract_client: &Arc<Box<dyn EvmAccountingContractApi>>,
+	contract_client: &Arc<Box<dyn AccountingContractApi<A, N>>>,
 	from_asset: ChainAsset,
 	from_amount: String,
-) -> Result<(String, U256), ()> {
+	to_network: BinanceNetwork,
+	payout_coin: BinanceCoin,
+) -> Result<(String, U256), ()>
+where
+	A: Send + Sync + std::fmt::Debug + std::marker::Copy,
+	N: Plus<u64, Output = N> + std::fmt::Debug,
+{
 	let (deposit_address, binance_asset, from_amount_decimal, _amount_to_transfer_decimal) =
 		get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
 
@@ -274,7 +255,7 @@ pub async fn do_binance_swap_sol_to_bsc<BinanceClient: BinanceApi>(
 	let (trade_symbol, _order_side) = determine_trade_symbol_and_order_side(
 		binance_network.clone(),
 		binance_coin.clone(),
-		BinanceNetwork::Bsc,
+		to_network,
 	)?;
 
 	// init `payout_amount` with estimated-amount-to-receive
@@ -286,10 +267,10 @@ pub async fn do_binance_swap_sol_to_bsc<BinanceClient: BinanceApi>(
 	)
 	.await?;
 
-	let payout_amount_u256 = str_to_u256(&payout_amount, BinanceCoin::Bnb.decimals())?;
+	let payout_amount_u256 = str_to_u256(&payout_amount, payout_coin.decimals())?;
 
 	// Fetch contract balance
-	let balance = evm_accounting_contract_client.get_balance().await?;
+	let balance = contract_client.get_balance().await?;
 	if balance < payout_amount_u256 {
 		error!(
 			"There is not enough balance in the accounting contract, {} < {}",
@@ -298,53 +279,11 @@ pub async fn do_binance_swap_sol_to_bsc<BinanceClient: BinanceApi>(
 		return Err(());
 	}
 
-	// For omni, we simulate the SOL transfer instead of actually performing it
-	debug!("Omni: Simulating SOL transfer to binance deposit address: {}", deposit_address);
-
-	Ok((payout_amount, payout_amount_u256))
-}
-
-pub async fn do_binance_swap_bsc_to_sol<BinanceClient: BinanceApi>(
-	binance_api: Arc<BinanceClient>,
-	solana_accounting_contract_client: &Arc<Box<dyn SolanaAccountingContractApi>>,
-	from_asset: ChainAsset,
-	from_amount: String,
-) -> Result<(String, U256), ()> {
-	let (deposit_address, binance_asset, from_amount_decimal, _amount_to_transfer_decimal) =
-		get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
-
-	let binance_network = binance_asset.network;
-	let binance_coin = binance_asset.coin;
-
-	let (trade_symbol, _order_side) = determine_trade_symbol_and_order_side(
-		binance_network.clone(),
-		binance_coin.clone(),
-		BinanceNetwork::Sol,
-	)?;
-
-	// init `payout_amount` with estimated-amount-to-receive
-	let payout_amount = estimate_payout_amount(
-		&binance_api,
-		&trade_symbol,
-		binance_coin.clone(),
-		from_amount_decimal,
-	)
-	.await?;
-
-	let payout_amount_u256 = str_to_u256(&payout_amount, BinanceCoin::Sol.decimals())?;
-
-	// Fetch contract balance
-	let balance = solana_accounting_contract_client.get_balance().await?;
-	if balance < payout_amount_u256 {
-		error!(
-			"There is not enough balance in the accounting contract, {} < {}",
-			balance, payout_amount_u256
-		);
-		return Err(());
-	}
-
-	// For omni, we simulate the BNB transfer instead of actually performing it
-	debug!("Omni: Simulating BNB transfer to binance deposit address: {}", deposit_address);
+	// For omni, we simulate the BSC/SOL transfer instead of actually performing it
+	debug!(
+		"Omni: Simulating {:?} transfer to binance deposit address: {}",
+		binance_network, deposit_address
+	);
 
 	Ok((payout_amount, payout_amount_u256))
 }

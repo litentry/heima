@@ -1,6 +1,12 @@
+use alloy::primitives::U256;
+use async_trait::async_trait;
 use base58::ToBase58;
+use ethereum_rpc::client::EthereumClient;
+use ethereum_rpc::signer::RemoteSigner as RemoteEvmSigner;
 use executor_primitives::{Chain, ChainAsset, EthereumToken, SolanaToken};
-use std::collections::HashMap;
+use solana::signer::RemoteSigner as RemoteSolanaSigner;
+use solana::SolanaClient as SolanaClientTrait;
+use std::{collections::HashMap, sync::Arc};
 
 use rust_decimal::Decimal;
 use tracing::error;
@@ -157,5 +163,85 @@ impl FromChainAsset for BinanceAsset {
 				Err(())
 			},
 		}
+	}
+}
+
+#[async_trait]
+pub trait ChainTransferClient: Send + Sync {
+	async fn transfer_native(&self, to: &str, amount: U256) -> Result<String, ()>;
+
+	async fn transfer(&self, to: &str, amount: U256, address: &str) -> Result<String, ()>;
+}
+
+pub struct EvmTransferClient {
+	client: Arc<dyn EthereumClient + Send + Sync>,
+	signer: RemoteEvmSigner,
+}
+impl EvmTransferClient {
+	pub fn new(client: Arc<dyn EthereumClient + Send + Sync>, signer: RemoteEvmSigner) -> Self {
+		Self { client, signer }
+	}
+}
+
+#[async_trait]
+impl ChainTransferClient for EvmTransferClient {
+	async fn transfer_native(&self, to: &str, amount: U256) -> Result<String, ()> {
+		let signature =
+			self.client.transfer(to, amount, Box::new(self.signer.clone())).await.map_err(
+				|_| {
+					error!("Failed to transfer native token");
+				},
+			)?;
+		Ok(signature)
+	}
+
+	async fn transfer(&self, to: &str, amount: U256, contract_address: &str) -> Result<String, ()> {
+		let signature = self
+			.client
+			.transfer_erc20(to, amount, contract_address, Box::new(self.signer.clone()))
+			.await
+			.map_err(|_| {
+				error!("Failed to transfer token");
+			})?;
+		Ok(signature)
+	}
+}
+
+pub struct SolanaTransferClient<SolanaClient: SolanaClientTrait> {
+	client: Arc<SolanaClient>,
+	signer: RemoteSolanaSigner,
+}
+
+impl<SolanaClient: SolanaClientTrait> SolanaTransferClient<SolanaClient> {
+	pub fn new(client: Arc<SolanaClient>, signer: RemoteSolanaSigner) -> Self {
+		Self { client, signer }
+	}
+}
+
+#[async_trait]
+impl<SolanaClient: SolanaClientTrait> ChainTransferClient for SolanaTransferClient<SolanaClient> {
+	async fn transfer_native(&self, to: &str, amount: U256) -> Result<String, ()> {
+		let u64_amount: u64 = amount.try_into().map_err(|_| {
+			error!("Failed to convert U256 nonce to u64");
+		})?;
+		let signature =
+			self.client.transfer_sol(to, u64_amount, &self.signer).await.map_err(|_| {
+				error!("Failed to transfer SOL");
+			})?;
+		Ok(signature)
+	}
+
+	async fn transfer(&self, to: &str, amount: U256, mint_address: &str) -> Result<String, ()> {
+		let u64_amount: u64 = amount.try_into().map_err(|_| {
+			error!("Failed to convert U256 nonce to u64");
+		})?;
+		let signature = self
+			.client
+			.transfer_spl(to, u64_amount, mint_address, &self.signer)
+			.await
+			.map_err(|_| {
+				error!("Failed to transfer SPL");
+			})?;
+		Ok(signature)
 	}
 }
