@@ -46,7 +46,7 @@ pnpm run build
 ## Publish
 
 ```
+pnpm run load:metadata
 pnpm run generate
-pnpm run build
-pnpm run publish
+pnpm run build-publish
 ```
