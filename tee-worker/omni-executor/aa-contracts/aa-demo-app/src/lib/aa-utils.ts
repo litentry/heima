@@ -12,6 +12,16 @@ import {
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
 /**
+ * UserOpSigner enum - matches the contract enum
+ */
+export enum UserOpSigner {
+	Owner = 0x00,
+	RootKey = 0x01,
+	SessionKey = 0x02,
+	Passkey = 0x03,
+}
+
+/**
  * Based on the OmniAccount.sol _determineOa function:
  * bytes memory oaType = bytes("evm");
  * return sha256(abi.encodePacked(clientId, oaType, sender));
@@ -157,8 +167,7 @@ export interface UserOperation {
 
 /**
  * PackedUserOperation structure for EntryPoint v0.7
- * Includes packed gas fields and session-related fields for future extensibility
- * Session fields are currently set to default values (zero address/empty proof)
+ * Includes packed gas fields
  */
 export interface PackedUserOperation {
 	sender: Address;
@@ -169,9 +178,6 @@ export interface PackedUserOperation {
 	preVerificationGas: bigint;
 	gasFees: `0x${string}`; // packed maxPriorityFeePerGas and maxFeePerGas
 	paymasterAndData: `0x${string}`;
-	sessionAccount: Address;
-	sessionExpiration: bigint;
-	sessionAccountProof: `0x${string}`;
 	signature: `0x${string}`;
 }
 
@@ -203,7 +209,6 @@ export function createUserOperation(params: {
  * Get the hash of a UserOperation for signing
  * This follows the ERC-4337 specification for PackedUserOperation hash calculation
  * Uses EIP-712 typed data hashing with EntryPoint v0.7 domain separator
- * Includes support for session fields (sessionAccount, sessionExpiration, sessionAccountProof)
  */
 export function getUserOpHash(
 	userOp: UserOperation,
@@ -215,7 +220,7 @@ export function getUserOpHash(
 	
 	// Type hash for PackedUserOperation
 	const PACKED_USEROP_TYPEHASH = keccak256(
-		toHex("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData,address sessionAccount,uint256 sessionExpiration,bytes sessionAccountProof)")
+		toHex("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)")
 	);
 	
 	// Encode according to the contract's UserOperationLib.encode
@@ -231,9 +236,6 @@ export function getUserOpHash(
 			{ name: 'preVerificationGas', type: 'uint256' },
 			{ name: 'gasFees', type: 'bytes32' },
 			{ name: 'hashPaymasterAndData', type: 'bytes32' },
-			{ name: 'sessionAccount', type: 'address' },
-			{ name: 'sessionExpiration', type: 'uint256' },
-			{ name: 'hashSessionAccountProof', type: 'bytes32' },
 		],
 		[
 			PACKED_USEROP_TYPEHASH,
@@ -245,9 +247,6 @@ export function getUserOpHash(
 			packedOp.preVerificationGas,
 			packedOp.gasFees,
 			keccak256(packedOp.paymasterAndData),
-			packedOp.sessionAccount,
-			packedOp.sessionExpiration,
-			keccak256(packedOp.sessionAccountProof),
 		],
 	);
 
@@ -341,8 +340,6 @@ export function packGasFees(
 
 /**
  * Convert UserOperation to PackedUserOperation for EntryPoint v0.7
- * Session fields (sessionAccount, sessionExpiration, sessionAccountProof) are set to default values
- * as they're not yet implemented but required for the PackedUserOperation structure
  */
 export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 	const packed = {
@@ -357,9 +354,6 @@ export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 		preVerificationGas: userOp.preVerificationGas,
 		gasFees: packGasFees(userOp.maxFeePerGas, userOp.maxPriorityFeePerGas),
 		paymasterAndData: userOp.paymasterAndData,
-		sessionAccount: "0x0000000000000000000000000000000000000000" as Address, // No session account for now
-		sessionExpiration: BigInt(0), // No session expiration
-		sessionAccountProof: "0x" as `0x${string}`, // Empty proof
 		signature: userOp.signature,
 	};
 
@@ -373,13 +367,24 @@ export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 		preVerificationGas: packed.preVerificationGas,
 		gasFees: packed.gasFees,
 		paymasterAndData: packed.paymasterAndData,
-		sessionAccount: packed.sessionAccount,
-		sessionExpiration: packed.sessionExpiration,
-		sessionAccountProof: packed.sessionAccountProof,
 		signature: packed.signature,
 	});
 
 	return packed;
+}
+
+/**
+ * Add UserOpSigner prefix to a signature
+ */
+export function addSignaturePrefix(
+	signature: `0x${string}`,
+	signerType: UserOpSigner
+): `0x${string}` {
+	// Remove 0x prefix from signature
+	const sigWithoutPrefix = signature.slice(2);
+	// Add signer type byte
+	const prefixedSig = `0x${signerType.toString(16).padStart(2, '0')}${sigWithoutPrefix}`;
+	return prefixedSig as `0x${string}`;
 }
 
 /**
@@ -391,6 +396,7 @@ export async function signUserOperation(
 	userOp: UserOperation,
 	entryPointAddress: Address,
 	chainId: bigint,
+	signerType: UserOpSigner = UserOpSigner.Owner,
 ): Promise<`0x${string}`> {
 	// Convert UserOperation to PackedUserOperation for signing
 	const packedOp = packUserOperation(userOp);
@@ -414,9 +420,6 @@ export async function signUserOperation(
 			{ name: 'preVerificationGas', type: 'uint256' },
 			{ name: 'gasFees', type: 'bytes32' },
 			{ name: 'paymasterAndData', type: 'bytes' },
-			{ name: 'sessionAccount', type: 'address' },
-			{ name: 'sessionExpiration', type: 'uint256' },
-			{ name: 'sessionAccountProof', type: 'bytes' },
 		],
 	};
 
@@ -430,9 +433,6 @@ export async function signUserOperation(
 		preVerificationGas: packedOp.preVerificationGas,
 		gasFees: packedOp.gasFees,
 		paymasterAndData: packedOp.paymasterAndData,
-		sessionAccount: packedOp.sessionAccount,
-		sessionExpiration: packedOp.sessionExpiration,
-		sessionAccountProof: packedOp.sessionAccountProof,
 	};
 
 	try {
@@ -445,7 +445,8 @@ export async function signUserOperation(
 			message,
 		});
 		console.log("Successfully signed with EIP-712");
-		return signature;
+		// Add the signer type prefix
+		return addSignaturePrefix(signature, signerType);
 	} catch (e) {
 		console.error("EIP-712 signing failed:", e);
 		
@@ -457,7 +458,8 @@ export async function signUserOperation(
 		});
 		
 		console.warn("WARNING: Using personal_sign which adds message prefix");
-		return signature;
+		// Add the signer type prefix
+		return addSignaturePrefix(signature, signerType);
 	}
 }
 
