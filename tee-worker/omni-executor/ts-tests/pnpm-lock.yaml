@@ -118,7 +118,7 @@ importers:
         specifier: ^8.18.2
         version: 8.18.3(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       zx:
-        specifier: ^8.6.0
+        specifier: ^8.6.1
         version: 8.6.1
     devDependencies:
       '@ethersproject/providers':
@@ -137,19 +137,19 @@ importers:
         specifier: ^8.5.9
         version: 8.18.1
       '@typescript-eslint/eslint-plugin':
-        specifier: ^8.35.1
+        specifier: ^8.36.0
         version: 8.36.0(@typescript-eslint/parser@8.36.0)(eslint@9.30.1)(typescript@5.8.3)
       '@typescript-eslint/parser':
-        specifier: ^8.35.1
+        specifier: ^8.36.0
         version: 8.36.0(eslint@9.30.1)(typescript@5.8.3)
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
       dotenv:
-        specifier: ^17.0.0
+        specifier: ^17.0.1
         version: 17.1.0
       eslint:
-        specifier: ^9.30.0
+        specifier: ^9.30.1
         version: 9.30.1
       ethers:
         specifier: ^5.7.2
@@ -192,8 +192,8 @@ importers:
         version: 2.31.7(typescript@5.8.3)
     devDependencies:
       '@types/chai':
-        specifier: ^4.3.3
-        version: 4.3.20
+        specifier: ^5.2.2
+        version: 5.2.2
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
@@ -1889,10 +1889,6 @@ packages:
     dependencies:
       '@types/node': 20.19.4
     dev: false
-
-  /@types/chai@4.3.20:
-    resolution: {integrity: sha512-/pC9HAB5I/xMlc5FP77qjCnI16ChlJfW0tGa0IUcFn38VJrTV6DeZ60NU5KZBtaOZqjdpwTWohz5HU1RrhiYxQ==}
-    dev: true
 
   /@types/chai@5.2.2:
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}

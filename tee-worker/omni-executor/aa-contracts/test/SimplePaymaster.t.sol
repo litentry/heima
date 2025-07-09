@@ -73,7 +73,7 @@ contract SimplePaymasterTest is Test {
     }
 
     function test_ValidatePaymasterUserOp_AuthorizedBundler() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -87,7 +87,7 @@ contract SimplePaymasterTest is Test {
     }
 
     function test_ValidatePaymasterUserOp_UnauthorizedBundler() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -105,7 +105,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.withdrawTo(payable(owner), currentDeposit);
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -117,7 +117,7 @@ contract SimplePaymasterTest is Test {
     }
 
     function test_ValidatePaymasterUserOp_OnlyEntryPoint() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -218,7 +218,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.pause();
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -235,7 +235,7 @@ contract SimplePaymasterTest is Test {
         paymaster.unpause();
         vm.stopPrank();
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -329,7 +329,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.setAuthorizedBundler(bundler2, true);
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
@@ -349,7 +349,7 @@ contract SimplePaymasterTest is Test {
         vm.prank(owner);
         paymaster.setAuthorizedBundler(bundler1, false);
 
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "", address(0), 0, "");
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(omniAccount, "");
         bytes32 userOpHash = keccak256("test");
         uint256 maxCost = 1000000;
 
