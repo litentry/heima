@@ -10,6 +10,7 @@ import {
 	createUserOperation,
 	signUserOperation,
 	packUserOperation,
+	UserOpSigner,
 	type UserOperation,
 } from "@/lib/aa-utils";
 
@@ -107,13 +108,14 @@ export function AuthorizeTEEWorker({
 				initCode: "0x", // Account already deployed
 			});
 
-			// Sign UserOperation
+			// Sign UserOperation with RootKey signer type
 			const signature = await signUserOperation(
 				walletClient,
 				evmAddress,
 				userOp as UserOperation,
 				CONTRACTS.EntryPoint.address,
 				BigInt(await publicClient.getChainId()),
+				UserOpSigner.RootKey,
 			);
 
 			userOp.signature = signature;

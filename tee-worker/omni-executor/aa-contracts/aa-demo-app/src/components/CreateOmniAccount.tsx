@@ -13,10 +13,11 @@ import {
 import {
 	calculateOmniAccount,
 	createUserOperation,
-	getUserOpHash,
 	stringToBytes,
 	generateInitCode,
 	packUserOperation,
+	signUserOperation,
+	UserOpSigner,
 	type UserOperation,
 } from "@/lib/aa-utils";
 import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
@@ -113,74 +114,15 @@ export function CreateOmniAccount({
 				callData: "0x", // No additional operations needed
 			});
 
-			// Sign the UserOperation
-			let signature: `0x${string}`;
-
-			try {
-				// Convert UserOperation to PackedUserOperation for signing
-				const packedOp = packUserOperation(userOp as UserOperation);
-
-				// EIP-712 domain
-				const domain = {
-					name: "ERC4337",
-					version: "1",
-					chainId: chain.id,
-					verifyingContract: CONTRACTS.EntryPoint.address as `0x${string}`,
-				};
-
-				// EIP-712 types for PackedUserOperation
-				const types = {
-					PackedUserOperation: [
-						{ name: "sender", type: "address" },
-						{ name: "nonce", type: "uint256" },
-						{ name: "initCode", type: "bytes" },
-						{ name: "callData", type: "bytes" },
-						{ name: "accountGasLimits", type: "bytes32" },
-						{ name: "preVerificationGas", type: "uint256" },
-						{ name: "gasFees", type: "bytes32" },
-						{ name: "paymasterAndData", type: "bytes" },
-						{ name: "sessionAccount", type: "address" },
-						{ name: "sessionExpiration", type: "uint256" },
-						{ name: "sessionAccountProof", type: "bytes" },
-					],
-				};
-
-				// Message to sign (without signature field)
-				const message = {
-					sender: packedOp.sender,
-					nonce: packedOp.nonce,
-					initCode: packedOp.initCode,
-					callData: packedOp.callData,
-					accountGasLimits: packedOp.accountGasLimits,
-					preVerificationGas: packedOp.preVerificationGas,
-					gasFees: packedOp.gasFees,
-					paymasterAndData: packedOp.paymasterAndData,
-					sessionAccount: packedOp.sessionAccount,
-					sessionExpiration: packedOp.sessionExpiration,
-					sessionAccountProof: packedOp.sessionAccountProof,
-				};
-
-				signature = await walletClient.signTypedData({
-					account: evmAddress,
-					domain,
-					types,
-					primaryType: "PackedUserOperation",
-					message,
-				});
-			} catch (e) {
-				console.error("EIP-712 signing failed:", e);
-
-				// Fallback: Try personal_sign
-				const userOpHash = getUserOpHash(
-					userOp as UserOperation,
-					CONTRACTS.EntryPoint.address,
-					chain.id,
-				);
-				signature = await walletClient.signMessage({
-					account: evmAddress,
-					message: { raw: userOpHash },
-				});
-			}
+			// Sign the UserOperation with Owner signer type
+			const signature = await signUserOperation(
+				walletClient,
+				evmAddress,
+				userOp as UserOperation,
+				CONTRACTS.EntryPoint.address,
+				BigInt(chain.id),
+				UserOpSigner.Owner,
+			);
 
 			// Update the UserOperation with signature
 			const signedUserOp = {
