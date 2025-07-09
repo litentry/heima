@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
 import {Counter} from "../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
@@ -69,14 +70,11 @@ contract OmniAccountTest is Test {
 
         bytes memory initCode = "";
 
-        address session_account = 0x0000000000000000000000000000000000000000;
-        bytes memory sessionAccountProof = "";
-        PackedUserOperation memory packedOp =
-            TestUtils.preparePackedOp(sender, initCode, session_account, 2, sessionAccountProof);
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
         bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
         // sign userOp
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(bobPk, packedOpHash);
-        packedOp.signature = abi.encodePacked(r, s, v);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
 
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
