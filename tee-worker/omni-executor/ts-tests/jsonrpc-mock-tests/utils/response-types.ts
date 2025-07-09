@@ -37,4 +37,10 @@ interface AddWalletResponse {
         data: object; // Additional data (usually empty for add wallet)
     };
 }
+
+export interface ExportWalletResponse {
+    ciphertext: string;
+    aad: string;
+    nonce: string;
+}
 // todo: add other types

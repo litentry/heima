@@ -30,3 +30,11 @@ export interface GetWeb3SignInMessageParams {
     client_id: string;
     omni_account: string;
 }
+
+export interface ExportWalletParams {
+    key: string;
+    google_code: string;
+    chain_id: number;
+    wallet_index: number;
+    wallet_address: string;
+}

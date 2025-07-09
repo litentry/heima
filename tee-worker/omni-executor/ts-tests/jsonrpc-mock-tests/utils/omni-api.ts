@@ -5,6 +5,7 @@ import {
     UserLoginParams,
     GetWeb3SignInMessageParams,
     GetNextIntentIdParams,
+    ExportWalletParams,
 } from './request-types';
 import {
     RequestEmailVerificationCodeResponse,
@@ -12,6 +13,7 @@ import {
     UserLoginResponse,
     GetWeb3SignInMessageResponse,
     GetNextIntentIdResponse,
+    ExportWalletResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -63,6 +65,12 @@ export class OmniApi {
 
     async addWallet(token: string): Promise<null> {
         const response = await this.client.call(JsonRpcMethods.OmniAddWallet, {}, token);
+
+        return response;
+    }
+
+    async exportWallet(params: ExportWalletParams, token: string): Promise<ExportWalletResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniExportWallet, params, token);
 
         return response;
     }
