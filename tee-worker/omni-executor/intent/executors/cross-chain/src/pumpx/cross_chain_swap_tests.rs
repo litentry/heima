@@ -18,9 +18,7 @@ use crate::Chain;
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
 use crate::U256;
-use accounting_contract_client::{
-	solana::AccountingContractApi as SolanaAccountingContractApi, AccountingContractApi,
-};
+use accounting_contract_client::AccountingContractApi;
 use alloy::primitives::Address;
 use binance_api::spot_trading_api::types::SymbolPrice;
 use binance_api::wallet_api::types::{CoinInfo, DepositAddress, NetworkInfo};
@@ -275,22 +273,22 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		.times(1)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
-	let mut accounting_contract_client_mock =
+	let mut evm_accounting_contract_client_mock =
 		accounting_contract_client::mocks::MockAccountingContractClient::new();
 	let solana_accounting_contract_client_mock =
 		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_get_balance()
 		.times(1)
 		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_get_nonce()
 		.times(1)
 		.returning(|_| Ok(U256::from(1)));
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_execute_pay_out_request()
 		.with(
 			mockall::predicate::eq(Address::from_str(expected_payout_address).unwrap()),
@@ -317,9 +315,9 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	let binance_api = Arc::new(binance_api_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
-		Arc::new(Box::new(accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>> =
+	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_accounting_contract_client_mock));
+	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
 		Arc::new(Box::new(solana_accounting_contract_client_mock));
 
 	let intent_id = 0;
@@ -342,6 +340,10 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock,
 		rpc_endpoint_registry,
@@ -351,9 +353,11 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		binance_api,
 		bsc_client,
 		solana_client,
-		accounting_contract_client,
+		evm_accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from(1),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
@@ -561,7 +565,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		.times(2)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
-	let accounting_contract_client_mock =
+	let evm_accounting_contract_client_mock =
 		accounting_contract_client::mocks::MockAccountingContractClient::new();
 	let mut solana_accounting_contract_client_mock =
 		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
@@ -606,9 +610,9 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	let binance_api = Arc::new(binance_api_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
-		Arc::new(Box::new(accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>> =
+	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_accounting_contract_client_mock));
+	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
 		Arc::new(Box::new(solana_accounting_contract_client_mock));
 
 	let intent_id = 0;
@@ -631,6 +635,10 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -640,9 +648,11 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		binance_api,
 		bsc_client,
 		solana_client,
-		accounting_contract_client,
+		evm_accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("1").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
@@ -681,7 +691,7 @@ async fn instant_payout_cross_chain_swap() {
 	let binance_deposit_address = "binance_deposit_address";
 	let solana_coin_ticker = "SOL";
 	let solana_coin_name = "Solana";
-	let accounting_contract_client_address = "0x7CE3464A6dc52001754b0b90878d9Ffd61B47c6C";
+	let evm_accounting_contract_client_address = "0x7CE3464A6dc52001754b0b90878d9Ffd61B47c6C";
 
 	// this is called twice, one for solana address and later for ethereum address
 	pumpx_signer_client_mock
@@ -772,7 +782,7 @@ async fn instant_payout_cross_chain_swap() {
 				amount_in: "998.000000000000000000".to_string(),
 				double_out: false,
 				is_one_click: false,
-				address: accounting_contract_client_address.to_string(),
+				address: evm_accounting_contract_client_address.to_string(),
 				is_anti_mev: false,
 				is_auto_slippage: false,
 				gas_type: GasType::Slow,
@@ -877,13 +887,13 @@ async fn instant_payout_cross_chain_swap() {
 	let solana_accounting_contract_client_mock =
 		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
 
-	let mut accounting_contract_client_mock =
+	let mut evm_accounting_contract_client_mock =
 		accounting_contract_client::mocks::MockAccountingContractClient::new();
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_get_signer_address()
 		.times(1)
-		.returning(|| Address::from_str(accounting_contract_client_address).unwrap());
+		.returning(|| Address::from_str(evm_accounting_contract_client_address).unwrap());
 
 	let bsc_client_mock = ethereum_rpc::client::mocks::MockEthereumRpcClient::new();
 
@@ -909,9 +919,9 @@ async fn instant_payout_cross_chain_swap() {
 	let binance_api = Arc::new(binance_api_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
-		Arc::new(Box::new(accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>> =
+	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_accounting_contract_client_mock));
+	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
 		Arc::new(Box::new(solana_accounting_contract_client_mock));
 
 	let intent_id = 0;
@@ -934,6 +944,10 @@ async fn instant_payout_cross_chain_swap() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -943,9 +957,11 @@ async fn instant_payout_cross_chain_swap() {
 		binance_api,
 		bsc_client,
 		solana_client,
-		accounting_contract_client,
+		evm_accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("100000").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
@@ -1177,20 +1193,20 @@ async fn no_instant_payout_if_exported_wallet() {
 	let solana_accounting_contract_client_mock =
 		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
 
-	let mut accounting_contract_client_mock =
+	let mut evm_accounting_contract_client_mock =
 		accounting_contract_client::mocks::MockAccountingContractClient::new();
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_get_balance()
 		.times(1)
 		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_get_nonce()
 		.times(1)
 		.returning(|_| Ok(U256::from(1)));
 
-	accounting_contract_client_mock
+	evm_accounting_contract_client_mock
 		.expect_execute_pay_out_request()
 		.with(
 			mockall::predicate::eq(Address::from_str(expected_payout_address).unwrap()),
@@ -1219,9 +1235,9 @@ async fn no_instant_payout_if_exported_wallet() {
 	let binance_api = Arc::new(binance_api_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let accounting_contract_client: Arc<Box<dyn AccountingContractApi>> =
-		Arc::new(Box::new(accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn SolanaAccountingContractApi>> =
+	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_accounting_contract_client_mock));
+	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
 		Arc::new(Box::new(solana_accounting_contract_client_mock));
 
 	let intent_id = 0;
@@ -1244,6 +1260,10 @@ async fn no_instant_payout_if_exported_wallet() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
+	// Placeholder AA contract addresses for testing
+	let factory_address = Address::from_slice(&[0u8; 20]);
+	let implementation_address = Address::from_slice(&[1u8; 20]);
+
 	let executor = CrossChainIntentExecutor::new(
 		account_assets_lock.clone(),
 		rpc_endpoint_registry,
@@ -1253,9 +1273,11 @@ async fn no_instant_payout_if_exported_wallet() {
 		binance_api,
 		bsc_client,
 		solana_client,
-		accounting_contract_client,
+		evm_accounting_contract_client,
 		solana_accounting_contract_client,
 		Decimal::from_str("100000").unwrap(),
+		factory_address,
+		implementation_address,
 	)
 	.unwrap();
 
