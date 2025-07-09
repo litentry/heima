@@ -49,7 +49,6 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let add_wallet = warp::post()
-		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "add_wallet"))
 		.and(warp::header::optional::<String>("authorization"))
 		.map(|auth: Option<String>| {
