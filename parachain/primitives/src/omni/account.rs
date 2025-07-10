@@ -25,6 +25,7 @@ pub enum OmniAccountAuthType {
 	Email,
 	OAuth2,
 	AuthToken,
+	Passkey,
 }
 
 #[derive(Encode, Decode, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]

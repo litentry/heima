@@ -332,6 +332,9 @@ pub enum Identity {
 
 	#[codec(index = 9)]
 	Pumpx(IdentityString),
+
+	#[codec(index = 10)]
+	Passkey(IdentityString),
 }
 
 impl Identity {
@@ -344,6 +347,7 @@ impl Identity {
 				| Self::Email(..)
 				| Self::Google(..)
 				| Self::Pumpx(..)
+				| Self::Passkey(..)
 		)
 	}
 
@@ -378,7 +382,8 @@ impl Identity {
 			| Identity::Github(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
-			| Identity::Pumpx(_) => Vec::new(),
+			| Identity::Pumpx(_)
+			| Identity::Passkey(_) => Vec::new(),
 		}
 	}
 
@@ -396,7 +401,8 @@ impl Identity {
 			| Identity::Github(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
-			| Identity::Pumpx(_) => networks.is_empty(),
+			| Identity::Pumpx(_)
+			| Identity::Passkey(_) => networks.is_empty(),
 		}
 	}
 
@@ -419,7 +425,8 @@ impl Identity {
 			| Identity::Github(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
-			| Identity::Pumpx(_) => None,
+			| Identity::Pumpx(_)
+			| Identity::Passkey(_) => None,
 		}
 	}
 
@@ -477,6 +484,10 @@ impl Identity {
 			Identity::Pumpx(handle) => {
 				// TODO: this type will be removed.
 				hasher.update(b"pumpx");
+				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+			},
+			Identity::Passkey(handle) => {
+				hasher.update(b"passkey");
 				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
 			},
 		}
@@ -581,6 +592,11 @@ impl Identity {
 					"pumpx:{}",
 					str::from_utf8(handle.inner_ref())
 						.map_err(|_| "pumpx handle conversion error")?
+				),
+				Identity::Passkey(handle) => format!(
+					"passkey:{}",
+					str::from_utf8(handle.inner_ref())
+						.map_err(|_| "passkey handle conversion error")?
 				),
 			}
 		))
