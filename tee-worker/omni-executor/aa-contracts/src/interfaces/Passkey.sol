@@ -15,6 +15,7 @@ import "@openzeppelin/contracts/utils/cryptography/P256.sol";
 library Passkey {
     struct Metadata {
         bytes authData;
+        /// We assume clientDataJSON.challenge should be UserOpHash
         string clientDataJSON;
         /// Having these fields to avoid expensive on-chain JSON parsing
         uint16 challengeIndex;
