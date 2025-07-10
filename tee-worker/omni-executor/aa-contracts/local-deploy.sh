@@ -65,6 +65,10 @@ deploy_contracts() {
         FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         
+        # Extract test token addresses
+        USDC_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        USDT_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | tail -1)
+        
         echo ""
         echo "🎉 All contracts deployed successfully!"
         echo ""
@@ -74,7 +78,19 @@ deploy_contracts() {
         echo "OmniAccountFactory: $FACTORY_ADDRESS"
         echo "SimplePaymaster:    $PAYMASTER_ADDRESS"
         echo ""
+        echo "Test Token Addresses:"
+        echo "===================="
+        echo "Test USDC:          $USDC_ADDRESS"
+        echo "Test USDT:          $USDT_ADDRESS"
+        echo ""
         echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"
+        echo ""
+        echo "To use these addresses in the demo app, update your .env.local file:"
+        echo "NEXT_PUBLIC_ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS"
+        echo "NEXT_PUBLIC_FACTORY_ADDRESS=$FACTORY_ADDRESS"
+        echo "NEXT_PUBLIC_PAYMASTER_ADDRESS=$PAYMASTER_ADDRESS"
+        echo "NEXT_PUBLIC_TEST_USDC_ADDRESS=$USDC_ADDRESS"
+        echo "NEXT_PUBLIC_TEST_USDT_ADDRESS=$USDT_ADDRESS"
     else
         echo "⚠️  Contracts deployed but broadcast file not found"
         echo "Check the output above for contract addresses"
