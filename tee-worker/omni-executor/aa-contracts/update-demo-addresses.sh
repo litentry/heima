@@ -80,6 +80,9 @@ NEXT_PUBLIC_TEST_USDT_ADDRESS=$USDT_ADDRESS
 # Local RPC URL
 NEXT_PUBLIC_RPC_URL=http://localhost:8545
 
+# TEE Worker RPC URL
+NEXT_PUBLIC_TEE_WORKER_RPC_URL=https://staging-dex-worker.heima.network
+
 # Add your WalletConnect Project ID here
 # NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
 EOF
