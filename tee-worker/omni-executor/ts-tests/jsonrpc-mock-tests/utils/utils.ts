@@ -64,25 +64,6 @@ export function calculateOmniAccount(
     // Convert to hex string
     const result = `0x${hash.map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 
-    // console.log("OmniAccount calculation:", {
-    // 	address,
-    // 	clientId,
-    // 	identityType,
-    // 	clientIdBytes: Array.from(inputs[0])
-    // 		.map((b) => b.toString(16).padStart(2, "0"))
-    // 		.join(""),
-    // 	identityTypeBytes: Array.from(inputs[1])
-    // 		.map((b) => b.toString(16).padStart(2, "0"))
-    // 		.join(""),
-    // 	addressBytes: Array.from(inputs[2])
-    // 		.map((b) => b.toString(16).padStart(2, "0"))
-    // 		.join(""),
-    // 	combined: Array.from(combined)
-    // 		.map((b) => b.toString(16).padStart(2, "0"))
-    // 		.join(""),
-    // 	result,
-    // });
-
     return result as `0x${string}`;
 }
 
