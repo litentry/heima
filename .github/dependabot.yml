@@ -55,6 +55,11 @@ updates:
     schedule:
       interval: "weekly"
 
+  # Explicitly ignore aa-demo-app dependencies
+  - package-ecosystem: "npm"
+    directory: "/tee-worker/omni-executor/aa-contracts/aa-demo-app"
+    open-pull-requests-limit: 0
+
   # GitHub Actions
   - package-ecosystem: github-actions
     directory: '/'
