@@ -35,6 +35,10 @@ extract_addresses() {
         FACTORY_ADDRESS=$(grep -A2 '"contractName": "SmartAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     fi
     
+    # Extract test token addresses
+    USDC_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    USDT_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | tail -1)
+    
     # OmniAccount implementation is created by the factory, need to find it differently
     # For now, we'll leave it empty as it's deployed by the factory
     OMNI_ACCOUNT_IMPL_ADDRESS=""
@@ -42,6 +46,8 @@ extract_addresses() {
     echo "Found addresses:"
     echo "  EntryPoint: $ENTRYPOINT_ADDRESS"
     echo "  OmniAccountFactory: $FACTORY_ADDRESS"
+    echo "  Test USDC: $USDC_ADDRESS"
+    echo "  Test USDT: $USDT_ADDRESS"
 }
 
 # Function to create or update .env.local
@@ -67,8 +73,15 @@ NEXT_PUBLIC_ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS
 NEXT_PUBLIC_FACTORY_ADDRESS=$FACTORY_ADDRESS
 NEXT_PUBLIC_OMNI_ACCOUNT_IMPL_ADDRESS=$OMNI_ACCOUNT_IMPL_ADDRESS
 
+# Test Token Addresses
+NEXT_PUBLIC_TEST_USDC_ADDRESS=$USDC_ADDRESS
+NEXT_PUBLIC_TEST_USDT_ADDRESS=$USDT_ADDRESS
+
 # Local RPC URL
 NEXT_PUBLIC_RPC_URL=http://localhost:8545
+
+# TEE Worker RPC URL
+NEXT_PUBLIC_TEE_WORKER_RPC_URL=https://staging-dex-worker.heima.network
 
 # Add your WalletConnect Project ID here
 # NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
@@ -91,6 +104,8 @@ show_next_steps() {
     echo "Contract addresses:"
     echo "  EntryPoint: $ENTRYPOINT_ADDRESS"
     echo "  Factory: $FACTORY_ADDRESS"
+    echo "  Test USDC: $USDC_ADDRESS"
+    echo "  Test USDT: $USDT_ADDRESS"
     echo ""
     echo "Make sure Anvil is running on port 8545 (started by deploy-local.sh)"
 }
