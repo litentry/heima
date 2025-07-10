@@ -327,9 +327,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			preVerificationGas: pre_verification_gas,
 			gasFees: gas_fees,
 			paymasterAndData: paymaster_and_data,
-			sessionAccount: Address::default(),
-			sessionExpiration: U256::from(0),
-			sessionAccountProof: Bytes::new(),
 			signature: Bytes::new(),
 		})
 	}

@@ -28,8 +28,5 @@ pub struct SerializablePackedUserOperation {
 	pub pre_verification_gas: [u8; 32], // U256 as byte array
 	pub gas_fees: [u8; 32],             // FixedBytes<32> as byte array
 	pub paymaster_and_data: Vec<u8>,    // Bytes as Vec<u8>
-	pub session_account: [u8; 20],      // Address as byte array
-	pub session_expiration: [u8; 32],   // U256 as byte array
-	pub session_account_proof: Vec<u8>, // Bytes as Vec<u8>
 	pub signature: Vec<u8>,             // Bytes as Vec<u8>
 }

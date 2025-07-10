@@ -193,13 +193,12 @@ fn calculate_domain_separator(
 /// Encode PackedUserOperation for hashing (equivalent to UserOperationLib.encode)
 fn encode_user_operation(user_op: &PackedUserOperation) -> Vec<u8> {
 	// PackedUserOperation TypeHash - calculated at runtime
-	let packed_userop_typehash = keccak256("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData,address sessionAccount,uint256 sessionExpiration,bytes sessionAccountProof)".as_bytes());
+	let packed_userop_typehash = keccak256("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)".as_bytes());
 
 	// Hash dynamic fields (bytes data)
 	let init_code_hash = keccak256(&user_op.initCode);
 	let call_data_hash = keccak256(&user_op.callData);
 	let paymaster_and_data_hash = keccak256(&user_op.paymasterAndData);
-	let session_account_proof_hash = keccak256(&user_op.sessionAccountProof);
 
 	let user_op_for_hashing = PackedUserOperationForHashing {
 		typeHash: packed_userop_typehash,
@@ -211,9 +210,6 @@ fn encode_user_operation(user_op: &PackedUserOperation) -> Vec<u8> {
 		preVerificationGas: user_op.preVerificationGas,
 		gasFees: user_op.gasFees,
 		paymasterAndData: paymaster_and_data_hash,
-		sessionAccount: user_op.sessionAccount,
-		sessionExpiration: user_op.sessionExpiration,
-		sessionAccountProof: session_account_proof_hash,
 	};
 
 	// Use sol! type's ABI encoding
@@ -363,9 +359,6 @@ mod tests {
 			preVerificationGas: U256::from(21000),
 			gasFees: FixedBytes::from([2u8; 32]),
 			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
-			sessionAccount: address!("0x9876543210987654321098765432109876543210"),
-			sessionExpiration: U256::from(1000000),
-			sessionAccountProof: Bytes::from(hex::decode("112233").unwrap()),
 			signature: Bytes::from(hex::decode("445566").unwrap()),
 		};
 
@@ -395,9 +388,6 @@ mod tests {
 			preVerificationGas: U256::from(21000),
 			gasFees: FixedBytes::from([2u8; 32]),
 			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
-			sessionAccount: address!("0x9876543210987654321098765432109876543210"),
-			sessionExpiration: U256::from(1000000),
-			sessionAccountProof: Bytes::from(hex::decode("112233").unwrap()),
 			signature: Bytes::from(hex::decode("445566").unwrap()),
 		};
 
@@ -427,9 +417,6 @@ mod tests {
 			preVerificationGas: U256::from(21000),
 			gasFees: FixedBytes::from([2u8; 32]),
 			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
-			sessionAccount: address!("0x9876543210987654321098765432109876543210"),
-			sessionExpiration: U256::from(1000000),
-			sessionAccountProof: Bytes::from(hex::decode("112233").unwrap()),
 			signature: Bytes::from(hex::decode("445566").unwrap()),
 		};
 
@@ -476,9 +463,6 @@ mod tests {
 			preVerificationGas: U256::from(21000),
 			gasFees: FixedBytes::from([2u8; 32]),
 			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
-			sessionAccount: address!("0x9876543210987654321098765432109876543210"),
-			sessionExpiration: U256::from(1000000),
-			sessionAccountProof: Bytes::from(hex::decode("112233").unwrap()),
 			signature: Bytes::from(hex::decode("445566").unwrap()),
 		};
 
@@ -540,9 +524,6 @@ mod tests {
 			preVerificationGas: U256::from(21000),
 			gasFees: FixedBytes::from([2u8; 32]),
 			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
-			sessionAccount: address!("0x9876543210987654321098765432109876543210"),
-			sessionExpiration: U256::from(1000000),
-			sessionAccountProof: Bytes::from(hex::decode("112233").unwrap()),
 			signature: Bytes::from(hex::decode("445566").unwrap()),
 		};
 
@@ -592,9 +573,6 @@ mod tests {
 				preVerificationGas: U256::from(21000),
 				gasFees: FixedBytes::from([1u8; 32]),
 				paymasterAndData: Bytes::new(),
-				sessionAccount: Address::ZERO,
-				sessionExpiration: U256::from(0),
-				sessionAccountProof: Bytes::new(),
 				signature: Bytes::new(),
 			},
 			// Complex user operation with all fields populated
@@ -607,9 +585,6 @@ mod tests {
 				preVerificationGas: U256::from(50000),
 				gasFees: FixedBytes::from([0x34u8; 32]),
 				paymasterAndData: Bytes::from(hex::decode("444444444444444444444444444444444444444400000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002").unwrap()),
-				sessionAccount: address!("0x5555555555555555555555555555555555555555"),
-				sessionExpiration: U256::from(9999999999u64),
-				sessionAccountProof: Bytes::from(hex::decode("aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899").unwrap()),
 				signature: Bytes::from(hex::decode("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1c").unwrap()),
 			},
 		];

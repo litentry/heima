@@ -907,9 +907,6 @@ async fn handle_native_task<
 					preVerificationGas: packed_user_op.preVerificationGas,
 					gasFees: packed_user_op.gasFees,
 					paymasterAndData: packed_user_op.paymasterAndData.clone(),
-					sessionAccount: packed_user_op.sessionAccount,
-					sessionExpiration: packed_user_op.sessionExpiration,
-					sessionAccountProof: packed_user_op.sessionAccountProof.clone(),
 					signature: packed_user_op.signature.clone(),
 				};
 				aa_user_ops.push(aa_user_op);
@@ -1119,9 +1116,6 @@ fn convert_to_packed_user_op(
 		preVerificationGas: U256::from_be_bytes(user_op.pre_verification_gas),
 		gasFees: FixedBytes::from_slice(&user_op.gas_fees),
 		paymasterAndData: Bytes::from(user_op.paymaster_and_data),
-		sessionAccount: Address::from_slice(&user_op.session_account),
-		sessionExpiration: U256::from_be_bytes(user_op.session_expiration),
-		sessionAccountProof: Bytes::from(user_op.session_account_proof),
 		signature: Bytes::from(user_op.signature),
 	}
 }
