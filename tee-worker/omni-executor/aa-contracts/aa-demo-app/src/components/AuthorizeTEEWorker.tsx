@@ -137,9 +137,10 @@ export function AuthorizeTEEWorker({
 			const receipt = await publicClient.waitForTransactionReceipt({ hash });
 			console.log("Transaction receipt:", receipt);
 
-			// Add a delay to ensure events are indexed
-			console.log("Waiting for events to be indexed...");
-			await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
+			// Check if transaction was successful
+			if (receipt.status !== "success") {
+				throw new Error("Transaction failed");
+			}
 
 			// Verify the signer was actually added
 			const isSignerAdded = await publicClient.readContract({
