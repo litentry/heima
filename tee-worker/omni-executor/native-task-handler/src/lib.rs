@@ -1159,9 +1159,12 @@ fn convert_to_packed_user_op(
 			decode_hex(&user_op.paymaster_and_data)
 				.map_err(|e| format!("Invalid paymaster_and_data hex: {}", e))?,
 		),
-		signature: Bytes::from(
-			decode_hex(&user_op.signature).map_err(|e| format!("Invalid signature hex: {}", e))?,
-		),
+		signature: match user_op.signature {
+			Some(sig) => {
+				Bytes::from(decode_hex(&sig).map_err(|e| format!("Invalid signature hex: {}", e))?)
+			},
+			None => Bytes::new(), // Empty signature for unsigned operations
+		},
 	})
 }
 
@@ -1187,7 +1190,7 @@ mod tests {
 			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
 				.to_string(),
 			paymaster_and_data: "0x".to_string(),
-			signature: "0x1234567890abcdef".to_string(),
+			signature: Some("0x1234567890abcdef".to_string()),
 		};
 
 		let packed_user_op = convert_to_packed_user_op(serializable_user_op)
@@ -1201,5 +1204,30 @@ mod tests {
 		assert_eq!(packed_user_op.preVerificationGas, U256::from(21000));
 		assert_eq!(packed_user_op.paymasterAndData, Bytes::from(Vec::<u8>::new()));
 		assert_eq!(packed_user_op.signature, Bytes::from(hex::decode("1234567890abcdef").unwrap()));
+	}
+
+	#[test]
+	fn test_convert_to_packed_user_op_unsigned() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0xdeadbeef".to_string(),
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None, // Unsigned operation
+		};
+
+		let packed_user_op = convert_to_packed_user_op(serializable_user_op)
+			.expect("Failed to convert unsigned SerializablePackedUserOperation");
+
+		// Verify the signature is empty for unsigned operation
+		assert!(packed_user_op.signature.is_empty());
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
 	}
 }

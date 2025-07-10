@@ -28,7 +28,7 @@ pub struct SerializablePackedUserOperation {
 	pub pre_verification_gas: u128, // U256 as u128 integer
 	pub gas_fees: String,           // FixedBytes<32> as hex string (e.g., "0x456...")
 	pub paymaster_and_data: String, // Bytes as hex string (e.g., "0x789...")
-	pub signature: String,          // Bytes as hex string (e.g., "0xabc...")
+	pub signature: Option<String>,  // Optional signature: None = unsigned, Some("0xabc...") = signed
 }
 
 #[cfg(test)]
@@ -62,7 +62,7 @@ mod tests {
 		assert_eq!(user_op.pre_verification_gas, 21000);
 		assert_eq!(user_op.gas_fees, "0x000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000000000000000000000000000000000000b2d05e0");
 		assert_eq!(user_op.paymaster_and_data, "0x");
-		assert_eq!(user_op.signature, "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1c");
+		assert_eq!(user_op.signature, Some("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1c".to_string()));
 	}
 
 	#[test]
@@ -76,7 +76,7 @@ mod tests {
 			pre_verification_gas: 25000,
 			gas_fees: "0x000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000000000000000000000000000000000000b2d05e0".to_string(),
 			paymaster_and_data: "0x456789".to_string(),
-			signature: "0x987654321".to_string(),
+			signature: Some("0x987654321".to_string()),
 		};
 
 		let json_string = serde_json::to_string(&user_op)
@@ -87,5 +87,28 @@ mod tests {
 			serde_json::from_str(&json_string).expect("Failed to deserialize back");
 
 		assert_eq!(user_op, deserialized);
+	}
+
+	#[test]
+	fn test_serializable_packed_user_operation_unsigned() {
+		let json_data = r#"{
+			"sender": "0x1234567890123456789012345678901234567890",
+			"nonce": 42,
+			"init_code": "0xdeadbeef",
+			"call_data": "0xcafebabe",
+			"account_gas_limits": "0x0000000000000000000000000000000000000000000000000000000000030d40000000000000000000000000000000000000000000000000000000000000c350",
+			"pre_verification_gas": 21000,
+			"gas_fees": "0x000000000000000000000000000000000000000000000000000000003b9aca00000000000000000000000000000000000000000000000000000000000b2d05e0",
+			"paymaster_and_data": "0x",
+			"signature": null
+		}"#;
+
+		let user_op: SerializablePackedUserOperation = serde_json::from_str(json_data)
+			.expect("Failed to deserialize unsigned SerializablePackedUserOperation");
+
+		// Verify signature is None for unsigned operation
+		assert_eq!(user_op.signature, None);
+		assert_eq!(user_op.sender, "0x1234567890123456789012345678901234567890");
+		assert_eq!(user_op.nonce, 42);
 	}
 }
