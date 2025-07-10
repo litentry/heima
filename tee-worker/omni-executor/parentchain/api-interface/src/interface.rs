@@ -1306,9 +1306,9 @@ pub mod api {
 						"query_call_info",
 						types::QueryCallInfo { call, len },
 						[
-							236u8, 178u8, 108u8, 151u8, 103u8, 114u8, 150u8, 87u8, 171u8, 238u8,
-							191u8, 195u8, 207u8, 7u8, 67u8, 47u8, 172u8, 27u8, 114u8, 22u8, 77u8,
-							13u8, 73u8, 95u8, 154u8, 168u8, 7u8, 79u8, 146u8, 180u8, 100u8, 18u8,
+							9u8, 205u8, 251u8, 126u8, 87u8, 1u8, 20u8, 61u8, 168u8, 49u8, 103u8,
+							101u8, 226u8, 74u8, 187u8, 245u8, 192u8, 123u8, 21u8, 8u8, 180u8, 83u8,
+							163u8, 62u8, 110u8, 34u8, 1u8, 70u8, 54u8, 110u8, 11u8, 40u8,
 						],
 					)
 				}
@@ -1326,9 +1326,9 @@ pub mod api {
 						"query_call_fee_details",
 						types::QueryCallFeeDetails { call, len },
 						[
-							123u8, 99u8, 2u8, 101u8, 165u8, 163u8, 27u8, 143u8, 160u8, 227u8, 36u8,
-							12u8, 99u8, 164u8, 212u8, 248u8, 168u8, 104u8, 60u8, 79u8, 233u8,
-							102u8, 0u8, 8u8, 205u8, 178u8, 61u8, 24u8, 42u8, 202u8, 207u8, 241u8,
+							56u8, 22u8, 250u8, 209u8, 71u8, 92u8, 213u8, 242u8, 89u8, 175u8, 201u8,
+							73u8, 143u8, 246u8, 166u8, 58u8, 205u8, 190u8, 137u8, 234u8, 206u8,
+							107u8, 139u8, 46u8, 187u8, 6u8, 17u8, 109u8, 100u8, 61u8, 194u8, 101u8,
 						],
 					)
 				}
@@ -2798,10 +2798,9 @@ pub mod api {
 						"omni_account",
 						types::OmniAccount { client_id, id },
 						[
-							169u8, 183u8, 212u8, 42u8, 120u8, 20u8, 132u8, 38u8, 241u8, 136u8,
-							67u8, 14u8, 217u8, 212u8, 91u8, 133u8, 124u8, 133u8, 141u8, 227u8,
-							82u8, 88u8, 162u8, 120u8, 151u8, 79u8, 16u8, 223u8, 154u8, 39u8, 76u8,
-							227u8,
+							3u8, 49u8, 36u8, 33u8, 25u8, 165u8, 118u8, 64u8, 114u8, 25u8, 245u8,
+							177u8, 142u8, 57u8, 25u8, 118u8, 243u8, 80u8, 88u8, 0u8, 27u8, 192u8,
+							131u8, 8u8, 197u8, 73u8, 51u8, 182u8, 171u8, 44u8, 233u8, 112u8,
 						],
 					)
 				}
@@ -3033,9 +3032,6 @@ pub mod api {
 		pub fn teebag(&self) -> teebag::constants::ConstantsApi {
 			teebag::constants::ConstantsApi
 		}
-		pub fn omni_account(&self) -> omni_account::constants::ConstantsApi {
-			omni_account::constants::ConstantsApi
-		}
 	}
 	pub struct StorageApi;
 	impl StorageApi {
@@ -3076,9 +3072,9 @@ pub mod api {
 			.hash();
 		runtime_metadata_hash
 			== [
-				243u8, 195u8, 165u8, 29u8, 124u8, 51u8, 129u8, 127u8, 159u8, 248u8, 114u8, 231u8,
-				197u8, 210u8, 232u8, 103u8, 240u8, 93u8, 191u8, 224u8, 100u8, 152u8, 33u8, 244u8,
-				205u8, 255u8, 185u8, 31u8, 210u8, 168u8, 5u8, 174u8,
+				168u8, 104u8, 127u8, 94u8, 120u8, 79u8, 0u8, 172u8, 237u8, 124u8, 161u8, 176u8,
+				223u8, 218u8, 32u8, 102u8, 29u8, 56u8, 230u8, 46u8, 115u8, 190u8, 34u8, 217u8,
+				228u8, 164u8, 196u8, 71u8, 254u8, 135u8, 94u8, 28u8,
 			]
 	}
 	pub mod system {
@@ -4231,10 +4227,9 @@ pub mod api {
 						"Events",
 						(),
 						[
-							249u8, 195u8, 27u8, 167u8, 121u8, 207u8, 250u8, 208u8, 222u8, 180u8,
-							108u8, 123u8, 174u8, 133u8, 42u8, 29u8, 27u8, 235u8, 155u8, 181u8,
-							121u8, 244u8, 16u8, 69u8, 234u8, 247u8, 77u8, 46u8, 129u8, 188u8,
-							166u8, 135u8,
+							44u8, 29u8, 210u8, 157u8, 184u8, 99u8, 243u8, 158u8, 0u8, 92u8, 23u8,
+							49u8, 161u8, 101u8, 243u8, 204u8, 169u8, 138u8, 242u8, 181u8, 178u8,
+							135u8, 136u8, 39u8, 194u8, 184u8, 29u8, 46u8, 2u8, 140u8, 24u8, 87u8,
 						],
 					)
 				}
@@ -6973,9 +6968,9 @@ pub mod api {
 						"batch",
 						types::Batch { calls },
 						[
-							84u8, 124u8, 37u8, 67u8, 60u8, 212u8, 192u8, 117u8, 93u8, 190u8, 165u8,
-							184u8, 88u8, 198u8, 91u8, 131u8, 53u8, 18u8, 139u8, 99u8, 239u8, 231u8,
-							167u8, 254u8, 227u8, 218u8, 102u8, 77u8, 98u8, 133u8, 199u8, 111u8,
+							157u8, 34u8, 143u8, 89u8, 196u8, 203u8, 92u8, 223u8, 89u8, 7u8, 184u8,
+							57u8, 3u8, 46u8, 102u8, 97u8, 162u8, 8u8, 225u8, 87u8, 20u8, 89u8,
+							222u8, 109u8, 40u8, 199u8, 27u8, 62u8, 133u8, 182u8, 155u8, 142u8,
 						],
 					)
 				}
@@ -7779,14 +7774,14 @@ pub mod api {
 					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 				)]
 				pub struct DispatchAsOmniAccount {
-					pub member_account_hash: dispatch_as_omni_account::MemberAccountHash,
+					pub who: dispatch_as_omni_account::Who,
 					pub call:
 						::subxt::ext::subxt_core::alloc::boxed::Box<dispatch_as_omni_account::Call>,
 					pub auth_type: dispatch_as_omni_account::AuthType,
 				}
 				pub mod dispatch_as_omni_account {
 					use super::runtime_types;
-					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
 					pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 					pub type AuthType = ::core::option::Option<
 						runtime_types::heima_primitives::omni::account::OmniAccountAuthType,
@@ -7812,13 +7807,13 @@ pub mod api {
 					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
 				)]
 				pub struct DispatchAsSigned {
-					pub member_account_hash: dispatch_as_signed::MemberAccountHash,
+					pub who: dispatch_as_signed::Who,
 					pub call: ::subxt::ext::subxt_core::alloc::boxed::Box<dispatch_as_signed::Call>,
 					pub auth_type: dispatch_as_signed::AuthType,
 				}
 				pub mod dispatch_as_signed {
 					use super::runtime_types;
-					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
+					pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
 					pub type Call = runtime_types::paseo_runtime::RuntimeCall;
 					pub type AuthType = ::core::option::Option<
 						runtime_types::heima_primitives::omni::account::OmniAccountAuthType,
@@ -7827,123 +7822,6 @@ pub mod api {
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for DispatchAsSigned {
 					const PALLET: &'static str = "OmniAccount";
 					const CALL: &'static str = "dispatch_as_signed";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
-				pub struct CreateAccountStore {
-					pub client_id: create_account_store::ClientId,
-					pub identity: create_account_store::Identity,
-				}
-				pub mod create_account_store {
-					use super::runtime_types;
-					pub type ClientId = ::subxt::ext::subxt_core::alloc::string::String;
-					pub type Identity = runtime_types::heima_primitives::identity::Identity;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for CreateAccountStore {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "create_account_store";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
-				pub struct AddAccount {
-					pub member_account: add_account::MemberAccount,
-					pub permissions: add_account::Permissions,
-				}
-				pub mod add_account {
-					use super::runtime_types;
-					pub type MemberAccount =
-						runtime_types::heima_primitives::omni::account::MemberAccount;
-					pub type Permissions = ::core::option::Option<
-						::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_runtime::OmniAccountPermission,
-						>,
-					>;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for AddAccount {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "add_account";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
-				pub struct RemoveAccounts {
-					pub member_account_hashes: remove_accounts::MemberAccountHashes,
-				}
-				pub mod remove_accounts {
-					use super::runtime_types;
-					pub type MemberAccountHashes = ::subxt::ext::subxt_core::alloc::vec::Vec<
-						::subxt::ext::subxt_core::utils::H256,
-					>;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for RemoveAccounts {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "remove_accounts";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
-				#[doc = "make a member account public in the AccountStore"]
-				#[doc = "we force `Identity` type to avoid misuse and additional check"]
-				pub struct PublicizeAccount {
-					pub member_account: publicize_account::MemberAccount,
-				}
-				pub mod publicize_account {
-					use super::runtime_types;
-					pub type MemberAccount = runtime_types::heima_primitives::identity::Identity;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for PublicizeAccount {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "publicize_account";
 				}
 				#[derive(
 					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -7970,68 +7848,6 @@ pub mod api {
 				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for RequestIntent {
 					const PALLET: &'static str = "OmniAccount";
 					const CALL: &'static str = "request_intent";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
-				#[doc = "temporary extrinsic to upload the existing IDGraph from the worker onto chain"]
-				pub struct UpdateAccountStoreByOne {
-					pub client_id: update_account_store_by_one::ClientId,
-					pub who: update_account_store_by_one::Who,
-					pub member_account: update_account_store_by_one::MemberAccount,
-				}
-				pub mod update_account_store_by_one {
-					use super::runtime_types;
-					pub type ClientId = ::subxt::ext::subxt_core::alloc::string::String;
-					pub type Who = runtime_types::heima_primitives::identity::Identity;
-					pub type MemberAccount =
-						runtime_types::heima_primitives::omni::account::MemberAccount;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for UpdateAccountStoreByOne {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "update_account_store_by_one";
-				}
-				#[derive(
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-					:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-					:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-					:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-					Debug,
-				)]
-				# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-				#[codec(dumb_trait_bound)]
-				#[decode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-				)]
-				#[encode_as_type(
-					crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-				)]
-				pub struct SetPermissions {
-					pub member_account_hash: set_permissions::MemberAccountHash,
-					pub permissions: set_permissions::Permissions,
-				}
-				pub mod set_permissions {
-					use super::runtime_types;
-					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
-					pub type Permissions = ::subxt::ext::subxt_core::alloc::vec::Vec<
-						runtime_types::paseo_runtime::OmniAccountPermission,
-					>;
-				}
-				impl ::subxt::ext::subxt_core::blocks::StaticExtrinsic for SetPermissions {
-					const PALLET: &'static str = "OmniAccount";
-					const CALL: &'static str = "set_permissions";
 				}
 				#[derive(
 					:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -8158,7 +7974,7 @@ pub mod api {
 			impl TransactionApi {
 				pub fn dispatch_as_omni_account(
 					&self,
-					member_account_hash: types::dispatch_as_omni_account::MemberAccountHash,
+					who: types::dispatch_as_omni_account::Who,
 					call: types::dispatch_as_omni_account::Call,
 					auth_type: types::dispatch_as_omni_account::AuthType,
 				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<
@@ -8168,20 +7984,21 @@ pub mod api {
 						"OmniAccount",
 						"dispatch_as_omni_account",
 						types::DispatchAsOmniAccount {
-							member_account_hash,
+							who,
 							call: ::subxt::ext::subxt_core::alloc::boxed::Box::new(call),
 							auth_type,
 						},
 						[
-							159u8, 85u8, 99u8, 86u8, 10u8, 251u8, 42u8, 52u8, 63u8, 174u8, 242u8,
-							53u8, 54u8, 76u8, 146u8, 111u8, 231u8, 170u8, 168u8, 201u8, 250u8,
-							47u8, 5u8, 101u8, 57u8, 5u8, 204u8, 183u8, 5u8, 184u8, 222u8, 239u8,
+							245u8, 32u8, 247u8, 25u8, 251u8, 159u8, 65u8, 144u8, 205u8, 142u8,
+							111u8, 47u8, 111u8, 249u8, 201u8, 245u8, 112u8, 100u8, 133u8, 208u8,
+							60u8, 249u8, 171u8, 70u8, 105u8, 68u8, 246u8, 127u8, 254u8, 111u8,
+							229u8, 221u8,
 						],
 					)
 				}
 				pub fn dispatch_as_signed(
 					&self,
-					member_account_hash: types::dispatch_as_signed::MemberAccountHash,
+					who: types::dispatch_as_signed::Who,
 					call: types::dispatch_as_signed::Call,
 					auth_type: types::dispatch_as_signed::AuthType,
 				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::DispatchAsSigned>
@@ -8190,85 +8007,14 @@ pub mod api {
 						"OmniAccount",
 						"dispatch_as_signed",
 						types::DispatchAsSigned {
-							member_account_hash,
+							who,
 							call: ::subxt::ext::subxt_core::alloc::boxed::Box::new(call),
 							auth_type,
 						},
 						[
-							249u8, 147u8, 165u8, 31u8, 147u8, 194u8, 52u8, 217u8, 103u8, 2u8,
-							218u8, 70u8, 76u8, 142u8, 80u8, 22u8, 42u8, 48u8, 222u8, 210u8, 226u8,
-							245u8, 110u8, 210u8, 247u8, 139u8, 105u8, 137u8, 120u8, 11u8, 247u8,
-							131u8,
-						],
-					)
-				}
-				pub fn create_account_store(
-					&self,
-					client_id: types::create_account_store::ClientId,
-					identity: types::create_account_store::Identity,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::CreateAccountStore>
-				{
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"create_account_store",
-						types::CreateAccountStore { client_id, identity },
-						[
-							165u8, 144u8, 205u8, 157u8, 20u8, 86u8, 210u8, 226u8, 114u8, 33u8,
-							166u8, 159u8, 13u8, 222u8, 106u8, 189u8, 50u8, 247u8, 201u8, 22u8,
-							17u8, 34u8, 252u8, 46u8, 15u8, 149u8, 100u8, 191u8, 176u8, 151u8, 44u8,
-							86u8,
-						],
-					)
-				}
-				pub fn add_account(
-					&self,
-					member_account: types::add_account::MemberAccount,
-					permissions: types::add_account::Permissions,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::AddAccount> {
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"add_account",
-						types::AddAccount { member_account, permissions },
-						[
-							144u8, 99u8, 144u8, 107u8, 29u8, 237u8, 161u8, 141u8, 0u8, 130u8,
-							115u8, 4u8, 17u8, 227u8, 235u8, 154u8, 202u8, 33u8, 215u8, 124u8, 95u8,
-							170u8, 229u8, 197u8, 180u8, 188u8, 209u8, 251u8, 175u8, 87u8, 16u8,
-							165u8,
-						],
-					)
-				}
-				pub fn remove_accounts(
-					&self,
-					member_account_hashes: types::remove_accounts::MemberAccountHashes,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::RemoveAccounts>
-				{
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"remove_accounts",
-						types::RemoveAccounts { member_account_hashes },
-						[
-							147u8, 0u8, 0u8, 106u8, 168u8, 20u8, 59u8, 243u8, 124u8, 15u8, 253u8,
-							155u8, 215u8, 122u8, 229u8, 18u8, 188u8, 148u8, 165u8, 74u8, 52u8,
-							86u8, 251u8, 227u8, 144u8, 202u8, 214u8, 8u8, 176u8, 18u8, 148u8,
-							231u8,
-						],
-					)
-				}
-				#[doc = "make a member account public in the AccountStore"]
-				#[doc = "we force `Identity` type to avoid misuse and additional check"]
-				pub fn publicize_account(
-					&self,
-					member_account: types::publicize_account::MemberAccount,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::PublicizeAccount>
-				{
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"publicize_account",
-						types::PublicizeAccount { member_account },
-						[
-							120u8, 63u8, 98u8, 113u8, 82u8, 230u8, 213u8, 41u8, 123u8, 73u8, 226u8,
-							54u8, 90u8, 171u8, 8u8, 137u8, 11u8, 12u8, 175u8, 233u8, 56u8, 148u8,
-							249u8, 244u8, 95u8, 235u8, 152u8, 56u8, 33u8, 66u8, 229u8, 125u8,
+							120u8, 179u8, 86u8, 68u8, 148u8, 228u8, 27u8, 145u8, 172u8, 148u8,
+							83u8, 182u8, 23u8, 75u8, 51u8, 119u8, 44u8, 58u8, 243u8, 65u8, 123u8,
+							3u8, 166u8, 100u8, 5u8, 241u8, 102u8, 124u8, 82u8, 43u8, 210u8, 27u8,
 						],
 					)
 				}
@@ -8282,47 +8028,9 @@ pub mod api {
 						"request_intent",
 						types::RequestIntent { intent },
 						[
-							156u8, 25u8, 96u8, 192u8, 164u8, 226u8, 211u8, 208u8, 143u8, 25u8,
-							255u8, 188u8, 88u8, 132u8, 142u8, 138u8, 37u8, 86u8, 10u8, 112u8, 97u8,
-							0u8, 123u8, 199u8, 172u8, 188u8, 229u8, 137u8, 138u8, 246u8, 255u8,
-							80u8,
-						],
-					)
-				}
-				#[doc = "temporary extrinsic to upload the existing IDGraph from the worker onto chain"]
-				pub fn update_account_store_by_one(
-					&self,
-					client_id: types::update_account_store_by_one::ClientId,
-					who: types::update_account_store_by_one::Who,
-					member_account: types::update_account_store_by_one::MemberAccount,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<
-					types::UpdateAccountStoreByOne,
-				> {
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"update_account_store_by_one",
-						types::UpdateAccountStoreByOne { client_id, who, member_account },
-						[
-							36u8, 33u8, 31u8, 131u8, 122u8, 21u8, 137u8, 138u8, 78u8, 170u8, 190u8,
-							89u8, 168u8, 207u8, 0u8, 209u8, 226u8, 149u8, 54u8, 140u8, 86u8, 114u8,
-							142u8, 89u8, 152u8, 140u8, 156u8, 255u8, 48u8, 198u8, 164u8, 199u8,
-						],
-					)
-				}
-				pub fn set_permissions(
-					&self,
-					member_account_hash: types::set_permissions::MemberAccountHash,
-					permissions: types::set_permissions::Permissions,
-				) -> ::subxt::ext::subxt_core::tx::payload::StaticPayload<types::SetPermissions>
-				{
-					::subxt::ext::subxt_core::tx::payload::StaticPayload::new_static(
-						"OmniAccount",
-						"set_permissions",
-						types::SetPermissions { member_account_hash, permissions },
-						[
-							250u8, 24u8, 165u8, 101u8, 77u8, 223u8, 96u8, 176u8, 103u8, 22u8, 51u8,
-							151u8, 204u8, 164u8, 101u8, 60u8, 226u8, 161u8, 35u8, 119u8, 250u8,
-							66u8, 68u8, 164u8, 188u8, 8u8, 213u8, 216u8, 0u8, 128u8, 130u8, 5u8,
+							184u8, 140u8, 54u8, 218u8, 247u8, 198u8, 102u8, 19u8, 34u8, 139u8,
+							138u8, 184u8, 115u8, 47u8, 26u8, 42u8, 169u8, 75u8, 98u8, 39u8, 57u8,
+							247u8, 17u8, 208u8, 41u8, 97u8, 117u8, 98u8, 98u8, 209u8, 189u8, 232u8,
 						],
 					)
 				}
@@ -8356,9 +8064,9 @@ pub mod api {
 						"intent_accepted",
 						types::IntentAccepted { who, intent_id, intent },
 						[
-							51u8, 207u8, 128u8, 217u8, 220u8, 124u8, 19u8, 213u8, 92u8, 69u8, 68u8,
-							87u8, 16u8, 19u8, 161u8, 141u8, 210u8, 254u8, 230u8, 103u8, 101u8,
-							79u8, 3u8, 11u8, 176u8, 162u8, 117u8, 194u8, 6u8, 103u8, 85u8, 22u8,
+							118u8, 37u8, 162u8, 150u8, 81u8, 143u8, 7u8, 184u8, 238u8, 201u8,
+							201u8, 98u8, 224u8, 106u8, 44u8, 48u8, 5u8, 56u8, 92u8, 103u8, 86u8,
+							41u8, 211u8, 218u8, 8u8, 65u8, 178u8, 24u8, 69u8, 89u8, 74u8, 101u8,
 						],
 					)
 				}
@@ -8418,133 +8126,6 @@ pub mod api {
 			#[codec(dumb_trait_bound)]
 			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
 			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "An account store is created"]
-			pub struct AccountStoreCreated {
-				pub who: account_store_created::Who,
-			}
-			pub mod account_store_created {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountStoreCreated {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "AccountStoreCreated";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "Some member account is added"]
-			pub struct AccountAdded {
-				pub who: account_added::Who,
-				pub member_account_hash: account_added::MemberAccountHash,
-			}
-			pub mod account_added {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountAdded {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "AccountAdded";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "Some member accounts are removed"]
-			pub struct AccountRemoved {
-				pub who: account_removed::Who,
-				pub member_account_hashes: account_removed::MemberAccountHashes,
-			}
-			pub mod account_removed {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type MemberAccountHashes = ::subxt::ext::subxt_core::alloc::vec::Vec<
-					::subxt::ext::subxt_core::utils::H256,
-				>;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountRemoved {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "AccountRemoved";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "Some member account is made public"]
-			pub struct AccountMadePublic {
-				pub who: account_made_public::Who,
-				pub member_account_hash: account_made_public::MemberAccountHash,
-			}
-			pub mod account_made_public {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountMadePublic {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "AccountMadePublic";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "An account store is updated"]
-			pub struct AccountStoreUpdated {
-				pub who: account_store_updated::Who,
-				pub account_store: account_store_updated::AccountStore,
-			}
-			pub mod account_store_updated {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type AccountStore = runtime_types::bounded_collections::bounded_vec::BoundedVec<
-					runtime_types::heima_primitives::omni::account::MemberAccount,
-				>;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountStoreUpdated {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "AccountStoreUpdated";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
 			#[doc = "Some call is dispatched as omni-account origin"]
 			pub struct DispatchedAsOmniAccount {
 				pub who: dispatched_as_omni_account::Who,
@@ -8593,31 +8174,6 @@ pub mod api {
 			impl ::subxt::ext::subxt_core::events::StaticEvent for DispatchedAsSigned {
 				const PALLET: &'static str = "OmniAccount";
 				const EVENT: &'static str = "DispatchedAsSigned";
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			#[doc = "Member permission set"]
-			pub struct AccountPermissionsSet {
-				pub who: account_permissions_set::Who,
-				pub member_account_hash: account_permissions_set::MemberAccountHash,
-			}
-			pub mod account_permissions_set {
-				use super::runtime_types;
-				pub type Who = ::subxt::ext::subxt_core::utils::AccountId32;
-				pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::H256;
-			}
-			impl ::subxt::ext::subxt_core::events::StaticEvent for AccountPermissionsSet {
-				const PALLET: &'static str = "OmniAccount";
-				const EVENT: &'static str = "AccountPermissionsSet";
 			}
 			#[derive(
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -8755,27 +8311,6 @@ pub mod api {
 			use super::runtime_types;
 			pub mod types {
 				use super::runtime_types;
-				pub mod account_store {
-					use super::runtime_types;
-					pub type AccountStore =
-						runtime_types::bounded_collections::bounded_vec::BoundedVec<
-							runtime_types::heima_primitives::omni::account::MemberAccount,
-						>;
-					pub type Param0 = ::subxt::ext::subxt_core::utils::AccountId32;
-				}
-				pub mod member_account_hash {
-					use super::runtime_types;
-					pub type MemberAccountHash = ::subxt::ext::subxt_core::utils::AccountId32;
-					pub type Param0 = ::subxt::ext::subxt_core::utils::H256;
-				}
-				pub mod member_account_permissions {
-					use super::runtime_types;
-					pub type MemberAccountPermissions =
-						runtime_types::bounded_collections::bounded_vec::BoundedVec<
-							runtime_types::paseo_runtime::OmniAccountPermission,
-						>;
-					pub type Param0 = ::subxt::ext::subxt_core::utils::H256;
-				}
 				pub mod intents {
 					use super::runtime_types;
 					pub type Intents = runtime_types::heima_primitives::omni::intent::Intent;
@@ -8795,151 +8330,6 @@ pub mod api {
 			}
 			pub struct StorageApi;
 			impl StorageApi {
-				#[doc = " A map between OmniAccount and its MemberAccounts (a bounded vector of MemberAccount)"]
-				pub fn account_store_iter(
-					&self,
-				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
-					(),
-					types::account_store::AccountStore,
-					(),
-					(),
-					::subxt::ext::subxt_core::utils::Yes,
-				> {
-					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
-						"OmniAccount",
-						"AccountStore",
-						(),
-						[
-							223u8, 230u8, 236u8, 179u8, 45u8, 3u8, 198u8, 106u8, 181u8, 138u8,
-							21u8, 141u8, 154u8, 118u8, 134u8, 130u8, 241u8, 197u8, 211u8, 9u8,
-							152u8, 186u8, 209u8, 72u8, 161u8, 78u8, 166u8, 195u8, 59u8, 142u8,
-							16u8, 125u8,
-						],
-					)
-				}
-				#[doc = " A map between OmniAccount and its MemberAccounts (a bounded vector of MemberAccount)"]
-				pub fn account_store(
-					&self,
-					_0: impl ::core::borrow::Borrow<types::account_store::Param0>,
-				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
-					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
-						types::account_store::Param0,
-					>,
-					types::account_store::AccountStore,
-					::subxt::ext::subxt_core::utils::Yes,
-					(),
-					(),
-				> {
-					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
-						"OmniAccount",
-						"AccountStore",
-						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
-							_0.borrow(),
-						),
-						[
-							223u8, 230u8, 236u8, 179u8, 45u8, 3u8, 198u8, 106u8, 181u8, 138u8,
-							21u8, 141u8, 154u8, 118u8, 134u8, 130u8, 241u8, 197u8, 211u8, 9u8,
-							152u8, 186u8, 209u8, 72u8, 161u8, 78u8, 166u8, 195u8, 59u8, 142u8,
-							16u8, 125u8,
-						],
-					)
-				}
-				#[doc = " A map between hash of MemberAccount and its belonging OmniAccount"]
-				pub fn member_account_hash_iter(
-					&self,
-				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
-					(),
-					types::member_account_hash::MemberAccountHash,
-					(),
-					(),
-					::subxt::ext::subxt_core::utils::Yes,
-				> {
-					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
-						"OmniAccount",
-						"MemberAccountHash",
-						(),
-						[
-							54u8, 90u8, 36u8, 240u8, 22u8, 77u8, 84u8, 27u8, 136u8, 13u8, 232u8,
-							182u8, 187u8, 93u8, 127u8, 29u8, 148u8, 190u8, 91u8, 137u8, 211u8,
-							106u8, 173u8, 194u8, 22u8, 75u8, 246u8, 3u8, 91u8, 200u8, 37u8, 135u8,
-						],
-					)
-				}
-				#[doc = " A map between hash of MemberAccount and its belonging OmniAccount"]
-				pub fn member_account_hash(
-					&self,
-					_0: impl ::core::borrow::Borrow<types::member_account_hash::Param0>,
-				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
-					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
-						types::member_account_hash::Param0,
-					>,
-					types::member_account_hash::MemberAccountHash,
-					::subxt::ext::subxt_core::utils::Yes,
-					(),
-					(),
-				> {
-					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
-						"OmniAccount",
-						"MemberAccountHash",
-						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
-							_0.borrow(),
-						),
-						[
-							54u8, 90u8, 36u8, 240u8, 22u8, 77u8, 84u8, 27u8, 136u8, 13u8, 232u8,
-							182u8, 187u8, 93u8, 127u8, 29u8, 148u8, 190u8, 91u8, 137u8, 211u8,
-							106u8, 173u8, 194u8, 22u8, 75u8, 246u8, 3u8, 91u8, 200u8, 37u8, 135u8,
-						],
-					)
-				}
-				#[doc = " A map between hash of MemberAccount and its permissions"]
-				pub fn member_account_permissions_iter(
-					&self,
-				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
-					(),
-					types::member_account_permissions::MemberAccountPermissions,
-					(),
-					::subxt::ext::subxt_core::utils::Yes,
-					::subxt::ext::subxt_core::utils::Yes,
-				> {
-					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
-						"OmniAccount",
-						"MemberAccountPermissions",
-						(),
-						[
-							119u8, 233u8, 243u8, 176u8, 52u8, 185u8, 224u8, 189u8, 195u8, 17u8,
-							38u8, 215u8, 42u8, 28u8, 12u8, 138u8, 4u8, 60u8, 11u8, 241u8, 199u8,
-							246u8, 170u8, 227u8, 151u8, 37u8, 166u8, 111u8, 240u8, 19u8, 156u8,
-							50u8,
-						],
-					)
-				}
-				#[doc = " A map between hash of MemberAccount and its permissions"]
-				pub fn member_account_permissions(
-					&self,
-					_0: impl ::core::borrow::Borrow<types::member_account_permissions::Param0>,
-				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
-					::subxt::ext::subxt_core::storage::address::StaticStorageKey<
-						types::member_account_permissions::Param0,
-					>,
-					types::member_account_permissions::MemberAccountPermissions,
-					::subxt::ext::subxt_core::utils::Yes,
-					::subxt::ext::subxt_core::utils::Yes,
-					(),
-				> {
-					::subxt::ext::subxt_core::storage::address::StaticAddress::new_static(
-						"OmniAccount",
-						"MemberAccountPermissions",
-						::subxt::ext::subxt_core::storage::address::StaticStorageKey::new(
-							_0.borrow(),
-						),
-						[
-							119u8, 233u8, 243u8, 176u8, 52u8, 185u8, 224u8, 189u8, 195u8, 17u8,
-							38u8, 215u8, 42u8, 28u8, 12u8, 138u8, 4u8, 60u8, 11u8, 241u8, 199u8,
-							246u8, 170u8, 227u8, 151u8, 37u8, 166u8, 111u8, 240u8, 19u8, 156u8,
-							50u8,
-						],
-					)
-				}
 				pub fn intents_iter(
 					&self,
 				) -> ::subxt::ext::subxt_core::storage::address::StaticAddress<
@@ -8954,10 +8344,10 @@ pub mod api {
 						"Intents",
 						(),
 						[
-							196u8, 10u8, 114u8, 203u8, 154u8, 118u8, 138u8, 53u8, 183u8, 32u8,
-							42u8, 219u8, 162u8, 224u8, 212u8, 96u8, 233u8, 17u8, 139u8, 107u8,
-							216u8, 80u8, 137u8, 60u8, 113u8, 73u8, 169u8, 185u8, 243u8, 12u8,
-							159u8, 252u8,
+							59u8, 155u8, 192u8, 241u8, 115u8, 201u8, 189u8, 162u8, 50u8, 47u8,
+							10u8, 231u8, 57u8, 187u8, 165u8, 55u8, 191u8, 122u8, 222u8, 91u8,
+							140u8, 145u8, 234u8, 176u8, 82u8, 185u8, 36u8, 46u8, 139u8, 245u8,
+							100u8, 42u8,
 						],
 					)
 				}
@@ -8980,10 +8370,10 @@ pub mod api {
 							_0.borrow(),
 						),
 						[
-							196u8, 10u8, 114u8, 203u8, 154u8, 118u8, 138u8, 53u8, 183u8, 32u8,
-							42u8, 219u8, 162u8, 224u8, 212u8, 96u8, 233u8, 17u8, 139u8, 107u8,
-							216u8, 80u8, 137u8, 60u8, 113u8, 73u8, 169u8, 185u8, 243u8, 12u8,
-							159u8, 252u8,
+							59u8, 155u8, 192u8, 241u8, 115u8, 201u8, 189u8, 162u8, 50u8, 47u8,
+							10u8, 231u8, 57u8, 187u8, 165u8, 55u8, 191u8, 122u8, 222u8, 91u8,
+							140u8, 145u8, 234u8, 176u8, 82u8, 185u8, 36u8, 46u8, 139u8, 245u8,
+							100u8, 42u8,
 						],
 					)
 				}
@@ -9017,10 +8407,10 @@ pub mod api {
 							),
 						),
 						[
-							196u8, 10u8, 114u8, 203u8, 154u8, 118u8, 138u8, 53u8, 183u8, 32u8,
-							42u8, 219u8, 162u8, 224u8, 212u8, 96u8, 233u8, 17u8, 139u8, 107u8,
-							216u8, 80u8, 137u8, 60u8, 113u8, 73u8, 169u8, 185u8, 243u8, 12u8,
-							159u8, 252u8,
+							59u8, 155u8, 192u8, 241u8, 115u8, 201u8, 189u8, 162u8, 50u8, 47u8,
+							10u8, 231u8, 57u8, 187u8, 165u8, 55u8, 191u8, 122u8, 222u8, 91u8,
+							140u8, 145u8, 234u8, 176u8, 82u8, 185u8, 36u8, 46u8, 139u8, 245u8,
+							100u8, 42u8,
 						],
 					)
 				}
@@ -9117,46 +8507,6 @@ pub mod api {
 							0u8, 25u8, 56u8, 187u8, 208u8, 37u8, 109u8, 58u8, 27u8, 162u8, 235u8,
 							174u8, 183u8, 54u8, 151u8, 71u8, 115u8, 174u8, 231u8, 218u8, 21u8,
 							31u8,
-						],
-					)
-				}
-			}
-		}
-		pub mod constants {
-			use super::runtime_types;
-			pub struct ConstantsApi;
-			impl ConstantsApi {
-				#[doc = " The maximum number of accounts that an AccountGraph can have"]
-				pub fn max_account_store_length(
-					&self,
-				) -> ::subxt::ext::subxt_core::constants::address::StaticAddress<
-					::core::primitive::u32,
-				> {
-					::subxt::ext::subxt_core::constants::address::StaticAddress::new_static(
-						"OmniAccount",
-						"MaxAccountStoreLength",
-						[
-							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
-							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
-							178u8, 197u8, 113u8, 31u8, 79u8, 200u8, 90u8, 203u8, 100u8, 41u8,
-							145u8,
-						],
-					)
-				}
-				#[doc = " The maximum number of permissions that a member account can have"]
-				pub fn max_permissions(
-					&self,
-				) -> ::subxt::ext::subxt_core::constants::address::StaticAddress<
-					::core::primitive::u32,
-				> {
-					::subxt::ext::subxt_core::constants::address::StaticAddress::new_static(
-						"OmniAccount",
-						"MaxPermissions",
-						[
-							98u8, 252u8, 116u8, 72u8, 26u8, 180u8, 225u8, 83u8, 200u8, 157u8,
-							125u8, 151u8, 53u8, 76u8, 168u8, 26u8, 10u8, 9u8, 98u8, 68u8, 9u8,
-							178u8, 197u8, 113u8, 31u8, 79u8, 200u8, 90u8, 203u8, 100u8, 41u8,
-							145u8,
 						],
 					)
 				}
@@ -11933,36 +11283,14 @@ pub mod api {
 					Google(::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>),
 					#[codec(index = 9)]
 					Pumpx(::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>),
+					#[codec(index = 10)]
+					Passkey(::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>),
 				}
 			}
 			pub mod omni {
 				use super::runtime_types;
 				pub mod account {
 					use super::runtime_types;
-					#[derive(
-						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-						:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-						:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-						Debug,
-					)]
-					# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-					#[codec(dumb_trait_bound)]
-					#[decode_as_type(
-						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode"
-					)]
-					#[encode_as_type(
-						crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode"
-					)]
-					pub enum MemberAccount {
-						#[codec(index = 0)]
-						Public(runtime_types::heima_primitives::identity::Identity),
-						#[codec(index = 1)]
-						Private(
-							::subxt::ext::subxt_core::alloc::vec::Vec<::core::primitive::u8>,
-							::subxt::ext::subxt_core::utils::H256,
-						),
-					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
@@ -11987,6 +11315,8 @@ pub mod api {
 						OAuth2,
 						#[codec(index = 3)]
 						AuthToken,
+						#[codec(index = 4)]
+						Passkey,
 					}
 				}
 				pub mod chain {
@@ -12210,6 +11540,8 @@ pub mod api {
 					pub enum OnChainSingleChainSwapProvider {
 						#[codec(index = 0)]
 						Pumpx(runtime_types::heima_primitives::omni::intent::OnChainPumpxConfig),
+						#[codec(index = 1)]
+						Omni,
 					}
 					#[derive(
 						:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
@@ -18523,7 +17855,7 @@ pub mod api {
 				pub enum Call {
 					#[codec(index = 0)]
 					dispatch_as_omni_account {
-						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
 							runtime_types::paseo_runtime::RuntimeCall,
 						>,
@@ -18533,7 +17865,7 @@ pub mod api {
 					},
 					#[codec(index = 1)]
 					dispatch_as_signed {
-						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
+						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						call: ::subxt::ext::subxt_core::alloc::boxed::Box<
 							runtime_types::paseo_runtime::RuntimeCall,
 						>,
@@ -18542,67 +17874,25 @@ pub mod api {
 						>,
 					},
 					#[codec(index = 2)]
-					create_account_store {
-						client_id: ::subxt::ext::subxt_core::alloc::string::String,
-						identity: runtime_types::heima_primitives::identity::Identity,
-					},
-					#[codec(index = 3)]
-					add_account {
-						member_account:
-							runtime_types::heima_primitives::omni::account::MemberAccount,
-						permissions: ::core::option::Option<
-							::subxt::ext::subxt_core::alloc::vec::Vec<
-								runtime_types::paseo_runtime::OmniAccountPermission,
-							>,
-						>,
-					},
-					#[codec(index = 4)]
-					remove_accounts {
-						member_account_hashes: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							::subxt::ext::subxt_core::utils::H256,
-						>,
-					},
-					#[codec(index = 5)]
-					#[doc = "make a member account public in the AccountStore"]
-					#[doc = "we force `Identity` type to avoid misuse and additional check"]
-					publicize_account {
-						member_account: runtime_types::heima_primitives::identity::Identity,
-					},
-					#[codec(index = 6)]
 					request_intent { intent: runtime_types::heima_primitives::omni::intent::Intent },
-					#[codec(index = 7)]
-					#[doc = "temporary extrinsic to upload the existing IDGraph from the worker onto chain"]
-					update_account_store_by_one {
-						client_id: ::subxt::ext::subxt_core::alloc::string::String,
-						who: runtime_types::heima_primitives::identity::Identity,
-						member_account:
-							runtime_types::heima_primitives::omni::account::MemberAccount,
-					},
-					#[codec(index = 8)]
-					set_permissions {
-						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
-						permissions: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							runtime_types::paseo_runtime::OmniAccountPermission,
-						>,
-					},
-					#[codec(index = 9)]
+					#[codec(index = 3)]
 					auth_token_requested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						expires_at: ::core::primitive::i64,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 4)]
 					intent_accepted {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent_id: ::core::primitive::u32,
 						intent: runtime_types::heima_primitives::omni::intent::Intent,
 					},
-					#[codec(index = 11)]
+					#[codec(index = 5)]
 					intent_in_process_updated {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent_id: ::core::primitive::u32,
 						detail: runtime_types::pallet_omni_account::pallet::IntentInProcessDetail,
 					},
-					#[codec(index = 12)]
+					#[codec(index = 6)]
 					intent_completed {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent_id: ::core::primitive::u32,
@@ -18627,26 +17917,10 @@ pub mod api {
 				#[doc = "The `Error` enum of this pallet."]
 				pub enum Error {
 					#[codec(index = 0)]
-					AccountAlreadyAdded,
-					#[codec(index = 1)]
-					AccountStoreLenLimitReached,
-					#[codec(index = 2)]
-					AccountNotFound,
-					#[codec(index = 3)]
 					InvalidAccount,
-					#[codec(index = 4)]
-					UnknownAccountStore,
-					#[codec(index = 5)]
+					#[codec(index = 1)]
 					EmptyAccount,
-					#[codec(index = 6)]
-					NoPermission,
-					#[codec(index = 7)]
-					PermissionsLenLimitReached,
-					#[codec(index = 8)]
-					AccountStoreAlreadyExists,
-					#[codec(index = 9)]
-					AccountStoreHasOneMember,
-					#[codec(index = 10)]
+					#[codec(index = 2)]
 					IntentAlreadyExists,
 				}
 				#[derive(
@@ -18667,37 +17941,6 @@ pub mod api {
 				#[doc = "The `Event` enum of this pallet"]
 				pub enum Event {
 					#[codec(index = 0)]
-					#[doc = "An account store is created"]
-					AccountStoreCreated { who: ::subxt::ext::subxt_core::utils::AccountId32 },
-					#[codec(index = 1)]
-					#[doc = "Some member account is added"]
-					AccountAdded {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
-					},
-					#[codec(index = 2)]
-					#[doc = "Some member accounts are removed"]
-					AccountRemoved {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						member_account_hashes: ::subxt::ext::subxt_core::alloc::vec::Vec<
-							::subxt::ext::subxt_core::utils::H256,
-						>,
-					},
-					#[codec(index = 3)]
-					#[doc = "Some member account is made public"]
-					AccountMadePublic {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
-					},
-					#[codec(index = 4)]
-					#[doc = "An account store is updated"]
-					AccountStoreUpdated {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						account_store: runtime_types::bounded_collections::bounded_vec::BoundedVec<
-							runtime_types::heima_primitives::omni::account::MemberAccount,
-						>,
-					},
-					#[codec(index = 5)]
 					#[doc = "Some call is dispatched as omni-account origin"]
 					DispatchedAsOmniAccount {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
@@ -18707,7 +17950,7 @@ pub mod api {
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec(index = 6)]
+					#[codec(index = 1)]
 					#[doc = "Some call is dispatched as signed origin"]
 					DispatchedAsSigned {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
@@ -18717,39 +17960,33 @@ pub mod api {
 						result:
 							::core::result::Result<(), runtime_types::sp_runtime::DispatchError>,
 					},
-					#[codec(index = 7)]
-					#[doc = "Member permission set"]
-					AccountPermissionsSet {
-						who: ::subxt::ext::subxt_core::utils::AccountId32,
-						member_account_hash: ::subxt::ext::subxt_core::utils::H256,
-					},
-					#[codec(index = 8)]
+					#[codec(index = 2)]
 					#[doc = "An auth token is requested"]
 					AuthTokenRequested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						expires_at: ::core::primitive::i64,
 					},
-					#[codec(index = 9)]
+					#[codec(index = 3)]
 					#[doc = "Intent is requested by some user"]
 					IntentRequested {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent: runtime_types::heima_primitives::omni::intent::Intent,
 					},
-					#[codec(index = 10)]
+					#[codec(index = 4)]
 					#[doc = "Intent is accepted - we record the Intent detail (once)"]
 					IntentAccepted {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent_id: ::core::primitive::u32,
 						intent: runtime_types::heima_primitives::omni::intent::Intent,
 					},
-					#[codec(index = 11)]
+					#[codec(index = 5)]
 					#[doc = "Intent is in-process"]
 					IntentInProcessUpdated {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
 						intent_id: ::core::primitive::u32,
 						detail: runtime_types::pallet_omni_account::pallet::IntentInProcessDetail,
 					},
-					#[codec(index = 12)]
+					#[codec(index = 6)]
 					#[doc = "Intent is completed"]
 					IntentCompleted {
 						who: ::subxt::ext::subxt_core::utils::AccountId32,
@@ -18843,8 +18080,6 @@ pub mod api {
 			pub enum RawOrigin<_0> {
 				#[codec(index = 0)]
 				OmniAccount(_0),
-				#[codec(index = 1)]
-				OmniAccountMembers(_0, ::core::primitive::u32, ::core::primitive::u32),
 			}
 		}
 		pub mod pallet_omni_bridge {
@@ -22594,29 +21829,6 @@ pub mod api {
 						}
 					}
 				}
-			}
-			#[derive(
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
-				:: subxt :: ext :: subxt_core :: ext :: codec :: Encode,
-				:: subxt :: ext :: subxt_core :: ext :: scale_decode :: DecodeAsType,
-				:: subxt :: ext :: subxt_core :: ext :: scale_encode :: EncodeAsType,
-				Debug,
-			)]
-			# [codec (crate = :: subxt :: ext :: subxt_core :: ext :: codec)]
-			#[codec(dumb_trait_bound)]
-			#[decode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_decode")]
-			#[encode_as_type(crate_path = ":: subxt :: ext :: subxt_core :: ext :: scale_encode")]
-			pub enum OmniAccountPermission {
-				#[codec(index = 0)]
-				All,
-				#[codec(index = 1)]
-				AccountManagement,
-				#[codec(index = 2)]
-				RequestNativeIntent,
-				#[codec(index = 3)]
-				RequestEthereumIntent,
-				#[codec(index = 4)]
-				RequestSolanaIntent,
 			}
 			#[derive(
 				:: subxt :: ext :: subxt_core :: ext :: codec :: Decode,
