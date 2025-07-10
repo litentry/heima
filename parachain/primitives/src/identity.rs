@@ -717,6 +717,7 @@ mod tests {
 					Identity::Solana(..) => false,
 					Identity::Google(..) => true,
 					Identity::Pumpx(..) => true,
+					Identity::Passkey(..) => true,
 				}
 			)
 		})
@@ -738,6 +739,7 @@ mod tests {
 					Identity::Solana(..) => true,
 					Identity::Google(..) => false,
 					Identity::Pumpx(..) => false,
+					Identity::Passkey(..) => false,
 				}
 			)
 		})
@@ -759,6 +761,7 @@ mod tests {
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
 					Identity::Pumpx(..) => false,
+					Identity::Passkey(..) => false,
 				}
 			)
 		})
@@ -780,6 +783,7 @@ mod tests {
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
 					Identity::Pumpx(..) => false,
+					Identity::Passkey(..) => false,
 				}
 			)
 		})
@@ -801,6 +805,7 @@ mod tests {
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
 					Identity::Pumpx(..) => false,
+					Identity::Passkey(..) => false,
 				}
 			)
 		})
@@ -822,6 +827,7 @@ mod tests {
 					Identity::Solana(..) => true,
 					Identity::Google(..) => false,
 					Identity::Pumpx(..) => false,
+					Identity::Passkey(..) => false,
 				}
 			)
 		})
