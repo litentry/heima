@@ -79,8 +79,16 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			address.copy_from_slice(&address_bytes);
 
 			// Collect unique sender addresses to avoid redundant validation calls
-			let unique_addresses: HashSet<Address> =
-				params.user_operations.iter().map(|op| Address::from(op.sender)).collect();
+			let unique_addresses: HashSet<Address> = params
+				.user_operations
+				.iter()
+				.map(|op| {
+					op.sender.parse::<Address>().map_err(|e| {
+						error!("Invalid sender address '{}': {}", op.sender, e);
+						PumpxRpcError::from_error_code(ErrorCode::ParseError)
+					})
+				})
+				.collect::<Result<HashSet<_>, _>>()?;
 
 			// Validate each unique address once
 			for sender_address in unique_addresses {

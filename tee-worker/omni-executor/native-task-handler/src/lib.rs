@@ -16,8 +16,9 @@ use executor_crypto::{
 	jwt,
 };
 use executor_primitives::{
-	utils::hex::ToHexPrefixed, AccountId, Chain, Identity, Intent, IntentId, OmniAccountAuthType,
-	PumpxAccountProfile, Web2IdentityType,
+	utils::hex::{decode_hex, ToHexPrefixed},
+	AccountId, Chain, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
+	Web2IdentityType,
 };
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
 use heima_authentication::{
@@ -850,7 +851,18 @@ async fn handle_native_task<
 
 			for (index, serializable_user_op) in serializable_user_ops.iter().enumerate() {
 				// Convert SerializablePackedUserOperation to PackedUserOperation
-				let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone());
+				let mut packed_user_op =
+					match convert_to_packed_user_op(serializable_user_op.clone()) {
+						Ok(user_op) => user_op,
+						Err(e) => {
+							send_error(
+								format!("Failed to convert UserOperation {}: {}", index, e),
+								response_sender,
+								NativeTaskError::InternalError,
+							);
+							return;
+						},
+					};
 
 				// Check if UserOperation is signed
 				if packed_user_op.signature.is_empty() {
@@ -1106,16 +1118,88 @@ async fn verify_google_code(
 /// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
 fn convert_to_packed_user_op(
 	user_op: SerializablePackedUserOperation,
-) -> aa_contracts_client::PackedUserOperation {
-	aa_contracts_client::PackedUserOperation {
-		sender: Address::from_slice(&user_op.sender),
-		nonce: U256::from_be_bytes(user_op.nonce),
-		initCode: Bytes::from(user_op.init_code),
-		callData: Bytes::from(user_op.call_data),
-		accountGasLimits: FixedBytes::from_slice(&user_op.account_gas_limits),
-		preVerificationGas: U256::from_be_bytes(user_op.pre_verification_gas),
-		gasFees: FixedBytes::from_slice(&user_op.gas_fees),
-		paymasterAndData: Bytes::from(user_op.paymaster_and_data),
-		signature: Bytes::from(user_op.signature),
+) -> Result<aa_contracts_client::PackedUserOperation, String> {
+	use std::str::FromStr;
+
+	// Helper function to parse hex string to fixed bytes
+	let parse_hex_fixed = |hex_str: &str, expected_len: usize| -> Result<Vec<u8>, String> {
+		let bytes =
+			decode_hex(hex_str).map_err(|e| format!("Invalid hex string '{}': {}", hex_str, e))?;
+		if bytes.len() != expected_len {
+			return Err(format!(
+				"Expected {} bytes, got {} for '{}'",
+				expected_len,
+				bytes.len(),
+				hex_str
+			));
+		}
+		Ok(bytes)
+	};
+
+	Ok(aa_contracts_client::PackedUserOperation {
+		sender: Address::from_str(&user_op.sender)
+			.map_err(|e| format!("Invalid sender address '{}': {}", user_op.sender, e))?,
+		nonce: U256::from(user_op.nonce),
+		initCode: Bytes::from(
+			decode_hex(&user_op.init_code).map_err(|e| format!("Invalid init_code hex: {}", e))?,
+		),
+		callData: Bytes::from(
+			decode_hex(&user_op.call_data).map_err(|e| format!("Invalid call_data hex: {}", e))?,
+		),
+		accountGasLimits: {
+			let bytes = parse_hex_fixed(&user_op.account_gas_limits, 32)?;
+			FixedBytes::from_slice(&bytes)
+		},
+		preVerificationGas: U256::from(user_op.pre_verification_gas),
+		gasFees: {
+			let bytes = parse_hex_fixed(&user_op.gas_fees, 32)?;
+			FixedBytes::from_slice(&bytes)
+		},
+		paymasterAndData: Bytes::from(
+			decode_hex(&user_op.paymaster_and_data)
+				.map_err(|e| format!("Invalid paymaster_and_data hex: {}", e))?,
+		),
+		signature: Bytes::from(
+			decode_hex(&user_op.signature).map_err(|e| format!("Invalid signature hex: {}", e))?,
+		),
+	})
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use alloy::{
+		hex,
+		primitives::{Bytes, U256},
+	};
+	use executor_core::types::SerializablePackedUserOperation;
+
+	#[test]
+	fn test_convert_to_packed_user_op() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0xdeadbeef".to_string(),
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: "0x1234567890abcdef".to_string(),
+		};
+
+		let packed_user_op = convert_to_packed_user_op(serializable_user_op)
+			.expect("Failed to convert SerializablePackedUserOperation");
+
+		// Verify the conversion
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+		assert_eq!(packed_user_op.initCode, Bytes::from(hex::decode("deadbeef").unwrap()));
+		assert_eq!(packed_user_op.callData, Bytes::from(hex::decode("cafebabe").unwrap()));
+		assert_eq!(packed_user_op.preVerificationGas, U256::from(21000));
+		assert_eq!(packed_user_op.paymasterAndData, Bytes::from(Vec::<u8>::new()));
+		assert_eq!(packed_user_op.signature, Bytes::from(hex::decode("1234567890abcdef").unwrap()));
 	}
 }
