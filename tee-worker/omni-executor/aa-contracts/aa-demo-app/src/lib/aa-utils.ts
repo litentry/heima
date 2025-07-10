@@ -12,6 +12,16 @@ import {
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
 /**
+ * UserOpSigner enum - matches the contract enum
+ */
+export enum UserOpSigner {
+	Owner = 0x00,
+	RootKey = 0x01,
+	SessionKey = 0x02,
+	Passkey = 0x03,
+}
+
+/**
  * Based on the OmniAccount.sol _determineOa function:
  * bytes memory oaType = bytes("evm");
  * return sha256(abi.encodePacked(clientId, oaType, sender));
@@ -157,8 +167,7 @@ export interface UserOperation {
 
 /**
  * PackedUserOperation structure for EntryPoint v0.7
- * Includes packed gas fields and session-related fields for future extensibility
- * Session fields are currently set to default values (zero address/empty proof)
+ * Includes packed gas fields
  */
 export interface PackedUserOperation {
 	sender: Address;
@@ -169,9 +178,6 @@ export interface PackedUserOperation {
 	preVerificationGas: bigint;
 	gasFees: `0x${string}`; // packed maxPriorityFeePerGas and maxFeePerGas
 	paymasterAndData: `0x${string}`;
-	sessionAccount: Address;
-	sessionExpiration: bigint;
-	sessionAccountProof: `0x${string}`;
 	signature: `0x${string}`;
 }
 
@@ -183,7 +189,7 @@ export function createUserOperation(params: {
 	nonce?: bigint;
 	callData?: `0x${string}`;
 	initCode?: `0x${string}`;
-}): Partial<UserOperation> {
+}): UserOperation {
 	return {
 		sender: params.sender,
 		nonce: params.nonce || BigInt(0),
@@ -203,7 +209,6 @@ export function createUserOperation(params: {
  * Get the hash of a UserOperation for signing
  * This follows the ERC-4337 specification for PackedUserOperation hash calculation
  * Uses EIP-712 typed data hashing with EntryPoint v0.7 domain separator
- * Includes support for session fields (sessionAccount, sessionExpiration, sessionAccountProof)
  */
 export function getUserOpHash(
 	userOp: UserOperation,
@@ -215,7 +220,7 @@ export function getUserOpHash(
 	
 	// Type hash for PackedUserOperation
 	const PACKED_USEROP_TYPEHASH = keccak256(
-		toHex("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData,address sessionAccount,uint256 sessionExpiration,bytes sessionAccountProof)")
+		toHex("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)")
 	);
 	
 	// Encode according to the contract's UserOperationLib.encode
@@ -231,9 +236,6 @@ export function getUserOpHash(
 			{ name: 'preVerificationGas', type: 'uint256' },
 			{ name: 'gasFees', type: 'bytes32' },
 			{ name: 'hashPaymasterAndData', type: 'bytes32' },
-			{ name: 'sessionAccount', type: 'address' },
-			{ name: 'sessionExpiration', type: 'uint256' },
-			{ name: 'hashSessionAccountProof', type: 'bytes32' },
 		],
 		[
 			PACKED_USEROP_TYPEHASH,
@@ -245,9 +247,6 @@ export function getUserOpHash(
 			packedOp.preVerificationGas,
 			packedOp.gasFees,
 			keccak256(packedOp.paymasterAndData),
-			packedOp.sessionAccount,
-			packedOp.sessionExpiration,
-			keccak256(packedOp.sessionAccountProof),
 		],
 	);
 
@@ -341,8 +340,6 @@ export function packGasFees(
 
 /**
  * Convert UserOperation to PackedUserOperation for EntryPoint v0.7
- * Session fields (sessionAccount, sessionExpiration, sessionAccountProof) are set to default values
- * as they're not yet implemented but required for the PackedUserOperation structure
  */
 export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 	const packed = {
@@ -357,9 +354,6 @@ export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 		preVerificationGas: userOp.preVerificationGas,
 		gasFees: packGasFees(userOp.maxFeePerGas, userOp.maxPriorityFeePerGas),
 		paymasterAndData: userOp.paymasterAndData,
-		sessionAccount: "0x0000000000000000000000000000000000000000" as Address, // No session account for now
-		sessionExpiration: BigInt(0), // No session expiration
-		sessionAccountProof: "0x" as `0x${string}`, // Empty proof
 		signature: userOp.signature,
 	};
 
@@ -373,12 +367,99 @@ export function packUserOperation(userOp: UserOperation): PackedUserOperation {
 		preVerificationGas: packed.preVerificationGas,
 		gasFees: packed.gasFees,
 		paymasterAndData: packed.paymasterAndData,
-		sessionAccount: packed.sessionAccount,
-		sessionExpiration: packed.sessionExpiration,
-		sessionAccountProof: packed.sessionAccountProof,
 		signature: packed.signature,
 	});
 
 	return packed;
+}
+
+/**
+ * Add UserOpSigner prefix to a signature
+ */
+export function addSignaturePrefix(
+	signature: `0x${string}`,
+	signerType: UserOpSigner
+): `0x${string}` {
+	// Remove 0x prefix from signature
+	const sigWithoutPrefix = signature.slice(2);
+	// Add signer type byte
+	const prefixedSig = `0x${signerType.toString(16).padStart(2, '0')}${sigWithoutPrefix}`;
+	return prefixedSig as `0x${string}`;
+}
+
+/**
+ * Sign a UserOperation using EIP-712 typed data signing
+ */
+export async function signUserOperation(
+	walletClient: any,
+	address: Address,
+	userOp: UserOperation,
+	entryPointAddress: Address,
+	chainId: bigint,
+	signerType: UserOpSigner = UserOpSigner.Owner,
+): Promise<`0x${string}`> {
+	// Convert UserOperation to PackedUserOperation for signing
+	const packedOp = packUserOperation(userOp);
+	
+	// EIP-712 domain
+	const domain = {
+		name: 'ERC4337',
+		version: '1', 
+		chainId: Number(chainId),
+		verifyingContract: entryPointAddress,
+	};
+
+	// EIP-712 types for PackedUserOperation
+	const types = {
+		PackedUserOperation: [
+			{ name: 'sender', type: 'address' },
+			{ name: 'nonce', type: 'uint256' },
+			{ name: 'initCode', type: 'bytes' },
+			{ name: 'callData', type: 'bytes' },
+			{ name: 'accountGasLimits', type: 'bytes32' },
+			{ name: 'preVerificationGas', type: 'uint256' },
+			{ name: 'gasFees', type: 'bytes32' },
+			{ name: 'paymasterAndData', type: 'bytes' },
+		],
+	};
+
+	// Message to sign (without signature field)
+	const message = {
+		sender: packedOp.sender,
+		nonce: packedOp.nonce,
+		initCode: packedOp.initCode,
+		callData: packedOp.callData,
+		accountGasLimits: packedOp.accountGasLimits,
+		preVerificationGas: packedOp.preVerificationGas,
+		gasFees: packedOp.gasFees,
+		paymasterAndData: packedOp.paymasterAndData,
+	};
+
+	try {
+		console.log("Signing PackedUserOperation with EIP-712...");
+		const signature = await walletClient.signTypedData({
+			account: address,
+			domain,
+			types,
+			primaryType: 'PackedUserOperation',
+			message,
+		});
+		console.log("Successfully signed with EIP-712");
+		// Add the signer type prefix
+		return addSignaturePrefix(signature, signerType);
+	} catch (e) {
+		console.error("EIP-712 signing failed:", e);
+		
+		// Fallback: Use personal_sign (adds message prefix)
+		const userOpHash = getUserOpHash(userOp, entryPointAddress, Number(chainId));
+		const signature = await walletClient.signMessage({
+			account: address,
+			message: { raw: userOpHash },
+		});
+		
+		console.warn("WARNING: Using personal_sign which adds message prefix");
+		// Add the signer type prefix
+		return addSignaturePrefix(signature, signerType);
+	}
 }
 

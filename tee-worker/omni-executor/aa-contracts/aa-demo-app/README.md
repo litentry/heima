@@ -6,13 +6,26 @@ A Next.js application demonstrating Account Abstraction (ERC-4337) functionality
 
 This application demonstrates:
 - **Account Abstraction (AA)**: Create smart contract wallets (OmniAccounts) that can be controlled by multiple signers
-- **Root Key Authorization**: Add authorized signers to control the smart account
+- **Multi-Signer Management**: Add and remove authorized signers to control the smart account
+- **ERC20 Token Support**: Fund accounts with both ETH and ERC20 tokens (USDC, USDT)
+- **Test Token Minting**: Mint test tokens for easy demonstration
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
+- **TEE Worker Integration**: Authorize trusted execution environment workers to execute transactions securely
+
+## Key Features
+
+- **Separated Funding Flow**: Fund with ETH first for gas, then optionally add ERC20 tokens
+- **Multi-Token Support**: Transfer ETH, USDC, and USDT to your OmniAccount
+- **Signer Management**: View, add, and remove authorized signers through the UI
+- **Token Balance Display**: Monitor all token balances in real-time
+- **Test Token Faucet**: Mint test tokens directly from the UI
+- **Root Key Delegation**: Authorize multiple signers to control your smart account
+- **TEE Worker Authorization**: Delegate transaction execution to secure TEE workers
 
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+ and pnpm
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
 - A web3 wallet (MetaMask or similar)
 - Git
@@ -44,6 +57,11 @@ Contract Addresses:
 EntryPoint:         0x5fbdb2315678afecb367f032d93f642f64180aa3
 OmniAccountFactory: 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
 SimplePaymaster:    0x...
+
+Test Token Addresses:
+====================
+Test USDC:          0x...
+Test USDT:          0x...
 ```
 
 ### 2. Update Demo App Configuration
@@ -64,10 +82,10 @@ This creates/updates the `.env.local` file in the demo app with the correct cont
 cd aa-demo-app
 
 # Install dependencies (first time only)
-npm install
+pnpm install
 
 # Start the development server
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -81,20 +99,36 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
      - RPC URL: http://localhost:8545
      - Chain ID: 1337
      - Currency Symbol: ETH
+   - After connecting, your Omni Account details will be displayed automatically
 
-2. **View Your OmniAccount**: After connecting, you'll see your pre-calculated OmniAccount address
+2. **Fund with ETH**: Send ETH to your OmniAccount address for gas fees
+   - Copy the displayed address or scan the QR code
+   - Send at least 0.01 ETH (recommended)
+   - The app will automatically detect when funded
 
-3. **Fund Your Account**: Send some ETH to your OmniAccount address
-   - Use MetaMask to send ETH to the displayed address
-   - Or use Anvil's funded accounts
-
-4. **Authorize Root Key**: Once funded, authorize your wallet as a root signer
+3. **Create Omni Account**: Once ETH is received, create your smart account
    - This deploys your OmniAccount contract
-   - Adds your wallet as an authorized signer
+   - Your wallet automatically becomes the initial root signer
+
+4. **Authorize TEE Worker** (Optional): Authorize the TEE worker to execute transactions
+   - Click "Authorize TEE Worker" to authenticate with the TEE service
+   - The worker will be added as an authorized signer
+   - Enables secure delegated transaction execution
+   - The worker address will be tagged in the signers list
+
+5. **Transfer ERC20 Tokens** (Optional): Transfer USDC or USDT to your Omni Account
+   - Test tokens are minted directly from the interface
+   - Use "Transfer to Omni" to move tokens from wallet to Omni Account
+   - Monitor all token balances in real-time
+
+6. **Manage Signers**: After deployment, manage authorized signers
+   - View all current authorized signers
+   - Add new signers by entering their address
+   - Remove existing signers (except yourself while connected)
 
 ## Verifying On-Chain
 
-To verify your OmniAccount was created and the root signer was added:
+To verify your OmniAccount was created and signers were added:
 
 ```bash
 # From the aa-contracts directory
@@ -108,8 +142,11 @@ cast code $ACCOUNT --rpc-url http://localhost:8545
 # Should return bytecode (not "0x")
 
 # Check if your wallet is a root signer
-cast call $ACCOUNT "isRootSigner(address)(bool)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --rpc-url http://localhost:8545
+cast call $ACCOUNT "isRootSigner(address)(bool)" YOUR_WALLET_ADDRESS --rpc-url http://localhost:8545
 # Should return "true"
+
+# Check ERC20 token balance
+cast call 0xTOKEN_ADDRESS "balanceOf(address)(uint256)" $ACCOUNT --rpc-url http://localhost:8545
 
 # Check the owner
 cast call $ACCOUNT "owner()(bytes32)" --rpc-url http://localhost:8545
@@ -125,32 +162,50 @@ aa-demo-app/
 ├── src/
 │   ├── app/              # Next.js app router pages
 │   ├── components/       # React components
-│   │   ├── AAWalletInfo.tsx         # Displays OmniAccount information
-│   │   ├── FundingGuide.tsx         # Guide for funding the account
-│   │   ├── RootKeyAuthorization.tsx # Root key authorization flow
+│   │   ├── AccountsDashboard.tsx    # Displays wallet and OmniAccount balances
+│   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
+│   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow
+│   │   ├── FundingGuide.tsx         # ETH funding guide
+│   │   ├── ERC20FundingGuide.tsx    # ERC20 token transfer interface
+│   │   ├── CreateOmniAccount.tsx    # Smart account creation flow
 │   │   └── WalletConnect.tsx        # Wallet connection component
-│   ├── contracts/        # Contract ABIs
+│   ├── contracts/        # Contract ABIs including TestToken
 │   └── lib/             # Utilities and configuration
 │       ├── aa-utils.ts  # Account abstraction utilities
-│       ├── constants.ts # Contract addresses and ABIs
+│       ├── constants.ts # Contract addresses and token configs
+│       ├── tee-worker-client.ts # TEE Worker RPC client utilities
 │       └── wagmi.ts     # Web3 configuration
 └── public/              # Static assets
 ```
 
 ## Troubleshooting
 
-### "AA Wallet Not Ready"
+### "AA Wallet Not Ready" or Balance Not Updating
 - Ensure your wallet is connected
 - Check you're on the correct network (Chain ID: 1337)
 - Verify contracts are deployed (check Anvil terminal)
+- If balance doesn't update after sending funds, try clicking "Check Balance" or refresh the page
+- Clear MetaMask activity data if transactions are being rejected
 
 ### Transaction Failures
-- Ensure your OmniAccount is funded with ETH
+- Ensure your OmniAccount is funded with ETH (for gas)
 - Check Anvil is still running
 - Verify you're using the correct network
 
+### Token Operations
+- Make sure test tokens are deployed (check deploy output)
+- Ensure you have ETH for gas fees before adding ERC20 tokens
+- ERC20 token funding is only available after creating your Omni Account
+- Check token addresses in .env.local match deployment
+
 ### Anvil Errors
 You might see errors like `execution reverted` for `symbol()` or `decimals()` calls. These are harmless - they're from wallets trying to detect if addresses are ERC20 tokens.
+
+### TEE Worker Authorization Issues
+- **Parse errors**: Ensure you're using the correct client ID ("wildmeta" for staging)
+- **Authentication failures**: The TEE worker uses Web3 message signing for authentication
+- **Server errors**: Check that the TEE Worker RPC URL is accessible
+- **Worker not added**: Ensure your Omni Account is deployed before authorizing
 
 ## Environment Variables
 
@@ -159,7 +214,12 @@ The app uses these environment variables (set automatically by `update-demo-addr
 - `NEXT_PUBLIC_CHAIN_ID`: Network chain ID (1337 for Anvil)
 - `NEXT_PUBLIC_ENTRYPOINT_ADDRESS`: EntryPoint contract address
 - `NEXT_PUBLIC_FACTORY_ADDRESS`: OmniAccountFactory contract address
+- `NEXT_PUBLIC_TEST_USDC_ADDRESS`: Test USDC token address
+- `NEXT_PUBLIC_TEST_USDT_ADDRESS`: Test USDT token address
 - `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545)
+- `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint (default: https://staging-dex-worker.heima.network)
+
+You can also copy `.env.local.example` to `.env.local` and update manually.
 
 ## Development
 
@@ -170,7 +230,21 @@ To modify the app:
 3. Update addresses: Run `./update-demo-addresses.sh`
 4. The app hot-reloads automatically
 
+### Adding New ERC20 Tokens
+
+1. Deploy your token contract
+2. Update `src/lib/constants.ts` with token details
+3. Add to `SUPPORTED_TOKENS` array
+4. The ERC20FundingGuide component will automatically include it
+
+### Testing Signer Management
+
+1. Deploy and fund an OmniAccount
+2. Use the AuthorizedSigners component to add signers
+3. Test from different wallets to verify permissions
+
 ## Learn More
 
 - [ERC-4337 Specification](https://eips.ethereum.org/EIPS/eip-4337)
 - [Foundry Book](https://book.getfoundry.sh/)
+- [ERC20 Token Standard](https://eips.ethereum.org/EIPS/eip-20)
