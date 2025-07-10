@@ -25,7 +25,7 @@ This application demonstrates:
 
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+ and pnpm
 - [Foundry](https://book.getfoundry.sh/getting-started/installation) installed
 - A web3 wallet (MetaMask or similar)
 - Git
@@ -82,10 +82,10 @@ This creates/updates the `.env.local` file in the demo app with the correct cont
 cd aa-demo-app
 
 # Install dependencies (first time only)
-npm install
+pnpm install
 
 # Start the development server
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
