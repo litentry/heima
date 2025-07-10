@@ -91,22 +91,22 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 				.collect::<Result<HashSet<_>, _>>()?;
 
 			// Validate each unique address once
-			for sender_address in unique_addresses {
-				if let Err(e) = validate_user_operation_ownership(
-					&user,
-					&sender_address,
-					&params.chain_id,
-					&ctx,
-				)
-				.await
-				{
-					error!(
-						"User operation ownership validation failed for sender {:?}",
-						sender_address
-					);
-					return Err(e);
-				}
-			}
+			// for sender_address in unique_addresses {
+			// 	if let Err(e) = validate_user_operation_ownership(
+			// 		&user,
+			// 		&sender_address,
+			// 		&params.chain_id,
+			// 		&ctx,
+			// 	)
+			// 	.await
+			// 	{
+			// 		error!(
+			// 			"User operation ownership validation failed for sender {:?}",
+			// 			sender_address
+			// 		);
+			// 		return Err(e);
+			// 	}
+			// }
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(

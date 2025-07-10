@@ -12,6 +12,7 @@ use tokio::{
 use warp::Filter;
 
 mod binance;
+mod dex;
 mod evm;
 mod pumpx;
 mod sendgrid;
@@ -27,11 +28,11 @@ async fn shutdown_signal() {
 		signal(SignalKind::terminate()).expect("Cannot install SIGTERM signal handler");
 
 	select! {
-		_val = hangup_stream.recv() => log::warn!("Received SIGHUP"),
-		_val = sigint_stream.recv() => log::warn!("Received SIGINT"),
-		_val = sigterm_stream.recv() => log::warn!("Received SIGTERM"),
+		_val = hangup_stream.recv() => tracing::warn!("Received SIGHUP"),
+		_val = sigint_stream.recv() => tracing::warn!("Received SIGINT"),
+		_val = sigterm_stream.recv() => tracing::warn!("Received SIGTERM"),
 	}
-	log::info!("Shutdown signal received, stopping server...");
+	tracing::info!("Shutdown signal received, stopping server...");
 }
 
 pub fn run(port: u16) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
@@ -48,6 +49,7 @@ pub fn run_with_shutdown_control(
 	thread::spawn(move || {
 		let runtime = Builder::new_current_thread().enable_all().build().unwrap();
 		LocalSet::new().block_on(&runtime, async {
+			println!("Waiting for server to come up...");
 			let (addr, srv) = warp::serve(
 				binance::handle()
 					.or(evm::handle())
@@ -60,13 +62,12 @@ pub fn run_with_shutdown_control(
 				shutdown_signal().await;
 				let _ = shutdown_in.send(());
 			});
-
-			log::info!("mock-server listen on addr:{:?}", addr);
+			tracing::info!("mock-server listen on addr:{:?}", addr);
 			let _ = result_in.send(format!("http://{:?}", addr));
 
 			let join = spawn_local(srv);
 			let _ = join.await;
-			log::info!("Server has been shut down gracefully");
+			tracing::info!("Server has been shut down gracefully");
 		});
 	});
 

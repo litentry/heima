@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::cli::Cli;
 use accounting_contract_client::{
 	solana::AccountingContractClient as SolanaAccountingContractClient,
 	AccountingContractClient as EthereumAccountingContractClient,
@@ -24,8 +23,8 @@ use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
-use cli::*;
-use config_loader::ConfigLoader;
+use cli::{Cli, Commands, GenKeyArgs, RunArgs};
+use config_loader::{ConfigLoader, MailerType};
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
@@ -41,6 +40,7 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer, Mailer};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
@@ -257,7 +257,7 @@ async fn main() -> Result<(), ()> {
 
 			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
 				&config_loader.bsc_url,
-				accounting_contract_wallet,
+				accounting_contract_wallet.clone(),
 			);
 			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
 				bsc_rpc_provider,
@@ -327,13 +327,18 @@ async fn main() -> Result<(), ()> {
 			let mut rpc_clients: HashMap<u64, Arc<ethereum_rpc::AlloyRpcProvider>> = HashMap::new();
 
 			// Add BSC (BNB Chain)
-			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url));
+			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.bsc_url,
+				accounting_contract_wallet.clone(),
+			));
 			rpc_clients.insert(56, bsc_rpc.clone());
 
 			// Add BSC Testnet if configured
 			let bsc_testnet_rpc = if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
-				let bsc_testnet_rpc =
-					Arc::new(ethereum_rpc::AlloyRpcProvider::new(bsc_testnet_url));
+				let bsc_testnet_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+					bsc_testnet_url,
+					accounting_contract_wallet.clone(),
+				));
 				rpc_clients.insert(97, bsc_testnet_rpc.clone());
 				Some(bsc_testnet_rpc)
 			} else {
@@ -341,12 +346,17 @@ async fn main() -> Result<(), ()> {
 			};
 
 			// Add Ethereum Mainnet
-			let ethereum_rpc =
-				Arc::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.ethereum_url));
+			let ethereum_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.ethereum_url,
+				accounting_contract_wallet.clone(),
+			));
 			rpc_clients.insert(1, ethereum_rpc.clone());
 
 			// Add local development chain
-			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new("http://localhost:8545"));
+			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				"http://ethereum-node:8545",
+				accounting_contract_wallet.clone(),
+			));
 			rpc_clients.insert(31337, local_rpc.clone());
 
 			let rpc_clients = Arc::new(rpc_clients);
@@ -439,6 +449,23 @@ async fn main() -> Result<(), ()> {
 				error!("Could not perform attestation");
 			})?;
 
+			// Create mailer instance based on config_loader only
+			let mailer: Box<dyn MailerTrait + Send + Sync> = match config_loader.mailer_type {
+				MailerType::Console => {
+					info!("Using Console Mailer - verification codes will be printed to logs");
+					Box::new(ConsoleMailer::new())
+				},
+				MailerType::Sendgrid => {
+					info!("Using SendGrid Mailer - verification codes will be sent via email");
+					Box::new(Mailer::new(
+						config_loader.mailer_api_host.clone(),
+						config_loader.mailer_api_key.clone(),
+						config_loader.mailer_from_email.clone(),
+						config_loader.mailer_from_name.clone(),
+					))
+				},
+			};
+
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -449,6 +476,7 @@ async fn main() -> Result<(), ()> {
 				&config_loader,
 				rpc_clients,
 				pumpx_signer_client,
+				mailer,
 			)
 			.await
 			.map_err(|e| {

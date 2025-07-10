@@ -15,8 +15,28 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use tracing::info;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum MailerType {
+	Sendgrid,
+	Console,
+}
+
+impl FromStr for MailerType {
+	type Err = String;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"sendgrid" => Ok(MailerType::Sendgrid),
+			"console" => Ok(MailerType::Console),
+			_ => Err(format!("Invalid mailer type: {}", s)),
+		}
+	}
+}
+
+const DEFAULT_MAILER_TYPE: &str = "sendgrid";
 const DEFAULT_MAILER_API_HOST: &str = ""; // Optional
 const DEFAULT_MAILER_API_KEY: &str = "";
 const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
@@ -41,6 +61,7 @@ const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
+	pub mailer_type: MailerType,
 	pub mailer_api_host: Option<String>,
 	pub mailer_api_key: String,
 	pub mailer_from_email: String,
@@ -87,6 +108,15 @@ impl ConfigLoader {
 		info!("Executing: {}", std::env::args().collect::<Vec<_>>().join(" "));
 
 		let vars: HashMap<&str, EnvVar> = HashMap::from([
+			(
+				"mailer_type",
+				EnvVar {
+					env_key: "OE_MAILER_TYPE",
+					default: DEFAULT_MAILER_TYPE,
+					sensitive: false,
+					optional: false,
+				},
+			),
 			(
 				"mailer_api_host",
 				EnvVar {
@@ -282,6 +312,7 @@ impl ConfigLoader {
 		let get_opt = |key: &str| get_env_value(&vars[key]);
 
 		ConfigLoader {
+			mailer_type: MailerType::from_str(&get("mailer_type")).unwrap_or(MailerType::Sendgrid),
 			mailer_api_host: get_opt("mailer_api_host"),
 			mailer_api_key: get("mailer_api_key"),
 			mailer_from_email: get("mailer_from_email"),

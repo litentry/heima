@@ -6,7 +6,7 @@ use crate::{
 use config_loader::ConfigLoader;
 use ethereum_rpc::AlloyRpcProvider;
 use executor_storage::StorageDB;
-use heima_identity_verification::web2::email::Mailer;
+use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer, Mailer};
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use pumpx::PumpxApi;
@@ -18,7 +18,7 @@ pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
 	pub storage_db: Arc<StorageDB>,
-	pub mailer: Mailer,
+	pub mailer: Box<dyn MailerTrait + Send + Sync>,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
@@ -35,7 +35,7 @@ impl RpcContext {
 		shielding_key: ShieldingKey,
 		native_task_sender: Arc<NativeTaskSender>,
 		storage_db: Arc<StorageDB>,
-		mailer: Mailer,
+		mailer: Box<dyn MailerTrait + Send + Sync>,
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
@@ -69,14 +69,8 @@ pub async fn start_server(
 	config_loader: &ConfigLoader,
 	rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	signer_client: Arc<Box<dyn SignerClient>>,
+	mailer: Box<dyn MailerTrait + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	let mailer = Mailer::new(
-		config_loader.mailer_api_host.clone(),
-		config_loader.mailer_api_key.clone(),
-		config_loader.mailer_from_email.clone(),
-		config_loader.mailer_from_name.clone(),
-	);
-
 	let ctx = RpcContext::new(
 		shielding_key,
 		native_task_sender,

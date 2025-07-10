@@ -64,3 +64,92 @@ impl MailerTrait for Mailer {
 		Ok(())
 	}
 }
+
+/// A mailer implementation that prints verification codes to console/logs instead of sending emails
+pub struct ConsoleMailer;
+
+impl ConsoleMailer {
+	pub fn new() -> Self {
+		Self
+	}
+}
+
+#[async_trait]
+impl MailerTrait for ConsoleMailer {
+	async fn send(&self, mail: Mail) -> Result<(), Error> {
+		// Extract verification code from the email body
+		let verification_code = extract_verification_code(&mail.body);
+
+		tracing::info!("==============================================");
+		tracing::info!("Email Verification Code (Console Mailer)");
+		tracing::info!("==============================================");
+		tracing::info!("To: {}", mail.to);
+		tracing::info!("Subject: {}", mail.subject);
+		if let Some(code) = verification_code {
+			tracing::info!("VERIFICATION CODE: {}", code);
+		}
+		tracing::info!("==============================================");
+
+		Ok(())
+	}
+}
+
+/// Extract verification code from email body
+fn extract_verification_code(body: &str) -> Option<String> {
+	// The template uses {{ verification_code }}, so after replacement it will be the actual code
+	// Look for a 6-digit code pattern within the HTML structure
+	// The code appears inside <p style="font-size: 16px; font-weight: 600;">CODE</p>
+
+	// First try to find it with the specific HTML pattern
+	if let Ok(re) = regex::Regex::new(r"<p[^>]*font-weight:\s*600[^>]*>(\d{6})</p>") {
+		if let Some(captures) = re.captures(body) {
+			if let Some(code) = captures.get(1) {
+				return Some(code.as_str().to_string());
+			}
+		}
+	}
+
+	// Fallback: Look for any 6-digit code pattern in the body
+	if let Ok(re) = regex::Regex::new(r"\b\d{6}\b") {
+		if let Some(m) = re.find(body) {
+			return Some(m.as_str().to_string());
+		}
+	}
+
+	None
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_extract_verification_code_from_html() {
+		// Test with actual HTML structure from the template
+		let html_with_code = r#"<div style="background-color: #e5e7eb; padding: 8px 4px">
+			<p style="font-size: 16px; font-weight: 600;">123456</p>
+		</div>"#;
+
+		assert_eq!(extract_verification_code(html_with_code), Some("123456".to_string()));
+
+		// Test with different formatting
+		let html_with_code2 = r#"<p style="font-weight: 600; font-size: 16px;">987654</p>"#;
+		assert_eq!(extract_verification_code(html_with_code2), Some("987654".to_string()));
+
+		// Test fallback with plain text
+		let plain_text = "Your verification code is 555555";
+		assert_eq!(extract_verification_code(plain_text), Some("555555".to_string()));
+
+		// Test with no code
+		let no_code = "This text has no verification code";
+		assert_eq!(extract_verification_code(no_code), None);
+	}
+
+	#[test]
+	fn test_extract_verification_code_from_full_template() {
+		// Test with the actual template after replacement
+		let full_email =
+			template::EMAIL_VERIFICATION_TEMPLATE.replace("{{ verification_code }}", "246810");
+		assert_eq!(extract_verification_code(&full_email), Some("246810".to_string()));
+	}
+}

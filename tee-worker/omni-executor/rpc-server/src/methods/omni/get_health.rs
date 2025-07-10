@@ -28,6 +28,7 @@ mod test {
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
 	use executor_storage::StorageDB;
+	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -58,6 +59,9 @@ mod test {
 		// Create empty rpc_clients for test
 		let rpc_clients = Arc::new(std::collections::HashMap::new());
 
+		// Create console mailer for test
+		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -68,6 +72,7 @@ mod test {
 			&config_loader,
 			rpc_clients,
 			signer_client,
+			mailer,
 		)
 		.await
 		.unwrap();

@@ -26,6 +26,7 @@ mod test {
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
 	};
+	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use heima_primitives::{Identity, Web2IdentityType};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
@@ -57,6 +58,9 @@ mod test {
 		// Create empty rpc_clients for test
 		let rpc_clients = Arc::new(std::collections::HashMap::new());
 
+		// Create console mailer for test
+		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -67,6 +71,7 @@ mod test {
 			&config_loader,
 			rpc_clients,
 			signer_client,
+			mailer,
 		)
 		.await
 		.unwrap();

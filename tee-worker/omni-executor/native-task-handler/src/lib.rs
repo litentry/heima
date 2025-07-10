@@ -456,13 +456,17 @@ async fn handle_native_task<
 			let auth_options = AuthOptions { expires_at };
 
 			debug!("Calling pumpx get_account_user_id, email: {}", email);
-			let Ok(res) = ctx.pumpx_api.get_account_user_id(email.clone()).await else {
-				send_error(
-					"Failed to get_account_user_id".to_string(),
-					response_sender,
-					NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
-				);
-				return;
+			let res = match ctx.pumpx_api.get_account_user_id(email.clone()).await {
+				Ok(res) => res,
+				Err(e) => {
+					error!("Failed to get_account_user_id for email {}: {:?}", email, e);
+					send_error(
+						format!("Failed to get_account_user_id: {:?}", e),
+						response_sender,
+						NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
+					);
+					return;
+				},
 			};
 			debug!("Response pumpx get_account_user_id: {:?}", res);
 
@@ -853,6 +857,15 @@ async fn handle_native_task<
 						index
 					);
 
+					// Log UserOp details for debugging
+					info!(
+						"UserOp details - Sender: {}, Nonce: {}, InitCode length: {}, CallData length: {}",
+						packed_user_op.sender,
+						packed_user_op.nonce,
+						packed_user_op.initCode.len(),
+						packed_user_op.callData.len()
+					);
+
 					let entry_point_address = entry_point_client.entry_point_address();
 
 					let user_op_hash_bytes = calculate_user_operation_hash(
@@ -861,6 +874,13 @@ async fn handle_native_task<
 						chain_id,
 					);
 					let message_to_sign = user_op_hash_bytes.to_vec();
+
+					info!(
+						"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
+						hex::encode(&user_op_hash_bytes),
+						entry_point_address,
+						chain_id
+					);
 
 					// Request signature from pumpx signer for EVM chain
 					let signature_result = ctx
@@ -887,7 +907,10 @@ async fn handle_native_task<
 						},
 					};
 
-					packed_user_op.signature = Bytes::from(signature);
+					// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
+					let mut signature_with_prefix: Vec<u8> = vec![0x01];
+					signature_with_prefix.extend_from_slice(&signature);
+					packed_user_op.signature = Bytes::from(signature_with_prefix);
 					info!("UserOperation {} signed successfully", index);
 				}
 
@@ -1104,19 +1127,20 @@ fn convert_to_packed_user_op(
 	use std::str::FromStr;
 
 	// Helper function to parse hex string to fixed bytes
-	let parse_hex_fixed = |hex_str: &str, expected_len: usize| -> Result<Vec<u8>, String> {
-		let bytes =
-			decode_hex(hex_str).map_err(|e| format!("Invalid hex string '{}': {}", hex_str, e))?;
-		if bytes.len() != expected_len {
-			return Err(format!(
-				"Expected {} bytes, got {} for '{}'",
-				expected_len,
-				bytes.len(),
-				hex_str
-			));
-		}
-		Ok(bytes)
-	};
+	let parse_hex_fixed =
+		|hex_str: &str, expected_len: usize, name: &str| -> Result<Vec<u8>, String> {
+			let bytes = decode_hex(hex_str)
+				.map_err(|e| format!("Invalid hex string '{}' '{}': {}", hex_str, name, e))?;
+			if bytes.len() != expected_len {
+				return Err(format!(
+					"Expected {} bytes, got {} for '{}'",
+					expected_len,
+					bytes.len(),
+					hex_str
+				));
+			}
+			Ok(bytes)
+		};
 
 	Ok(aa_contracts_client::PackedUserOperation {
 		sender: Address::from_str(&user_op.sender)
@@ -1129,12 +1153,12 @@ fn convert_to_packed_user_op(
 			decode_hex(&user_op.call_data).map_err(|e| format!("Invalid call_data hex: {}", e))?,
 		),
 		accountGasLimits: {
-			let bytes = parse_hex_fixed(&user_op.account_gas_limits, 32)?;
+			let bytes = parse_hex_fixed(&user_op.account_gas_limits, 32, "account_gas_limits")?;
 			FixedBytes::from_slice(&bytes)
 		},
 		preVerificationGas: U256::from(user_op.pre_verification_gas),
 		gasFees: {
-			let bytes = parse_hex_fixed(&user_op.gas_fees, 32)?;
+			let bytes = parse_hex_fixed(&user_op.gas_fees, 32, "gas_fees")?;
 			FixedBytes::from_slice(&bytes)
 		},
 		paymasterAndData: Bytes::from(
