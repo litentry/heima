@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::types::Chain;
 use crate::*;
 use accounting_contract_client::{AccountingContractApi, Plus};
 use ethereum_rpc::AlloyRpcProvider;
-use executor_primitives::Chain;
 use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
 use rust_decimal::Decimal;
 use std::ops::Deref;
@@ -297,7 +297,7 @@ pub async fn get_token_available_amount<SolanaClient: SolanaClientTrait>(
 	match &asset {
 		ChainAsset::Ethereum(chain_id, token) => {
 			let rpc_url = rpc_endpoint_registry
-				.get(&Chain::Evm(*chain_id as u64))
+				.get(&Chain::Ethereum(*chain_id))
 				.ok_or(error!("No RPC endpoint in registry for Ethereum chain"))?;
 			let provider = AlloyRpcProvider::new(rpc_url);
 			query_ethereum(&provider, EthereumAddress::from_slice(&address), token).await

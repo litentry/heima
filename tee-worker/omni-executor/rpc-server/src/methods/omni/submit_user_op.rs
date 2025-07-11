@@ -23,7 +23,7 @@ use crate::ErrorCode;
 use alloy::primitives::{Address, FixedBytes};
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, Chain};
+use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Decode;
@@ -34,7 +34,7 @@ use tracing::{debug, error};
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpParams {
 	pub user_operations: Vec<SerializablePackedUserOperation>,
-	pub chain: Chain,
+	pub chain_id: ChainId,
 	pub wallet_index: u32,
 }
 
@@ -92,9 +92,13 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 
 			// Validate each unique address once
 			for sender_address in unique_addresses {
-				if let Err(e) =
-					validate_user_operation_ownership(&user, &sender_address, &params.chain, &ctx)
-						.await
+				if let Err(e) = validate_user_operation_ownership(
+					&user,
+					&sender_address,
+					&params.chain_id,
+					&ctx,
+				)
+				.await
 				{
 					error!(
 						"User operation ownership validation failed for sender {:?}",
@@ -111,7 +115,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 						PumpxRpcError::from_error_code(ErrorCode::InternalError)
 					})?,
 					params.user_operations.clone(),
-					params.chain.clone(),
+					params.chain_id.clone(),
 					params.wallet_index,
 				),
 				None,
@@ -136,7 +140,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 async fn validate_user_operation_ownership(
 	user: &crate::methods::omni::common::User,
 	sender_address: &Address,
-	chain: &Chain,
+	chain_id: &ChainId,
 	ctx: &RpcContext,
 ) -> Result<(), PumpxRpcError> {
 	// Calculate the expected OA from the user's identity
@@ -155,17 +159,8 @@ async fn validate_user_operation_ownership(
 
 	let expected_oa = FixedBytes::<32>::from_slice(&expected_oa_bytes);
 
-	// Get the chain ID from the chain enum
-	let chain_id = match chain {
-		Chain::Evm(id) => *id,
-		_ => {
-			error!("Unsupported chain type for omni account validation: {:?}", chain);
-			return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-		},
-	};
-
 	// Get the RPC client for the chain
-	let Some(rpc_client) = ctx.rpc_clients.get(&chain_id) else {
+	let Some(rpc_client) = ctx.rpc_clients.get(chain_id) else {
 		error!("No RPC client found for chain ID: {}", chain_id);
 		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 	};

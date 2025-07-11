@@ -1,5 +1,5 @@
 use crate::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, Chain, Identity, Intent, IntentId, Nonce, OmniAuth};
+use executor_primitives::{AccountId, ChainId, Identity, Intent, IntentId, Nonce, OmniAuth};
 use parity_scale_codec::{Codec, Decode, Encode};
 use std::fmt::Debug;
 use std::vec::Vec;
@@ -39,7 +39,7 @@ pub type PumpxChainId = u32;
 pub enum NativeTask {
 	RequestAuthToken(Identity),
 	RequestIntent(AccountId, IntentId, Box<Intent>),
-	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, Chain, u32),
+	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, ChainId, u32),
 
 	// pumpx specific, starting from index 20
 	#[codec(index = 20)]

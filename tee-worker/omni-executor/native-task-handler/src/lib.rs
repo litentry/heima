@@ -17,7 +17,7 @@ use executor_crypto::{
 };
 use executor_primitives::{
 	utils::hex::{decode_hex, ToHexPrefixed},
-	AccountId, Chain, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
+	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
 	Web2IdentityType,
 };
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
@@ -140,12 +140,9 @@ impl<
 	/// Get EntryPoint client for a specific chain
 	pub fn get_entry_point_client(
 		&self,
-		chain: &Chain,
+		chain_id: ChainId,
 	) -> Option<Arc<EntryPointClient<AlloyRpcProvider>>> {
-		match chain {
-			Chain::Evm(chain_id) => self.entry_point_clients.get(chain_id).cloned(),
-			_ => None,
-		}
+		self.entry_point_clients.get(&chain_id).cloned()
 	}
 }
 
@@ -811,34 +808,19 @@ async fn handle_native_task<
 			)
 			.await;
 		},
-		NativeTask::SubmitUserOp(omni_account, serializable_user_ops, chain, wallet_index) => {
-			// Only support EVM chains for now
-			if !chain.is_evm() {
-				send_error(
-					format!(
-						"Unsupported chain type: {:?}. Only EVM chains are currently supported.",
-						chain
-					),
-					response_sender,
-					NativeTaskError::UnsupportedChain,
-				);
-				return;
-			}
-
-			let chain_id = chain.evm_chain_id().unwrap(); // Safe to unwrap since we checked is_evm() above
+		NativeTask::SubmitUserOp(omni_account, serializable_user_ops, chain_id, wallet_index) => {
 			info!(
-				"Processing SubmitUserOp for {} UserOperations on chain: {:?} (chain_id: {})",
+				"Processing SubmitUserOp for {} UserOperations on chain_id: {}",
 				serializable_user_ops.len(),
-				chain,
 				chain_id
 			);
 
 			// Get EntryPoint client for this chain (needed for both signing and submission)
-			let entry_point_client = match ctx.get_entry_point_client(&chain) {
+			let entry_point_client = match ctx.get_entry_point_client(chain_id) {
 				Some(client) => client,
 				None => {
 					send_error(
-						format!("No EntryPoint client configured for chain: {:?}", chain),
+						format!("No EntryPoint client configured for chain_id: {}", chain_id),
 						response_sender,
 						NativeTaskError::UnsupportedChain,
 					);

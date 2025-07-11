@@ -3,13 +3,19 @@ use async_trait::async_trait;
 use base58::ToBase58;
 use ethereum_rpc::client::EthereumClient;
 use ethereum_rpc::signer::RemoteSigner as RemoteEvmSigner;
-use executor_primitives::{Chain, ChainAsset, EthereumToken, SolanaToken};
+use executor_primitives::{ChainAsset, EthereumToken, SolanaToken};
 use solana::signer::RemoteSigner as RemoteSolanaSigner;
 use solana::SolanaClient as SolanaClientTrait;
 use std::{collections::HashMap, sync::Arc};
 
 use rust_decimal::Decimal;
 use tracing::error;
+
+#[derive(PartialEq, Hash, Eq)]
+pub enum Chain {
+	Ethereum(u32),
+	Solana,
+}
 
 pub type RpcEndpointRegistry = HashMap<Chain, String>;
 
