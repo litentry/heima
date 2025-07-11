@@ -173,9 +173,9 @@ contract Deploy is Script {
 
         SimplePaymaster paymaster = SimplePaymaster(payable(paymasterAddress));
 
-        // Add stake and deposit for the paymaster
-        uint256 stakeAmount = paymasterInitialDeposit / 2; // Half for stake, half for deposit
-        uint256 depositAmount = paymasterInitialDeposit - stakeAmount;
+        // Add stake and deposit for the paymaster - for now all goes in deposit
+        uint256 stakeAmount = 0;
+        uint256 depositAmount = paymasterInitialDeposit;
 
         if (stakeAmount > 0) {
             paymaster.addStake{value: stakeAmount}(1 days);
