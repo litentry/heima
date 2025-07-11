@@ -1,6 +1,6 @@
 use std::str::FromStr;
-use std::sync::Arc;
 
+use crate::AccountingContractApi;
 use alloy::primitives::U256;
 use anchor_client::{
 	solana_sdk::{
@@ -14,21 +14,8 @@ use anchor_client::{
 };
 use async_trait::async_trait;
 use sp_core::ed25519;
+use std::sync::Arc;
 use tracing::{error, warn};
-
-#[async_trait]
-pub trait AccountingContractApi: Send + Sync {
-	async fn execute_pay_out_request(
-		&self,
-		beneficiary: Pubkey,
-		nonce: u64,
-		amount: U256,
-	) -> Result<(), ()>;
-
-	async fn get_nonce(&self, user: Pubkey) -> Result<u64, ()>;
-
-	async fn get_balance(&self) -> Result<U256, ()>;
-}
 
 pub struct AccountingContractClient {
 	pub payer: Keypair,
@@ -58,7 +45,7 @@ impl AccountingContractClient {
 }
 
 #[async_trait]
-impl AccountingContractApi for AccountingContractClient {
+impl AccountingContractApi<Pubkey, u64> for AccountingContractClient {
 	async fn execute_pay_out_request(
 		&self,
 		beneficiary: Pubkey,
@@ -66,57 +53,40 @@ impl AccountingContractApi for AccountingContractClient {
 		amount: U256,
 	) -> Result<(), ()> {
 		let client = self.create_client()?;
-		let program = client.program(self.program_id).map_err(|e| {
-			error!("Failed to create program client: {:?}", e);
-		})?;
 
-		let result = tokio::task::spawn_blocking(move || {
-			program
-				.request()
-				.accounts(accounting_contract::accounts::CreatePayRequest {
-					pay_out_request: Pubkey::find_program_address(
-						&[beneficiary.to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
-						&program.id(),
-					)
-					.0,
-					account_nonce: Pubkey::find_program_address(
-						&[beneficiary.to_bytes().as_ref(), b"nonce"],
-						&program.id(),
-					)
-					.0,
-					signer: program.payer(),
-					worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
-					treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
-					beneficiary,
-					system_program: system_program::ID,
-				})
-				.args(accounting_contract::instruction::CreatePayRequest {
-					amount: amount.try_into().map_err(|_| {
-						error!("Failed to convert U256 to u64");
-						anchor_client::ClientError::from(std::io::Error::new(
-							std::io::ErrorKind::InvalidData,
-							"Failed to convert U256 to u64",
-						))
-					})?,
-					nonce,
-				})
-				.send()
-		})
-		.await;
+		let program = client.program(self.program_id).expect("Failed to create program client");
 
-		match result {
-			Ok(anchor_result) => match anchor_result {
-				Ok(_) => Ok(()),
-				Err(e) => {
-					error!("Anchor client error: {:?}", e);
-					Err(())
-				},
-			},
-			Err(e) => {
+		program
+			.request()
+			.accounts(accounting_contract::accounts::CreatePayRequest {
+				pay_out_request: Pubkey::find_program_address(
+					&[beneficiary.to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
+					&program.id(),
+				)
+				.0,
+				account_nonce: Pubkey::find_program_address(
+					&[beneficiary.to_bytes().as_ref(), b"nonce"],
+					&program.id(),
+				)
+				.0,
+				signer: self.payer.pubkey(),
+				worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
+				treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
+				beneficiary,
+				system_program: system_program::ID,
+			})
+			.args(accounting_contract::instruction::CreatePayRequest {
+				amount: amount.try_into().map_err(|_| {
+					error!("Failed to convert U256 amount to u64");
+				})?,
+				nonce,
+			})
+			.send()
+			.await
+			.map_err(|e| {
 				error!("Failed to execute pay out request: {:?}", e);
-				Err(())
-			},
-		}
+			})?;
+		Ok(())
 	}
 
 	async fn get_nonce(&self, user: Pubkey) -> Result<u64, ()> {
@@ -129,46 +99,29 @@ impl AccountingContractApi for AccountingContractClient {
 		let (account_pubkey, _bump) =
 			Pubkey::find_program_address(&[user.to_bytes().as_ref(), b"nonce"], &self.program_id);
 
-		match tokio::task::spawn_blocking(move || program.rpc().get_account(&account_pubkey)).await
-		{
+		match program.rpc().get_account(&account_pubkey).await {
 			// return default nonce 0 when fail to get nonce
-			Ok(result) => match result {
-				Ok(account) => {
-					match bincode::deserialize::<accounting_contract::Nonce>(&account.data[8..]) {
-						Ok(nonce) => Ok(nonce.nonce),
-						Err(e) => {
-							error!("Failed deserialize nonce from account {:?}: {:?}", account, e);
-							Ok(0)
-						},
-					}
-				},
-				Err(e) => {
-					error!("Failed to get_account {:?}", e);
-					Ok(0)
-				},
+			Ok(account) => {
+				match bincode::deserialize::<accounting_contract::Nonce>(&account.data[8..]) {
+					Ok(nonce) => Ok(nonce.nonce),
+					Err(e) => {
+						error!("Failed deserialize nonce from account {:?}: {:?}", account, e);
+						Ok(0)
+					},
+				}
 			},
 			Err(e) => {
-				error!("Failed to spawn blocking task: {:?}", e);
-				Err(())
+				error!("Failed to get_account {:?}", e);
+				Ok(0)
 			},
 		}
 	}
 
 	async fn get_balance(&self) -> Result<U256, ()> {
 		let client = self.create_client()?;
-		let program = client.program(self.program_id).map_err(|e| {
-			error!("Failed to create program client: {:?}", e);
-		})?;
 
-		let payer_pubkey = self.payer.pubkey();
-		let balance_result =
-			tokio::task::spawn_blocking(move || program.rpc().get_balance(&payer_pubkey))
-				.await
-				.map_err(|e| {
-					error!("Failed to spawn blocking task: {:?}", e);
-				})?;
-
-		match balance_result {
+		let program = client.program(self.program_id).expect("Failed to create program client");
+		match program.rpc().get_balance(&self.payer.pubkey()).await {
 			Ok(v) => {
 				let balance = U256::try_from(v).map_err(|err| {
 					warn!("Failed to convert balance to U256: {:?}", err);
@@ -185,17 +138,19 @@ impl AccountingContractApi for AccountingContractClient {
 
 #[cfg(feature = "mocks")]
 pub mod mocks {
-	use crate::solana::AccountingContractApi;
+	use crate::AccountingContractApi;
 	use crate::U256;
 	use anchor_client::solana_sdk::pubkey::Pubkey;
 	use async_trait::async_trait;
 	use mockall::mock;
 
 	mock! {
+
 		pub AccountingContractClient {}
 
 		#[async_trait]
-		impl AccountingContractApi for AccountingContractClient {
+		impl AccountingContractApi<Pubkey, u64> for AccountingContractClient {
+
 			async fn execute_pay_out_request(
 				&self,
 				beneficiary: Pubkey,
