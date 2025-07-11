@@ -115,7 +115,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 						PumpxRpcError::from_error_code(ErrorCode::InternalError)
 					})?,
 					params.user_operations.clone(),
-					params.chain_id.clone(),
+					params.chain_id,
 					params.wallet_index,
 				),
 				None,
