@@ -1,7 +1,22 @@
 import { JsonRpcClient } from './client';
 import { JsonRpcMethods } from './methods';
-import { RequestEmailVerificationCodeParams } from './request-types';
-import { RequestEmailVerificationCodeResponse } from './response-types';
+import {
+    RequestEmailVerificationCodeParams,
+    UserLoginParams,
+    GetWeb3SignInMessageParams,
+    GetNextIntentIdParams,
+    ExportWalletParams,
+} from './request-types';
+import {
+    RequestEmailVerificationCodeResponse,
+    GetShieldingKeyResponse,
+    UserLoginResponse,
+    GetWeb3SignInMessageResponse,
+    GetNextIntentIdResponse,
+    ExportWalletResponse,
+    AddWalletResponse,
+} from './response-types';
+
 export class OmniApi {
     private static instance: OmniApi;
     private client: JsonRpcClient;
@@ -25,7 +40,41 @@ export class OmniApi {
         return response;
     }
 
-    // todo: add other methods
+    async getShieldingKey(): Promise<GetShieldingKeyResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniGetShieldingKey, {});
+
+        return response;
+    }
+
+    async getNextIntentId(params: GetNextIntentIdParams): Promise<GetNextIntentIdResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniGetNextIntentId, params);
+
+        return response;
+    }
+
+    async getWeb3SignInMessage(params: GetWeb3SignInMessageParams): Promise<GetWeb3SignInMessageResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniGetWeb3SignInMessage, params);
+
+        return response;
+    }
+
+    async userLogin(params: UserLoginParams): Promise<UserLoginResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniUserLogin, params);
+
+        return response;
+    }
+
+    async addWallet(token: string): Promise<AddWalletResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniAddWallet, {}, token);
+
+        return response;
+    }
+
+    async exportWallet(params: ExportWalletParams, token: string): Promise<ExportWalletResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniExportWallet, params, token);
+
+        return response;
+    }
 }
 
 export const omniApi = OmniApi.getInstance();
