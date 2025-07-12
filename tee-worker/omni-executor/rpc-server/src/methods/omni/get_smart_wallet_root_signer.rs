@@ -14,20 +14,14 @@ use tracing::{debug, error};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetSmartWalletRootSignerParams {
+	pub omni_account: String,
 	pub chain_type: ChainType,
 	pub index: u32,
 }
 
 pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
-			})?;
-
+		.register_async_method("omni_getSmartWalletRootSigner", |params, _, ext| async move {
 			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -35,7 +29,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 
 			debug!("Received omni_getSmartWalletRootSigner");
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
+			let Ok(address) = Address32::from_hex(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
