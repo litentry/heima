@@ -1,9 +1,4 @@
-use crate::{
-	error_code::*,
-	methods::omni::{common::check_auth, PumpxRpcError},
-	server::RpcContext,
-	ErrorCode,
-};
+use crate::{error_code::*, methods::omni::PumpxRpcError, server::RpcContext, ErrorCode};
 use executor_primitives::utils::hex::FromHexPrefixed;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
@@ -21,7 +16,7 @@ pub struct GetSmartWalletRootSignerParams {
 
 pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_getSmartWalletRootSigner", |params, _, ext| async move {
+		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
 			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -29,7 +24,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 
 			debug!("Received omni_getSmartWalletRootSigner");
 
-			let Ok(address) = Address32::from_hex(&omni_account) else {
+			let Ok(address) = Address32::from_hex(&params.omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			};
