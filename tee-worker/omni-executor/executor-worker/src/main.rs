@@ -440,8 +440,8 @@ async fn main() -> Result<(), ()> {
 			})?;
 
 			// Create wildmeta API client and timestamp storage
-			let wildmeta_api: Arc<Box<dyn rpc_server::wildmeta_api::WildmetaApi>> =
-				Arc::new(Box::new(rpc_server::wildmeta_api::MockWildmetaApi));
+			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> =
+				Arc::new(Box::new(wildmeta_api::MockWildmetaApi));
 			let wildmeta_timestamp_storage = Arc::new(
 				executor_storage::WildmetaTimestampStorage::new(storage_db.clone())
 			);
