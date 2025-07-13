@@ -8563,6 +8563,7 @@ dependencies = [
  "alloy",
  "alloy-signer",
  "alloy-signer-local",
+ "async-trait",
  "base58",
  "chrono",
  "config-loader",
