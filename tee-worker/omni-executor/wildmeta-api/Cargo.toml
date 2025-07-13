@@ -1,0 +1,22 @@
+[package]
+name = "wildmeta-api"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+mockall = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+tracing-subscriber = { workspace = true }
+
+[lints]
+workspace = true
+
+[features]
+mocks = []
