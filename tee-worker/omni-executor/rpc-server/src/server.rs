@@ -1,9 +1,9 @@
 use crate::{
 	methods::register_methods,
 	middlewares::{HttpMiddleware, RpcMiddleware},
-	wildmeta_api::WildmetaApi,
 	ShieldingKey,
 };
+use wildmeta_api::WildmetaApi;
 use config_loader::ConfigLoader;
 use ethereum_rpc::AlloyRpcProvider;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
