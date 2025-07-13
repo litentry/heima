@@ -5,6 +5,7 @@ mod middlewares;
 mod server;
 mod task;
 mod verify_auth;
+pub mod wildmeta_api;
 
 pub use auth_token_key_store::AuthTokenKeyStore;
 pub use executor_crypto::shielding_key::ShieldingKey;
