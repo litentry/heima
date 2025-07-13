@@ -1,11 +1,12 @@
 use crate::{
 	methods::register_methods,
 	middlewares::{HttpMiddleware, RpcMiddleware},
+	wildmeta_api::WildmetaApi,
 	ShieldingKey,
 };
 use config_loader::ConfigLoader;
 use ethereum_rpc::AlloyRpcProvider;
-use executor_storage::StorageDB;
+use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use heima_identity_verification::web2::email::Mailer;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
@@ -27,6 +28,8 @@ pub(crate) struct RpcContext {
 	// we could save copying client (and other objects) around when P-1527 is done
 	// there could some a single `handler` that wraps up all accessible member variables
 	pub signer_client: Arc<Box<dyn SignerClient>>,
+	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
+	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 }
 
 impl RpcContext {
@@ -42,6 +45,8 @@ impl RpcContext {
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 		signer_client: Arc<Box<dyn SignerClient>>,
+		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
+		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -54,6 +59,8 @@ impl RpcContext {
 			pumpx_api,
 			rpc_clients,
 			signer_client,
+			wildmeta_api,
+			wildmeta_timestamp_storage,
 		}
 	}
 }
@@ -69,6 +76,8 @@ pub async fn start_server(
 	config_loader: &ConfigLoader,
 	rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	signer_client: Arc<Box<dyn SignerClient>>,
+	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
+	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let mailer = Mailer::new(
 		config_loader.mailer_api_host.clone(),
@@ -88,6 +97,8 @@ pub async fn start_server(
 		pumpx_api,
 		rpc_clients,
 		signer_client,
+		wildmeta_api,
+		wildmeta_timestamp_storage,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

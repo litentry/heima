@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 alloy = { workspace = true }
+async-trait = { workspace = true }
 base58 = { workspace = true }
 chrono = { workspace = true }
 ethers = { workspace = true }

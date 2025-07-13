@@ -439,6 +439,13 @@ async fn main() -> Result<(), ()> {
 				error!("Could not perform attestation");
 			})?;
 
+			// Create wildmeta API client and timestamp storage
+			let wildmeta_api: Arc<Box<dyn rpc_server::wildmeta_api::WildmetaApi>> =
+				Arc::new(Box::new(rpc_server::wildmeta_api::MockWildmetaApi));
+			let wildmeta_timestamp_storage = Arc::new(
+				executor_storage::WildmetaTimestampStorage::new(storage_db.clone())
+			);
+
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -449,6 +456,8 @@ async fn main() -> Result<(), ()> {
 				&config_loader,
 				rpc_clients,
 				pumpx_signer_client,
+				wildmeta_api,
+				wildmeta_timestamp_storage,
 			)
 			.await
 			.map_err(|e| {
