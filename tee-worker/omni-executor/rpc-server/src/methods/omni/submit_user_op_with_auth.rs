@@ -41,7 +41,7 @@ pub struct SubmitUserOpWithAuthParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub user_id: UserId,
-	pub user_auth: Option<UserAuth>,
+	pub _user_auth: Option<UserAuth>,
 	pub client_id: String,
 	pub client_auth: ClientAuth,
 }
