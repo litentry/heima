@@ -4062,6 +4062,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "wildmeta-api",
 ]
 
 [[package]]
@@ -8597,6 +8598,7 @@ dependencies = [
  "tower 0.4.13",
  "tower-http 0.5.2",
  "tracing",
+ "wildmeta-api",
 ]
 
 [[package]]
@@ -14906,6 +14908,19 @@ checksum = "0ce5da8ecb62bcd8ec8b7ea19f69a51275e91299be594ea5cc6ef7819e16cd03"
 dependencies = [
  "bytemuck",
  "safe_arch",
+]
+
+[[package]]
+name = "wildmeta-api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "mockall",
+ "reqwest 0.12.22",
+ "serde",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
