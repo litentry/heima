@@ -31,7 +31,7 @@ impl<
 		from_wallet: Vec<u8>,
 		pumpx_config: &PumpxConfig,
 		to_address: String,
-	) -> Result<(String, String, Option<InstantFlowDetails>), ()> {
+	) -> Result<(Option<String>, String, Option<InstantFlowDetails>), ()> {
 		debug!("executing cross chain swap");
 
 		if pumpx_config.order_type != PumpxOrderType::Market {
@@ -103,17 +103,38 @@ impl<
 			)?;
 		}
 
-		self.pumpx_create_cross_order(
-			intent_id,
-			pumpx_config.from_token_ca.clone(),
-			pumpx_config.to_token_ca.clone(),
-			pumpx_config.from_amount.clone(),
-			pumpx_config.usd_worth.clone(),
-			from_address.clone(),
-			access_token,
-			pumpx_config,
-		)
-		.await?;
+		// Only create pumpx cross order if pumpx_config.to_assert token is not supported by CSSP
+		let should_create_pumpx_order = match BinanceAsset::from_chain_asset(&swap_order.to_asset) {
+			Ok(_) => {
+				debug!(
+					"to_asset {:?} is supported by CSSP, skipping pumpx cross order creation",
+					&swap_order.to_asset
+				);
+				false
+			},
+			Err(_) => {
+				debug!(
+					"to_asset {:?} is not supported by CSSP, creating pumpx cross order",
+					&swap_order.to_asset
+				);
+				true
+			},
+		};
+
+		if should_create_pumpx_order {
+			self.pumpx_create_cross_order(
+				intent_id,
+				pumpx_config.from_token_ca.clone(),
+				pumpx_config.to_token_ca.clone(),
+				pumpx_config.from_amount.clone(),
+				pumpx_config.usd_worth.clone(),
+				from_address.clone(),
+				access_token,
+				pumpx_config,
+			)
+			.await?;
+			return Ok((None, to_address, None));
+		}
 
 		match (&swap_order.from_asset, &swap_order.to_asset) {
 			// SOL to BSC
@@ -152,13 +173,15 @@ impl<
 					.await?;
 
 					Ok((
-						self.apply_gas_fee(
-							&payout_amount,
-							BinanceCoin::Bnb,
-							access_token,
-							pumpx_config,
-						)
-						.await?,
+						Some(
+							self.apply_gas_fee(
+								&payout_amount,
+								BinanceCoin::Bnb,
+								access_token,
+								pumpx_config,
+							)
+							.await?,
+						),
 						self.evm_accounting_contract_client.get_signer_address().await.to_string(),
 						Some(InstantFlowDetails {
 							omni_account,
@@ -200,13 +223,15 @@ impl<
 					.await?;
 
 					Ok((
-						self.apply_gas_fee(
-							&payout_amount,
-							BinanceCoin::Bnb,
-							access_token,
-							pumpx_config,
-						)
-						.await?,
+						Some(
+							self.apply_gas_fee(
+								&payout_amount,
+								BinanceCoin::Bnb,
+								access_token,
+								pumpx_config,
+							)
+							.await?,
+						),
 						to_address,
 						None,
 					))
@@ -253,13 +278,15 @@ impl<
 				.await?;
 
 				Ok((
-					self.apply_gas_fee(
-						&payout_amount,
-						BinanceCoin::Sol,
-						access_token,
-						pumpx_config,
-					)
-					.await?,
+					Some(
+						self.apply_gas_fee(
+							&payout_amount,
+							BinanceCoin::Sol,
+							access_token,
+							pumpx_config,
+						)
+						.await?,
+					),
 					to_address,
 					None,
 				))

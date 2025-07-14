@@ -248,10 +248,16 @@ impl<
 
 						let should_notify_parentchain =
 							pumpx_config.order_type != PumpxOrderType::Limit;
+						let mut should_execute_single_chain_swap = true;
 
 						// do cross-chain swap first, if required
 						if pumpx_config.is_cross_chain() {
-							(amount, from_address, instant_flow_details) = match self
+							(
+								amount,
+								from_address,
+								instant_flow_details,
+								should_execute_single_chain_swap,
+							) = match self
 								.execute_cross_chain_swap(
 									account_id,
 									*account_id.as_ref(),
@@ -266,7 +272,14 @@ impl<
 								.await
 							{
 								Ok((amount, address, instant_flow_details)) => {
-									(amount, address, instant_flow_details)
+									// If amount is None, it means the pumpx_config.to_asset is not supported by CSSP
+									// If amount is None, do not execute single chain swap
+									(
+										amount.clone().unwrap_or(pumpx_config.from_amount.clone()),
+										address,
+										instant_flow_details,
+										amount.is_none(),
+									)
 								},
 								Err(_) => {
 									error!(
@@ -288,17 +301,22 @@ impl<
 						}
 
 						// then do a single (native) chain swap
-						let res = self
-							.execute_single_chain_swap(
-								*account_id.as_ref(),
-								intent_id,
-								&access_token,
-								amount,
-								&pumpx_config,
-								from_address,
-								to_address,
+						let res = if should_execute_single_chain_swap {
+							Some(
+								self.execute_single_chain_swap(
+									*account_id.as_ref(),
+									intent_id,
+									&access_token,
+									amount,
+									&pumpx_config,
+									from_address,
+									to_address,
+								)
+								.await?,
 							)
-							.await?;
+						} else {
+							None
+						};
 
 						// deposit here and unlock assets
 						if let Some(details) = instant_flow_details {
@@ -335,7 +353,7 @@ impl<
 							});
 						}
 
-						Ok((Some(res), should_notify_parentchain))
+						Ok((res, should_notify_parentchain))
 					},
 					SingleChainSwapProvider::Omni => {
 						debug!("Processing Omni single chain swap provider");
