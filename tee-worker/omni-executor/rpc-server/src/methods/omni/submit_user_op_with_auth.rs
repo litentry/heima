@@ -17,7 +17,9 @@ use heima_primitives::Address20;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Encode;
+use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
+use signer_client::ChainType;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{debug, error};
@@ -115,26 +117,22 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 				},
 				_ => {
 					let omni_account = identity.to_omni_account(&params.client_id);
-					let omni_account_bytes: [u8; 32] =
-						omni_account.encode().try_into().map_err(|_| {
-							error!("Failed to convert omni account to bytes");
-							PumpxRpcError::from_error_code(ErrorCode::InternalError)
-						})?;
-					let derived_address = ctx
+					let derived_pubkey = ctx
 						.signer_client
-						.request_wallet(
-							signer_client::ChainType::Evm,
-							params.wallet_index,
-							omni_account_bytes,
-						)
+						.request_wallet(ChainType::Evm, params.wallet_index, *omni_account.as_ref())
 						.await
 						.map_err(|_| {
 							error!("Failed to derive EVM address");
 							PumpxRpcError::from_error_code(ErrorCode::InternalError)
 						})?;
-
-					let derived_hex = format!("0x{}", hex::encode(&derived_address));
-					if derived_hex.to_lowercase() != main_address.to_lowercase() {
+					let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
+						.map_err(|_| {
+							error!("Failed to convert derived pubkey to address");
+							PumpxRpcError::from_error_code(ErrorCode::ServerError(
+								AUTH_VERIFICATION_FAILED_CODE,
+							))
+						})?;
+					if derived_address.to_lowercase() != main_address.to_lowercase() {
 						error!("Main address does not match derived EVM address");
 						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 							AUTH_VERIFICATION_FAILED_CODE,
@@ -298,4 +296,3 @@ async fn validate_user_operation_ownership(
 
 	Ok(())
 }
-
