@@ -1,19 +1,3 @@
-// Copyright 2020-2024 Trust Computing GmbH.
-// This file is part of Litentry.
-//
-// Litentry is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Litentry is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
-
 use super::common::handle_omni_native_task;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::omni::PumpxRpcError;
@@ -64,7 +48,6 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
 
-			// Verify client auth
 			let (_agent_address, main_address, _timestamp) = match &params.client_auth {
 				ClientAuth::WildmetaHl {
 					agent_address,
@@ -73,30 +56,25 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 					signature,
 					login_type,
 				} => {
-					// Verify signature
-					verify_wildmeta_signature(
-						agent_address,
-						business_json,
-						signature,
-					).await?;
+					verify_wildmeta_signature(agent_address, business_json, signature).await?;
 
-					// Extract timestamp from business_json
-					let timestamp = business_json.get("timestamp")
+					let timestamp = business_json
+						.get("timestamp")
 						.and_then(|v| v.as_u64())
 						.ok_or_else(|| {
 							error!("Missing timestamp in business_json");
 							PumpxRpcError::from_error_code(ErrorCode::ParseError)
 						})?;
 
-					// Check timestamp is monotonically increasing
 					verify_timestamp_monotonic(
 						&ctx.wildmeta_timestamp_storage,
 						main_address,
 						timestamp,
-					).await?;
+					)
+					.await?;
 
-					// Verify hyperliquid link
-					let linked = ctx.wildmeta_api
+					let linked = ctx
+						.wildmeta_api
 						.verify_hyperliquid_link(agent_address, main_address, *login_type)
 						.await
 						.map_err(|_| {
@@ -106,9 +84,9 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 
 					if !linked {
 						error!("Agent and main addresses are not linked");
-						return Err(PumpxRpcError::from_error_code(
-							ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-						));
+						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+							AUTH_VERIFICATION_FAILED_CODE,
+						)));
 					}
 
 					(agent_address.clone(), main_address.clone(), timestamp)
@@ -116,37 +94,34 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 				_ => {
 					error!("Invalid client auth type");
 					return Err(PumpxRpcError::from_error_code(ErrorCode::ParseError));
-				}
+				},
 			};
 
-			// Convert user_id to Identity and then to AccountId
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
 				error!("Failed to convert UserId to Identity: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			// For non-EVM identities, verify that main_address matches derived EVM address
 			match &identity {
 				Identity::Evm(_) => {
-					// For EVM identity, main_address should match user_id
 					if let UserId::Evm(user_address) = &params.user_id {
 						if user_address.to_lowercase() != main_address.to_lowercase() {
 							error!("Main address does not match user_id for EVM identity");
-							return Err(PumpxRpcError::from_error_code(
-								ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-							));
+							return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+								AUTH_VERIFICATION_FAILED_CODE,
+							)));
 						}
 					}
 				},
 				_ => {
-					// For non-EVM identities, derive EVM address and verify
 					let omni_account = identity.to_omni_account(&params.client_id);
-					// Convert AccountId to bytes
-					let omni_account_bytes: [u8; 32] = omni_account.encode().try_into().map_err(|_| {
-						error!("Failed to convert omni account to bytes");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
-					})?;
-					let derived_address = ctx.signer_client
+					let omni_account_bytes: [u8; 32] =
+						omni_account.encode().try_into().map_err(|_| {
+							error!("Failed to convert omni account to bytes");
+							PumpxRpcError::from_error_code(ErrorCode::InternalError)
+						})?;
+					let derived_address = ctx
+						.signer_client
 						.request_wallet(
 							signer_client::ChainType::Evm,
 							params.wallet_index,
@@ -158,21 +133,18 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 							PumpxRpcError::from_error_code(ErrorCode::InternalError)
 						})?;
 
-					// Compare derived address with main_address
 					let derived_hex = format!("0x{}", hex::encode(&derived_address));
 					if derived_hex.to_lowercase() != main_address.to_lowercase() {
 						error!("Main address does not match derived EVM address");
-						return Err(PumpxRpcError::from_error_code(
-							ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-						));
+						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+							AUTH_VERIFICATION_FAILED_CODE,
+						)));
 					}
-				}
+				},
 			}
 
-			// Get AccountId from identity
 			let account_id = identity.to_omni_account(&params.client_id);
 
-			// Validate UserOperation ownership (reuse existing logic)
 			let unique_addresses: HashSet<Address> = params
 				.user_operations
 				.iter()
@@ -194,7 +166,6 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 				.await?;
 			}
 
-			// Create task wrapper and submit
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(
 					account_id,
@@ -230,29 +201,29 @@ async fn verify_wildmeta_signature(
 		error!("Failed to serialize business_json: {:?}", e);
 		PumpxRpcError::from_error_code(ErrorCode::ParseError)
 	})?;
-    let signature_bytes = decode_hex(signature).map_err(|e| {
-        error!("Failed to decode signature: {:?}", e);
-        PumpxRpcError::from_error_code(ErrorCode::ParseError)
-    })?;
-    let ethereum_signature = EthereumSignature::try_from(signature_bytes.as_slice()).map_err(|e| {
-        error!("Failed to convert signature to EthereumSignature: {:?}", e);
-        PumpxRpcError::from_error_code(ErrorCode::ParseError)
-    })?;
-	let heima_sig = HeimaMultiSignature::Ethereum(ethereum_signature);
-
-	let agent_address = Address20::from_hex(agent_address)
-		.map_err(|e| {
-			error!("Failed to parse agent address: {:?}", e);
+	let signature_bytes = decode_hex(signature).map_err(|e| {
+		error!("Failed to decode signature: {:?}", e);
+		PumpxRpcError::from_error_code(ErrorCode::ParseError)
+	})?;
+	let ethereum_signature =
+		EthereumSignature::try_from(signature_bytes.as_slice()).map_err(|e| {
+			error!("Failed to convert signature to EthereumSignature: {:?}", e);
 			PumpxRpcError::from_error_code(ErrorCode::ParseError)
 		})?;
+	let heima_sig = HeimaMultiSignature::Ethereum(ethereum_signature);
+
+	let agent_address = Address20::from_hex(agent_address).map_err(|e| {
+		error!("Failed to parse agent address: {:?}", e);
+		PumpxRpcError::from_error_code(ErrorCode::ParseError)
+	})?;
 
 	let agent_identity = Identity::Evm(agent_address);
 
 	if !heima_sig.verify(&message, &agent_identity) {
 		error!("Signature verification failed");
-		return Err(PumpxRpcError::from_error_code(
-			ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-		));
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			AUTH_VERIFICATION_FAILED_CODE,
+		)));
 	}
 
 	Ok(())
@@ -263,28 +234,25 @@ async fn verify_timestamp_monotonic(
 	main_address: &str,
 	new_timestamp: u64,
 ) -> Result<(), PumpxRpcError> {
-	// Get last timestamp
-	let last_timestamp = storage.get(&main_address.to_string())
+	let last_timestamp = storage
+		.get(&main_address.to_string())
 		.map_err(|_| {
 			error!("Failed to get last timestamp");
 			PumpxRpcError::from_error_code(ErrorCode::InternalError)
 		})?
 		.unwrap_or(0);
 
-	// Check monotonic increase
 	if new_timestamp <= last_timestamp {
 		error!("Timestamp not monotonically increasing: {} <= {}", new_timestamp, last_timestamp);
-		return Err(PumpxRpcError::from_error_code(
-			ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-		));
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			AUTH_VERIFICATION_FAILED_CODE,
+		)));
 	}
 
-	// Store new timestamp
-	storage.insert(&main_address.to_string(), new_timestamp)
-		.map_err(|_| {
-			error!("Failed to store timestamp");
-			PumpxRpcError::from_error_code(ErrorCode::InternalError)
-		})?;
+	storage.insert(&main_address.to_string(), new_timestamp).map_err(|_| {
+		error!("Failed to store timestamp");
+		PumpxRpcError::from_error_code(ErrorCode::InternalError)
+	})?;
 
 	Ok(())
 }
@@ -307,7 +275,8 @@ async fn validate_user_operation_ownership(
 	};
 
 	// Query OmniWallet contract
-	let omni_client = aa_contracts_client::OmniAccountClient::new(*sender_address, rpc_client.clone());
+	let omni_client =
+		aa_contracts_client::OmniAccountClient::new(*sender_address, rpc_client.clone());
 
 	let stored_oa = match omni_client.get_owner().await {
 		Ok(oa) => oa,
@@ -329,3 +298,4 @@ async fn validate_user_operation_ownership(
 
 	Ok(())
 }
+
