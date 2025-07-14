@@ -255,6 +255,8 @@ async fn verify_payload_timestamp(
 	Ok(())
 }
 
+// TODO: abstract this once https://github.com/litentry/heima/pull/3590 is merged
+// Reuse the logic from submit_user_op.rs
 async fn validate_user_operation_ownership(
 	account_id: &AccountId,
 	sender_address: &Address,
