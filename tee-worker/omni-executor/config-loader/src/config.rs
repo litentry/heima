@@ -38,6 +38,7 @@ const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000
 const DEFAULT_OMNI_WALLET_IMPLEMENTATION_ADDRESS: &str =
 	"0x0000000000000000000000000000000000000000";
 const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const DEFAULT_WILDMETA_API_URL: &str = ""; // Optional, empty means use mock
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
@@ -61,6 +62,7 @@ pub struct ConfigLoader {
 	pub omni_factory_address: String,
 	pub omni_wallet_implementation_address: String,
 	pub entry_point_address: String,
+	pub wildmeta_api_url: Option<String>,
 }
 
 struct EnvVar {
@@ -267,6 +269,15 @@ impl ConfigLoader {
 					optional: false,
 				},
 			),
+			(
+				"wildmeta_api_url",
+				EnvVar {
+					env_key: "OE_WILDMETA_API_URL",
+					default: DEFAULT_WILDMETA_API_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
 		]);
 
 		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
@@ -302,6 +313,7 @@ impl ConfigLoader {
 			omni_factory_address: get("omni_factory_address"),
 			omni_wallet_implementation_address: get("omni_wallet_implementation_address"),
 			entry_point_address: get("entry_point_address"),
+			wildmeta_api_url: get_opt("wildmeta_api_url"),
 		}
 	}
 }
