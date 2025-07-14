@@ -15,6 +15,12 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use async_trait::async_trait;
+use reqwest::Client;
+use url::Url;
+
+pub mod methods;
+
+use methods::verify_hyperliquid_link::verify_hyperliquid_link_impl;
 
 #[async_trait]
 pub trait WildmetaApi: Send + Sync {
@@ -26,6 +32,42 @@ pub trait WildmetaApi: Send + Sync {
 		main_address: &str,
 		login_type: u32,
 	) -> Result<bool, ()>;
+}
+
+pub struct WildmetaApiClient {
+	http_client: Client,
+	base_url: Url,
+}
+
+impl WildmetaApiClient {
+	pub fn new(base_url: String) -> Self {
+		let base_url = Url::parse(&base_url).expect("Invalid base URL");
+		let http_client = Client::builder().build().expect("Failed to build HTTP client");
+		WildmetaApiClient { http_client, base_url }
+	}
+}
+
+#[async_trait]
+impl WildmetaApi for WildmetaApiClient {
+	async fn verify_hyperliquid_link(
+		&self,
+		agent_address: &str,
+		main_address: &str,
+		login_type: u32,
+	) -> Result<bool, ()> {
+		let response = verify_hyperliquid_link_impl(
+			self,
+			main_address.to_string(),
+			agent_address.to_string(),
+			login_type as i32,
+		)
+		.await
+		.map_err(|e| {
+			tracing::error!("Failed to verify hyperliquid link: {:?}", e);
+		})?;
+
+		Ok(response.data().is_bound)
+	}
 }
 
 /// Mock implementation for testing
