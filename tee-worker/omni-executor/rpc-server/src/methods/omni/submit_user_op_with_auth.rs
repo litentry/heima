@@ -22,11 +22,14 @@ use crate::ErrorCode;
 use alloy::primitives::{Address, FixedBytes};
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
+use executor_primitives::utils::hex::decode_hex;
 use executor_primitives::{
 	AccountId, ChainId, ClientAuth, Identity, UserId, UserAuth,
 	signature::{HeimaMultiSignature, EthereumSignature},
+	utils::hex::FromHexPrefixed;
 };
 use executor_storage::{Storage, WildmetaTimestampStorage};
+use heima_primitives::Address20;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Encode;
@@ -223,51 +226,29 @@ async fn verify_wildmeta_signature(
 	business_json: &serde_json::Value,
 	signature: &str,
 ) -> Result<(), PumpxRpcError> {
-	// Serialize business_json to bytes
 	let message = serde_json::to_vec(business_json).map_err(|e| {
 		error!("Failed to serialize business_json: {:?}", e);
 		PumpxRpcError::from_error_code(ErrorCode::ParseError)
 	})?;
+    let signature_bytes = decode_hex(signature).map_err(|e| {
+        error!("Failed to decode signature: {:?}", e);
+        PumpxRpcError::from_error_code(ErrorCode::ParseError)
+    })?;
+    let ethereum_signature = EthereumSignature::try_from(signature_bytes.as_slice()).map_err(|e| {
+        error!("Failed to convert signature to EthereumSignature: {:?}", e);
+        PumpxRpcError::from_error_code(ErrorCode::ParseError)
+    })?;
+	let heima_sig = HeimaMultiSignature::Ethereum(ethereum_signature);
 
-	// Create Ethereum signed message
-	let eth_message = format!("\x19Ethereum Signed Message:\n{}{}", 
-		message.len(), 
-		String::from_utf8_lossy(&message)
-	);
-	
-	// Parse signature
-	let sig_bytes = hex::decode(signature.strip_prefix("0x").unwrap_or(signature))
+	let agent_address = Address20::from_hex(agent_address)
 		.map_err(|e| {
-			error!("Failed to decode signature: {:?}", e);
+			error!("Failed to parse agent address: {:?}", e);
 			PumpxRpcError::from_error_code(ErrorCode::ParseError)
 		})?;
 
-	// Convert to array and create EthereumSignature
-	let sig_array: [u8; 65] = sig_bytes.try_into().map_err(|_| {
-		error!("Invalid signature length, expected 65 bytes");
-		PumpxRpcError::from_error_code(ErrorCode::ParseError)
-	})?;
+	let agent_identity = Identity::Evm(agent_address);
 
-	// Create HeimaMultiSignature
-	let heima_sig = HeimaMultiSignature::Ethereum(EthereumSignature(sig_array));
-
-	// Parse agent address
-	let agent_addr_bytes = hex::decode(agent_address.strip_prefix("0x").unwrap_or(agent_address))
-		.map_err(|e| {
-			error!("Failed to decode agent address: {:?}", e);
-			PumpxRpcError::from_error_code(ErrorCode::ParseError)
-		})?;
-
-	// Convert to array
-	let agent_addr_array: [u8; 20] = agent_addr_bytes.try_into().map_err(|_| {
-		error!("Invalid agent address length, expected 20 bytes");
-		PumpxRpcError::from_error_code(ErrorCode::ParseError)
-	})?;
-
-	let agent_identity = Identity::Evm(agent_addr_array.into());
-
-	// Verify signature
-	if !heima_sig.verify(eth_message.as_bytes(), &agent_identity) {
+	if !heima_sig.verify(&message, &agent_identity) {
 		error!("Signature verification failed");
 		return Err(PumpxRpcError::from_error_code(
 			ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
@@ -327,7 +308,7 @@ async fn validate_user_operation_ownership(
 
 	// Query OmniWallet contract
 	let omni_client = aa_contracts_client::OmniAccountClient::new(*sender_address, rpc_client.clone());
-	
+
 	let stored_oa = match omni_client.get_owner().await {
 		Ok(oa) => oa,
 		Err(e) => {
