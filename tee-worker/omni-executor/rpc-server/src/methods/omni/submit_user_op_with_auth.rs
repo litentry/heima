@@ -66,7 +66,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 							PumpxRpcError::from_error_code(ErrorCode::ParseError)
 						})?;
 
-					verify_timestamp_monotonic(
+					verify_payload_timestamp(
 						&ctx.wildmeta_timestamp_storage,
 						main_address,
 						timestamp,
@@ -229,7 +229,7 @@ async fn verify_wildmeta_signature(
 	Ok(())
 }
 
-async fn verify_timestamp_monotonic(
+async fn verify_payload_timestamp(
 	storage: &Arc<WildmetaTimestampStorage>,
 	main_address: &str,
 	new_timestamp: u64,
@@ -243,7 +243,7 @@ async fn verify_timestamp_monotonic(
 		.unwrap_or(0);
 
 	if new_timestamp <= last_timestamp {
-		error!("Timestamp not monotonically increasing: {} <= {}", new_timestamp, last_timestamp);
+		error!("Invalid payload timestamp: {} <= {}", new_timestamp, last_timestamp);
 		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 			AUTH_VERIFICATION_FAILED_CODE,
 		)));
