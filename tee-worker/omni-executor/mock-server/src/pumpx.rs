@@ -15,12 +15,10 @@ fn build_success_response(response: serde_json::Value) -> Response<String> {
 
 pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone
 {
-	let user_connect = warp::post()
-		.and(warp::path!("v3" / "account" / "user_connect"))
-		.map(|| {
-			// TODO implements your response logic
-			Response::builder().status(200).body("").unwrap()
-		});
+	let user_connect = warp::post().and(warp::path!("v3" / "account" / "user_connect")).map(|| {
+		// TODO implements your response logic
+		Response::builder().status(200).body("").unwrap()
+	});
 
 	let verify_google_code = warp::post()
 		.and(warp::path!("v3" / "account" / "verify_google_code"))
