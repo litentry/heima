@@ -59,6 +59,32 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	///
 	/// This function loads the bytecode from the filesystem on first call and caches it
 	/// in memory for subsequent calls, improving performance.
+	///
+	/// ## When to Update EntryPointSimulations_deployed_bytecode.hex
+	///
+	/// The `EntryPointSimulations_deployed_bytecode.hex` file contains the deployed bytecode
+	/// for the EntryPointSimulations contract, which is used for UserOperation validation
+	/// simulation through state override.
+	///
+	/// **Update this file when:**
+	/// - The EntryPointSimulations contract logic changes in `aa-contracts/`
+	/// - You encounter "execution reverted" errors during `simulate_validation` calls
+	/// - The bytecode becomes outdated after contract recompilation
+	/// - Integration tests like `try_full_flow` fail on simulation but succeed on execution
+	///
+	/// **How to update:**
+	/// 1. Navigate to the `aa-contracts/` directory
+	/// 2. Ensure contracts are compiled: `forge build`
+	/// 3. Extract the deployed bytecode:
+	///    ```bash
+	///    cat out/EntryPointSimulations.sol/EntryPointSimulations.json | \
+	///    jq -r '.deployedBytecode.object' > \
+	///    ../aa-contracts-client/src/bytecode/EntryPointSimulations_deployed_bytecode.hex
+	///    ```
+	/// 4. Rebuild the `aa-contracts-client` crate to use the updated bytecode
+	///
+	/// **Note:** This file contains the deployed bytecode (not creation bytecode), which is
+	/// deployed via state override at the EntryPoint address for simulation purposes.
 	fn get_simulation_bytecode() -> Result<String, ()> {
 		SIMULATION_BYTECODE_ONCE.call_once(|| {
 			// Use deployed bytecode, not creation bytecode
