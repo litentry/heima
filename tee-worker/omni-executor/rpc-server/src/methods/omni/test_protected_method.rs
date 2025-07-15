@@ -21,7 +21,7 @@ mod test {
 	use config_loader::ConfigLoader;
 	use executor_crypto::jwt;
 	use executor_primitives::utils::hex::ToHexPrefixed;
-	use executor_storage::StorageDB;
+	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
@@ -37,6 +37,7 @@ mod test {
 	use std::sync::Arc;
 	use tempfile::tempdir;
 	use tokio::sync::mpsc;
+	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
 	pub async fn test_protected_method() {
@@ -44,7 +45,7 @@ mod test {
 		let port = 2004;
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
-		let db = StorageDB::open_default(tmp_dir.path()).unwrap();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
@@ -57,16 +58,21 @@ mod test {
 		// Create empty rpc_clients for test
 		let rpc_clients = Arc::new(std::collections::HashMap::new());
 
+		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
+		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+
 		start_server(
 			port,
 			shielding_key.clone(),
 			Arc::new(sender),
 			Arc::new(Box::new(pumpx_api)),
-			Arc::new(db),
+			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			rpc_clients,
 			signer_client,
+			wildmeta_api,
+			wildmeta_timestamp_storage,
 		)
 		.await
 		.unwrap();

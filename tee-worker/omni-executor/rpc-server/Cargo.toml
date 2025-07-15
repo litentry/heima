@@ -47,6 +47,9 @@ wildmeta-api = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
+signer-client = { workspace = true, features = ["mocks"] }
+wildmeta-api = { workspace = true, features = ["mocks"] }
+executor-storage = { workspace = true }
 chrono = { workspace = true }
 alloy-signer = { workspace = true }
 alloy-signer-local = { workspace = true }
