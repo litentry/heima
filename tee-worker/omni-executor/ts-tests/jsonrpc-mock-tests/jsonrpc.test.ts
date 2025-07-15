@@ -285,7 +285,8 @@ describe('Omni JsonRpc Mock Tests', function () {
         // }
 
         expect(result.backend_response).to.be.not.undefined;
-        expect(result.backend_response.market_order_response || result.backend_response.limit_order_response).to.be.not.undefined;
+        expect(result.backend_response.market_order_response || result.backend_response.limit_order_response).to.be.not
+            .undefined;
     });
 
     it('should submit swap order successfully (limit order)', async function () {
@@ -321,7 +322,8 @@ describe('Omni JsonRpc Mock Tests', function () {
         // }
 
         expect(result.backend_response).to.be.not.undefined;
-        expect(result.backend_response.limit_order_response || result.backend_response.market_order_response).to.be.not.undefined;
+        expect(result.backend_response.limit_order_response || result.backend_response.market_order_response).to.be.not
+            .undefined;
     });
 
     it('should sign limit order successfully', async function () {

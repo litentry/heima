@@ -102,7 +102,10 @@ export class OmniApi {
         return response;
     }
 
-    async notifyLimitOrderResult(params: NotifyLimitOrderResultParams, token: string): Promise<NotifyLimitOrderResultResponse> {
+    async notifyLimitOrderResult(
+        params: NotifyLimitOrderResultParams,
+        token: string
+    ): Promise<NotifyLimitOrderResultResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniNotifyLimitOrderResult, params, token);
 
         return response;
