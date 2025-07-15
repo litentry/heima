@@ -174,7 +174,7 @@ pub enum ClientAuth {
 	Wildmeta { google_code: Option<String>, invite_code: Option<String> },
 	WildmetaHl {
 		agent_address: String,
-		business_json: serde_json::Value,
+		business_json: String,
 		main_address: String,
 		signature: String,
 		login_type: u32,
