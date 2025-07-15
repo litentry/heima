@@ -6,6 +6,10 @@ import {
     GetWeb3SignInMessageParams,
     GetNextIntentIdParams,
     ExportWalletParams,
+    TransferWithdrawParams,
+    SubmitSwapOrderParams,
+    SignLimitOrderParams,
+    NotifyLimitOrderResultParams,
 } from './request-types';
 import {
     RequestEmailVerificationCodeResponse,
@@ -15,6 +19,10 @@ import {
     GetNextIntentIdResponse,
     ExportWalletResponse,
     AddWalletResponse,
+    TransferWithdrawResponse,
+    SubmitSwapOrderResponse,
+    SignLimitOrderResponse,
+    NotifyLimitOrderResultResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -72,6 +80,30 @@ export class OmniApi {
 
     async exportWallet(params: ExportWalletParams, token: string): Promise<ExportWalletResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniExportWallet, params, token);
+
+        return response;
+    }
+
+    async transferWithdraw(params: TransferWithdrawParams, token: string): Promise<TransferWithdrawResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniTransferWithdraw, params, token);
+
+        return response;
+    }
+
+    async submitSwapOrder(params: SubmitSwapOrderParams, token: string): Promise<SubmitSwapOrderResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSubmitSwapOrder, params, token);
+
+        return response;
+    }
+
+    async signLimitOrder(params: SignLimitOrderParams, token: string): Promise<SignLimitOrderResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSignLimitOrder, params, token);
+
+        return response;
+    }
+
+    async notifyLimitOrderResult(params: NotifyLimitOrderResultParams, token: string): Promise<NotifyLimitOrderResultResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniNotifyLimitOrderResult, params, token);
 
         return response;
     }

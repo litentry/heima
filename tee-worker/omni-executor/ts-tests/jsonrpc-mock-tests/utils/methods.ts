@@ -6,6 +6,10 @@ enum JsonRpcMethods {
     OmniGetNextIntentId = 'omni_getNextIntentId',
     OmniAddWallet = 'omni_addWallet',
     OmniExportWallet = 'omni_exportWallet',
+    OmniTransferWithdraw = 'omni_transferWithdraw',
+    OmniSubmitSwapOrder = 'omni_submitSwapOrder',
+    OmniSignLimitOrder = 'omni_signLimitOrder',
+    OmniNotifyLimitOrderResult = 'omni_notifyLimitOrderResult',
 }
 
 export { JsonRpcMethods };
