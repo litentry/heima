@@ -116,7 +116,7 @@ if check_anvil; then
     ANVIL_RUNNING=true
 else
     echo "🔧 Starting Anvil node..."
-    anvil --host $ANVIL_HOST --chain-id $CHAIN_ID --port $ANVIL_PORT &
+    anvil -vv --host $ANVIL_HOST --chain-id $CHAIN_ID --port $ANVIL_PORT &
     ANVIL_PID=$!
     ANVIL_RUNNING=false
     wait_for_anvil
