@@ -68,7 +68,11 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
 		.map(|auth: Option<String>, body: serde_json::Value| {
-			log::info!("Received create_transfer_tx request with auth: {:?}, body: {:?}", auth, body);
+			log::info!(
+				"Received create_transfer_tx request with auth: {:?}, body: {:?}",
+				auth,
+				body
+			);
 
 			let response = json!({
 				"code": 10000,
@@ -108,7 +112,11 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
 		.map(|auth: Option<String>, body: serde_json::Value| {
-			log::info!("Received create_limit_order request with auth: {:?}, body: {:?}", auth, body);
+			log::info!(
+				"Received create_limit_order request with auth: {:?}, body: {:?}",
+				auth,
+				body
+			);
 
 			let response = json!({
 				"code": 10000,
@@ -126,7 +134,11 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
 		.map(|auth: Option<String>, body: serde_json::Value| {
-			log::info!("Received create_market_order_unsigned_tx request with auth: {:?}, body: {:?}", auth, body);
+			log::info!(
+				"Received create_market_order_unsigned_tx request with auth: {:?}, body: {:?}",
+				auth,
+				body
+			);
 
 			let response = json!({
 				"code": 10000,
