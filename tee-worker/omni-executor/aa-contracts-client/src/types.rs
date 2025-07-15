@@ -27,9 +27,6 @@ sol! {
 		uint256 preVerificationGas;
 		bytes32 gasFees;
 		bytes paymasterAndData;
-		address sessionAccount;
-		uint256 sessionExpiration;
-		bytes sessionAccountProof;
 		bytes signature;
 	}
 
