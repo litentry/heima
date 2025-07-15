@@ -26,9 +26,17 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 	let verify_google_code = warp::post()
 		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "verify_google_code"))
-		.map(|| {
-			// TODO implements your response logic
-			Response::builder().status(200).body("").unwrap()
+		.and(warp::body::json())
+		.map(|body: serde_json::Value| {
+			log::info!("Received verify_google_code request with body: {:?}", body);
+
+			let response = json!({
+				"code": 10000,
+				"message": "OK",
+				"data": {}
+			});
+
+			build_success_response(response)
 		});
 
 	let post_heima_login = warp::post()
@@ -64,6 +72,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let create_transfer_tx = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "trade" / "create_transfer_tx"))
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
@@ -88,6 +97,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let get_user_trade_info = warp::get()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "trade" / "get_user_trade_info"))
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::query::raw())
@@ -108,6 +118,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let create_limit_order = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "trade" / "create_limit_order"))
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
@@ -130,6 +141,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let create_market_order_unsigned_tx = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "trade" / "create_market_order_unsigned_tx"))
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
@@ -153,6 +165,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let send_order_tx = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "trade" / "send_order_tx"))
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
