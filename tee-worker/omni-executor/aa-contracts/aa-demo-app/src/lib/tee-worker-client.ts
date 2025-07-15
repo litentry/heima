@@ -28,7 +28,7 @@ interface UserLoginResponse {
 
 interface GetSmartWalletRootSignerParams {
 	chain_type: "Evm" | "Solana" | "Tron";
-	index: number;
+	wallet_index: number;
 }
 
 // JSON-RPC request helper
@@ -49,7 +49,7 @@ async function makeRpcRequest<T>(
 	// If params is already an array (for methods like omni_getWeb3SignInMessage), it's the actual params
 	// If params is an object or null/undefined, use it directly
 	const rpcParams = params ?? null;
-	
+
 	const requestBody = {
 		jsonrpc: "2.0",
 		method,
@@ -82,8 +82,8 @@ async function makeRpcRequest<T>(
 	if (data.error) {
 		console.error(`[TEE Worker RPC] Error from ${method}:`, data.error);
 		// Include error code in the error message for better debugging
-		const errorMessage = data.error.data 
-			? `${data.error.message} (${data.error.data})` 
+		const errorMessage = data.error.data
+			? `${data.error.message} (${data.error.data})`
 			: data.error.message || "RPC error";
 		throw new Error(errorMessage);
 	}
@@ -99,10 +99,10 @@ export async function getWeb3SignInMessage(
 	// The omniAccount should already be a properly formatted 32-byte hex string (64 chars) with 0x prefix
 	// from calculateOmniAccount function
 	console.log('[TEE Worker] Using omni account:', omniAccount);
-	
+
 	// Pass parameters as an array for positional arguments
 	return makeRpcRequest<Web3SignInMessageResponse>(
-		"omni_getWeb3SignInMessage", 
+		"omni_getWeb3SignInMessage",
 		[clientId, omniAccount]
 	);
 }
@@ -118,7 +118,7 @@ export async function loginWithEvm(
 	// The server expects the message to be a JSON string of the payload
 	const message = JSON.stringify(messagePayload);
 	console.log("[TEE Worker] Message to sign:", message);
-	
+
 	const signature = await walletClient.signMessage({
 		account: evmAddress as `0x${string}`,
 		message,
@@ -140,7 +140,7 @@ export async function loginWithEvm(
 	};
 
 	console.log("[TEE Worker] UserLogin params:", JSON.stringify(params, null, 2));
-	
+
 	// Pass the params object directly
 	return makeRpcRequest<UserLoginResponse>("omni_userLogin", params);
 }
@@ -153,7 +153,7 @@ export async function getSmartWalletRootSigner(
 ): Promise<string> {
 	const params: GetSmartWalletRootSignerParams = {
 		chain_type: chainType,
-		index,
+		wallet_index: index,
 	};
 
 	return makeRpcRequest<string>("omni_getSmartWalletRootSigner", params, idToken);
@@ -205,16 +205,16 @@ export async function authorizeTEEWorker(
 			};
 		} catch (error) {
 			console.error(`[TEE Worker] Authorization attempt ${retryCount + 1} failed:`, error);
-			
+
 			// If this was our last retry, throw the error
 			if (retryCount >= maxRetries) {
 				throw error;
 			}
-			
+
 			// Wait a bit before retrying to ensure any server-side state is cleared
 			console.log("[TEE Worker] Waiting 1 second before retry...");
 			await new Promise(resolve => setTimeout(resolve, 1000));
-			
+
 			retryCount++;
 		}
 	}
