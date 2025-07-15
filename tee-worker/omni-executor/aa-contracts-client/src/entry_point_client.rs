@@ -234,9 +234,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			preVerificationGas: pre_verification_gas,
 			gasFees: gas_fees,
 			paymasterAndData: paymaster_and_data,
-			sessionAccount: Address::default(),
-			sessionExpiration: U256::from(0),
-			sessionAccountProof: Bytes::new(),
 			signature: Bytes::new(),
 		})
 	}
@@ -460,7 +457,10 @@ pub mod test {
 		let user_op_hash = entrypoint_client.get_user_op_hash(user_op.clone()).await.unwrap();
 		let signature = user_signer.sign_hash(&user_op_hash).await.unwrap();
 
-		user_op.signature = signature.as_bytes().into();
+		// Prepend 0x00 byte to indicate Owner signature type (according to UserOpSigner enum)
+		let mut signature_with_prefix: Vec<u8> = vec![0x00];
+		signature_with_prefix.extend_from_slice(&signature.as_bytes());
+		user_op.signature = signature_with_prefix.into();
 
 		// Fund the paymaster with ETH deposits to EntryPoint
 		let paymaster_deposit_call = depositCall {}.abi_encode();
