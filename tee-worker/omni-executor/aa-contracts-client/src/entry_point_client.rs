@@ -482,7 +482,7 @@ pub mod test {
 	/// Integration test to verify that local CREATE2 calculation matches EntryPoint.getSenderAddress
 	///
 	/// To run this test:
-	/// 1. Deploy contracts using: `cd aa-contracts && ./local-deploy.sh`
+	/// 1. Deploy contracts using: `cd aa-contracts && ./deploy-local.sh`
 	/// 2. Run: `cargo test test_local_vs_entrypoint_address_calculation -- --ignored`
 	#[test(tokio::test)]
 	#[ignore = "manual"]

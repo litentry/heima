@@ -18,7 +18,7 @@ licensed under the GNU General Public License v3.0.
 Run the deployment script to start an Anvil node and deploy all contracts:
 
 ```bash
-./local-deploy.sh
+./deploy-local.sh
 ```
 
 This script will:

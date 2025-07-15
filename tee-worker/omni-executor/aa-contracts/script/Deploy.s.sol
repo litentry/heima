@@ -124,6 +124,14 @@ contract Deploy is Script {
             return NetworkConfig("Polygon Mainnet", 137, 1 ether);
         } else if (chainId == 80001) {
             return NetworkConfig("Polygon Mumbai", 80001, 0.1 ether);
+        } else if (chainId == 42161) {
+            return NetworkConfig("Arbitrum Mainnet", 42161, 0.01 ether);
+        } else if (chainId == 421614) {
+            return NetworkConfig("Arbitrum Sepolia", 421614, 0.01 ether);
+        } else if (chainId == 999) {
+            return NetworkConfig("HyperEVM Mainnet", 999, 0.01 ether);
+        } else if (chainId == 998) {
+            return NetworkConfig("HyperEVM Testnet", 998, 0.01 ether);
         } else if (chainId == 1337) {
             return NetworkConfig("Local Anvil", 1337, 0.01 ether);
         } else if (chainId == 31337) {
@@ -277,6 +285,10 @@ contract Deploy is Script {
         if (chainId == 80001) return "mumbai";
         if (chainId == 1337) return "local";
         if (chainId == 31337) return "local";
+        if (chainId == 42161) return "arbitrum";
+        if (chainId == 421614) return "arbitrum-sepolia";
+        if (chainId == 998) return "hyperevm-testnet";
+        if (chainId == 999) return "hyperevm";
         return string(abi.encodePacked("chain-", vm.toString(chainId)));
     }
 }
