@@ -19,9 +19,11 @@ mod test {
 	use crate::{start_server, ShieldingKey};
 	use chrono::{Days, Utc};
 	use config_loader::ConfigLoader;
+	use ethereum_rpc::AlloyRpcProvider;
 	use executor_crypto::jwt;
 	use executor_primitives::utils::hex::ToHexPrefixed;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
+	use std::collections::HashMap;
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
@@ -62,6 +64,9 @@ mod test {
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
 
+		// Create empty rpc_clients map for test
+		let rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>> = Arc::new(HashMap::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -70,6 +75,7 @@ mod test {
 			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
+			rpc_clients,
 			signer_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,

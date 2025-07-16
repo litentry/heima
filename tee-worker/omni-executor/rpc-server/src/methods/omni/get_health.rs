@@ -27,8 +27,10 @@ pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
+	use ethereum_rpc::AlloyRpcProvider;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
+	use std::collections::HashMap;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -63,6 +65,9 @@ mod test {
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
 
+		// Create empty rpc_clients map for test
+		let rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>> = Arc::new(HashMap::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -71,6 +76,7 @@ mod test {
 			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
+			rpc_clients,
 			signer_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
