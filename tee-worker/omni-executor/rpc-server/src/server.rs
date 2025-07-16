@@ -5,14 +5,13 @@ use crate::{
 };
 use wildmeta_api::WildmetaApi;
 use config_loader::ConfigLoader;
-use ethereum_rpc::AlloyRpcProvider;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use heima_identity_verification::web2::email::mailer::MailerTrait;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
-use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
+use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
 
 pub(crate) struct RpcContext {
@@ -24,7 +23,6 @@ pub(crate) struct RpcContext {
 	pub google_client_id: String,
 	pub google_client_secret: String,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
-	pub rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	// we could save copying client (and other objects) around when P-1527 is done
 	// there could some a single `handler` that wraps up all accessible member variables
 	pub signer_client: Arc<Box<dyn SignerClient>>,
@@ -43,7 +41,6 @@ impl RpcContext {
 		google_client_id: String,
 		google_client_secret: String,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
-		rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 		signer_client: Arc<Box<dyn SignerClient>>,
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
@@ -57,7 +54,6 @@ impl RpcContext {
 			google_client_id,
 			google_client_secret,
 			pumpx_api,
-			rpc_clients,
 			signer_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
@@ -74,7 +70,6 @@ pub async fn start_server(
 	storage_db: Arc<StorageDB>,
 	jwt_rsa_private_key: Vec<u8>,
 	config_loader: &ConfigLoader,
-	rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	signer_client: Arc<Box<dyn SignerClient>>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
@@ -89,7 +84,6 @@ pub async fn start_server(
 		config_loader.google_client_id.clone(),
 		config_loader.google_client_secret.clone(),
 		pumpx_api,
-		rpc_clients,
 		signer_client,
 		wildmeta_api,
 		wildmeta_timestamp_storage,
