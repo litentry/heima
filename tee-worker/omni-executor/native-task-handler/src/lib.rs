@@ -1236,4 +1236,56 @@ mod tests {
 		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
 		assert_eq!(packed_user_op.nonce, U256::from(42));
 	}
+
+	#[test]
+	fn test_convert_to_packed_user_op_empty_init_code() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "".to_string(), // Empty init_code
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: Some("0x1234567890abcdef".to_string()),
+		};
+
+		let result = convert_to_packed_user_op(serializable_user_op);
+		assert!(result.is_ok(), "Empty init_code should not cause an error: {:?}", result.err());
+
+		let packed_user_op = result.unwrap();
+		// Empty init_code should result in empty Bytes
+		assert!(packed_user_op.initCode.is_empty());
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+	}
+
+	#[test]
+	fn test_convert_to_packed_user_op_0x_init_code() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(), // "0x" prefix only
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: Some("0x1234567890abcdef".to_string()),
+		};
+
+		let result = convert_to_packed_user_op(serializable_user_op);
+		assert!(result.is_ok(), "0x init_code should not cause an error: {:?}", result.err());
+
+		let packed_user_op = result.unwrap();
+		// "0x" init_code should result in empty Bytes
+		assert!(packed_user_op.initCode.is_empty());
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+	}
 }
