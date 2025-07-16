@@ -323,12 +323,15 @@ async fn main() -> Result<(), ()> {
 			)?;
 
 			// Create EntryPoint clients registry
+			// Create RPC clients registry first
+			let mut rpc_clients: HashMap<u64, Arc<ethereum_rpc::AlloyRpcProvider>> = HashMap::new();
 
 			// Add BSC (BNB Chain)
 			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
 				&config_loader.bsc_url,
 				accounting_contract_wallet.clone(),
 			));
+			rpc_clients.insert(56, bsc_rpc.clone());
 
 			// Add BSC Testnet if configured
 			let bsc_testnet_rpc = if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
@@ -336,6 +339,7 @@ async fn main() -> Result<(), ()> {
 					bsc_testnet_url,
 					accounting_contract_wallet.clone(),
 				));
+				rpc_clients.insert(97, bsc_testnet_rpc.clone());
 				Some(bsc_testnet_rpc)
 			} else {
 				None
@@ -346,12 +350,16 @@ async fn main() -> Result<(), ()> {
 				&config_loader.ethereum_url,
 				accounting_contract_wallet.clone(),
 			));
+			rpc_clients.insert(1, ethereum_rpc.clone());
 
 			// Add local development chain
 			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
 				"http://ethereum-node:8545",
 				accounting_contract_wallet.clone(),
 			));
+			rpc_clients.insert(31337, local_rpc.clone());
+
+			let rpc_clients = Arc::new(rpc_clients);
 
 			// Create EntryPoint clients
 			let mut entry_point_clients = HashMap::new();
@@ -480,6 +488,7 @@ async fn main() -> Result<(), ()> {
 				storage_db.clone(),
 				jwt_rsa_private_key,
 				&config_loader,
+				rpc_clients,
 				pumpx_signer_client,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
