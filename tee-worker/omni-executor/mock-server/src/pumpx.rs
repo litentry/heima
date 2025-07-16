@@ -25,7 +25,9 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 			let response = json!({
 				"code": 10000,
 				"message": "OK",
-				"data": {}
+				"data": {
+					"result": true
+				}
 			});
 
 			build_success_response(response)
