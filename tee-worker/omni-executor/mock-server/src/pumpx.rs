@@ -54,6 +54,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let post_heima_login = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "post_heima_login"))
 		.and(warp::body::json())
 		.map(|body: serde_json::Value| {
@@ -71,6 +72,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let add_wallet = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "add_wallet"))
 		.and(warp::header::optional::<String>("authorization"))
 		.map(|auth: Option<String>| {
