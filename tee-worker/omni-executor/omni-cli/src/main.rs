@@ -1,6 +1,3 @@
-use alloy::primitives::{Address, Bytes, FixedBytes, U256};
-use alloy::signers::{local::PrivateKeySigner, Signer};
-use alloy::sol_types::SolCall;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use executor_core::types::SerializablePackedUserOperation;
@@ -17,6 +14,7 @@ struct JsonRpcRequest {
 	id: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse<T> {
 	jsonrpc: String,
@@ -62,6 +60,7 @@ struct UserConnectResponseData {
 	google_auth_check: Option<bool>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct UserConnectResponse {
 	code: i32,

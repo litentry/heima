@@ -82,7 +82,6 @@ pub struct TaskHandlerContext<
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
-	pub rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -117,7 +116,6 @@ impl<
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
-		rpc_clients: Arc<HashMap<u64, Arc<AlloyRpcProvider>>>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -131,7 +129,6 @@ impl<
 			pumpx_api,
 			pumpx_signer_client,
 			entry_point_clients,
-			rpc_clients,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}

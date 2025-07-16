@@ -56,9 +56,6 @@ mod test {
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
-		// Create empty rpc_clients for test
-		let rpc_clients = Arc::new(std::collections::HashMap::new());
-
 		// Create console mailer for test
 		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
 
@@ -70,7 +67,6 @@ mod test {
 			Arc::new(db),
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
-			rpc_clients,
 			signer_client,
 			mailer,
 		)

@@ -20,7 +20,7 @@ use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::ErrorCode;
-use alloy::primitives::{Address, FixedBytes};
+use alloy::primitives::Address;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
@@ -28,7 +28,6 @@ use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -75,17 +74,13 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			}
 
-			// Collect unique sender addresses to avoid redundant validation calls
-			let unique_addresses: HashSet<Address> = params
-				.user_operations
-				.iter()
-				.map(|op| {
-					op.sender.parse::<Address>().map_err(|e| {
-						error!("Invalid sender address '{}': {}", op.sender, e);
-						PumpxRpcError::from_error_code(ErrorCode::ParseError)
-					})
-				})
-				.collect::<Result<HashSet<_>, _>>()?;
+			// Validate sender addresses
+			for op in &params.user_operations {
+				op.sender.parse::<Address>().map_err(|e| {
+					error!("Invalid sender address '{}': {}", op.sender, e);
+					PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				})?;
+			}
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(
