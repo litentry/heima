@@ -75,9 +75,6 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 			}
 
-			let mut address = [0u8; 32];
-			address.copy_from_slice(&address_bytes);
-
 			// Collect unique sender addresses to avoid redundant validation calls
 			let unique_addresses: HashSet<Address> = params
 				.user_operations
@@ -92,7 +89,7 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(
-					AccountId::decode(&mut &address[..]).map_err(|_| {
+					AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
 						error!("Failed to decode AccountId from bytes");
 						PumpxRpcError::from_error_code(ErrorCode::InternalError)
 					})?,
