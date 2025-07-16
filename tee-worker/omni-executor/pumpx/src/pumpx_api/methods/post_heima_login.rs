@@ -2,6 +2,7 @@ use executor_primitives::{ClientAuth, UserId};
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::methods::common::ApiResponse;
 
@@ -31,7 +32,14 @@ pub async fn post_heima_login_impl(
 	access_token: &str,
 	body: PostHeimaLoginBody,
 ) -> Result<PostHeimaLoginResponse, Error> {
-	let endpoint = client.base_url.join("/v3/account/post_heima_login").unwrap();
+	let endpoint = client.base_url.join("v3/account/post_heima_login").unwrap();
+	info!("-------------------");
+	info!("-------------------");
+	info!("-------------------");
+	info!("Endpoint is {}", endpoint.as_str());
+	info!("-------------------");
+	info!("-------------------");
+	info!("-------------------");
 
 	let response = client
 		.http_client
