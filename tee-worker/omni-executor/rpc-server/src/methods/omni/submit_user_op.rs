@@ -90,24 +90,6 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 				})
 				.collect::<Result<HashSet<_>, _>>()?;
 
-			// Validate each unique address once
-			// for sender_address in unique_addresses {
-			// 	if let Err(e) = validate_user_operation_ownership(
-			// 		&user,
-			// 		&sender_address,
-			// 		&params.chain_id,
-			// 		&ctx,
-			// 	)
-			// 	.await
-			// 	{
-			// 		error!(
-			// 			"User operation ownership validation failed for sender {:?}",
-			// 			sender_address
-			// 		);
-			// 		return Err(e);
-			// 	}
-			// }
-
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(
 					AccountId::decode(&mut &address[..]).map_err(|_| {
@@ -135,58 +117,4 @@ pub fn register_submit_user_op(module: &mut RpcModule<RpcContext>) {
 			.await
 		})
 		.expect("Failed to register omni_submitUserOp method");
-}
-
-async fn validate_user_operation_ownership(
-	user: &crate::methods::omni::common::User,
-	sender_address: &Address,
-	chain_id: &ChainId,
-	ctx: &RpcContext,
-) -> Result<(), PumpxRpcError> {
-	// Calculate the expected OA from the user's identity
-	let expected_oa_bytes = hex::decode(
-		user.omni_account.strip_prefix("0x").unwrap_or(&user.omni_account),
-	)
-	.map_err(|_| {
-		error!("Failed to decode omni account hex string");
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?;
-
-	if expected_oa_bytes.len() != 32 {
-		error!("Invalid omni account length: expected 32 bytes, got {}", expected_oa_bytes.len());
-		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-	}
-
-	let expected_oa = FixedBytes::<32>::from_slice(&expected_oa_bytes);
-
-	// Get the RPC client for the chain
-	let Some(rpc_client) = ctx.rpc_clients.get(chain_id) else {
-		error!("No RPC client found for chain ID: {}", chain_id);
-		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-	};
-
-	// Create a new client with the specific wallet address
-	let omni_client =
-		aa_contracts_client::OmniAccountClient::new(*sender_address, rpc_client.clone());
-
-	// Query the OmniWallet contract directly to get its stored OA
-	let stored_oa = match omni_client.get_owner().await {
-		Ok(oa) => oa,
-		Err(e) => {
-			error!("Failed to query OmniWallet owner: {:?}", e);
-			return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-		},
-	};
-
-	// Compare stored OA with expected OA
-	if stored_oa != expected_oa {
-		error!(
-			"OA mismatch: contract has 0x{}, expected 0x{}",
-			hex::encode(stored_oa.as_slice()),
-			hex::encode(expected_oa.as_slice())
-		);
-		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(-32010)));
-	}
-
-	Ok(())
 }
