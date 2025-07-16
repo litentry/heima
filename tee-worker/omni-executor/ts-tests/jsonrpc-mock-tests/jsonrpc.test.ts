@@ -260,12 +260,12 @@ describe('Omni JsonRpc Mock Tests', function () {
             swap_type: 1 as const,
             from_chain_id: 1,
             from_token_ca: '0xA0b86a33E6441b3F1c1e3f8B0c6c8b8d7e6f3e4a',
-            from_amount: '1000000000000000000',
-            to_chain_id: 1,
+            from_amount: '0.001',
+            to_chain_id: 56,
             to_token_ca: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
             double_out: false,
             is_one_click: true,
-            usd_worth: '1000.00',
+            usd_worth: '0.001',
             wallet_index: 0,
         };
 
@@ -296,13 +296,13 @@ describe('Omni JsonRpc Mock Tests', function () {
             swap_type: 2 as const,
             from_chain_id: 1,
             from_token_ca: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-            from_amount: '1000000000000000000',
-            to_chain_id: 1,
+            from_amount: '0.001',
+            to_chain_id: 56,
             to_token_ca: '0xA0b86a33E6441b3F1c1e3f8B0c6c8b8d7e6f3e4a',
             double_out: false,
             is_one_click: false,
-            price_usd: '50000.00',
-            usd_worth: '1000.00',
+            price_usd: '0.1',
+            usd_worth: '0.001',
             wallet_index: 0,
         };
 
