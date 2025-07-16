@@ -29,12 +29,12 @@ use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
 use ethereum_rpc::RpcProvider;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Once};
+use std::sync::Arc;
 use tracing::error;
 
-/// Cached simulation bytecode to avoid repeated filesystem reads
-static SIMULATION_BYTECODE: Mutex<Option<String>> = Mutex::new(None);
-static SIMULATION_BYTECODE_ONCE: Once = Once::new();
+/// EntryPointSimulations deployed bytecode embedded at compile time
+const SIMULATION_BYTECODE: &str =
+	include_str!("bytecode/EntryPointSimulations_deployed_bytecode.hex");
 
 /// Client for interacting with on-chain EntryPoint instance
 pub struct EntryPointClient<P: RpcProvider<Transaction = TransactionRequest>> {
@@ -55,56 +55,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		self.rpc_client.get_wallet_address().await
 	}
 
-	/// Get EntryPointSimulations deployed bytecode (cached on first access)
-	///
-	/// This function loads the bytecode from the filesystem on first call and caches it
-	/// in memory for subsequent calls, improving performance.
-	fn get_simulation_bytecode() -> Result<String, ()> {
-		SIMULATION_BYTECODE_ONCE.call_once(|| {
-			// Use deployed bytecode, not creation bytecode
-			let bytecode_path = concat!(
-				env!("CARGO_MANIFEST_DIR"),
-				"/src/bytecode/EntryPointSimulations_deployed_bytecode.hex"
-			);
-
-			match std::fs::read_to_string(bytecode_path) {
-				Ok(content) => {
-					let trimmed = content.trim().to_string();
-					if let Ok(mut cache) = SIMULATION_BYTECODE.lock() {
-						*cache = Some(trimmed);
-					}
-				},
-				Err(e) => {
-					error!("Could not read EntryPointSimulations deployed bytecode file: {}", e);
-				},
-			}
-		});
-
-		// Return the cached value
-		match SIMULATION_BYTECODE.lock() {
-			Ok(cache) => cache.as_ref().cloned().ok_or(()),
-			Err(_) => {
-				error!("Failed to acquire lock on simulation bytecode cache");
-				Err(())
-			},
-		}
-	}
-
 	/// Simulate user operation validation using EntryPointSimulations contract
 	/// This function uses state override to temporarily deploy the simulation contract
 	pub async fn simulate_validation(
 		&self,
 		user_op: PackedUserOperation,
 	) -> Result<ValidationResult, ()> {
-		// Get EntryPointSimulations contract bytecode (cached)
-		let simulation_bytecode = Self::get_simulation_bytecode()?;
-
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(&simulation_bytecode).map_err(|_| ())?.into()),
+				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
 				..Default::default()
 			},
 		);
@@ -401,7 +363,7 @@ pub mod test {
 	use alloy::sol_types::SolCall;
 	use ethereum_rpc::mocks::MockRpcProvider;
 	use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
-	use heima_primitives::{AccountId, Identity};
+	use heima_primitives::{AccountId, Identity, Web2IdentityType};
 	use std::str::FromStr;
 	use std::sync::Arc;
 	use test_log::test;
@@ -500,14 +462,14 @@ pub mod test {
 			"0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
 		)
 		.unwrap();
-		let client_id = "test_client";
+		let client_id = "heima";
 		// calculate from wallet
 		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
-		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
-		let root_address = address!("0x0000000000000000000000000000000000000001");
+		let entrypoint_address = address!("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512");
+		let factory_address = address!("0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0");
+		let root_address = user_address;
 		// This should be the address where SimplePaymaster contract is deployed
-		let paymaster_address = address!("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
+		let paymaster_address = address!("0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9");
 		let signer = PrivateKeySigner::from_str(
 			"0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
 		)
@@ -518,7 +480,8 @@ pub mod test {
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 		// first 20 bytes factory address, then call data which should be oa + client_id + root_address encode packed
 		let oa: AccountId =
-			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+			Identity::from_web2_account("user@example.com", Web2IdentityType::Email)
+				.to_omni_account(client_id);
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 
@@ -539,18 +502,23 @@ pub mod test {
 				oa_bytes.0,
 				&client_id_fixed_bytes,
 				root_address,
-				call_data,
-				Some(paymaster_address),
+				call_data.clone(),
+				None,
 			)
 			.await
 			.unwrap();
 
 		println!("Sender address: {:?}", user_op.sender);
+		println!("Init code: {:?}", hex::encode(init_code_bytes));
+		println!("Call data: {:?}", hex::encode(call_data));
 
 		let user_op_hash = entrypoint_client.get_user_op_hash(user_op.clone()).await.unwrap();
 		let signature = user_signer.sign_hash(&user_op_hash).await.unwrap();
 
-		user_op.signature = signature.as_bytes().into();
+		// Prepend 0x00 byte to indicate Owner signature type (according to UserOpSigner enum)
+		let mut signature_with_prefix: Vec<u8> = vec![0x01];
+		signature_with_prefix.extend_from_slice(&signature.as_bytes());
+		user_op.signature = signature_with_prefix.into();
 
 		// Fund the paymaster with ETH deposits to EntryPoint
 		let paymaster_deposit_call = depositCall {}.abi_encode();

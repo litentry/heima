@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../core/BaseAccount.sol";
 import "../interfaces/UserOpSigner.sol";
+import "../interfaces/Passkey.sol";
 import "../core/Helpers.sol";
 import "./callback/TokenCallbackHandler.sol";
 
@@ -22,9 +23,12 @@ import "./callback/TokenCallbackHandler.sol";
  *  has execute, eth handling methods
  */
 contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+    using Passkey for Passkey.PublicKey;
+
     bytes32 public owner;
     bytes public clientId;
     mapping(address => bool) public rootSigners;
+    mapping(bytes32 => bool) public passkeySigners;
 
     IEntryPoint private immutable _entryPoint;
 
@@ -34,6 +38,8 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
 
     event RootSignerAdded(address root);
     event RootSignerRemoved(address root);
+    event PasskeySignerAdded(Passkey.PublicKey pk);
+    event PasskeySignerRemoved(Passkey.PublicKey pk);
 
     modifier onlyOwner() {
         _onlyOwner();
@@ -199,6 +205,16 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     function removeRootSigner(address root) public onlyOwner {
         rootSigners[root] = false;
         emit RootSignerRemoved(root);
+    }
+
+    function addPasskeySigner(Passkey.PublicKey memory pk) public onlyOwner {
+        passkeySigners[pk.toKey()] = true;
+        emit PasskeySignerAdded(pk);
+    }
+
+    function removePasskeySigner(Passkey.PublicKey memory pk) public onlyOwner {
+        passkeySigners[pk.toKey()] = false;
+        emit PasskeySignerRemoved(pk);
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {

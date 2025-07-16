@@ -69,8 +69,8 @@ pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
 						REQUIRE_AUTHENTICATION_CODE,
 					)));
 				};
-				verify_auth(ctx.clone(), auth).await.map_err(|_| {
-					error!("Failed to verify auth: {:?}", wrapper.auth);
+				verify_auth(ctx.clone(), auth).await.map_err(|e| {
+					error!("Failed to verify auth: {:?}, reason: {:?}", wrapper.auth, e);
 					PumpxRpcError::from_error_code(ErrorCode::ServerError(
 						AUTH_VERIFICATION_FAILED_CODE,
 					))

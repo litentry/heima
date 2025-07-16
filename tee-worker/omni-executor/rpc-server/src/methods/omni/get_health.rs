@@ -28,6 +28,7 @@ mod test {
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
+	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -56,8 +57,8 @@ mod test {
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
-		// Create empty rpc_clients for test
-		let rpc_clients = Arc::new(std::collections::HashMap::new());
+		// Create console mailer for test
+		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
@@ -70,10 +71,10 @@ mod test {
 			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
-			rpc_clients,
 			signer_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
+			mailer,
 		)
 		.await
 		.unwrap();

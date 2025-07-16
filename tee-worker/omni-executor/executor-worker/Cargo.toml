@@ -29,6 +29,7 @@ executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
+heima-identity-verification = { workspace = true }
 intent-asset-lock = { workspace = true }
 mock-server = { workspace = true }
 native-task-handler = { workspace = true }

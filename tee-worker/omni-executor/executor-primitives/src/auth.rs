@@ -36,6 +36,7 @@ pub enum UserId {
 	Solana(String),    // base58-encoded
 	Email(String),
 	Google(String),
+	Passkey(String), // unique user_id, even for multiple credential_id
 }
 
 impl TryFrom<UserId> for Identity {
@@ -85,6 +86,9 @@ impl TryFrom<UserId> for Identity {
 			UserId::Google(handle) => {
 				Ok(Identity::Google(IdentityString::new(handle.as_bytes().to_vec())))
 			},
+			UserId::Passkey(handle) => {
+				Ok(Identity::Passkey(IdentityString::new(handle.as_bytes().to_vec())))
+			},
 		}
 	}
 }
@@ -95,6 +99,7 @@ pub enum OmniAuth {
 	Email(String, Email, VerificationCode),      // (client_id, Email, VerificationCode)
 	AuthToken(JwtToken),
 	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
+	Passkey(PasskeyData),
 }
 
 impl TryFrom<Identity> for UserId {
@@ -126,6 +131,9 @@ impl TryFrom<Identity> for UserId {
 				error!("Pumpx identity is not supported in UserId conversion");
 				Err(())
 			},
+			Identity::Passkey(handle) => {
+				Ok(UserId::Passkey(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
 		}
 	}
 }
@@ -141,6 +149,7 @@ pub enum UserAuth {
 	Bitcoin(BitcoinSignature),
 	Solana(SolanaSignature),
 	OAuth2(OAuth2Data),
+	Passkey(PasskeyData),
 }
 
 impl From<OmniAuth> for OmniAccountAuthType {
@@ -150,6 +159,7 @@ impl From<OmniAuth> for OmniAccountAuthType {
 			OmniAuth::Email(..) => Self::Email,
 			OmniAuth::OAuth2(..) => Self::OAuth2,
 			OmniAuth::AuthToken(..) => Self::AuthToken,
+			OmniAuth::Passkey(..) => Self::Passkey,
 		}
 	}
 }
@@ -165,6 +175,16 @@ pub struct OAuth2Data {
 	pub code: String,
 	pub state: String,
 	pub redirect_uri: String,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PasskeyData {
+	pub user_id: String,
+	pub credential_id: String,
+	pub pubkey: String, // uncompressed, compressed, or COSE-encoded - have to figure out what authenticator sends
+	pub signature: String, // raw 64 byte, or DER encoded - have to figure out what authenticator sends
+	pub auth_data: String,
+	pub client_data_json: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
