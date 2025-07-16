@@ -68,6 +68,12 @@ impl MailerTrait for Mailer {
 /// A mailer implementation that prints verification codes to console/logs instead of sending emails
 pub struct ConsoleMailer;
 
+impl Default for ConsoleMailer {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl ConsoleMailer {
 	pub fn new() -> Self {
 		Self

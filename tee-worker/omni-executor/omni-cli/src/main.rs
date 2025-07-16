@@ -244,6 +244,7 @@ fn parse_hex_to_array<const N: usize>(hex_str: &str) -> Result<[u8; N]> {
 	Ok(array)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn handle_submit_user_op(
 	client: &RpcClient,
 	chain_id: Option<u64>,

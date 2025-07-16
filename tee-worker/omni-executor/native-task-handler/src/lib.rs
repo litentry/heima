@@ -874,7 +874,7 @@ async fn handle_native_task<
 
 					info!(
 						"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
-						hex::encode(&user_op_hash_bytes),
+						hex::encode(user_op_hash_bytes),
 						entry_point_address,
 						chain_id
 					);
