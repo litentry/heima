@@ -301,6 +301,7 @@ fn handle_stf_call_request(req: RequestType, time: f64) {
 			Identity::Solana(_) => "Solana".into(),
 			Identity::Google(_) => "Google".into(),
 			Identity::Pumpx(_) => "Pumpx".into(),
+			Identity::Passkey(_) => "Passkey".into(),
 		},
 	};
 	inc_stf_calls(category, &label);
