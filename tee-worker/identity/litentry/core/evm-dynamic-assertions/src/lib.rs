@@ -206,6 +206,7 @@ pub fn identity_with_networks_to_token(identity: &IdentityNetworkTuple) -> Token
 		Identity::Email(str) => (7, str.inner_ref().to_vec()),
 		Identity::Google(str) => (8, str.inner_ref().to_vec()),
 		Identity::Pumpx(str) => (9, str.inner_ref().to_vec()),
+		Identity::Passkey(str) => (10, str.inner_ref().to_vec()),
 	};
 	let networks: Vec<Token> = identity.1.iter().map(network_to_token).collect();
 	Token::Tuple(vec![Token::Uint(type_index.into()), Token::Bytes(value), Token::Array(networks)])
