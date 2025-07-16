@@ -5,7 +5,7 @@ import { usePublicClient, useWalletClient, useAccount } from "wagmi";
 import { Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { encodeFunctionData } from "viem";
 import { CONTRACTS, TEE_WORKER_CONFIG } from "@/lib/constants";
-import { authorizeTEEWorker } from "@/lib/tee-worker-client";
+import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
 import {
 	createUserOperation,
 	signUserOperation,
@@ -53,13 +53,8 @@ export function AuthorizeTEEWorker({
 		setError(null);
 
 		try {
-			// Step 1: Authenticate with TEE worker and get its address
-			const { workerAddress: teeWorkerAddress } = await authorizeTEEWorker(
-				walletClient,
-				evmAddress,
-				TEE_WORKER_CONFIG.clientId,
-				omniAccountHash
-			);
+			// Step 1: Get TEE worker address
+			const teeWorkerAddress = await getTEEWorkerAddress(omniAccountHash);
 
 			setWorkerAddress(teeWorkerAddress);
 
@@ -196,14 +191,14 @@ export function AuthorizeTEEWorker({
 		<div className="w-full p-6 bg-white rounded-lg shadow-lg">
 			<div className="flex items-center mb-6">
 				<Shield className="h-6 w-6 text-purple-500 mr-2" />
-				<h2 className="text-2xl font-bold">Authorize TEE Worker</h2>
+				<h2 className="text-2xl font-bold">Add TEE Worker Signer</h2>
 			</div>
 
 			{!isCompleted ? (
 				<>
 					<p className="text-gray-600 mb-6">
-						Authorize the TEE worker to execute transactions on behalf of your Omni Account.
-						This allows the worker to perform swaps and other operations securely.
+						Add the TEE worker as an authorized signer to your Omni Account.
+						This allows the worker to execute transactions securely on your behalf.
 					</p>
 
 					{error && (
@@ -223,12 +218,12 @@ export function AuthorizeTEEWorker({
 						{isAuthorizing ? (
 							<>
 								<Loader2 className="animate-spin h-5 w-5 mr-2" />
-								{isAddingSigner ? "Adding TEE Worker as Signer..." : "Authenticating with TEE Worker..."}
+								{isAddingSigner ? "Adding TEE Worker as Signer..." : "Getting TEE Worker Address..."}
 							</>
 						) : (
 							<>
 								<Shield className="h-5 w-5 mr-2" />
-								Authorize TEE Worker
+								Add TEE Worker as Signer
 							</>
 						)}
 					</button>

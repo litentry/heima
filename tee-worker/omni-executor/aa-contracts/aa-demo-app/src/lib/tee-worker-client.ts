@@ -27,6 +27,7 @@ interface UserLoginResponse {
 }
 
 interface GetSmartWalletRootSignerParams {
+	omni_account: string;
 	chain_type: "Evm" | "Solana" | "Tron";
 	wallet_index: number;
 }
@@ -147,78 +148,37 @@ export async function loginWithEvm(
 
 // Get the TEE worker's smart wallet root signer address
 export async function getSmartWalletRootSigner(
-	idToken: string,
+	omniAccount: string,
 	chainType: "Evm" | "Solana" | "Tron" = TEE_WORKER_CONFIG.chainType,
 	index: number = TEE_WORKER_CONFIG.signerIndex
 ): Promise<string> {
 	const params: GetSmartWalletRootSignerParams = {
+		omni_account: omniAccount,
 		chain_type: chainType,
 		wallet_index: index,
 	};
 
-	return makeRpcRequest<string>("omni_getSmartWalletRootSigner", params, idToken);
+	return makeRpcRequest<string>("omni_getSmartWalletRootSigner", params);
 }
 
-// Combined flow to authenticate and get TEE worker address
-export async function authorizeTEEWorker(
-	walletClient: WalletClient,
-	evmAddress: string,
-	clientId: string,
+// Simplified flow to get TEE worker address without authentication
+export async function getTEEWorkerAddress(
 	omniAccount: string
-): Promise<{ idToken: string; workerAddress: string }> {
-	console.log("[TEE Worker] Starting authorization flow", {
-		evmAddress,
-		clientId,
+): Promise<string> {
+	console.log("[TEE Worker] Getting TEE worker address", {
 		omniAccount,
 		rpcUrl: TEE_WORKER_CONFIG.rpcUrl
 	});
 
-	// We'll retry once if the first attempt fails due to stale verification code
-	let retryCount = 0;
-	const maxRetries = 1;
+	try {
+		// Directly get the TEE worker's address without authentication
+		console.log("[TEE Worker] Getting smart wallet root signer");
+		const workerAddress = await getSmartWalletRootSigner(omniAccount);
+		console.log("[TEE Worker] Received worker address:", workerAddress);
 
-	while (retryCount <= maxRetries) {
-		try {
-			// Step 1: Get the message to sign
-			console.log(`[TEE Worker] Step 1: Getting Web3 sign-in message (attempt ${retryCount + 1})`);
-			const messagePayload = await getWeb3SignInMessage(clientId, omniAccount);
-			console.log("[TEE Worker] Received message payload:", messagePayload);
-
-			// Step 2: Sign and login
-			console.log("[TEE Worker] Step 2: Signing message and logging in");
-			const loginResponse = await loginWithEvm(
-				walletClient,
-				evmAddress,
-				clientId,
-				messagePayload
-			);
-			console.log("[TEE Worker] Login successful, received tokens");
-
-			// Step 3: Get the TEE worker's address using the id_token
-			console.log("[TEE Worker] Step 3: Getting smart wallet root signer");
-			const workerAddress = await getSmartWalletRootSigner(loginResponse.id_token);
-			console.log("[TEE Worker] Received worker address:", workerAddress);
-
-			return {
-				idToken: loginResponse.id_token,
-				workerAddress,
-			};
-		} catch (error) {
-			console.error(`[TEE Worker] Authorization attempt ${retryCount + 1} failed:`, error);
-
-			// If this was our last retry, throw the error
-			if (retryCount >= maxRetries) {
-				throw error;
-			}
-
-			// Wait a bit before retrying to ensure any server-side state is cleared
-			console.log("[TEE Worker] Waiting 1 second before retry...");
-			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			retryCount++;
-		}
+		return workerAddress;
+	} catch (error) {
+		console.error("[TEE Worker] Failed to get worker address:", error);
+		throw error;
 	}
-
-	// This should never be reached due to the throw above
-	throw new Error("Authorization failed after all retries");
 }
