@@ -3,24 +3,22 @@ use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::ErrorCode;
-use alloy::primitives::{Address, FixedBytes};
+use alloy::primitives::Address;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::utils::hex::decode_hex;
 use executor_primitives::{
 	signature::{EthereumSignature, HeimaMultiSignature},
 	utils::hex::FromHexPrefixed,
-	AccountId, ChainId, ClientAuth, Identity, UserAuth, UserId,
+	ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
 use executor_storage::{Storage, WildmetaTimestampStorage};
 use heima_primitives::Address20;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parity_scale_codec::Encode;
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
-use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -50,7 +48,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
 
-			let (_agent_address, main_address, _timestamp) = match &params.client_auth {
+			let main_address = match &params.client_auth {
 				ClientAuth::WildmetaHl {
 					agent_address,
 					business_json,
@@ -97,7 +95,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 						)));
 					}
 
-					(agent_address.clone(), main_address.clone(), timestamp)
+					main_address
 				},
 				_ => {
 					error!("Invalid client auth type");
@@ -149,25 +147,11 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 
 			let account_id = identity.to_omni_account(&params.client_id);
 
-			let unique_addresses: HashSet<Address> = params
-				.user_operations
-				.iter()
-				.map(|op| {
-					op.sender.parse::<Address>().map_err(|e| {
-						error!("Invalid sender address '{}': {}", op.sender, e);
-						PumpxRpcError::from_error_code(ErrorCode::ParseError)
-					})
-				})
-				.collect::<Result<HashSet<_>, _>>()?;
-
-			for sender_address in unique_addresses {
-				validate_user_operation_ownership(
-					&account_id,
-					&sender_address,
-					&params.chain_id,
-					&ctx,
-				)
-				.await?;
+			for op in &params.user_operations {
+				op.sender.parse::<Address>().map_err(|e| {
+					error!("Invalid sender address '{}': {}", op.sender, e);
+					PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				})?;
 			}
 
 			let wrapper = NativeTaskWrapper::new(
@@ -259,63 +243,16 @@ async fn verify_payload_timestamp(
 	Ok(())
 }
 
-// TODO: abstract this once https://github.com/litentry/heima/pull/3590 is merged
-// Reuse the logic from submit_user_op.rs
-async fn validate_user_operation_ownership(
-	account_id: &AccountId,
-	sender_address: &Address,
-	chain_id: &ChainId,
-	ctx: &RpcContext,
-) -> Result<(), PumpxRpcError> {
-	// Similar to existing implementation in submit_user_op.rs
-	// Get expected OA from account_id - AccountId is already 32 bytes
-	let account_bytes = account_id.encode();
-	let expected_oa = FixedBytes::<32>::from_slice(&account_bytes);
-
-	// Get RPC client for chain
-	let Some(rpc_client) = ctx.rpc_clients.get(chain_id) else {
-		error!("No RPC client found for chain ID: {}", chain_id);
-		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-	};
-
-	// Query OmniWallet contract
-	let omni_client =
-		aa_contracts_client::OmniAccountClient::new(*sender_address, rpc_client.clone());
-
-	let stored_oa = match omni_client.get_owner().await {
-		Ok(oa) => oa,
-		Err(e) => {
-			error!("Failed to query OmniWallet owner: {:?}", e);
-			return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-		},
-	};
-
-	// Compare OA values
-	if stored_oa != expected_oa {
-		error!(
-			"OA mismatch: contract has 0x{}, expected 0x{}",
-			hex::encode(stored_oa.as_slice()),
-			hex::encode(expected_oa.as_slice())
-		);
-		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(-32010)));
-	}
-
-	Ok(())
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
 
 	#[tokio::test]
 	async fn test_verify_wildmeta_signature_with_real_data() {
-		// Test data provided by the user
 		let business_json = r#"{"action":"trade","amount":1.5,"customField1":"buy","customField2":"market","leverage":10,"metadata":{"features":{"darkMode":true,"notifications":false},"userAgent":"mobile-app","version":"1.0.0"},"positions":[{"entryPrice":50000,"metadata":{"openTime":1640995200,"strategy":"momentum"},"side":"long","size":1.5,"symbol":"BTC/USD"},{"entryPrice":3000,"metadata":{"openTime":1640995300,"strategy":"reversal"},"side":"short","size":2,"symbol":"ETH/USD"}],"price":50000,"riskManagement":{"maxLeverage":20,"stopLoss":{"enabled":true,"percentage":0.05},"takeProfit":{"enabled":true,"percentage":0.1}},"slippage":0.01,"symbol":"BTC/USD","timestamp":1752573555}"#;
-
 		let signature = "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		// This should verify successfully
 		let result = verify_wildmeta_signature(agent_address, business_json, signature).await;
 		assert!(result.is_ok(), "Signature verification should succeed");
 	}
