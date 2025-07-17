@@ -5,6 +5,7 @@ authors = ['Trust Computing GmbH <info@litentry.com>']
 edition.workspace = true
 
 [dependencies]
+alloy = { workspace = true }
 base58 = { workspace = true }
 chrono = { workspace = true }
 ethers = { workspace = true }
@@ -24,7 +25,9 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
+aa-contracts-client = { workspace = true }
 config-loader = { workspace = true }
+ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }

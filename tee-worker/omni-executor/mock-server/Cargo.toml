@@ -4,9 +4,12 @@ name = "mock-server"
 version = "0.1.0"
 
 [dependencies]
+alloy = { workspace = true, features = ["node-bindings", "json-rpc"] }
 env_logger = { workspace = true }
 hex = { workspace = true, features = ["std"] }
 log = { workspace = true, features = ["std"] }
 serde_json = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
 tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
 warp = "0.3.7"

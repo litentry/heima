@@ -52,6 +52,9 @@ use get_omni_account::*;
 mod get_smart_wallet_root_signer;
 use get_smart_wallet_root_signer::*;
 
+mod submit_user_op;
+use submit_user_op::*;
+
 mod user_login;
 use user_login::*;
 
@@ -77,6 +80,7 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_notify_limit_order_result(module);
 	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
+	register_submit_user_op(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);

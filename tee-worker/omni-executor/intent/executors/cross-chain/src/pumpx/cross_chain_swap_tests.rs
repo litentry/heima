@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Chain;
+use crate::types::Chain;
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
 use crate::U256;
