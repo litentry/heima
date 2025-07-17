@@ -60,7 +60,7 @@ const DEFAULT_BINANCE_API_SECRET: &str = "";
 const DEFAULT_BINANCE_API_BASE_URL: &str = "https://api.binance.com";
 const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
 const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
-const DEFAULT_WILDMETA_API_URL: &str = "https://dex-api.heima.network";
+const DEFAULT_WILDMETA_API_URL: &str = "https://test-dex-api.heima.network";
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
