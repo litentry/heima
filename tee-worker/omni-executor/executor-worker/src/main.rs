@@ -514,15 +514,9 @@ async fn main() -> Result<(), ()> {
 
 			// Create wildmeta API client and timestamp storage
 			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> =
-				if let Some(url) = &config_loader.wildmeta_api_url {
-					if url.is_empty() {
-						Arc::new(Box::new(wildmeta_api::MockWildmetaApi))
-					} else {
-						Arc::new(Box::new(wildmeta_api::WildmetaApiClient::new(url.clone())))
-					}
-				} else {
-					Arc::new(Box::new(wildmeta_api::MockWildmetaApi))
-				};
+				Arc::new(Box::new(wildmeta_api::WildmetaApiClient::new(
+					config_loader.wildmeta_api_url.clone(),
+				)));
 			let wildmeta_timestamp_storage = Arc::new(
 				executor_storage::WildmetaTimestampStorage::new(storage_db.clone())
 			);
