@@ -64,6 +64,9 @@ use user_login::*;
 #[cfg(test)]
 mod test_protected_method;
 
+mod submit_user_op_test;
+use submit_user_op_test::*;
+
 pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
@@ -88,4 +91,6 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
+	
+	register_submit_user_op_test(module);
 }
