@@ -10,7 +10,6 @@ if [ -f "/shared/contract-addresses.env" ]; then
     # Export the variables
     export OE_ENTRY_POINT_ADDRESS
     export OE_OMNI_FACTORY_ADDRESS
-    export OE_OMNI_WALLET_IMPLEMENTATION_ADDRESS
     export OE_PAYMASTER_ADDRESS
     export OE_TEST_USDC_ADDRESS
     export OE_TEST_USDT_ADDRESS
@@ -18,7 +17,6 @@ if [ -f "/shared/contract-addresses.env" ]; then
     echo "Contract addresses loaded:"
     echo "  EntryPoint: $OE_ENTRY_POINT_ADDRESS"
     echo "  OmniFactory: $OE_OMNI_FACTORY_ADDRESS"
-    echo "  WalletImplementation: $OE_OMNI_WALLET_IMPLEMENTATION_ADDRESS"
     echo "  Paymaster: $OE_PAYMASTER_ADDRESS"
     echo "  Test USDC: $OE_TEST_USDC_ADDRESS"
     echo "  Test USDT: $OE_TEST_USDT_ADDRESS"
