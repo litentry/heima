@@ -14,4 +14,3 @@ impl<T: Codec> ApiResponse<T> {
 		&self.data
 	}
 }
-

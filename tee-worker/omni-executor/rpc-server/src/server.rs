@@ -3,7 +3,6 @@ use crate::{
 	middlewares::{HttpMiddleware, RpcMiddleware},
 	ShieldingKey,
 };
-use wildmeta_api::WildmetaApi;
 use config_loader::ConfigLoader;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use heima_identity_verification::web2::email::mailer::MailerTrait;
@@ -13,6 +12,7 @@ use pumpx::PumpxApi;
 use signer_client::SignerClient;
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
+use wildmeta_api::WildmetaApi;
 
 pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,

@@ -91,6 +91,6 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
-	
+
 	register_submit_user_op_test(module);
 }

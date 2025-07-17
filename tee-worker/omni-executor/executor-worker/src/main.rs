@@ -513,13 +513,11 @@ async fn main() -> Result<(), ()> {
 			})?;
 
 			// Create wildmeta API client and timestamp storage
-			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> =
-				Arc::new(Box::new(wildmeta_api::WildmetaApiClient::new(
-					config_loader.wildmeta_api_url.clone(),
-				)));
-			let wildmeta_timestamp_storage = Arc::new(
-				executor_storage::WildmetaTimestampStorage::new(storage_db.clone())
-			);
+			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(
+				wildmeta_api::WildmetaApiClient::new(config_loader.wildmeta_api_url.clone()),
+			));
+			let wildmeta_timestamp_storage =
+				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
 
 			// Create mailer instance based on config_loader only
 			let mailer: Box<dyn MailerTrait + Send + Sync> = match config_loader.mailer_type {
