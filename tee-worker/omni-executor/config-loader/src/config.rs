@@ -48,6 +48,10 @@ const DEFAULT_ETHEREUM_URL: &str = "https://eth-mainnet.g.alchemy.com/v2/";
 const DEFAULT_SOLANA_URL: &str = "https://solana-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_URL: &str = "https://bnb-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_TESTNET_URL: &str = "https://bnb-testnet.g.alchemy.com/v2/"; // Optional
+const DEFAULT_ARBITRUM_URL: &str = "https://arb-mainnet.g.alchemy.com/v2/";
+const DEFAULT_ARBITRUM_TESTNET_URL: &str = "https://arb-sepolia.g.alchemy.com/v2/"; // Optional
+const DEFAULT_HYPEREVM_URL: &str = "https://rpc.hyperevm.org";
+const DEFAULT_HYPEREVM_TESTNET_URL: &str = "https://testnet-rpc.hyperevm.org"; // Optional
 const DEFAULT_PUMPX_API_BASE_URL: &str = "https://test-dex-api.heima.network";
 const DEFAULT_PUMPX_SIGNER_URL: &str = "https://dev-dex-signer.heima.network";
 const DEFAULT_PUMPX_WORKER_URL: &str = "wss://dev-dex-worker.heima.network";
@@ -74,6 +78,10 @@ pub struct ConfigLoader {
 	pub solana_url: String,
 	pub bsc_url: String,
 	pub bsc_testnet_url: Option<String>,
+	pub arbitrum_url: String,
+	pub arbitrum_testnet_url: Option<String>,
+	pub hyperevm_url: String,
+	pub hyperevm_testnet_url: Option<String>,
 	pub pumpx_signer_url: String,
 	pub pumpx_api_base_url: String,
 	pub pumpx_worker_url: String,
@@ -219,6 +227,42 @@ impl ConfigLoader {
 				},
 			),
 			(
+				"arbitrum_url",
+				EnvVar {
+					env_key: "OE_ARBITRUM_URL",
+					default: DEFAULT_ARBITRUM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"arbitrum_testnet_url",
+				EnvVar {
+					env_key: "OE_ARBITRUM_TESTNET_URL",
+					default: DEFAULT_ARBITRUM_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
+				"hyperevm_url",
+				EnvVar {
+					env_key: "OE_HYPEREVM_URL",
+					default: DEFAULT_HYPEREVM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"hyperevm_testnet_url",
+				EnvVar {
+					env_key: "OE_HYPEREVM_TESTNET_URL",
+					default: DEFAULT_HYPEREVM_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
 				"pumpx_signer_url",
 				EnvVar {
 					env_key: "OE_PUMPX_SIGNER_URL",
@@ -335,6 +379,10 @@ impl ConfigLoader {
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
 			bsc_testnet_url: get_opt("bsc_testnet_url").map(|v| append_key(&v)),
+			arbitrum_url: append_key(&get("arbitrum_url")),
+			arbitrum_testnet_url: get_opt("arbitrum_testnet_url").map(|v| append_key(&v)),
+			hyperevm_url: get("hyperevm_url"),
+			hyperevm_testnet_url: get_opt("hyperevm_testnet_url"),
 			pumpx_signer_url: get("pumpx_signer_url"),
 			pumpx_api_base_url: get("pumpx_api_base_url"),
 			pumpx_worker_url: get("pumpx_worker_url"),
