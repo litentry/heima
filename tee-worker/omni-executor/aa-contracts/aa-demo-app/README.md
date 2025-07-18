@@ -12,6 +12,7 @@ This application demonstrates:
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
 - **TEE Worker Integration**: Authorize trusted execution environment workers to execute transactions securely
+- **Paymaster Support**: Optional gas sponsorship through integrated paymaster contracts
 
 ## Key Features
 
@@ -22,6 +23,7 @@ This application demonstrates:
 - **Test Token Faucet**: Mint test tokens directly from the UI
 - **Root Key Delegation**: Authorize multiple signers to control your smart account
 - **TEE Worker Authorization**: Delegate transaction execution to secure TEE workers
+- **Gas Sponsorship**: Enable paymaster to cover transaction fees for users
 
 ## Prerequisites
 
@@ -48,6 +50,12 @@ cd /path/to/aa-contracts
 # Keep this terminal open - Anvil needs to keep running
 ```
 
+**Note**: By default, this deploys with SimplePaymaster (requires authorized bundlers). To deploy with DemoPaymaster (no bundler restrictions, for testing only):
+
+```bash
+PAYMASTER_TYPE=demo ./local-deploy.sh
+```
+
 You should see output like:
 ```
 🎉 All contracts deployed successfully!
@@ -56,7 +64,7 @@ Contract Addresses:
 ===================
 EntryPoint:         0x5fbdb2315678afecb367f032d93f642f64180aa3
 OmniAccountFactory: 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
-SimplePaymaster:    0x...
+Paymaster:          0x...
 
 Test Token Addresses:
 ====================
@@ -105,10 +113,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Copy the displayed address or scan the QR code
    - Send at least 0.01 ETH (recommended)
    - The app will automatically detect when funded
+   - **Optional**: If a paymaster is deployed and funded, you can enable gas sponsorship instead
 
 3. **Create Omni Account**: Once ETH is received, create your smart account
    - This deploys your OmniAccount contract
    - Your wallet automatically becomes the initial root signer
+   - **Optional**: Toggle "Use Paymaster" to have gas fees sponsored
 
 4. **Authorize TEE Worker** (Optional): Authorize the TEE worker to execute transactions
    - Click "Authorize TEE Worker" to authenticate with the TEE service
@@ -125,6 +135,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - View all current authorized signers
    - Add new signers by entering their address
    - Remove existing signers (except yourself while connected)
+   - **Optional**: Enable paymaster for signer management operations
 
 ## Verifying On-Chain
 
@@ -167,11 +178,13 @@ aa-demo-app/
 │   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow
 │   │   ├── FundingGuide.tsx         # ETH funding guide
 │   │   ├── ERC20FundingGuide.tsx    # ERC20 token transfer interface
-│   │   ├── CreateOmniAccount.tsx    # Smart account creation flow
+│   │   ├── CreateOmniAccount.tsx    # Smart account creation flow with paymaster option
 │   │   └── WalletConnect.tsx        # Wallet connection component
-│   ├── contracts/        # Contract ABIs including TestToken
+│   ├── contracts/        # Contract ABIs
+│   │   ├── ...existing ABIs
+│   │   └── SimplePaymaster.json     # Paymaster contract ABI
 │   └── lib/             # Utilities and configuration
-│       ├── aa-utils.ts  # Account abstraction utilities
+│       ├── aa-utils.ts  # AA utilities including paymaster encoding
 │       ├── constants.ts # Contract addresses and token configs
 │       ├── tee-worker-client.ts # TEE Worker RPC client utilities
 │       └── wagmi.ts     # Web3 configuration
@@ -207,6 +220,12 @@ You might see errors like `execution reverted` for `symbol()` or `decimals()` ca
 - **Server errors**: Check that the TEE Worker RPC URL is accessible
 - **Worker not added**: Ensure your Omni Account is deployed before authorizing
 
+### Paymaster Issues
+- **"Paymaster not available"**: The paymaster might not be deployed or funded
+- **"Insufficient balance"**: The paymaster needs ETH deposited at the EntryPoint
+- **Transaction fails with paymaster**: Ensure the paymaster is properly configured
+- **DemoPaymaster vs SimplePaymaster**: DemoPaymaster accepts all operations (testing only), SimplePaymaster requires authorized bundlers
+
 ## Environment Variables
 
 The app uses these environment variables (set automatically by `update-demo-addresses.sh`):
@@ -218,6 +237,7 @@ The app uses these environment variables (set automatically by `update-demo-addr
 - `NEXT_PUBLIC_TEST_USDT_ADDRESS`: Test USDT token address
 - `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545)
 - `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint (default: https://staging-dex-worker.heima.network)
+- `NEXT_PUBLIC_PAYMASTER_ADDRESS`: Paymaster contract address (0x0 if not deployed)
 
 You can also copy `.env.local.example` to `.env.local` and update manually.
 
@@ -226,9 +246,25 @@ You can also copy `.env.local.example` to `.env.local` and update manually.
 To modify the app:
 
 1. Smart contract changes: Update contracts in parent `src/` directory
-2. Re-deploy: Run `./local-deploy.sh` again
+2. Re-deploy: Run `./local-deploy.sh` again (or `PAYMASTER_TYPE=demo ./local-deploy.sh` for DemoPaymaster)
 3. Update addresses: Run `./update-demo-addresses.sh`
 4. The app hot-reloads automatically
+
+### Paymaster Configuration
+
+The app supports two paymaster types:
+
+1. **SimplePaymaster** (default): Production-ready, requires authorized bundlers
+2. **DemoPaymaster**: For testing, accepts any operation (not for production)
+
+To configure paymaster behavior, edit `src/lib/constants.ts`:
+```typescript
+export const PAYMASTER_CONFIG = {
+  defaultValidationGasLimit: BigInt(100000),
+  defaultPostOpGasLimit: BigInt(50000),
+  enabledByDefault: false, // Set to true to enable by default
+};
+```
 
 ### Adding New ERC20 Tokens
 
@@ -243,8 +279,29 @@ To modify the app:
 2. Use the AuthorizedSigners component to add signers
 3. Test from different wallets to verify permissions
 
+## Technical Details
+
+### Paymaster Integration
+
+The app integrates paymaster functionality for gas sponsorship:
+
+- **UserOperation Enhancement**: Automatically encodes `paymasterAndData` field when paymaster is enabled
+- **Balance Checking**: Verifies paymaster has sufficient deposit at EntryPoint
+- **Dynamic Toggle**: Users can enable/disable paymaster per transaction
+
+### New Utility Functions
+
+- `encodePaymasterAndData()`: Encodes paymaster address and gas limits into UserOperation format
+- `checkPaymasterStatus()`: Verifies paymaster deployment and funding status
+- `decodePaymasterAndData()`: Decodes paymaster information from UserOperation
+
+### RPC Method Updates
+
+The app now uses the new `omni_getSmartWalletRootSigner` RPC method for improved TEE worker integration.
+
 ## Learn More
 
 - [ERC-4337 Specification](https://eips.ethereum.org/EIPS/eip-4337)
 - [Foundry Book](https://book.getfoundry.sh/)
 - [ERC20 Token Standard](https://eips.ethereum.org/EIPS/eip-20)
+- [Account Abstraction Paymasters](https://eips.ethereum.org/EIPS/eip-4337#paymaster-1)
