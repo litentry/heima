@@ -619,3 +619,98 @@ export async function signUserOperation(
 	}
 }
 
+/**
+ * SerializablePackedUserOperation interface matching the Rust struct
+ */
+export interface SerializablePackedUserOperation {
+	sender: string;             // Address as hex string (e.g., "0x1234...")
+	nonce: number;              // U256 as u128 integer
+	init_code: string;          // Bytes as hex string (e.g., "0xabc...")
+	call_data: string;          // Bytes as hex string (e.g., "0xdef...")
+	account_gas_limits: string; // FixedBytes<32> as hex string (e.g., "0x123...")
+	pre_verification_gas: number; // U256 as u128 integer
+	gas_fees: string;           // FixedBytes<32> as hex string (e.g., "0x456...")
+	paymaster_and_data: string; // Bytes as hex string (e.g., "0x789...")
+	signature?: string;         // Optional signature: None = unsigned, Some("0xabc...") = signed
+}
+
+/**
+ * Convert PackedUserOperation to SerializablePackedUserOperation
+ */
+export function toSerializablePackedUserOperation(
+	packedOp: PackedUserOperation
+): SerializablePackedUserOperation {
+	return {
+		sender: packedOp.sender,
+		nonce: Number(packedOp.nonce), // Convert bigint to number
+		init_code: packedOp.initCode,
+		call_data: packedOp.callData,
+		account_gas_limits: packedOp.accountGasLimits,
+		pre_verification_gas: Number(packedOp.preVerificationGas), // Convert bigint to number
+		gas_fees: packedOp.gasFees,
+		paymaster_and_data: packedOp.paymasterAndData,
+		signature: packedOp.signature === "0x" ? undefined : packedOp.signature,
+	};
+}
+
+/**
+ * Build calldata for ERC20 transfer
+ */
+export function buildERC20TransferCallData(
+	to: Address,
+	amount: bigint
+): `0x${string}` {
+	return encodeFunctionData({
+		abi: [{
+			name: 'transfer',
+			type: 'function',
+			inputs: [
+				{ name: 'to', type: 'address' },
+				{ name: 'amount', type: 'uint256' }
+			],
+			outputs: [{ name: '', type: 'bool' }]
+		}],
+		functionName: 'transfer',
+		args: [to, amount]
+	});
+}
+
+/**
+ * Build UserOperation for token transfer through OmniAccount
+ */
+export function buildTokenTransferUserOp(params: {
+	omniAccountAddress: Address;
+	tokenAddress: Address;
+	recipient: Address;
+	amount: bigint;
+	nonce?: bigint;
+	paymaster?: {
+		address: Address;
+		validationGasLimit?: bigint;
+		postOpGasLimit?: bigint;
+		data?: `0x${string}`;
+	};
+}): UserOperation {
+	// Build the ERC20 transfer calldata
+	const erc20TransferData = buildERC20TransferCallData(params.recipient, params.amount);
+	
+	// Build the OmniAccount execute calldata
+	const executeCallData = encodeFunctionData({
+		abi: CONTRACTS.OmniAccountImplementation.abi,
+		functionName: 'execute',
+		args: [
+			params.tokenAddress, // target: ERC20 token contract
+			BigInt(0), // value: 0 ETH
+			erc20TransferData // data: ERC20 transfer function call
+		]
+	});
+
+	// Create the UserOperation
+	return createUserOperation({
+		sender: params.omniAccountAddress,
+		nonce: params.nonce,
+		callData: executeCallData,
+		paymaster: params.paymaster,
+	});
+}
+
