@@ -24,7 +24,7 @@ pub async fn get_account_user_id_impl(
 	client: &PumpxApiClient,
 	email: String,
 ) -> Result<GetAccountUserIdResponse, Error> {
-	let endpoint = client.base_url.join("v3/account/get_account_user_id/").unwrap();
+	let endpoint = client.base_url.join("v3/account/get_account_user_id").unwrap();
 	let params = GetAccountUserIdParams { email };
 	client.http_client.get(endpoint).query(&params).send().await?.json().await
 }
