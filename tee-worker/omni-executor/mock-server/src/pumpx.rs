@@ -4,7 +4,9 @@ use crate::dex;
 use serde_json::{json, Value};
 use warp::{http::Response, Filter};
 
-fn build_success_response(response: serde_json::Value) -> Response<String> {
+const BASE_PATH: &str = "pumpx";
+
+fn build_success_response(response: serde_json::Value) -> Response<warp::hyper::Body> {
 	Response::builder()
 		.status(200)
 		.header("content-type", "application/json")
@@ -14,15 +16,31 @@ fn build_success_response(response: serde_json::Value) -> Response<String> {
 
 pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone
 {
-	let user_connect = warp::post().and(warp::path!("v3" / "account" / "user_connect")).map(|| {
-		// TODO implements your response logic
-		Response::builder().status(200).body("").unwrap()
-	});
+	let user_connect = warp::post()
+		.and(warp::path(BASE_PATH))
+		.and(warp::path!("v3" / "account" / "user_connect"))
+		.and(warp::body::json())
+		.map(|body: serde_json::Value| {
+			tracing::info!("Received user_connect request: {:?}", body);
+
+			let response = json!({
+				"code": 10000,
+				"message": "OK",
+				"data": {
+					"userId": "mock_user_123",
+					"googleAuthCheck": true
+				}
+			});
+
+			build_success_response(response)
+		});
 
 	let verify_google_code = warp::post()
 		.and(warp::path!("v3" / "account" / "verify_google_code"))
 		.and(warp::body::json())
-		.map(|_body: serde_json::Value| {
+		.map(|body: serde_json::Value| {
+			tracing::info!("Received verify_google_code request: {:?}", body);
+
 			let response = json!({
 				"code": 10000,
 				"message": "OK",
@@ -38,7 +56,9 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "post_heima_login"))
 		.and(warp::body::json())
-		.map(|_body: serde_json::Value| {
+		.map(|body: serde_json::Value| {
+			tracing::info!("Received post_heima_login request: {:?}", body);
+
 			let response = json!({
 				"code": 10000,
 				"message": "OK",
@@ -54,7 +74,9 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "add_wallet"))
 		.and(warp::header::optional::<String>("authorization"))
-		.map(|_auth: Option<String>| {
+		.map(|auth: Option<String>| {
+			tracing::info!("Received add_wallet request with auth: {:?}", auth);
+
 			let response = json!({
 				"code": 10000,
 				"message": "OK",
@@ -64,90 +86,55 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 			build_success_response(response)
 		});
 
+	let get_account_user_id = warp::get()
+		.and(warp::path(BASE_PATH))
+		.and(warp::path!("v3" / "account" / "get_account_user_id"))
+		.and(warp::query::<std::collections::HashMap<String, String>>())
+		.map(|query: std::collections::HashMap<String, String>| {
+			tracing::info!("Received get_account_user_id request with query: {:?}", query);
+
+			let response = json!({
+				"code": 10000,
+				"message": "OK",
+				"data": {
+					"userId": "mock_user_123"
+				}
+			});
+
+			build_success_response(response)
+		});
+
 	let create_transfer_tx = warp::post()
-		.and(warp::path!("v3" / "trade" / "create_transfer_tx"))
+		.and(warp::path(BASE_PATH))
+		.and(warp::path!("v3" / "account" / "create_transfer_tx"))
 		.and(warp::header::optional::<String>("authorization"))
 		.and(warp::body::json())
-		.map(|_auth: Option<String>, body: serde_json::Value| {
+		.map(|auth: Option<String>, body: serde_json::Value| {
+			tracing::info!(
+				"Received create_transfer_tx request with auth: {:?}, body: {:?}",
+				auth,
+				body
+			);
+
 			let response = json!({
 				"code": 10000,
 				"message": "OK",
 				"data": {
-					"tx_hash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-					"transfer_id": 12345,
-					"chain_id": body.get("chainId").unwrap_or(&json!(1))
+					"txHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+					"status": "success"
 				}
 			});
 
 			build_success_response(response)
 		});
 
-	let get_user_trade_info = warp::get()
-		.and(warp::path!("v3" / "trade" / "get_user_trade_info"))
-		.and(warp::header::optional::<String>("authorization"))
-		.and(warp::query::raw())
-		.map(|_auth: Option<String>, _query: String| {
-			let response = json!({
-				"code": 10000,
-				"message": "OK",
-				"data": {
-					"user_id": "test_user",
-					"trade_enabled": true,
-					"balance": "1000000000000000000"
-				}
-			});
-
-			build_success_response(response)
-		});
-
-	let create_limit_order = warp::post()
-		.and(warp::path!("v3" / "trade" / "create_limit_order"))
-		.and(warp::header::optional::<String>("authorization"))
-		.and(warp::body::json())
-		.map(|_auth: Option<String>, _body: serde_json::Value| {
-			let response = json!({
-				"code": 10000,
-				"message": "OK",
-				"data": {
-					"order_id": 123456
-				}
-			});
-
-			build_success_response(response)
-		});
-
-	let create_market_order_unsigned_tx = warp::post()
-		.and(warp::path!("v3" / "trade" / "create_market_order_unsigned_tx"))
-		.and(warp::header::optional::<String>("authorization"))
-		.and(warp::body::json())
-		.map(|_auth: Option<String>, _body: serde_json::Value| {
-			let response = json!({
-				"code": 10000,
-				"message": "OK",
-				"data": {
-					"unsigned_tx": ["0x1234567890abcdef"],
-					"tx_hash": ["0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"]
-				}
-			});
-
-			build_success_response(response)
-		});
-
-	let send_order_tx = warp::post()
-		.and(warp::path!("v3" / "trade" / "send_order_tx"))
-		.and(warp::header::optional::<String>("authorization"))
-		.and(warp::body::json())
-		.map(|_auth: Option<String>, _body: serde_json::Value| {
-			let response = json!({
-				"code": 10000,
-				"message": "OK",
-				"data": {
-					"tx_hash": ["0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"]
-				}
-			});
-
-			build_success_response(response)
-		});
+	// JSON-RPC endpoints for dex signer
+	let jsonrpc_handler = warp::post().and(warp::path("jsonrpc")).and(warp::body::json()).and_then(
+		|body: Value| async move {
+			tracing::info!("Received JSON-RPC request: {:?}", body);
+			Ok::<_, warp::Rejection>(handle_jsonrpc_request(body).await)
+		},
+	);
 
 	// mock other APIs you need here
 
@@ -155,9 +142,44 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		.or(verify_google_code)
 		.or(post_heima_login)
 		.or(add_wallet)
+		.or(get_account_user_id)
 		.or(create_transfer_tx)
-		.or(get_user_trade_info)
-		.or(create_limit_order)
-		.or(create_market_order_unsigned_tx)
-		.or(send_order_tx)
+		.or(jsonrpc_handler)
+}
+
+async fn handle_jsonrpc_request(request: Value) -> Box<dyn warp::Reply> {
+	let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
+
+	// Check if it's a dex_* method and delegate to dex module
+	if method.starts_with("dex_") {
+		return match dex::handle_dex_method(request).await {
+			Ok(response) => response,
+			Err(_) => {
+				let error_response = json!({
+					"jsonrpc": "2.0",
+					"error": {
+						"code": -32603,
+						"message": "Internal error"
+					},
+					"id": 1
+				});
+				Box::new(warp::reply::with_status(
+					warp::reply::json(&error_response),
+					warp::http::StatusCode::OK,
+				))
+			},
+		};
+	}
+
+	// Handle other pumpx-specific methods here
+	let id = request.get("id").cloned().unwrap_or(json!(1));
+	let response = json!({
+		"jsonrpc": "2.0",
+		"error": {
+			"code": -32601,
+			"message": "Method not found"
+		},
+		"id": id
+	});
+	Box::new(warp::reply::with_status(warp::reply::json(&response), warp::http::StatusCode::OK))
 }
