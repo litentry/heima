@@ -939,29 +939,31 @@ async fn handle_native_task<
 				},
 			};
 
-			// Run simulation for each UserOperation before submission
-			for (index, aa_user_op) in aa_user_ops.iter().enumerate() {
-				info!("Running simulation for UserOperation {}", index);
-				match entry_point_client.simulate_validation(aa_user_op.clone()).await {
-					Ok(validation_result) => {
+			// Run batch simulation for all UserOperations before submission
+			info!("Running batch simulation for {} UserOperations", aa_user_ops.len());
+			match entry_point_client.simulate_handle_ops(&aa_user_ops, beneficiary).await {
+				Ok(simulation_results) => {
+					for (index, result) in simulation_results.iter().enumerate() {
 						info!(
-							"UserOperation {} simulation successful. PreOpGas: {}, Prefund: {}",
+							"UserOperation {} simulation successful. PreOpGas: {}, Paid: {}, AccountValidation: {}, PaymasterValidation: {}",
 							index,
-							validation_result.returnInfo.preOpGas,
-							validation_result.returnInfo.prefund
+							result.preOpGas,
+							result.paid,
+							result.accountValidationData,
+							result.paymasterValidationData
 						);
-					},
-					Err(_) => {
-						send_error(
-							format!("UserOperation {} simulation failed", index),
-							response_sender,
-							NativeTaskError::InternalError,
-						);
-						return;
-					},
-				}
+					}
+					info!("All {} UserOperations passed batch simulation checks", aa_user_ops.len());
+				},
+				Err(_) => {
+					send_error(
+						"Batch UserOperation simulation failed".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
 			}
-			info!("All UserOperations passed simulation checks");
 
 			// Submit all UserOperations via EntryPoint.handleOps()
 			let transaction_hash =
