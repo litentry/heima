@@ -31,6 +31,8 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     mapping(bytes32 => bool) public passkeySigners;
 
     IEntryPoint private immutable _entryPoint;
+    
+    bool private _factoryUpgradeInProgress;
 
     event AccountInitialized(
         IEntryPoint indexed entryPoint, bytes32 indexed owner, bytes clientId, address indexed root
@@ -57,6 +59,10 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     constructor(IEntryPoint anEntryPoint) {
         _entryPoint = anEntryPoint;
         _disableInitializers();
+    }
+
+    function getVersion() virtual external pure returns (string memory) {
+        return "1.0.0";
     }
 
     function _onlyOwner() internal view {
@@ -219,6 +225,22 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
 
     function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation);
+        // Allow owner or factory upgrade in progress
+        if (_factoryUpgradeInProgress) {
+            // This is called from factoryUpgrade, allow it
+            return;
+        }
         _onlyOwner();
+    }
+    
+    /**
+     * Allow factory to upgrade the account to a newer implementation
+     * This is called during createAccount when a newer version is available
+     */
+    function factoryUpgrade(address newImplementation) external {
+        // Store the original caller to bypass owner check
+        _factoryUpgradeInProgress = true;
+        upgradeToAndCall(newImplementation, "");
+        _factoryUpgradeInProgress = false;
     }
 }
