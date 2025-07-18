@@ -7,8 +7,8 @@ A Next.js application demonstrating Account Abstraction (ERC-4337) functionality
 This application demonstrates:
 - **Account Abstraction (AA)**: Create smart contract wallets (OmniAccounts) that can be controlled by multiple signers
 - **Multi-Signer Management**: Add and remove authorized signers to control the smart account
-- **ERC20 Token Support**: Fund accounts with both ETH and ERC20 tokens (USDC, USDT)
-- **Test Token Minting**: Mint test tokens for easy demonstration
+- **ERC20 Token Transfers**: Send USDC and USDT through the TEE worker using UserOperations
+- **Real Token Support**: Use actual deployed tokens instead of test tokens
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
 - **TEE Worker Integration**: Authorize trusted execution environment workers to execute transactions securely
@@ -16,11 +16,11 @@ This application demonstrates:
 
 ## Key Features
 
-- **Separated Funding Flow**: Fund with ETH first for gas, then optionally add ERC20 tokens
-- **Multi-Token Support**: Transfer ETH, USDC, and USDT to your OmniAccount
+- **Separated Funding Flow**: Fund with ETH first for gas
+- **Multi-Token Support**: Send USDC and USDT transfers through TEE worker
 - **Signer Management**: View, add, and remove authorized signers through the UI
 - **Token Balance Display**: Monitor all token balances in real-time
-- **Test Token Faucet**: Mint test tokens directly from the UI
+- **TEE Worker Integration**: Execute token transfers securely through TEE worker
 - **Root Key Delegation**: Authorize multiple signers to control your smart account
 - **TEE Worker Authorization**: Delegate transaction execution to secure TEE workers
 - **Gas Sponsorship**: Enable paymaster to cover transaction fees for users
@@ -66,10 +66,10 @@ EntryPoint:         0x5fbdb2315678afecb367f032d93f642f64180aa3
 OmniAccountFactory: 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
 Paymaster:          0x...
 
-Test Token Addresses:
-====================
-Test USDC:          0x...
-Test USDT:          0x...
+Token Addresses:
+================
+USDC:               <Set via NEXT_PUBLIC_TEST_USDC_ADDRESS>
+USDT:               <Set via NEXT_PUBLIC_TEST_USDT_ADDRESS>
 ```
 
 ### 2. Update Demo App Configuration
@@ -120,16 +120,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Your wallet automatically becomes the initial root signer
    - **Optional**: Toggle "Use Paymaster" to have gas fees sponsored
 
-4. **Authorize TEE Worker** (Optional): Authorize the TEE worker to execute transactions
+4. **Authorize TEE Worker**: Authorize the TEE worker to execute transactions
    - Click "Authorize TEE Worker" to authenticate with the TEE service
    - The worker will be added as an authorized signer
    - Enables secure delegated transaction execution
    - The worker address will be tagged in the signers list
 
-5. **Transfer ERC20 Tokens** (Optional): Transfer USDC or USDT to your Omni Account
-   - Test tokens are minted directly from the interface
-   - Use "Transfer to Omni" to move tokens from wallet to Omni Account
-   - Monitor all token balances in real-time
+5. **Send Token Transfer**: Transfer USDC or USDT through the TEE worker
+   - Select the token you want to transfer (USDC or USDT)
+   - Enter recipient address and amount
+   - The transfer is executed through a UserOperation signed by the TEE worker
+   - Monitor transaction status in real-time
 
 6. **Manage Signers**: After deployment, manage authorized signers
    - View all current authorized signers
@@ -177,16 +178,16 @@ aa-demo-app/
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
 │   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow
 │   │   ├── FundingGuide.tsx         # ETH funding guide
-│   │   ├── ERC20FundingGuide.tsx    # ERC20 token transfer interface
+│   │   ├── TEETokenTransfer.tsx     # Token transfer through TEE worker
 │   │   ├── CreateOmniAccount.tsx    # Smart account creation flow with paymaster option
 │   │   └── WalletConnect.tsx        # Wallet connection component
 │   ├── contracts/        # Contract ABIs
 │   │   ├── ...existing ABIs
 │   │   └── SimplePaymaster.json     # Paymaster contract ABI
 │   └── lib/             # Utilities and configuration
-│       ├── aa-utils.ts  # AA utilities including paymaster encoding
+│       ├── aa-utils.ts  # AA utilities including UserOp construction
 │       ├── constants.ts # Contract addresses and token configs
-│       ├── tee-worker-client.ts # TEE Worker RPC client utilities
+│       ├── tee-worker-client.ts # TEE Worker RPC client with submitUserOpTest
 │       └── wagmi.ts     # Web3 configuration
 └── public/              # Static assets
 ```
@@ -206,10 +207,10 @@ aa-demo-app/
 - Verify you're using the correct network
 
 ### Token Operations
-- Make sure test tokens are deployed (check deploy output)
-- Ensure you have ETH for gas fees before adding ERC20 tokens
-- ERC20 token funding is only available after creating your Omni Account
-- Check token addresses in .env.local match deployment
+- Make sure USDC and USDT addresses are set in .env.local
+- Ensure you have ETH for gas fees before sending token transfers
+- Token transfers require TEE worker to be authorized
+- Check that your Omni Account has sufficient token balance
 
 ### Anvil Errors
 You might see errors like `execution reverted` for `symbol()` or `decimals()` calls. These are harmless - they're from wallets trying to detect if addresses are ERC20 tokens.
@@ -233,8 +234,8 @@ The app uses these environment variables (set automatically by `update-demo-addr
 - `NEXT_PUBLIC_CHAIN_ID`: Network chain ID (1337 for Anvil)
 - `NEXT_PUBLIC_ENTRYPOINT_ADDRESS`: EntryPoint contract address
 - `NEXT_PUBLIC_FACTORY_ADDRESS`: OmniAccountFactory contract address
-- `NEXT_PUBLIC_TEST_USDC_ADDRESS`: Test USDC token address
-- `NEXT_PUBLIC_TEST_USDT_ADDRESS`: Test USDT token address
+- `NEXT_PUBLIC_TEST_USDC_ADDRESS`: USDC token address (real deployed token)
+- `NEXT_PUBLIC_TEST_USDT_ADDRESS`: USDT token address (real deployed token)
 - `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545)
 - `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint (default: https://staging-dex-worker.heima.network)
 - `NEXT_PUBLIC_PAYMASTER_ADDRESS`: Paymaster contract address (0x0 if not deployed)
@@ -268,10 +269,10 @@ export const PAYMASTER_CONFIG = {
 
 ### Adding New ERC20 Tokens
 
-1. Deploy your token contract
+1. Deploy your token contract on the target chain
 2. Update `src/lib/constants.ts` with token details
-3. Add to `SUPPORTED_TOKENS` array
-4. The ERC20FundingGuide component will automatically include it
+3. Add to `TEST_TOKENS` object with address, symbol, decimals, and ABI
+4. The TEETokenTransfer component will automatically include it
 
 ### Testing Signer Management
 
@@ -291,9 +292,10 @@ The app integrates paymaster functionality for gas sponsorship:
 
 ### New Utility Functions
 
-- `encodePaymasterAndData()`: Encodes paymaster address and gas limits into UserOperation format
-- `checkPaymasterStatus()`: Verifies paymaster deployment and funding status
-- `decodePaymasterAndData()`: Decodes paymaster information from UserOperation
+- `buildTokenTransferUserOp()`: Creates UserOperation for ERC20 token transfers
+- `buildERC20TransferCallData()`: Encodes ERC20 transfer function call
+- `toSerializablePackedUserOperation()`: Converts PackedUserOperation to serializable format
+- `submitUserOpTest()`: Submits UserOperations through TEE worker RPC
 
 ### RPC Method Updates
 
