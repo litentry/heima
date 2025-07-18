@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract, usePublicClient } from "wagmi";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Copy, ExternalLink, Wallet, RefreshCw } from "lucide-react";
+import { Copy, Wallet, RefreshCw } from "lucide-react";
 import { formatUnits } from "viem";
 import { calculateOmniAccount, stringToBytes } from "@/lib/aa-utils";
-import { DEFAULT_CLIENT_ID, CONTRACTS, TEST_TOKENS } from "@/lib/constants";
+import { DEFAULT_CLIENT_ID, CONTRACTS, ERC20_TOKENS } from "@/lib/constants";
 import type { Address } from "viem";
 
 interface TokenBalance {
@@ -19,7 +19,6 @@ interface AccountsDashboardProps {
 	onAddressCalculated?: (address: string) => void;
 	onOmniAccountCalculated?: (omniAccount: string) => void;
 	ethBalance?: bigint;
-	onBalancesUpdate?: (balances: TokenBalance[]) => void;
 	isAccountCreated?: boolean;
 }
 
@@ -27,7 +26,6 @@ export function AccountsDashboard({
 	onAddressCalculated,
 	onOmniAccountCalculated,
 	ethBalance: propEthBalance,
-	onBalancesUpdate,
 	isAccountCreated = false,
 }: AccountsDashboardProps = {}) {
 	const { address: evmAddress } = useAccount();
@@ -44,12 +42,6 @@ export function AccountsDashboard({
 	const [walletTokenBalances, setWalletTokenBalances] = useState<TokenBalance[]>([]);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [isRefreshingWallet, setIsRefreshingWallet] = useState(false);
-	
-	// Use ref to store the latest onBalancesUpdate callback
-	const onBalancesUpdateRef = useRef(onBalancesUpdate);
-	useEffect(() => {
-		onBalancesUpdateRef.current = onBalancesUpdate;
-	}, [onBalancesUpdate]);
 
 	useEffect(() => {
 		if (evmAddress) {
@@ -110,7 +102,7 @@ export function AccountsDashboard({
 	}, [omniAccount, onOmniAccountCalculated]);
 
 	// Available ERC20 tokens
-	const availableTokens = [TEST_TOKENS.USDC, TEST_TOKENS.USDT];
+	const availableTokens = [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT];
 
 	// Fetch connected wallet balances
 	const fetchWalletBalances = useCallback(async () => {
@@ -223,11 +215,6 @@ export function AccountsDashboard({
 
 		setTokenBalances(balances);
 		setIsRefreshing(false);
-
-		// Notify parent of balance updates using ref
-		if (onBalancesUpdateRef.current) {
-			onBalancesUpdateRef.current(balances);
-		}
 	}, [omniAccountAddress, publicClient, propEthBalance, isAccountCreated]);
 
 	// Initial balance fetch

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
-import { Copy, AlertCircle, CheckCircle, Coins, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle, Coins, RefreshCw } from "lucide-react";
 import { formatUnits, parseUnits } from "viem";
-import { TEST_TOKENS } from "@/lib/constants";
+import { ERC20_TOKENS } from "@/lib/constants";
 
 interface TokenBalance {
 	symbol: string;
@@ -42,7 +42,7 @@ export function ERC20FundingGuide({
 	const [tokensTransferred, setTokensTransferred] = useState(false);
 
 	// Available ERC20 tokens
-	const availableTokens = [TEST_TOKENS.USDC, TEST_TOKENS.USDT];
+	const availableTokens = [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT];
 
 	// Fetch wallet token balances
 	const fetchWalletBalances = async () => {
@@ -86,7 +86,7 @@ export function ERC20FundingGuide({
 
 	// Mint test tokens
 	const mintTestTokens = async (
-		token: typeof TEST_TOKENS.USDC | typeof TEST_TOKENS.USDT,
+		token: typeof ERC20_TOKENS.USDC | typeof ERC20_TOKENS.USDT,
 	) => {
 		if (!walletClient || !evmAddress || !publicClient) return;
 
@@ -130,7 +130,7 @@ export function ERC20FundingGuide({
 		try {
 			const hash = await walletClient.writeContract({
 				address: token.address,
-				abi: token.abi || TEST_TOKENS.USDC.abi,
+				abi: token.abi || ERC20_TOKENS.USDC.abi,
 				functionName: "transfer" as const,
 				args: [omniAccountAddress, token.balance],
 				chain: walletClient.chain,
@@ -179,19 +179,6 @@ export function ERC20FundingGuide({
 		}
 	}, [evmAddress]);
 
-	// Check if wallet has tokens that need to be transferred
-	const hasWalletTokens = walletTokenBalances.some(
-		(tb) => tb.balance > BigInt(0),
-	);
-
-	const copyToClipboard = async (text: string) => {
-		try {
-			await navigator.clipboard.writeText(text);
-			// Could add toast notification here
-		} catch (err) {
-			console.error("Failed to copy text: ", err);
-		}
-	};
 
 	if (!omniAccountAddress) {
 		return (
@@ -278,8 +265,8 @@ export function ERC20FundingGuide({
 													onClick={() => {
 														const token =
 															tb.symbol === "USDC"
-																? TEST_TOKENS.USDC
-																: TEST_TOKENS.USDT;
+																? ERC20_TOKENS.USDC
+																: ERC20_TOKENS.USDT;
 														mintTestTokens(token);
 													}}
 													disabled={mintingToken !== null}
@@ -388,8 +375,8 @@ export function ERC20FundingGuide({
 													onClick={() => {
 														const token =
 															tb.symbol === "USDC"
-																? TEST_TOKENS.USDC
-																: TEST_TOKENS.USDT;
+																? ERC20_TOKENS.USDC
+																: ERC20_TOKENS.USDT;
 														mintTestTokens(token);
 													}}
 													disabled={mintingToken !== null}
