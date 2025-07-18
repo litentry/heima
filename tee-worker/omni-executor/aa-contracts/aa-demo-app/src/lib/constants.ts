@@ -92,7 +92,7 @@ export const SOLANA_CONFIG = {
 // ERC20 Token configurations
 export const ERC20_TOKENS = {
 	USDC: {
-		address: (process.env.NEXT_PUBLIC_TEST_USDC_ADDRESS ||
+		address: (process.env.NEXT_PUBLIC_USDC_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		symbol: "USDC",
 		name: "USD Coin",
@@ -100,7 +100,7 @@ export const ERC20_TOKENS = {
 		abi: StandardERC20ABI,
 	},
 	USDT: {
-		address: (process.env.NEXT_PUBLIC_TEST_USDT_ADDRESS ||
+		address: (process.env.NEXT_PUBLIC_USDT_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		symbol: "USDT",
 		name: "Tether USD",
