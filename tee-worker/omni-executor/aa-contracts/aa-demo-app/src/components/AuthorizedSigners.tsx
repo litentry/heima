@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePublicClient, useWalletClient, useAccount } from "wagmi";
 import {
 	Users,
@@ -11,13 +11,14 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { encodeFunctionData } from "viem";
-import { CONTRACTS } from "@/lib/constants";
+import { CONTRACTS, PAYMASTER_CONFIG } from "@/lib/constants";
 import {
 	createUserOperation,
 	signUserOperation,
 	packUserOperation,
 	UserOpSigner,
 	type UserOperation,
+	checkPaymasterStatus,
 } from "@/lib/aa-utils";
 
 interface AuthorizedSignersProps {
@@ -44,12 +45,43 @@ export function AuthorizedSigners({
 	const [isAddingSigner, setIsAddingSigner] = useState(false);
 	const [showAddForm, setShowAddForm] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [usePaymaster, setUsePaymaster] = useState<boolean>(PAYMASTER_CONFIG.enabledByDefault);
+	const [paymasterStatus, setPaymasterStatus] = useState<{
+		isAvailable: boolean;
+		balance: bigint;
+		error?: string;
+	} | null>(null);
 
 	const handleRefresh = () => {
 		setIsRefreshing(true);
 		refreshSigners();
 		setIsRefreshing(false);
 	};
+
+	// Check paymaster status
+	useEffect(() => {
+		const checkPaymaster = async () => {
+			if (!publicClient || CONTRACTS.SimplePaymaster.address === "0x0000000000000000000000000000000000000000") {
+				return;
+			}
+
+			const status = await checkPaymasterStatus(
+				publicClient,
+				CONTRACTS.SimplePaymaster.address,
+				CONTRACTS.EntryPoint.address,
+			);
+
+			setPaymasterStatus({
+				isAvailable: status.isAvailable,
+				balance: status.balance,
+				error: status.error,
+			});
+		};
+
+		if (usePaymaster && isDeployed) {
+			checkPaymaster();
+		}
+	}, [publicClient, usePaymaster, isDeployed]);
 
 	// Add a new root signer
 	const addSigner = async () => {
@@ -114,6 +146,13 @@ export function AuthorizedSigners({
 				nonce,
 				callData,
 				initCode: "0x", // Account already deployed
+				paymaster: usePaymaster && paymasterStatus?.isAvailable 
+					? {
+						address: CONTRACTS.SimplePaymaster.address,
+						validationGasLimit: PAYMASTER_CONFIG.defaultValidationGasLimit,
+						postOpGasLimit: PAYMASTER_CONFIG.defaultPostOpGasLimit,
+					}
+					: undefined,
 			});
 
 			// Sign UserOperation with RootKey signer type
@@ -239,6 +278,13 @@ export function AuthorizedSigners({
 				nonce,
 				callData,
 				initCode: "0x", // Account already deployed
+				paymaster: usePaymaster && paymasterStatus?.isAvailable 
+					? {
+						address: CONTRACTS.SimplePaymaster.address,
+						validationGasLimit: PAYMASTER_CONFIG.defaultValidationGasLimit,
+						postOpGasLimit: PAYMASTER_CONFIG.defaultPostOpGasLimit,
+					}
+					: undefined,
 			});
 
 			// Sign UserOperation with RootKey signer type
@@ -343,7 +389,7 @@ export function AuthorizedSigners({
 			{showAddForm && (
 				<div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
 					<h3 className="font-medium mb-3">Add New Signer</h3>
-					<div className="flex gap-2">
+					<div className="flex gap-2 mb-3">
 						<input
 							type="text"
 							value={newSignerAddress}
@@ -368,6 +414,36 @@ export function AuthorizedSigners({
 							Cancel
 						</button>
 					</div>
+					
+					{/* Paymaster Option */}
+					{CONTRACTS.SimplePaymaster.address !== "0x0000000000000000000000000000000000000000" && (
+						<div className="mt-3 pt-3 border-t border-blue-200">
+							<label className="flex items-center cursor-pointer">
+								<input
+									type="checkbox"
+									checked={usePaymaster}
+									onChange={(e) => setUsePaymaster(e.target.checked)}
+									className="mr-2 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+								/>
+								<span className="text-sm font-medium text-gray-700">
+									Use Paymaster (Gas Sponsorship)
+								</span>
+							</label>
+							{usePaymaster && paymasterStatus && (
+								<div className="text-xs text-gray-600 ml-6 mt-1">
+									{paymasterStatus.isAvailable ? (
+										<span className="text-green-600">
+											✓ Paymaster available
+										</span>
+									) : (
+										<span className="text-red-600">
+											✗ {paymasterStatus.error || "Paymaster not available"}
+										</span>
+									)}
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 			)}
 

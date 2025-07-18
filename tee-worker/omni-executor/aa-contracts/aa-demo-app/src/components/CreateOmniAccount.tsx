@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 import {
 	Wallet,
@@ -19,8 +19,9 @@ import {
 	signUserOperation,
 	UserOpSigner,
 	type UserOperation,
+	checkPaymasterStatus,
 } from "@/lib/aa-utils";
-import { DEFAULT_CLIENT_ID, CONTRACTS } from "@/lib/constants";
+import { DEFAULT_CLIENT_ID, CONTRACTS, PAYMASTER_CONFIG } from "@/lib/constants";
 
 interface CreateOmniAccountProps {
 	omniAccountAddress?: string;
@@ -41,11 +42,42 @@ export function CreateOmniAccount({
 	const [accountCreated, setAccountCreated] = useState(false);
 	const [error, setError] = useState("");
 	const [txHash, setTxHash] = useState("");
+	const [usePaymaster, setUsePaymaster] = useState<boolean>(PAYMASTER_CONFIG.enabledByDefault);
+	const [paymasterStatus, setPaymasterStatus] = useState<{
+		isAvailable: boolean;
+		balance: bigint;
+		error?: string;
+	} | null>(null);
 
 	const truncateAddress = (address: string) => {
 		if (!address) return "";
 		return `${address.slice(0, 6)}...${address.slice(-4)}`;
 	};
+
+	// Check paymaster status when component mounts or when usePaymaster changes
+	useEffect(() => {
+		const checkPaymaster = async () => {
+			if (!publicClient || CONTRACTS.SimplePaymaster.address === "0x0000000000000000000000000000000000000000") {
+				return;
+			}
+
+			const status = await checkPaymasterStatus(
+				publicClient,
+				CONTRACTS.SimplePaymaster.address,
+				CONTRACTS.EntryPoint.address,
+			);
+
+			setPaymasterStatus({
+				isAvailable: status.isAvailable,
+				balance: status.balance,
+				error: status.error,
+			});
+		};
+
+		if (usePaymaster) {
+			checkPaymaster();
+		}
+	}, [publicClient, usePaymaster]);
 
 	const handleCreateAccount = async () => {
 		if (
@@ -112,6 +144,13 @@ export function CreateOmniAccount({
 				nonce: BigInt(0),
 				initCode: initCode,
 				callData: "0x", // No additional operations needed
+				paymaster: usePaymaster && paymasterStatus?.isAvailable 
+					? {
+						address: CONTRACTS.SimplePaymaster.address,
+						validationGasLimit: PAYMASTER_CONFIG.defaultValidationGasLimit,
+						postOpGasLimit: PAYMASTER_CONFIG.defaultPostOpGasLimit,
+					}
+					: undefined,
 			});
 
 			// Sign the UserOperation with Owner signer type
@@ -309,6 +348,41 @@ export function CreateOmniAccount({
 								<AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
 								<span className="text-sm text-red-700">{error}</span>
 							</div>
+						</div>
+					)}
+
+					{/* Paymaster Option */}
+					{CONTRACTS.SimplePaymaster.address !== "0x0000000000000000000000000000000000000000" && (
+						<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+							<div className="flex items-center justify-between mb-2">
+								<label className="flex items-center cursor-pointer">
+									<input
+										type="checkbox"
+										checked={usePaymaster}
+										onChange={(e) => setUsePaymaster(e.target.checked)}
+										className="mr-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+									/>
+									<span className="font-medium text-gray-900">
+										Use Paymaster (Gas Sponsorship)
+									</span>
+								</label>
+							</div>
+							{usePaymaster && paymasterStatus && (
+								<div className="text-sm text-gray-600 ml-7">
+									{paymasterStatus.isAvailable ? (
+										<span className="text-green-600">
+											✓ Paymaster available (Balance: {(paymasterStatus.balance / BigInt("1000000000000000000")).toString()} ETH)
+										</span>
+									) : (
+										<span className="text-red-600">
+											✗ {paymasterStatus.error || "Paymaster not available"}
+										</span>
+									)}
+								</div>
+							)}
+							<p className="text-xs text-gray-500 mt-2 ml-7">
+								When enabled, the paymaster will cover gas fees for this transaction
+							</p>
 						</div>
 					)}
 

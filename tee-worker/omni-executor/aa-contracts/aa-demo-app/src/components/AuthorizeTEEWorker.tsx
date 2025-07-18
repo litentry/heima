@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePublicClient, useWalletClient, useAccount } from "wagmi";
 import { Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { encodeFunctionData } from "viem";
-import { CONTRACTS, TEE_WORKER_CONFIG } from "@/lib/constants";
+import { CONTRACTS, TEE_WORKER_CONFIG, PAYMASTER_CONFIG } from "@/lib/constants";
 import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
 import {
 	createUserOperation,
@@ -12,6 +12,7 @@ import {
 	packUserOperation,
 	UserOpSigner,
 	type UserOperation,
+	checkPaymasterStatus,
 } from "@/lib/aa-utils";
 
 interface AuthorizeTEEWorkerProps {
@@ -37,6 +38,37 @@ export function AuthorizeTEEWorker({
 	const [workerAddress, setWorkerAddress] = useState<string | null>(null);
 	const [isAddingSigner, setIsAddingSigner] = useState(false);
 	const [isCompleted, setIsCompleted] = useState(false);
+	const [usePaymaster, setUsePaymaster] = useState<boolean>(PAYMASTER_CONFIG.enabledByDefault);
+	const [paymasterStatus, setPaymasterStatus] = useState<{
+		isAvailable: boolean;
+		balance: bigint;
+		error?: string;
+	} | null>(null);
+
+	// Check paymaster status
+	useEffect(() => {
+		const checkPaymaster = async () => {
+			if (!publicClient || CONTRACTS.SimplePaymaster.address === "0x0000000000000000000000000000000000000000") {
+				return;
+			}
+
+			const status = await checkPaymasterStatus(
+				publicClient,
+				CONTRACTS.SimplePaymaster.address,
+				CONTRACTS.EntryPoint.address,
+			);
+
+			setPaymasterStatus({
+				isAvailable: status.isAvailable,
+				balance: status.balance,
+				error: status.error,
+			});
+		};
+
+		if (usePaymaster && isDeployed) {
+			checkPaymaster();
+		}
+	}, [publicClient, usePaymaster, isDeployed]);
 
 	const handleAuthorize = async () => {
 		if (
@@ -101,6 +133,13 @@ export function AuthorizeTEEWorker({
 				nonce,
 				callData,
 				initCode: "0x", // Account already deployed
+				paymaster: usePaymaster && paymasterStatus?.isAvailable 
+					? {
+						address: CONTRACTS.SimplePaymaster.address,
+						validationGasLimit: PAYMASTER_CONFIG.defaultValidationGasLimit,
+						postOpGasLimit: PAYMASTER_CONFIG.defaultPostOpGasLimit,
+					}
+					: undefined,
 			});
 
 			// Sign UserOperation with RootKey signer type
