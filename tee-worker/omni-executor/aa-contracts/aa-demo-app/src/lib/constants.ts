@@ -2,12 +2,14 @@ import EntryPointArtifact from "@/contracts/abis/EntryPoint.json";
 import OmniAccountArtifact from "@/contracts/abis/OmniAccount.json";
 import OmniAccountFactoryArtifact from "@/contracts/abis/OmniAccountFactory.json";
 import TestTokenArtifact from "@/contracts/abis/TestToken.json";
+import SimplePaymasterArtifact from "@/contracts/abis/SimplePaymaster.json";
 
 // Extract ABIs from artifacts
 const EntryPointABI = (EntryPointArtifact as any).abi || EntryPointArtifact;
 const OmniAccountABI = (OmniAccountArtifact as any).abi || OmniAccountArtifact;
 const OmniAccountFactoryABI = (OmniAccountFactoryArtifact as any).abi || OmniAccountFactoryArtifact;
 const TestTokenABI = (TestTokenArtifact as any).abi || TestTokenArtifact;
+const SimplePaymasterABI = (SimplePaymasterArtifact as any).abi || SimplePaymasterArtifact;
 
 // Contract addresses - update these after running deploy-local.sh
 // Default addresses are for chainId 31337 (Hardhat)
@@ -37,7 +39,7 @@ export const CONTRACTS = {
 		// Optional - deployed by deploy-local.sh but not used in basic flow
 		address: (process.env.NEXT_PUBLIC_PAYMASTER_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
-		abi: [] as any, // Add ABI when needed
+		abi: SimplePaymasterABI,
 	},
 } as const;
 
@@ -77,6 +79,8 @@ export const TEE_WORKER_CONFIG = {
 	clientId: "wildmeta",
 	chainType: "Evm" as const,
 	signerIndex: 0,
+	// Use proxy to avoid CORS issues when running in browser
+	useProxy: true,
 };
 
 // Solana configuration
@@ -117,3 +121,12 @@ export const SUPPORTED_TOKENS = [
 	TEST_TOKENS.USDC,
 	TEST_TOKENS.USDT,
 ] as const;
+
+// Paymaster configuration
+export const PAYMASTER_CONFIG = {
+	// Default gas limits for paymaster operations
+	defaultValidationGasLimit: BigInt(100000),
+	defaultPostOpGasLimit: BigInt(50000),
+	// Whether paymaster is enabled by default
+	enabledByDefault: false,
+} as const;

@@ -189,7 +189,24 @@ export function createUserOperation(params: {
 	nonce?: bigint;
 	callData?: `0x${string}`;
 	initCode?: `0x${string}`;
+	paymaster?: {
+		address: Address;
+		validationGasLimit?: bigint;
+		postOpGasLimit?: bigint;
+		data?: `0x${string}`;
+	};
 }): UserOperation {
+	// Encode paymasterAndData if paymaster is provided
+	let paymasterAndData: `0x${string}` = "0x";
+	if (params.paymaster && params.paymaster.address !== "0x0000000000000000000000000000000000000000") {
+		paymasterAndData = encodePaymasterAndData(
+			params.paymaster.address,
+			params.paymaster.validationGasLimit,
+			params.paymaster.postOpGasLimit,
+			params.paymaster.data,
+		);
+	}
+
 	return {
 		sender: params.sender,
 		nonce: params.nonce || BigInt(0),
@@ -200,7 +217,7 @@ export function createUserOperation(params: {
 		preVerificationGas: BigInt(100000),
 		maxFeePerGas: BigInt(20000000000), // 20 gwei
 		maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei
-		paymasterAndData: "0x",
+		paymasterAndData,
 		signature: "0x",
 	};
 }
@@ -385,6 +402,145 @@ export function addSignaturePrefix(
 	// Add signer type byte
 	const prefixedSig = `0x${signerType.toString(16).padStart(2, '0')}${sigWithoutPrefix}`;
 	return prefixedSig as `0x${string}`;
+}
+
+/**
+ * Encode paymasterAndData field for UserOperation
+ * Format: [20 bytes paymaster address][16 bytes validationGasLimit][16 bytes postOpGasLimit][arbitrary bytes for paymaster data]
+ * 
+ * @param paymasterAddress - The paymaster contract address
+ * @param validationGasLimit - Gas limit for paymaster validation (default: 100000)
+ * @param postOpGasLimit - Gas limit for paymaster postOp (default: 50000)
+ * @param paymasterData - Optional paymaster-specific data
+ * @returns Encoded paymasterAndData field
+ */
+export function encodePaymasterAndData(
+	paymasterAddress: Address,
+	validationGasLimit: bigint = BigInt(100000),
+	postOpGasLimit: bigint = BigInt(50000),
+	paymasterData: `0x${string}` = "0x",
+): `0x${string}` {
+	// Validate inputs
+	if (!paymasterAddress || paymasterAddress === "0x0000000000000000000000000000000000000000") {
+		throw new Error("Invalid paymaster address");
+	}
+
+	// Remove 0x prefix from address
+	const addressBytes = paymasterAddress.slice(2).toLowerCase();
+	
+	// Convert gas limits to hex strings (uint128 = 16 bytes)
+	const validationGasHex = validationGasLimit.toString(16).padStart(32, '0');
+	const postOpGasHex = postOpGasLimit.toString(16).padStart(32, '0');
+	
+	// Remove 0x prefix from paymaster data if present
+	const dataBytes = paymasterData.startsWith('0x') ? paymasterData.slice(2) : paymasterData;
+	
+	// Combine all parts
+	const encoded = `0x${addressBytes}${validationGasHex}${postOpGasHex}${dataBytes}`;
+	
+	console.log("Encoded paymasterAndData:", {
+		paymasterAddress,
+		validationGasLimit: validationGasLimit.toString(),
+		postOpGasLimit: postOpGasLimit.toString(),
+		paymasterData,
+		encoded,
+	});
+	
+	return encoded as `0x${string}`;
+}
+
+/**
+ * Decode paymasterAndData field
+ * @param paymasterAndData - The encoded paymaster data
+ * @returns Decoded components or null if empty
+ */
+export function decodePaymasterAndData(paymasterAndData: `0x${string}`): {
+	paymaster: Address;
+	validationGasLimit: bigint;
+	postOpGasLimit: bigint;
+	data: `0x${string}`;
+} | null {
+	if (!paymasterAndData || paymasterAndData === "0x" || paymasterAndData.length < 106) {
+		return null;
+	}
+
+	const data = paymasterAndData.slice(2); // Remove 0x prefix
+	
+	const paymaster = `0x${data.slice(0, 40)}` as Address;
+	const validationGasLimit = BigInt(`0x${data.slice(40, 72)}`);
+	const postOpGasLimit = BigInt(`0x${data.slice(72, 104)}`);
+	const paymasterData = `0x${data.slice(104)}` as `0x${string}`;
+
+	return {
+		paymaster,
+		validationGasLimit,
+		postOpGasLimit,
+		data: paymasterData,
+	};
+}
+
+/**
+ * Check if paymaster is available and has sufficient balance
+ * @param publicClient - Viem public client
+ * @param paymasterAddress - Address of the paymaster contract
+ * @param entryPointAddress - Address of the EntryPoint contract
+ * @param minBalance - Minimum balance required (default: 0.01 ETH)
+ * @returns Object with availability status and balance info
+ */
+export async function checkPaymasterStatus(
+	publicClient: any,
+	paymasterAddress: Address,
+	entryPointAddress: Address,
+	minBalance: bigint = BigInt("10000000000000000"), // 0.01 ETH
+): Promise<{
+	isAvailable: boolean;
+	isDeployed: boolean;
+	isFunded: boolean;
+	balance: bigint;
+	error?: string;
+}> {
+	try {
+		// Check if paymaster is deployed
+		const code = await publicClient.getBytecode({ address: paymasterAddress });
+		const isDeployed = !!(code && code !== "0x");
+
+		if (!isDeployed) {
+			return {
+				isAvailable: false,
+				isDeployed: false,
+				isFunded: false,
+				balance: BigInt(0),
+				error: "Paymaster not deployed",
+			};
+		}
+
+		// Check paymaster balance at EntryPoint
+		const balance = await publicClient.readContract({
+			address: entryPointAddress,
+			abi: CONTRACTS.EntryPoint.abi,
+			functionName: "balanceOf",
+			args: [paymasterAddress],
+		}) as bigint;
+
+		const isFunded = balance >= minBalance;
+
+		return {
+			isAvailable: isDeployed && isFunded,
+			isDeployed,
+			isFunded,
+			balance,
+			error: isFunded ? undefined : `Paymaster has insufficient balance: ${balance.toString()} wei`,
+		};
+	} catch (error) {
+		console.error("Error checking paymaster status:", error);
+		return {
+			isAvailable: false,
+			isDeployed: false,
+			isFunded: false,
+			balance: BigInt(0),
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 /**
