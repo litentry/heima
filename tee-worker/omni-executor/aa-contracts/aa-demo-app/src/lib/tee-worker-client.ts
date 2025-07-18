@@ -182,3 +182,49 @@ export async function getTEEWorkerAddress(
 		throw error;
 	}
 }
+
+// SerializablePackedUserOperation interface matching the Rust struct
+interface SerializablePackedUserOperation {
+	sender: string;             // Address as hex string (e.g., "0x1234...")
+	nonce: number;              // U256 as u128 integer
+	init_code: string;          // Bytes as hex string (e.g., "0xabc...")
+	call_data: string;          // Bytes as hex string (e.g., "0xdef...")
+	account_gas_limits: string; // FixedBytes<32> as hex string (e.g., "0x123...")
+	pre_verification_gas: number; // U256 as u128 integer
+	gas_fees: string;           // FixedBytes<32> as hex string (e.g., "0x456...")
+	paymaster_and_data: string; // Bytes as hex string (e.g., "0x789...")
+	signature?: string;         // Optional signature: None = unsigned, Some("0xabc...") = signed
+}
+
+interface SubmitUserOpTestParams {
+	user_operations: SerializablePackedUserOperation[];
+	chain_id: number;
+	wallet_index: number;
+	omni_account: string;
+	client_id: string;
+}
+
+interface SubmitUserOpTestResponse {
+	transaction_hash: string | null;
+}
+
+// Submit user operations through the TEE worker
+export async function submitUserOpTest(
+	userOperations: SerializablePackedUserOperation[],
+	chainId: number,
+	walletIndex: number,
+	omniAccount: string,
+	clientId: string
+): Promise<SubmitUserOpTestResponse> {
+	const params: SubmitUserOpTestParams = {
+		user_operations: userOperations,
+		chain_id: chainId,
+		wallet_index: walletIndex,
+		omni_account: omniAccount,
+		client_id: clientId,
+	};
+
+	console.log("[TEE Worker] Submitting user operation test", params);
+
+	return makeRpcRequest<SubmitUserOpTestResponse>("omni_submitUserOpTest", params);
+}
