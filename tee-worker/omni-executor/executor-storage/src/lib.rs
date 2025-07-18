@@ -14,6 +14,8 @@ pub use intent_id::IntentIdStorage;
 mod asset_lock;
 mod pumpx_account_profile;
 pub use pumpx_account_profile::PumpxProfileStorage;
+mod wildmeta_timestamp;
+pub use wildmeta_timestamp::WildmetaTimestampStorage;
 
 pub use asset_lock::AssetLockStorage;
 pub use asset_lock::Key as AssetLockStorageKey;

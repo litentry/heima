@@ -4,7 +4,7 @@ use crate::{
 	ShieldingKey,
 };
 use config_loader::ConfigLoader;
-use executor_storage::StorageDB;
+use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use heima_identity_verification::web2::email::mailer::MailerTrait;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
@@ -12,6 +12,7 @@ use pumpx::PumpxApi;
 use signer_client::SignerClient;
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
+use wildmeta_api::WildmetaApi;
 
 pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
@@ -25,6 +26,8 @@ pub(crate) struct RpcContext {
 	// we could save copying client (and other objects) around when P-1527 is done
 	// there could some a single `handler` that wraps up all accessible member variables
 	pub signer_client: Arc<Box<dyn SignerClient>>,
+	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
+	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 }
 
 impl RpcContext {
@@ -39,6 +42,8 @@ impl RpcContext {
 		google_client_secret: String,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		signer_client: Arc<Box<dyn SignerClient>>,
+		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
+		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -50,6 +55,8 @@ impl RpcContext {
 			google_client_secret,
 			pumpx_api,
 			signer_client,
+			wildmeta_api,
+			wildmeta_timestamp_storage,
 		}
 	}
 }
@@ -64,6 +71,8 @@ pub async fn start_server(
 	jwt_rsa_private_key: Vec<u8>,
 	config_loader: &ConfigLoader,
 	signer_client: Arc<Box<dyn SignerClient>>,
+	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
+	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	mailer: Box<dyn MailerTrait + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let ctx = RpcContext::new(
@@ -76,6 +85,8 @@ pub async fn start_server(
 		config_loader.google_client_secret.clone(),
 		pumpx_api,
 		signer_client,
+		wildmeta_api,
+		wildmeta_timestamp_storage,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

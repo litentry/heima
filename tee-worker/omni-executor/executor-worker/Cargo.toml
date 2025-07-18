@@ -42,6 +42,7 @@ rpc-server = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
 solana-intent-executor = { workspace = true }
+wildmeta-api = { workspace = true }
 
 [features]
 default = []

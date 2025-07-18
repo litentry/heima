@@ -323,7 +323,7 @@ async fn main() -> Result<(), ()> {
 			)?;
 
 			// Create EntryPoint clients registry
-
+			// Create RPC providers first
 			// Add BSC (BNB Chain)
 			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
 				&config_loader.bsc_url,
@@ -512,6 +512,13 @@ async fn main() -> Result<(), ()> {
 				error!("Could not perform attestation");
 			})?;
 
+			// Create wildmeta API client and timestamp storage
+			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(
+				wildmeta_api::WildmetaApiClient::new(config_loader.wildmeta_api_url.clone()),
+			));
+			let wildmeta_timestamp_storage =
+				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
+
 			// Create mailer instance based on config_loader only
 			let mailer: Box<dyn MailerTrait + Send + Sync> = match config_loader.mailer_type {
 				MailerType::Console => {
@@ -538,6 +545,8 @@ async fn main() -> Result<(), ()> {
 				jwt_rsa_private_key,
 				&config_loader,
 				pumpx_signer_client,
+				wildmeta_api,
+				wildmeta_timestamp_storage,
 				mailer,
 			)
 			.await

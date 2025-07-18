@@ -191,7 +191,17 @@ pub struct PasskeyData {
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type", content = "value")]
 pub enum ClientAuth {
-	Wildmeta { google_code: Option<String>, invite_code: Option<String> },
+	Wildmeta {
+		google_code: Option<String>,
+		invite_code: Option<String>,
+	},
+	WildmetaHl {
+		agent_address: String,
+		business_json: String,
+		main_address: String,
+		signature: String,
+		login_type: u32,
+	},
 }
 
 #[cfg(test)]
