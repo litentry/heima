@@ -34,9 +34,13 @@ This application demonstrates:
 
 ## Quick Start
 
-Follow these steps to run the demo application locally:
+Follow these steps to run the demo application:
 
-### 1. Deploy Smart Contracts
+### Option 1: Local Development
+
+For local development with Anvil:
+
+#### 1. Deploy Smart Contracts
 
 First, navigate to the parent directory and deploy the contracts:
 
@@ -68,11 +72,11 @@ Paymaster:          0x...
 
 Token Addresses:
 ================
-USDC:               <Set via NEXT_PUBLIC_TEST_USDC_ADDRESS>
-USDT:               <Set via NEXT_PUBLIC_TEST_USDT_ADDRESS>
+USDC:               <Set via NEXT_PUBLIC_USDC_ADDRESS>
+USDT:               <Set via NEXT_PUBLIC_USDT_ADDRESS>
 ```
 
-### 2. Update Demo App Configuration
+#### 2. Update Demo App Configuration
 
 In a new terminal, update the demo app with the deployed contract addresses:
 
@@ -83,7 +87,7 @@ In a new terminal, update the demo app with the deployed contract addresses:
 
 This creates/updates the `.env.local` file in the demo app with the correct contract addresses.
 
-### 3. Run the Demo App
+#### 3. Run the Demo App
 
 ```bash
 # Navigate to the demo app directory
@@ -98,15 +102,120 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 4. Use the Application
+### Option 2: Using with Remote Networks
+
+If you have already deployed the AA contracts to a remote network (testnet or mainnet), follow these steps to configure the demo app:
+
+#### 1. Create Environment Configuration
+
+Copy the example environment file and update it with your deployed contract addresses:
+
+```bash
+cd aa-demo-app
+cp .env.local.example .env.local
+```
+
+#### 2. Configure for Your Network
+
+Edit `.env.local` with your network-specific values:
+
+```bash
+# Network Configuration
+NEXT_PUBLIC_CHAIN_ID=<your-network-chain-id>
+NEXT_PUBLIC_RPC_URL=<your-network-rpc-url>
+
+# Your Deployed Contract Addresses
+NEXT_PUBLIC_ENTRYPOINT_ADDRESS=<your-entrypoint-address>
+NEXT_PUBLIC_FACTORY_ADDRESS=<your-factory-address>
+NEXT_PUBLIC_PAYMASTER_ADDRESS=<your-paymaster-address>
+
+# Token Addresses (use actual token addresses on your network)
+NEXT_PUBLIC_USDC_ADDRESS=<usdc-address-on-your-network>
+NEXT_PUBLIC_USDT_ADDRESS=<usdt-address-on-your-network>
+
+# TEE Worker Configuration
+NEXT_PUBLIC_TEE_WORKER_RPC_URL=<tee-worker-rpc-url>
+```
+
+##### Example Configuration
+
+Here's an example for a testnet deployment:
+
+```bash
+# Example testnet configuration
+NEXT_PUBLIC_CHAIN_ID=11155111
+NEXT_PUBLIC_RPC_URL=https://rpc.testnet.example.com
+NEXT_PUBLIC_ENTRYPOINT_ADDRESS=0x5fbdb2315678afecb367f032d93f642f64180aa3
+NEXT_PUBLIC_FACTORY_ADDRESS=0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
+NEXT_PUBLIC_PAYMASTER_ADDRESS=0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0
+NEXT_PUBLIC_USDC_ADDRESS=0x1234567890abcdef1234567890abcdef12345678
+NEXT_PUBLIC_USDT_ADDRESS=0xabcdef1234567890abcdef1234567890abcdef12
+NEXT_PUBLIC_TEE_WORKER_RPC_URL=https://staging-dex-worker.heima.network
+```
+
+#### 3. Network Configuration
+
+The application automatically configures the network based on your `NEXT_PUBLIC_CHAIN_ID`. No code changes are needed!
+
+**Supported Networks Out-of-the-Box:**
+- Ethereum Mainnet (1)
+- Sepolia (11155111)
+- Arbitrum (42161)
+- Arbitrum Sepolia (421614)
+- Optimism (10)
+- Optimism Sepolia (11155420)
+- Polygon (137)
+- Polygon Mumbai (80001)
+- Base (8453)
+- Base Sepolia (84532)
+- Local Anvil (1337)
+
+**For Custom or Unlisted Networks:**
+Add these optional environment variables to `.env.local`:
+
+```bash
+# Custom chain configuration
+NEXT_PUBLIC_CHAIN_NAME=My L2 Network
+NEXT_PUBLIC_NATIVE_CURRENCY_NAME=Ether
+NEXT_PUBLIC_NATIVE_CURRENCY_SYMBOL=ETH
+NEXT_PUBLIC_BLOCK_EXPLORER_URL=https://explorer.mynetwork.com
+NEXT_PUBLIC_BLOCK_EXPLORER_NAME=My Explorer
+```
+
+#### 4. Start the Application
+
+```bash
+# Install dependencies (if not already done)
+pnpm install
+
+# Start the development server
+pnpm dev
+```
+
+#### 5. Connect to Your Network
+
+- Ensure your wallet is connected to the same network where contracts are deployed
+- Add the network to your wallet if it's not already configured
+- The app will automatically use the configured contract addresses
+
+##### Important Notes for Remote Networks
+
+- Ensure your wallet has native tokens for gas fees on the target network
+- USDC and USDT addresses must be the actual deployed tokens on your network
+- The paymaster (if used) must be funded on the target network
+- The TEE Worker URL should be accessible from your network
+- Some networks may require custom RPC configuration in your wallet
+
+## Use the Application
 
 1. **Connect Wallet**: Click "Connect Wallet" and select your wallet
-   - Make sure you're connected to the Anvil network (Chain ID: 1337)
-   - If not, add a custom network in MetaMask:
-     - Network Name: Anvil Local
-     - RPC URL: http://localhost:8545
-     - Chain ID: 1337
-     - Currency Symbol: ETH
+   - For local development: Make sure you're connected to the Anvil network (Chain ID: 1337)
+     - If not, add a custom network in MetaMask:
+       - Network Name: Anvil Local
+       - RPC URL: http://localhost:8545
+       - Chain ID: 1337
+       - Currency Symbol: ETH
+   - For remote networks: Connect to the network matching your NEXT_PUBLIC_CHAIN_ID
    - After connecting, your Omni Account details will be displayed automatically
 
 2. **Fund with ETH**: Send ETH to your OmniAccount address for gas fees
@@ -229,18 +338,38 @@ You might see errors like `execution reverted` for `symbol()` or `decimals()` ca
 
 ## Environment Variables
 
-The app uses these environment variables (set automatically by `update-demo-addresses.sh`):
+The app uses these environment variables:
 
+For local development (set automatically by `update-demo-addresses.sh`):
 - `NEXT_PUBLIC_CHAIN_ID`: Network chain ID (1337 for Anvil)
 - `NEXT_PUBLIC_ENTRYPOINT_ADDRESS`: EntryPoint contract address
 - `NEXT_PUBLIC_FACTORY_ADDRESS`: OmniAccountFactory contract address
-- `NEXT_PUBLIC_TEST_USDC_ADDRESS`: USDC token address (real deployed token)
-- `NEXT_PUBLIC_TEST_USDT_ADDRESS`: USDT token address (real deployed token)
-- `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545)
-- `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint (default: https://staging-dex-worker.heima.network)
+- `NEXT_PUBLIC_USDC_ADDRESS`: USDC token address
+- `NEXT_PUBLIC_USDT_ADDRESS`: USDT token address
+- `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545 for local)
+- `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint
 - `NEXT_PUBLIC_PAYMASTER_ADDRESS`: Paymaster contract address (0x0 if not deployed)
 
-You can also copy `.env.local.example` to `.env.local` and update manually.
+For remote networks, manually set these in `.env.local`:
+- Use the actual deployed contract addresses for your network
+- Set the appropriate chain ID and RPC URL
+- Use real token addresses for USDC and USDT on your network
+
+You can copy `.env.local.example` to `.env.local` and update manually for any configuration.
+
+### Chain Configuration
+
+The app automatically configures the blockchain network based on `NEXT_PUBLIC_CHAIN_ID`. Supported networks include:
+- Ethereum Mainnet, Sepolia, Arbitrum, Optimism, Polygon, Base, and their testnets
+- Local Anvil (1337)
+- Any custom EVM chain (using optional environment variables)
+
+For custom chains, you can specify:
+- `NEXT_PUBLIC_CHAIN_NAME`: Display name for your chain
+- `NEXT_PUBLIC_NATIVE_CURRENCY_NAME`: Name of the native currency
+- `NEXT_PUBLIC_NATIVE_CURRENCY_SYMBOL`: Symbol of the native currency
+- `NEXT_PUBLIC_BLOCK_EXPLORER_URL`: Block explorer URL
+- `NEXT_PUBLIC_BLOCK_EXPLORER_NAME`: Block explorer name
 
 ## Development
 
