@@ -26,6 +26,7 @@ mod test {
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
 	};
+	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use heima_primitives::{Identity, Web2IdentityType};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
@@ -54,6 +55,9 @@ mod test {
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
+		// Create console mailer for test
+		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -63,6 +67,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
+			mailer,
 		)
 		.await
 		.unwrap();

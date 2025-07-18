@@ -1,13 +1,14 @@
 #![allow(opaque_hidden_inferred_bound)]
 
-use serde_json::json;
+use crate::dex;
+use serde_json::{json, Value};
 use warp::{http::Response, Filter};
 
 fn build_success_response(response: serde_json::Value) -> Response<String> {
 	Response::builder()
 		.status(200)
 		.header("content-type", "application/json")
-		.body(response.to_string())
+		.body(warp::hyper::Body::from(response.to_string()))
 		.unwrap()
 }
 
@@ -34,6 +35,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let post_heima_login = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "post_heima_login"))
 		.and(warp::body::json())
 		.map(|_body: serde_json::Value| {
@@ -49,6 +51,7 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let add_wallet = warp::post()
+		.and(warp::path(BASE_PATH))
 		.and(warp::path!("v3" / "account" / "add_wallet"))
 		.and(warp::header::optional::<String>("authorization"))
 		.map(|_auth: Option<String>| {

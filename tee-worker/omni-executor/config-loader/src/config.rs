@@ -15,8 +15,28 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use tracing::info;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum MailerType {
+	Sendgrid,
+	Console,
+}
+
+impl FromStr for MailerType {
+	type Err = String;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"sendgrid" => Ok(MailerType::Sendgrid),
+			"console" => Ok(MailerType::Console),
+			_ => Err(format!("Invalid mailer type: {}", s)),
+		}
+	}
+}
+
+const DEFAULT_MAILER_TYPE: &str = "sendgrid";
 const DEFAULT_MAILER_API_HOST: &str = ""; // Optional
 const DEFAULT_MAILER_API_KEY: &str = "";
 const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
@@ -28,15 +48,22 @@ const DEFAULT_ETHEREUM_URL: &str = "https://eth-mainnet.g.alchemy.com/v2/";
 const DEFAULT_SOLANA_URL: &str = "https://solana-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_URL: &str = "https://bnb-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_TESTNET_URL: &str = "https://bnb-testnet.g.alchemy.com/v2/"; // Optional
+const DEFAULT_ARBITRUM_URL: &str = "https://arb-mainnet.g.alchemy.com/v2/";
+const DEFAULT_ARBITRUM_TESTNET_URL: &str = "https://arb-sepolia.g.alchemy.com/v2/"; // Optional
+const DEFAULT_HYPEREVM_URL: &str = "https://rpc.hyperevm.org";
+const DEFAULT_HYPEREVM_TESTNET_URL: &str = "https://testnet-rpc.hyperevm.org"; // Optional
 const DEFAULT_PUMPX_API_BASE_URL: &str = "https://test-dex-api.heima.network";
 const DEFAULT_PUMPX_SIGNER_URL: &str = "https://dev-dex-signer.heima.network";
 const DEFAULT_PUMPX_WORKER_URL: &str = "wss://dev-dex-worker.heima.network";
 const DEFAULT_BINANCE_API_KEY: &str = "";
 const DEFAULT_BINANCE_API_SECRET: &str = "";
 const DEFAULT_BINANCE_API_BASE_URL: &str = "https://api.binance.com";
+const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
+const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
+	pub mailer_type: MailerType,
 	pub mailer_api_host: Option<String>,
 	pub mailer_api_key: String,
 	pub mailer_from_email: String,
@@ -48,12 +75,18 @@ pub struct ConfigLoader {
 	pub solana_url: String,
 	pub bsc_url: String,
 	pub bsc_testnet_url: Option<String>,
+	pub arbitrum_url: String,
+	pub arbitrum_testnet_url: Option<String>,
+	pub hyperevm_url: String,
+	pub hyperevm_testnet_url: Option<String>,
 	pub pumpx_signer_url: String,
 	pub pumpx_api_base_url: String,
 	pub pumpx_worker_url: String,
 	pub binance_api_key: String,
 	pub binance_api_secret: String,
 	pub binance_api_base_url: String,
+	pub omni_factory_address: String,
+	pub entry_point_address: String,
 }
 
 struct EnvVar {
@@ -80,6 +113,15 @@ impl ConfigLoader {
 		info!("Executing: {}", std::env::args().collect::<Vec<_>>().join(" "));
 
 		let vars: HashMap<&str, EnvVar> = HashMap::from([
+			(
+				"mailer_type",
+				EnvVar {
+					env_key: "OE_MAILER_TYPE",
+					default: DEFAULT_MAILER_TYPE,
+					sensitive: false,
+					optional: false,
+				},
+			),
 			(
 				"mailer_api_host",
 				EnvVar {
@@ -180,6 +222,42 @@ impl ConfigLoader {
 				},
 			),
 			(
+				"arbitrum_url",
+				EnvVar {
+					env_key: "OE_ARBITRUM_URL",
+					default: DEFAULT_ARBITRUM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"arbitrum_testnet_url",
+				EnvVar {
+					env_key: "OE_ARBITRUM_TESTNET_URL",
+					default: DEFAULT_ARBITRUM_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
+				"hyperevm_url",
+				EnvVar {
+					env_key: "OE_HYPEREVM_URL",
+					default: DEFAULT_HYPEREVM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"hyperevm_testnet_url",
+				EnvVar {
+					env_key: "OE_HYPEREVM_TESTNET_URL",
+					default: DEFAULT_HYPEREVM_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
 				"pumpx_signer_url",
 				EnvVar {
 					env_key: "OE_PUMPX_SIGNER_URL",
@@ -233,6 +311,24 @@ impl ConfigLoader {
 					optional: false,
 				},
 			),
+			(
+				"omni_factory_address",
+				EnvVar {
+					env_key: "OE_OMNI_FACTORY_ADDRESS",
+					default: DEFAULT_OMNI_FACTORY_ADDRESS,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"entry_point_address",
+				EnvVar {
+					env_key: "OE_ENTRY_POINT_ADDRESS",
+					default: DEFAULT_ENTRY_POINT_ADDRESS,
+					sensitive: false,
+					optional: false,
+				},
+			),
 		]);
 
 		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
@@ -248,6 +344,7 @@ impl ConfigLoader {
 		let get_opt = |key: &str| get_env_value(&vars[key]);
 
 		ConfigLoader {
+			mailer_type: MailerType::from_str(&get("mailer_type")).unwrap_or(MailerType::Sendgrid),
 			mailer_api_host: get_opt("mailer_api_host"),
 			mailer_api_key: get("mailer_api_key"),
 			mailer_from_email: get("mailer_from_email"),
@@ -259,12 +356,18 @@ impl ConfigLoader {
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
 			bsc_testnet_url: get_opt("bsc_testnet_url").map(|v| append_key(&v)),
+			arbitrum_url: append_key(&get("arbitrum_url")),
+			arbitrum_testnet_url: get_opt("arbitrum_testnet_url").map(|v| append_key(&v)),
+			hyperevm_url: get("hyperevm_url"),
+			hyperevm_testnet_url: get_opt("hyperevm_testnet_url"),
 			pumpx_signer_url: get("pumpx_signer_url"),
 			pumpx_api_base_url: get("pumpx_api_base_url"),
 			pumpx_worker_url: get("pumpx_worker_url"),
 			binance_api_key: get("binance_api_key"),
 			binance_api_secret: get("binance_api_secret"),
 			binance_api_base_url: get("binance_api_base_url"),
+			omni_factory_address: get("omni_factory_address"),
+			entry_point_address: get("entry_point_address"),
 		}
 	}
 }

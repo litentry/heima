@@ -28,6 +28,7 @@ mod test {
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
 	use executor_storage::StorageDB;
+	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -55,6 +56,9 @@ mod test {
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
+		// Create console mailer for test
+		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+
 		start_server(
 			port,
 			shielding_key.clone(),
@@ -64,6 +68,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
+			mailer,
 		)
 		.await
 		.unwrap();

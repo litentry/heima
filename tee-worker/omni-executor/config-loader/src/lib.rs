@@ -1,2 +1,2 @@
 mod config;
-pub use config::ConfigLoader;
+pub use config::{ConfigLoader, MailerType};

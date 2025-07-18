@@ -20,6 +20,7 @@ members = [
     "mock-server",
     "native-task-handler",
     "oauth-providers",
+    "omni-cli",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/attestation",
