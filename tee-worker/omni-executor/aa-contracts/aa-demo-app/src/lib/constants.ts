@@ -1,14 +1,14 @@
 import EntryPointArtifact from "@/contracts/abis/EntryPoint.json";
 import OmniAccountArtifact from "@/contracts/abis/OmniAccount.json";
 import OmniAccountFactoryArtifact from "@/contracts/abis/OmniAccountFactory.json";
-import TestTokenArtifact from "@/contracts/abis/TestToken.json";
+import StandardERC20Artifact from "@/contracts/abis/StandardERC20.json";
 import SimplePaymasterArtifact from "@/contracts/abis/SimplePaymaster.json";
 
 // Extract ABIs from artifacts
 const EntryPointABI = (EntryPointArtifact as any).abi || EntryPointArtifact;
 const OmniAccountABI = (OmniAccountArtifact as any).abi || OmniAccountArtifact;
 const OmniAccountFactoryABI = (OmniAccountFactoryArtifact as any).abi || OmniAccountFactoryArtifact;
-const TestTokenABI = (TestTokenArtifact as any).abi || TestTokenArtifact;
+const StandardERC20ABI = (StandardERC20Artifact as any).abi || StandardERC20Artifact;
 const SimplePaymasterABI = (SimplePaymasterArtifact as any).abi || SimplePaymasterArtifact;
 
 // Contract addresses - update these after running deploy-local.sh
@@ -89,23 +89,23 @@ export const SOLANA_CONFIG = {
 	rpcUrl: "https://api.devnet.solana.com",
 };
 
-// Test Token configurations
-export const TEST_TOKENS = {
+// ERC20 Token configurations
+export const ERC20_TOKENS = {
 	USDC: {
 		address: (process.env.NEXT_PUBLIC_TEST_USDC_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		symbol: "USDC",
-		name: "Test USDC",
+		name: "USD Coin",
 		decimals: 6,
-		abi: TestTokenABI,
+		abi: StandardERC20ABI,
 	},
 	USDT: {
 		address: (process.env.NEXT_PUBLIC_TEST_USDT_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		symbol: "USDT",
-		name: "Test USDT",
+		name: "Tether USD",
 		decimals: 6,
-		abi: TestTokenABI,
+		abi: StandardERC20ABI,
 	},
 } as const;
 
@@ -118,8 +118,8 @@ export const SUPPORTED_TOKENS = [
 		address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
 		isNative: true,
 	},
-	TEST_TOKENS.USDC,
-	TEST_TOKENS.USDT,
+	ERC20_TOKENS.USDC,
+	ERC20_TOKENS.USDT,
 ] as const;
 
 // Paymaster configuration
