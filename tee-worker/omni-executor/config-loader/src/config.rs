@@ -60,6 +60,7 @@ const DEFAULT_BINANCE_API_SECRET: &str = "";
 const DEFAULT_BINANCE_API_BASE_URL: &str = "https://api.binance.com";
 const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
 const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const DEFAULT_WILDMETA_API_URL: &str = "https://test-dex-api.heima.network";
 
 #[derive(Debug, Clone)]
 pub struct ConfigLoader {
@@ -87,6 +88,7 @@ pub struct ConfigLoader {
 	pub binance_api_base_url: String,
 	pub omni_factory_address: String,
 	pub entry_point_address: String,
+	pub wildmeta_api_url: String,
 }
 
 struct EnvVar {
@@ -329,6 +331,15 @@ impl ConfigLoader {
 					optional: false,
 				},
 			),
+			(
+				"wildmeta_api_url",
+				EnvVar {
+					env_key: "OE_WILDMETA_API_URL",
+					default: DEFAULT_WILDMETA_API_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
 		]);
 
 		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
@@ -368,6 +379,7 @@ impl ConfigLoader {
 			binance_api_base_url: get("binance_api_base_url"),
 			omni_factory_address: get("omni_factory_address"),
 			entry_point_address: get("entry_point_address"),
+			wildmeta_api_url: get("wildmeta_api_url"),
 		}
 	}
 }

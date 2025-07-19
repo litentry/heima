@@ -891,7 +891,7 @@ async fn handle_native_task<
 						.await;
 
 					let signature = match signature_result {
-						Ok(sig) => sig,
+						Ok(sig) => substrate_to_ethereum_signature(&sig).unwrap().to_vec(),
 						Err(_) => {
 							send_error(
 								format!("Failed to sign user operation {}", index),
@@ -1117,6 +1117,38 @@ async fn verify_google_code(
 			)
 		},
 	)
+}
+
+/// Convert Substrate signature to Ethereum ECDSA format
+/// Returns signature in format: [r (32 bytes), s (32 bytes), v (1 byte)]
+pub fn substrate_to_ethereum_signature(substrate_sig: &[u8]) -> Result<[u8; 65], &'static str> {
+	if substrate_sig.len() != 65 {
+		return Err("Invalid signature length");
+	}
+
+	// Parse as (r, s, v) format - most common
+	let mut r = [0u8; 32];
+	let mut s = [0u8; 32];
+	r.copy_from_slice(&substrate_sig[0..32]);
+	s.copy_from_slice(&substrate_sig[32..64]);
+	let substrate_v = substrate_sig[64];
+
+	// Convert recovery parameter: 0/1 -> 27/28
+	let ethereum_v = match substrate_v {
+		0 => 27,
+		1 => 28,
+		27 => 27, // Already Ethereum format
+		28 => 28, // Already Ethereum format
+		_ => return Err("Invalid recovery parameter"),
+	};
+
+	// Build Ethereum signature: [r, s, v]
+	let mut ethereum_sig = [0u8; 65];
+	ethereum_sig[0..32].copy_from_slice(&r);
+	ethereum_sig[32..64].copy_from_slice(&s);
+	ethereum_sig[64] = ethereum_v;
+
+	Ok(ethereum_sig)
 }
 
 /// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
