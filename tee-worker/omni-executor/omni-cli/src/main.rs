@@ -1,10 +1,29 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::ChainId;
 use serde::{Deserialize, Serialize};
+use signer_client::ChainType;
 use std::collections::HashMap;
 use tracing::{debug, info};
+
+#[derive(Debug, Clone, ValueEnum, Serialize)]
+#[serde(rename_all = "PascalCase")]
+enum CliChainType {
+	Evm,
+	Solana,
+	Tron,
+}
+
+impl From<CliChainType> for ChainType {
+	fn from(cli_type: CliChainType) -> Self {
+		match cli_type {
+			CliChainType::Evm => ChainType::Evm,
+			CliChainType::Solana => ChainType::Solana,
+			CliChainType::Tron => ChainType::Tron,
+		}
+	}
+}
 
 #[derive(Debug, Serialize)]
 struct JsonRpcRequest {
@@ -35,6 +54,15 @@ struct SubmitUserOpParams {
 	user_operations: Vec<SerializablePackedUserOperation>,
 	chain_id: ChainId,
 	wallet_index: u32,
+}
+
+#[derive(Debug, Serialize)]
+struct SubmitUserOpTestParams {
+	user_operations: Vec<SerializablePackedUserOperation>,
+	chain_id: ChainId,
+	wallet_index: u32,
+	omni_account: String,
+	client_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,6 +109,13 @@ struct RequestJwtResponse {
 struct RequestEmailVerificationCodeParams {
 	client_id: String,
 	user_email: String,
+}
+
+#[derive(Debug, Serialize)]
+struct GetSmartWalletRootSignerParams {
+	omni_account: String,
+	chain_type: ChainType,
+	wallet_index: u32,
 }
 
 #[derive(Debug, Parser)]
@@ -163,6 +198,60 @@ enum Commands {
 
 		#[arg(long)]
 		user_email: String,
+	},
+
+	/// Submit UserOperation test (with omni_account and client_id)
+	SubmitUserOpTest {
+		#[arg(long)]
+		chain_id: Option<u64>,
+
+		#[arg(long, default_value = "0")]
+		wallet_index: u32,
+
+		#[arg(long)]
+		omni_account: String,
+
+		#[arg(long)]
+		client_id: String,
+
+		#[arg(long)]
+		sender: String,
+
+		#[arg(long, default_value = "0")]
+		nonce: String,
+
+		#[arg(long, default_value = "")]
+		init_code: String,
+
+		#[arg(long, default_value = "")]
+		call_data: String,
+
+		#[arg(long, default_value = "0")]
+		account_gas_limits: String,
+
+		#[arg(long, default_value = "0")]
+		pre_verification_gas: String,
+
+		#[arg(long, default_value = "0")]
+		gas_fees: String,
+
+		#[arg(long, default_value = "")]
+		paymaster_and_data: String,
+
+		#[arg(long, default_value = "")]
+		signature: String,
+	},
+
+	/// Get smart wallet root signer address
+	GetSmartWalletRootSigner {
+		#[arg(long)]
+		omni_account: String,
+
+		#[arg(long, value_enum)]
+		chain_type: CliChainType,
+
+		#[arg(long, default_value = "0")]
+		wallet_index: u32,
 	},
 }
 
@@ -378,6 +467,114 @@ async fn handle_request_email_verification_code(
 	Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn handle_submit_user_op_test(
+	client: &RpcClient,
+	chain_id: Option<u64>,
+	wallet_index: u32,
+	omni_account: String,
+	client_id: String,
+	sender: String,
+	nonce: String,
+	init_code: String,
+	call_data: String,
+	account_gas_limits: String,
+	pre_verification_gas: String,
+	gas_fees: String,
+	paymaster_and_data: String,
+	signature: String,
+) -> Result<()> {
+	let chain = chain_id.unwrap_or(1); // Default to Ethereum mainnet if not specified
+
+	// Convert hex strings to proper format for SerializablePackedUserOperation
+	let nonce_val = if nonce.is_empty() || nonce == "0" {
+		0u128
+	} else {
+		let nonce_bytes = parse_hex_to_array::<32>(&nonce)?;
+		u128::from_be_bytes(nonce_bytes[16..32].try_into()?)
+	};
+
+	let pre_verification_gas_val = if pre_verification_gas.is_empty() || pre_verification_gas == "0"
+	{
+		0u128
+	} else {
+		let gas_bytes = parse_hex_to_array::<32>(&pre_verification_gas)?;
+		let gas_val = u128::from_be_bytes(gas_bytes[16..32].try_into()?);
+		debug!(
+			"Parsed pre_verification_gas: input='{}', bytes={:?}, value={}",
+			pre_verification_gas, gas_bytes, gas_val
+		);
+		gas_val
+	};
+
+	let user_operation = SerializablePackedUserOperation {
+		sender,
+		nonce: nonce_val,
+		init_code,
+		call_data,
+		account_gas_limits,
+		pre_verification_gas: pre_verification_gas_val,
+		gas_fees,
+		paymaster_and_data,
+		signature: if signature.is_empty() { None } else { Some(signature) },
+	};
+
+	debug!(
+		"Created UserOperation with pre_verification_gas: {}",
+		user_operation.pre_verification_gas
+	);
+
+	let params = SubmitUserOpTestParams {
+		user_operations: vec![user_operation],
+		chain_id: chain,
+		wallet_index,
+		omni_account,
+		client_id,
+	};
+
+	info!("Submitting UserOperation (test) with params: {:?}", params);
+
+	let json_params = serde_json::to_value(&params)?;
+	debug!("JSON serialized params: {}", serde_json::to_string_pretty(&json_params)?);
+
+	let response: SubmitUserOpResponse = client.call("omni_submitUserOpTest", json_params).await?;
+
+	info!("Response: {:?}", response);
+
+	if let Some(tx_hash) = response.transaction_hash {
+		println!("Transaction Hash: {}", tx_hash);
+	} else {
+		println!("No transaction hash returned");
+	}
+
+	Ok(())
+}
+
+async fn handle_get_smart_wallet_root_signer(
+	client: &RpcClient,
+	omni_account: String,
+	chain_type: CliChainType,
+	wallet_index: u32,
+) -> Result<()> {
+	let params = GetSmartWalletRootSignerParams {
+		omni_account,
+		chain_type: chain_type.into(),
+		wallet_index,
+	};
+
+	info!("Getting smart wallet root signer with params: {:?}", params);
+
+	let response: String = client
+		.call("omni_getSmartWalletRootSigner", serde_json::to_value(&params)?)
+		.await?;
+
+	info!("Response: {:?}", response);
+
+	println!("Root Signer Address: {}", response);
+
+	Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
 	tracing_subscriber::fmt::init();
@@ -436,6 +633,43 @@ async fn main() -> Result<()> {
 		},
 		Commands::RequestEmailVerificationCode { client_id, user_email } => {
 			handle_request_email_verification_code(&client, client_id, user_email).await?;
+		},
+		Commands::SubmitUserOpTest {
+			chain_id,
+			wallet_index,
+			omni_account,
+			client_id,
+			sender,
+			nonce,
+			init_code,
+			call_data,
+			account_gas_limits,
+			pre_verification_gas,
+			gas_fees,
+			paymaster_and_data,
+			signature,
+		} => {
+			handle_submit_user_op_test(
+				&client,
+				chain_id,
+				wallet_index,
+				omni_account,
+				client_id,
+				sender,
+				nonce,
+				init_code,
+				call_data,
+				account_gas_limits,
+				pre_verification_gas,
+				gas_fees,
+				paymaster_and_data,
+				signature,
+			)
+			.await?;
+		},
+		Commands::GetSmartWalletRootSigner { omni_account, chain_type, wallet_index } => {
+			handle_get_smart_wallet_root_signer(&client, omni_account, chain_type, wallet_index)
+				.await?;
 		},
 	}
 
