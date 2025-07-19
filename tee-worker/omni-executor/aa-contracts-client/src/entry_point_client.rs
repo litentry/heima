@@ -16,7 +16,7 @@
 
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateValidationCall, simulateHandleOpsCall, ExecutionResult, SenderAddressResult, 
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, SenderAddressResult,
 	ValidationResult,
 };
 use crate::utils::{
@@ -503,7 +503,7 @@ pub mod test {
 	pub async fn test_simulate_handle_ops() {
 		// This test demonstrates how to use the new simulate_handle_ops function
 		// to simulate a batch of user operations before actual execution
-		
+
 		let client_id = "test_client";
 		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
 		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
@@ -558,7 +558,7 @@ pub mod test {
 
 		// Verify we got results for both operations
 		assert_eq!(simulation_results.len(), 2, "Should get results for both operations");
-		
+
 		// Log simulation results
 		for (i, result) in simulation_results.iter().enumerate() {
 			println!("UserOp {} simulation result:", i);

@@ -953,7 +953,10 @@ async fn handle_native_task<
 							result.paymasterValidationData
 						);
 					}
-					info!("All {} UserOperations passed batch simulation checks", aa_user_ops.len());
+					info!(
+						"All {} UserOperations passed batch simulation checks",
+						aa_user_ops.len()
+					);
 				},
 				Err(_) => {
 					send_error(
