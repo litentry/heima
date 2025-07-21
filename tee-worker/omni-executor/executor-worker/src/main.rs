@@ -445,21 +445,21 @@ async fn main() -> Result<(), ()> {
 				entry_point_clients.insert(421614, arbitrum_testnet_entry_point);
 			}
 
-			// Add HyperEVM (Chain ID: 998)
+			// Add HyperEVM (Chain ID: 999)
 			let hyperevm_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
 				entry_point_address,
 				hyperevm_rpc,
 			));
-			entry_point_clients.insert(998, hyperevm_entry_point);
+			entry_point_clients.insert(999, hyperevm_entry_point);
 
-			// Add HyperEVM Testnet if configured (Chain ID: 999)
+			// Add HyperEVM Testnet if configured (Chain ID: 998)
 			if let Some(hyperevm_testnet_rpc) = hyperevm_testnet_rpc {
 				let hyperevm_testnet_entry_point =
 					Arc::new(aa_contracts_client::EntryPointClient::new(
 						entry_point_address,
 						hyperevm_testnet_rpc,
 					));
-				entry_point_clients.insert(999, hyperevm_testnet_entry_point);
+				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}
 
 			let entry_point_clients = Arc::new(entry_point_clients);
