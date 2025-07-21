@@ -270,8 +270,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let account_gas_limits = create_account_gas_limits(verification_gas_limit, call_gas_limit);
 
 		let pre_verification_gas = U256::from(21000u64);
-		let max_fee_per_gas = U256::from(3000000000u64); // 3 gwei
-		let max_priority_fee_per_gas = U256::from(1000000000u64); // 1 gwei
+		let max_fee_per_gas = U256::from(50000000000u64); // 50 gwei - increased for mainnet
+		let max_priority_fee_per_gas = U256::from(2000000000u64); // 2 gwei
 		let gas_fees = create_gas_fees(max_fee_per_gas, max_priority_fee_per_gas);
 
 		let paymaster_and_data = if let Some(paymaster_addr) = paymaster_address {

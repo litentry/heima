@@ -22,6 +22,17 @@ use sp_core::keccak_256;
 // Mock private key for testing - corresponds to 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720
 const MOCK_PRIVATE_KEY: &str = "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6";
 
+fn ethereum_to_substrate_signature(ethereum_sig: &[u8]) -> [u8; 65] {
+	let mut substrate_sig = [0u8; 65];
+	substrate_sig[0..64].copy_from_slice(&ethereum_sig[0..64]);
+	substrate_sig[64] = match ethereum_sig[64] {
+		27 => 0,
+		28 => 1,
+		v => v, // Keep as-is if already in Substrate format
+	};
+	substrate_sig
+}
+
 fn get_mock_wallet_address() -> String {
 	// This will return the address corresponding to MOCK_PRIVATE_KEY
 	// Address: 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720
@@ -83,18 +94,22 @@ pub async fn handle_dex_method(request: Value) -> Result<Box<dyn warp::Reply>, w
 				keccak_256(&message_bytes)
 			};
 
-			// Use alloy signer for Ethereum-compatible signatures
+			// Use alloy signer for Ethereum-compatible signatures, then convert to Substrate format
 			let private_key_bytes =
 				hex::decode(&MOCK_PRIVATE_KEY[2..]).expect("Invalid private key");
 			let private_key = B256::from_slice(&private_key_bytes);
 			let signer = PrivateKeySigner::from_bytes(&private_key).expect("Invalid private key");
 
 			// Sign the hash directly (alloy will handle recovery ID correctly)
-			let signature =
+			let ethereum_signature =
 				signer.sign_hash_sync(&B256::from(message_hash)).expect("Failed to sign");
 
-			// Format signature as hex string (65 bytes: r + s + v with proper Ethereum recovery ID)
-			let signature_hex = hex::encode(signature.as_bytes());
+			// Convert Ethereum signature (v=27/28) to Substrate format (v=0/1)
+			let substrate_signature =
+				ethereum_to_substrate_signature(&ethereum_signature.as_bytes());
+
+			// Format signature as hex string (65 bytes: r + s + v with Substrate recovery ID)
+			let signature_hex = hex::encode(substrate_signature);
 
 			tracing::info!("Signing message: {}, signature: {}", msg_hex, signature_hex);
 
@@ -114,7 +129,7 @@ pub async fn handle_dex_method(request: Value) -> Result<Box<dyn warp::Reply>, w
 			let empty_msgs = vec![];
 			let msgs = payload.get("msgs").and_then(|m| m.as_array()).unwrap_or(&empty_msgs);
 
-			// Use alloy signer for Ethereum-compatible signatures
+			// Use alloy signer for Ethereum-compatible signatures, then convert to Substrate format
 			let private_key_bytes =
 				hex::decode(&MOCK_PRIVATE_KEY[2..]).expect("Invalid private key");
 			let private_key = B256::from_slice(&private_key_bytes);
@@ -135,9 +150,13 @@ pub async fn handle_dex_method(request: Value) -> Result<Box<dyn warp::Reply>, w
 				};
 
 				// Sign the hash directly (alloy will handle recovery ID correctly)
-				let signature =
+				let ethereum_signature =
 					signer.sign_hash_sync(&B256::from(message_hash)).expect("Failed to sign");
-				let signature_hex = hex::encode(signature.as_bytes());
+
+				// Convert Ethereum signature (v=27/28) to Substrate format (v=0/1)
+				let substrate_signature =
+					ethereum_to_substrate_signature(&ethereum_signature.as_bytes());
+				let signature_hex = hex::encode(substrate_signature);
 				signatures.push(signature_hex);
 			}
 
