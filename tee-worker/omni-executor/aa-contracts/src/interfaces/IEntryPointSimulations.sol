@@ -67,4 +67,16 @@ interface IEntryPointSimulations is IEntryPoint {
     function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData)
         external
         returns (ExecutionResult memory);
+
+    /**
+     * Simulate a batch of UserOperations (similar to handleOps but for simulation)
+     * It performs full validation and execution simulation for all operations in the batch.
+     * This is useful for testing entire batches before submitting them to the actual entry point.
+     * @param ops The array of UserOperations to simulate.
+     * @param beneficiary The address that will receive the collected fees.
+     * @return results Array of execution results, one for each UserOperation in the batch.
+     */
+    function simulateHandleOps(PackedUserOperation[] calldata ops, address payable beneficiary)
+        external
+        returns (ExecutionResult[] memory results);
 }
