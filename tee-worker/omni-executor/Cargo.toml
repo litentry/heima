@@ -4,6 +4,7 @@ members = [
     "accounting-contract/solana/programs/accounting-contract",
     "accounting-contract-client",
     "binance-api",
+    "config-loader",
     "ethereum-rpc",
     "executor-crypto",
     "executor-core",
@@ -20,6 +21,7 @@ members = [
     "mock-server",
     "native-task-handler",
     "oauth-providers",
+    "omni-cli",
     "parentchain/listener",
     "parentchain/api-interface",
     "parentchain/attestation",
@@ -29,7 +31,7 @@ members = [
     "rpc-server",
     "signer-client",
     "solana",
-    "config-loader",
+    "wildmeta-api",
 ]
 
 resolver = "2"
@@ -133,6 +135,7 @@ rpc-server = { path = "rpc-server" }
 signer-client = { path = "signer-client" }
 solana = { path = "solana" }
 solana-intent-executor = { path = "intent/executors/solana" }
+wildmeta-api = { path = "wildmeta-api" }
 
 heima-primitives = { path = "../../parachain/primitives", default-features = false, features = ["std"] }
 heima-utils = { path = "../../parachain/utils", default-features = false, features = ["std"] }

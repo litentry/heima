@@ -714,7 +714,6 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardT
         validationData = _validateAccountPrepayment(opIndex, userOp, outOpInfo, requiredPreFund);
 
         require(_validateAndUpdateNonce(mUserOp.sender, mUserOp.nonce), FailedOp(opIndex, "AA25 invalid account nonce"));
-
         unchecked {
             if (preGas - gasleft() > verificationGasLimit) {
                 revert FailedOp(opIndex, "AA26 over verificationGasLimit");

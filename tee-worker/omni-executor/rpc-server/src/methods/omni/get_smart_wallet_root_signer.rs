@@ -11,7 +11,7 @@ use tracing::{debug, error};
 pub struct GetSmartWalletRootSignerParams {
 	pub omni_account: String,
 	pub chain_type: ChainType,
-	pub index: u32,
+	pub wallet_index: u32,
 }
 
 pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>) {
@@ -22,7 +22,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received omni_getSmartWalletRootSigner");
+			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
 			let Ok(address) = Address32::from_hex(&params.omni_account) else {
 				error!("Failed to parse from omni account token");
@@ -31,7 +31,7 @@ pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>)
 
 			let pubkey = ctx
 				.signer_client
-				.request_wallet(params.chain_type, params.index, address.as_ref().to_owned())
+				.request_wallet(params.chain_type, params.wallet_index, address.as_ref().to_owned())
 				.await
 				.map_err(|_| {
 					error!("Failed to request wallet from signer client");

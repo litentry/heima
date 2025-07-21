@@ -167,7 +167,9 @@ dependencies = [
  "alloy-core",
  "alloy-eips",
  "alloy-genesis",
+ "alloy-json-rpc",
  "alloy-network",
+ "alloy-node-bindings",
  "alloy-provider",
  "alloy-rpc-client",
  "alloy-rpc-types",
@@ -350,6 +352,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloy-hardforks"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "819a3620fe125e0fff365363315ee5e24c23169173b19747dfd6deba33db8990"
+dependencies = [
+ "alloy-chains",
+ "alloy-eip2124",
+ "alloy-primitives",
+ "auto_impl",
+ "dyn-clone",
+]
+
+[[package]]
 name = "alloy-json-abi"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -416,6 +431,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloy-node-bindings"
+version = "1.0.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f70cdf0ba711fb6f1a427fd026e149bd6d64c9da4c020c1c96c69245c4721ac1"
+dependencies = [
+ "alloy-genesis",
+ "alloy-hardforks",
+ "alloy-network",
+ "alloy-primitives",
+ "alloy-signer",
+ "alloy-signer-local",
+ "k256",
+ "rand 0.8.5",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.12",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "alloy-primitives"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -454,8 +490,10 @@ dependencies = [
  "alloy-json-rpc",
  "alloy-network",
  "alloy-network-primitives",
+ "alloy-node-bindings",
  "alloy-primitives",
  "alloy-rpc-client",
+ "alloy-rpc-types-anvil",
  "alloy-rpc-types-eth",
  "alloy-signer",
  "alloy-sol-types",
@@ -534,6 +572,18 @@ name = "alloy-rpc-types"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99074f79ad4b188b1049807f8f96637abc3cc019fde53791906edc26bc092a57"
+dependencies = [
+ "alloy-primitives",
+ "alloy-rpc-types-eth",
+ "alloy-serde",
+ "serde",
+]
+
+[[package]]
+name = "alloy-rpc-types-anvil"
+version = "1.0.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ad84b1927e3c5985afca4a3c3a3a5bdce433de30cf8b2f7e52b642758d235d9"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-eth",
@@ -3965,6 +4015,7 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "uuid 1.17.0",
@@ -4028,6 +4079,7 @@ dependencies = [
 name = "executor-worker"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
  "accounting-contract-client",
  "alloy",
  "binance-api",
@@ -4040,6 +4092,7 @@ dependencies = [
  "executor-crypto",
  "executor-primitives",
  "executor-storage",
+ "heima-identity-verification",
  "hex",
  "intent-asset-lock",
  "metrics-exporter-prometheus",
@@ -4061,6 +4114,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "wildmeta-api",
 ]
 
 [[package]]
@@ -5057,6 +5111,7 @@ dependencies = [
  "oauth-providers",
  "parity-scale-codec",
  "rand 0.8.5",
+ "regex",
  "sendgrid",
  "serde",
  "serde_json",
@@ -6632,11 +6687,14 @@ dependencies = [
 name = "mock-server"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "env_logger 0.11.8",
  "hex",
  "log",
  "serde_json",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
+ "tracing",
  "warp",
 ]
 
@@ -6709,7 +6767,10 @@ dependencies = [
 name = "native-task-handler"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
+ "alloy",
  "chrono",
+ "ethereum-rpc",
  "executor-core",
  "executor-crypto",
  "executor-primitives",
@@ -7045,6 +7106,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9bedf36ffb6ba96c2eb7144ef6270557b52e54b20c0a8e1eb2ff99a6c6959bff"
 dependencies = [
  "asn1-rs",
+]
+
+[[package]]
+name = "omni-cli"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "clap",
+ "executor-core",
+ "executor-primitives",
+ "hex",
+ "reqwest 0.12.22",
+ "serde",
+ "serde_json",
+ "signer-client",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid 1.17.0",
 ]
 
 [[package]]
@@ -8562,11 +8643,15 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
+ "alloy",
  "alloy-signer",
  "alloy-signer-local",
+ "async-trait",
  "base58",
  "chrono",
  "config-loader",
+ "ethereum-rpc",
  "ethers",
  "executor-core",
  "executor-crypto",
@@ -8596,6 +8681,7 @@ dependencies = [
  "tower 0.4.13",
  "tower-http 0.5.2",
  "tracing",
+ "wildmeta-api",
 ]
 
 [[package]]
@@ -14899,6 +14985,21 @@ checksum = "0ce5da8ecb62bcd8ec8b7ea19f69a51275e91299be594ea5cc6ef7819e16cd03"
 dependencies = [
  "bytemuck",
  "safe_arch",
+]
+
+[[package]]
+name = "wildmeta-api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "mockall",
+ "parity-scale-codec",
+ "reqwest 0.12.22",
+ "serde",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

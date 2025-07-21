@@ -36,7 +36,7 @@ pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContex
 				.insert(&omni_account.hash(), verification_code.clone())
 				.map_err(|_| ErrorCode::InternalError)?;
 
-			send_verification_email(&ctx.mailer, params.user_email, verification_code)
+			send_verification_email(&*ctx.mailer, params.user_email, verification_code)
 				.await
 				.map_err(|_| {
 					error!("Failed to send verification email");

@@ -78,3 +78,7 @@ impl GetEventId<EventId> for BlockEvent {
 pub struct PumpxAccountProfile {
 	pub wallet_exported: bool,
 }
+
+/// Represents EVM chain ID for omni operations
+/// Since we only support EVM chains now, this is simply a u64 chain ID
+pub type ChainId = u64;

@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{addRootSignerCall, getNonceCall, removeRootSignerCall};
+use crate::types::{addRootSignerCall, getNonceCall, getOwnerCall, removeRootSignerCall};
 use crate::utils::build_call_transaction;
-use alloy::primitives::{Address, U256};
+use alloy::primitives::{Address, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolValue};
 use ethereum_rpc::RpcProvider;
@@ -31,6 +31,10 @@ pub struct OmniAccountClient<P: RpcProvider<Transaction = TransactionRequest>> {
 impl<P: RpcProvider<Transaction = TransactionRequest>> OmniAccountClient<P> {
 	pub fn new(address: Address, rpc_client: Arc<P>) -> Self {
 		Self { address, rpc_client }
+	}
+
+	pub fn rpc_client(&self) -> Arc<P> {
+		self.rpc_client.clone()
 	}
 
 	pub async fn get_nonce(&self) -> Result<U256, ()> {
@@ -57,6 +61,19 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> OmniAccountClient<P> {
 		let tx = build_call_transaction(self.address, call_data);
 		self.rpc_client.send_transaction(tx).await.map_err(|_| ())?;
 		Ok(())
+	}
+
+	pub async fn get_owner(&self) -> Result<FixedBytes<32>, ()> {
+		let call_data = getOwnerCall {}.abi_encode();
+		let tx = build_call_transaction(self.address, call_data);
+		let result = self
+			.rpc_client
+			.call(tx)
+			.await
+			.map_err(|e| error!("Could not get owner: {:?}", e))?;
+		let owner =
+			FixedBytes::<32>::abi_decode(&result).map_err(|_| error!("Could not decode owner"))?;
+		Ok(owner)
 	}
 }
 
@@ -102,7 +119,7 @@ pub mod test {
 			.expect_send_transaction()
 			.with(mockall::predicate::always())
 			.times(1)
-			.returning(|_| Ok(()));
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let client = OmniAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.add_root_signer(root_signer).await;
@@ -121,7 +138,7 @@ pub mod test {
 			.expect_send_transaction()
 			.with(mockall::predicate::always())
 			.times(1)
-			.returning(|_| Ok(()));
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let client = OmniAccountClient::new(account_address, Arc::new(rpc_client));
 		let result = client.remove_root_signer(root_signer).await;
