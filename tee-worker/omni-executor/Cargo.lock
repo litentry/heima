@@ -18,7 +18,9 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "ethereum-rpc",
+ "ethers",
  "heima-primitives",
+ "heima-utils",
  "mockall",
  "sha2 0.10.9",
  "test-log",

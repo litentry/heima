@@ -16,6 +16,8 @@ test-log = { workspace = true }
 ethereum-rpc = { workspace = true, features = ["mocks"] }
 mockall = { workspace = true }
 sha2 = { workspace = true }
+heima-utils = { workspace = true }
+ethers = "2.0.14"
 
 [lints]
 workspace = true

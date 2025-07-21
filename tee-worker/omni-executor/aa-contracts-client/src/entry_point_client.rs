@@ -364,6 +364,7 @@ pub mod test {
 	use ethereum_rpc::mocks::MockRpcProvider;
 	use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
 	use heima_primitives::{AccountId, Identity, Web2IdentityType};
+	use heima_utils::decode_hex;
 	use std::str::FromStr;
 	use std::sync::Arc;
 	use test_log::test;
@@ -589,5 +590,64 @@ pub mod test {
 
 		// Assert that all three methods return the same address
 		assert_eq!(entrypoint_address_result, local_address_result,);
+	}
+
+	#[tokio::test]
+	async fn print_init_code_and_sender() {
+		let entrypoint_address = address!("0xf1646af389deE47DC7d45E6616A1bCdc9F2b0140");
+		let rpc_client =
+			Arc::new(AlloyRpcProvider::new("https://arbitrum-sepolia.api.onfinality.io/public"));
+		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
+
+		let factory = address!("0xca470c1990B1E3DBF24676D8ACDF4B5867CD410e");
+		let oa: [u8; 32] =
+			decode_hex("0xf8e2b8a37e033636eca0ab96dc93cf1d3af807a530010943e838bd272e1d8dc0")
+				.unwrap()
+				.try_into()
+				.unwrap();
+		let client_id = "Wildmeta";
+		let root_signer = address!("0x947E83EfcbC5A9c7A1A84Cea4dEBc4ce632E6564");
+		let client_id_bytes = client_id.as_bytes();
+		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
+		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
+		let init_code_bytes =
+			prepare_factory_init_code(factory, oa, &client_id_fixed_bytes.as_ref(), root_signer);
+		let init_code = Bytes::from(init_code_bytes);
+		println!("initCode: {}", format!("{init_code}"));
+
+		let sender = entrypoint_client.get_sender_address(init_code).await.unwrap();
+		println!("sender: {}", sender);
+	}
+
+	#[test]
+	fn print_calldata() {
+		use ethers::abi::AbiEncode;
+		use ethers::abi::Token;
+		use ethers::types::Address;
+		use ethers::utils::parse_ether;
+
+		// OmniAccount `execute(address dest, uint256 value, bytes func)`
+		let function_signature = "execute(address,uint256,bytes)";
+		let function_selector = ethers::utils::id(function_signature)[..4].to_vec();
+
+		// Recipient
+		let recipient: Address = "0x49fC5CC35F08E894959AA09Ce64d51F58faBdc0b".parse().unwrap();
+
+		// Amount: 0.001 ETH
+		let value = parse_ether(0.001).unwrap(); // U256
+
+		// Empty bytes for `func`
+		let func = ethers::abi::Bytes::from(vec![]);
+
+		// Encode the parameters
+		let params = [Token::Address(recipient), Token::Uint(value), Token::Bytes(func.to_vec())];
+
+		let encoded_params = ethers::abi::encode(&params);
+
+		// Concatenate selector + encoded params
+		let mut calldata = function_selector;
+		calldata.extend(encoded_params);
+
+		println!("calldata: 0x{}", hex::encode(calldata));
 	}
 }
