@@ -36,7 +36,6 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 		});
 
 	let verify_google_code = warp::post()
-		.and(warp::path!("v3" / "account" / "verify_google_code"))
 		.and(warp::body::json())
 		.map(|body: serde_json::Value| {
 			tracing::info!("Received verify_google_code request: {:?}", body);
