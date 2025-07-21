@@ -8,6 +8,7 @@ import {
 	toHex,
 	type Address,
 	type Hash,
+	type PublicClient,
 } from "viem";
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
@@ -182,6 +183,52 @@ export interface PackedUserOperation {
 }
 
 /**
+ * Estimate gas parameters for a UserOperation
+ */
+export async function estimateUserOperationGas(
+	publicClient: PublicClient,
+	isDeployment: boolean = false,
+): Promise<{
+	callGasLimit: bigint;
+	verificationGasLimit: bigint;
+	preVerificationGas: bigint;
+	maxFeePerGas: bigint;
+	maxPriorityFeePerGas: bigint;
+}> {
+	try {
+		// Get current gas prices from the network
+		const feeData = await publicClient.estimateFeesPerGas();
+		
+		// Use the estimated values with a safety margin (1.2x for maxFeePerGas)
+		const maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
+		const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
+		
+		// Use higher gas limits for deployment
+		const callGasLimit = isDeployment ? BigInt(2000000) : BigInt(500000);
+		const verificationGasLimit = isDeployment ? BigInt(3000000) : BigInt(1000000);
+		const preVerificationGas = BigInt(100000);
+		
+		return {
+			callGasLimit,
+			verificationGasLimit,
+			preVerificationGas,
+			maxFeePerGas,
+			maxPriorityFeePerGas,
+		};
+	} catch (error) {
+		console.warn("Failed to estimate gas, using fallback values:", error);
+		// Fallback values appropriate for Arbitrum Sepolia
+		return {
+			callGasLimit: isDeployment ? BigInt(2000000) : BigInt(500000),
+			verificationGasLimit: isDeployment ? BigInt(3000000) : BigInt(1000000),
+			preVerificationGas: BigInt(100000),
+			maxFeePerGas: BigInt(30000000000), // 30 gwei fallback
+			maxPriorityFeePerGas: BigInt(1500000000), // 1.5 gwei fallback
+		};
+	}
+}
+
+/**
  * Create a basic UserOperation
  */
 export function createUserOperation(params: {
@@ -189,6 +236,13 @@ export function createUserOperation(params: {
 	nonce?: bigint;
 	callData?: `0x${string}`;
 	initCode?: `0x${string}`;
+	gasParams?: {
+		callGasLimit: bigint;
+		verificationGasLimit: bigint;
+		preVerificationGas: bigint;
+		maxFeePerGas: bigint;
+		maxPriorityFeePerGas: bigint;
+	};
 	paymaster?: {
 		address: Address;
 		validationGasLimit?: bigint;
@@ -207,16 +261,25 @@ export function createUserOperation(params: {
 		);
 	}
 
+	// Use provided gas parameters or defaults
+	const gasParams = params.gasParams || {
+		callGasLimit: BigInt(2000000),
+		verificationGasLimit: BigInt(3000000),
+		preVerificationGas: BigInt(100000),
+		maxFeePerGas: BigInt(30000000000), // 30 gwei default
+		maxPriorityFeePerGas: BigInt(1500000000), // 1.5 gwei default
+	};
+
 	return {
 		sender: params.sender,
 		nonce: params.nonce || BigInt(0),
 		initCode: params.initCode || "0x",
 		callData: params.callData || "0x",
-		callGasLimit: BigInt(2000000), // Increased for deployment
-		verificationGasLimit: BigInt(3000000), // Increased for deployment
-		preVerificationGas: BigInt(100000),
-		maxFeePerGas: BigInt(20000000000), // 20 gwei
-		maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei
+		callGasLimit: gasParams.callGasLimit,
+		verificationGasLimit: gasParams.verificationGasLimit,
+		preVerificationGas: gasParams.preVerificationGas,
+		maxFeePerGas: gasParams.maxFeePerGas,
+		maxPriorityFeePerGas: gasParams.maxPriorityFeePerGas,
 		paymasterAndData,
 		signature: "0x",
 	};
@@ -684,6 +747,13 @@ export function buildTokenTransferUserOp(params: {
 	recipient: Address;
 	amount: bigint;
 	nonce?: bigint;
+	gasParams?: {
+		callGasLimit: bigint;
+		verificationGasLimit: bigint;
+		preVerificationGas: bigint;
+		maxFeePerGas: bigint;
+		maxPriorityFeePerGas: bigint;
+	};
 	paymaster?: {
 		address: Address;
 		validationGasLimit?: bigint;
@@ -710,6 +780,7 @@ export function buildTokenTransferUserOp(params: {
 		sender: params.omniAccountAddress,
 		nonce: params.nonce,
 		callData: executeCallData,
+		gasParams: params.gasParams,
 		paymaster: params.paymaster,
 	});
 }

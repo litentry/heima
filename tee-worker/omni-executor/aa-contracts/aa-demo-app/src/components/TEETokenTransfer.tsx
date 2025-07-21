@@ -8,6 +8,7 @@ import {
     buildTokenTransferUserOp,
     packUserOperation,
     toSerializablePackedUserOperation,
+    estimateUserOperationGas,
 } from "@/lib/aa-utils";
 
 interface TEETokenTransferProps {
@@ -138,6 +139,9 @@ export function TEETokenTransfer({
         setIsSubmitting(true);
 
         try {
+            // Estimate gas parameters for token transfer
+            const gasParams = await estimateUserOperationGas(publicClient!, false);
+
             // Build the UserOperation for token transfer
             const userOp = buildTokenTransferUserOp({
                 omniAccountAddress: omniAccountAddress as `0x${string}`,
@@ -145,6 +149,7 @@ export function TEETokenTransfer({
                 recipient: recipient as `0x${string}`,
                 amount: amountBigInt,
                 nonce,
+                gasParams,
             });
 
             // Pack the UserOperation

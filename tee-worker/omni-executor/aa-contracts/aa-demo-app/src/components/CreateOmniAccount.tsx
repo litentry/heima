@@ -18,6 +18,7 @@ import {
     UserOpSigner,
     type UserOperation,
     checkPaymasterStatus,
+    estimateUserOperationGas,
 } from "@/lib/aa-utils";
 import { DEFAULT_CLIENT_ID, CONTRACTS, PAYMASTER_CONFIG } from "@/lib/constants";
 
@@ -136,12 +137,18 @@ export function CreateOmniAccount({
                 initCode: initCode.slice(0, 66) + "...",
             });
 
+            // Estimate gas parameters for the deployment
+            console.log("Estimating gas parameters...");
+            const gasParams = await estimateUserOperationGas(publicClient, true);
+            console.log("Estimated gas parameters:", gasParams);
+
             // Create UserOperation for deploying the Omni Account
             const userOp = createUserOperation({
                 sender: omniAccountAddress as `0x${string}`,
                 nonce: BigInt(0),
                 initCode: initCode,
                 callData: "0x", // No additional operations needed
+                gasParams,
                 paymaster: usePaymaster && paymasterStatus?.isAvailable
                     ? {
                         address: CONTRACTS.SimplePaymaster.address,

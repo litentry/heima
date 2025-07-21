@@ -11,6 +11,7 @@ import {
     UserOpSigner,
     type UserOperation,
     checkPaymasterStatus,
+    estimateUserOperationGas,
 } from "@/lib/aa-utils";
 
 interface AuthorizeTEEWorkerProps {
@@ -125,12 +126,16 @@ export function AuthorizeTEEWorker({
                 args: [omniAccountAddress as `0x${string}`, BigInt(0)],
             })) as bigint;
 
+            // Estimate gas parameters
+            const gasParams = await estimateUserOperationGas(publicClient, false);
+
             // Create UserOperation
             const userOp = createUserOperation({
                 sender: omniAccountAddress as `0x${string}`,
                 nonce,
                 callData,
                 initCode: "0x", // Account already deployed
+                gasParams,
                 paymaster: usePaymaster && paymasterStatus?.isAvailable
                     ? {
                         address: CONTRACTS.SimplePaymaster.address,
