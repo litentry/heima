@@ -99,6 +99,7 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
         uint256 opslen = ops.length;
         results = new ExecutionResult[](opslen);
         UserOpInfo[] memory opInfos = new UserOpInfo[](opslen);
+        uint256 collected = 0;
         
         unchecked {
             // For simulation, we need to run validation on each operation first
@@ -108,6 +109,7 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
                 
                 // Execute the user operation
                 uint256 paid = _executeUserOp(i, ops[i], opInfos[i]);
+                collected += paid;
                 
                 // Create execution result for this operation
                 results[i] = ExecutionResult(
@@ -121,8 +123,9 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
             }
         }
         
-        // Note: In simulation, we don't actually compensate the beneficiary
-        // This is just for simulation purposes to understand gas costs and execution flow
+        // Compensate beneficiary to accurately simulate the actual handleOps behavior
+        // This ensures gas estimation includes the transfer cost and validates the beneficiary
+        _compensate(beneficiary, collected);
         
         return results;
     }
