@@ -21,4 +21,4 @@ RUN mkdir -p out cache broadcast /shared && \
     chmod 777 out cache broadcast /shared
 
 # Run the deployment script
-CMD ["./docker-deploy.sh"]
+CMD ["./deploy-docker.sh"]

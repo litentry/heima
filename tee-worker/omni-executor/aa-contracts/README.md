@@ -28,3 +28,5 @@ This script will:
 - Display the deployed contract addresses
 
 The script keeps Anvil running after deployment. Press Ctrl+C to stop both the script and Anvil.
+
+Also see [DEPLOYMENT.md](./DEPLOYMENT.md) for more information.
