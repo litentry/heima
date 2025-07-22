@@ -16,7 +16,8 @@
 
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateValidationCall, SenderAddressResult, ValidationResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, SenderAddressResult,
+	ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
@@ -172,6 +173,48 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				// In some cases, the simulation might revert with ValidationResult data
 				ValidationResult::abi_decode(&revert_data).map_err(|_| {
 					error!("Could not decode ValidationResult from revert data");
+				})
+			},
+			Err(None) => {
+				error!("Simulation failed with no data");
+				Err(())
+			},
+		}
+	}
+
+	pub async fn simulate_handle_ops(
+		&self,
+		user_ops: &[PackedUserOperation],
+		beneficiary: Address,
+	) -> Result<Vec<ExecutionResult>, ()> {
+		// Create state override to deploy simulation contract at EntryPoint address
+		let mut state_override = HashMap::new();
+		state_override.insert(
+			self.entry_point_address,
+			AccountOverride {
+				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				..Default::default()
+			},
+		);
+
+		// Build call to simulateHandleOps
+		let ops = user_ops.to_vec();
+		let call_data = simulateHandleOpsCall { ops, beneficiary }.abi_encode();
+		let tx = build_call_transaction(self.entry_point_address, call_data);
+
+		// Make the call with state override
+		// EntryPointSimulations.simulateHandleOps() returns ExecutionResult[] on success
+		match self.rpc_client.call_with_state_override(tx, state_override).await {
+			Ok(result) => {
+				// Decode the ExecutionResult[] from the successful response
+				Vec::<ExecutionResult>::abi_decode(&result).map_err(|_| {
+					error!("Could not decode ExecutionResult[] from response");
+				})
+			},
+			Err(Some(revert_data)) => {
+				// In some cases, the simulation might revert with ExecutionResult[] data
+				Vec::<ExecutionResult>::abi_decode(&revert_data).map_err(|_| {
+					error!("Could not decode ExecutionResult[] from revert data");
 				})
 			},
 			Err(None) => {
@@ -538,6 +581,85 @@ pub mod test {
 		let sender = entrypoint_client.get_sender_address(init_code.clone()).await.unwrap();
 
 		assert_eq!(expected_sender, sender);
+	}
+
+	#[test(tokio::test)]
+	#[ignore = "manual"]
+	pub async fn test_simulate_handle_ops() {
+		// This test demonstrates how to use the new simulate_handle_ops function
+		// to simulate a batch of user operations before actual execution
+
+		let client_id = "test_client";
+		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
+		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
+		let paymaster_address = address!("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
+		let beneficiary_address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+		let root_address = address!("0x0000000000000000000000000000000000000001");
+
+		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
+		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
+
+		// Create two user operations for batch simulation
+		let oa: AccountId =
+			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let client_id_bytes = client_id.as_bytes();
+		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
+
+		// Create first user operation
+		let call_data1 = Bytes::from(vec![0x12, 0x34]); // dummy call data
+		let user_op1 = entrypoint_client
+			.create_packed_user_operation(
+				factory_address,
+				oa_bytes.0,
+				client_id_bytes,
+				root_address,
+				call_data1,
+				Some(paymaster_address),
+			)
+			.await
+			.expect("Should create first user operation");
+
+		// Create second user operation with different call data
+		let call_data2 = Bytes::from(vec![0x56, 0x78]); // different dummy call data
+		let user_op2 = entrypoint_client
+			.create_packed_user_operation(
+				factory_address,
+				oa_bytes.0,
+				client_id_bytes,
+				root_address,
+				call_data2,
+				Some(paymaster_address),
+			)
+			.await
+			.expect("Should create second user operation");
+
+		// Simulate batch execution of both user operations
+		let user_ops = vec![user_op1, user_op2];
+		let simulation_results = entrypoint_client
+			.simulate_handle_ops(&user_ops, beneficiary_address)
+			.await
+			.expect("simulate_handle_ops should succeed");
+
+		// Verify we got results for both operations
+		assert_eq!(simulation_results.len(), 2, "Should get results for both operations");
+
+		// Log simulation results
+		for (i, result) in simulation_results.iter().enumerate() {
+			println!("UserOp {} simulation result:", i);
+			println!("  Pre-op gas: {}", result.preOpGas);
+			println!("  Paid: {}", result.paid);
+			println!("  Account validation data: {}", result.accountValidationData);
+			println!("  Paymaster validation data: {}", result.paymasterValidationData);
+			println!("  Target success: {}", result.targetSuccess);
+		}
+
+		// After successful simulation, execute the batch
+		let tx_hash = entrypoint_client
+			.handle_ops(&user_ops, beneficiary_address)
+			.await
+			.expect("Batch execution should succeed");
+		println!("Batch transaction hash: {}", tx_hash);
 	}
 
 	#[test(tokio::test)]

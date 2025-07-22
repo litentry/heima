@@ -2,6 +2,10 @@
 
 # AA Contracts Deployment Script
 # This script starts an Anvil node and deploys the Account Abstraction contracts
+#
+# Usage:
+#   ./local-deploy.sh                   # Deploy with SimplePaymaster (default)
+#   PAYMASTER_TYPE=demo ./local-deploy.sh  # Deploy with DemoPaymaster (no bundler restrictions)
 
 set -e
 
@@ -16,6 +20,11 @@ ANVIL_HOST=127.0.0.1
 CHAIN_ID=1337
 DEPLOYER_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 OMNI_EXECUTOR_SIGNER="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+
+# Paymaster configuration
+# Set PAYMASTER_TYPE=demo to deploy DemoPaymaster (no bundler restrictions)
+# Default is SimplePaymaster (requires authorized bundlers)
+PAYMASTER_TYPE="${PAYMASTER_TYPE:-simple}"
 
 # Function to check if anvil is running
 check_anvil() {
@@ -45,9 +54,17 @@ deploy_contracts() {
     # Export environment variables for the script
     export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"  # Anvil's first private key
     export OMNI_EXECUTOR_SIGNER=$OMNI_EXECUTOR_SIGNER
+    export PAYMASTER_TYPE=$PAYMASTER_TYPE
+    
+    # Show which paymaster is being deployed
+    if [ "$PAYMASTER_TYPE" = "demo" ]; then
+        echo "🎮 Deploying with DemoPaymaster (no bundler restrictions)"
+    else
+        echo "🔒 Deploying with SimplePaymaster (requires authorized bundlers)"
+    fi
     
     # Run the deployment script
-    DEPLOY_OUTPUT=$(forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://$ANVIL_HOST:$ANVIL_PORT --broadcast --legacy)
+    DEPLOY_OUTPUT=$(forge script script/DeployLocalWithPaymaster.s.sol:DeployLocalWithPaymaster --rpc-url http://$ANVIL_HOST:$ANVIL_PORT --broadcast --legacy)
     
     if [ $? -ne 0 ]; then
         echo "❌ Failed to deploy contracts"
@@ -58,12 +75,16 @@ deploy_contracts() {
     echo "$DEPLOY_OUTPUT"
     
     # Extract addresses from the broadcast file
-    BROADCAST_FILE="$SCRIPT_DIR/broadcast/DeployLocal.s.sol/$CHAIN_ID/run-latest.json"
+    BROADCAST_FILE="$SCRIPT_DIR/broadcast/DeployLocalWithPaymaster.s.sol/$CHAIN_ID/run-latest.json"
     
     if [ -f "$BROADCAST_FILE" ]; then
         ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-        PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        # Try to find DemoPaymaster first, fall back to SimplePaymaster
+        PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        if [ -z "$PAYMASTER_ADDRESS" ]; then
+            PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        fi
         
         # Extract test token addresses
         USDC_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
@@ -76,7 +97,7 @@ deploy_contracts() {
         echo "==================="
         echo "EntryPoint:         $ENTRYPOINT_ADDRESS"
         echo "OmniAccountFactory: $FACTORY_ADDRESS"
-        echo "SimplePaymaster:    $PAYMASTER_ADDRESS"
+        echo "Paymaster:          $PAYMASTER_ADDRESS"
         echo ""
         echo "Test Token Addresses:"
         echo "===================="
@@ -85,7 +106,10 @@ deploy_contracts() {
         echo ""
         echo "Anvil RPC URL: http://$ANVIL_HOST:$ANVIL_PORT"
         echo ""
-        echo "To use these addresses in the demo app, update your .env.local file:"
+        echo "📋 To use these addresses in the demo app:"
+        echo "   Run: ./update-demo-addresses.sh"
+        echo ""
+        echo "Or manually update your .env.local file:"
         echo "NEXT_PUBLIC_ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS"
         echo "NEXT_PUBLIC_FACTORY_ADDRESS=$FACTORY_ADDRESS"
         echo "NEXT_PUBLIC_PAYMASTER_ADDRESS=$PAYMASTER_ADDRESS"

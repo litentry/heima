@@ -27,6 +27,7 @@ interface UserLoginResponse {
 }
 
 interface GetSmartWalletRootSignerParams {
+	omni_account: string;
 	chain_type: "Evm" | "Solana" | "Tron";
 	wallet_index: number;
 }
@@ -147,78 +148,83 @@ export async function loginWithEvm(
 
 // Get the TEE worker's smart wallet root signer address
 export async function getSmartWalletRootSigner(
-	idToken: string,
+	omniAccount: string,
 	chainType: "Evm" | "Solana" | "Tron" = TEE_WORKER_CONFIG.chainType,
 	index: number = TEE_WORKER_CONFIG.signerIndex
 ): Promise<string> {
 	const params: GetSmartWalletRootSignerParams = {
+		omni_account: omniAccount,
 		chain_type: chainType,
 		wallet_index: index,
 	};
 
-	return makeRpcRequest<string>("omni_getSmartWalletRootSigner", params, idToken);
+	return makeRpcRequest<string>("omni_getSmartWalletRootSigner", params);
 }
 
-// Combined flow to authenticate and get TEE worker address
-export async function authorizeTEEWorker(
-	walletClient: WalletClient,
-	evmAddress: string,
-	clientId: string,
+// Simplified flow to get TEE worker address without authentication
+export async function getTEEWorkerAddress(
 	omniAccount: string
-): Promise<{ idToken: string; workerAddress: string }> {
-	console.log("[TEE Worker] Starting authorization flow", {
-		evmAddress,
-		clientId,
+): Promise<string> {
+	console.log("[TEE Worker] Getting TEE worker address", {
 		omniAccount,
 		rpcUrl: TEE_WORKER_CONFIG.rpcUrl
 	});
 
-	// We'll retry once if the first attempt fails due to stale verification code
-	let retryCount = 0;
-	const maxRetries = 1;
+	try {
+		// Directly get the TEE worker's address without authentication
+		console.log("[TEE Worker] Getting smart wallet root signer");
+		const workerAddress = await getSmartWalletRootSigner(omniAccount);
+		console.log("[TEE Worker] Received worker address:", workerAddress);
 
-	while (retryCount <= maxRetries) {
-		try {
-			// Step 1: Get the message to sign
-			console.log(`[TEE Worker] Step 1: Getting Web3 sign-in message (attempt ${retryCount + 1})`);
-			const messagePayload = await getWeb3SignInMessage(clientId, omniAccount);
-			console.log("[TEE Worker] Received message payload:", messagePayload);
-
-			// Step 2: Sign and login
-			console.log("[TEE Worker] Step 2: Signing message and logging in");
-			const loginResponse = await loginWithEvm(
-				walletClient,
-				evmAddress,
-				clientId,
-				messagePayload
-			);
-			console.log("[TEE Worker] Login successful, received tokens");
-
-			// Step 3: Get the TEE worker's address using the id_token
-			console.log("[TEE Worker] Step 3: Getting smart wallet root signer");
-			const workerAddress = await getSmartWalletRootSigner(loginResponse.id_token);
-			console.log("[TEE Worker] Received worker address:", workerAddress);
-
-			return {
-				idToken: loginResponse.id_token,
-				workerAddress,
-			};
-		} catch (error) {
-			console.error(`[TEE Worker] Authorization attempt ${retryCount + 1} failed:`, error);
-
-			// If this was our last retry, throw the error
-			if (retryCount >= maxRetries) {
-				throw error;
-			}
-
-			// Wait a bit before retrying to ensure any server-side state is cleared
-			console.log("[TEE Worker] Waiting 1 second before retry...");
-			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			retryCount++;
-		}
+		return workerAddress;
+	} catch (error) {
+		console.error("[TEE Worker] Failed to get worker address:", error);
+		throw error;
 	}
+}
 
-	// This should never be reached due to the throw above
-	throw new Error("Authorization failed after all retries");
+// SerializablePackedUserOperation interface matching the Rust struct
+interface SerializablePackedUserOperation {
+	sender: string;             // Address as hex string (e.g., "0x1234...")
+	nonce: number;              // U256 as u128 integer
+	init_code: string;          // Bytes as hex string (e.g., "0xabc...")
+	call_data: string;          // Bytes as hex string (e.g., "0xdef...")
+	account_gas_limits: string; // FixedBytes<32> as hex string (e.g., "0x123...")
+	pre_verification_gas: number; // U256 as u128 integer
+	gas_fees: string;           // FixedBytes<32> as hex string (e.g., "0x456...")
+	paymaster_and_data: string; // Bytes as hex string (e.g., "0x789...")
+	signature?: string;         // Optional signature: None = unsigned, Some("0xabc...") = signed
+}
+
+interface SubmitUserOpTestParams {
+	user_operations: SerializablePackedUserOperation[];
+	chain_id: number;
+	wallet_index: number;
+	omni_account: string;
+	client_id: string;
+}
+
+interface SubmitUserOpTestResponse {
+	transaction_hash: string | null;
+}
+
+// Submit user operations through the TEE worker
+export async function submitUserOpTest(
+	userOperations: SerializablePackedUserOperation[],
+	chainId: number,
+	walletIndex: number,
+	omniAccount: string,
+	clientId: string
+): Promise<SubmitUserOpTestResponse> {
+	const params: SubmitUserOpTestParams = {
+		user_operations: userOperations,
+		chain_id: chainId,
+		wallet_index: walletIndex,
+		omni_account: omniAccount,
+		client_id: clientId,
+	};
+
+	console.log("[TEE Worker] Submitting user operation test", params);
+
+	return makeRpcRequest<SubmitUserOpTestResponse>("omni_submitUserOpTest", params);
 }

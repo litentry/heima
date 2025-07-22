@@ -7,8 +7,9 @@ USER root
 # Set working directory
 WORKDIR /app
 
-# Copy the entire omni-executor project to have access to forge-libs
-COPY . /app/
+# Copy only the necessary files for aa-contracts build
+COPY aa-contracts/ /app/aa-contracts/
+COPY forge-libs/ /app/forge-libs/
 
 # Set working directory to aa-contracts
 WORKDIR /app/aa-contracts
