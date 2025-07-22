@@ -6,6 +6,7 @@ import "forge-std/console.sol";
 import "../src/core/EntryPoint.sol";
 import "../src/accounts/OmniAccountFactory.sol";
 import "../src/core/SimplePaymaster.sol";
+import "./DeploymentHelper.sol";
 
 /**
  * @title Deploy
@@ -209,74 +210,50 @@ contract Deploy is Script {
     }
 
     function saveDeploymentAddresses(NetworkConfig memory networkConfig) internal {
-        // Create deployment directory if it doesn't exist
-        string memory deploymentDir = "deployments";
-
-        // Ensure the deployments directory exists
-        try vm.createDir(deploymentDir, false) {} catch {}
-
-        // Create filename based on network
-        string memory filename =
-            string(abi.encodePacked(deploymentDir, "/", getNetworkFilename(networkConfig.chainId), ".json"));
-
-        // Create JSON with deployment addresses
-        string memory json = string(
-            abi.encodePacked(
-                "{\n",
-                '  "network": "',
-                networkConfig.name,
-                '",\n',
-                '  "chainId": ',
-                vm.toString(networkConfig.chainId),
-                ",\n",
-                '  "timestamp": ',
-                vm.toString(block.timestamp),
-                ",\n",
-                '  "deployer": "',
-                vm.toString(msg.sender),
-                '",\n',
-                '  "contracts": {\n',
-                '    "EntryPoint": "',
-                vm.toString(entryPointAddress),
-                '",\n',
-                '    "OmniAccountFactory": "',
-                vm.toString(factoryAddress),
-                '",\n',
-                '    "SimplePaymaster": "',
-                vm.toString(paymasterAddress),
-                '"\n',
-                "  }\n",
-                "}"
-            )
-        );
-
-        // Write to deployment file (creates file if it doesn't exist)
-        try vm.writeFile(filename, json) {
-            console.log("Deployment addresses saved to:", filename);
-        } catch Error(string memory reason) {
-            console.log("Failed to save deployment file:", reason);
-            console.log("Contract addresses (save manually if needed):");
-            console.log("EntryPoint:         ", entryPointAddress);
-            console.log("OmniAccountFactory: ", factoryAddress);
-            console.log("SimplePaymaster:    ", paymasterAddress);
+        // Get deployment environment (default to empty string for backward compatibility)
+        string memory environment = "";
+        try vm.envString("DEPLOYMENT_ENV") returns (string memory env) {
+            environment = env;
         } catch {
-            console.log("Failed to save deployment file (unknown error)");
-            console.log("Contract addresses (save manually if needed):");
-            console.log("EntryPoint:         ", entryPointAddress);
-            console.log("OmniAccountFactory: ", factoryAddress);
-            console.log("SimplePaymaster:    ", paymasterAddress);
+            // No environment specified, use flat structure
         }
+        
+        // Create array of deployments with enhanced artifact data
+        DeploymentHelper.ContractDeployment[] memory deployments = new DeploymentHelper.ContractDeployment[](3);
+        
+        // Add EntryPoint deployment with ABI and bytecode
+        deployments[0] = DeploymentHelper.createContractDeployment(
+            vm,
+            "EntryPoint",
+            entryPointAddress,
+            "" // No additional metadata for now
+        );
+        
+        // Add OmniAccountFactory deployment with ABI and bytecode
+        deployments[1] = DeploymentHelper.createContractDeployment(
+            vm,
+            "OmniAccountFactory",
+            factoryAddress,
+            "" // No additional metadata for now
+        );
+        
+        // Add SimplePaymaster deployment with ABI and bytecode
+        deployments[2] = DeploymentHelper.createContractDeployment(
+            vm,
+            "SimplePaymaster",
+            paymasterAddress,
+            string(abi.encodePacked('{"initialBundler": "', vm.toString(initialBundler), '"}'))
+        );
+        
+        // Save enhanced deployment artifacts with environment support
+        DeploymentHelper.saveDeploymentArtifacts(
+            vm,
+            "deployments",
+            environment,
+            networkConfig.name,
+            networkConfig.chainId,
+            deployments
+        );
     }
 
-    function getNetworkFilename(uint256 chainId) internal pure returns (string memory) {
-        if (chainId == 1) return "mainnet";
-        if (chainId == 11155111) return "sepolia";
-        if (chainId == 56) return "bsc";
-        if (chainId == 97) return "bsc-testnet";
-        if (chainId == 137) return "polygon";
-        if (chainId == 80001) return "mumbai";
-        if (chainId == 1337) return "local";
-        if (chainId == 31337) return "local";
-        return string(abi.encodePacked("chain-", vm.toString(chainId)));
-    }
 }
