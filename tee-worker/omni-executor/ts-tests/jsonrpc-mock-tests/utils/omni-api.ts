@@ -6,6 +6,8 @@ import {
     GetWeb3SignInMessageParams,
     GetNextIntentIdParams,
     ExportWalletParams,
+    SubmitUserOpParams,
+    GetSmartWalletRootSignerParams,
 } from './request-types';
 import {
     RequestEmailVerificationCodeResponse,
@@ -15,6 +17,8 @@ import {
     GetNextIntentIdResponse,
     ExportWalletResponse,
     AddWalletResponse,
+    SubmitUserOpResponse,
+    GetSmartWalletRootSignerResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -72,6 +76,18 @@ export class OmniApi {
 
     async exportWallet(params: ExportWalletParams, token: string): Promise<ExportWalletResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniExportWallet, params, token);
+
+        return response;
+    }
+
+    async submitUserOp(params: SubmitUserOpParams, token: string): Promise<SubmitUserOpResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSubmitUserOp, params, token);
+
+        return response;
+    }
+
+    async getSmartWalletRootSigner(params: GetSmartWalletRootSignerParams, token: string): Promise<GetSmartWalletRootSignerResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniGetSmartWalletRootSigner, params, token);
 
         return response;
     }

@@ -38,3 +38,22 @@ export interface ExportWalletParams {
     wallet_index: number;
     wallet_address: string;
 }
+
+export interface SubmitUserOpParams {
+    user_op: {
+        sender: string;
+        nonce: string;
+        initCode: string;
+        callData: string;
+        accountGasLimits: string;
+        preVerificationGas: string;
+        gasFees: string;
+        paymasterAndData: string;
+        signature: string;
+    };
+}
+
+export interface GetSmartWalletRootSignerParams {
+    chain_type: string;
+    wallet_index: number;
+}

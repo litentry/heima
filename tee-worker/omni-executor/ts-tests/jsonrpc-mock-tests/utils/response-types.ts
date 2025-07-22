@@ -43,4 +43,9 @@ export interface ExportWalletResponse {
     aad: string;
     nonce: string;
 }
-// todo: add other types
+
+export interface SubmitUserOpResponse {
+    user_op_hash: string;
+}
+
+export type GetSmartWalletRootSignerResponse = string;
