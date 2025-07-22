@@ -8,6 +8,7 @@ import {
 	toHex,
 	type Address,
 	type Hash,
+	type PublicClient,
 } from "viem";
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
@@ -182,6 +183,52 @@ export interface PackedUserOperation {
 }
 
 /**
+ * Estimate gas parameters for a UserOperation
+ */
+export async function estimateUserOperationGas(
+	publicClient: PublicClient,
+	isDeployment: boolean = false,
+): Promise<{
+	callGasLimit: bigint;
+	verificationGasLimit: bigint;
+	preVerificationGas: bigint;
+	maxFeePerGas: bigint;
+	maxPriorityFeePerGas: bigint;
+}> {
+	try {
+		// Get current gas prices from the network
+		const feeData = await publicClient.estimateFeesPerGas();
+		
+		// Use the estimated values with a safety margin (1.2x for maxFeePerGas)
+		const maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
+		const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
+		
+		// Use higher gas limits for deployment
+		const callGasLimit = isDeployment ? BigInt(2000000) : BigInt(500000);
+		const verificationGasLimit = isDeployment ? BigInt(3000000) : BigInt(1000000);
+		const preVerificationGas = BigInt(100000);
+		
+		return {
+			callGasLimit,
+			verificationGasLimit,
+			preVerificationGas,
+			maxFeePerGas,
+			maxPriorityFeePerGas,
+		};
+	} catch (error) {
+		console.warn("Failed to estimate gas, using fallback values:", error);
+		// Fallback values appropriate for Arbitrum Sepolia
+		return {
+			callGasLimit: isDeployment ? BigInt(2000000) : BigInt(500000),
+			verificationGasLimit: isDeployment ? BigInt(3000000) : BigInt(1000000),
+			preVerificationGas: BigInt(100000),
+			maxFeePerGas: BigInt(30000000000), // 30 gwei fallback
+			maxPriorityFeePerGas: BigInt(1500000000), // 1.5 gwei fallback
+		};
+	}
+}
+
+/**
  * Create a basic UserOperation
  */
 export function createUserOperation(params: {
@@ -189,18 +236,51 @@ export function createUserOperation(params: {
 	nonce?: bigint;
 	callData?: `0x${string}`;
 	initCode?: `0x${string}`;
+	gasParams?: {
+		callGasLimit: bigint;
+		verificationGasLimit: bigint;
+		preVerificationGas: bigint;
+		maxFeePerGas: bigint;
+		maxPriorityFeePerGas: bigint;
+	};
+	paymaster?: {
+		address: Address;
+		validationGasLimit?: bigint;
+		postOpGasLimit?: bigint;
+		data?: `0x${string}`;
+	};
 }): UserOperation {
+	// Encode paymasterAndData if paymaster is provided
+	let paymasterAndData: `0x${string}` = "0x";
+	if (params.paymaster && params.paymaster.address !== "0x0000000000000000000000000000000000000000") {
+		paymasterAndData = encodePaymasterAndData(
+			params.paymaster.address,
+			params.paymaster.validationGasLimit,
+			params.paymaster.postOpGasLimit,
+			params.paymaster.data,
+		);
+	}
+
+	// Use provided gas parameters or defaults
+	const gasParams = params.gasParams || {
+		callGasLimit: BigInt(2000000),
+		verificationGasLimit: BigInt(3000000),
+		preVerificationGas: BigInt(100000),
+		maxFeePerGas: BigInt(30000000000), // 30 gwei default
+		maxPriorityFeePerGas: BigInt(1500000000), // 1.5 gwei default
+	};
+
 	return {
 		sender: params.sender,
 		nonce: params.nonce || BigInt(0),
 		initCode: params.initCode || "0x",
 		callData: params.callData || "0x",
-		callGasLimit: BigInt(2000000), // Increased for deployment
-		verificationGasLimit: BigInt(3000000), // Increased for deployment
-		preVerificationGas: BigInt(100000),
-		maxFeePerGas: BigInt(20000000000), // 20 gwei
-		maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei
-		paymasterAndData: "0x",
+		callGasLimit: gasParams.callGasLimit,
+		verificationGasLimit: gasParams.verificationGasLimit,
+		preVerificationGas: gasParams.preVerificationGas,
+		maxFeePerGas: gasParams.maxFeePerGas,
+		maxPriorityFeePerGas: gasParams.maxPriorityFeePerGas,
+		paymasterAndData,
 		signature: "0x",
 	};
 }
@@ -388,6 +468,145 @@ export function addSignaturePrefix(
 }
 
 /**
+ * Encode paymasterAndData field for UserOperation
+ * Format: [20 bytes paymaster address][16 bytes validationGasLimit][16 bytes postOpGasLimit][arbitrary bytes for paymaster data]
+ * 
+ * @param paymasterAddress - The paymaster contract address
+ * @param validationGasLimit - Gas limit for paymaster validation (default: 100000)
+ * @param postOpGasLimit - Gas limit for paymaster postOp (default: 50000)
+ * @param paymasterData - Optional paymaster-specific data
+ * @returns Encoded paymasterAndData field
+ */
+export function encodePaymasterAndData(
+	paymasterAddress: Address,
+	validationGasLimit: bigint = BigInt(100000),
+	postOpGasLimit: bigint = BigInt(50000),
+	paymasterData: `0x${string}` = "0x",
+): `0x${string}` {
+	// Validate inputs
+	if (!paymasterAddress || paymasterAddress === "0x0000000000000000000000000000000000000000") {
+		throw new Error("Invalid paymaster address");
+	}
+
+	// Remove 0x prefix from address
+	const addressBytes = paymasterAddress.slice(2).toLowerCase();
+	
+	// Convert gas limits to hex strings (uint128 = 16 bytes)
+	const validationGasHex = validationGasLimit.toString(16).padStart(32, '0');
+	const postOpGasHex = postOpGasLimit.toString(16).padStart(32, '0');
+	
+	// Remove 0x prefix from paymaster data if present
+	const dataBytes = paymasterData.startsWith('0x') ? paymasterData.slice(2) : paymasterData;
+	
+	// Combine all parts
+	const encoded = `0x${addressBytes}${validationGasHex}${postOpGasHex}${dataBytes}`;
+	
+	console.log("Encoded paymasterAndData:", {
+		paymasterAddress,
+		validationGasLimit: validationGasLimit.toString(),
+		postOpGasLimit: postOpGasLimit.toString(),
+		paymasterData,
+		encoded,
+	});
+	
+	return encoded as `0x${string}`;
+}
+
+/**
+ * Decode paymasterAndData field
+ * @param paymasterAndData - The encoded paymaster data
+ * @returns Decoded components or null if empty
+ */
+export function decodePaymasterAndData(paymasterAndData: `0x${string}`): {
+	paymaster: Address;
+	validationGasLimit: bigint;
+	postOpGasLimit: bigint;
+	data: `0x${string}`;
+} | null {
+	if (!paymasterAndData || paymasterAndData === "0x" || paymasterAndData.length < 106) {
+		return null;
+	}
+
+	const data = paymasterAndData.slice(2); // Remove 0x prefix
+	
+	const paymaster = `0x${data.slice(0, 40)}` as Address;
+	const validationGasLimit = BigInt(`0x${data.slice(40, 72)}`);
+	const postOpGasLimit = BigInt(`0x${data.slice(72, 104)}`);
+	const paymasterData = `0x${data.slice(104)}` as `0x${string}`;
+
+	return {
+		paymaster,
+		validationGasLimit,
+		postOpGasLimit,
+		data: paymasterData,
+	};
+}
+
+/**
+ * Check if paymaster is available and has sufficient balance
+ * @param publicClient - Viem public client
+ * @param paymasterAddress - Address of the paymaster contract
+ * @param entryPointAddress - Address of the EntryPoint contract
+ * @param minBalance - Minimum balance required (default: 0.01 ETH)
+ * @returns Object with availability status and balance info
+ */
+export async function checkPaymasterStatus(
+	publicClient: any,
+	paymasterAddress: Address,
+	entryPointAddress: Address,
+	minBalance: bigint = BigInt("10000000000000000"), // 0.01 ETH
+): Promise<{
+	isAvailable: boolean;
+	isDeployed: boolean;
+	isFunded: boolean;
+	balance: bigint;
+	error?: string;
+}> {
+	try {
+		// Check if paymaster is deployed
+		const code = await publicClient.getBytecode({ address: paymasterAddress });
+		const isDeployed = !!(code && code !== "0x");
+
+		if (!isDeployed) {
+			return {
+				isAvailable: false,
+				isDeployed: false,
+				isFunded: false,
+				balance: BigInt(0),
+				error: "Paymaster not deployed",
+			};
+		}
+
+		// Check paymaster balance at EntryPoint
+		const balance = await publicClient.readContract({
+			address: entryPointAddress,
+			abi: CONTRACTS.EntryPoint.abi,
+			functionName: "balanceOf",
+			args: [paymasterAddress],
+		}) as bigint;
+
+		const isFunded = balance >= minBalance;
+
+		return {
+			isAvailable: isDeployed && isFunded,
+			isDeployed,
+			isFunded,
+			balance,
+			error: isFunded ? undefined : `Paymaster has insufficient balance: ${balance.toString()} wei`,
+		};
+	} catch (error) {
+		console.error("Error checking paymaster status:", error);
+		return {
+			isAvailable: false,
+			isDeployed: false,
+			isFunded: false,
+			balance: BigInt(0),
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}
+
+/**
  * Sign a UserOperation using EIP-712 typed data signing
  */
 export async function signUserOperation(
@@ -461,5 +680,108 @@ export async function signUserOperation(
 		// Add the signer type prefix
 		return addSignaturePrefix(signature, signerType);
 	}
+}
+
+/**
+ * SerializablePackedUserOperation interface matching the Rust struct
+ */
+export interface SerializablePackedUserOperation {
+	sender: string;             // Address as hex string (e.g., "0x1234...")
+	nonce: number;              // U256 as u128 integer
+	init_code: string;          // Bytes as hex string (e.g., "0xabc...")
+	call_data: string;          // Bytes as hex string (e.g., "0xdef...")
+	account_gas_limits: string; // FixedBytes<32> as hex string (e.g., "0x123...")
+	pre_verification_gas: number; // U256 as u128 integer
+	gas_fees: string;           // FixedBytes<32> as hex string (e.g., "0x456...")
+	paymaster_and_data: string; // Bytes as hex string (e.g., "0x789...")
+	signature?: string;         // Optional signature: None = unsigned, Some("0xabc...") = signed
+}
+
+/**
+ * Convert PackedUserOperation to SerializablePackedUserOperation
+ */
+export function toSerializablePackedUserOperation(
+	packedOp: PackedUserOperation
+): SerializablePackedUserOperation {
+	return {
+		sender: packedOp.sender,
+		nonce: Number(packedOp.nonce), // Convert bigint to number
+		init_code: packedOp.initCode,
+		call_data: packedOp.callData,
+		account_gas_limits: packedOp.accountGasLimits,
+		pre_verification_gas: Number(packedOp.preVerificationGas), // Convert bigint to number
+		gas_fees: packedOp.gasFees,
+		paymaster_and_data: packedOp.paymasterAndData,
+		signature: packedOp.signature === "0x" ? undefined : packedOp.signature,
+	};
+}
+
+/**
+ * Build calldata for ERC20 transfer
+ */
+export function buildERC20TransferCallData(
+	to: Address,
+	amount: bigint
+): `0x${string}` {
+	return encodeFunctionData({
+		abi: [{
+			name: 'transfer',
+			type: 'function',
+			inputs: [
+				{ name: 'to', type: 'address' },
+				{ name: 'amount', type: 'uint256' }
+			],
+			outputs: [{ name: '', type: 'bool' }]
+		}],
+		functionName: 'transfer',
+		args: [to, amount]
+	});
+}
+
+/**
+ * Build UserOperation for token transfer through OmniAccount
+ */
+export function buildTokenTransferUserOp(params: {
+	omniAccountAddress: Address;
+	tokenAddress: Address;
+	recipient: Address;
+	amount: bigint;
+	nonce?: bigint;
+	gasParams?: {
+		callGasLimit: bigint;
+		verificationGasLimit: bigint;
+		preVerificationGas: bigint;
+		maxFeePerGas: bigint;
+		maxPriorityFeePerGas: bigint;
+	};
+	paymaster?: {
+		address: Address;
+		validationGasLimit?: bigint;
+		postOpGasLimit?: bigint;
+		data?: `0x${string}`;
+	};
+}): UserOperation {
+	// Build the ERC20 transfer calldata
+	const erc20TransferData = buildERC20TransferCallData(params.recipient, params.amount);
+	
+	// Build the OmniAccount execute calldata
+	const executeCallData = encodeFunctionData({
+		abi: CONTRACTS.OmniAccountImplementation.abi,
+		functionName: 'execute',
+		args: [
+			params.tokenAddress, // target: ERC20 token contract
+			BigInt(0), // value: 0 ETH
+			erc20TransferData // data: ERC20 transfer function call
+		]
+	});
+
+	// Create the UserOperation
+	return createUserOperation({
+		sender: params.omniAccountAddress,
+		nonce: params.nonce,
+		callData: executeCallData,
+		gasParams: params.gasParams,
+		paymaster: params.paymaster,
+	});
 }
 
