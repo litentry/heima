@@ -14,4 +14,6 @@ docs/
 # Dotenv file
 .env
 broadcast/
-deployments/local.json
+
+# Deployment artifacts
+deployments/local/
