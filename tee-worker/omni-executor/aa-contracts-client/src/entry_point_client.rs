@@ -601,12 +601,12 @@ pub mod test {
 
 		let factory = address!("0xca470c1990B1E3DBF24676D8ACDF4B5867CD410e");
 		let oa: [u8; 32] =
-			decode_hex("0xf8e2b8a37e033636eca0ab96dc93cf1d3af807a530010943e838bd272e1d8dc0")
+			decode_hex("0x8a04e3fd314f7ac39359df0383eb6b6737d9b2db04ee6beb5a12f6e49286e0a7")
 				.unwrap()
 				.try_into()
 				.unwrap();
 		let client_id = "Wildmeta";
-		let root_signer = address!("0x947E83EfcbC5A9c7A1A84Cea4dEBc4ce632E6564");
+		let root_signer = address!("0x683d0aF0a61E5C8c2fA295CfE9FabB899C7fE121");
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
@@ -617,6 +617,24 @@ pub mod test {
 
 		let sender = entrypoint_client.get_sender_address(init_code).await.unwrap();
 		println!("sender: {}", sender);
+
+		// 1 GWEI = 1000000000
+		let paymaster_and_data = crate::entry_point_client::create_paymaster_and_data(
+			address!("0xb529aca1d832be817bd8b30c2f2a51490792fcff"),
+			U256::from(100_000u64),
+			U256::from(300_000u64),
+		);
+		println!("paymaster_and_data: {}", paymaster_and_data);
+		let account_gas_limits = crate::entry_point_client::create_account_gas_limits(
+			U256::from(300_000u64),
+			U256::from(500_000u64),
+		);
+		println!("account_gas_limits: {}", account_gas_limits);
+		let gas_fees = crate::entry_point_client::create_gas_fees(
+			U256::from(100_000_000u64),
+			U256::ZERO,
+		);
+		println!("gas_fees: {}", gas_fees);
 	}
 
 	#[test]
