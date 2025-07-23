@@ -112,4 +112,5 @@ sol! {
 	// simulation functions
 	function simulateValidation(PackedUserOperation calldata userOp) external returns (ValidationResult memory);
 	function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData) external returns (ExecutionResult memory);
+	function simulateHandleOps(PackedUserOperation[] calldata ops, address payable beneficiary) external returns (ExecutionResult[] memory);
 }
