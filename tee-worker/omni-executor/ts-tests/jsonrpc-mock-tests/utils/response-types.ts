@@ -43,4 +43,44 @@ export interface ExportWalletResponse {
     aad: string;
     nonce: string;
 }
+
+export interface TransferWithdrawResponse {
+    backend_response: {
+        code: number;
+        message: string;
+        data: {
+            tx_hash: string;
+            transfer_id: string;
+            chain_id: number;
+        };
+    };
+}
+
+export interface SubmitSwapOrderResponse {
+    backend_response: {
+        limit_order_response?: {
+            code: number;
+            message: string;
+            data: {
+                order_id?: number;
+            };
+        };
+        market_order_response?: {
+            code: number;
+            message: string;
+            data: {
+                tx_hash?: string[];
+            };
+        };
+    };
+}
+
+export interface SignLimitOrderResponse {
+    intent_id: number;
+    order_id: number;
+    chain_id: number;
+    signed_tx: string[];
+}
+
+export type NotifyLimitOrderResultResponse = null;
 // todo: add other types
