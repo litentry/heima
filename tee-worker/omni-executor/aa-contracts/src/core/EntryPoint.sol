@@ -20,6 +20,30 @@ import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
+/*
+Summary:
+
+These 4 fields in request will affect the final amount transferd to bundler:
+
+1. paymasterPostOpGasLimit in paymaster_and_data
+2. callGasLimit in account_gas_limits
+3. maxFeePerGas in gas_fees
+4. maxPriorityFeePerGas in gas_fees
+
+---------------------------------------------
+
+1. paymasterPostOpGasLimit
+It must be close to actualPostOpGas. If the difference exceeds PENALTY_GAS_THRESHOLD(40,000), a UNUSED_GAS_PENALTY_PERCENT(10%) difference gas penalty will be incurred, which will cause the entrypoint to transfer more amout to the bundler.
+
+2. callGasLimit 
+It must be close to actualExecutionGasUsed. If the difference exceeds PENALTY_GAS_THRESHOLD(40,000), a UNUSED_GAS_PENALTY_PERCENT(10%) difference gas penalty will be incurred, which will cause the entrypoint to transfer more amout to the bundler.
+
+3. maxFeePerGas/maxPriorityFeePerGas
+The gasPrice = min(maxFeePerGas, maxPriorityFeePerGas + baseFee), and the baseFee in Arbitrum Sepolia testnet is 0.1 Gwei, so we can set the maxFeePerGas to 0.1 Gwei and maxPriorityFeePerGas to 0 to let the gasPrice = baseFee, the baseFee is the closest value we can get to the actual gas price.
+
+QUESTION, Q1: Is there any way to get the suitable paymasterPostOpGasLimit and callGasLimit value?
+*/
+
 /**
  * Account-Abstraction (EIP-4337) singleton EntryPoint v0.8 implementation.
  * Only one instance required on each chain.
@@ -726,6 +750,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardT
         }
         unchecked {
             outOpInfo.contextOffset = _getOffsetOfMemoryBytes(context);
+            // QUESTION, Q2: Why the preVerificationGas affect the preOpGas? I think the preOpGas should be the actualGas(preGas - gasleft()), is that correct?
             outOpInfo.preOpGas = preGas - gasleft() + userOp.preVerificationGas;
         }
     }
@@ -816,6 +841,7 @@ contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardT
         unchecked {
             uint256 maxFeePerGas = mUserOp.maxFeePerGas;
             uint256 maxPriorityFeePerGas = mUserOp.maxPriorityFeePerGas;
+            // QUESTION, Q3: Why not using tx.gasprice here as the userOpGasPrice?
             return min(maxFeePerGas, maxPriorityFeePerGas + block.basefee);
         }
     }
