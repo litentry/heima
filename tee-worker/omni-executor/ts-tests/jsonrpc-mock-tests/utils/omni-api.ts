@@ -8,6 +8,10 @@ import {
     ExportWalletParams,
     SubmitUserOpParams,
     GetSmartWalletRootSignerParams,
+    TransferWithdrawParams,
+    SubmitSwapOrderParams,
+    SignLimitOrderParams,
+    NotifyLimitOrderResultParams,
 } from './request-types';
 import {
     RequestEmailVerificationCodeResponse,
@@ -19,6 +23,10 @@ import {
     AddWalletResponse,
     SubmitUserOpResponse,
     GetSmartWalletRootSignerResponse,
+    TransferWithdrawResponse,
+    SubmitSwapOrderResponse,
+    SignLimitOrderResponse,
+    NotifyLimitOrderResultResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -80,13 +88,42 @@ export class OmniApi {
         return response;
     }
 
+    async submitSwapOrder(params: SubmitSwapOrderParams, token: string): Promise<SubmitSwapOrderResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSubmitSwapOrder, params, token);
+
+        return response;
+    }
+
+    async signLimitOrder(params: SignLimitOrderParams, token: string): Promise<SignLimitOrderResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSignLimitOrder, params, token);
+
+        return response;
+    }
+
+    async notifyLimitOrderResult(
+        params: NotifyLimitOrderResultParams,
+        token: string
+    ): Promise<NotifyLimitOrderResultResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniNotifyLimitOrderResult, params, token);
+
+        return response;
+    }
     async submitUserOp(params: SubmitUserOpParams, token: string): Promise<SubmitUserOpResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniSubmitUserOp, params, token);
 
         return response;
     }
 
-    async getSmartWalletRootSigner(params: GetSmartWalletRootSignerParams, token: string): Promise<GetSmartWalletRootSignerResponse> {
+    async transferWithdraw(params: TransferWithdrawParams, token: string): Promise<TransferWithdrawResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniTransferWithdraw, params, token);
+
+        return response;
+    }
+
+    async getSmartWalletRootSigner(
+        params: GetSmartWalletRootSignerParams,
+        token: string
+    ): Promise<GetSmartWalletRootSignerResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniGetSmartWalletRootSigner, params, token);
 
         return response;
