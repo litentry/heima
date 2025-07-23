@@ -37,15 +37,83 @@ use tracing::error;
 const SIMULATION_BYTECODE: &str =
 	include_str!("bytecode/EntryPointSimulations_deployed_bytecode.hex");
 
+/// Gas price configuration for EIP-1559 transactions
+#[derive(Clone, Debug)]
+pub struct GasPriceConfig {
+	/// Buffer percentage to add to current gas price (e.g., 50 for 50% buffer)
+	pub gas_price_buffer_percent: u64,
+	/// Minimum priority fee in wei (default: 1 gwei)
+	pub min_priority_fee: u128,
+	/// Maximum priority fee in wei (default: 50 gwei)
+	pub max_priority_fee: u128,
+}
+
+impl Default for GasPriceConfig {
+	fn default() -> Self {
+		Self {
+			gas_price_buffer_percent: 50,     // 50% buffer
+			min_priority_fee: 1_000_000_000,  // 1 gwei
+			max_priority_fee: 50_000_000_000, // 50 gwei
+		}
+	}
+}
+
+impl GasPriceConfig {
+	/// Configuration for Ethereum mainnet
+	pub fn mainnet() -> Self {
+		Self {
+			gas_price_buffer_percent: 50,
+			min_priority_fee: 2_000_000_000,   // 2 gwei
+			max_priority_fee: 100_000_000_000, // 100 gwei
+		}
+	}
+
+	/// Configuration for L2 networks (Arbitrum, Optimism, Base)
+	pub fn l2() -> Self {
+		Self {
+			gas_price_buffer_percent: 30,
+			min_priority_fee: 100_000_000,   // 0.1 gwei
+			max_priority_fee: 2_000_000_000, // 2 gwei
+		}
+	}
+
+	/// Configuration for BSC
+	pub fn bsc() -> Self {
+		Self {
+			gas_price_buffer_percent: 40,
+			min_priority_fee: 1_000_000_000,  // 1 gwei
+			max_priority_fee: 10_000_000_000, // 10 gwei
+		}
+	}
+
+	/// Configuration for HyperEVM
+	pub fn hyperevm() -> Self {
+		Self {
+			gas_price_buffer_percent: 20,    // Lower buffer due to stable, low fees
+			min_priority_fee: 10_000_000,    // 0.01 gwei
+			max_priority_fee: 1_000_000_000, // 1 gwei
+		}
+	}
+}
+
 /// Client for interacting with on-chain EntryPoint instance
 pub struct EntryPointClient<P: RpcProvider<Transaction = TransactionRequest>> {
 	entry_point_address: Address,
 	rpc_client: Arc<P>,
+	gas_config: GasPriceConfig,
 }
 
 impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPointClient<P> {
 	pub fn new(entry_point_address: Address, rpc_client: Arc<P>) -> Self {
-		Self { entry_point_address, rpc_client }
+		Self { entry_point_address, rpc_client, gas_config: GasPriceConfig::default() }
+	}
+
+	pub fn new_with_config(
+		entry_point_address: Address,
+		rpc_client: Arc<P>,
+		gas_config: GasPriceConfig,
+	) -> Self {
+		Self { entry_point_address, rpc_client, gas_config }
 	}
 
 	pub fn entry_point_address(&self) -> Address {
@@ -54,6 +122,31 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 	pub async fn get_wallet_address(&self) -> Result<Address, ()> {
 		self.rpc_client.get_wallet_address().await
+	}
+
+	/// Calculate dynamic gas fees based on current network conditions
+	async fn calculate_gas_fees(&self) -> Result<(U256, U256), ()> {
+		// Get current gas price from network
+		let current_gas_price = self
+			.rpc_client
+			.get_gas_price()
+			.await
+			.map_err(|_| error!("Failed to fetch gas price"))?;
+
+		// Apply buffer to current gas price for max_fee_per_gas
+		let buffer_multiplier = 100 + self.gas_config.gas_price_buffer_percent;
+		let max_fee_per_gas = U256::from(current_gas_price)
+			.saturating_mul(U256::from(buffer_multiplier))
+			.checked_div(U256::from(100))
+			.unwrap_or(U256::from(current_gas_price));
+
+		// Calculate priority fee (tip) with bounds
+		// Use 10% of current gas price as priority fee, bounded by min/max
+		let priority_fee = U256::from(current_gas_price / 10)
+			.max(U256::from(self.gas_config.min_priority_fee))
+			.min(U256::from(self.gas_config.max_priority_fee));
+
+		Ok((max_fee_per_gas, priority_fee))
 	}
 
 	/// Simulate user operation validation using EntryPointSimulations contract
@@ -313,8 +406,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let account_gas_limits = create_account_gas_limits(verification_gas_limit, call_gas_limit);
 
 		let pre_verification_gas = U256::from(21000u64);
-		let max_fee_per_gas = U256::from(50000000000u64); // 50 gwei - increased for mainnet
-		let max_priority_fee_per_gas = U256::from(2000000000u64); // 2 gwei
+
+		// Calculate dynamic gas fees
+		let (max_fee_per_gas, max_priority_fee_per_gas) = self.calculate_gas_fees().await?;
 		let gas_fees = create_gas_fees(max_fee_per_gas, max_priority_fee_per_gas);
 
 		let paymaster_and_data = if let Some(paymaster_addr) = paymaster_address {
@@ -397,7 +491,7 @@ pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) ->
 pub mod test {
 	use crate::types::depositCall;
 	use crate::utils::build_payable_transaction;
-	use crate::{prepare_factory_init_code, EntryPointClient};
+	use crate::{prepare_factory_init_code, EntryPointClient, GasPriceConfig};
 	use alloy::hex;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::{address, Bytes, FixedBytes, U256};
@@ -711,5 +805,64 @@ pub mod test {
 
 		// Assert that all three methods return the same address
 		assert_eq!(entrypoint_address_result, local_address_result,);
+	}
+
+	#[test(tokio::test)]
+	pub async fn test_dynamic_gas_pricing() {
+		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let mut rpc_client = MockRpcProvider::new();
+
+		// Mock gas price at 30 gwei
+		let mock_gas_price = 30_000_000_000u128;
+		rpc_client.expect_get_gas_price().times(1).returning(move || Ok(mock_gas_price));
+
+		// Test with default config (50% buffer)
+		let default_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
+		let (max_fee, priority_fee) = default_client.calculate_gas_fees().await.unwrap();
+
+		// max_fee should be 30 gwei * 1.5 = 45 gwei
+		assert_eq!(max_fee, U256::from(45_000_000_000u128));
+		// priority fee should be max(3 gwei, min_fee) = 3 gwei
+		assert_eq!(priority_fee, U256::from(3_000_000_000u128));
+
+		// Test with mainnet config
+		let mut mainnet_rpc_client = MockRpcProvider::new();
+		mainnet_rpc_client
+			.expect_get_gas_price()
+			.times(1)
+			.returning(move || Ok(mock_gas_price));
+
+		let mainnet_client = EntryPointClient::new_with_config(
+			entrypoint_address,
+			Arc::new(mainnet_rpc_client),
+			GasPriceConfig::mainnet(),
+		);
+		let (max_fee_mainnet, priority_fee_mainnet) =
+			mainnet_client.calculate_gas_fees().await.unwrap();
+
+		// Mainnet has same buffer but different priority fee bounds
+		assert_eq!(max_fee_mainnet, U256::from(45_000_000_000u128));
+		// priority fee should be max(3 gwei, 2 gwei min) = 3 gwei
+		assert_eq!(priority_fee_mainnet, U256::from(3_000_000_000u128));
+
+		// Test with L2 config and lower gas price
+		let mut l2_rpc_client = MockRpcProvider::new();
+		let l2_gas_price = 1_000_000_000u128; // 1 gwei
+		l2_rpc_client
+			.expect_get_gas_price()
+			.times(1)
+			.returning(move || Ok(l2_gas_price));
+
+		let l2_client = EntryPointClient::new_with_config(
+			entrypoint_address,
+			Arc::new(l2_rpc_client),
+			GasPriceConfig::l2(),
+		);
+		let (max_fee_l2, priority_fee_l2) = l2_client.calculate_gas_fees().await.unwrap();
+
+		// L2 has 30% buffer: 1 gwei * 1.3 = 1.3 gwei
+		assert_eq!(max_fee_l2, U256::from(1_300_000_000u128));
+		// priority fee should be max(0.1 gwei, 0.1 gwei min) = 0.1 gwei
+		assert_eq!(priority_fee_l2, U256::from(100_000_000u128));
 	}
 }
