@@ -85,6 +85,15 @@ impl GasPriceConfig {
 			max_priority_fee: 10_000_000_000, // 10 gwei
 		}
 	}
+
+	/// Configuration for HyperEVM
+	pub fn hyperevm() -> Self {
+		Self {
+			gas_price_buffer_percent: 20,    // Lower buffer due to stable, low fees
+			min_priority_fee: 10_000_000,    // 0.01 gwei
+			max_priority_fee: 1_000_000_000, // 1 gwei
+		}
+	}
 }
 
 /// Client for interacting with on-chain EntryPoint instance

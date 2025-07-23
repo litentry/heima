@@ -401,63 +401,78 @@ async fn main() -> Result<(), ()> {
 				.expect("Invalid entry point address in configuration");
 
 			// Add BSC (BNB Chain)
-			let bsc_entry_point =
-				Arc::new(aa_contracts_client::EntryPointClient::new(entry_point_address, bsc_rpc));
+			let bsc_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+				entry_point_address,
+				bsc_rpc,
+				aa_contracts_client::GasPriceConfig::bsc(),
+			));
 			entry_point_clients.insert(56, bsc_entry_point);
 
 			// Add BSC Testnet if configured
 			if let Some(bsc_testnet_rpc) = bsc_testnet_rpc {
-				let bsc_testnet_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
-					entry_point_address,
-					bsc_testnet_rpc,
-				));
+				let bsc_testnet_entry_point =
+					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+						entry_point_address,
+						bsc_testnet_rpc,
+						aa_contracts_client::GasPriceConfig::bsc(),
+					));
 				entry_point_clients.insert(97, bsc_testnet_entry_point);
 			}
 
 			// Add Ethereum Mainnet
-			let ethereum_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
-				entry_point_address,
-				ethereum_rpc,
-			));
+			let ethereum_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					ethereum_rpc,
+					aa_contracts_client::GasPriceConfig::mainnet(),
+				));
 			entry_point_clients.insert(1, ethereum_entry_point);
 
 			// Add local development chain
-			let local_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
-				entry_point_address,
-				local_rpc,
-			));
+			let local_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					local_rpc,
+					aa_contracts_client::GasPriceConfig::default(),
+				));
 			entry_point_clients.insert(31337, local_entry_point);
 
 			// Add Arbitrum One (Chain ID: 42161)
-			let arbitrum_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
-				entry_point_address,
-				arbitrum_rpc,
-			));
+			let arbitrum_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					arbitrum_rpc,
+					aa_contracts_client::GasPriceConfig::l2(),
+				));
 			entry_point_clients.insert(42161, arbitrum_entry_point);
 
 			// Add Arbitrum Testnet if configured (Chain ID: 421614)
 			if let Some(arbitrum_testnet_rpc) = arbitrum_testnet_rpc {
 				let arbitrum_testnet_entry_point =
-					Arc::new(aa_contracts_client::EntryPointClient::new(
+					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
 						entry_point_address,
 						arbitrum_testnet_rpc,
+						aa_contracts_client::GasPriceConfig::l2(),
 					));
 				entry_point_clients.insert(421614, arbitrum_testnet_entry_point);
 			}
 
 			// Add HyperEVM (Chain ID: 999)
-			let hyperevm_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new(
-				entry_point_address,
-				hyperevm_rpc,
-			));
+			let hyperevm_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					hyperevm_rpc,
+					aa_contracts_client::GasPriceConfig::hyperevm(),
+				));
 			entry_point_clients.insert(999, hyperevm_entry_point);
 
 			// Add HyperEVM Testnet if configured (Chain ID: 998)
 			if let Some(hyperevm_testnet_rpc) = hyperevm_testnet_rpc {
 				let hyperevm_testnet_entry_point =
-					Arc::new(aa_contracts_client::EntryPointClient::new(
+					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
 						entry_point_address,
 						hyperevm_testnet_rpc,
+						aa_contracts_client::GasPriceConfig::hyperevm(),
 					));
 				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}
