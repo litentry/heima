@@ -1,0 +1,19 @@
+{
+  "network": "local",
+  "chain_id": 0,
+  "last_updated": "2025-07-23T12:23:30.666625245Z",
+  "applied_migrations": [
+    {
+      "id": "001",
+      "name": "init",
+      "script_path": "migrations/scripts/001_init.s.sol",
+      "script_hash": "9642efa11f7c95a4aa2778b205e85a7fd895b306e42ee54636806bb1f02337ba",
+      "applied_at": "2025-07-23T12:23:30.666611304Z",
+      "deployer": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "gas_used": null,
+      "tx_hashes": [],
+      "deployed_contracts": {},
+      "metadata": {}
+    }
+  ]
+}

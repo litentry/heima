@@ -1,0 +1,42 @@
+# Forge Pilot Configuration
+
+# Path to migrations directory
+migrations_dir = "migrations"
+
+# Path to forge project root
+forge_root = "."
+
+# Networks configuration
+[networks.local]
+name = "Local Anvil"
+chain_id = 31337
+rpc_url = "http://localhost:8545"
+min_balance = "10000000000000000" # 0.01 ETH
+
+[networks.sepolia]
+name = "Ethereum Sepolia"
+chain_id = 11155111
+rpc_url = "https://sepolia.infura.io/v3/YOUR_API_KEY"
+explorer_url = "https://sepolia.etherscan.io"
+etherscan_api_key = "YOUR_ETHERSCAN_API_KEY"
+min_balance = "50000000000000000" # 0.05 ETH
+
+[networks.mainnet]
+name = "Ethereum Mainnet"
+chain_id = 1
+rpc_url = "https://mainnet.infura.io/v3/YOUR_API_KEY"
+explorer_url = "https://etherscan.io"
+etherscan_api_key = "YOUR_ETHERSCAN_API_KEY"
+min_balance = "100000000000000000" # 0.1 ETH
+
+# Forge configuration
+[forge]
+optimizer_runs = 200
+# forge_path = "/usr/local/bin/forge" # Optional: specify forge binary path
+
+# Migration settings
+[migration]
+deployment_salt = "0x0000000000000000000000000000000000000000000000000000000000000001"
+save_artifacts = true
+auto_commit = false
+naming_pattern = "{number:03}_{name}"

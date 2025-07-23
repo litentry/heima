@@ -1,0 +1,16 @@
+# Forge artifacts
+broadcast/
+cache/
+out/
+
+# Local environment files
+.env
+.env.local
+
+# Editor directories
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
