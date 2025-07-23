@@ -6,10 +6,7 @@ import {
     http,
     parseEther,
     parseUnits,
-    getContract,
-    encodeFunctionData,
     type Address,
-    type Hash,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { anvil } from 'viem/chains';
@@ -18,261 +15,25 @@ import {
     omniApi,
     randomEvmWallet,
     calculateOmniAccount,
-    GetShieldingKeyResponse,
     UserLoginResponse,
 } from './utils';
 import { signMessage } from 'viem/accounts';
-
-// Contract ABIs - simplified for testing
-const ENTRY_POINT_ABI = [
-    {
-        name: 'handleOps',
-        type: 'function',
-        inputs: [
-            { name: 'ops', type: 'tuple[]', components: [
-                { name: 'sender', type: 'address' },
-                { name: 'nonce', type: 'uint256' },
-                { name: 'initCode', type: 'bytes' },
-                { name: 'callData', type: 'bytes' },
-                { name: 'accountGasLimits', type: 'bytes32' },
-                { name: 'preVerificationGas', type: 'uint256' },
-                { name: 'gasFees', type: 'bytes32' },
-                { name: 'paymasterAndData', type: 'bytes' },
-                { name: 'signature', type: 'bytes' },
-            ]},
-            { name: 'beneficiary', type: 'address' },
-        ],
-        outputs: [],
-        stateMutability: 'nonpayable',
-    },
-    {
-        name: 'getNonce',
-        type: 'function',
-        inputs: [
-            { name: 'sender', type: 'address' },
-            { name: 'key', type: 'uint192' }
-        ],
-        outputs: [{ name: 'nonce', type: 'uint256' }],
-        stateMutability: 'view',
-    }
-] as const;
-
-const OMNI_ACCOUNT_FACTORY_ABI = [
-    {
-        name: 'createAccount',
-        type: 'function',
-        inputs: [
-            { name: 'omniAccount', type: 'bytes32' },
-            { name: 'clientId', type: 'bytes' },
-            { name: 'rootSigner', type: 'address' }
-        ],
-        outputs: [{ name: 'account', type: 'address' }],
-        stateMutability: 'nonpayable',
-    },
-    {
-        name: 'getAddress',
-        type: 'function',
-        inputs: [
-            { name: 'omniAccount', type: 'bytes32' },
-            { name: 'clientId', type: 'bytes' },
-            { name: 'rootSigner', type: 'address' }
-        ],
-        outputs: [{ name: 'account', type: 'address' }],
-        stateMutability: 'view',
-    }
-] as const;
-
-const OMNI_ACCOUNT_ABI = [
-    {
-        name: 'addRootSigner',
-        type: 'function',
-        inputs: [{ name: 'root', type: 'address' }],
-        outputs: [],
-        stateMutability: 'nonpayable',
-    },
-    {
-        name: 'isRootSigner',
-        type: 'function',
-        inputs: [{ name: 'root', type: 'address' }],
-        outputs: [{ name: 'result', type: 'bool' }],
-        stateMutability: 'view',
-    },
-    {
-        name: 'execute',
-        type: 'function',
-        inputs: [
-            { name: 'target', type: 'address' },
-            { name: 'value', type: 'uint256' },
-            { name: 'data', type: 'bytes' }
-        ],
-        outputs: [],
-        stateMutability: 'nonpayable',
-    }
-] as const;
-
-const TEST_TOKEN_ABI = [
-    {
-        name: 'mint',
-        type: 'function',
-        inputs: [
-            { name: 'to', type: 'address' },
-            { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [],
-        stateMutability: 'nonpayable',
-    },
-    {
-        name: 'transfer',
-        type: 'function',
-        inputs: [
-            { name: 'to', type: 'address' },
-            { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [{ name: 'result', type: 'bool' }],
-        stateMutability: 'nonpayable',
-    },
-    {
-        name: 'balanceOf',
-        type: 'function',
-        inputs: [{ name: 'account', type: 'address' }],
-        outputs: [{ name: 'balance', type: 'uint256' }],
-        stateMutability: 'view',
-    }
-] as const;
-
-// Contract addresses - these need to be deployed first via local-deploy.sh
-const CONTRACT_ADDRESSES = {
-    entryPoint: '0x5FbDB2315678afecb367f032d93F642f64180aa3' as Address,
-    factory: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512' as Address,
-    testToken: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0' as Address, // Will be deployed
-};
-
-// Test accounts from Anvil
-const TEST_ACCOUNTS = {
-    deployer: {
-        address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' as Address,
-        privateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' as `0x${string}`,
-    },
-    user: {
-        address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8' as Address,
-        privateKey: '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d' as `0x${string}`,
-    }
-};
-
-// Utility functions
-function stringToBytes(str: string): `0x${string}` {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(str);
-    return `0x${Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-}
-
-function packAccountGasLimits(callGasLimit: bigint, verificationGasLimit: bigint): `0x${string}` {
-    const packed = (verificationGasLimit << BigInt(128)) | callGasLimit;
-    return `0x${packed.toString(16).padStart(64, '0')}`;
-}
-
-function packGasFees(maxFeePerGas: bigint, maxPriorityFeePerGas: bigint): `0x${string}` {
-    const packed = (maxPriorityFeePerGas << BigInt(128)) | maxFeePerGas;
-    return `0x${packed.toString(16).padStart(64, '0')}`;
-}
-
-interface UserOperation {
-    sender: Address;
-    nonce: bigint;
-    initCode: `0x${string}`;
-    callData: `0x${string}`;
-    callGasLimit: bigint;
-    verificationGasLimit: bigint;
-    preVerificationGas: bigint;
-    maxFeePerGas: bigint;
-    maxPriorityFeePerGas: bigint;
-    paymasterAndData: `0x${string}`;
-    signature: `0x${string}`;
-}
-
-interface PackedUserOperation {
-    sender: Address;
-    nonce: bigint;
-    initCode: `0x${string}`;
-    callData: `0x${string}`;
-    accountGasLimits: `0x${string}`;
-    preVerificationGas: bigint;
-    gasFees: `0x${string}`;
-    paymasterAndData: `0x${string}`;
-    signature: `0x${string}`;
-}
-
-function packUserOperation(userOp: UserOperation): PackedUserOperation {
-    return {
-        sender: userOp.sender,
-        nonce: userOp.nonce,
-        initCode: userOp.initCode,
-        callData: userOp.callData,
-        accountGasLimits: packAccountGasLimits(userOp.callGasLimit, userOp.verificationGasLimit),
-        preVerificationGas: userOp.preVerificationGas,
-        gasFees: packGasFees(userOp.maxFeePerGas, userOp.maxPriorityFeePerGas),
-        paymasterAndData: userOp.paymasterAndData,
-        signature: userOp.signature,
-    };
-}
-
-async function signUserOperation(
-    walletClient: any,
-    userOp: UserOperation,
-    entryPointAddress: Address,
-    chainId: number,
-    signerType: number = 0x00
-): Promise<`0x${string}`> {
-    const packedOp = packUserOperation(userOp);
-    
-    // EIP-712 domain
-    const domain = {
-        name: 'ERC4337',
-        version: '1',
-        chainId,
-        verifyingContract: entryPointAddress,
-    };
-
-    // EIP-712 types for PackedUserOperation
-    const types = {
-        PackedUserOperation: [
-            { name: 'sender', type: 'address' },
-            { name: 'nonce', type: 'uint256' },
-            { name: 'initCode', type: 'bytes' },
-            { name: 'callData', type: 'bytes' },
-            { name: 'accountGasLimits', type: 'bytes32' },
-            { name: 'preVerificationGas', type: 'uint256' },
-            { name: 'gasFees', type: 'bytes32' },
-            { name: 'paymasterAndData', type: 'bytes' },
-        ],
-    };
-
-    // Message to sign (without signature field)
-    const message = {
-        sender: packedOp.sender,
-        nonce: packedOp.nonce,
-        initCode: packedOp.initCode,
-        callData: packedOp.callData,
-        accountGasLimits: packedOp.accountGasLimits,
-        preVerificationGas: packedOp.preVerificationGas,
-        gasFees: packedOp.gasFees,
-        paymasterAndData: packedOp.paymasterAndData,
-    };
-
-    const signature = await walletClient.signTypedData({
-        account: walletClient.account,
-        domain,
-        types,
-        primaryType: 'PackedUserOperation',
-        message,
-    });
-
-    // Add signer type prefix
-    return `0x${signerType.toString(16).padStart(2, '0')}${signature.slice(2)}`;
-}
+import { TEST_CONFIG, validateTestEnvironment } from './config';
+import {
+    CONTRACT_ABIS,
+    createUserOperation,
+    signUserOperation,
+    packUserOperation,
+    generateInitCode,
+    stringToBytes,
+    createExecuteCalldata,
+    createAddSignerCalldata,
+    createTokenTransferCalldata,
+    type UserOperation,
+} from './utils/aa-utils';
 
 describe('SubmitUserOp Integration Tests', function () {
-    this.timeout(120000);
+    this.timeout(TEST_CONFIG.TIMEOUTS.DEFAULT);
 
     let publicClient: any;
     let deployerWalletClient: any;
@@ -281,26 +42,40 @@ describe('SubmitUserOp Integration Tests', function () {
     let omniAccount: `0x${string}`;
     let omniAccountAddress: Address;
     let teeWorkerAddress: Address;
-    let testTokenAddress: Address = CONTRACT_ADDRESSES.testToken;
+    let testTokenAddress: Address;
     let idToken: string;
+    let testEnv: ReturnType<typeof validateTestEnvironment>;
 
     before(async function () {
+        // Validate test environment
+        testEnv = validateTestEnvironment();
+        
+        // Custom chain configuration using test config
+        const testChain = {
+            ...anvil,
+            id: testEnv.chainId,
+            rpcUrls: {
+                default: { http: [testEnv.rpcUrl] },
+                public: { http: [testEnv.rpcUrl] },
+            },
+        };
+
         // Setup clients
         publicClient = createPublicClient({
-            chain: anvil,
-            transport: http('http://127.0.0.1:8545'),
+            chain: testChain,
+            transport: http(testEnv.rpcUrl),
         });
 
         deployerWalletClient = createWalletClient({
-            chain: anvil,
-            transport: http('http://127.0.0.1:8545'),
-            account: privateKeyToAccount(TEST_ACCOUNTS.deployer.privateKey),
+            chain: testChain,
+            transport: http(testEnv.rpcUrl),
+            account: privateKeyToAccount(TEST_CONFIG.ACCOUNTS.DEPLOYER.privateKey),
         });
 
         userWalletClient = createWalletClient({
-            chain: anvil,
-            transport: http('http://127.0.0.1:8545'),
-            account: privateKeyToAccount(TEST_ACCOUNTS.user.privateKey),
+            chain: testChain,
+            transport: http(testEnv.rpcUrl),
+            account: privateKeyToAccount(TEST_CONFIG.ACCOUNTS.USER.privateKey),
         });
 
         // Generate test wallet
@@ -308,30 +83,32 @@ describe('SubmitUserOp Integration Tests', function () {
         console.log('Generated EVM wallet:', evmWallet.address);
 
         // Calculate omni account
-        omniAccount = calculateOmniAccount(evmWallet.address, ClientId.Wildmeta, 'evm');
+        omniAccount = calculateOmniAccount(evmWallet.address, TEST_CONFIG.TEE_WORKER.CLIENT_ID, 'evm');
         console.log('Calculated OmniAccount:', omniAccount);
 
         // Get omni account contract address
         omniAccountAddress = await publicClient.readContract({
-            address: CONTRACT_ADDRESSES.factory,
-            abi: OMNI_ACCOUNT_FACTORY_ABI,
+            address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
+            abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
             functionName: 'getAddress',
-            args: [omniAccount, stringToBytes(ClientId.Wildmeta), evmWallet.address],
+            args: [omniAccount, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
         });
         console.log('OmniAccount contract address:', omniAccountAddress);
 
-        // Deploy test token if needed
+        // Set test token address
+        testTokenAddress = testEnv.contracts.TEST_USDC as Address;
+
+        // Check if test token is deployed
         try {
             await publicClient.readContract({
                 address: testTokenAddress,
-                abi: TEST_TOKEN_ABI,
+                abi: CONTRACT_ABIS.TEST_TOKEN,
                 functionName: 'balanceOf',
                 args: [evmWallet.address],
             });
-            console.log('Test token already deployed at:', testTokenAddress);
+            console.log('Test token deployed at:', testTokenAddress);
         } catch (error) {
-            // Token might not be deployed, use a mock address for now
-            console.log('Test token not found, using mock address');
+            console.log('⚠️ Test token not found at:', testTokenAddress);
         }
     });
 
@@ -343,28 +120,32 @@ describe('SubmitUserOp Integration Tests', function () {
         console.log('✅ Step 1 completed: EVM wallet and OmniAccount generated');
     });
 
-    it('Step 2: Should fund OmniAccount with 1 ETH from default test account', async function () {
+    it('Step 2: Should fund OmniAccount with ETH from default test account', async function () {
         // Check initial balance
         const initialBalance = await publicClient.getBalance({
             address: omniAccountAddress,
         });
         console.log('Initial OmniAccount balance:', initialBalance.toString());
 
-        // Send 1 ETH from deployer to OmniAccount
+        // Send ETH from deployer to OmniAccount
+        const fundingAmount = parseEther(TEST_CONFIG.AMOUNTS.FUNDING_ETH);
         const hash = await deployerWalletClient.sendTransaction({
             to: omniAccountAddress,
-            value: parseEther('1'),
+            value: fundingAmount,
         });
 
-        await publicClient.waitForTransactionReceipt({ hash });
+        await publicClient.waitForTransactionReceipt({ 
+            hash, 
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        });
 
         // Verify balance
         const finalBalance = await publicClient.getBalance({
             address: omniAccountAddress,
         });
         
-        expect(finalBalance).to.equal(parseEther('1'));
-        console.log('✅ Step 2 completed: OmniAccount funded with 1 ETH');
+        expect(finalBalance).to.equal(fundingAmount);
+        console.log(`✅ Step 2 completed: OmniAccount funded with ${TEST_CONFIG.AMOUNTS.FUNDING_ETH} ETH`);
     });
 
     it('Step 3: Should create OmniAccount contract (without Paymaster)', async function () {
@@ -378,56 +159,53 @@ describe('SubmitUserOp Integration Tests', function () {
             return;
         }
 
-        // Create init code for deployment
-        const initCalldata = encodeFunctionData({
-            abi: OMNI_ACCOUNT_FACTORY_ABI,
-            functionName: 'createAccount',
-            args: [omniAccount, stringToBytes(ClientId.Wildmeta), evmWallet.address],
-        });
-
-        const initCode = `${CONTRACT_ADDRESSES.factory}${initCalldata.slice(2)}` as `0x${string}`;
+        // Generate init code for deployment
+        const initCode = generateInitCode(
+            testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
+            omniAccount,
+            stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID),
+            evmWallet.address
+        );
 
         // Create UserOperation for deployment
-        const userOp: UserOperation = {
+        const userOp = createUserOperation({
             sender: omniAccountAddress,
             nonce: BigInt(0),
             initCode: initCode,
             callData: '0x',
-            callGasLimit: BigInt(2000000),
-            verificationGasLimit: BigInt(3000000),
-            preVerificationGas: BigInt(100000),
-            maxFeePerGas: BigInt(20000000000), // 20 gwei
-            maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei
-            paymasterAndData: '0x',
-            signature: '0x',
-        };
+        });
 
-        // Sign UserOperation
+        // Create wallet client for signing
+        const testChain = { ...anvil, id: testEnv.chainId };
         const walletClient = createWalletClient({
-            chain: anvil,
-            transport: http('http://127.0.0.1:8545'),
+            chain: testChain,
+            transport: http(testEnv.rpcUrl),
             account: privateKeyToAccount(evmWallet.privateKey),
         });
 
+        // Sign UserOperation with Owner signer type
         userOp.signature = await signUserOperation(
             walletClient,
             userOp,
-            CONTRACT_ADDRESSES.entryPoint,
-            anvil.id,
-            0x00 // Owner signer
+            testEnv.contracts.ENTRY_POINT as Address,
+            testEnv.chainId,
+            TEST_CONFIG.SIGNER_TYPES.OWNER
         );
 
         // Pack and execute
         const packedUserOp = packUserOperation(userOp);
 
         const hash = await deployerWalletClient.writeContract({
-            address: CONTRACT_ADDRESSES.entryPoint,
-            abi: ENTRY_POINT_ABI,
+            address: testEnv.contracts.ENTRY_POINT as Address,
+            abi: CONTRACT_ABIS.ENTRY_POINT,
             functionName: 'handleOps',
-            args: [[packedUserOp], TEST_ACCOUNTS.deployer.address],
+            args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ 
+            hash, 
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        });
         expect(receipt.status).to.equal('success');
 
         // Verify contract is deployed
@@ -441,7 +219,7 @@ describe('SubmitUserOp Integration Tests', function () {
     it('Step 4: Should add TEE Worker as authorized signer', async function () {
         // First authenticate with TEE worker to get its address
         const messageResponse = await omniApi.getWeb3SignInMessage({
-            client_id: ClientId.Wildmeta,
+            client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
             omni_account: omniAccount,
         });
 
@@ -460,7 +238,7 @@ describe('SubmitUserOp Integration Tests', function () {
                 type: 'evm',
                 value: signature,
             },
-            client_id: ClientId.Wildmeta,
+            client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
             client_auth: {
                 type: 'wildmeta',
                 value: {
@@ -473,75 +251,65 @@ describe('SubmitUserOp Integration Tests', function () {
         idToken = loginResponse.id_token;
         
         // For testing, use a mock TEE worker address
-        teeWorkerAddress = TEST_ACCOUNTS.user.address; // Mock TEE worker address
+        teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address; // Mock TEE worker address
         console.log('Mock TEE worker address:', teeWorkerAddress);
 
-        // Add TEE worker as root signer via UserOperation
-        const addSignerCalldata = encodeFunctionData({
-            abi: OMNI_ACCOUNT_ABI,
-            functionName: 'addRootSigner',
-            args: [teeWorkerAddress],
-        });
-
-        const executeCalldata = encodeFunctionData({
-            abi: OMNI_ACCOUNT_ABI,
-            functionName: 'execute',
-            args: [omniAccountAddress, BigInt(0), addSignerCalldata],
-        });
+        // Create calldata for adding TEE worker as root signer
+        const addSignerCalldata = createAddSignerCalldata(teeWorkerAddress);
+        const executeCalldata = createExecuteCalldata(omniAccountAddress, BigInt(0), addSignerCalldata);
 
         // Get current nonce
         const nonce = await publicClient.readContract({
-            address: CONTRACT_ADDRESSES.entryPoint,
-            abi: ENTRY_POINT_ABI,
+            address: testEnv.contracts.ENTRY_POINT as Address,
+            abi: CONTRACT_ABIS.ENTRY_POINT,
             functionName: 'getNonce',
             args: [omniAccountAddress, BigInt(0)],
         });
 
-        const userOp: UserOperation = {
+        // Create UserOperation
+        const userOp = createUserOperation({
             sender: omniAccountAddress,
             nonce,
             initCode: '0x',
             callData: executeCalldata,
-            callGasLimit: BigInt(2000000),
-            verificationGasLimit: BigInt(1000000),
-            preVerificationGas: BigInt(50000),
-            maxFeePerGas: BigInt(20000000000),
-            maxPriorityFeePerGas: BigInt(1000000000),
-            paymasterAndData: '0x',
-            signature: '0x',
-        };
+        });
 
-        // Sign with root key signer type
+        // Create wallet client for signing
+        const testChain = { ...anvil, id: testEnv.chainId };
         const walletClient = createWalletClient({
-            chain: anvil,
-            transport: http('http://127.0.0.1:8545'),
+            chain: testChain,
+            transport: http(testEnv.rpcUrl),
             account: privateKeyToAccount(evmWallet.privateKey),
         });
 
+        // Sign with root key signer type
         userOp.signature = await signUserOperation(
             walletClient,
             userOp,
-            CONTRACT_ADDRESSES.entryPoint,
-            anvil.id,
-            0x01 // RootKey signer
+            testEnv.contracts.ENTRY_POINT as Address,
+            testEnv.chainId,
+            TEST_CONFIG.SIGNER_TYPES.ROOT_KEY
         );
 
         const packedUserOp = packUserOperation(userOp);
 
         const hash = await deployerWalletClient.writeContract({
-            address: CONTRACT_ADDRESSES.entryPoint,
-            abi: ENTRY_POINT_ABI,
+            address: testEnv.contracts.ENTRY_POINT as Address,
+            abi: CONTRACT_ABIS.ENTRY_POINT,
             functionName: 'handleOps',
-            args: [[packedUserOp], TEST_ACCOUNTS.deployer.address],
+            args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ 
+            hash, 
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        });
         expect(receipt.status).to.equal('success');
 
         // Verify signer was added
         const isRootSigner = await publicClient.readContract({
             address: omniAccountAddress,
-            abi: OMNI_ACCOUNT_ABI,
+            abi: CONTRACT_ABIS.OMNI_ACCOUNT,
             functionName: 'isRootSigner',
             args: [teeWorkerAddress],
         });
@@ -552,107 +320,110 @@ describe('SubmitUserOp Integration Tests', function () {
 
     it('Step 5: Should send token transfer via UserOperation', async function () {
         // First mint test tokens to the EVM wallet
-        if (testTokenAddress !== '0x0000000000000000000000000000000000000000') {
-            try {
-                const mintHash = await deployerWalletClient.writeContract({
-                    address: testTokenAddress,
-                    abi: TEST_TOKEN_ABI,
-                    functionName: 'mint',
-                    args: [evmWallet.address, parseUnits('1000', 18)], // 1000 tokens
-                });
-                await publicClient.waitForTransactionReceipt({ hash: mintHash });
+        try {
+            const mintAmount = parseUnits(TEST_CONFIG.AMOUNTS.MINT_TOKENS, 18);
+            const mintHash = await deployerWalletClient.writeContract({
+                address: testTokenAddress,
+                abi: CONTRACT_ABIS.TEST_TOKEN,
+                functionName: 'mint',
+                args: [evmWallet.address, mintAmount],
+            });
+            await publicClient.waitForTransactionReceipt({ 
+                hash: mintHash, 
+                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+            });
 
-                // Transfer tokens from EVM wallet to OmniAccount
-                const evmWalletClient = createWalletClient({
-                    chain: anvil,
-                    transport: http('http://127.0.0.1:8545'),
-                    account: privateKeyToAccount(evmWallet.privateKey),
-                });
+            // Transfer tokens from EVM wallet to OmniAccount
+            const testChain = { ...anvil, id: testEnv.chainId };
+            const evmWalletClient = createWalletClient({
+                chain: testChain,
+                transport: http(testEnv.rpcUrl),
+                account: privateKeyToAccount(evmWallet.privateKey),
+            });
 
-                const transferHash = await evmWalletClient.writeContract({
-                    address: testTokenAddress,
-                    abi: TEST_TOKEN_ABI,
-                    functionName: 'transfer',
-                    args: [omniAccountAddress, parseUnits('500', 18)], // 500 tokens
-                });
-                await publicClient.waitForTransactionReceipt({ hash: transferHash });
+            const transferAmount = parseUnits(TEST_CONFIG.AMOUNTS.TRANSFER_TOKENS, 18);
+            const transferHash = await evmWalletClient.writeContract({
+                address: testTokenAddress,
+                abi: CONTRACT_ABIS.TEST_TOKEN,
+                functionName: 'transfer',
+                args: [omniAccountAddress, transferAmount],
+            });
+            await publicClient.waitForTransactionReceipt({ 
+                hash: transferHash, 
+                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+            });
 
-                // Verify balance
-                const balance = await publicClient.readContract({
-                    address: testTokenAddress,
-                    abi: TEST_TOKEN_ABI,
-                    functionName: 'balanceOf',
-                    args: [omniAccountAddress],
-                });
+            // Verify balance
+            const balance = await publicClient.readContract({
+                address: testTokenAddress,
+                abi: CONTRACT_ABIS.TEST_TOKEN,
+                functionName: 'balanceOf',
+                args: [omniAccountAddress],
+            });
 
-                expect(balance).to.equal(parseUnits('500', 18));
-                console.log('✅ Test tokens transferred to OmniAccount');
-            } catch (error) {
-                console.log('⚠️ Test token operations failed, using mock transfer');
-            }
+            expect(balance).to.equal(transferAmount);
+            console.log(`✅ Test tokens (${TEST_CONFIG.AMOUNTS.TRANSFER_TOKENS}) transferred to OmniAccount`);
+        } catch (error) {
+            console.log('⚠️ Test token operations failed, using mock transfer:', error);
         }
 
         // Create token transfer via UserOperation
-        const transferCalldata = encodeFunctionData({
-            abi: TEST_TOKEN_ABI,
-            functionName: 'transfer',
-            args: [TEST_ACCOUNTS.deployer.address, parseUnits('100', 18)],
-        });
+        const sendAmount = parseUnits(TEST_CONFIG.AMOUNTS.SEND_TOKENS, 18);
+        const transferCalldata = createTokenTransferCalldata(
+            testTokenAddress,
+            TEST_CONFIG.ACCOUNTS.DEPLOYER.address,
+            sendAmount
+        );
 
-        const executeCalldata = encodeFunctionData({
-            abi: OMNI_ACCOUNT_ABI,
-            functionName: 'execute',
-            args: [testTokenAddress, BigInt(0), transferCalldata],
-        });
+        const executeCalldata = createExecuteCalldata(testTokenAddress, BigInt(0), transferCalldata);
 
         // Get current nonce
         const nonce = await publicClient.readContract({
-            address: CONTRACT_ADDRESSES.entryPoint,
-            abi: ENTRY_POINT_ABI,
+            address: testEnv.contracts.ENTRY_POINT as Address,
+            abi: CONTRACT_ABIS.ENTRY_POINT,
             functionName: 'getNonce',
             args: [omniAccountAddress, BigInt(0)],
         });
 
-        const userOp: UserOperation = {
+        // Create UserOperation
+        const userOp = createUserOperation({
             sender: omniAccountAddress,
             nonce,
             initCode: '0x',
             callData: executeCalldata,
-            callGasLimit: BigInt(1000000),
-            verificationGasLimit: BigInt(1000000),
-            preVerificationGas: BigInt(50000),
-            maxFeePerGas: BigInt(20000000000),
-            maxPriorityFeePerGas: BigInt(1000000000),
-            paymasterAndData: '0x',
-            signature: '0x',
-        };
+        });
 
-        // Sign with root key
+        // Create wallet client for signing
+        const testChain = { ...anvil, id: testEnv.chainId };
         const walletClient = createWalletClient({
-            chain: anvil,
-            transport: http('http://127.0.0.1:8545'),
+            chain: testChain,
+            transport: http(testEnv.rpcUrl),
             account: privateKeyToAccount(evmWallet.privateKey),
         });
 
+        // Sign with root key
         userOp.signature = await signUserOperation(
             walletClient,
             userOp,
-            CONTRACT_ADDRESSES.entryPoint,
-            anvil.id,
-            0x01 // RootKey signer
+            testEnv.contracts.ENTRY_POINT as Address,
+            testEnv.chainId,
+            TEST_CONFIG.SIGNER_TYPES.ROOT_KEY
         );
 
         const packedUserOp = packUserOperation(userOp);
 
         const hash = await deployerWalletClient.writeContract({
-            address: CONTRACT_ADDRESSES.entryPoint,
-            abi: ENTRY_POINT_ABI,
+            address: testEnv.contracts.ENTRY_POINT as Address,
+            abi: CONTRACT_ABIS.ENTRY_POINT,
             functionName: 'handleOps',
-            args: [[packedUserOp], TEST_ACCOUNTS.deployer.address],
+            args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ 
+            hash, 
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        });
         expect(receipt.status).to.equal('success');
-        console.log('✅ Step 5 completed: Token transfer via UserOperation executed');
+        console.log(`✅ Step 5 completed: Token transfer (${TEST_CONFIG.AMOUNTS.SEND_TOKENS} tokens) via UserOperation executed`);
     });
 });

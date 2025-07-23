@@ -31,4 +31,28 @@ pnpm install --force
 echo "Running JSON-RPC tests"
 OMNI_WORKER_ENDPOINT=http://omni-executor:2100 pnpm --filter jsonrpc-mock-tests test jsonrpc.test.ts
 
-echo "JSON-RPC tests completed successfully" 
+echo "Running SubmitUserOp integration tests"
+# Set environment variables for the SubmitUserOp test
+export TEST_RPC_URL="http://ethereum-node:8545"
+export TEST_CHAIN_ID="1337"
+export TEE_WORKER_RPC_URL="http://omni-executor:2100"
+
+# Contract addresses should be available from the shared volume
+if [ -f "/shared/deployed-addresses.json" ]; then
+    echo "Loading deployed contract addresses..."
+    export TEST_ENTRY_POINT_ADDRESS=$(cat /shared/deployed-addresses.json | jq -r '.EntryPoint // "0x5FbDB2315678afecb367f032d93F642f64180aa3"')
+    export TEST_FACTORY_ADDRESS=$(cat /shared/deployed-addresses.json | jq -r '.OmniAccountFactory // "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"')
+    export TEST_USDC_ADDRESS=$(cat /shared/deployed-addresses.json | jq -r '.TestUSDC // "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"')
+    export TEST_USDT_ADDRESS=$(cat /shared/deployed-addresses.json | jq -r '.TestUSDT // "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"')
+fi
+
+echo "Environment variables for SubmitUserOp test:"
+echo "  RPC URL: $TEST_RPC_URL"
+echo "  Chain ID: $TEST_CHAIN_ID" 
+echo "  TEE Worker: $TEE_WORKER_RPC_URL"
+echo "  EntryPoint: $TEST_ENTRY_POINT_ADDRESS"
+echo "  Factory: $TEST_FACTORY_ADDRESS"
+
+pnpm --filter jsonrpc-mock-tests test submitUserOp.test.ts
+
+echo "All tests completed successfully" 
