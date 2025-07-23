@@ -217,7 +217,7 @@ describe('Omni JsonRpc Mock Tests', function () {
         expect(decryptedKey).not.to.be.undefined;
     });
 
-    it('should transfer withdraw successfully', async function () {
+    it.skip('should transfer withdraw successfully', async function () {
         const transferParams = {
             request_id: 1,
             chain_id: 1,

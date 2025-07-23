@@ -35,19 +35,23 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 			build_success_response(response)
 		});
 
-	let verify_google_code = warp::post().and(warp::body::json()).map(|body: serde_json::Value| {
-		tracing::info!("Received verify_google_code request: {:?}", body);
+	let verify_google_code = warp::post()
+		.and(warp::path(BASE_PATH))
+		.and(warp::path!("v3" / "account" / "verify_google_code"))
+		.and(warp::body::json())
+		.map(|body: serde_json::Value| {
+			tracing::info!("Received verify_google_code request: {:?}", body);
 
-		let response = json!({
-			"code": 10000,
-			"message": "OK",
-			"data": {
-				"result": true
-			}
+			let response = json!({
+				"code": 10000,
+				"message": "OK",
+				"data": {
+					"result": true
+				}
+			});
+
+			build_success_response(response)
 		});
-
-		build_success_response(response)
-	});
 
 	let post_heima_login = warp::post()
 		.and(warp::path(BASE_PATH))
