@@ -1,22 +1,9 @@
 import { describe, it, before } from 'mocha';
 import { expect } from 'chai';
-import {
-    createPublicClient,
-    createWalletClient,
-    http,
-    parseEther,
-    parseUnits,
-    type Address,
-} from 'viem';
+import { createPublicClient, createWalletClient, http, parseEther, parseUnits, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { anvil } from 'viem/chains';
-import {
-    ClientId,
-    omniApi,
-    randomEvmWallet,
-    calculateOmniAccount,
-    UserLoginResponse,
-} from './utils';
+import { ClientId, omniApi, randomEvmWallet, calculateOmniAccount, UserLoginResponse } from './utils';
 import { signMessage } from 'viem/accounts';
 import { TEST_CONFIG, validateTestEnvironment } from './config';
 import {
@@ -49,7 +36,7 @@ describe('SubmitUserOp Integration Tests', function () {
     before(async function () {
         // Validate test environment
         testEnv = validateTestEnvironment();
-        
+
         // Custom chain configuration using test config
         const testChain = {
             ...anvil,
@@ -134,16 +121,16 @@ describe('SubmitUserOp Integration Tests', function () {
             value: fundingAmount,
         });
 
-        await publicClient.waitForTransactionReceipt({ 
-            hash, 
-            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        await publicClient.waitForTransactionReceipt({
+            hash,
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
 
         // Verify balance
         const finalBalance = await publicClient.getBalance({
             address: omniAccountAddress,
         });
-        
+
         expect(finalBalance).to.equal(fundingAmount);
         console.log(`✅ Step 2 completed: OmniAccount funded with ${TEST_CONFIG.AMOUNTS.FUNDING_ETH} ETH`);
     });
@@ -202,9 +189,9 @@ describe('SubmitUserOp Integration Tests', function () {
             args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ 
-            hash, 
-            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        const receipt = await publicClient.waitForTransactionReceipt({
+            hash,
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
         expect(receipt.status).to.equal('success');
 
@@ -224,9 +211,9 @@ describe('SubmitUserOp Integration Tests', function () {
         });
 
         const messageString = JSON.stringify(messageResponse);
-        const signature = await signMessage({ 
-            message: messageString, 
-            privateKey: evmWallet.privateKey 
+        const signature = await signMessage({
+            message: messageString,
+            privateKey: evmWallet.privateKey,
         });
 
         const loginResponse: UserLoginResponse = await omniApi.userLogin({
@@ -249,7 +236,7 @@ describe('SubmitUserOp Integration Tests', function () {
         });
 
         idToken = loginResponse.id_token;
-        
+
         // For testing, use a mock TEE worker address
         teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address; // Mock TEE worker address
         console.log('Mock TEE worker address:', teeWorkerAddress);
@@ -300,9 +287,9 @@ describe('SubmitUserOp Integration Tests', function () {
             args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ 
-            hash, 
-            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        const receipt = await publicClient.waitForTransactionReceipt({
+            hash,
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
         expect(receipt.status).to.equal('success');
 
@@ -328,9 +315,9 @@ describe('SubmitUserOp Integration Tests', function () {
                 functionName: 'mint',
                 args: [evmWallet.address, mintAmount],
             });
-            await publicClient.waitForTransactionReceipt({ 
-                hash: mintHash, 
-                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+            await publicClient.waitForTransactionReceipt({
+                hash: mintHash,
+                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
             });
 
             // Transfer tokens from EVM wallet to OmniAccount
@@ -348,9 +335,9 @@ describe('SubmitUserOp Integration Tests', function () {
                 functionName: 'transfer',
                 args: [omniAccountAddress, transferAmount],
             });
-            await publicClient.waitForTransactionReceipt({ 
-                hash: transferHash, 
-                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+            await publicClient.waitForTransactionReceipt({
+                hash: transferHash,
+                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
             });
 
             // Verify balance
@@ -419,11 +406,13 @@ describe('SubmitUserOp Integration Tests', function () {
             args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({ 
-            hash, 
-            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION 
+        const receipt = await publicClient.waitForTransactionReceipt({
+            hash,
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
         expect(receipt.status).to.equal('success');
-        console.log(`✅ Step 5 completed: Token transfer (${TEST_CONFIG.AMOUNTS.SEND_TOKENS} tokens) via UserOperation executed`);
+        console.log(
+            `✅ Step 5 completed: Token transfer (${TEST_CONFIG.AMOUNTS.SEND_TOKENS} tokens) via UserOperation executed`
+        );
     });
 });

@@ -17,17 +17,21 @@ export const CONTRACT_ABIS = {
             name: 'handleOps',
             type: 'function',
             inputs: [
-                { name: 'ops', type: 'tuple[]', components: [
-                    { name: 'sender', type: 'address' },
-                    { name: 'nonce', type: 'uint256' },
-                    { name: 'initCode', type: 'bytes' },
-                    { name: 'callData', type: 'bytes' },
-                    { name: 'accountGasLimits', type: 'bytes32' },
-                    { name: 'preVerificationGas', type: 'uint256' },
-                    { name: 'gasFees', type: 'bytes32' },
-                    { name: 'paymasterAndData', type: 'bytes' },
-                    { name: 'signature', type: 'bytes' },
-                ]},
+                {
+                    name: 'ops',
+                    type: 'tuple[]',
+                    components: [
+                        { name: 'sender', type: 'address' },
+                        { name: 'nonce', type: 'uint256' },
+                        { name: 'initCode', type: 'bytes' },
+                        { name: 'callData', type: 'bytes' },
+                        { name: 'accountGasLimits', type: 'bytes32' },
+                        { name: 'preVerificationGas', type: 'uint256' },
+                        { name: 'gasFees', type: 'bytes32' },
+                        { name: 'paymasterAndData', type: 'bytes' },
+                        { name: 'signature', type: 'bytes' },
+                    ],
+                },
                 { name: 'beneficiary', type: 'address' },
             ],
             outputs: [],
@@ -38,11 +42,11 @@ export const CONTRACT_ABIS = {
             type: 'function',
             inputs: [
                 { name: 'sender', type: 'address' },
-                { name: 'key', type: 'uint192' }
+                { name: 'key', type: 'uint192' },
             ],
             outputs: [{ name: 'nonce', type: 'uint256' }],
             stateMutability: 'view',
-        }
+        },
     ],
 
     OMNI_ACCOUNT_FACTORY: [
@@ -52,7 +56,7 @@ export const CONTRACT_ABIS = {
             inputs: [
                 { name: 'omniAccount', type: 'bytes32' },
                 { name: 'clientId', type: 'bytes' },
-                { name: 'rootSigner', type: 'address' }
+                { name: 'rootSigner', type: 'address' },
             ],
             outputs: [{ name: 'account', type: 'address' }],
             stateMutability: 'nonpayable',
@@ -63,11 +67,11 @@ export const CONTRACT_ABIS = {
             inputs: [
                 { name: 'omniAccount', type: 'bytes32' },
                 { name: 'clientId', type: 'bytes' },
-                { name: 'rootSigner', type: 'address' }
+                { name: 'rootSigner', type: 'address' },
             ],
             outputs: [{ name: 'account', type: 'address' }],
             stateMutability: 'view',
-        }
+        },
     ],
 
     OMNI_ACCOUNT: [
@@ -91,11 +95,11 @@ export const CONTRACT_ABIS = {
             inputs: [
                 { name: 'target', type: 'address' },
                 { name: 'value', type: 'uint256' },
-                { name: 'data', type: 'bytes' }
+                { name: 'data', type: 'bytes' },
             ],
             outputs: [],
             stateMutability: 'nonpayable',
-        }
+        },
     ],
 
     TEST_TOKEN: [
@@ -104,7 +108,7 @@ export const CONTRACT_ABIS = {
             type: 'function',
             inputs: [
                 { name: 'to', type: 'address' },
-                { name: 'amount', type: 'uint256' }
+                { name: 'amount', type: 'uint256' },
             ],
             outputs: [],
             stateMutability: 'nonpayable',
@@ -114,7 +118,7 @@ export const CONTRACT_ABIS = {
             type: 'function',
             inputs: [
                 { name: 'to', type: 'address' },
-                { name: 'amount', type: 'uint256' }
+                { name: 'amount', type: 'uint256' },
             ],
             outputs: [{ name: 'result', type: 'bool' }],
             stateMutability: 'nonpayable',
@@ -125,7 +129,7 @@ export const CONTRACT_ABIS = {
             inputs: [{ name: 'account', type: 'address' }],
             outputs: [{ name: 'balance', type: 'uint256' }],
             stateMutability: 'view',
-        }
+        },
     ],
 } as const;
 
@@ -160,7 +164,9 @@ export interface PackedUserOperation {
 export function stringToBytes(str: string): `0x${string}` {
     const encoder = new TextEncoder();
     const bytes = encoder.encode(str);
-    return `0x${Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+    return `0x${Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')}`;
 }
 
 export function packAccountGasLimits(callGasLimit: bigint, verificationGasLimit: bigint): `0x${string}` {
@@ -195,7 +201,7 @@ export function createUserOperation(params: {
     gasConfig?: typeof TEST_CONFIG.GAS_CONFIG;
 }): UserOperation {
     const gasConfig = params.gasConfig || TEST_CONFIG.GAS_CONFIG;
-    
+
     return {
         sender: params.sender,
         nonce: params.nonce || BigInt(0),
@@ -227,7 +233,7 @@ export async function signUserOperation(
     signerType: number = TEST_CONFIG.SIGNER_TYPES.OWNER
 ): Promise<`0x${string}`> {
     const packedOp = packUserOperation(userOp);
-    
+
     // EIP-712 domain
     const domain = {
         name: 'ERC4337',
@@ -291,11 +297,7 @@ export function generateInitCode(
     return `${factoryAddress}${initCalldata.slice(2)}` as `0x${string}`;
 }
 
-export function createTokenTransferCalldata(
-    tokenAddress: ContractAddress,
-    to: Address,
-    amount: bigint
-): `0x${string}` {
+export function createTokenTransferCalldata(tokenAddress: ContractAddress, to: Address, amount: bigint): `0x${string}` {
     return encodeFunctionData({
         abi: CONTRACT_ABIS.TEST_TOKEN,
         functionName: 'transfer',
@@ -303,11 +305,7 @@ export function createTokenTransferCalldata(
     });
 }
 
-export function createExecuteCalldata(
-    target: Address,
-    value: bigint,
-    data: `0x${string}`
-): `0x${string}` {
+export function createExecuteCalldata(target: Address, value: bigint, data: `0x${string}`): `0x${string}` {
     return encodeFunctionData({
         abi: CONTRACT_ABIS.OMNI_ACCOUNT,
         functionName: 'execute',

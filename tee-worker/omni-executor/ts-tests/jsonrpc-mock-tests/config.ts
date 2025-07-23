@@ -3,7 +3,7 @@ export const TEST_CONFIG = {
     // Network configuration
     RPC_URL: process.env.TEST_RPC_URL || 'http://127.0.0.1:8545',
     CHAIN_ID: process.env.TEST_CHAIN_ID ? parseInt(process.env.TEST_CHAIN_ID) : 1337,
-    
+
     // Test accounts from Anvil/Hardhat default test mnemonic:
     // "test test test test test test test test test test test junk"
     // These addresses are deterministically generated and have public private keys
@@ -19,7 +19,7 @@ export const TEST_CONFIG = {
         TEE_WORKER: {
             address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC' as const, // Account #2
             privateKey: '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a' as const,
-        }
+        },
     },
 
     // Contract addresses - these are deployed by local-deploy.sh
@@ -76,15 +76,9 @@ export type ContractAddress = `0x${string}`;
 
 // Environment validation
 export function validateTestEnvironment() {
-    const requiredEnvVars = [
-        'TEST_RPC_URL',
-        'TEST_ENTRY_POINT_ADDRESS',
-        'TEST_FACTORY_ADDRESS',
-    ];
+    const requiredEnvVars = ['TEST_RPC_URL', 'TEST_ENTRY_POINT_ADDRESS', 'TEST_FACTORY_ADDRESS'];
 
-    const missing = requiredEnvVars.filter(envVar => 
-        envVar.startsWith('TEST_') && !process.env[envVar]
-    );
+    const missing = requiredEnvVars.filter((envVar) => envVar.startsWith('TEST_') && !process.env[envVar]);
 
     if (missing.length > 0) {
         console.warn('⚠️  Missing environment variables (using defaults):', missing.join(', '));
