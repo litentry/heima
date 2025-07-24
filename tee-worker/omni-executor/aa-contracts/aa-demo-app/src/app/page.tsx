@@ -5,10 +5,10 @@ import { useAccount, usePublicClient } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
 import { AccountsDashboard } from "@/components/AccountsDashboard";
 import { FundingGuide } from "@/components/FundingGuide";
-import { ERC20FundingGuide } from "@/components/ERC20FundingGuide";
 import { CreateOmniAccount } from "@/components/CreateOmniAccount";
 import { AuthorizedSigners } from "@/components/AuthorizedSigners";
 import { AuthorizeTEEWorker } from "@/components/AuthorizeTEEWorker";
+import { TEETokenTransfer } from "@/components/TEETokenTransfer";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronRight, Check } from "lucide-react";
 
@@ -22,20 +22,9 @@ function HomeContent() {
 	const [hasContract, setHasContract] = useState(false);
 	const [authorizedSigners, setAuthorizedSigners] = useState<string[]>([]);
 	const [isLoadingSigners, setIsLoadingSigners] = useState(false);
-	const [hasERC20Tokens, setHasERC20Tokens] = useState(false);
 	const [teeWorkerAddress, setTeeWorkerAddress] = useState<string | null>(null);
 	const [isTeeWorkerAuthorized, setIsTeeWorkerAuthorized] = useState(false);
 
-	// Memoized callback for balance updates
-	const handleBalancesUpdate = useCallback((balances: any[]) => {
-		// Check if any ERC20 tokens are present
-		const hasTokens = balances.some(
-			(tb) => tb.symbol !== "ETH" && tb.balance > BigInt(0)
-		);
-		if (hasTokens) {
-			setHasERC20Tokens(true);
-		}
-	}, []);
 
 	// Debug logging
 	useEffect(() => {
@@ -229,12 +218,10 @@ function HomeContent() {
 			setCurrentStep(3);
 		} else if (!isTeeWorkerAuthorized) {
 			setCurrentStep(4);
-		} else if (!hasERC20Tokens) {
-			setCurrentStep(5);
 		} else {
-			setCurrentStep(6);
+			setCurrentStep(5);
 		}
-	}, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, isTeeWorkerAuthorized, hasERC20Tokens]);
+	}, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, isTeeWorkerAuthorized]);
 
 	const steps = [
 		{
@@ -263,14 +250,8 @@ function HomeContent() {
 		},
 		{
 			id: 5,
-			title: "Transfer ERC20 Tokens",
-			description: "Transfer test tokens to your Omni Account",
-			completed: hasERC20Tokens,
-		},
-		{
-			id: 6,
-			title: "Ready to Swap",
-			description: "Send swap requests to the worker",
+			title: "Send Token Transfer",
+			description: "Transfer tokens through the TEE worker",
 			completed: false,
 		},
 	];
@@ -394,7 +375,6 @@ function HomeContent() {
 										onAddressCalculated={setOmniAccountAddress}
 										onOmniAccountCalculated={setOmniAccountHash}
 										ethBalance={ethBalance}
-										onBalancesUpdate={handleBalancesUpdate}
 										isAccountCreated={isAuthorized}
 									/>
 								</div>
@@ -479,34 +459,20 @@ function HomeContent() {
 							{currentStep >= 5 && currentStep <= 5 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 5: Transfer ERC20 Tokens
+										Step 5: Send Token Transfer
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Mint and transfer test USDC or USDT to your Omni Account for token swaps.
+										Transfer USDC or USDT through the TEE worker using UserOperations.
 									</p>
-									<ERC20FundingGuide
+									<TEETokenTransfer
 										omniAccountAddress={omniAccountAddress}
-										hasERC20Tokens={hasERC20Tokens}
-										onTokensAdded={() => {
-											console.log("ERC20 tokens added");
-											setHasERC20Tokens(true);
-										}}
+										omniAccountHash={omniAccountHash}
+										isDeployed={hasContract}
+										teeWorkerAddress={teeWorkerAddress}
 									/>
 								</div>
 							)}
 
-							{currentStep >= 6 && (
-								<div>
-									<h2 className="text-xl font-semibold mb-4">
-										Step 6: Start Swapping
-									</h2>
-									<p className="text-gray-600 mb-6">
-										Your Omni Account is ready! Send swap requests to the TEE
-										worker service.
-									</p>
-									{/* TODO */}
-								</div>
-							)}
 
 							{/* Always show completed steps in collapsed form */}
 							<div className="space-y-4">
@@ -583,23 +549,6 @@ function HomeContent() {
 									</div>
 								)}
 
-								{hasERC20Tokens && (
-									<div className="bg-white rounded-lg shadow p-4">
-										<div className="flex items-center justify-between">
-											<div className="flex items-center space-x-3">
-												<div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-													<Check className="w-4 h-4 text-white" />
-												</div>
-												<span className="font-medium text-green-700">
-													ERC20 Tokens Added
-												</span>
-											</div>
-											<span className="text-sm text-gray-500">
-												Ready for swaps
-											</span>
-										</div>
-									</div>
-								)}
 							</div>
 						</div>
 					</div>

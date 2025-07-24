@@ -7123,6 +7123,7 @@ dependencies = [
  "reqwest 0.12.22",
  "serde",
  "serde_json",
+ "signer-client",
  "tokio",
  "tracing",
  "tracing-subscriber",

@@ -75,10 +75,10 @@ loader.env.OE_BSC_TESTNET_URL = { passthrough = true }
 loader.env.OE_ALCHEMY_KEY = { passthrough = true }
 loader.env.OE_PUMPX_SIGNER_URL = { passthrough = true }
 loader.env.OE_PUMPX_WORKER_URL = { passthrough = true }
-loader.env.DEFAULT_ARBITRUM_URL = { passthrough = true }
-loader.env.DEFAULT_ARBITRUM_TESTNET_URL = { passthrough = true }
-loader.env.DEFAULT_HYPEREVM_URL = { passthrough = true }
-loader.env.DEFAULT_HYPEREVM_TESTNET_URL = { passthrough = true }
+loader.env.OE_ARBITRUM_URL = { passthrough = true }
+loader.env.OE_ARBITRUM_TESTNET_URL = { passthrough = true }
+loader.env.OE_HYPEREVM_URL = { passthrough = true }
+loader.env.OE_HYPEREVM_TESTNET_URL = { passthrough = true }
 loader.env.OE_OMNI_FACTORY_ADDRESS = { passthrough = true }
 loader.env.OE_ENTRY_POINT_ADDRESS = { passthrough = true }
 loader.env.OE_WILDMETA_API_URL = { passthrough = true }

@@ -38,3 +38,46 @@ export interface ExportWalletParams {
     wallet_index: number;
     wallet_address: string;
 }
+
+export interface TransferWithdrawParams {
+    request_id?: number;
+    chain_id: number;
+    wallet_index: number;
+    recipient_address: string;
+    token_ca: string;
+    amount: string;
+    google_code: string;
+    lang?: string;
+}
+
+export interface SubmitSwapOrderParams {
+    intent_id: number;
+    order_type: 'market' | 'limit';
+    swap_type: 1 | 2;
+    from_chain_id: number;
+    from_token_ca?: string;
+    from_amount: string;
+    to_chain_id: number;
+    to_token_ca?: string;
+    double_out: boolean;
+    is_one_click: boolean;
+    token_cap?: string;
+    price_usd?: string;
+    usd_worth: string;
+    trailing_percent?: number;
+    wallet_index: number;
+}
+
+export interface SignLimitOrderParams {
+    intent_id: number;
+    order_id: number;
+    chain_id: number;
+    wallet_index: number;
+    unsigned_tx: string[];
+}
+
+export interface NotifyLimitOrderResultParams {
+    intent_id: number;
+    result: string;
+    message?: string;
+}
