@@ -96,11 +96,16 @@ export const observeEvent = async (expectedSection: string, expectedMethod: stri
         let eventFound = false;
         let result: any;
         const query = (event: any) => true;
-        const timeout = setTimeout(() => {
-            if (!eventFound) {
-                reject(new Error(`Event -${expectedSection}.${expectedMethod} not found within the specified time`));
-            }
-        }, 5 * 60 * 1000); // 5 minutes
+        const timeout = setTimeout(
+            () => {
+                if (!eventFound) {
+                    reject(
+                        new Error(`Event -${expectedSection}.${expectedMethod} not found within the specified time`)
+                    );
+                }
+            },
+            5 * 60 * 1000
+        ); // 5 minutes
 
         const unsubscribe = api.rpc.chain.subscribeNewHeads(async (header) => {
             const events = await api.query.system.events.at(header.hash);
