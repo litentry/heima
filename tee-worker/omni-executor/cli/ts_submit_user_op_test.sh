@@ -22,7 +22,7 @@ done
 NODE_URL=${NODE_URL:-"http://heima-node:9944"}
 echo "Using node url $NODE_URL"
 
-echo "Running JSON-RPC tests"
+echo "Running SubmitUserOp integration tests"
 
 echo "Installing dependencies and building ts-tests"
 cd /ts-tests
@@ -49,38 +49,7 @@ echo "  TEE Worker: $TEE_WORKER_RPC_URL"
 echo "  EntryPoint: $TEST_ENTRY_POINT_ADDRESS"
 echo "  Factory: $TEST_FACTORY_ADDRESS"
 
-# Run tests in parallel
-echo "Starting tests in parallel..."
+echo "Running SubmitUserOp tests"
+OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test submitUserOp.test.ts
 
-# Start JSON-RPC tests in background
-echo "Starting JSON-RPC tests..."
-OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test jsonrpc.test.ts &
-JSONRPC_PID=$!
-
-# Start SubmitUserOp tests in background
-echo "Starting SubmitUserOp integration tests..."
-OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test submitUserOp.test.ts &
-SUBMIT_USER_OP_PID=$!
-
-# Wait for both processes to complete
-echo "Waiting for tests to complete..."
-wait $JSONRPC_PID
-JSONRPC_EXIT_CODE=$?
-
-wait $SUBMIT_USER_OP_PID
-SUBMIT_USER_OP_EXIT_CODE=$?
-
-# Check exit codes
-if [ $JSONRPC_EXIT_CODE -ne 0 ]; then
-    echo "JSON-RPC tests failed with exit code $JSONRPC_EXIT_CODE"
-    exit $JSONRPC_EXIT_CODE
-fi
-
-if [ $SUBMIT_USER_OP_EXIT_CODE -ne 0 ]; then
-    echo "SubmitUserOp tests failed with exit code $SUBMIT_USER_OP_EXIT_CODE"
-    exit $SUBMIT_USER_OP_EXIT_CODE
-fi
-
-echo "Both test suites completed successfully"
-
-echo "All tests completed successfully" 
+echo "SubmitUserOp tests completed successfully"
