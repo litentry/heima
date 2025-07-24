@@ -77,7 +77,7 @@ export const DEFAULT_CLIENT_ID = "wildmeta";
 export const TEE_WORKER_CONFIG = {
 	rpcUrl: process.env.NEXT_PUBLIC_TEE_WORKER_RPC_URL || "http://localhost:3000",
 	clientId: "wildmeta",
-	chainType: "Evm" as const,
+	chainType: "evm" as const,
 	signerIndex: 0,
 	// Use proxy to avoid CORS issues when running in browser
 	useProxy: true,
