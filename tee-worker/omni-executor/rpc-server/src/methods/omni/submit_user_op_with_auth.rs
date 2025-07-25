@@ -56,7 +56,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 					signature,
 					login_type,
 				} => {
-					verify_wildmeta_signature(agent_address, business_json, signature).await?;
+					verify_wildmeta_signature(agent_address, business_json, signature)?;
 
 					let business_data: serde_json::Value = serde_json::from_str(business_json)
 						.map_err(|e| {
@@ -76,8 +76,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 						&ctx.wildmeta_timestamp_storage,
 						main_address,
 						timestamp,
-					)
-					.await?;
+					)?;
 
 					let linked = ctx
 						.wildmeta_api
@@ -180,7 +179,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register omni_submitUserOpWithAuth method");
 }
 
-async fn verify_wildmeta_signature(
+fn verify_wildmeta_signature(
 	agent_address: &str,
 	business_json: &str,
 	signature: &str,
@@ -215,7 +214,7 @@ async fn verify_wildmeta_signature(
 	Ok(())
 }
 
-async fn verify_payload_timestamp(
+fn verify_payload_timestamp(
 	storage: &Arc<WildmetaTimestampStorage>,
 	main_address: &str,
 	new_timestamp: u64,
@@ -247,50 +246,50 @@ async fn verify_payload_timestamp(
 mod tests {
 	use super::*;
 
-	#[tokio::test]
-	async fn test_verify_wildmeta_signature_with_real_data() {
+	#[test]
+	fn test_verify_wildmeta_signature_with_real_data() {
 		let business_json = r#"{"action":"trade","amount":1.5,"customField1":"buy","customField2":"market","leverage":10,"metadata":{"features":{"darkMode":true,"notifications":false},"userAgent":"mobile-app","version":"1.0.0"},"positions":[{"entryPrice":50000,"metadata":{"openTime":1640995200,"strategy":"momentum"},"side":"long","size":1.5,"symbol":"BTC/USD"},{"entryPrice":3000,"metadata":{"openTime":1640995300,"strategy":"reversal"},"side":"short","size":2,"symbol":"ETH/USD"}],"price":50000,"riskManagement":{"maxLeverage":20,"stopLoss":{"enabled":true,"percentage":0.05},"takeProfit":{"enabled":true,"percentage":0.1}},"slippage":0.01,"symbol":"BTC/USD","timestamp":1752573555}"#;
 		let signature = "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		let result = verify_wildmeta_signature(agent_address, business_json, signature).await;
+		let result = verify_wildmeta_signature(agent_address, business_json, signature);
 		assert!(result.is_ok(), "Signature verification should succeed");
 	}
 
-	#[tokio::test]
-	async fn test_verify_wildmeta_signature_invalid_signature() {
+	#[test]
+	fn test_verify_wildmeta_signature_invalid_signature() {
 		let business_json = r#"{"action":"trade","timestamp":1752573555}"#;
 		let signature = "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		let result = verify_wildmeta_signature(agent_address, business_json, signature).await;
+		let result = verify_wildmeta_signature(agent_address, business_json, signature);
 		assert!(result.is_err(), "Should fail with invalid signature");
 	}
 
-	#[tokio::test]
-	async fn test_verify_wildmeta_signature_wrong_signer() {
+	#[test]
+	fn test_verify_wildmeta_signature_wrong_signer() {
 		let business_json = r#"{"action":"trade","amount":1.5,"customField1":"buy","customField2":"market","leverage":10,"metadata":{"features":{"darkMode":true,"notifications":false},"userAgent":"mobile-app","version":"1.0.0"},"positions":[{"entryPrice":50000,"metadata":{"openTime":1640995200,"strategy":"momentum"},"side":"long","size":1.5,"symbol":"BTC/USD"},{"entryPrice":3000,"metadata":{"openTime":1640995300,"strategy":"reversal"},"side":"short","size":2,"symbol":"ETH/USD"}],"price":50000,"riskManagement":{"maxLeverage":20,"stopLoss":{"enabled":true,"percentage":0.05},"takeProfit":{"enabled":true,"percentage":0.1}},"slippage":0.01,"symbol":"BTC/USD","timestamp":1752573555}"#;
 
 		let signature = "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c";
 		// Use a different address than the actual signer
 		let wrong_agent_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
 
-		let result = verify_wildmeta_signature(wrong_agent_address, business_json, signature).await;
+		let result = verify_wildmeta_signature(wrong_agent_address, business_json, signature);
 		assert!(result.is_err(), "Should fail with wrong signer address");
 	}
 
-	#[tokio::test]
-	async fn test_verify_wildmeta_signature_invalid_hex() {
+	#[test]
+	fn test_verify_wildmeta_signature_invalid_hex() {
 		let business_json = r#"{"timestamp":1752573555}"#;
 		let signature = "invalid_hex";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		let result = verify_wildmeta_signature(agent_address, business_json, signature).await;
+		let result = verify_wildmeta_signature(agent_address, business_json, signature);
 		assert!(result.is_err(), "Should fail with invalid hex signature");
 	}
 
-	#[tokio::test]
-	async fn test_parse_business_json_timestamp() {
+	#[test]
+	fn test_parse_business_json_timestamp() {
 		let business_json = r#"{"action":"trade","timestamp":1752573555}"#;
 
 		let parsed: serde_json::Value = serde_json::from_str(business_json).unwrap();
@@ -299,8 +298,8 @@ mod tests {
 		assert_eq!(timestamp, Some(1752573555), "Should correctly parse timestamp");
 	}
 
-	#[tokio::test]
-	async fn test_parse_business_json_missing_timestamp() {
+	#[test]
+	fn test_parse_business_json_missing_timestamp() {
 		let business_json = r#"{"action":"trade","amount":1.5}"#;
 
 		let parsed: serde_json::Value = serde_json::from_str(business_json).unwrap();
