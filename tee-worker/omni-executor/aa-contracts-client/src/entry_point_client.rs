@@ -876,12 +876,12 @@ pub mod test {
 
 		let factory = address!("0xca470c1990B1E3DBF24676D8ACDF4B5867CD410e");
 		let oa: [u8; 32] =
-			decode_hex("0x8a04e3fd314f7ac39359df0383eb6b6737d9b2db04ee6beb5a12f6e49286e0a7")
+			decode_hex("0x31e80de15f426f2e353810d57aff3a6ab44e1a79c44e8bbc5b17fa189ee47d8f")
 				.unwrap()
 				.try_into()
 				.unwrap();
 		let client_id = "Wildmeta";
-		let root_signer = address!("0x683d0aF0a61E5C8c2fA295CfE9FabB899C7fE121");
+		let root_signer = address!("0x2EfD25B2AE9F6f4918D25629d003120E3112B430");
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
@@ -912,33 +912,53 @@ pub mod test {
 
 	#[test]
 	fn print_calldata() {
-		use ethers::abi::AbiEncode;
-		use ethers::abi::Token;
+		use ethers::abi::{Function, Param, ParamType, StateMutability, Token};
 		use ethers::types::Address;
-		use ethers::utils::parse_ether;
 
-		// OmniAccount `execute(address dest, uint256 value, bytes func)`
-		let function_signature = "execute(address,uint256,bytes)";
-		let function_selector = ethers::utils::id(function_signature)[..4].to_vec();
+		let omni_account_addr: Address =
+			"0xF0Bc19d98E0A55b4eA07a077e4119CB3c39Edbb4".parse().unwrap();
+		let new_root_signer: Address =
+			"0x49fC5CC35F08E894959AA09Ce64d51F58faBdc0b".parse().unwrap();
 
-		// Recipient
-		let recipient: Address = "0x49fC5CC35F08E894959AA09Ce64d51F58faBdc0b".parse().unwrap();
+		// 1. Encode `addRootSigner(address)`
+		let add_fn = Function {
+			name: "addRootSigner".to_string(),
+			inputs: vec![Param {
+				name: "root".to_string(),
+				kind: ParamType::Address,
+				internal_type: None,
+			}],
+			outputs: vec![],
+			state_mutability: StateMutability::NonPayable,
+			constant: None,
+		};
+		let add_root_data = add_fn.encode_input(&[Token::Address(new_root_signer)]).unwrap();
 
-		// Amount: 0.001 ETH
-		let value = parse_ether(0.001).unwrap(); // U256
+		// 2. Encode `execute(address,uint256,bytes)`
+		let exec_fn = Function {
+			name: "execute".to_string(),
+			inputs: vec![
+				Param { name: "target".to_string(), kind: ParamType::Address, internal_type: None },
+				Param {
+					name: "value".to_string(),
+					kind: ParamType::Uint(256),
+					internal_type: None,
+				},
+				Param { name: "data".to_string(), kind: ParamType::Bytes, internal_type: None },
+			],
+			outputs: vec![],
+			state_mutability: StateMutability::NonPayable,
+			constant: None,
+		};
 
-		// Empty bytes for `func`
-		let func = ethers::abi::Bytes::from(vec![]);
+		let calldata = exec_fn
+			.encode_input(&[
+				Token::Address(omni_account_addr),
+				Token::Uint(0u64.into()),
+				Token::Bytes(add_root_data.clone()),
+			])
+			.unwrap();
 
-		// Encode the parameters
-		let params = [Token::Address(recipient), Token::Uint(value), Token::Bytes(func.to_vec())];
-
-		let encoded_params = ethers::abi::encode(&params);
-
-		// Concatenate selector + encoded params
-		let mut calldata = function_selector;
-		calldata.extend(encoded_params);
-
-		println!("calldata: 0x{}", hex::encode(calldata));
+		println!("userOp.callData: 0x{}", hex::encode(calldata));
 	}
 }
