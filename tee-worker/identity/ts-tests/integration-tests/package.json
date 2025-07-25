@@ -10,6 +10,7 @@
         "check-types": "tsc --noEmit"
     },
     "dependencies": {
+        "@heima-network/api-argument": "file:../../../client-api",
         "@litentry/chaindata": "^0.2.0",
         "@litentry/vc-schema-validator": "^0.0.1",
         "@noble/ed25519": "^1.7.3",
@@ -39,7 +40,6 @@
         "mocha": "^11.7.1",
         "mocha-steps": "^1.3.0",
         "scale-ts": "^0.2.11",
-        "@heima-network/api-argument": "file:../../../client-api",
         "tiny-secp256k1": "^2.2.3",
         "tweetnacl": "^1.0.3",
         "websocket-as-promised": "^2.0.1",
