@@ -1,1 +1,1 @@
-packages: ['integration-tests', 'stress', 'worker', 'post-checks']
+packages: ['integration-tests', 'worker', 'post-checks']
