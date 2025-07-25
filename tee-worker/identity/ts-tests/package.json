@@ -17,7 +17,8 @@
             "ws": "^8.18.2",
             "@types/ws": "^8.5.9",
             "@polkadot/types": "*",
-        "@polkadot/types-codec": "*"
+            "@polkadot/types-codec": "*",
+            "@substrate/connect": "^0.8.12"
         }
     }
 }
