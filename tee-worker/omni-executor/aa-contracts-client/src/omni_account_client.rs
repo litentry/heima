@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::{addRootSignerCall, getNonceCall, getOwnerCall, removeRootSignerCall};
+use crate::types::{
+	addPasskeySignerCall, addRootSignerCall, getNonceCall, getOwnerCall, removePasskeySignerCall,
+	removeRootSignerCall, PasskeyPublicKey,
+};
 use crate::utils::build_call_transaction;
 use alloy::primitives::{Address, FixedBytes, U256};
 use alloy::rpc::types::TransactionRequest;
@@ -75,7 +78,76 @@ impl<P: RpcProvider<Transaction = TransactionRequest>> OmniAccountClient<P> {
 			FixedBytes::<32>::abi_decode(&result).map_err(|_| error!("Could not decode owner"))?;
 		Ok(owner)
 	}
+
+	pub async fn add_passkey_signer(&self, pk: PasskeyPublicKey) -> Result<(), ()> {
+		let call_data = addPasskeySignerCall { pk }.abi_encode();
+		let tx = build_call_transaction(self.address, call_data);
+		self.rpc_client.send_transaction(tx).await.map_err(|_| ())?;
+		Ok(())
+	}
+
+	pub async fn remove_passkey_signer(&self, pk: PasskeyPublicKey) -> Result<(), ()> {
+		let call_data = removePasskeySignerCall { pk }.abi_encode();
+		let tx = build_call_transaction(self.address, call_data);
+		self.rpc_client.send_transaction(tx).await.map_err(|_| ())?;
+		Ok(())
+	}
+
+	pub async fn add_passkey_signer_from_string(&self, pubkey_str: &str) -> Result<(), String> {
+		let pk = parse_passkey_public_key(pubkey_str)?;
+		self.add_passkey_signer(pk)
+			.await
+			.map_err(|_| "Failed to add passkey signer".to_string())
+	}
+
+	pub async fn remove_passkey_signer_from_string(&self, pubkey_str: &str) -> Result<(), String> {
+		let pk = parse_passkey_public_key(pubkey_str)?;
+		self.remove_passkey_signer(pk)
+			.await
+			.map_err(|_| "Failed to remove passkey signer".to_string())
+	}
 }
+
+fn parse_passkey_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, String> {
+	let pubkey_str = pubkey_str.strip_prefix("0x").unwrap_or(pubkey_str);
+
+	// Handle different formats: compressed (66 chars) or uncompressed (130 chars)
+	let (x_hex, y_hex) = match pubkey_str.len() {
+		66 => {
+			// Compressed format: 02/03 + 32 bytes x coordinate
+			// We need to decompress to get both x and y
+			return Err("Compressed public key format not supported yet. Use uncompressed format."
+				.to_string());
+		},
+		128 => {
+			// Uncompressed format without prefix: 32 bytes x + 32 bytes y
+			(&pubkey_str[..64], &pubkey_str[64..])
+		},
+		130 => {
+			// Uncompressed format with 04 prefix: 04 + 32 bytes x + 32 bytes y
+			if !pubkey_str.starts_with("04") {
+				return Err("Invalid uncompressed public key prefix".to_string());
+			}
+			(&pubkey_str[2..66], &pubkey_str[66..])
+		},
+		_ => return Err("Invalid public key length".to_string()),
+	};
+
+	let x_bytes =
+		alloy::hex::decode(x_hex).map_err(|_| "Invalid hex in x coordinate".to_string())?;
+	let y_bytes =
+		alloy::hex::decode(y_hex).map_err(|_| "Invalid hex in y coordinate".to_string())?;
+
+	if x_bytes.len() != 32 || y_bytes.len() != 32 {
+		return Err("Invalid coordinate length".to_string());
+	}
+
+	let x = FixedBytes::<32>::from_slice(&x_bytes);
+	let y = FixedBytes::<32>::from_slice(&y_bytes);
+
+	Ok(PasskeyPublicKey { x, y })
+}
+
 
 #[cfg(test)]
 pub mod test {
