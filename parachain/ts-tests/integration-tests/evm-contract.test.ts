@@ -92,9 +92,8 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         const transferReceipt = await web3.eth.sendSignedTransaction(transferTransaction.rawTransaction!);
         console.log(`Tx successful with hash: ${transferReceipt.transactionHash}`);
 
-        const { nonce: eveCurrentNonce, data: eveCurrentBalance } = await context.api.query.system.account(
-            eveMappedSustrateAccount
-        );
+        const { nonce: eveCurrentNonce, data: eveCurrentBalance } =
+            await context.api.query.system.account(eveMappedSustrateAccount);
         const { nonce: evmAccountCurrentNonce, data: evmAccountCurrentBalance } =
             await context.api.query.system.account(evmAccountRaw.mappedAddress);
 
