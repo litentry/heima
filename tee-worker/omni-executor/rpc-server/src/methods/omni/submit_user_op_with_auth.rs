@@ -245,6 +245,8 @@ fn verify_payload_timestamp(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use executor_storage::StorageDB;
+	use tempfile::tempdir;
 
 	#[test]
 	fn test_verify_wildmeta_signature_with_real_data() {
@@ -306,5 +308,80 @@ mod tests {
 		let timestamp = parsed.get("timestamp").and_then(|v| v.as_u64());
 
 		assert_eq!(timestamp, None, "Should return None for missing timestamp");
+	}
+
+	#[test]
+	fn test_verify_payload_timestamp_success() {
+		let tmp_dir = tempdir().unwrap();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+		let storage = Arc::new(WildmetaTimestampStorage::new(db));
+
+		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
+
+		// First timestamp should succeed
+		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		assert!(result.is_ok(), "First timestamp should succeed");
+
+		// Higher timestamp should succeed
+		let result = verify_payload_timestamp(&storage, main_address, 2000);
+		assert!(result.is_ok(), "Higher timestamp should succeed");
+	}
+
+	#[test]
+	fn test_verify_payload_timestamp_fails_with_old_timestamp() {
+		let tmp_dir = tempdir().unwrap();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+		let storage = Arc::new(WildmetaTimestampStorage::new(db));
+
+		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
+
+		// Store initial timestamp
+		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		assert!(result.is_ok());
+
+		// Same timestamp should fail
+		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		assert!(result.is_err(), "Same timestamp should fail");
+
+		// Lower timestamp should fail
+		let result = verify_payload_timestamp(&storage, main_address, 500);
+		assert!(result.is_err(), "Lower timestamp should fail");
+	}
+
+	#[test]
+	fn test_verify_payload_timestamp_first_time() {
+		let tmp_dir = tempdir().unwrap();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+		let storage = Arc::new(WildmetaTimestampStorage::new(db));
+
+		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
+
+		// Any timestamp should succeed for first time
+		let result = verify_payload_timestamp(&storage, main_address, 1);
+		assert!(result.is_ok(), "First timestamp should succeed even if it's 1");
+	}
+
+	#[test]
+	fn test_verify_payload_timestamp_persistence() {
+		let tmp_dir = tempdir().unwrap();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+		let storage = Arc::new(WildmetaTimestampStorage::new(db));
+
+		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
+
+		// Store timestamp
+		verify_payload_timestamp(&storage, main_address, 1000).unwrap();
+
+		// Verify it's persisted by checking that lower timestamp fails
+		let result = verify_payload_timestamp(&storage, main_address, 999);
+		assert!(result.is_err(), "Timestamp should be persisted");
+
+		// Verify exact stored value fails
+		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		assert!(result.is_err(), "Exact stored timestamp should fail");
+
+		// Higher should succeed
+		let result = verify_payload_timestamp(&storage, main_address, 1001);
+		assert!(result.is_ok(), "Higher timestamp should succeed");
 	}
 }
