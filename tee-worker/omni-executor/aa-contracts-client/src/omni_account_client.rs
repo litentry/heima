@@ -148,7 +148,6 @@ fn parse_passkey_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, String
 	Ok(PasskeyPublicKey { x, y })
 }
 
-
 #[cfg(test)]
 pub mod test {
 	use crate::OmniAccountClient;
