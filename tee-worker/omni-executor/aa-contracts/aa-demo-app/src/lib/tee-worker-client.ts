@@ -28,7 +28,7 @@ interface UserLoginResponse {
 
 interface GetSmartWalletRootSignerParams {
 	omni_account: string;
-	chain_type: "Evm" | "Solana" | "Tron";
+	chain_type: "evm" | "solana" | "tron";
 	wallet_index: number;
 }
 
@@ -149,7 +149,7 @@ export async function loginWithEvm(
 // Get the TEE worker's smart wallet root signer address
 export async function getSmartWalletRootSigner(
 	omniAccount: string,
-	chainType: "Evm" | "Solana" | "Tron" = TEE_WORKER_CONFIG.chainType,
+	chainType: "evm" | "solana" | "tron" = TEE_WORKER_CONFIG.chainType,
 	index: number = TEE_WORKER_CONFIG.signerIndex
 ): Promise<string> {
 	const params: GetSmartWalletRootSignerParams = {
