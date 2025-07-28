@@ -5,9 +5,9 @@ edition.workspace = true
 
 [dependencies]
 alloy = { workspace = true, features = ["contract", "rpc-types"] }
+ciborium = { workspace = true }
 heima-primitives = { workspace = true }
 tracing = { workspace = true }
-ciborium = { workspace = true }
 
 ethereum-rpc = { workspace = true }
 

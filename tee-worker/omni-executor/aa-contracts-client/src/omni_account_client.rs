@@ -132,14 +132,15 @@ pub fn parse_passkey_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, St
 		Err(cose_err) => {
 			// If COSE parsing failed with a structural error, return it
 			// Otherwise, fall back to raw EC format parsing
-			if cose_err.contains("Invalid key type") ||
-			   cose_err.contains("Invalid algorithm") ||
-			   cose_err.contains("Invalid curve") ||
-			   cose_err.contains("Failed to parse CBOR") {
+			if cose_err.contains("Invalid key type")
+				|| cose_err.contains("Invalid algorithm")
+				|| cose_err.contains("Invalid curve")
+				|| cose_err.contains("Failed to parse CBOR")
+			{
 				return Err(cose_err);
 			}
 			// Continue to raw EC parsing for other errors (like hex decode failures)
-		}
+		},
 	}
 
 	// Fallback to raw EC formats for backwards compatibility
@@ -162,7 +163,11 @@ pub fn parse_passkey_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, St
 			}
 			(&pubkey_str[2..66], &pubkey_str[66..])
 		},
-		_ => return Err("Invalid public key length. Expected COSE format or raw EC format.".to_string()),
+		_ => {
+			return Err(
+				"Invalid public key length. Expected COSE format or raw EC format.".to_string()
+			)
+		},
 	};
 
 	let x_bytes =
@@ -203,8 +208,8 @@ pub fn parse_passkey_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, St
 /// }
 /// ```
 fn parse_cose_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, String> {
-	use ciborium::Value;
 	use alloy::primitives::FixedBytes;
+	use ciborium::Value;
 
 	// Decode hex string to bytes
 	let cose_bytes = alloy::hex::decode(pubkey_str)
@@ -232,7 +237,9 @@ fn parse_cose_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, String> {
 				match v {
 					Value::Integer(val) => {
 						// Convert ciborium::value::Integer to i64
-						let i64_val: i64 = (*val).try_into().map_err(|_| format!("Integer value too large for key {}", key))?;
+						let i64_val: i64 = (*val)
+							.try_into()
+							.map_err(|_| format!("Integer value too large for key {}", key))?;
 						return Ok(i64_val);
 					},
 					_ => return Err(format!("Key {} must be an integer", key)),
@@ -281,10 +288,16 @@ fn parse_cose_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, String> {
 
 	// Validate coordinate lengths (must be 32 bytes for P-256)
 	if x_bytes.len() != 32 {
-		return Err(format!("Invalid x coordinate length: expected 32 bytes, got {}", x_bytes.len()));
+		return Err(format!(
+			"Invalid x coordinate length: expected 32 bytes, got {}",
+			x_bytes.len()
+		));
 	}
 	if y_bytes.len() != 32 {
-		return Err(format!("Invalid y coordinate length: expected 32 bytes, got {}", y_bytes.len()));
+		return Err(format!(
+			"Invalid y coordinate length: expected 32 bytes, got {}",
+			y_bytes.len()
+		));
 	}
 
 	// Convert to PasskeyPublicKey format
@@ -296,8 +309,8 @@ fn parse_cose_public_key(pubkey_str: &str) -> Result<PasskeyPublicKey, String> {
 
 #[cfg(test)]
 pub mod test {
-	use crate::OmniAccountClient;
 	use super::parse_passkey_public_key;
+	use crate::OmniAccountClient;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::{address, U256};
 	use alloy::signers::local::PrivateKeySigner;
@@ -527,8 +540,16 @@ pub mod test {
 		use ciborium::Value;
 
 		// Add test coordinates (32 bytes each)
-		let x_coords = vec![0x65, 0xed, 0xa5, 0xa1, 0x25, 0x77, 0xc2, 0xba, 0xe8, 0x29, 0x43, 0x7f, 0xe3, 0x38, 0x70, 0x1a, 0x10, 0xaa, 0xa3, 0x75, 0xe1, 0xbb, 0x5b, 0x5d, 0xe1, 0x08, 0xde, 0x43, 0x9c, 0x08, 0x55, 0x1d];
-		let y_coords = vec![0x1e, 0x52, 0xed, 0x75, 0x70, 0x11, 0x63, 0xf7, 0xf9, 0xe4, 0x0d, 0xdf, 0x9f, 0x34, 0x1b, 0x3d, 0xc9, 0xba, 0x86, 0x0a, 0xf7, 0xe0, 0xca, 0x7c, 0xa7, 0xe9, 0xee, 0xcd, 0x00, 0x84, 0xd1, 0x9c];
+		let x_coords = vec![
+			0x65, 0xed, 0xa5, 0xa1, 0x25, 0x77, 0xc2, 0xba, 0xe8, 0x29, 0x43, 0x7f, 0xe3, 0x38,
+			0x70, 0x1a, 0x10, 0xaa, 0xa3, 0x75, 0xe1, 0xbb, 0x5b, 0x5d, 0xe1, 0x08, 0xde, 0x43,
+			0x9c, 0x08, 0x55, 0x1d,
+		];
+		let y_coords = vec![
+			0x1e, 0x52, 0xed, 0x75, 0x70, 0x11, 0x63, 0xf7, 0xf9, 0xe4, 0x0d, 0xdf, 0x9f, 0x34,
+			0x1b, 0x3d, 0xc9, 0xba, 0x86, 0x0a, 0xf7, 0xe0, 0xca, 0x7c, 0xa7, 0xe9, 0xee, 0xcd,
+			0x00, 0x84, 0xd1, 0x9c,
+		];
 
 		// Create COSE key map with required fields (using Vec of tuples)
 		let cose_map = vec![
