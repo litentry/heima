@@ -217,7 +217,7 @@ contract StakeManagerTest is Test {
         assertEq(info.withdrawTime, 0);
     }
 
-    function test_GetDepositInfoForUnstakedAccount() public {
+    function test_GetDepositInfoForUnstakedAccount() public view {
         IStakeManager.DepositInfo memory info = entryPoint.getDepositInfo(alice);
         assertEq(info.stake, 0);
         assertEq(info.unstakeDelaySec, 0);

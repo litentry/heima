@@ -24,8 +24,9 @@ contract SimplePaymaster is BasePaymaster {
      * Validate a user operation.
      * Only sponsor operations submitted by authorized bundlers.
      */
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 /* userOpHash */, uint256 maxCost)
         internal
+        view
         override
         returns (bytes memory context, uint256 validationData)
     {
@@ -51,7 +52,7 @@ contract SimplePaymaster is BasePaymaster {
      * Post-operation handler.
      * Log the sponsored operation.
      */
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
+    function _postOp(PostOpMode /* mode */, bytes calldata context, uint256 actualGasCost, uint256 /* actualUserOpFeePerGas */)
         internal
         override
     {

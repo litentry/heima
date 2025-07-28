@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {Counter} from "../src/Counter.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
+import {OmniAccountTestable} from "./OmniAccountTestable.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -27,6 +28,36 @@ library OmniAccountTestUtils {
         );
 
         return (counter, entryPoint, account);
+    }
+
+    function setUpTestable(address ownerAddress, bytes memory clientId, address rootAddress)
+        external
+        returns (Counter, EntryPoint, OmniAccount, OmniAccountTestable)
+    {
+        Counter counter = new Counter();
+        EntryPoint entryPoint = new EntryPoint();
+        OmniAccount accountImpl = new OmniAccount(entryPoint);
+        OmniAccountTestable testableAccountImpl = new OmniAccountTestable(entryPoint);
+        bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
+
+        OmniAccount account = OmniAccount(
+            payable(
+                new ERC1967Proxy{salt: oa}(
+                    address(accountImpl), abi.encodeCall(OmniAccount.initialize, (oa, clientId, rootAddress))
+                )
+            )
+        );
+
+        OmniAccountTestable testableAccount = OmniAccountTestable(
+            payable(
+                new ERC1967Proxy{salt: keccak256(abi.encodePacked("testable", oa))}(
+                    address(testableAccountImpl),
+                    abi.encodeCall(OmniAccount.initialize, (oa, clientId, rootAddress))
+                )
+            )
+        );
+
+        return (counter, entryPoint, account, testableAccount);
     }
 
     function performExecuteTestAs(Vm vm, address asAccount, OmniAccount account, Counter counter) internal {

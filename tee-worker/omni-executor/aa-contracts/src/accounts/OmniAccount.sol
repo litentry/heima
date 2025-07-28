@@ -161,9 +161,9 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         return isRootSigner(sessionProofSigner) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validatePasskey(bytes32, /* userOpHash */ bytes calldata /* sig */ )
+    function _validatePasskey(bytes32 userOpHash, bytes calldata sig)
         internal
-        pure
+        view
         returns (uint256 validationData)
     {
         // Decode signature data
