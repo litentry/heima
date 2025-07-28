@@ -177,7 +177,7 @@ describe('Test Vc (direct request)', function () {
 
             const eventsPromise = subscribeToEventsWithExtHash(requestIdentifier, context);
             // the +res+ below is the last message with "do_watch: false" property and we may not need it at all
-            const res = await sendRequestFromTrustedCall(context, teeShieldingKey, requestVcCall, onMessageReceived);
+            await sendRequestFromTrustedCall(context, teeShieldingKey, requestVcCall, onMessageReceived);
 
             const events = (await eventsPromise).map(({ event }) => event);
             assert.equal(events.length, Array.isArray(assertion) ? assertion.length : 1);
