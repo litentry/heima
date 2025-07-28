@@ -140,10 +140,8 @@ impl RpcProvider for AlloyRpcProvider {
 
 		let signer_address = wallet.default_signer().address();
 		let mut tx = raw_tx.from(signer_address);
-		// Bump the gas by 10%
-		// TODO: Set gas fees via CLI
+		// Add a 10% buffer to gas to make it safer
 		tx.gas = Some(self.estimate_gas(tx.clone()).await? * 110 / 100);
-		tx.gas_price = Some(self.get_gas_price().await?);
 
 		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
