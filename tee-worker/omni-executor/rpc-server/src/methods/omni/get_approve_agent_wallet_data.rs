@@ -7,14 +7,12 @@ use alloy::{
 	sol_types::{eip712_domain, SolValue},
 };
 use chrono::Utc;
-use executor_primitives::{
-	utils::hex::hex_encode, ChainId, Identity, UserAuth, UserId, Web2IdentityType,
-};
+use executor_primitives::{utils::hex::hex_encode, ChainId, Identity, UserAuth, UserId};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize, Serializer};
 use signer_client::ChainType;
-use std::str::FromStr;
+use std::{convert::TryFrom, str::FromStr};
 use tracing::error;
 
 #[derive(Debug, Deserialize)]
@@ -25,7 +23,6 @@ pub struct GetApproveAgentWalletDataParams {
 	pub agent_address: String,
 	pub agent_name: Option<String>,
 	pub chain_id: ChainId,
-	pub is_testnet: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -50,6 +47,29 @@ pub struct ApproveAgentAction {
 	pub agent_address: Address,
 	pub agent_name: Option<String>,
 	pub nonce: u64,
+}
+
+fn is_testnet_chain(chain_id: ChainId) -> bool {
+	match chain_id {
+		// Testnet chain IDs
+		11155111 => true, // Ethereum Sepolia
+		97 => true,       // BSC Testnet
+		80001 => true,    // Polygon Mumbai
+		421614 => true,   // Arbitrum Sepolia
+		998 => true,      // HyperEVM Testnet
+		1337 => true,     // Local Anvil
+		31337 => true,    // Local Anvil
+		// Mainnet chain IDs
+		1 => false,     // Ethereum Mainnet
+		56 => false,    // BSC Mainnet
+		137 => false,   // Polygon Mainnet
+		42161 => false, // Arbitrum Mainnet
+		999 => false,   // HyperEVM Mainnet
+		_ => {
+			// Default to mainnet for unknown chain IDs
+			false
+		},
+	}
 }
 
 impl ApproveAgentAction {
@@ -91,17 +111,19 @@ pub fn register_get_approve_agent_wallet_data(module: &mut RpcModule<RpcContext>
 				ErrorCode::ParseError
 			})?;
 
-			let (email, verification_code) = match &params.user_auth {
-				UserAuth::Email(code) => {
-					let UserId::Email(email) = &params.user_id else {
-						error!("User ID must be an email for Email authentication");
-						return Err(ErrorObject::from(ErrorCode::ParseError));
-					};
-					(email.clone(), code.clone())
-				},
+			let verification_code = match &params.user_auth {
+				UserAuth::Email(code) => code.clone(),
 				_ => {
 					error!("Only email authentication is supported for this method");
 					return Err(ErrorObject::from(ErrorCode::InvalidParams));
+				},
+			};
+
+			let email = match &params.user_id {
+				UserId::Email(email) => email.clone(),
+				_ => {
+					error!("User ID must be an email for this method");
+					return Err(ErrorObject::from(ErrorCode::ParseError));
 				},
 			};
 
@@ -111,7 +133,10 @@ pub fn register_get_approve_agent_wallet_data(module: &mut RpcModule<RpcContext>
 					ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
 				})?;
 
-			let identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
+			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
+				error!("Failed to convert user ID to identity: {}", e);
+				ErrorObject::from(ErrorCode::ParseError)
+			})?;
 			let omni_account = identity.to_omni_account(&params.client_id);
 
 			let derived_pubkey = ctx
@@ -130,8 +155,11 @@ pub fn register_get_approve_agent_wallet_data(module: &mut RpcModule<RpcContext>
 
 			let nonce = Utc::now().timestamp_millis() as u64;
 
-			let hyperliquid_chain =
-				if params.is_testnet { "Testnet".to_string() } else { "Mainnet".to_string() };
+			let hyperliquid_chain = if is_testnet_chain(params.chain_id) {
+				"Testnet".to_string()
+			} else {
+				"Mainnet".to_string()
+			};
 
 			let action = ApproveAgentAction {
 				signature_chain_id: params.chain_id,
@@ -253,8 +281,7 @@ mod tests {
 			"client_id": "test_client",
 			"agent_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
 			"agent_name": "My Trading Bot",
-			"chain_id": 42161,
-			"is_testnet": true
+			"chain_id": 42161
 		}"#;
 
 		let params: GetApproveAgentWalletDataParams = serde_json::from_str(json).unwrap();
@@ -268,7 +295,6 @@ mod tests {
 		assert_eq!(params.agent_address, "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10");
 		assert_eq!(params.agent_name, Some("My Trading Bot".to_string()));
 		assert_eq!(params.chain_id, 42161);
-		assert!(params.is_testnet);
 	}
 
 	#[test]
@@ -305,33 +331,24 @@ mod tests {
 	}
 
 	#[test]
-	fn test_testnet_vs_mainnet_chain_params() {
-		// Test mainnet parameters
-		let params_mainnet = GetApproveAgentWalletDataParams {
-			user_id: UserId::Email("test@example.com".to_string()),
-			user_auth: UserAuth::Email("123456".into()),
-			client_id: "test".to_string(),
-			agent_address: "0x0000000000000000000000000000000000000000".to_string(),
-			agent_name: None,
-			chain_id: 1,
-			is_testnet: false,
-		};
+	fn test_is_testnet_chain() {
+		// Test mainnet chain IDs
+		assert!(!is_testnet_chain(1)); // Ethereum Mainnet
+		assert!(!is_testnet_chain(56)); // BSC Mainnet
+		assert!(!is_testnet_chain(137)); // Polygon Mainnet
+		assert!(!is_testnet_chain(42161)); // Arbitrum Mainnet
+		assert!(!is_testnet_chain(999)); // HyperEVM Mainnet
 
-		let hyperliquid_chain = if params_mainnet.is_testnet { "Testnet" } else { "Mainnet" };
-		assert_eq!(hyperliquid_chain, "Mainnet");
+		// Test testnet chain IDs
+		assert!(is_testnet_chain(11155111)); // Ethereum Sepolia
+		assert!(is_testnet_chain(97)); // BSC Testnet
+		assert!(is_testnet_chain(80001)); // Polygon Mumbai
+		assert!(is_testnet_chain(421614)); // Arbitrum Sepolia
+		assert!(is_testnet_chain(998)); // HyperEVM Testnet
+		assert!(is_testnet_chain(1337)); // Local Anvil
+		assert!(is_testnet_chain(31337)); // Local Anvil
 
-		// Test testnet parameters
-		let params_testnet = GetApproveAgentWalletDataParams {
-			user_id: UserId::Email("test@example.com".to_string()),
-			user_auth: UserAuth::Email("123456".into()),
-			client_id: "test".to_string(),
-			agent_address: "0x0000000000000000000000000000000000000000".to_string(),
-			agent_name: None,
-			chain_id: 42161,
-			is_testnet: true,
-		};
-
-		let hyperliquid_chain = if params_testnet.is_testnet { "Testnet" } else { "Mainnet" };
-		assert_eq!(hyperliquid_chain, "Testnet");
+		// Test unknown chain ID (defaults to mainnet)
+		assert!(!is_testnet_chain(12345));
 	}
 }
