@@ -36,7 +36,7 @@ pub enum UserId {
 	Bitcoin(String),   // hex-encoded
 	Solana(String),    // base58-encoded
 	Google(String),
-	Passkey(String), // unique user_id, even for multiple
+	Passkey(String), // unique user_id, even for multiple credential_id
 }
 
 impl TryFrom<UserId> for Identity {
