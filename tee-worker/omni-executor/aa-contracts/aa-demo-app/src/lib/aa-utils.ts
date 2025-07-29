@@ -124,13 +124,14 @@ export function stringToBytes(str: string): `0x${string}` {
  */
 export function encodeGetAddress(
 	omniAccount: `0x${string}`,
+	ownerType: number,
 	clientId: `0x${string}`,
 	rootSigner: Address,
 ): `0x${string}` {
 	return encodeFunctionData({
 		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "getAddress",
-		args: [omniAccount, clientId, rootSigner],
+		args: [omniAccount, ownerType, clientId, rootSigner],
 	});
 }
 
@@ -139,13 +140,14 @@ export function encodeGetAddress(
  */
 export function encodeOmniAccountInitData(
 	omniAccount: `0x${string}`,
+	ownerType: number,
 	clientId: `0x${string}`,
 	rootSigner: Address,
 ): `0x${string}` {
 	return encodeFunctionData({
 		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "createAccount",
-		args: [omniAccount, clientId, rootSigner],
+		args: [omniAccount, ownerType, clientId, rootSigner],
 	});
 }
 
