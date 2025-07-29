@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
+import {OmniAccountTestable} from "./OmniAccountTestable.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
@@ -10,10 +11,11 @@ import {Counter} from "../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
-import {SIG_VALIDATION_SUCCESS} from "../src//core/Helpers.sol";
+import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
 
 contract OmniAccountAsOwner is Test {
     OmniAccount public account;
+    OmniAccountTestable public testableAccount;
     EntryPoint public entryPoint;
     Counter public counter;
 
@@ -22,7 +24,7 @@ contract OmniAccountAsOwner is Test {
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account, testableAccount) = OmniAccountTestUtils.setUpTestable(ownerAddress, clientId, rootAddress);
     }
 
     function test_Execute() public {
@@ -43,7 +45,7 @@ contract OmniAccountAsOwner is Test {
         assert(!account.rootSigners(root));
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(alice, clientId, rootAddress);
 
@@ -60,5 +62,49 @@ contract OmniAccountAsOwner is Test {
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
         assertEq(SIG_VALIDATION_SUCCESS, validationData);
+    }
+
+    function test_ValidateOwnerDirectValidSignature() public {
+        (address validOwner, uint256 validOwnerPk) = makeAddrAndKey("validOwner");
+
+        // Create account with this owner
+        (,,, OmniAccountTestable ownerTestableAccount) =
+            OmniAccountTestUtils.setUpTestable(validOwner, clientId, rootAddress);
+
+        bytes32 userOpHash = keccak256("test");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(validOwnerPk, userOpHash);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        uint256 validationData = ownerTestableAccount.validateOwnerPublic(userOpHash, sig);
+
+        assertEq(validationData, SIG_VALIDATION_SUCCESS);
+    }
+
+    function test_ValidateOwnerDirectInvalidSignature() public {
+        (, uint256 invalidSignerPk) = makeAddrAndKey("invalidSigner");
+
+        bytes32 userOpHash = keccak256("test");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(invalidSignerPk, userOpHash);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        uint256 validationData = testableAccount.validateOwnerPublic(userOpHash, sig);
+
+        assertEq(validationData, SIG_VALIDATION_FAILED);
+    }
+
+    function test_ValidateOwnerDirectInvalidSignatureLength() public {
+        bytes32 userOpHash = keccak256("test");
+        bytes memory shortSig = abi.encodePacked(bytes32(0), bytes16(0)); // 48 bytes instead of 65
+
+        vm.expectRevert("Owner signature length invalid");
+        testableAccount.validateOwnerPublic(userOpHash, shortSig);
+    }
+
+    function test_ValidateOwner_Direct_EmptySignature() public {
+        bytes32 userOpHash = keccak256("test");
+        bytes memory emptySig = "";
+
+        vm.expectRevert("Owner signature length invalid");
+        testableAccount.validateOwnerPublic(userOpHash, emptySig);
     }
 }

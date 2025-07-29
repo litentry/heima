@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
+import {OmniAccountTestable} from "./OmniAccountTestable.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
@@ -14,6 +15,7 @@ import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../src//core/Helper
 
 contract OmniAccountAsRoot is Test {
     OmniAccount public account;
+    OmniAccountTestable public testableAccount;
     EntryPoint public entryPoint;
     Counter public counter;
 
@@ -22,7 +24,7 @@ contract OmniAccountAsRoot is Test {
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account, testableAccount) = OmniAccountTestUtils.setUpTestable(ownerAddress, clientId, rootAddress);
     }
 
     function test_Execute() public {
@@ -33,7 +35,7 @@ contract OmniAccountAsRoot is Test {
         OmniAccountTestUtils.performExecuteBatchTestAs(vm, rootAddress, account, counter);
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
@@ -51,7 +53,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
-    function test_validateOpFailsWithWrongSigner() public {
+    function test_ValidateOpFailsWithWrongSigner() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
@@ -69,7 +71,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 
-    function test_validateOpSessionKey() public {
+    function test_ValidateOpSessionKey() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 2;
@@ -91,7 +93,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
-    function test_validateOpExpiredSessionKey() public {
+    function test_ValidateOpExpiredSessionKey() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 0;
@@ -114,7 +116,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 
-    function test_validateOpSessionKeyFailsIfProofNotSignedByRoot() public {
+    function test_ValidateOpSessionKeyFailsIfProofNotSignedByRoot() public {
         (, uint256 alicePk) = makeAddrAndKey("alice");
         (address root,) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
@@ -156,5 +158,60 @@ contract OmniAccountAsRoot is Test {
         (uint8 sv, bytes32 sr, bytes32 ss) = vm.sign(proofSigner, sessionDigest);
         bytes memory sessionProof = abi.encodePacked(sr, ss, sv);
         return sessionProof;
+    }
+
+    function test_ValidateRootKeyDirectValidSignature() public {
+        (address validRoot, uint256 validRootPk) = makeAddrAndKey("validRoot");
+
+        // Add as root signer
+        vm.prank(ownerAddress);
+        testableAccount.addRootSigner(validRoot);
+
+        bytes32 userOpHash = keccak256("test");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(validRootPk, userOpHash);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        uint256 validationData = testableAccount.validateRootKeyPublic(userOpHash, sig);
+
+        assertEq(validationData, SIG_VALIDATION_SUCCESS);
+    }
+
+    function test_ValidateRootKeyDirectInvalidSignature() public {
+        (, uint256 invalidSignerPk) = makeAddrAndKey("invalidSigner");
+
+        bytes32 userOpHash = keccak256("test");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(invalidSignerPk, userOpHash);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        uint256 validationData = testableAccount.validateRootKeyPublic(userOpHash, sig);
+
+        assertEq(validationData, SIG_VALIDATION_FAILED);
+    }
+
+    function test_ValidateRootKeyDirectRemovedRootSigner() public {
+        (address removedRoot, uint256 removedRootPk) = makeAddrAndKey("removedRoot");
+
+        // Add then remove root signer
+        vm.prank(ownerAddress);
+        testableAccount.addRootSigner(removedRoot);
+
+        vm.prank(ownerAddress);
+        testableAccount.removeRootSigner(removedRoot);
+
+        bytes32 userOpHash = keccak256("test");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(removedRootPk, userOpHash);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        uint256 validationData = testableAccount.validateRootKeyPublic(userOpHash, sig);
+
+        assertEq(validationData, SIG_VALIDATION_FAILED);
+    }
+
+    function test_ValidateRootKeyDirectInvalidSignatureLength() public {
+        bytes32 userOpHash = keccak256("test");
+        bytes memory shortSig = abi.encodePacked(bytes32(0), bytes16(0)); // 48 bytes instead of 65
+
+        vm.expectRevert("RootKey signature length invalid");
+        testableAccount.validateRootKeyPublic(userOpHash, shortSig);
     }
 }
