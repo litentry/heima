@@ -20,7 +20,7 @@ import {
     checkPaymasterStatus,
     estimateUserOperationGas,
 } from "@/lib/aa-utils";
-import { DEFAULT_CLIENT_ID, CONTRACTS, PAYMASTER_CONFIG } from "@/lib/constants";
+import { DEFAULT_CLIENT_ID, CONTRACTS, PAYMASTER_CONFIG, OwnerType } from "@/lib/constants";
 
 interface CreateOmniAccountProps {
     omniAccountAddress?: string;
@@ -128,6 +128,7 @@ export function CreateOmniAccount({
             const initCode = generateInitCode(
                 CONTRACTS.OmniAccountFactory.address,
                 omniAccount,
+                OwnerType.Evm,
                 clientIdBytes,
                 rootSigner,
             ) as `0x${string}`;

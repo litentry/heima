@@ -124,13 +124,14 @@ export function stringToBytes(str: string): `0x${string}` {
  */
 export function encodeGetAddress(
 	omniAccount: `0x${string}`,
+	ownerType: number,
 	clientId: `0x${string}`,
 	rootSigner: Address,
 ): `0x${string}` {
 	return encodeFunctionData({
 		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "getAddress",
-		args: [omniAccount, clientId, rootSigner],
+		args: [omniAccount, ownerType, clientId, rootSigner],
 	});
 }
 
@@ -139,13 +140,14 @@ export function encodeGetAddress(
  */
 export function encodeOmniAccountInitData(
 	omniAccount: `0x${string}`,
+	ownerType: number,
 	clientId: `0x${string}`,
 	rootSigner: Address,
 ): `0x${string}` {
 	return encodeFunctionData({
 		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "createAccount",
-		args: [omniAccount, clientId, rootSigner],
+		args: [omniAccount, ownerType, clientId, rootSigner],
 	});
 }
 
@@ -198,16 +200,16 @@ export async function estimateUserOperationGas(
 	try {
 		// Get current gas prices from the network
 		const feeData = await publicClient.estimateFeesPerGas();
-		
+
 		// Use the estimated values with a safety margin (1.2x for maxFeePerGas)
 		const maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
 		const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
-		
+
 		// Use higher gas limits for deployment
 		const callGasLimit = isDeployment ? BigInt(2000000) : BigInt(500000);
 		const verificationGasLimit = isDeployment ? BigInt(3000000) : BigInt(1000000);
 		const preVerificationGas = BigInt(100000);
-		
+
 		return {
 			callGasLimit,
 			verificationGasLimit,
@@ -297,12 +299,12 @@ export function getUserOpHash(
 ): Hash {
 	// First, convert to PackedUserOperation format
 	const packedOp = packUserOperation(userOp);
-	
+
 	// Type hash for PackedUserOperation
 	const PACKED_USEROP_TYPEHASH = keccak256(
 		toHex("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)")
 	);
-	
+
 	// Encode according to the contract's UserOperationLib.encode
 	// Note: The contract uses abi.encode, not encodePacked
 	const encoded = encodeAbiParameters(
@@ -376,6 +378,7 @@ export function getUserOpHash(
 export function generateInitCode(
 	factoryAddress: Address,
 	omniAccount: `0x${string}`,
+	ownerType: number,
 	clientId: `0x${string}`,
 	rootSigner: Address,
 ): `0x${string}` {
@@ -387,7 +390,7 @@ export function generateInitCode(
 	const initCalldata = encodeFunctionData({
 		abi: CONTRACTS.OmniAccountFactory.abi,
 		functionName: "createAccount",
-		args: [omniAccount, clientId, rootSigner],
+		args: [omniAccount, ownerType, clientId, rootSigner],
 	});
 
 	// Combine factory address and calldata
@@ -490,17 +493,17 @@ export function encodePaymasterAndData(
 
 	// Remove 0x prefix from address
 	const addressBytes = paymasterAddress.slice(2).toLowerCase();
-	
+
 	// Convert gas limits to hex strings (uint128 = 16 bytes)
 	const validationGasHex = validationGasLimit.toString(16).padStart(32, '0');
 	const postOpGasHex = postOpGasLimit.toString(16).padStart(32, '0');
-	
+
 	// Remove 0x prefix from paymaster data if present
 	const dataBytes = paymasterData.startsWith('0x') ? paymasterData.slice(2) : paymasterData;
-	
+
 	// Combine all parts
 	const encoded = `0x${addressBytes}${validationGasHex}${postOpGasHex}${dataBytes}`;
-	
+
 	console.log("Encoded paymasterAndData:", {
 		paymasterAddress,
 		validationGasLimit: validationGasLimit.toString(),
@@ -508,7 +511,7 @@ export function encodePaymasterAndData(
 		paymasterData,
 		encoded,
 	});
-	
+
 	return encoded as `0x${string}`;
 }
 
@@ -528,7 +531,7 @@ export function decodePaymasterAndData(paymasterAndData: `0x${string}`): {
 	}
 
 	const data = paymasterAndData.slice(2); // Remove 0x prefix
-	
+
 	const paymaster = `0x${data.slice(0, 40)}` as Address;
 	const validationGasLimit = BigInt(`0x${data.slice(40, 72)}`);
 	const postOpGasLimit = BigInt(`0x${data.slice(72, 104)}`);
@@ -619,11 +622,11 @@ export async function signUserOperation(
 ): Promise<`0x${string}`> {
 	// Convert UserOperation to PackedUserOperation for signing
 	const packedOp = packUserOperation(userOp);
-	
+
 	// EIP-712 domain
 	const domain = {
 		name: 'ERC4337',
-		version: '1', 
+		version: '1',
 		chainId: Number(chainId),
 		verifyingContract: entryPointAddress,
 	};
@@ -668,14 +671,14 @@ export async function signUserOperation(
 		return addSignaturePrefix(signature, signerType);
 	} catch (e) {
 		console.error("EIP-712 signing failed:", e);
-		
+
 		// Fallback: Use personal_sign (adds message prefix)
 		const userOpHash = getUserOpHash(userOp, entryPointAddress, Number(chainId));
 		const signature = await walletClient.signMessage({
 			account: address,
 			message: { raw: userOpHash },
 		});
-		
+
 		console.warn("WARNING: Using personal_sign which adds message prefix");
 		// Add the signer type prefix
 		return addSignaturePrefix(signature, signerType);
@@ -763,7 +766,7 @@ export function buildTokenTransferUserOp(params: {
 }): UserOperation {
 	// Build the ERC20 transfer calldata
 	const erc20TransferData = buildERC20TransferCallData(params.recipient, params.amount);
-	
+
 	// Build the OmniAccount execute calldata
 	const executeCallData = encodeFunctionData({
 		abi: CONTRACTS.OmniAccountImplementation.abi,
