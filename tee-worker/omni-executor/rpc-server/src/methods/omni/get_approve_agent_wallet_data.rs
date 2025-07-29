@@ -168,7 +168,6 @@ async fn generate_eip712_signature(
 ) -> Result<String, ErrorObject<'static>> {
 	let message_hash = action.eip712_signing_hash();
 
-	// Request signature from signer client
 	let signature_bytes = ctx
 		.signer_client
 		.request_signature(ChainType::Evm, 0, *omni_account, message_hash.to_vec())
@@ -178,7 +177,6 @@ async fn generate_eip712_signature(
 			ErrorObject::from(ErrorCode::InternalError)
 		})?;
 
-	// Convert signature to hex string with 0x prefix
 	Ok(hex_encode(&signature_bytes))
 }
 
