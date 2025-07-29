@@ -15,7 +15,10 @@
             "base-x": "4.0.1",
             "elliptic": "6.6.1",
             "ws": "^8.18.2",
-            "@types/ws": "^8.5.9"
+            "@types/ws": "^8.5.9",
+            "@polkadot/types": "*",
+            "@polkadot/types-codec": "*",
+            "@substrate/connect": "^0.8.12"
         }
     }
 }

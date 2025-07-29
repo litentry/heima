@@ -25,17 +25,20 @@ const TIMEOUT_MIN = 5;
 
     console.log(`Connecting to parachain ${config.parachain_ws}`);
 
-    timeout = global.setTimeout(async () => {
-        if (typeof unsub === 'function') unsub();
+    timeout = global.setTimeout(
+        async () => {
+            if (typeof unsub === 'function') unsub();
 
-        if (api) api.disconnect();
-        provider.on('disconnected', () => {
-            console.log(
-                `\nno block production detected after ${TIMEOUT_MIN}min, you might want to check it manually. Quit now`
-            );
-            process.exit(1);
-        });
-    }, TIMEOUT_MIN * 60 * 1000);
+            if (api) api.disconnect();
+            provider.on('disconnected', () => {
+                console.log(
+                    `\nno block production detected after ${TIMEOUT_MIN}min, you might want to check it manually. Quit now`
+                );
+                process.exit(1);
+            });
+        },
+        TIMEOUT_MIN * 60 * 1000
+    );
 
     api = await ApiPromise.create({
         provider: provider,

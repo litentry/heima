@@ -49,7 +49,7 @@ pub struct RunArgs {
 	pub instant_payout_threshold: String,
 	#[arg(long, value_name = "enable mock server for testing")]
 	pub enable_mock_server: bool,
-	#[arg(short, long, default_value = "3456", value_name = "mock server port")]
+	#[arg(long, default_value = "3456", value_name = "mock server port")]
 	pub mock_server_port: u16,
 }
 

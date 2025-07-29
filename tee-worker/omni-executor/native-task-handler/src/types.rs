@@ -30,6 +30,7 @@ pub enum NativeTaskOk {
 	PumpxSignLimitOrder(Vec<Vec<u8>>),
 	PumpxTransferWithdraw(CreateTransferTxResponse),
 	PumpxNotifyLimitOrderResult,
+	SubmitUserOp(Option<String>), // transaction_hash
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -43,6 +44,7 @@ pub enum NativeTaskError {
 	PumpxApiError(PumpxApiError),
 	PumpxSignerError(PumpxSignerError),
 	IntentNonceMismatch,
+	UnsupportedChain,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

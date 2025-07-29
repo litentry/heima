@@ -1,18 +1,24 @@
 mod aes256_key_store;
 mod types;
 
+use aa_contracts_client::calculate_user_operation_hash;
+use aa_contracts_client::EntryPointClient;
+use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use chrono::{Days, Utc};
+use ethereum_rpc::AlloyRpcProvider;
 use executor_core::{
 	intent_executor::IntentExecutor,
 	native_task::{NativeTask, NativeTaskWrapper},
+	types::SerializablePackedUserOperation,
 };
 use executor_crypto::{
 	aes256::{aes_decrypt, Aes256Key},
 	jwt,
 };
 use executor_primitives::{
-	utils::hex::ToHexPrefixed, AccountId, Identity, Intent, IntentId, OmniAccountAuthType,
-	PumpxAccountProfile, Web2IdentityType,
+	utils::hex::{decode_hex, ToHexPrefixed},
+	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
+	Web2IdentityType,
 };
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
 use heima_authentication::{
@@ -34,7 +40,7 @@ use pumpx::{
 	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
 };
 use signer_client::{ChainType, SignerClient};
-use std::{marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot, Semaphore};
 use tracing::{debug, error, info, span, Instrument, Level};
 
@@ -75,6 +81,7 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -108,6 +115,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
 			parentchain_rpc_client_factory,
@@ -120,9 +128,18 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
+			entry_point_clients,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
+	}
+
+	/// Get EntryPoint client for a specific chain
+	pub fn get_entry_point_client(
+		&self,
+		chain_id: ChainId,
+	) -> Option<Arc<EntryPointClient<AlloyRpcProvider>>> {
+		self.entry_point_clients.get(&chain_id).cloned()
 	}
 }
 
@@ -436,13 +453,17 @@ async fn handle_native_task<
 			let auth_options = AuthOptions { expires_at };
 
 			debug!("Calling pumpx get_account_user_id, email: {}", email);
-			let Ok(res) = ctx.pumpx_api.get_account_user_id(email.clone()).await else {
-				send_error(
-					"Failed to get_account_user_id".to_string(),
-					response_sender,
-					NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
-				);
-				return;
+			let res = match ctx.pumpx_api.get_account_user_id(email.clone()).await {
+				Ok(res) => res,
+				Err(e) => {
+					error!("Failed to get_account_user_id for email {}: {:?}", email, e);
+					send_error(
+						format!("Failed to get_account_user_id: {:?}", e),
+						response_sender,
+						NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed),
+					);
+					return;
+				},
 			};
 			debug!("Response pumpx get_account_user_id: {:?}", res);
 
@@ -788,7 +809,186 @@ async fn handle_native_task<
 			)
 			.await;
 		},
-	}
+		NativeTask::SubmitUserOp(omni_account, serializable_user_ops, chain_id, wallet_index) => {
+			info!(
+				"Processing SubmitUserOp for {} UserOperations on chain_id: {}",
+				serializable_user_ops.len(),
+				chain_id
+			);
+
+			// Get EntryPoint client for this chain (needed for both signing and submission)
+			let entry_point_client = match ctx.get_entry_point_client(chain_id) {
+				Some(client) => client,
+				None => {
+					send_error(
+						format!("No EntryPoint client configured for chain_id: {}", chain_id),
+						response_sender,
+						NativeTaskError::UnsupportedChain,
+					);
+					return;
+				},
+			};
+
+			// Process each UserOperation in the batch
+			let mut aa_user_ops = Vec::new();
+
+			for (index, serializable_user_op) in serializable_user_ops.iter().enumerate() {
+				// Convert SerializablePackedUserOperation to PackedUserOperation
+				let mut packed_user_op =
+					match convert_to_packed_user_op(serializable_user_op.clone()) {
+						Ok(user_op) => user_op,
+						Err(e) => {
+							send_error(
+								format!("Failed to convert UserOperation {}: {}", index, e),
+								response_sender,
+								NativeTaskError::InternalError,
+							);
+							return;
+						},
+					};
+
+				// Check if UserOperation is signed
+				if packed_user_op.signature.is_empty() {
+					info!(
+						"UserOperation {} is unsigned, requesting signature from pumpx signer",
+						index
+					);
+
+					// Log UserOp details for debugging
+					info!(
+						"UserOp details - Sender: {}, Nonce: {}, InitCode length: {}, CallData length: {}",
+						packed_user_op.sender,
+						packed_user_op.nonce,
+						packed_user_op.initCode.len(),
+						packed_user_op.callData.len()
+					);
+
+					let entry_point_address = entry_point_client.entry_point_address();
+
+					let user_op_hash_bytes = calculate_user_operation_hash(
+						&packed_user_op,
+						entry_point_address,
+						chain_id,
+					);
+					let message_to_sign = user_op_hash_bytes.to_vec();
+
+					info!(
+						"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
+						hex::encode(user_op_hash_bytes),
+						entry_point_address,
+						chain_id
+					);
+
+					// Request signature from pumpx signer for EVM chain
+					let signature_result = ctx
+						.pumpx_signer_client
+						.request_signature(
+							ChainType::Evm,
+							wallet_index,
+							omni_account.clone().into(),
+							message_to_sign,
+						)
+						.await;
+
+					let signature = match signature_result {
+						Ok(sig) => substrate_to_ethereum_signature(&sig).unwrap().to_vec(),
+						Err(_) => {
+							send_error(
+								format!("Failed to sign user operation {}", index),
+								response_sender,
+								NativeTaskError::PumpxSignerError(
+									PumpxSignerError::RequestSignatureFailed,
+								),
+							);
+							return;
+						},
+					};
+
+					// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
+					let mut signature_with_prefix: Vec<u8> = vec![0x01];
+					signature_with_prefix.extend_from_slice(&signature);
+					packed_user_op.signature = Bytes::from(signature_with_prefix);
+					info!("UserOperation {} signed successfully", index);
+				}
+
+				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
+				let aa_user_op = aa_contracts_client::PackedUserOperation {
+					sender: packed_user_op.sender,
+					nonce: packed_user_op.nonce,
+					initCode: packed_user_op.initCode.clone(),
+					callData: packed_user_op.callData.clone(),
+					accountGasLimits: packed_user_op.accountGasLimits,
+					preVerificationGas: packed_user_op.preVerificationGas,
+					gasFees: packed_user_op.gasFees,
+					paymasterAndData: packed_user_op.paymasterAndData.clone(),
+					signature: packed_user_op.signature.clone(),
+				};
+				aa_user_ops.push(aa_user_op);
+			}
+
+			// Get beneficiary address from the EntryPoint client's wallet
+			let beneficiary = match entry_point_client.get_wallet_address().await {
+				Ok(address) => address,
+				Err(_) => {
+					send_error(
+						"Failed to get wallet address from EntryPoint client".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
+			};
+
+			// Run batch simulation for all UserOperations before submission
+			info!("Running batch simulation for {} UserOperations", aa_user_ops.len());
+			match entry_point_client.simulate_handle_ops(&aa_user_ops, beneficiary).await {
+				Ok(simulation_results) => {
+					for (index, result) in simulation_results.iter().enumerate() {
+						info!(
+							"UserOperation {} simulation successful. PreOpGas: {}, Paid: {}, AccountValidation: {}, PaymasterValidation: {}",
+							index,
+							result.preOpGas,
+							result.paid,
+							result.accountValidationData,
+							result.paymasterValidationData
+						);
+					}
+					info!(
+						"All {} UserOperations passed batch simulation checks",
+						aa_user_ops.len()
+					);
+				},
+				Err(_) => {
+					send_error(
+						"Batch UserOperation simulation failed".to_string(),
+						response_sender,
+						NativeTaskError::InternalError,
+					);
+					return;
+				},
+			}
+
+			// Submit all UserOperations via EntryPoint.handleOps()
+			let transaction_hash =
+				match entry_point_client.handle_ops(&aa_user_ops, beneficiary).await {
+					Ok(tx_hash) => {
+						// Return the actual transaction hash from handle_ops
+						Some(tx_hash)
+					},
+					Err(_) => {
+						send_error(
+							"Failed to submit UserOperations to EntryPoint via handleOps"
+								.to_string(),
+							response_sender,
+							NativeTaskError::InternalError,
+						);
+						return;
+					},
+				};
+
+			send_ok(response_sender, NativeTaskOk::SubmitUserOp(transaction_hash));
+		},
+	};
 }
 
 fn send_response(sender: ResponseSender, response: NativeTaskResponse) {
@@ -920,4 +1120,206 @@ async fn verify_google_code(
 			)
 		},
 	)
+}
+
+/// Convert Substrate signature to Ethereum ECDSA format
+/// Returns signature in format: [r (32 bytes), s (32 bytes), v (1 byte)]
+pub fn substrate_to_ethereum_signature(substrate_sig: &[u8]) -> Result<[u8; 65], &'static str> {
+	if substrate_sig.len() != 65 {
+		return Err("Invalid signature length");
+	}
+
+	// Parse as (r, s, v) format - most common
+	let mut r = [0u8; 32];
+	let mut s = [0u8; 32];
+	r.copy_from_slice(&substrate_sig[0..32]);
+	s.copy_from_slice(&substrate_sig[32..64]);
+	let substrate_v = substrate_sig[64];
+
+	// Convert recovery parameter: 0/1 -> 27/28
+	let ethereum_v = match substrate_v {
+		0 => 27,
+		1 => 28,
+		27 => 27, // Already Ethereum format
+		28 => 28, // Already Ethereum format
+		_ => return Err("Invalid recovery parameter"),
+	};
+
+	// Build Ethereum signature: [r, s, v]
+	let mut ethereum_sig = [0u8; 65];
+	ethereum_sig[0..32].copy_from_slice(&r);
+	ethereum_sig[32..64].copy_from_slice(&s);
+	ethereum_sig[64] = ethereum_v;
+
+	Ok(ethereum_sig)
+}
+
+/// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
+fn convert_to_packed_user_op(
+	user_op: SerializablePackedUserOperation,
+) -> Result<aa_contracts_client::PackedUserOperation, String> {
+	use std::str::FromStr;
+
+	// Helper function to parse hex string to fixed bytes
+	let parse_hex_fixed =
+		|hex_str: &str, expected_len: usize, name: &str| -> Result<Vec<u8>, String> {
+			let bytes = decode_hex(hex_str)
+				.map_err(|e| format!("Invalid hex string '{}' '{}': {}", hex_str, name, e))?;
+			if bytes.len() != expected_len {
+				return Err(format!(
+					"Expected {} bytes, got {} for '{}'",
+					expected_len,
+					bytes.len(),
+					hex_str
+				));
+			}
+			Ok(bytes)
+		};
+
+	Ok(aa_contracts_client::PackedUserOperation {
+		sender: Address::from_str(&user_op.sender)
+			.map_err(|e| format!("Invalid sender address '{}': {}", user_op.sender, e))?,
+		nonce: U256::from(user_op.nonce),
+		initCode: Bytes::from(
+			decode_hex(&user_op.init_code).map_err(|e| format!("Invalid init_code hex: {}", e))?,
+		),
+		callData: Bytes::from(
+			decode_hex(&user_op.call_data).map_err(|e| format!("Invalid call_data hex: {}", e))?,
+		),
+		accountGasLimits: {
+			let bytes = parse_hex_fixed(&user_op.account_gas_limits, 32, "account_gas_limits")?;
+			FixedBytes::from_slice(&bytes)
+		},
+		preVerificationGas: U256::from(user_op.pre_verification_gas),
+		gasFees: {
+			let bytes = parse_hex_fixed(&user_op.gas_fees, 32, "gas_fees")?;
+			FixedBytes::from_slice(&bytes)
+		},
+		paymasterAndData: Bytes::from(
+			decode_hex(&user_op.paymaster_and_data)
+				.map_err(|e| format!("Invalid paymaster_and_data hex: {}", e))?,
+		),
+		signature: match user_op.signature {
+			Some(sig) => {
+				Bytes::from(decode_hex(&sig).map_err(|e| format!("Invalid signature hex: {}", e))?)
+			},
+			None => Bytes::new(), // Empty signature for unsigned operations
+		},
+	})
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use alloy::{
+		hex,
+		primitives::{Bytes, U256},
+	};
+	use executor_core::types::SerializablePackedUserOperation;
+
+	#[test]
+	fn test_convert_to_packed_user_op() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0xdeadbeef".to_string(),
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: Some("0x1234567890abcdef".to_string()),
+		};
+
+		let packed_user_op = convert_to_packed_user_op(serializable_user_op)
+			.expect("Failed to convert SerializablePackedUserOperation");
+
+		// Verify the conversion
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+		assert_eq!(packed_user_op.initCode, Bytes::from(hex::decode("deadbeef").unwrap()));
+		assert_eq!(packed_user_op.callData, Bytes::from(hex::decode("cafebabe").unwrap()));
+		assert_eq!(packed_user_op.preVerificationGas, U256::from(21000));
+		assert_eq!(packed_user_op.paymasterAndData, Bytes::from(Vec::<u8>::new()));
+		assert_eq!(packed_user_op.signature, Bytes::from(hex::decode("1234567890abcdef").unwrap()));
+	}
+
+	#[test]
+	fn test_convert_to_packed_user_op_unsigned() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0xdeadbeef".to_string(),
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None, // Unsigned operation
+		};
+
+		let packed_user_op = convert_to_packed_user_op(serializable_user_op)
+			.expect("Failed to convert unsigned SerializablePackedUserOperation");
+
+		// Verify the signature is empty for unsigned operation
+		assert!(packed_user_op.signature.is_empty());
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+	}
+
+	#[test]
+	fn test_convert_to_packed_user_op_empty_init_code() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "".to_string(), // Empty init_code
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: Some("0x1234567890abcdef".to_string()),
+		};
+
+		let result = convert_to_packed_user_op(serializable_user_op);
+		assert!(result.is_ok(), "Empty init_code should not cause an error: {:?}", result.err());
+
+		let packed_user_op = result.unwrap();
+		// Empty init_code should result in empty Bytes
+		assert!(packed_user_op.initCode.is_empty());
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+	}
+
+	#[test]
+	fn test_convert_to_packed_user_op_0x_init_code() {
+		let serializable_user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(), // "0x" prefix only
+			call_data: "0xcafebabe".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: Some("0x1234567890abcdef".to_string()),
+		};
+
+		let result = convert_to_packed_user_op(serializable_user_op);
+		assert!(result.is_ok(), "0x init_code should not cause an error: {:?}", result.err());
+
+		let packed_user_op = result.unwrap();
+		// "0x" init_code should result in empty Bytes
+		assert!(packed_user_op.initCode.is_empty());
+		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
+		assert_eq!(packed_user_op.nonce, U256::from(42));
+	}
 }

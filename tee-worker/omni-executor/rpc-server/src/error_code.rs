@@ -36,6 +36,7 @@ pub const PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE: i32 = -32051;
 pub const PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE: i32 = -32052;
 
 const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32060;
+const UNSUPPORTED_CHAIN_ERROR_CODE: i32 = -32061;
 
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
@@ -72,5 +73,6 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			-32099
 		},
 		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
+		NativeTaskError::UnsupportedChain => UNSUPPORTED_CHAIN_ERROR_CODE,
 	}
 }

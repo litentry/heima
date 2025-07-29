@@ -1078,6 +1078,8 @@ jobs:
         run: |
           # Create .env file that needs by the docker-compose.yml
           touch ../.env
+          git submodule update --init --recursive
+          docker compose build --no-cache aa-contracts-deploy
           docker compose -f docker-compose.yml -f docker-compose.test.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Collect docker logs if test fails

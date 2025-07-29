@@ -22,14 +22,15 @@ use alloy::hex;
 use alloy::network::Ethereum;
 use alloy::network::EthereumWallet;
 use alloy::network::NetworkWallet;
-use alloy::primitives::Address;
-use alloy::primitives::U256;
+use alloy::primitives::{Address, U256};
 use alloy::providers::Provider;
 use alloy::providers::ProviderBuilder;
+use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::transports::RpcError;
 use async_trait::async_trait;
 use executor_core::wallet_metrics::WalletBalanceFetcher;
+use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::log::error;
 
@@ -61,7 +62,7 @@ pub trait RpcProvider: Send + Sync {
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()>;
 	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()>;
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()>;
-	async fn send_transaction(&self, tx: Self::Transaction) -> Result<(), ()>;
+	async fn send_transaction(&self, tx: Self::Transaction) -> Result<String, ()>;
 	async fn send_transaction_with_wallet(
 		&self,
 		wallet: &EthereumWallet,
@@ -73,6 +74,11 @@ pub trait RpcProvider: Send + Sync {
 	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()>;
 
 	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, Option<Vec<u8>>>;
+	async fn call_with_state_override(
+		&self,
+		tx: Self::Transaction,
+		state_override: HashMap<Address, AccountOverride>,
+	) -> Result<Vec<u8>, Option<Vec<u8>>>;
 	async fn get_wallet_address(&self) -> Result<Address, ()>;
 }
 
@@ -128,15 +134,13 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get transaction count: {:?}", e))
 	}
 
-	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<(), ()> {
+	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<String, ()> {
 		let Some(ref wallet) = self.wallet else {
 			error!("Provider without a wallet cannot send transactions");
 			return Err(());
 		};
 
-		self.send_transaction_with_wallet(wallet, raw_tx).await?;
-
-		Ok(())
+		self.send_transaction_with_wallet(wallet, raw_tx).await
 	}
 
 	async fn send_transaction_with_wallet(
@@ -150,10 +154,8 @@ impl RpcProvider for AlloyRpcProvider {
 
 		let signer_address = wallet.default_signer().address();
 		let mut tx = raw_tx.from(signer_address);
-		// Bump the gas by 10%
-		// TODO: Set gas fees via CLI
+		// Add a 10% buffer to gas to make it safer
 		tx.gas = Some(self.estimate_gas(tx.clone()).await? * 110 / 100);
-		tx.gas_price = Some(self.get_gas_price().await?);
 
 		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
@@ -235,6 +237,51 @@ impl RpcProvider for AlloyRpcProvider {
 		Ok(result.to_vec())
 	}
 
+	async fn call_with_state_override(
+		&self,
+		tx: Self::Transaction,
+		state_override: HashMap<Address, AccountOverride>,
+	) -> Result<Vec<u8>, Option<Vec<u8>>> {
+		let provider = ProviderBuilder::new().connect_http(self.url.parse().map_err(|e| {
+			error!("Could not parse rpc url: {:?}", e);
+			None
+		})?);
+
+		// Use the raw_request method to make eth_call with state override
+		let params = serde_json::json!([tx, "latest", state_override]);
+
+		let result = match provider.raw_request::<_, String>("eth_call".into(), params).await {
+			Ok(r) => r,
+			Err(e) => {
+				error!("Error from call with state override: {:?}", e);
+				match e {
+					RpcError::ErrorResp(resp) => match resp.data {
+						Some(value) => {
+							let value: String = serde_json::from_str(value.get()).map_err(|e| {
+								error!("Could not deserialize rpc response: {:?}", e);
+								None
+							})?;
+							let decoded = hex::decode(value).map_err(|e| {
+								error!("Could not decode rpc response: {:?}", e);
+								None
+							})?;
+							return Err(Some(decoded));
+						},
+						None => return Err(None),
+					},
+					_ => return Err(None),
+				}
+			},
+		};
+
+		let decoded = hex::decode(&result[2..]).map_err(|e| {
+			error!("Could not decode hex response: {:?}", e);
+			None
+		})?;
+
+		Ok(decoded)
+	}
+
 	async fn get_wallet_address(&self) -> Result<Address, ()> {
 		if let Some(ref wallet) = self.wallet {
 			Ok(<EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(wallet))
@@ -267,6 +314,7 @@ pub mod mocks {
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::Address;
 	use alloy::primitives::U256;
+	use alloy::rpc::types::state::AccountOverride;
 	use alloy::rpc::types::TransactionRequest;
 	use async_trait::async_trait;
 	use mockall::mock;
@@ -284,12 +332,13 @@ pub mod mocks {
 			async fn get_balance(&self, address: Address) -> Result<U256, ()>;
 			async fn get_transaction_count(&self, address: Address) -> Result<u64, ()>;
 			async fn get_pending_nonce(&self, address: Address) -> Result<u64, ()>;
-			async fn send_transaction(&self, tx: TransactionRequest) -> Result<(), ()>;
+			async fn send_transaction(&self, tx: TransactionRequest) -> Result<String, ()>;
 			async fn send_transaction_with_wallet(&self, wallet: &EthereumWallet, tx: TransactionRequest) -> Result<String, ()>;
 			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;
 			async fn get_gas_price(&self) -> Result<u128, ()>;
 			async fn get_code_at(&self, address: Address) -> Result<Vec<u8>, ()>;
 			async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, Option<Vec<u8>>>;
+			async fn call_with_state_override(&self, tx: TransactionRequest, state_override: HashMap<Address, AccountOverride>) -> Result<Vec<u8>, Option<Vec<u8>>>;
 			async fn get_wallet_address(&self) -> Result<Address, ()>;
 		}
 

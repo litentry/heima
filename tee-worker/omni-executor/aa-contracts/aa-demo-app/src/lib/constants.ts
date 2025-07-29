@@ -1,13 +1,15 @@
 import EntryPointArtifact from "@/contracts/abis/EntryPoint.json";
 import OmniAccountArtifact from "@/contracts/abis/OmniAccount.json";
 import OmniAccountFactoryArtifact from "@/contracts/abis/OmniAccountFactory.json";
-import TestTokenArtifact from "@/contracts/abis/TestToken.json";
+import StandardERC20Artifact from "@/contracts/abis/StandardERC20.json";
+import SimplePaymasterArtifact from "@/contracts/abis/SimplePaymaster.json";
 
 // Extract ABIs from artifacts
 const EntryPointABI = (EntryPointArtifact as any).abi || EntryPointArtifact;
 const OmniAccountABI = (OmniAccountArtifact as any).abi || OmniAccountArtifact;
 const OmniAccountFactoryABI = (OmniAccountFactoryArtifact as any).abi || OmniAccountFactoryArtifact;
-const TestTokenABI = (TestTokenArtifact as any).abi || TestTokenArtifact;
+const StandardERC20ABI = (StandardERC20Artifact as any).abi || StandardERC20Artifact;
+const SimplePaymasterABI = (SimplePaymasterArtifact as any).abi || SimplePaymasterArtifact;
 
 // Contract addresses - update these after running deploy-local.sh
 // Default addresses are for chainId 31337 (Hardhat)
@@ -37,9 +39,24 @@ export const CONTRACTS = {
 		// Optional - deployed by deploy-local.sh but not used in basic flow
 		address: (process.env.NEXT_PUBLIC_PAYMASTER_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
-		abi: [] as any, // Add ABI when needed
+		abi: SimplePaymasterABI,
 	},
 } as const;
+
+// OwnerType enum - matches the contract enum in OwnerType.sol
+export enum OwnerType {
+	Pumpx = 0,
+	Email = 1,
+	Twitter = 2,
+	Discord = 3,
+	Github = 4,
+	Substrate = 5,
+	Evm = 6,
+	Bitcoin = 7,
+	Solana = 8,
+	Google = 9,
+	Passkey = 10,
+}
 
 // Chain configurations
 export const SUPPORTED_CHAINS = {
@@ -75,8 +92,10 @@ export const DEFAULT_CLIENT_ID = "wildmeta";
 export const TEE_WORKER_CONFIG = {
 	rpcUrl: process.env.NEXT_PUBLIC_TEE_WORKER_RPC_URL || "http://localhost:3000",
 	clientId: "wildmeta",
-	chainType: "Evm" as const,
+	chainType: "evm" as const,
 	signerIndex: 0,
+	// Use proxy to avoid CORS issues when running in browser
+	useProxy: true,
 };
 
 // Solana configuration
@@ -85,23 +104,23 @@ export const SOLANA_CONFIG = {
 	rpcUrl: "https://api.devnet.solana.com",
 };
 
-// Test Token configurations
-export const TEST_TOKENS = {
+// ERC20 Token configurations
+export const ERC20_TOKENS = {
 	USDC: {
-		address: (process.env.NEXT_PUBLIC_TEST_USDC_ADDRESS ||
+		address: (process.env.NEXT_PUBLIC_USDC_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		symbol: "USDC",
-		name: "Test USDC",
+		name: "USD Coin",
 		decimals: 6,
-		abi: TestTokenABI,
+		abi: StandardERC20ABI,
 	},
 	USDT: {
-		address: (process.env.NEXT_PUBLIC_TEST_USDT_ADDRESS ||
+		address: (process.env.NEXT_PUBLIC_USDT_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		symbol: "USDT",
-		name: "Test USDT",
+		name: "Tether USD",
 		decimals: 6,
-		abi: TestTokenABI,
+		abi: StandardERC20ABI,
 	},
 } as const;
 
@@ -114,6 +133,15 @@ export const SUPPORTED_TOKENS = [
 		address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
 		isNative: true,
 	},
-	TEST_TOKENS.USDC,
-	TEST_TOKENS.USDT,
+	ERC20_TOKENS.USDC,
+	ERC20_TOKENS.USDT,
 ] as const;
+
+// Paymaster configuration
+export const PAYMASTER_CONFIG = {
+	// Default gas limits for paymaster operations
+	defaultValidationGasLimit: BigInt(100000),
+	defaultPostOpGasLimit: BigInt(50000),
+	// Whether paymaster is enabled by default
+	enabledByDefault: false,
+} as const;

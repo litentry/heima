@@ -31,8 +31,7 @@ pub async fn post_heima_login_impl(
 	access_token: &str,
 	body: PostHeimaLoginBody,
 ) -> Result<PostHeimaLoginResponse, Error> {
-	let endpoint = client.base_url.join("/v3/account/post_heima_login").unwrap();
-
+	let endpoint = client.base_url.join("v3/account/post_heima_login").unwrap();
 	let response = client
 		.http_client
 		.post(endpoint)

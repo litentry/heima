@@ -1,6 +1,0 @@
-{
-    "connections": 20,
-    "iterations": 10,
-    "parachainEndpoint": "ws://tee-staging.litentry.io:9944",
-    "enclaveEndpoint": "wss://tee-staging.litentry.io:2000"
-}

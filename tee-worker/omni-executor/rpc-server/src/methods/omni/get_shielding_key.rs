@@ -20,7 +20,8 @@ mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
-	use executor_storage::StorageDB;
+	use executor_storage::{StorageDB, WildmetaTimestampStorage};
+	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -31,6 +32,7 @@ mod test {
 	use std::sync::Arc;
 	use tempfile::tempdir;
 	use tokio::sync::mpsc;
+	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
 	pub async fn get_shielding_key_works() {
@@ -38,7 +40,7 @@ mod test {
 		let port: u16 = 2005;
 		let shielding_key = ShieldingKey::new();
 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
-		let db = StorageDB::open_default(tmp_dir.path()).unwrap();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
@@ -47,15 +49,24 @@ mod test {
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 
+		// Create console mailer for test
+		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+
+		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
+		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+
 		start_server(
 			port,
 			shielding_key.clone(),
 			Arc::new(sender),
 			Arc::new(Box::new(pumpx_api)),
-			Arc::new(db),
+			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
+			wildmeta_api,
+			wildmeta_timestamp_storage,
+			mailer,
 		)
 		.await
 		.unwrap();
