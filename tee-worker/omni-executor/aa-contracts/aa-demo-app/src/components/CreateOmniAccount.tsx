@@ -128,6 +128,7 @@ export function CreateOmniAccount({
             const initCode = generateInitCode(
                 CONTRACTS.OmniAccountFactory.address,
                 omniAccount,
+                6, // OwnerType.Evm
                 clientIdBytes,
                 rootSigner,
             ) as `0x${string}`;
