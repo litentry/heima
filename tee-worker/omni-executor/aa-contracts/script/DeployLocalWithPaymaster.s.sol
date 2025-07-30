@@ -36,10 +36,10 @@ contract DeployLocalWithPaymaster is Script {
             // Deploy DemoPaymaster
             DemoPaymaster paymaster = new DemoPaymaster(entryPoint);
             console.log("DemoPaymaster deployed at:", address(paymaster));
-            
+
             // Fund the paymaster with 0.1 ETH for demo purposes
             // Note: The paymaster's receive function will automatically deposit to EntryPoint
-            (bool success, ) = address(paymaster).call{value: 0.1 ether}("");
+            (bool success,) = address(paymaster).call{value: 0.1 ether}("");
             require(success, "Failed to fund paymaster");
             console.log("DemoPaymaster funded with 0.1 ETH");
         } else {

@@ -26,11 +26,17 @@ contract OmniAccountAsRoot is Test {
     }
 
     function test_Execute() public {
-        OmniAccountTestUtils.performExecuteTestAs(vm, rootAddress, account, counter);
+        vm.expectRevert("account: not Owner or EntryPoint");
+        vm.prank(rootAddress);
+        account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
     function test_ExecuteBatch() public {
-        OmniAccountTestUtils.performExecuteBatchTestAs(vm, rootAddress, account, counter);
+        vm.expectRevert("account: not Owner or EntryPoint");
+        vm.prank(rootAddress);
+        BaseAccount.Call[] memory calls = new BaseAccount.Call[](1);
+        calls[0] = BaseAccount.Call({target: address(counter), value: 0, data: abi.encodeWithSignature("increment()")});
+        account.executeBatch(calls);
     }
 
     function test_validateOp() public {

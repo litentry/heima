@@ -92,11 +92,10 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         emit AccountInitialized(_entryPoint, owner, ownerType, clientId, aRoot);
     }
 
-    // Require the function call went through EntryPoint or be signed by [owner|root]
+    // Require the function call went through EntryPoint or be signed by owner
     function _requireForExecute() internal view virtual override {
         require(
-            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner || isRootSigner(msg.sender),
-            "account: not Owner or EntryPoint or root"
+            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner, "account: not Owner or EntryPoint"
         );
     }
 
