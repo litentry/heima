@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "../core/BaseAccount.sol";
+import "../interfaces/OwnerType.sol";
 import "../interfaces/UserOpSigner.sol";
 import "../interfaces/Passkey.sol";
 import "../core/Helpers.sol";
@@ -27,13 +28,15 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
 
     bytes32 public owner;
     bytes public clientId;
+    OwnerType public ownerType;
+
     mapping(address => bool) public rootSigners;
     mapping(bytes32 => bool) public passkeySigners;
 
     IEntryPoint private immutable _entryPoint;
 
     event AccountInitialized(
-        IEntryPoint indexed entryPoint, bytes32 indexed owner, bytes clientId, address indexed root
+        IEntryPoint indexed entryPoint, bytes32 indexed owner, OwnerType ownerType, bytes clientId, address indexed root
     );
 
     event RootSignerAdded(address root);
@@ -70,15 +73,23 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
      * the implementation by calling `upgradeTo()`
      * @param anOwner the owner (signer) of this account
      */
-    function initialize(bytes32 anOwner, bytes memory aClientId, address aRoot) public virtual initializer {
-        _initialize(anOwner, aClientId, aRoot);
+    function initialize(bytes32 anOwner, OwnerType anOwnerType, bytes memory aClientId, address aRoot)
+        public
+        virtual
+        initializer
+    {
+        _initialize(anOwner, anOwnerType, aClientId, aRoot);
     }
 
-    function _initialize(bytes32 anOwner, bytes memory aClientId, address aRoot) internal virtual {
+    function _initialize(bytes32 anOwner, OwnerType anOwnerType, bytes memory aClientId, address aRoot)
+        internal
+        virtual
+    {
         owner = anOwner;
         rootSigners[aRoot] = true;
         clientId = aClientId;
-        emit AccountInitialized(_entryPoint, owner, clientId, aRoot);
+        ownerType = anOwnerType;
+        emit AccountInitialized(_entryPoint, owner, ownerType, clientId, aRoot);
     }
 
     // Require the function call went through EntryPoint or be signed by [owner|root]

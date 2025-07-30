@@ -7,7 +7,7 @@ import "../interfaces/PackedUserOperation.sol";
 /**
  * Demo paymaster implementation that sponsors gas for any user operation
  * without bundler restrictions. For demonstration purposes only.
- * 
+ *
  * SECURITY WARNING: This paymaster accepts any operation as long as it has
  * sufficient deposit. Do not use in production.
  */
@@ -20,7 +20,7 @@ contract DemoPaymaster is BasePaymaster {
      * Validate a user operation.
      * Sponsors any operation as long as we have sufficient deposit.
      */
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 /* userOpHash */, uint256 maxCost)
+    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32, /* userOpHash */ uint256 maxCost)
         internal
         view
         override
@@ -42,10 +42,12 @@ contract DemoPaymaster is BasePaymaster {
      * Post-operation handler.
      * Log the sponsored operation.
      */
-    function _postOp(PostOpMode /* mode */, bytes calldata context, uint256 actualGasCost, uint256 /* actualUserOpFeePerGas */)
-        internal
-        override
-    {
+    function _postOp(
+        PostOpMode, /* mode */
+        bytes calldata context,
+        uint256 actualGasCost,
+        uint256 /* actualUserOpFeePerGas */
+    ) internal override {
         // Decode sender from context
         address sender = abi.decode(context, (address));
 

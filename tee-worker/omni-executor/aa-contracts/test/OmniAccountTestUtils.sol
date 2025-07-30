@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.28;
 
 import {Counter} from "../src/Counter.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -7,6 +7,7 @@ import {OmniAccount} from "../src/accounts/OmniAccount.sol";
 import {OmniAccountTestable} from "./OmniAccountTestable.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {OwnerType} from "../src/interfaces/OwnerType.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestUtils} from "./TestUtils.sol";
 
@@ -22,7 +23,8 @@ library OmniAccountTestUtils {
         OmniAccount account = OmniAccount(
             payable(
                 new ERC1967Proxy{salt: oa}(
-                    address(accountImpl), abi.encodeCall(OmniAccount.initialize, (oa, clientId, rootAddress))
+                    address(accountImpl),
+                    abi.encodeCall(OmniAccount.initialize, (oa, OwnerType.Evm, clientId, rootAddress))
                 )
             )
         );

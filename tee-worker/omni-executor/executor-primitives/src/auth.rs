@@ -10,7 +10,6 @@ use base58::{FromBase58, ToBase58};
 use heima_primitives::{Address20, Address32, Address33, Identity, IdentityString};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 pub type VerificationCode = String;
 type Email = String;
@@ -27,6 +26,8 @@ type JwtToken = String;
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type", content = "value")]
 pub enum UserId {
+	Pumpx(String),
+	Email(String),
 	Twitter(String),
 	Discord(String),
 	Github(String),
@@ -34,7 +35,6 @@ pub enum UserId {
 	Evm(String),       // hex-encoded
 	Bitcoin(String),   // hex-encoded
 	Solana(String),    // base58-encoded
-	Email(String),
 	Google(String),
 	Passkey(String), // unique user_id, even for multiple credential_id
 }
@@ -44,6 +44,9 @@ impl TryFrom<UserId> for Identity {
 
 	fn try_from(value: UserId) -> Result<Self, Self::Error> {
 		match value {
+			UserId::Pumpx(handle) => {
+				Ok(Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec())))
+			},
 			UserId::Twitter(handle) => {
 				Ok(Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec())))
 			},
@@ -126,10 +129,8 @@ impl TryFrom<Identity> for UserId {
 			Identity::Google(handle) => {
 				Ok(UserId::Google(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
-			Identity::Pumpx(_) => {
-				// TODO: should we remove this identity type?
-				error!("Pumpx identity is not supported in UserId conversion");
-				Err(())
+			Identity::Pumpx(handle) => {
+				Ok(UserId::Pumpx(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
 			Identity::Passkey(handle) => {
 				Ok(UserId::Passkey(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
