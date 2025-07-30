@@ -43,6 +43,21 @@ export const CONTRACTS = {
 	},
 } as const;
 
+// OwnerType enum - matches the contract enum in OwnerType.sol
+export enum OwnerType {
+	Pumpx = 0,
+	Email = 1,
+	Twitter = 2,
+	Discord = 3,
+	Github = 4,
+	Substrate = 5,
+	Evm = 6,
+	Bitcoin = 7,
+	Solana = 8,
+	Google = 9,
+	Passkey = 10,
+}
+
 // Chain configurations
 export const SUPPORTED_CHAINS = {
 	// Local development - Anvil (deploy-local.sh)
@@ -77,7 +92,7 @@ export const DEFAULT_CLIENT_ID = "wildmeta";
 export const TEE_WORKER_CONFIG = {
 	rpcUrl: process.env.NEXT_PUBLIC_TEE_WORKER_RPC_URL || "http://localhost:3000",
 	clientId: "wildmeta",
-	chainType: "Evm" as const,
+	chainType: "evm" as const,
 	signerIndex: 0,
 	// Use proxy to avoid CORS issues when running in browser
 	useProxy: true,

@@ -90,6 +90,9 @@ importers:
       ecpair:
         specifier: ^3.0.0
         version: 3.0.0(typescript@5.8.3)
+      globals:
+        specifier: ^16.3.0
+        version: 16.3.0
       js-base64:
         specifier: ^3.7.5
         version: 3.7.7
@@ -178,6 +181,9 @@ importers:
       chai:
         specifier: ^5.2.1
         version: 5.2.1
+      globals:
+        specifier: ^16.3.0
+        version: 16.3.0
       js-sha256:
         specifier: ^0.11.1
         version: 0.11.1
@@ -3048,6 +3054,11 @@ packages:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
     dev: true
+
+  /globals@16.3.0:
+    resolution: {integrity: sha512-bqWEnJ1Nt3neqx2q5SFfGS8r/ahumIakg3HcwtNlrVlwXIeNumWn/c7Pn/wKzGhf6SaW6H6uWXLqC30STCMchQ==}
+    engines: {node: '>=18'}
+    dev: false
 
   /gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}

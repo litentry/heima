@@ -1,0 +1,11 @@
+{
+  "network": "HyperEVM Testnet",
+  "chainId": 998,
+  "timestamp": 1753100887,
+  "deployer": "0x6eCd109368A8dF927A3dDE6FD4c1648C346Caec7",
+  "contracts": {
+    "EntryPoint": "0xf1646af389deE47DC7d45E6616A1bCdc9F2b0140",
+    "OmniAccountFactory": "0xca470c1990B1E3DBF24676D8ACDF4B5867CD410e",
+    "SimplePaymaster": "0xB529AcA1D832be817Bd8B30c2f2a51490792fcff"
+  }
+}

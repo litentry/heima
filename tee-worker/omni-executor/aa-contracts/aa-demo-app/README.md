@@ -49,7 +49,7 @@ First, navigate to the parent directory and deploy the contracts:
 cd /path/to/aa-contracts
 
 # Start Anvil (local Ethereum node) and deploy contracts
-./local-deploy.sh
+./deploy-local.sh
 
 # Keep this terminal open - Anvil needs to keep running
 ```
@@ -376,7 +376,7 @@ For custom chains, you can specify:
 To modify the app:
 
 1. Smart contract changes: Update contracts in parent `src/` directory
-2. Re-deploy: Run `./local-deploy.sh` again (or `PAYMASTER_TYPE=demo ./local-deploy.sh` for DemoPaymaster)
+2. Re-deploy: Run `./deploy-local.sh` again (or `PAYMASTER_TYPE=demo ./deploy-local.sh` for DemoPaymaster)
 3. Update addresses: Run `./update-demo-addresses.sh`
 4. The app hot-reloads automatically
 
