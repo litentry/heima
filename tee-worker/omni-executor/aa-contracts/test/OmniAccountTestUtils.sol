@@ -45,7 +45,7 @@ library OmniAccountTestUtils {
         OmniAccount account = OmniAccount(
             payable(
                 new ERC1967Proxy{salt: oa}(
-                    address(accountImpl), abi.encodeCall(OmniAccount.initialize, (oa, clientId, rootAddress))
+                    address(accountImpl), abi.encodeCall(OmniAccount.initialize, (oa, OwnerType.Evm, clientId, rootAddress))
                 )
             )
         );
@@ -54,7 +54,7 @@ library OmniAccountTestUtils {
             payable(
                 new ERC1967Proxy{salt: keccak256(abi.encodePacked("testable", oa))}(
                     address(testableAccountImpl),
-                    abi.encodeCall(OmniAccount.initialize, (oa, clientId, rootAddress))
+                    abi.encodeCall(OmniAccount.initialize, (oa, OwnerType.Evm, clientId, rootAddress))
                 )
             )
         );
