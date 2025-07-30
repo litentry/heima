@@ -232,4 +232,8 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         (newImplementation);
         _onlyOwner();
     }
+
+    function version() public pure returns (string memory) {
+        return "1.0.0";
+    }
 }

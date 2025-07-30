@@ -100,17 +100,17 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
         results = new ExecutionResult[](opslen);
         UserOpInfo[] memory opInfos = new UserOpInfo[](opslen);
         uint256 collected = 0;
-        
+
         unchecked {
             // For simulation, we need to run validation on each operation first
             for (uint256 i = 0; i < opslen; i++) {
                 _simulationOnlyValidations(ops[i]);
                 (uint256 validationData, uint256 paymasterValidationData) = _validatePrepayment(i, ops[i], opInfos[i]);
-                
+
                 // Execute the user operation
                 uint256 paid = _executeUserOp(i, ops[i], opInfos[i]);
                 collected += paid;
-                
+
                 // Create execution result for this operation
                 results[i] = ExecutionResult(
                     opInfos[i].preOpGas,
@@ -122,11 +122,11 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
                 );
             }
         }
-        
+
         // Compensate beneficiary to accurately simulate the actual handleOps behavior
         // This ensures gas estimation includes the transfer cost and validates the beneficiary
         _compensate(beneficiary, collected);
-        
+
         return results;
     }
 
