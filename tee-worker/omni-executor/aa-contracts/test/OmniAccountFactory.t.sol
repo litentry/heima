@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.28;
 
 import {EntryPoint} from "../src/core/EntryPoint.sol";
 import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
 import {OmniAccount} from "../src/accounts/OmniAccount.sol";
+import {OwnerType} from "../src/interfaces/OwnerType.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {TestUtils} from "./TestUtils.sol";
 
@@ -24,9 +25,9 @@ contract OmniAccountFactoryTest is Test {
     function test_CreateAccountReturnsSameAddress() public {
         address senderCreator = address(entryPoint.senderCreator());
         vm.prank(senderCreator);
-        OmniAccount account1 = omniAccountFactory.createAccount(oa, clientId, rootAddress);
+        OmniAccount account1 = omniAccountFactory.createAccount(oa, OwnerType.Evm, clientId, rootAddress);
         vm.prank(senderCreator);
-        OmniAccount account2 = omniAccountFactory.createAccount(oa, clientId, rootAddress);
+        OmniAccount account2 = omniAccountFactory.createAccount(oa, OwnerType.Evm, clientId, rootAddress);
 
         assertEq(address(account1), address(account2));
     }
