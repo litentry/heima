@@ -30,7 +30,7 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
  *
  * @custom:security-contact https://bounty.ethereum.org
  */
-contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardTransient, ERC165, EIP712 {
+contract EntryPointV1 is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardTransient, ERC165, EIP712 {
     using UserOperationLib for PackedUserOperation;
 
     /**

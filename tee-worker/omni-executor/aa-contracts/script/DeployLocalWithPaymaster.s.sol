@@ -2,8 +2,8 @@
 pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
-import "../src/core/EntryPoint.sol";
-import "../src/accounts/OmniAccountFactory.sol";
+import "../src/core/EntryPointV1.sol";
+import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
 import "../src/core/DemoPaymaster.sol";
 import "../src/TestToken.sol";
@@ -23,13 +23,13 @@ contract DeployLocalWithPaymaster is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy EntryPoint
-        EntryPoint entryPoint = new EntryPoint();
-        console.log("EntryPoint deployed at:", address(entryPoint));
+        // Deploy EntryPointV1
+        EntryPointV1 entryPoint = new EntryPointV1();
+        console.log("EntryPointV1 deployed at:", address(entryPoint));
 
-        // Deploy OmniAccountFactory
-        OmniAccountFactory factory = new OmniAccountFactory(entryPoint);
-        console.log("OmniAccountFactory deployed at:", address(factory));
+        // Deploy OmniAccountFactoryV1
+        OmniAccountFactoryV1 factory = new OmniAccountFactoryV1(entryPoint);
+        console.log("OmniAccountFactoryV1 deployed at:", address(factory));
 
         // Deploy appropriate paymaster based on environment variable
         if (keccak256(bytes(paymasterType)) == keccak256(bytes("demo"))) {
@@ -38,7 +38,7 @@ contract DeployLocalWithPaymaster is Script {
             console.log("DemoPaymaster deployed at:", address(paymaster));
 
             // Fund the paymaster with 0.1 ETH for demo purposes
-            // Note: The paymaster's receive function will automatically deposit to EntryPoint
+            // Note: The paymaster's receive function will automatically deposit to EntryPointV1
             (bool success,) = address(paymaster).call{value: 0.1 ether}("");
             require(success, "Failed to fund paymaster");
             console.log("DemoPaymaster funded with 0.1 ETH");
