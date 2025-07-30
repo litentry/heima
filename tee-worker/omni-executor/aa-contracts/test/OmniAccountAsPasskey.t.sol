@@ -121,7 +121,7 @@ contract OmniAccountAsPasskey is Test {
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, userOpHash, 0);
 
-        assertEq(validationData, SIG_VALIDATION_FAILED, "Would pass with valid P256 signature");
+        assertEq(validationData, SIG_VALIDATION_FAILED, "P256 signature is invalid");
     }
 
     function test_AddPasskeySignerOnlyOwner() public {
