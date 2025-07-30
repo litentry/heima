@@ -374,6 +374,54 @@ contract OmniAccountAsPasskey is Test {
         assertFalse(Passkey.checkAuthFlags(0x11, false), "Should fail with UP and BS but no BE");
     }
 
+    function test_ValidatePasskeyDirectSucceed() public {
+        // Use the exact public key from JavaScript generation
+        Passkey.PublicKey memory validPublicKey = Passkey.PublicKey({
+            x: 0xb814cadbe97896dc16192a641cee9fe08e5bdb61fdb1c9dca9b690c36aa16794,
+            y: 0x54a8bacd85b0dac616dde551e1cfc2806a8b467f5a0b95502afa98f8a59e188f
+        });
+
+        // Use the exact signature from JavaScript generation
+        Passkey.Signature memory validSignature = Passkey.Signature({
+            r: 0x5450f52fc923b60d14feab0897021c7763f5337f926dcf3c60820870e4868d25,
+            s: 0x03c18f5feb1ae2236ed048401f8fd56f9fd2716d51a86b2d38fcb6dcacf31a18
+        });
+
+        // Add the passkey to authorized signers first
+        vm.prank(ownerAddress);
+        testableAccount.addPasskeySigner(validPublicKey);
+
+        // Use the exact userOpHash from JavaScript generation
+        bytes32 userOpHash = 0x9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08;
+        // Use the exact clientDataJSON from JavaScript generation
+        string memory clientDataJSON = '{"type":"webauthn.get","challenge":"n4bQgYhMfWWaL-qgxVrQFaO_TxsrC4Is0V1sFbDwCgg","origin":"https://example.com"}';
+
+        // Use the exact authData from JavaScript generation
+        bytes memory authData = hex"00000000000000000000000000000000000000000000000000000000000000000100000000";
+
+        Passkey.Metadata memory metadata = Passkey.Metadata({
+            authData: authData,
+            clientDataJSON: clientDataJSON,
+            challengeIndex: 23, // Exact challengeIndex from JavaScript
+            typeIndex: 1,       // Exact typeIndex from JavaScript
+            userVerificationRequired: false
+        });
+
+        bytes memory sig = abi.encode(validPublicKey, validSignature, metadata);
+
+        // Mock the actual staticcall made by OpenZeppelin's P256 library
+        // When P256.verify is called, it makes a staticcall to the precompile
+        vm.mockCall(
+            address(0x100),
+            abi.encodeWithSignature(""),
+            abi.encode(uint256(1))
+        );
+
+        uint256 validationData = testableAccount.validatePasskeyPublic(userOpHash, sig);
+
+        assertEq(validationData, SIG_VALIDATION_SUCCESS, "SUCCESS: Valid P256 signature verification");
+    }
+
     // Define events for testing
     event PasskeySignerAdded(Passkey.PublicKey pk);
     event PasskeySignerRemoved(Passkey.PublicKey pk);
