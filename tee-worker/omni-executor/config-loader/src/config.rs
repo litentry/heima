@@ -37,7 +37,6 @@ impl FromStr for MailerType {
 }
 
 const DEFAULT_MAILER_TYPE: &str = "sendgrid";
-const DEFAULT_MAILER_API_HOST: &str = ""; // Optional
 const DEFAULT_MAILER_API_KEY: &str = "";
 const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
 const DEFAULT_MAILER_FROM_NAME: &str = "Heima Verify";
@@ -75,11 +74,7 @@ impl Default for MailerConfig {
 	fn default() -> Self {
 		Self {
 			mailer_type: MailerType::from_str(DEFAULT_MAILER_TYPE).unwrap_or(MailerType::Sendgrid),
-			mailer_api_host: if DEFAULT_MAILER_API_HOST.is_empty() {
-				None
-			} else {
-				Some(DEFAULT_MAILER_API_HOST.to_string())
-			},
+			mailer_api_host: None,
 			mailer_api_key: DEFAULT_MAILER_API_KEY.to_string(),
 			mailer_from_email: DEFAULT_MAILER_FROM_EMAIL.to_string(),
 			mailer_from_name: DEFAULT_MAILER_FROM_NAME.to_string(),
@@ -368,7 +363,7 @@ impl ConfigLoader {
 
 		// Find all unique client suffixes
 		let mut clients = std::collections::HashSet::new();
-		for (key, _) in &env_vars {
+		for key in env_vars.keys() {
 			if key.starts_with("OE_MAILER_TYPE_") {
 				// Extract client name from OE_MAILER_TYPE_{CLIENT}
 				if let Some(client) = key.strip_prefix("OE_MAILER_TYPE_") {

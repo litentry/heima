@@ -93,13 +93,6 @@ impl MailerFactory {
 
 		Ok(mailer)
 	}
-
-	/// List all available client configurations
-	pub fn list_available_clients(&self) -> Vec<String> {
-		let mut clients: Vec<String> = self.config_loader.mailer_configs.keys().cloned().collect();
-		clients.sort();
-		clients
-	}
 }
 
 #[cfg(test)]
