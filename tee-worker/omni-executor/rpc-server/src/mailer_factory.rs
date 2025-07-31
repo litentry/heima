@@ -102,13 +102,18 @@ mod tests {
 
 	#[test]
 	fn test_mailer_factory_caching() {
+		// Set up test environment variables
+		std::env::set_var("OE_MAILER_TYPE_CONSOLE", "console");
+		std::env::set_var("OE_MAILER_FROM_EMAIL_CONSOLE", "test@example.com");
+		std::env::set_var("OE_MAILER_FROM_NAME_CONSOLE", "Console Test Mailer");
+
 		// Test that mailers are cached properly
 		let config = ConfigLoader::from_env();
 		let factory = MailerFactory::new(Arc::new(config));
 
-		let mailer1 = factory.get_mailer_for_client("test_client").expect("Should create mailer");
+		let mailer1 = factory.get_mailer_for_client("console").expect("Should create mailer");
 		let mailer2 =
-			factory.get_mailer_for_client("test_client").expect("Should get cached mailer");
+			factory.get_mailer_for_client("console").expect("Should get cached mailer");
 
 		// Should be the same instance (Arc points to same object)
 		assert!(Arc::ptr_eq(&mailer1, &mailer2));
