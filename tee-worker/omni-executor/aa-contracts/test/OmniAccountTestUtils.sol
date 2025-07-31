@@ -11,6 +11,25 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 library OmniAccountTestUtils {
+    function setUpWithOwnerType(address ownerAddress, bytes memory clientId, address rootAddress, OwnerType ownerType)
+        external
+        returns (Counter, EntryPoint, OmniAccount)
+    {
+        Counter counter = new Counter();
+        EntryPoint entryPoint = new EntryPoint();
+        OmniAccount accountImpl = new OmniAccount(entryPoint);
+        bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
+        OmniAccount account = OmniAccount(
+            payable(
+                new ERC1967Proxy{salt: oa}(
+                    address(accountImpl), abi.encodeCall(OmniAccount.initialize, (oa, ownerType, clientId, rootAddress))
+                )
+            )
+        );
+
+        return (counter, entryPoint, account);
+    }
+
     function setUp(address ownerAddress, bytes memory clientId, address rootAddress)
         external
         returns (Counter, EntryPoint, OmniAccount)

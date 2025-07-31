@@ -163,4 +163,173 @@ contract OmniAccountAsRoot is Test {
         bytes memory sessionProof = abi.encodePacked(sr, ss, sv);
         return sessionProof;
     }
+
+    function test_RootCannotCallAddRootSignerViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        address newRoot = 0x0000000000000000000000000000000000000002;
+
+        // Prepare UserOp that calls addRootSigner
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("addRootSigner(address)", newRoot);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotCallRemoveRootSignerViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        // Prepare UserOp that calls removeRootSigner
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("removeRootSigner(address)", root);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_SessionKeyCannotCallAddRootSignerViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (address session, uint256 sessionPk) = makeAddrAndKey("session");
+        uint256 sessionExpiration = block.timestamp + 1000;
+
+        bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
+
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        address newRoot = 0x0000000000000000000000000000000000000002;
+
+        // Prepare UserOp that calls addRootSigner
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("addRootSigner(address)", newRoot);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with session key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
+
+        // Validation should fail because session key is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotExecuteBatchViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        // Prepare UserOp that calls executeBatch
+        address sender = address(account);
+        bytes memory initCode = "";
+
+        BaseAccount.Call[] memory calls = new BaseAccount.Call[](1);
+        calls[0] = BaseAccount.Call({target: address(counter), value: 0, data: abi.encodeWithSignature("increment()")});
+        bytes memory callData = abi.encodeWithSignature("executeBatch((address,uint256,bytes)[])", calls);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root cannot use executeBatch
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotCallAddRootSignerViaExecute() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        address newRoot = 0x0000000000000000000000000000000000000002;
+
+        // Prepare UserOp that calls execute() with addRootSigner as inner call
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory innerCallData = abi.encodeWithSignature("addRootSigner(address)", newRoot);
+        bytes memory callData =
+            abi.encodeWithSignature("execute(address,uint256,bytes)", address(account), 0, innerCallData);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root is trying to call a restricted function via execute
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_SessionKeyCannotCallAddRootSignerViaExecute() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (address session, uint256 sessionPk) = makeAddrAndKey("session");
+        uint256 sessionExpiration = block.timestamp + 1000;
+
+        bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
+
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        address newRoot = 0x0000000000000000000000000000000000000002;
+
+        // Prepare UserOp that calls execute() with addRootSigner as inner call
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory innerCallData = abi.encodeWithSignature("addRootSigner(address)", newRoot);
+        bytes memory callData =
+            abi.encodeWithSignature("execute(address,uint256,bytes)", address(account), 0, innerCallData);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with session key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
+
+        // Validation should fail because session key is trying to call a restricted function via execute
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
 }

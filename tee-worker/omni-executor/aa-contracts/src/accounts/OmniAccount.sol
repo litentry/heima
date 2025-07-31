@@ -32,8 +32,18 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
 
     mapping(address => bool) public rootSigners;
     mapping(bytes32 => bool) public passkeySigners;
+    uint256 public passkeySignerCount;
 
     IEntryPoint private immutable _entryPoint;
+
+    // Selectors for restricted functions that only owner should call
+    bytes4 private constant ADD_ROOT_SIGNER_SELECTOR = bytes4(keccak256("addRootSigner(address)"));
+    bytes4 private constant REMOVE_ROOT_SIGNER_SELECTOR = bytes4(keccak256("removeRootSigner(address)"));
+    bytes4 private constant ADD_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("addPasskeySigner((uint256,uint256))"));
+    bytes4 private constant REMOVE_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("removePasskeySigner((uint256,uint256))"));
+    bytes4 private constant WITHDRAW_DEPOSIT_SELECTOR = bytes4(keccak256("withdrawDepositTo(address,uint256)"));
+    bytes4 private constant UPGRADE_TO_SELECTOR = bytes4(keccak256("upgradeTo(address)"));
+    bytes4 private constant UPGRADE_TO_AND_CALL_SELECTOR = bytes4(keccak256("upgradeToAndCall(address,bytes)"));
 
     event AccountInitialized(
         IEntryPoint indexed entryPoint, bytes32 indexed owner, OwnerType ownerType, bytes clientId, address indexed root
@@ -63,8 +73,16 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     }
 
     function _onlyOwner() internal view {
-        // Directly from EOA owner, or through the account itself (which gets redirected through execute())
-        require(_determineOa(msg.sender) == owner || msg.sender == address(this), "only owner");
+        // Directly from EOA owner, through the account itself (which gets redirected through execute()),
+        // or from EntryPoint (safe because _validateSignature ensures only owner-signed UserOps can call restricted functions)
+        // For non-EVM owner types:
+        // - If passkey signers exist, they have priority (root signers cannot call onlyOwner)
+        // - If no passkey signers exist, root signers can call onlyOwner
+        require(
+            _determineOa(msg.sender) == owner || msg.sender == address(this) || msg.sender == address(entryPoint())
+                || (ownerType != OwnerType.Evm && passkeySignerCount == 0 && isRootSigner(msg.sender)),
+            "only owner"
+        );
     }
 
     /**
@@ -127,10 +145,32 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         if (signer == UserOpSigner.Owner) {
             return _validateOwner(userOpHash, sig);
         } else if (signer == UserOpSigner.RootKey) {
+            // For non-EVM owner types, allow root signers to call restricted functions only if no passkey signers exist
+            if (ownerType != OwnerType.Evm && passkeySignerCount == 0) {
+                // Root signers can act as owners for non-EVM accounts without passkey signers
+                return _validateRootKey(userOpHash, sig);
+            }
+            // Otherwise, check if the UserOp is trying to call a restricted function
+            if (_isRestrictedCall(userOp.callData)) {
+                return SIG_VALIDATION_FAILED;
+            }
             return _validateRootKey(userOpHash, sig);
         } else if (signer == UserOpSigner.SessionKey) {
+            // Session keys should also be restricted from sensitive operations
+            if (_isRestrictedCall(userOp.callData)) {
+                return SIG_VALIDATION_FAILED;
+            }
             return _validateSessionKey(userOpHash, sig);
         } else if (signer == UserOpSigner.Passkey) {
+            // For non-EVM owner types with passkey signers, allow passkeys to call restricted functions
+            if (ownerType != OwnerType.Evm && passkeySignerCount > 0) {
+                // Passkey signers can act as owners for non-EVM accounts
+                return _validatePasskey(userOpHash, sig);
+            }
+            // Otherwise, check if the UserOp is trying to call a restricted function
+            if (_isRestrictedCall(userOp.callData)) {
+                return SIG_VALIDATION_FAILED;
+            }
             return _validatePasskey(userOpHash, sig);
         } else {
             revert("unsupported signer type");
@@ -218,17 +258,62 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     }
 
     function addPasskeySigner(Passkey.PublicKey memory pk) public onlyOwner {
-        passkeySigners[pk.toKey()] = true;
-        emit PasskeySignerAdded(pk);
+        bytes32 key = pk.toKey();
+        if (!passkeySigners[key]) {
+            passkeySigners[key] = true;
+            passkeySignerCount++;
+            emit PasskeySignerAdded(pk);
+        }
     }
 
     function removePasskeySigner(Passkey.PublicKey memory pk) public onlyOwner {
-        passkeySigners[pk.toKey()] = false;
-        emit PasskeySignerRemoved(pk);
+        bytes32 key = pk.toKey();
+        if (passkeySigners[key]) {
+            passkeySigners[key] = false;
+            passkeySignerCount--;
+            emit PasskeySignerRemoved(pk);
+        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation);
         _onlyOwner();
+    }
+
+    /// Check if the callData contains a call to a restricted function
+    function _isRestrictedCall(bytes calldata callData) internal pure returns (bool) {
+        if (callData.length < 4) return false;
+
+        bytes4 selector = bytes4(callData[0:4]);
+
+        // Check against all restricted selectors
+        return selector == ADD_ROOT_SIGNER_SELECTOR || selector == REMOVE_ROOT_SIGNER_SELECTOR
+            || selector == ADD_PASSKEY_SIGNER_SELECTOR || selector == REMOVE_PASSKEY_SIGNER_SELECTOR
+            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_SELECTOR
+            || selector == UPGRADE_TO_AND_CALL_SELECTOR || _isExecuteWithRestrictedCall(selector, callData);
+    }
+
+    /// Check if execute/executeBatch contains calls to restricted functions
+    function _isExecuteWithRestrictedCall(bytes4 selector, bytes calldata callData) internal pure returns (bool) {
+        // Check execute(address,uint256,bytes)
+        if (selector == bytes4(keccak256("execute(address,uint256,bytes)"))) {
+            if (callData.length < 100) return false; // Not enough data
+
+            // Extract the inner calldata from execute
+            // Skip 4 (selector) + 32 (address) + 32 (value) + 32 (offset) + 32 (length)
+            uint256 innerDataLength = abi.decode(callData[100:132], (uint256));
+            if (callData.length < 132 + innerDataLength) return false;
+
+            bytes calldata innerData = callData[132:132 + innerDataLength];
+            return _isRestrictedCall(innerData);
+        }
+
+        // Check executeBatch(Call[])
+        if (selector == bytes4(keccak256("executeBatch((address,uint256,bytes)[])"))) {
+            // This is more complex to parse, so for simplicity we could restrict all executeBatch from root
+            return true;
+        }
+
+        return false;
     }
 }
