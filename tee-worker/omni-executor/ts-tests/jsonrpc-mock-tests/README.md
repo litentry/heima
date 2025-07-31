@@ -2,7 +2,7 @@
 
 This project contains TypeScript-based integration tests for the Omni Executor JSON-RPC API endpoints, including:
 
--   **JSON-RPC API Tests** (`jsonrpc.test.ts`) - Basic API endpoint testing
+-   **JSON-RPC API Tests** (`jsonrpc_mock_test`) - Basic API endpoint testing
 -   **SubmitUserOp Integration Tests** (`submitUserOp.test.ts`) - Complete Account Abstraction flow testing
 
 ## Quick Start
@@ -36,7 +36,7 @@ This project contains TypeScript-based integration tests for the Omni Executor J
 
     ```bash
     # JSON-RPC API tests only
-    pnpm test jsonrpc.test.ts
+    pnpm test jsonrpc_mock_test
 
     # SubmitUserOp integration tests only
     pnpm test submitUserOp.test.ts
