@@ -25,7 +25,6 @@ contract OmniAccountAsPasskey is Test {
     address rootAddress = 0x0000000000000000000000000000000000000001;
     bytes clientId = bytes("test_client");
 
-    // Sample passkey data for testing
     Passkey.PublicKey public testPublicKey;
     Passkey.Signature public testSignature;
     Passkey.Metadata public testMetadata;
@@ -33,7 +32,6 @@ contract OmniAccountAsPasskey is Test {
     function setUp() public {
         (counter, entryPoint, account, testableAccount) = OmniAccountTestUtils.setUpTestable(ownerAddress, clientId, rootAddress);
 
-        // Initialize test passkey data
         testPublicKey = Passkey.PublicKey({
             x: 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef,
             y: 0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321
@@ -44,7 +42,6 @@ contract OmniAccountAsPasskey is Test {
             s: 0x2222222222222222222222222222222222222222222222222222222222222222
         });
 
-        // Create valid authData (37 bytes minimum with UP flag set)
         bytes memory authData = new bytes(37);
         authData[32] = 0x01; // Set UP flag (bit 0)
 
@@ -58,7 +55,6 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyDirectUnauthorizedPasskey() public view {
-        // Test case: Direct call to _validatePasskey with unauthorized passkey
         bytes32 userOpHash = keccak256("test");
         bytes memory sig = abi.encode(testPublicKey, testSignature, testMetadata);
         uint256 validationData = testableAccount.validatePasskeyPublic(userOpHash, sig);
@@ -66,7 +62,6 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyDirectAuthorizedPasskey() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         testableAccount.addPasskeySigner(testPublicKey);
 
@@ -77,7 +72,6 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyUnauthorizedPasskey() public {
-        // Test case: Passkey not added to passkeySigners mapping
         bytes32 userOpHash = keccak256("test");
 
         bytes memory sig = abi.encode(testPublicKey, testSignature, testMetadata);
@@ -93,11 +87,9 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyAuthorizedPasskey() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         account.addPasskeySigner(testPublicKey);
 
-        // Verify it was added
         bytes32 pkKey = Passkey.toKey(testPublicKey);
         assertTrue(account.passkeySigners(pkKey), "Passkey should be authorized");
 
@@ -109,15 +101,6 @@ contract OmniAccountAsPasskey is Test {
         PackedUserOperation memory packedOp = TestUtils.preparePackedOp(address(account), "");
         packedOp.signature = fullSig;
 
-        // Mock the P256.verify call to return true for this test
-        // Note: In a real test, you would need actual valid P256 signature data
-        // For now, this tests the authorization check logic
-        vm.mockCall(
-            address(0), // P256 precompile address would be different
-            abi.encodeWithSignature("verify(bytes32,bytes32,bytes32,bytes32,bytes32)"),
-            abi.encode(true)
-        );
-
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, userOpHash, 0);
 
@@ -125,12 +108,10 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_AddPasskeySignerOnlyOwner() public {
-        // Test that only owner can add passkey signers
         vm.prank(rootAddress);
         vm.expectRevert("only owner");
         account.addPasskeySigner(testPublicKey);
 
-        // Owner should be able to add
         vm.prank(ownerAddress);
         account.addPasskeySigner(testPublicKey);
 
@@ -139,19 +120,16 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_RemovePasskeySignerOnlyOwner() public {
-        // First add a passkey signer
         vm.prank(ownerAddress);
         account.addPasskeySigner(testPublicKey);
 
         bytes32 pkKey = Passkey.toKey(testPublicKey);
         assertTrue(account.passkeySigners(pkKey), "Passkey should be authorized");
 
-        // Test that only owner can remove passkey signers
         vm.prank(rootAddress);
         vm.expectRevert("only owner");
         account.removePasskeySigner(testPublicKey);
 
-        // Owner should be able to remove
         vm.prank(ownerAddress);
         account.removePasskeySigner(testPublicKey);
 
@@ -159,13 +137,11 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_PasskeySignerEvents() public {
-        // Test PasskeySignerAdded event
         vm.prank(ownerAddress);
         vm.expectEmit(true, true, true, true);
         emit PasskeySignerAdded(testPublicKey);
         account.addPasskeySigner(testPublicKey);
 
-        // Test PasskeySignerRemoved event
         vm.prank(ownerAddress);
         vm.expectEmit(true, true, true, true);
         emit PasskeySignerRemoved(testPublicKey);
@@ -173,7 +149,6 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_PasskeyToKey() public view{
-        // Test the toKey function from Passkey library
         bytes32 expectedKey = sha256(abi.encodePacked(testPublicKey.x, testPublicKey.y));
         bytes32 actualKey = Passkey.toKey(testPublicKey);
 
@@ -181,7 +156,6 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyInvalidSignatureLength() public {
-        // Test with signature too short
         bytes memory shortSig = abi.encodePacked(uint8(UserOpSigner.Passkey));
 
         PackedUserOperation memory packedOp = TestUtils.preparePackedOp(address(account), "");
@@ -195,13 +169,11 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyInvalidAuthDataFlags() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         account.addPasskeySigner(testPublicKey);
 
-        // Create authData with invalid flags (UP flag not set)
         bytes memory invalidAuthData = new bytes(37);
-        invalidAuthData[32] = 0x00; // No flags set
+        invalidAuthData[32] = 0x00;
 
         Passkey.Metadata memory invalidMetadata = Passkey.Metadata({
             authData: invalidAuthData,
@@ -226,20 +198,18 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyUserVerificationRequired() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         account.addPasskeySigner(testPublicKey);
 
-        // Create authData with UV flag not set but required
         bytes memory authDataNoUV = new bytes(37);
-        authDataNoUV[32] = 0x01; // Only UP flag set, UV flag (0x04) not set
+        authDataNoUV[32] = 0x01;
 
         Passkey.Metadata memory metadataUVRequired = Passkey.Metadata({
             authData: authDataNoUV,
             clientDataJSON: testMetadata.clientDataJSON,
             challengeIndex: testMetadata.challengeIndex,
             typeIndex: testMetadata.typeIndex,
-            userVerificationRequired: true // Require UV but it's not set in authData
+            userVerificationRequired: true
         });
 
         bytes memory sig = abi.encode(testPublicKey, testSignature, metadataUVRequired);
@@ -252,36 +222,29 @@ contract OmniAccountAsPasskey is Test {
 
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, userOpHash, 0);
-
         assertEq(validationData, SIG_VALIDATION_FAILED);
     }
 
     function test_ValidatePasskeyDirectMalformedSignature() public {
-        // Test with malformed signature data that cannot be decoded
         bytes32 userOpHash = keccak256("test");
         bytes memory malformedSig = abi.encodePacked("invalid", "signature", "data");
 
-        // This should revert due to ABI decoding failure
         vm.expectRevert();
         testableAccount.validatePasskeyPublic(userOpHash, malformedSig);
     }
 
     function test_ValidatePasskeyDirectEmptySignature() public {
-        // Test with empty signature
         bytes32 userOpHash = keccak256("test");
         bytes memory emptySig = "";
 
-        // This should revert due to ABI decoding failure
         vm.expectRevert();
         testableAccount.validatePasskeyPublic(userOpHash, emptySig);
     }
 
     function test_ValidatePasskeyDirectShortAuthData() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         testableAccount.addPasskeySigner(testPublicKey);
 
-        // Create authData that's too short (less than 37 bytes)
         bytes memory shortAuthData = new bytes(36);
 
         Passkey.Metadata memory shortMetadata = Passkey.Metadata({
@@ -294,18 +257,14 @@ contract OmniAccountAsPasskey is Test {
 
         bytes32 userOpHash = keccak256("test");
         bytes memory sig = abi.encode(testPublicKey, testSignature, shortMetadata);
-
         uint256 validationData = testableAccount.validatePasskeyPublic(userOpHash, sig);
-
         assertEq(validationData, SIG_VALIDATION_FAILED);
     }
 
     function test_ValidatePasskeyDirectWrongClientDataType() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         testableAccount.addPasskeySigner(testPublicKey);
 
-        // Create metadata with wrong type (not "webauthn.get")
         Passkey.Metadata memory wrongTypeMetadata = Passkey.Metadata({
             authData: testMetadata.authData,
             clientDataJSON: '{"type":"webauthn.create","challenge":"dGVzdA","origin":"https://example.com"}',
@@ -316,18 +275,14 @@ contract OmniAccountAsPasskey is Test {
 
         bytes32 userOpHash = keccak256("test");
         bytes memory sig = abi.encode(testPublicKey, testSignature, wrongTypeMetadata);
-
         uint256 validationData = testableAccount.validatePasskeyPublic(userOpHash, sig);
-
         assertEq(validationData, SIG_VALIDATION_FAILED);
     }
 
     function test_ValidatePasskeyDirectWrongChallenge() public {
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         testableAccount.addPasskeySigner(testPublicKey);
 
-        // Create metadata with challenge that doesn't match userOpHash
         bytes32 userOpHash = keccak256("test");
         bytes32 wrongChallenge = keccak256("wrong");
         string memory wrongChallengeB64 = Base64.encodeURL(abi.encodePacked(wrongChallenge));
@@ -344,9 +299,7 @@ contract OmniAccountAsPasskey is Test {
         });
 
         bytes memory sig = abi.encode(testPublicKey, testSignature, wrongChallengeMetadata);
-
         uint256 validationData = testableAccount.validatePasskeyPublic(userOpHash, sig);
-
         assertEq(validationData, SIG_VALIDATION_FAILED);
     }
 
@@ -375,28 +328,22 @@ contract OmniAccountAsPasskey is Test {
     }
 
     function test_ValidatePasskeyDirectSucceed() public {
-        // Use the exact public key from JavaScript generation
         Passkey.PublicKey memory validPublicKey = Passkey.PublicKey({
             x: 0xb814cadbe97896dc16192a641cee9fe08e5bdb61fdb1c9dca9b690c36aa16794,
             y: 0x54a8bacd85b0dac616dde551e1cfc2806a8b467f5a0b95502afa98f8a59e188f
         });
 
-        // Use the exact signature from JavaScript generation
         Passkey.Signature memory validSignature = Passkey.Signature({
             r: 0x5450f52fc923b60d14feab0897021c7763f5337f926dcf3c60820870e4868d25,
             s: 0x03c18f5feb1ae2236ed048401f8fd56f9fd2716d51a86b2d38fcb6dcacf31a18
         });
 
-        // Add the passkey to authorized signers first
         vm.prank(ownerAddress);
         testableAccount.addPasskeySigner(validPublicKey);
 
-        // Use the exact userOpHash from JavaScript generation
         bytes32 userOpHash = 0x9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08;
-        // Use the exact clientDataJSON from JavaScript generation
         string memory clientDataJSON = '{"type":"webauthn.get","challenge":"n4bQgYhMfWWaL-qgxVrQFaO_TxsrC4Is0V1sFbDwCgg","origin":"https://example.com"}';
 
-        // Use the exact authData from JavaScript generation
         bytes memory authData = hex"00000000000000000000000000000000000000000000000000000000000000000100000000";
 
         Passkey.Metadata memory metadata = Passkey.Metadata({
@@ -408,21 +355,10 @@ contract OmniAccountAsPasskey is Test {
         });
 
         bytes memory sig = abi.encode(validPublicKey, validSignature, metadata);
-
-        // Mock the actual staticcall made by OpenZeppelin's P256 library
-        // When P256.verify is called, it makes a staticcall to the precompile
-        vm.mockCall(
-            address(0x100),
-            abi.encodeWithSignature(""),
-            abi.encode(uint256(1))
-        );
-
         uint256 validationData = testableAccount.validatePasskeyPublic(userOpHash, sig);
-
         assertEq(validationData, SIG_VALIDATION_SUCCESS, "SUCCESS: Valid P256 signature verification");
     }
 
-    // Define events for testing
     event PasskeySignerAdded(Passkey.PublicKey pk);
     event PasskeySignerRemoved(Passkey.PublicKey pk);
 }
