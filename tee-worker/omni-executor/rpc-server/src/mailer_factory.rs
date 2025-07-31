@@ -112,8 +112,7 @@ mod tests {
 		let factory = MailerFactory::new(Arc::new(config));
 
 		let mailer1 = factory.get_mailer_for_client("console").expect("Should create mailer");
-		let mailer2 =
-			factory.get_mailer_for_client("console").expect("Should get cached mailer");
+		let mailer2 = factory.get_mailer_for_client("console").expect("Should get cached mailer");
 
 		// Should be the same instance (Arc points to same object)
 		assert!(Arc::ptr_eq(&mailer1, &mailer2));
