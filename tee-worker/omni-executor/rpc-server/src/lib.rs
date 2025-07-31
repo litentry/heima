@@ -1,5 +1,6 @@
 mod auth_token_key_store;
 mod error_code;
+mod mailer_factory;
 mod methods;
 mod middlewares;
 mod server;

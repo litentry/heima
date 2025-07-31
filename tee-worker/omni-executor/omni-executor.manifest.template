@@ -62,9 +62,14 @@ loader.env.OE_BINANCE_API_KEY = { passthrough = true }
 loader.env.OE_BINANCE_API_SECRET = { passthrough = true }
 loader.env.OE_BINANCE_API_BASE_URL = { passthrough = true }
 loader.env.OE_RPC_SERVER_MAX_CONNECTIONS = { passthrough = true }
-loader.env.OE_SENDGRID_API_KEY = { passthrough = true }
-loader.env.OE_SENDGRID_FROM_EMAIL = { passthrough = true }
-loader.env.OE_SENDGRID_FROM_NAME = { passthrough = true }
+loader.env.OE_MAILER_TYPE_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_API_KEY_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_FROM_EMAIL_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_FROM_NAME_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_TYPE_WILDMETA = { passthrough = true }
+loader.env.OE_MAILER_API_KEY_WILDMETA = { passthrough = true }
+loader.env.OE_MAILER_FROM_EMAIL_WILDMETA = { passthrough = true }
+loader.env.OE_MAILER_FROM_NAME_WILDMETA = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_ID = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_SECRET = { passthrough = true }
 loader.env.OE_PARENTCHAIN_URL = { passthrough = true }
