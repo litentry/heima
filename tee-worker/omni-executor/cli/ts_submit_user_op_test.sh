@@ -30,7 +30,7 @@ pnpm install --force
 
 # Set environment variables for the SubmitUserOp test
 export TEST_RPC_URL="http://ethereum-node:8545"
-export TEST_CHAIN_ID="1337"
+export TEST_CHAIN_ID="31337"
 export TEE_WORKER_RPC_URL="http://omni-executor:2100"
 
 # Contract addresses should be available from the shared volume

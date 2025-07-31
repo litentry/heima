@@ -73,13 +73,30 @@ describe('SubmitUserOp Integration Tests', function () {
         omniAccount = calculateOmniAccount(evmWallet.address, TEST_CONFIG.TEE_WORKER.CLIENT_ID, 'evm');
         console.log('Calculated OmniAccount:', omniAccount);
 
-        // Get omni account contract address
-        omniAccountAddress = await publicClient.readContract({
+        // Verify factory contract is deployed
+        console.log('Verifying factory contract deployment...');
+        const factoryCode = await publicClient.getCode({
             address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
-            abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
-            functionName: 'getAddress',
-            args: [omniAccount, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
         });
+        if (!factoryCode || factoryCode === '0x') {
+            throw new Error(`OmniAccountFactory not deployed at ${testEnv.contracts.OMNI_ACCOUNT_FACTORY}`);
+        }
+        console.log('✅ Factory contract is deployed');
+
+        // Get omni account contract address
+        try {
+            omniAccountAddress = await publicClient.readContract({
+                address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
+                abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
+                functionName: 'getAddress',
+                args: [omniAccount, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
+            });
+        } catch (error) {
+            console.error('Failed to get OmniAccount address from factory:', error);
+            console.log('Factory address:', testEnv.contracts.OMNI_ACCOUNT_FACTORY);
+            console.log('Args:', [omniAccount, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address]);
+            throw error;
+        }
         console.log('OmniAccount contract address:', omniAccountAddress);
 
         // Set test token address

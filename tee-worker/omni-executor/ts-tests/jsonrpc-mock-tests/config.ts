@@ -2,7 +2,7 @@
 export const TEST_CONFIG = {
     // Network configuration
     RPC_URL: process.env.TEST_RPC_URL || 'http://127.0.0.1:8545',
-    CHAIN_ID: process.env.TEST_CHAIN_ID ? parseInt(process.env.TEST_CHAIN_ID) : 1337,
+    CHAIN_ID: process.env.TEST_CHAIN_ID ? parseInt(process.env.TEST_CHAIN_ID) : 31337,
 
     // Test accounts from Anvil/Hardhat default test mnemonic:
     // "test test test test test test test test test test test junk"

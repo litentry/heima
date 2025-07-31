@@ -15,6 +15,8 @@ services:
       omni-executor:
         condition: service_healthy
         restart: true
+      aa-contracts-deploy:
+        condition: service_completed_successfully
     networks:
       - litentry-test-network
     entrypoint: "sh -c '/usr/local/executor-worker-cli/ts_submit_user_op_test.sh 3>&1' "

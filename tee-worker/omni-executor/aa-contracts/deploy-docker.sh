@@ -17,6 +17,7 @@ CHAIN_ID=31337
 DEPLOYER_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 OMNI_EXECUTOR_SIGNER="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
 OUTPUT_FILE="/shared/contract-addresses.env"
+JSON_OUTPUT_FILE="/shared/deployed-addresses.json"
 
 # Function to check if anvil is running
 check_anvil() {
@@ -100,7 +101,18 @@ deploy_contracts() {
         echo "OE_TEST_USDC_ADDRESS=$USDC_ADDRESS" >> "$OUTPUT_FILE"
         echo "OE_TEST_USDT_ADDRESS=$USDT_ADDRESS" >> "$OUTPUT_FILE"
 
-        echo "📝 Contract addresses written to $OUTPUT_FILE"
+        # Also write addresses to JSON format for test scripts
+        cat > "$JSON_OUTPUT_FILE" << EOF
+{
+  "EntryPoint": "$ENTRYPOINT_ADDRESS",
+  "OmniAccountFactory": "$FACTORY_ADDRESS",
+  "SimplePaymaster": "$PAYMASTER_ADDRESS",
+  "TestUSDC": "$USDC_ADDRESS",
+  "TestUSDT": "$USDT_ADDRESS"
+}
+EOF
+
+        echo "📝 Contract addresses written to $OUTPUT_FILE and $JSON_OUTPUT_FILE"
         echo "✅ Deployment complete!"
 
     else
