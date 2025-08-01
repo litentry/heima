@@ -214,6 +214,10 @@ library DeploymentHelper {
         if (chainId == 8453) return "base";
         if (chainId == 84532) return "base-sepolia";
         
+        // HyperEVM networks
+        if (chainId == 999) return "hyperevm";
+        if (chainId == 998) return "hyperevm-testnet";
+        
         // Local networks
         if (chainId == 1337) return "local";
         if (chainId == 31337) return "local";
