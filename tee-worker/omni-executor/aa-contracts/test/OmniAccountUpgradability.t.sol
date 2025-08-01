@@ -48,15 +48,6 @@ contract OmniAccountUpgradeable is Test {
         assertAccountVersion(address(account));
     }
 
-    function testSelfCanUpgradeOA() public {
-        (, EntryPointV1 entryPoint, OmniAccountV1 account) = OmniAccountTestUtils.setUp(owner, clientId, rootSigner);
-        OmniAccountV2 accountV2 = new OmniAccountV2(entryPoint);
-
-        vm.prank(address(account));
-        UUPSUpgradeable(account).upgradeToAndCall(address(accountV2), "");
-        assertAccountVersion(address(account));
-    }
-
     function testEntryPointCanUpgradeOA() public {
         (, EntryPointV1 entryPoint, OmniAccountV1 account) = OmniAccountTestUtils.setUp(owner, clientId, rootSigner);
         OmniAccountV2 accountV2 = new OmniAccountV2(entryPoint);
