@@ -173,7 +173,6 @@ jobs:
           fi
           if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
             run_omni_executor_test=true
-            rebuild_omni_executor=true
           fi
 
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
@@ -1079,6 +1078,8 @@ jobs:
         run: |
           # Create .env file that needs by the docker-compose.yml
           touch ../.env
+          git submodule update --init --recursive
+          docker compose build --no-cache aa-contracts-deploy
           docker compose -f docker-compose.yml -f docker-compose.test.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
 
       - name: Collect docker logs if test fails

@@ -97,6 +97,7 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 				})?;
 				OmniAuth::OAuth2(identity, data)
 			},
+			UserAuth::Passkey(data) => OmniAuth::Passkey(data),
 		};
 
 		Ok(omni_auth)

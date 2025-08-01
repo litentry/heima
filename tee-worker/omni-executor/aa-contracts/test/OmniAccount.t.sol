@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {OmniAccount} from "../src/accounts/OmniAccount.sol";
+import {OmniAccountV1} from "../src/accounts/OmniAccountV1.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {EntryPointV1} from "../src/core/EntryPointV1.sol";
 import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
 import {Counter} from "../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
@@ -15,8 +15,8 @@ import {SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
 // add test cases for revert if called by non authorized address
 
 contract OmniAccountTest is Test {
-    OmniAccount public account;
-    EntryPoint public entryPoint;
+    OmniAccountV1 public account;
+    EntryPointV1 public entryPoint;
     Counter public counter;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
@@ -42,12 +42,12 @@ contract OmniAccountTest is Test {
     }
 
     function test_Execute_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint or root");
+        vm.expectRevert("account: not from EntryPoint");
         account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
     function test_ExecuteBatch_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint or root");
+        vm.expectRevert("account: not from EntryPoint");
         BaseAccount.Call[] memory calls = new BaseAccount.Call[](0);
         account.executeBatch(calls);
     }
@@ -62,7 +62,7 @@ contract OmniAccountTest is Test {
         account.removeRootSigner(0x0000000000000000000000000000000000000000);
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (, uint256 bobPk) = makeAddrAndKey("bob");
 

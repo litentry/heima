@@ -65,7 +65,7 @@ export const subscribeToEvents = async (
             const allBlockEvents = await shiftedApi.query.system.events();
             const allExtrinsicEvents = allBlockEvents.filter(({ phase }) => phase.isApplyExtrinsic);
 
-            const matchingEvent = allExtrinsicEvents.filter(({ event, phase }) => {
+            const matchingEvent = allExtrinsicEvents.filter(({ event }) => {
                 return event.section === section && event.method === method;
             });
 

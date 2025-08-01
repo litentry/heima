@@ -16,43 +16,475 @@
 
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	SenderAddressResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, SenderAddressResult,
+	ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
 };
 use crate::{OmniAccountClient, PackedUserOperation};
+use alloy::hex;
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
 use ethereum_rpc::RpcProvider;
+use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::error;
+use tracing::{error, info, warn};
+
+/// EntryPointSimulations deployed bytecode embedded at compile time
+const SIMULATION_BYTECODE: &str =
+	include_str!("bytecode/EntryPointSimulations_deployed_bytecode.hex");
+
+/// Gas price configuration for EIP-1559 transactions
+#[derive(Clone, Debug)]
+pub struct GasPriceConfig {
+	/// Buffer percentage to add to current gas price (e.g., 50 for 50% buffer)
+	pub gas_price_buffer_percent: u64,
+	/// Minimum priority fee in wei (default: 1 gwei)
+	pub min_priority_fee: u128,
+	/// Maximum priority fee in wei (default: 50 gwei)
+	pub max_priority_fee: u128,
+}
+
+impl Default for GasPriceConfig {
+	fn default() -> Self {
+		Self {
+			gas_price_buffer_percent: 50,     // 50% buffer
+			min_priority_fee: 1_000_000_000,  // 1 gwei
+			max_priority_fee: 50_000_000_000, // 50 gwei
+		}
+	}
+}
+
+impl GasPriceConfig {
+	/// Configuration for Ethereum mainnet
+	pub fn mainnet() -> Self {
+		Self {
+			gas_price_buffer_percent: 50,
+			min_priority_fee: 2_000_000_000,   // 2 gwei
+			max_priority_fee: 100_000_000_000, // 100 gwei
+		}
+	}
+
+	/// Configuration for L2 networks (Arbitrum, Optimism, Base)
+	pub fn l2() -> Self {
+		Self {
+			gas_price_buffer_percent: 30,
+			min_priority_fee: 100_000_000,   // 0.1 gwei
+			max_priority_fee: 2_000_000_000, // 2 gwei
+		}
+	}
+
+	/// Configuration for BSC
+	pub fn bsc() -> Self {
+		Self {
+			gas_price_buffer_percent: 40,
+			min_priority_fee: 1_000_000_000,  // 1 gwei
+			max_priority_fee: 10_000_000_000, // 10 gwei
+		}
+	}
+
+	/// Configuration for HyperEVM
+	pub fn hyperevm() -> Self {
+		Self {
+			gas_price_buffer_percent: 20,    // Lower buffer due to stable, low fees
+			min_priority_fee: 10_000_000,    // 0.01 gwei
+			max_priority_fee: 1_000_000_000, // 1 gwei
+		}
+	}
+}
+
+/// Retry configuration for transaction submission
+#[derive(Clone, Debug)]
+pub struct RetryConfig {
+	/// Maximum number of retry attempts
+	pub max_attempts: u8,
+	/// Initial delay between retries in milliseconds
+	pub initial_delay_ms: u64,
+	/// Maximum delay between retries in milliseconds
+	pub max_delay_ms: u64,
+	/// Gas price increase percentage for each retry
+	pub gas_increase_percent: u16,
+}
+
+impl Default for RetryConfig {
+	fn default() -> Self {
+		Self {
+			max_attempts: 3,
+			initial_delay_ms: 2000,   // 2 seconds
+			max_delay_ms: 30000,      // 30 seconds
+			gas_increase_percent: 10, // 10% increase per retry
+		}
+	}
+}
+
+impl RetryConfig {
+	/// Configuration for Ethereum mainnet
+	pub fn mainnet() -> Self {
+		Self {
+			max_attempts: 5,
+			initial_delay_ms: 3000,
+			max_delay_ms: 60000,
+			gas_increase_percent: 15,
+		}
+	}
+
+	/// Configuration for L2 networks
+	pub fn l2() -> Self {
+		Self {
+			max_attempts: 4,
+			initial_delay_ms: 1000,
+			max_delay_ms: 20000,
+			gas_increase_percent: 20, // L2s can be more volatile
+		}
+	}
+
+	/// Configuration for BSC
+	pub fn bsc() -> Self {
+		Self {
+			max_attempts: 4,
+			initial_delay_ms: 2000,
+			max_delay_ms: 30000,
+			gas_increase_percent: 12,
+		}
+	}
+
+	/// Configuration for HyperEVM
+	pub fn hyperevm() -> Self {
+		Self {
+			max_attempts: 2,         // Fewer retries due to fast finality (0.2s blocks)
+			initial_delay_ms: 500,   // Short delay due to 1-2s transaction completion
+			max_delay_ms: 5000,      // Max 5s delay given the fast network
+			gas_increase_percent: 5, // Small increase due to stable, low fees
+		}
+	}
+
+	/// Chain-specific configuration
+	pub fn for_chain(chain_id: u64) -> Self {
+		match chain_id {
+			1 => Self::mainnet(),    // Ethereum mainnet
+			137 => Self::l2(),       // Polygon
+			42161 => Self::l2(),     // Arbitrum
+			10 => Self::l2(),        // Optimism
+			8453 => Self::l2(),      // Base
+			56 => Self::bsc(),       // BSC
+			999 => Self::hyperevm(), // HyperEVM
+			998 => Self::hyperevm(), // HyperEVM Testnet
+			_ => Self::default(),
+		}
+	}
+}
 
 /// Client for interacting with on-chain EntryPoint instance
 pub struct EntryPointClient<P: RpcProvider<Transaction = TransactionRequest>> {
 	entry_point_address: Address,
 	rpc_client: Arc<P>,
+	gas_config: GasPriceConfig,
+	retry_config: RetryConfig,
 }
 
 impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPointClient<P> {
 	pub fn new(entry_point_address: Address, rpc_client: Arc<P>) -> Self {
-		Self { entry_point_address, rpc_client }
+		Self {
+			entry_point_address,
+			rpc_client,
+			gas_config: GasPriceConfig::default(),
+			retry_config: RetryConfig::default(),
+		}
+	}
+
+	pub fn new_with_config(
+		entry_point_address: Address,
+		rpc_client: Arc<P>,
+		gas_config: GasPriceConfig,
+		retry_config: RetryConfig,
+	) -> Self {
+		Self { entry_point_address, rpc_client, gas_config, retry_config }
+	}
+
+	pub fn entry_point_address(&self) -> Address {
+		self.entry_point_address
+	}
+
+	pub async fn get_wallet_address(&self) -> Result<Address, ()> {
+		self.rpc_client.get_wallet_address().await
+	}
+
+	/// Calculate dynamic gas fees based on current network conditions
+	async fn calculate_gas_fees(&self) -> Result<(U256, U256), ()> {
+		// Try EIP-1559 estimation first
+		match self.rpc_client.estimate_eip1559_fees().await {
+			Ok(eip1559_estimate) => {
+				// Use EIP-1559 fees with buffer
+				let buffer_multiplier = 100 + self.gas_config.gas_price_buffer_percent;
+
+				let max_fee_per_gas = U256::from(eip1559_estimate.max_fee_per_gas)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
+
+				// Use the EIP-1559 priority fee with bounds
+				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+			Err(_) => {
+				// Fallback to legacy gas price calculation
+				// Get current gas price from network
+				let current_gas_price = self
+					.rpc_client
+					.get_gas_price()
+					.await
+					.map_err(|_| error!("Failed to fetch gas price"))?;
+
+				// Apply buffer to current gas price for max_fee_per_gas
+				let buffer_multiplier = 100 + self.gas_config.gas_price_buffer_percent;
+				let max_fee_per_gas = U256::from(current_gas_price)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(current_gas_price));
+
+				// Calculate priority fee (tip) with bounds
+				// Use 10% of current gas price as priority fee, bounded by min/max
+				let priority_fee = U256::from(current_gas_price / 10)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+		}
+	}
+
+	/// Simulate user operation validation using EntryPointSimulations contract
+	/// This function uses state override to temporarily deploy the simulation contract
+	pub async fn simulate_validation(
+		&self,
+		user_op: PackedUserOperation,
+	) -> Result<ValidationResult, ()> {
+		// Create state override to deploy simulation contract at EntryPoint address
+		let mut state_override = HashMap::new();
+		state_override.insert(
+			self.entry_point_address,
+			AccountOverride {
+				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				..Default::default()
+			},
+		);
+
+		// Build call to simulateValidation
+		let call_data = simulateValidationCall { userOp: user_op }.abi_encode();
+		let tx = build_call_transaction(self.entry_point_address, call_data);
+
+		// Make the call with state override
+		// EntryPointSimulations.simulateValidation() returns ValidationResult on success
+		match self.rpc_client.call_with_state_override(tx, state_override).await {
+			Ok(result) => {
+				// Decode the ValidationResult from the successful response
+				ValidationResult::abi_decode(&result).map_err(|_| {
+					error!("Could not decode ValidationResult from response");
+				})
+			},
+			Err(Some(revert_data)) => {
+				// In some cases, the simulation might revert with ValidationResult data
+				ValidationResult::abi_decode(&revert_data).map_err(|_| {
+					error!("Could not decode ValidationResult from revert data");
+				})
+			},
+			Err(None) => {
+				error!("Simulation failed with no data");
+				Err(())
+			},
+		}
+	}
+
+	pub async fn simulate_handle_ops(
+		&self,
+		user_ops: &[PackedUserOperation],
+		beneficiary: Address,
+	) -> Result<Vec<ExecutionResult>, ()> {
+		// Create state override to deploy simulation contract at EntryPoint address
+		let mut state_override = HashMap::new();
+		state_override.insert(
+			self.entry_point_address,
+			AccountOverride {
+				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				..Default::default()
+			},
+		);
+
+		// Build call to simulateHandleOps
+		let ops = user_ops.to_vec();
+		let call_data = simulateHandleOpsCall { ops, beneficiary }.abi_encode();
+		let tx = build_call_transaction(self.entry_point_address, call_data);
+
+		// Make the call with state override
+		// EntryPointSimulations.simulateHandleOps() returns ExecutionResult[] on success
+		match self.rpc_client.call_with_state_override(tx, state_override).await {
+			Ok(result) => {
+				// Decode the ExecutionResult[] from the successful response
+				Vec::<ExecutionResult>::abi_decode(&result).map_err(|_| {
+					error!("Could not decode ExecutionResult[] from response");
+				})
+			},
+			Err(Some(revert_data)) => {
+				// In some cases, the simulation might revert with ExecutionResult[] data
+				Vec::<ExecutionResult>::abi_decode(&revert_data).map_err(|_| {
+					error!("Could not decode ExecutionResult[] from revert data");
+				})
+			},
+			Err(None) => {
+				error!("Simulation failed with no data");
+				Err(())
+			},
+		}
 	}
 
 	pub async fn handle_ops(
 		&self,
 		user_ops: &[PackedUserOperation],
 		beneficiary: Address,
-	) -> Result<(), ()> {
+	) -> Result<String, ()> {
 		let ops = user_ops.to_vec();
 		let call_data = handleOpsCall { ops, beneficiary }.abi_encode();
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		self.rpc_client
 			.send_transaction(tx)
 			.await
-			.map_err(|_| error!("Could not send tx"))?;
-		Ok(())
+			.map_err(|_| error!("Could not send tx"))
+	}
+
+	/// Submit UserOperations with automatic retry and gas escalation on failure
+	pub async fn handle_ops_with_retry(
+		&self,
+		user_ops: &[PackedUserOperation],
+		beneficiary: Address,
+	) -> Result<String, ()> {
+		let mut attempt = 0;
+		let mut gas_buffer_adjustment = 0u64;
+
+		loop {
+			// Calculate gas fees with increasing buffer on retries
+			let (base_max_fee, base_priority_fee) =
+				self.calculate_gas_fees_with_buffer(gas_buffer_adjustment).await?;
+
+			// Build transaction with adjusted gas
+			let ops = user_ops.to_vec();
+			let call_data = handleOpsCall { ops, beneficiary }.abi_encode();
+			let mut tx = build_call_transaction(self.entry_point_address, call_data);
+
+			// Apply gas fees to transaction
+			tx.max_fee_per_gas = Some(base_max_fee.to::<u128>());
+			tx.max_priority_fee_per_gas = Some(base_priority_fee.to::<u128>());
+
+			// Attempt to send transaction
+			match self.rpc_client.send_transaction(tx).await {
+				Ok(tx_hash) => {
+					if attempt > 0 {
+						info!(
+							"Transaction succeeded after {} retries with gas buffer {}%",
+							attempt, gas_buffer_adjustment
+						);
+					}
+					return Ok(tx_hash);
+				},
+				Err(_) => {
+					// Since RPC provider returns unit error, we treat all errors as potentially gas-related
+					// TODO: improve error handling, classify retryable vs non-retryable errors
+
+					attempt += 1;
+					if attempt >= self.retry_config.max_attempts {
+						error!("Transaction failed after {} attempts", attempt);
+						return Err(());
+					}
+
+					// Calculate backoff delay
+					let delay = self.calculate_backoff_delay(attempt);
+
+					// Increase gas buffer for next attempt
+					gas_buffer_adjustment += self.retry_config.gas_increase_percent as u64;
+
+					warn!(
+						"Transaction failed (attempt {}/{}), retrying with {}% higher gas after {}ms",
+						attempt,
+						self.retry_config.max_attempts,
+						gas_buffer_adjustment,
+						delay
+					);
+
+					tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+				},
+			}
+		}
+	}
+
+	/// Calculate gas fees with additional buffer percentage
+	async fn calculate_gas_fees_with_buffer(
+		&self,
+		additional_buffer_percent: u64,
+	) -> Result<(U256, U256), ()> {
+		// Try EIP-1559 estimation first
+		match self.rpc_client.estimate_eip1559_fees().await {
+			Ok(eip1559_estimate) => {
+				// Use EIP-1559 fees with buffer
+				let total_buffer =
+					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
+				let buffer_multiplier = 100 + total_buffer;
+
+				let max_fee_per_gas = U256::from(eip1559_estimate.max_fee_per_gas)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
+
+				// Use the EIP-1559 priority fee with bounds
+				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+			Err(_) => {
+				// Fallback to legacy gas price calculation
+				let current_gas_price = self
+					.rpc_client
+					.get_gas_price()
+					.await
+					.map_err(|_| error!("Failed to fetch gas price"))?;
+
+				// Apply base buffer plus additional retry buffer
+				let total_buffer =
+					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
+				let buffer_multiplier = 100 + total_buffer;
+
+				let max_fee_per_gas = U256::from(current_gas_price)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(current_gas_price));
+
+				// Calculate priority fee (tip) with bounds
+				let priority_fee = U256::from(current_gas_price / 10)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+		}
+	}
+
+	/// Calculate exponential backoff delay with jitter
+	fn calculate_backoff_delay(&self, attempt: u8) -> u64 {
+		let base_delay = self.retry_config.initial_delay_ms;
+		let exponential_delay = base_delay.saturating_mul(2u64.pow(attempt as u32 - 1));
+		let capped_delay = exponential_delay.min(self.retry_config.max_delay_ms);
+
+		// Add jitter (±10%) to prevent thundering herd
+		let jitter_range = capped_delay / 10;
+		let jitter = (rand::random::<u64>() % (2 * jitter_range)).saturating_sub(jitter_range);
+
+		capped_delay.saturating_add(jitter)
 	}
 
 	pub async fn get_sender_address(&self, init_code: Bytes) -> Result<Address, ()> {
@@ -85,14 +517,13 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		calculate_omni_account_address(factory_address, account_implementation, oa, client_id, root)
 	}
 
-	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<(), ()> {
+	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<String, ()> {
 		let call_data = depositToCall { account }.abi_encode();
 		let tx = build_payable_transaction(self.entry_point_address, call_data, amount);
 		self.rpc_client
 			.send_transaction(tx)
 			.await
-			.map_err(|_| error!("Could not send tx"))?;
-		Ok(())
+			.map_err(|_| error!("Could not send tx"))
 	}
 
 	pub async fn get_user_op_hash(
@@ -215,8 +646,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let account_gas_limits = create_account_gas_limits(verification_gas_limit, call_gas_limit);
 
 		let pre_verification_gas = U256::from(21000u64);
-		let max_fee_per_gas = U256::from(3000000000u64); // 3 gwei
-		let max_priority_fee_per_gas = U256::from(1000000000u64); // 1 gwei
+
+		// Calculate dynamic gas fees
+		let (max_fee_per_gas, max_priority_fee_per_gas) = self.calculate_gas_fees().await?;
 		let gas_fees = create_gas_fees(max_fee_per_gas, max_priority_fee_per_gas);
 
 		let paymaster_and_data = if let Some(paymaster_addr) = paymaster_address {
@@ -234,9 +666,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			preVerificationGas: pre_verification_gas,
 			gasFees: gas_fees,
 			paymasterAndData: paymaster_and_data,
-			sessionAccount: Address::default(),
-			sessionExpiration: U256::from(0),
-			sessionAccountProof: Bytes::new(),
 			signature: Bytes::new(),
 		})
 	}
@@ -302,7 +731,7 @@ pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) ->
 pub mod test {
 	use crate::types::depositCall;
 	use crate::utils::build_payable_transaction;
-	use crate::{prepare_factory_init_code, EntryPointClient};
+	use crate::{prepare_factory_init_code, EntryPointClient, GasPriceConfig};
 	use alloy::hex;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::{address, Bytes, FixedBytes, U256};
@@ -311,7 +740,7 @@ pub mod test {
 	use alloy::sol_types::SolCall;
 	use ethereum_rpc::mocks::MockRpcProvider;
 	use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
-	use heima_primitives::{AccountId, Identity};
+	use heima_primitives::{AccountId, Identity, Web2IdentityType};
 	use std::str::FromStr;
 	use std::sync::Arc;
 	use test_log::test;
@@ -405,19 +834,98 @@ pub mod test {
 
 	#[test(tokio::test)]
 	#[ignore = "manual"]
+	pub async fn test_simulate_handle_ops() {
+		// This test demonstrates how to use the new simulate_handle_ops function
+		// to simulate a batch of user operations before actual execution
+
+		let client_id = "test_client";
+		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
+		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
+		let paymaster_address = address!("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
+		let beneficiary_address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+		let root_address = address!("0x0000000000000000000000000000000000000001");
+
+		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
+		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
+
+		// Create two user operations for batch simulation
+		let oa: AccountId =
+			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let client_id_bytes = client_id.as_bytes();
+		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
+
+		// Create first user operation
+		let call_data1 = Bytes::from(vec![0x12, 0x34]); // dummy call data
+		let user_op1 = entrypoint_client
+			.create_packed_user_operation(
+				factory_address,
+				oa_bytes.0,
+				client_id_bytes,
+				root_address,
+				call_data1,
+				Some(paymaster_address),
+			)
+			.await
+			.expect("Should create first user operation");
+
+		// Create second user operation with different call data
+		let call_data2 = Bytes::from(vec![0x56, 0x78]); // different dummy call data
+		let user_op2 = entrypoint_client
+			.create_packed_user_operation(
+				factory_address,
+				oa_bytes.0,
+				client_id_bytes,
+				root_address,
+				call_data2,
+				Some(paymaster_address),
+			)
+			.await
+			.expect("Should create second user operation");
+
+		// Simulate batch execution of both user operations
+		let user_ops = vec![user_op1, user_op2];
+		let simulation_results = entrypoint_client
+			.simulate_handle_ops(&user_ops, beneficiary_address)
+			.await
+			.expect("simulate_handle_ops should succeed");
+
+		// Verify we got results for both operations
+		assert_eq!(simulation_results.len(), 2, "Should get results for both operations");
+
+		// Log simulation results
+		for (i, result) in simulation_results.iter().enumerate() {
+			println!("UserOp {} simulation result:", i);
+			println!("  Pre-op gas: {}", result.preOpGas);
+			println!("  Paid: {}", result.paid);
+			println!("  Account validation data: {}", result.accountValidationData);
+			println!("  Paymaster validation data: {}", result.paymasterValidationData);
+			println!("  Target success: {}", result.targetSuccess);
+		}
+
+		// After successful simulation, execute the batch
+		let tx_hash = entrypoint_client
+			.handle_ops(&user_ops, beneficiary_address)
+			.await
+			.expect("Batch execution should succeed");
+		println!("Batch transaction hash: {}", tx_hash);
+	}
+
+	#[test(tokio::test)]
+	#[ignore = "manual"]
 	pub async fn try_full_flow() {
 		let user_signer = PrivateKeySigner::from_str(
 			"0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
 		)
 		.unwrap();
-		let client_id = "test_client";
+		let client_id = "heima";
 		// calculate from wallet
 		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
-		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
-		let root_address = address!("0x0000000000000000000000000000000000000001");
+		let entrypoint_address = address!("0xe7f1725e7734ce288f8367e1bb143e90bb3f0512");
+		let factory_address = address!("0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0");
+		let root_address = user_address;
 		// This should be the address where SimplePaymaster contract is deployed
-		let paymaster_address = address!("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
+		let paymaster_address = address!("0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9");
 		let signer = PrivateKeySigner::from_str(
 			"0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
 		)
@@ -428,7 +936,8 @@ pub mod test {
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 		// first 20 bytes factory address, then call data which should be oa + client_id + root_address encode packed
 		let oa: AccountId =
-			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+			Identity::from_web2_account("user@example.com", Web2IdentityType::Email)
+				.to_omni_account(client_id);
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 
@@ -449,18 +958,23 @@ pub mod test {
 				oa_bytes.0,
 				&client_id_fixed_bytes,
 				root_address,
-				call_data,
-				Some(paymaster_address),
+				call_data.clone(),
+				None,
 			)
 			.await
 			.unwrap();
 
 		println!("Sender address: {:?}", user_op.sender);
+		println!("Init code: {:?}", hex::encode(init_code_bytes));
+		println!("Call data: {:?}", hex::encode(call_data));
 
 		let user_op_hash = entrypoint_client.get_user_op_hash(user_op.clone()).await.unwrap();
 		let signature = user_signer.sign_hash(&user_op_hash).await.unwrap();
 
-		user_op.signature = signature.as_bytes().into();
+		// Prepend 0x00 byte to indicate Owner signature type (according to UserOpSigner enum)
+		let mut signature_with_prefix: Vec<u8> = vec![0x01];
+		signature_with_prefix.extend_from_slice(&signature.as_bytes());
+		user_op.signature = signature_with_prefix.into();
 
 		// Fund the paymaster with ETH deposits to EntryPoint
 		let paymaster_deposit_call = depositCall {}.abi_encode();
@@ -475,14 +989,22 @@ pub mod test {
 			.await
 			.unwrap();
 
+		// Test simulate_validation before executing the user operation
+		let _validation_result = entrypoint_client
+			.simulate_validation(user_op.clone())
+			.await
+			.expect("simulate_validation should succeed");
+
 		// Execute user operation with paymaster sponsorship
-		entrypoint_client.handle_ops(&vec![user_op], entrypoint_address).await.unwrap();
+		let tx_hash =
+			entrypoint_client.handle_ops(&vec![user_op], entrypoint_address).await.unwrap();
+		println!("Transaction hash: {}", tx_hash);
 	}
 
 	/// Integration test to verify that local CREATE2 calculation matches EntryPoint.getSenderAddress
 	///
 	/// To run this test:
-	/// 1. Deploy contracts using: `cd aa-contracts && ./local-deploy.sh`
+	/// 1. Deploy contracts using: `cd aa-contracts && ./deploy-local.sh`
 	/// 2. Run: `cargo test test_local_vs_entrypoint_address_calculation -- --ignored`
 	#[test(tokio::test)]
 	#[ignore = "manual"]
@@ -523,5 +1045,293 @@ pub mod test {
 
 		// Assert that all three methods return the same address
 		assert_eq!(entrypoint_address_result, local_address_result,);
+	}
+
+	#[test(tokio::test)]
+	pub async fn test_dynamic_gas_pricing() {
+		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let mut rpc_client = MockRpcProvider::new();
+
+		// Mock EIP-1559 to fail, forcing legacy fallback
+		rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		// Mock gas price at 30 gwei
+		let mock_gas_price = 30_000_000_000u128;
+		rpc_client.expect_get_gas_price().times(1).returning(move || Ok(mock_gas_price));
+
+		// Test with default config (50% buffer)
+		let default_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
+		let (max_fee, priority_fee) = default_client.calculate_gas_fees().await.unwrap();
+
+		// max_fee should be 30 gwei * 1.5 = 45 gwei
+		assert_eq!(max_fee, U256::from(45_000_000_000u128));
+		// priority fee should be max(3 gwei, min_fee) = 3 gwei
+		assert_eq!(priority_fee, U256::from(3_000_000_000u128));
+
+		// Test with mainnet config
+		let mut mainnet_rpc_client = MockRpcProvider::new();
+		mainnet_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		mainnet_rpc_client
+			.expect_get_gas_price()
+			.times(1)
+			.returning(move || Ok(mock_gas_price));
+
+		let mainnet_client = EntryPointClient::new_with_config(
+			entrypoint_address,
+			Arc::new(mainnet_rpc_client),
+			GasPriceConfig::mainnet(),
+			crate::RetryConfig::default(),
+		);
+		let (max_fee_mainnet, priority_fee_mainnet) =
+			mainnet_client.calculate_gas_fees().await.unwrap();
+
+		// Mainnet has same buffer but different priority fee bounds
+		assert_eq!(max_fee_mainnet, U256::from(45_000_000_000u128));
+		// priority fee should be max(3 gwei, 2 gwei min) = 3 gwei
+		assert_eq!(priority_fee_mainnet, U256::from(3_000_000_000u128));
+
+		// Test with L2 config and lower gas price
+		let mut l2_rpc_client = MockRpcProvider::new();
+		let l2_gas_price = 1_000_000_000u128; // 1 gwei
+		l2_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		l2_rpc_client
+			.expect_get_gas_price()
+			.times(1)
+			.returning(move || Ok(l2_gas_price));
+
+		let l2_client = EntryPointClient::new_with_config(
+			entrypoint_address,
+			Arc::new(l2_rpc_client),
+			GasPriceConfig::l2(),
+			crate::RetryConfig::default(),
+		);
+		let (max_fee_l2, priority_fee_l2) = l2_client.calculate_gas_fees().await.unwrap();
+
+		// L2 has 30% buffer: 1 gwei * 1.3 = 1.3 gwei
+		assert_eq!(max_fee_l2, U256::from(1_300_000_000u128));
+		// priority fee should be max(0.1 gwei, 0.1 gwei min) = 0.1 gwei
+		assert_eq!(priority_fee_l2, U256::from(100_000_000u128));
+	}
+
+	#[test]
+	fn test_retry_config_defaults() {
+		let config = crate::RetryConfig::default();
+		assert_eq!(config.max_attempts, 3);
+		assert_eq!(config.initial_delay_ms, 2000);
+		assert_eq!(config.max_delay_ms, 30000);
+		assert_eq!(config.gas_increase_percent, 10);
+	}
+
+	#[test]
+	fn test_retry_config_for_chain() {
+		// Test mainnet configuration
+		let mainnet_config = crate::RetryConfig::for_chain(1);
+		assert_eq!(mainnet_config.max_attempts, 5);
+		assert_eq!(mainnet_config.gas_increase_percent, 15);
+
+		// Test L2 configuration
+		let arbitrum_config = crate::RetryConfig::for_chain(42161);
+		assert_eq!(arbitrum_config.max_attempts, 4);
+		assert_eq!(arbitrum_config.gas_increase_percent, 20);
+
+		// Test HyperEVM configuration
+		let hyperevm_config = crate::RetryConfig::for_chain(999);
+		assert_eq!(hyperevm_config.max_attempts, 2);
+		assert_eq!(hyperevm_config.initial_delay_ms, 500);
+		assert_eq!(hyperevm_config.max_delay_ms, 5000);
+		assert_eq!(hyperevm_config.gas_increase_percent, 5);
+
+		// Test default for unknown chain
+		let unknown_config = crate::RetryConfig::for_chain(99999);
+		assert_eq!(unknown_config.max_attempts, 3);
+		assert_eq!(unknown_config.gas_increase_percent, 10);
+	}
+
+	#[test]
+	fn test_backoff_calculation() {
+		let retry_config = crate::RetryConfig::default();
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(MockRpcProvider::new()),
+			GasPriceConfig::default(),
+			retry_config,
+		);
+
+		// Test exponential backoff
+		let delay1 = client.calculate_backoff_delay(1);
+		let delay2 = client.calculate_backoff_delay(2);
+		let delay3 = client.calculate_backoff_delay(3);
+
+		// Allow for jitter (±10%)
+		assert!((1800..=2200).contains(&delay1)); // ~2 seconds
+		assert!((3600..=4400).contains(&delay2)); // ~4 seconds
+		assert!((7200..=8800).contains(&delay3)); // ~8 seconds
+
+		// Test max cap
+		let delay_max = client.calculate_backoff_delay(10);
+		assert!(delay_max <= 33000); // Max 30 seconds + 10% jitter
+	}
+
+	#[test(tokio::test)]
+	async fn test_handle_ops_with_retry_success() {
+		use std::sync::atomic::{AtomicU8, Ordering};
+		use std::sync::Arc;
+
+		let mut mock_client = MockRpcProvider::new();
+		let counter = Arc::new(AtomicU8::new(0));
+		let counter_clone = counter.clone();
+
+		// Set up EIP-1559 to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| Err(()));
+		// Set up gas price expectation
+		mock_client.expect_get_gas_price().times(3).returning(|| Ok(30_000_000_000u128)); // 30 gwei
+
+		// Set up send_transaction to fail twice then succeed
+		mock_client.expect_send_transaction().times(3).returning(move |_| {
+			let count = counter_clone.fetch_add(1, Ordering::SeqCst);
+			if count < 2 {
+				Err(()) // Fail first two attempts
+			} else {
+				Ok("0x1234567890abcdef".to_string()) // Succeed on third
+			}
+		});
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig::default(),
+			crate::RetryConfig {
+				max_attempts: 3,
+				initial_delay_ms: 100, // Short delay for tests
+				max_delay_ms: 1000,
+				gas_increase_percent: 10,
+			},
+		);
+
+		let result = client
+			.handle_ops_with_retry(&[], address!("0x0000000000000000000000000000000000000000"))
+			.await;
+		assert!(result.is_ok());
+		assert_eq!(result.unwrap(), "0x1234567890abcdef");
+		assert_eq!(counter.load(Ordering::SeqCst), 3);
+	}
+
+	#[test(tokio::test)]
+	async fn test_handle_ops_with_retry_max_attempts() {
+		let mut mock_client = MockRpcProvider::new();
+
+		// Set up EIP-1559 to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| Err(()));
+		// Set up gas price expectation
+		mock_client.expect_get_gas_price().times(3).returning(|| Ok(30_000_000_000u128)); // 30 gwei
+
+		// Set up send_transaction to always fail
+		mock_client.expect_send_transaction().times(3).returning(|_| Err(()));
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig::default(),
+			crate::RetryConfig {
+				max_attempts: 3,
+				initial_delay_ms: 100, // Short delay for tests
+				max_delay_ms: 1000,
+				gas_increase_percent: 10,
+			},
+		);
+
+		let result = client
+			.handle_ops_with_retry(&[], address!("0x0000000000000000000000000000000000000000"))
+			.await;
+		assert!(result.is_err());
+	}
+
+	#[test(tokio::test)]
+	async fn test_calculate_gas_fees_with_buffer() {
+		let mut mock_client = MockRpcProvider::new();
+
+		// Set up EIP-1559 to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+
+		// Set up gas price expectation
+		mock_client.expect_get_gas_price().times(1).returning(|| Ok(20_000_000_000u128)); // 20 gwei
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig {
+				gas_price_buffer_percent: 50,
+				min_priority_fee: 1_000_000_000,
+				max_priority_fee: 50_000_000_000,
+			},
+			crate::RetryConfig::default(),
+		);
+
+		// Test with 10% additional buffer
+		let (max_fee, priority_fee) = client.calculate_gas_fees_with_buffer(10).await.unwrap();
+
+		// Expected: 20 gwei * 1.6 (50% + 10%) = 32 gwei
+		assert_eq!(max_fee, U256::from(32_000_000_000u128));
+		// Priority fee: 20 gwei / 10 = 2 gwei (within bounds)
+		assert_eq!(priority_fee, U256::from(2_000_000_000u128));
+	}
+
+	#[test(tokio::test)]
+	async fn test_calculate_gas_fees_with_eip1559_support() {
+		use ethereum_rpc::Eip1559FeeEstimate;
+		let mut mock_client = MockRpcProvider::new();
+
+		// Set up EIP-1559 fee estimation to succeed
+		mock_client
+			.expect_estimate_eip1559_fees()
+			.times(1)
+			.returning(|| Ok(Eip1559FeeEstimate::new(40_000_000_000, 2_000_000_000))); // 40 gwei max, 2 gwei priority
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig {
+				gas_price_buffer_percent: 50,
+				min_priority_fee: 1_000_000_000,
+				max_priority_fee: 50_000_000_000,
+			},
+			crate::RetryConfig::default(),
+		);
+
+		// Test calculate_gas_fees
+		let (max_fee, priority_fee) = client.calculate_gas_fees().await.unwrap();
+
+		// Expected: 40 gwei * 1.5 = 60 gwei
+		assert_eq!(max_fee, U256::from(60_000_000_000u128));
+		// Priority fee: 2 gwei (within bounds)
+		assert_eq!(priority_fee, U256::from(2_000_000_000u128));
+	}
+
+	#[test(tokio::test)]
+	async fn test_calculate_gas_fees_eip1559_fallback() {
+		let mut mock_client = MockRpcProvider::new();
+
+		// Set up EIP-1559 to fail, fallback to legacy
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+
+		mock_client.expect_get_gas_price().times(1).returning(|| Ok(30_000_000_000u128)); // 30 gwei
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig {
+				gas_price_buffer_percent: 50,
+				min_priority_fee: 1_000_000_000,
+				max_priority_fee: 50_000_000_000,
+			},
+			crate::RetryConfig::default(),
+		);
+
+		// Test calculate_gas_fees with fallback
+		let (max_fee, priority_fee) = client.calculate_gas_fees().await.unwrap();
+
+		// Expected: 30 gwei * 1.5 = 45 gwei
+		assert_eq!(max_fee, U256::from(45_000_000_000u128));
+		// Priority fee: 30 gwei / 10 = 3 gwei (within bounds)
+		assert_eq!(priority_fee, U256::from(3_000_000_000u128));
 	}
 }

@@ -13,17 +13,33 @@ echo "🔍 Extracting deployed contract addresses..."
 
 # Function to extract address from forge output or broadcast file
 extract_addresses() {
-    local broadcast_file="$SCRIPT_DIR/broadcast/DeployLocal.s.sol/1337/run-latest.json"
+    # Check for new broadcast file first (DeployLocalWithPaymaster)
+    local broadcast_file="$SCRIPT_DIR/broadcast/DeployLocalWithPaymaster.s.sol/1337/run-latest.json"
     
-    # Check for old broadcast file first
-    local old_broadcast_file="$SCRIPT_DIR/broadcast/DeployAA.s.sol/1337/run-latest.json"
-    if [ -f "$old_broadcast_file" ] && [ ! -f "$broadcast_file" ]; then
-        broadcast_file="$old_broadcast_file"
-        echo "⚠️  Using old broadcast file format. Consider re-running deploy-local.sh"
+    # If new broadcast file doesn't exist, check for DeployLocal.s.sol
+    if [ ! -f "$broadcast_file" ]; then
+        broadcast_file="$SCRIPT_DIR/broadcast/DeployLocal.s.sol/1337/run-latest.json"
+        if [ -f "$broadcast_file" ]; then
+            echo "ℹ️  Using DeployLocal.s.sol broadcast file"
+        fi
+    else
+        echo "ℹ️  Using DeployLocalWithPaymaster.s.sol broadcast file"
+    fi
+    
+    # Check for old broadcast file format as last resort
+    if [ ! -f "$broadcast_file" ]; then
+        local old_broadcast_file="$SCRIPT_DIR/broadcast/DeployAA.s.sol/1337/run-latest.json"
+        if [ -f "$old_broadcast_file" ]; then
+            broadcast_file="$old_broadcast_file"
+            echo "⚠️  Using old broadcast file format. Consider re-running local-deploy.sh"
+        fi
     fi
     
     if [ ! -f "$broadcast_file" ]; then
-        echo "❌ Broadcast file not found. Please run deploy-local.sh first."
+        echo "❌ Broadcast file not found. Please run local-deploy.sh first."
+        echo "   Expected locations:"
+        echo "   - $SCRIPT_DIR/broadcast/DeployLocalWithPaymaster.s.sol/1337/run-latest.json"
+        echo "   - $SCRIPT_DIR/broadcast/DeployLocal.s.sol/1337/run-latest.json"
         exit 1
     fi
     
@@ -35,6 +51,16 @@ extract_addresses() {
         FACTORY_ADDRESS=$(grep -A2 '"contractName": "SmartAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     fi
     
+    # Extract test token addresses
+    USDC_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    USDT_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | tail -1)
+    
+    # Extract DemoPaymaster address (try both DemoPaymaster and SimplePaymaster for backwards compatibility)
+    PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    if [ -z "$PAYMASTER_ADDRESS" ]; then
+        PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    fi
+    
     # OmniAccount implementation is created by the factory, need to find it differently
     # For now, we'll leave it empty as it's deployed by the factory
     OMNI_ACCOUNT_IMPL_ADDRESS=""
@@ -42,6 +68,9 @@ extract_addresses() {
     echo "Found addresses:"
     echo "  EntryPoint: $ENTRYPOINT_ADDRESS"
     echo "  OmniAccountFactory: $FACTORY_ADDRESS"
+    echo "  Paymaster: $PAYMASTER_ADDRESS"
+    echo "  Test USDC: $USDC_ADDRESS"
+    echo "  Test USDT: $USDT_ADDRESS"
 }
 
 # Function to create or update .env.local
@@ -66,9 +95,17 @@ NEXT_PUBLIC_CHAIN_ID=1337
 NEXT_PUBLIC_ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS
 NEXT_PUBLIC_FACTORY_ADDRESS=$FACTORY_ADDRESS
 NEXT_PUBLIC_OMNI_ACCOUNT_IMPL_ADDRESS=$OMNI_ACCOUNT_IMPL_ADDRESS
+NEXT_PUBLIC_PAYMASTER_ADDRESS=$PAYMASTER_ADDRESS
+
+# Token Addresses
+NEXT_PUBLIC_USDC_ADDRESS=$USDC_ADDRESS
+NEXT_PUBLIC_USDT_ADDRESS=$USDT_ADDRESS
 
 # Local RPC URL
 NEXT_PUBLIC_RPC_URL=http://localhost:8545
+
+# TEE Worker RPC URL
+NEXT_PUBLIC_TEE_WORKER_RPC_URL=https://staging-dex-worker.heima.network
 
 # Add your WalletConnect Project ID here
 # NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id_here
@@ -84,13 +121,16 @@ show_next_steps() {
     echo ""
     echo "Next steps:"
     echo "1. cd aa-demo-app"
-    echo "2. npm install (if not already done)"
-    echo "3. npm run dev"
+    echo "2. pnpm install (if not already done)"
+    echo "3. pnpm dev"
     echo "4. Open http://localhost:3000"
     echo ""
     echo "Contract addresses:"
     echo "  EntryPoint: $ENTRYPOINT_ADDRESS"
     echo "  Factory: $FACTORY_ADDRESS"
+    echo "  Paymaster: $PAYMASTER_ADDRESS"
+    echo "  Test USDC: $USDC_ADDRESS"
+    echo "  Test USDT: $USDT_ADDRESS"
     echo ""
     echo "Make sure Anvil is running on port 8545 (started by deploy-local.sh)"
 }

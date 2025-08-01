@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::cli::Cli;
 use accounting_contract_client::{
 	solana::AccountingContractClient as SolanaAccountingContractClient,
 	AccountingContractClient as EthereumAccountingContractClient,
@@ -24,8 +23,8 @@ use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
-use cli::*;
-use config_loader::ConfigLoader;
+use cli::{Cli, Commands, RunArgs};
+use config_loader::{ConfigLoader, MailerType};
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
@@ -41,6 +40,7 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer, Mailer};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
@@ -257,7 +257,7 @@ async fn main() -> Result<(), ()> {
 
 			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
 				&config_loader.bsc_url,
-				accounting_contract_wallet,
+				accounting_contract_wallet.clone(),
 			);
 			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
 				bsc_rpc_provider,
@@ -322,6 +322,171 @@ async fn main() -> Result<(), ()> {
 				omni_account_implementation_address,
 			)?;
 
+			// Create EntryPoint clients registry
+			// Create RPC providers first
+			// Add BSC (BNB Chain)
+			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.bsc_url,
+				accounting_contract_wallet.clone(),
+			));
+
+			// Add BSC Testnet if configured
+			let bsc_testnet_rpc = if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
+				let bsc_testnet_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+					bsc_testnet_url,
+					accounting_contract_wallet.clone(),
+				));
+				Some(bsc_testnet_rpc)
+			} else {
+				None
+			};
+
+			// Add Ethereum Mainnet
+			let ethereum_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.ethereum_url,
+				accounting_contract_wallet.clone(),
+			));
+
+			// Add local development chain
+			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				"http://ethereum-node:8545",
+				accounting_contract_wallet.clone(),
+			));
+
+			// Add Arbitrum One
+			let arbitrum_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.arbitrum_url,
+				accounting_contract_wallet.clone(),
+			));
+
+			// Add Arbitrum Testnet if configured
+			let arbitrum_testnet_rpc =
+				if let Some(ref arbitrum_testnet_url) = config_loader.arbitrum_testnet_url {
+					let arbitrum_testnet_rpc =
+						Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+							arbitrum_testnet_url,
+							accounting_contract_wallet.clone(),
+						));
+					Some(arbitrum_testnet_rpc)
+				} else {
+					None
+				};
+
+			// Add HyperEVM
+			let hyperevm_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.hyperevm_url,
+				accounting_contract_wallet.clone(),
+			));
+
+			// Add HyperEVM Testnet if configured
+			let hyperevm_testnet_rpc =
+				if let Some(ref hyperevm_testnet_url) = config_loader.hyperevm_testnet_url {
+					let hyperevm_testnet_rpc =
+						Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+							hyperevm_testnet_url,
+							accounting_contract_wallet.clone(),
+						));
+					Some(hyperevm_testnet_rpc)
+				} else {
+					None
+				};
+
+			// Create EntryPoint clients
+			let mut entry_point_clients = HashMap::new();
+
+			// Parse EntryPoint address from configuration
+			let entry_point_address = config_loader
+				.entry_point_address
+				.parse::<alloy::primitives::Address>()
+				.expect("Invalid entry point address in configuration");
+
+			// Add BSC (BNB Chain)
+			let bsc_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+				entry_point_address,
+				bsc_rpc,
+				aa_contracts_client::GasPriceConfig::bsc(),
+				aa_contracts_client::RetryConfig::bsc(),
+			));
+			entry_point_clients.insert(56, bsc_entry_point);
+
+			// Add BSC Testnet if configured
+			if let Some(bsc_testnet_rpc) = bsc_testnet_rpc {
+				let bsc_testnet_entry_point =
+					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+						entry_point_address,
+						bsc_testnet_rpc,
+						aa_contracts_client::GasPriceConfig::bsc(),
+						aa_contracts_client::RetryConfig::bsc(),
+					));
+				entry_point_clients.insert(97, bsc_testnet_entry_point);
+			}
+
+			// Add Ethereum Mainnet
+			let ethereum_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					ethereum_rpc,
+					aa_contracts_client::GasPriceConfig::mainnet(),
+					aa_contracts_client::RetryConfig::mainnet(),
+				));
+			entry_point_clients.insert(1, ethereum_entry_point);
+
+			// Add local development chain
+			let local_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					local_rpc,
+					aa_contracts_client::GasPriceConfig::default(),
+					aa_contracts_client::RetryConfig::default(),
+				));
+			entry_point_clients.insert(31337, local_entry_point);
+
+			// Add Arbitrum One (Chain ID: 42161)
+			let arbitrum_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					arbitrum_rpc,
+					aa_contracts_client::GasPriceConfig::l2(),
+					aa_contracts_client::RetryConfig::l2(),
+				));
+			entry_point_clients.insert(42161, arbitrum_entry_point);
+
+			// Add Arbitrum Testnet if configured (Chain ID: 421614)
+			if let Some(arbitrum_testnet_rpc) = arbitrum_testnet_rpc {
+				let arbitrum_testnet_entry_point =
+					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+						entry_point_address,
+						arbitrum_testnet_rpc,
+						aa_contracts_client::GasPriceConfig::l2(),
+						aa_contracts_client::RetryConfig::l2(),
+					));
+				entry_point_clients.insert(421614, arbitrum_testnet_entry_point);
+			}
+
+			// Add HyperEVM (Chain ID: 999)
+			let hyperevm_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					hyperevm_rpc,
+					aa_contracts_client::GasPriceConfig::hyperevm(),
+					aa_contracts_client::RetryConfig::hyperevm(),
+				));
+			entry_point_clients.insert(999, hyperevm_entry_point);
+
+			// Add HyperEVM Testnet if configured (Chain ID: 998)
+			if let Some(hyperevm_testnet_rpc) = hyperevm_testnet_rpc {
+				let hyperevm_testnet_entry_point =
+					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+						entry_point_address,
+						hyperevm_testnet_rpc,
+						aa_contracts_client::GasPriceConfig::hyperevm(),
+						aa_contracts_client::RetryConfig::hyperevm(),
+					));
+				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
+			}
+
+			let entry_point_clients = Arc::new(entry_point_clients);
+
 			let task_handler_context = TaskHandlerContext::new(
 				parentchain_rpc_client_factory.clone(),
 				tx_signer.clone(),
@@ -333,6 +498,7 @@ async fn main() -> Result<(), ()> {
 				Arc::new(cross_chain_intent_executor),
 				pumpx_api.clone(),
 				pumpx_signer_client.clone(),
+				entry_point_clients,
 			);
 			// TODO: make buffer size configurable
 			let native_task_sender =
@@ -369,6 +535,30 @@ async fn main() -> Result<(), ()> {
 				error!("Could not perform attestation");
 			})?;
 
+			// Create wildmeta API client and timestamp storage
+			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(
+				wildmeta_api::WildmetaApiClient::new(config_loader.wildmeta_api_url.clone()),
+			));
+			let wildmeta_timestamp_storage =
+				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
+
+			// Create mailer instance based on config_loader only
+			let mailer: Box<dyn MailerTrait + Send + Sync> = match config_loader.mailer_type {
+				MailerType::Console => {
+					info!("Using Console Mailer - verification codes will be printed to logs");
+					Box::new(ConsoleMailer::new())
+				},
+				MailerType::Sendgrid => {
+					info!("Using SendGrid Mailer - verification codes will be sent via email");
+					Box::new(Mailer::new(
+						config_loader.mailer_api_host.clone(),
+						config_loader.mailer_api_key.clone(),
+						config_loader.mailer_from_email.clone(),
+						config_loader.mailer_from_name.clone(),
+					))
+				},
+			};
+
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -378,6 +568,9 @@ async fn main() -> Result<(), ()> {
 				jwt_rsa_private_key,
 				&config_loader,
 				pumpx_signer_client,
+				wildmeta_api,
+				wildmeta_timestamp_storage,
+				mailer,
 			)
 			.await
 			.map_err(|e| {

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::types::Chain;
 use crate::*;
 use accounting_contract_client::{AccountingContractApi, Plus};
 use ethereum_rpc::AlloyRpcProvider;

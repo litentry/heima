@@ -27,10 +27,34 @@ sol! {
 		uint256 preVerificationGas;
 		bytes32 gasFees;
 		bytes paymasterAndData;
-		address sessionAccount;
-		uint256 sessionExpiration;
-		bytes sessionAccountProof;
 		bytes signature;
+	}
+
+	// EIP-712 domain separator struct for hash calculation
+	struct EIP712Domain {
+		bytes32 name;
+		bytes32 version;
+		uint256 chainId;
+		address verifyingContract;
+	}
+
+	// PackedUserOperation struct for EIP-712 hashing (with typehash)
+	struct PackedUserOperationForHashing {
+		bytes32 typeHash;
+		address sender;
+		uint256 nonce;
+		bytes32 initCode;
+		bytes32 callData;
+		bytes32 accountGasLimits;
+		uint256 preVerificationGas;
+		bytes32 gasFees;
+		bytes32 paymasterAndData;
+	}
+
+	// Passkey public key
+	struct PasskeyPublicKey {
+		bytes32 x;
+		bytes32 y;
 	}
 
 	// entry point
@@ -49,8 +73,54 @@ sol! {
 	function addRootSigner(address root) public;
 	function removeRootSigner(address root) public;
 	function initialize(bytes32 oa, bytes memory clientId, address root) public;
+	function getOwner() public view returns (bytes32);
+
+	// passkey signer management
+	function addPasskeySigner(PasskeyPublicKey memory pk) public;
+	function removePasskeySigner(PasskeyPublicKey memory pk) public;
 
 	// paymaster
 	function deposit() public payable;
 	function setAuthorizedBundler(address bundler, bool authorized) external;
+
+	// simulation types
+	struct StakeInfo {
+		uint256 stake;
+		uint256 unstakeDelaySec;
+	}
+
+	struct ReturnInfo {
+		uint256 preOpGas;
+		uint256 prefund;
+		uint256 accountValidationData;
+		uint256 paymasterValidationData;
+		bytes context;
+	}
+
+	struct AggregatorStakeInfo {
+		address aggregator;
+		StakeInfo stakeInfo;
+	}
+
+	struct ValidationResult {
+		ReturnInfo returnInfo;
+		StakeInfo senderInfo;
+		StakeInfo factoryInfo;
+		StakeInfo paymasterInfo;
+		AggregatorStakeInfo aggregatorInfo;
+	}
+
+	struct ExecutionResult {
+		uint256 preOpGas;
+		uint256 paid;
+		uint256 accountValidationData;
+		uint256 paymasterValidationData;
+		bool targetSuccess;
+		bytes targetResult;
+	}
+
+	// simulation functions
+	function simulateValidation(PackedUserOperation calldata userOp) external returns (ValidationResult memory);
+	function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData) external returns (ExecutionResult memory);
+	function simulateHandleOps(PackedUserOperation[] calldata ops, address payable beneficiary) external returns (ExecutionResult[] memory);
 }

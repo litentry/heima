@@ -62,6 +62,9 @@ pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), Au
 			false,
 		)
 		.map(|_| ()),
+		OmniAuth::Passkey(ref _passkey_data) => {
+			todo!()
+		},
 	}
 }
 

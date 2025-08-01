@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::types::PackedUserOperationForHashing;
+use crate::PackedUserOperation;
 use alloy::primitives::{keccak256, Address, Bytes, FixedBytes, TxKind, U256};
 use alloy::rpc::types::{TransactionInput, TransactionRequest};
-use alloy::sol_types::SolCall;
+use alloy::sol_types::{SolCall, SolValue};
 
 /// Build a transaction request for a contract call (no value transfer)
 pub fn build_call_transaction(to: Address, call_data: Vec<u8>) -> TransactionRequest {
@@ -112,10 +114,127 @@ fn get_erc1967_proxy_creation_code() -> Vec<u8> {
 		.expect("Valid ERC1967Proxy bytecode")
 }
 
+/// Calculate user operation hash locally without calling EntryPoint.getUserOpHash
+/// This implements the same logic as EntryPoint.getUserOpHash() and UserOperationLib.hash()
+///
+/// Based on:
+/// - EntryPoint.sol getUserOpHash(): MessageHashUtils.toTypedDataHash(getDomainSeparatorV4(), userOp.hash(overrideInitCodeHash))
+/// - UserOperationLib.sol hash(): keccak256(encode(userOp, overrideInitCodeHash))
+/// - UserOperationLib.sol encode(): abi.encode with PACKED_USEROP_TYPEHASH and all fields
+///
+/// @param user_op - The PackedUserOperation to hash
+/// @param entry_point_address - The EntryPoint contract address for domain separator
+/// @param chain_id - The chain ID for domain separator
+/// @return The user operation hash as computed by EntryPoint.getUserOpHash()
+pub fn calculate_user_operation_hash(
+	user_op: &PackedUserOperation,
+	entry_point_address: Address,
+	chain_id: u64,
+) -> FixedBytes<32> {
+	// EIP-712 Domain Constants (from EntryPoint.sol)
+	const DOMAIN_NAME: &str = "ERC4337";
+	const DOMAIN_VERSION: &str = "1";
+
+	// Calculate domain separator (EIP-712)
+	let domain_separator =
+		calculate_domain_separator(DOMAIN_NAME, DOMAIN_VERSION, chain_id, entry_point_address);
+
+	// Encode user operation (equivalent to UserOperationLib.encode)
+	let encoded_user_op = encode_user_operation(user_op);
+
+	// Hash the encoded user operation (equivalent to UserOperationLib.hash)
+	let user_op_struct_hash = keccak256(&encoded_user_op);
+
+	// Final EIP-712 hash (equivalent to MessageHashUtils.toTypedDataHash)
+	calculate_eip712_hash(domain_separator, user_op_struct_hash)
+}
+
+/// Calculate EIP-712 domain separator
+/// Based on EIP-712 standard: keccak256(abi.encode(EIP712DOMAIN_TYPEHASH, name, version, chainId, verifyingContract))
+fn calculate_domain_separator(
+	name: &str,
+	version: &str,
+	chain_id: u64,
+	verifying_contract: Address,
+) -> FixedBytes<32> {
+	// EIP712Domain TypeHash - calculated at runtime
+	let eip712_domain_typehash = keccak256(
+		"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+			.as_bytes(),
+	);
+
+	// We need to manually encode since the domain struct should include the typehash
+	// Manual encoding to match Solidity's exact behavior
+	let mut encoded = Vec::new();
+
+	// EIP712Domain typehash (32 bytes)
+	encoded.extend_from_slice(eip712_domain_typehash.as_slice());
+
+	// name hash (32 bytes)
+	let name_hash = keccak256(name.as_bytes());
+	encoded.extend_from_slice(name_hash.as_slice());
+
+	// version hash (32 bytes)
+	let version_hash = keccak256(version.as_bytes());
+	encoded.extend_from_slice(version_hash.as_slice());
+
+	// chain ID (32 bytes, big-endian)
+	let chain_id_bytes = U256::from(chain_id).to_be_bytes::<32>();
+	encoded.extend_from_slice(&chain_id_bytes);
+
+	// verifying contract (32 bytes, left-padded)
+	let mut contract_bytes = [0u8; 32];
+	contract_bytes[12..].copy_from_slice(verifying_contract.as_slice());
+	encoded.extend_from_slice(&contract_bytes);
+
+	keccak256(&encoded)
+}
+
+/// Encode PackedUserOperation for hashing (equivalent to UserOperationLib.encode)
+fn encode_user_operation(user_op: &PackedUserOperation) -> Vec<u8> {
+	// PackedUserOperation TypeHash - calculated at runtime
+	let packed_userop_typehash = keccak256("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)".as_bytes());
+
+	// Hash dynamic fields (bytes data)
+	let init_code_hash = keccak256(&user_op.initCode);
+	let call_data_hash = keccak256(&user_op.callData);
+	let paymaster_and_data_hash = keccak256(&user_op.paymasterAndData);
+
+	let user_op_for_hashing = PackedUserOperationForHashing {
+		typeHash: packed_userop_typehash,
+		sender: user_op.sender,
+		nonce: user_op.nonce,
+		initCode: init_code_hash,
+		callData: call_data_hash,
+		accountGasLimits: user_op.accountGasLimits,
+		preVerificationGas: user_op.preVerificationGas,
+		gasFees: user_op.gasFees,
+		paymasterAndData: paymaster_and_data_hash,
+	};
+
+	// Use sol! type's ABI encoding
+	user_op_for_hashing.abi_encode()
+}
+
+/// Calculate final EIP-712 hash (equivalent to MessageHashUtils.toTypedDataHash)
+/// EIP-712 final hash: keccak256(abi.encodePacked("\x19\x01", domain_separator, struct_hash))
+fn calculate_eip712_hash(
+	domain_separator: FixedBytes<32>,
+	struct_hash: FixedBytes<32>,
+) -> FixedBytes<32> {
+	let mut data = Vec::new();
+	data.extend_from_slice(b"\x19\x01"); // EIP-712 prefix
+	data.extend_from_slice(domain_separator.as_slice());
+	data.extend_from_slice(struct_hash.as_slice());
+
+	keccak256(&data)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use alloy::primitives::address;
+	use test_log::test;
 
 	#[test]
 	fn test_build_call_transaction() {
@@ -225,5 +344,266 @@ mod tests {
 			expected_hash.as_slice(),
 			"Creation code hash should match Solidity implementation"
 		);
+	}
+
+	#[test]
+	fn test_calculate_user_operation_hash_basic() {
+		use alloy::hex;
+
+		let user_op = PackedUserOperation {
+			sender: address!("0x1234567890123456789012345678901234567890"),
+			nonce: U256::from(42),
+			initCode: Bytes::from(hex::decode("deadbeef").unwrap()),
+			callData: Bytes::from(hex::decode("cafebabe").unwrap()),
+			accountGasLimits: FixedBytes::from([1u8; 32]),
+			preVerificationGas: U256::from(21000),
+			gasFees: FixedBytes::from([2u8; 32]),
+			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
+			signature: Bytes::from(hex::decode("445566").unwrap()),
+		};
+
+		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let chain_id = 31337;
+
+		let hash = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
+
+		// Ensure we get a non-zero hash
+		assert_ne!(hash, FixedBytes::ZERO);
+
+		// Ensure deterministic - same input should produce same hash
+		let hash2 = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
+		assert_eq!(hash, hash2);
+	}
+
+	#[test]
+	fn test_calculate_user_operation_hash_different_inputs() {
+		use alloy::hex;
+
+		let user_op1 = PackedUserOperation {
+			sender: address!("0x1234567890123456789012345678901234567890"),
+			nonce: U256::from(42),
+			initCode: Bytes::from(hex::decode("deadbeef").unwrap()),
+			callData: Bytes::from(hex::decode("cafebabe").unwrap()),
+			accountGasLimits: FixedBytes::from([1u8; 32]),
+			preVerificationGas: U256::from(21000),
+			gasFees: FixedBytes::from([2u8; 32]),
+			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
+			signature: Bytes::from(hex::decode("445566").unwrap()),
+		};
+
+		let mut user_op2 = user_op1.clone();
+		user_op2.nonce = U256::from(43); // Different nonce
+
+		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let chain_id = 31337;
+
+		let hash1 = calculate_user_operation_hash(&user_op1, entry_point_address, chain_id);
+		let hash2 = calculate_user_operation_hash(&user_op2, entry_point_address, chain_id);
+
+		// Different inputs should produce different hashes
+		assert_ne!(hash1, hash2);
+	}
+
+	#[test]
+	fn test_calculate_user_operation_hash_different_chain_ids() {
+		use alloy::hex;
+
+		let user_op = PackedUserOperation {
+			sender: address!("0x1234567890123456789012345678901234567890"),
+			nonce: U256::from(42),
+			initCode: Bytes::from(hex::decode("deadbeef").unwrap()),
+			callData: Bytes::from(hex::decode("cafebabe").unwrap()),
+			accountGasLimits: FixedBytes::from([1u8; 32]),
+			preVerificationGas: U256::from(21000),
+			gasFees: FixedBytes::from([2u8; 32]),
+			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
+			signature: Bytes::from(hex::decode("445566").unwrap()),
+		};
+
+		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+
+		let hash_mainnet = calculate_user_operation_hash(&user_op, entry_point_address, 1);
+		let hash_sepolia = calculate_user_operation_hash(&user_op, entry_point_address, 11155111);
+
+		// Different chain IDs should produce different hashes
+		assert_ne!(hash_mainnet, hash_sepolia);
+	}
+
+	#[test]
+	fn test_domain_separator_components() {
+		let name = "ERC4337";
+		let version = "1";
+		let chain_id = 31337;
+		let verifying_contract = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+
+		let domain_separator =
+			calculate_domain_separator(name, version, chain_id, verifying_contract);
+
+		// Should be deterministic
+		let domain_separator2 =
+			calculate_domain_separator(name, version, chain_id, verifying_contract);
+		assert_eq!(domain_separator, domain_separator2);
+
+		// Different parameters should produce different separators
+		let domain_separator_different =
+			calculate_domain_separator("DifferentName", version, chain_id, verifying_contract);
+		assert_ne!(domain_separator, domain_separator_different);
+	}
+
+	#[test]
+	fn test_encode_user_operation_consistency() {
+		use alloy::hex;
+
+		let user_op = PackedUserOperation {
+			sender: address!("0x1234567890123456789012345678901234567890"),
+			nonce: U256::from(42),
+			initCode: Bytes::from(hex::decode("deadbeef").unwrap()),
+			callData: Bytes::from(hex::decode("cafebabe").unwrap()),
+			accountGasLimits: FixedBytes::from([1u8; 32]),
+			preVerificationGas: U256::from(21000),
+			gasFees: FixedBytes::from([2u8; 32]),
+			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
+			signature: Bytes::from(hex::decode("445566").unwrap()),
+		};
+
+		let encoded1 = encode_user_operation(&user_op);
+		let encoded2 = encode_user_operation(&user_op);
+
+		// Encoding should be deterministic
+		assert_eq!(encoded1, encoded2);
+
+		// Should contain the typehash at the beginning
+		assert!(!encoded1.is_empty());
+	}
+
+	#[test]
+	fn test_eip712_hash_components() {
+		let domain_separator = FixedBytes::from([1u8; 32]);
+		let struct_hash = FixedBytes::from([2u8; 32]);
+
+		let eip712_hash = calculate_eip712_hash(domain_separator, struct_hash);
+
+		// Should be deterministic
+		let eip712_hash2 = calculate_eip712_hash(domain_separator, struct_hash);
+		assert_eq!(eip712_hash, eip712_hash2);
+
+		// Different inputs should produce different hashes
+		let different_domain = FixedBytes::from([3u8; 32]);
+		let eip712_hash_different = calculate_eip712_hash(different_domain, struct_hash);
+		assert_ne!(eip712_hash, eip712_hash_different);
+	}
+
+	/// Integration test to verify local hash calculation matches EntryPoint.getUserOpHash
+	///
+	/// This test requires a running local blockchain with deployed contracts.
+	/// To run:
+	/// 1. Deploy contracts: `cd aa-contracts && ./local-deploy.sh`
+	/// 2. Run: `cargo test test_local_vs_entrypoint_user_op_hash -- --ignored`
+	#[test(tokio::test)]
+	#[ignore = "manual"]
+	pub async fn test_local_vs_entrypoint_user_op_hash() {
+		use crate::EntryPointClient;
+		use alloy::hex;
+		use ethereum_rpc::AlloyRpcProvider;
+		use std::sync::Arc;
+
+		// Test configuration - update these addresses based on your local deployment
+		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let chain_id = 31337; // Local hardhat chain ID
+
+		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
+		let entry_point_client = EntryPointClient::new(entry_point_address, rpc_client);
+
+		// Create a test user operation
+		let user_op = PackedUserOperation {
+			sender: address!("0x1234567890123456789012345678901234567890"),
+			nonce: U256::from(42),
+			initCode: Bytes::from(hex::decode("deadbeef").unwrap()),
+			callData: Bytes::from(hex::decode("cafebabe").unwrap()),
+			accountGasLimits: FixedBytes::from([1u8; 32]),
+			preVerificationGas: U256::from(21000),
+			gasFees: FixedBytes::from([2u8; 32]),
+			paymasterAndData: Bytes::from(hex::decode("abcdef").unwrap()),
+			signature: Bytes::from(hex::decode("445566").unwrap()),
+		};
+
+		// Get hash from EntryPoint contract
+		let entrypoint_hash = entry_point_client
+			.get_user_op_hash(user_op.clone())
+			.await
+			.expect("EntryPoint hash calculation should succeed");
+
+		// Calculate hash locally
+		let local_hash = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
+
+		// Hashes should match exactly
+		assert_eq!(
+			entrypoint_hash, local_hash,
+			"Local hash calculation should match EntryPoint.getUserOpHash()\nEntryPoint: {}\nLocal: {}",
+			hex::encode(entrypoint_hash),
+			hex::encode(local_hash)
+		);
+	}
+
+	/// Additional integration test with real user operation data
+	/// Tests against multiple different user operations to ensure consistency
+	#[test(tokio::test)]
+	#[ignore = "manual"]
+	pub async fn test_multiple_user_operations_hash_consistency() {
+		use crate::EntryPointClient;
+		use alloy::hex;
+		use ethereum_rpc::AlloyRpcProvider;
+		use std::sync::Arc;
+
+		let entry_point_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+		let chain_id = 31337;
+
+		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
+		let entry_point_client = EntryPointClient::new(entry_point_address, rpc_client);
+
+		// Test multiple different user operations
+		let test_cases = vec![
+			// Minimal user operation
+			PackedUserOperation {
+				sender: address!("0x1111111111111111111111111111111111111111"),
+				nonce: U256::from(0),
+				initCode: Bytes::new(),
+				callData: Bytes::new(),
+				accountGasLimits: FixedBytes::ZERO,
+				preVerificationGas: U256::from(21000),
+				gasFees: FixedBytes::from([1u8; 32]),
+				paymasterAndData: Bytes::new(),
+				signature: Bytes::new(),
+			},
+			// Complex user operation with all fields populated
+			PackedUserOperation {
+				sender: address!("0x2222222222222222222222222222222222222222"),
+				nonce: U256::from(12345),
+				initCode: Bytes::from(hex::decode("60806040526000356101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550").unwrap()),
+				callData: Bytes::from(hex::decode("a9059cbb0000000000000000000000003333333333333333333333333333333333333333000000000000000000000000000000000000000000000000016345785d8a0000").unwrap()),
+				accountGasLimits: FixedBytes::from([0x12u8; 32]),
+				preVerificationGas: U256::from(50000),
+				gasFees: FixedBytes::from([0x34u8; 32]),
+				paymasterAndData: Bytes::from(hex::decode("444444444444444444444444444444444444444400000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002").unwrap()),
+				signature: Bytes::from(hex::decode("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1c").unwrap()),
+			},
+		];
+
+		for (i, user_op) in test_cases.into_iter().enumerate() {
+			let entrypoint_hash = entry_point_client
+				.get_user_op_hash(user_op.clone())
+				.await
+				.expect(&format!("EntryPoint hash calculation should succeed for test case {}", i));
+
+			let local_hash = calculate_user_operation_hash(&user_op, entry_point_address, chain_id);
+
+			assert_eq!(
+				entrypoint_hash, local_hash,
+				"Test case {}: Local hash calculation should match EntryPoint.getUserOpHash()\nEntryPoint: {}\nLocal: {}",
+				i,
+				hex::encode(entrypoint_hash),
+				hex::encode(local_hash)
+			);
+		}
 	}
 }

@@ -194,7 +194,10 @@ pub mod tests {
 			.times(1)
 			.returning(|_| Ok(U256::from(1000)));
 
-		signer_rpc_provider.expect_send_transaction().times(1).returning(|_| Ok(()));
+		signer_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let mut providers = HashMap::new();
 		providers.insert(signer.address(), signer_rpc_provider);
@@ -222,11 +225,17 @@ pub mod tests {
 			.times(1)
 			.returning(|_| Ok(U256::from(0)));
 
-		signer_rpc_provider.expect_send_transaction().times(1).returning(|_| Ok(()));
+		signer_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let mut sponsor_rpc_provider = MockRpcProvider::new();
 
-		sponsor_rpc_provider.expect_send_transaction().times(1).returning(|_| Ok(()));
+		sponsor_rpc_provider
+			.expect_send_transaction()
+			.times(1)
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let mut providers = HashMap::new();
 		providers.insert(signer.address(), signer_rpc_provider);
@@ -263,7 +272,7 @@ pub mod tests {
 					&& authorization_list.first().unwrap().nonce == 10
 					&& authorization_list.first().unwrap().address == delegation_contract_address)
 			}))
-			.returning(|_| Ok(()));
+			.returning(|_| Ok("0x1234567890abcdef".to_string()));
 
 		let mut providers = HashMap::new();
 		providers.insert(sponsor.address(), sponsor_rpc_provider);

@@ -3,19 +3,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
-import { AAWalletInfo } from "@/components/AAWalletInfo";
+import { AccountsDashboard } from "@/components/AccountsDashboard";
 import { FundingGuide } from "@/components/FundingGuide";
-import { RootKeyAuthorization } from "@/components/RootKeyAuthorization";
+import { CreateOmniAccount } from "@/components/CreateOmniAccount";
+import { AuthorizedSigners } from "@/components/AuthorizedSigners";
+import { AuthorizeTEEWorker } from "@/components/AuthorizeTEEWorker";
+import { TEETokenTransfer } from "@/components/TEETokenTransfer";
 import { ClientOnly } from "@/components/ClientOnly";
 import { ChevronRight, Check } from "lucide-react";
 
 function HomeContent() {
 	const { address: evmAddress, chain, isConnected } = useAccount();
 	const publicClient = usePublicClient();
-	const [aaWalletAddress, setAAWalletAddress] = useState<string>("");
+	const [omniAccountAddress, setOmniAccountAddress] = useState<string>("");
+	const [omniAccountHash, setOmniAccountHash] = useState<string>("");
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isAuthorized, setIsAuthorized] = useState(false);
 	const [hasContract, setHasContract] = useState(false);
+	const [authorizedSigners, setAuthorizedSigners] = useState<string[]>([]);
+	const [isLoadingSigners, setIsLoadingSigners] = useState(false);
+	const [teeWorkerAddress, setTeeWorkerAddress] = useState<string | null>(null);
+	const [isTeeWorkerAuthorized, setIsTeeWorkerAuthorized] = useState(false);
+
 
 	// Debug logging
 	useEffect(() => {
@@ -24,22 +33,22 @@ function HomeContent() {
 			chainId: chain?.id,
 			chainName: chain?.name,
 			isConnected,
-			aaWalletAddress,
+			omniAccountAddress,
 			publicClientChainId: publicClient?.chain?.id,
 		});
-	}, [evmAddress, chain, isConnected, aaWalletAddress, publicClient]);
+	}, [evmAddress, chain, isConnected, omniAccountAddress, publicClient]);
 
 	// Check if Omni Account contract exists
 	useEffect(() => {
 		const checkContract = async () => {
-			if (!aaWalletAddress || !publicClient) {
+			if (!omniAccountAddress || !publicClient) {
 				setHasContract(false);
 				return;
 			}
 
 			try {
-				const code = await publicClient.getBytecode({
-					address: aaWalletAddress as `0x${string}`,
+				const code = await publicClient.getCode({
+					address: omniAccountAddress as `0x${string}`,
 				});
 				setHasContract(!!code && code !== "0x");
 			} catch (error) {
@@ -49,39 +58,128 @@ function HomeContent() {
 		};
 
 		checkContract();
-	}, [aaWalletAddress, publicClient, isAuthorized]);
+	}, [omniAccountAddress, publicClient, isAuthorized]);
+
+	// Fetch all root signers by monitoring events
+	const fetchSigners = useCallback(async () => {
+		if (!omniAccountAddress || !publicClient || !hasContract) return;
+
+		console.log("Fetching signers for account:", omniAccountAddress);
+		setIsLoadingSigners(true);
+		try {
+			// Get all RootSignerAdded and RootSignerRemoved events
+			const addedLogs = await publicClient.getLogs({
+				address: omniAccountAddress as `0x${string}`,
+				event: {
+					type: "event",
+					name: "RootSignerAdded",
+					inputs: [{ name: "root", type: "address", indexed: false }],
+				},
+				fromBlock: "earliest",
+				toBlock: "latest",
+			});
+
+			const removedLogs = await publicClient.getLogs({
+				address: omniAccountAddress as `0x${string}`,
+				event: {
+					type: "event",
+					name: "RootSignerRemoved",
+					inputs: [{ name: "root", type: "address", indexed: false }],
+				},
+				fromBlock: "earliest",
+				toBlock: "latest",
+			});
+
+			// Also get the initial signer from AccountInitialized event
+			const initLogs = await publicClient.getLogs({
+				address: omniAccountAddress as `0x${string}`,
+				event: {
+					type: "event",
+					name: "AccountInitialized",
+					inputs: [
+						{ name: "entryPoint", type: "address", indexed: true },
+						{ name: "owner", type: "bytes32", indexed: true },
+						{ name: "ownerType", type: "uint8", indexed: false },
+						{ name: "clientId", type: "bytes", indexed: false },
+						{ name: "root", type: "address", indexed: true },
+					],
+				},
+				fromBlock: "earliest",
+				toBlock: "latest",
+			});
+
+			// Build current signer list
+			const signerMap = new Map<string, boolean>();
+
+			initLogs.forEach((log) => {
+				const root = log.args?.root as string;
+				if (root) {
+					signerMap.set(root.toLowerCase(), true);
+				}
+			});
+
+			addedLogs.forEach((log) => {
+				const root = log.args?.root as string;
+				if (root) {
+					signerMap.set(root.toLowerCase(), true);
+				}
+			});
+
+			removedLogs.forEach((log) => {
+				const root = log.args?.root as string;
+				if (root) {
+					signerMap.delete(root.toLowerCase());
+				}
+			});
+
+			const currentSigners = Array.from(signerMap.keys()).filter((s) =>
+				signerMap.get(s),
+			);
+			setAuthorizedSigners(currentSigners);
+		} catch (error) {
+			console.error("Error fetching signers:", error);
+		} finally {
+			setIsLoadingSigners(false);
+		}
+	}, [omniAccountAddress, publicClient, hasContract]);
+
+	useEffect(() => {
+		if (hasContract) {
+			fetchSigners();
+		}
+	}, [hasContract, fetchSigners]);
 
 	// Monitor AA wallet ETH balance
 	const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0));
 
 	const fetchEthBalance = useCallback(async () => {
-		if (!aaWalletAddress || !publicClient) return;
+		if (!omniAccountAddress || !publicClient) return;
 
 		try {
 			const balance = await publicClient.getBalance({
-				address: aaWalletAddress as `0x${string}`,
+				address: omniAccountAddress as `0x${string}`,
 			});
 			setEthBalance(balance);
 			console.log(
 				"Fetched balance:",
 				balance.toString(),
 				"for address:",
-				aaWalletAddress,
+				omniAccountAddress,
 			);
 		} catch (error) {
 			console.error("Error fetching balance:", error);
 		}
-	}, [aaWalletAddress, publicClient]);
+	}, [omniAccountAddress, publicClient]);
 
-	// Fetch balance when address changes or contract is deployed
+	// Fetch balance when address changes
 	useEffect(() => {
 		fetchEthBalance();
-	}, [fetchEthBalance, hasContract]);
+	}, [fetchEthBalance]);
 
-	// Also poll for balance updates every 5 seconds when on step 3
+	// Also poll for balance updates every 5 seconds when on step 2 (funding)
 	useEffect(() => {
-		if (currentStep === 3 && aaWalletAddress && publicClient) {
-			// Immediate check when entering step 3
+		if (currentStep === 2 && omniAccountAddress && publicClient) {
+			// Immediate check when entering step 2
 			fetchEthBalance();
 
 			const interval = setInterval(() => {
@@ -90,7 +188,7 @@ function HomeContent() {
 
 			return () => clearInterval(interval);
 		}
-	}, [currentStep, fetchEthBalance, aaWalletAddress, publicClient]);
+	}, [currentStep, fetchEthBalance, omniAccountAddress, publicClient]);
 
 	const isFunded = ethBalance > BigInt(0);
 
@@ -100,22 +198,31 @@ function HomeContent() {
 			ethBalance: ethBalance.toString(),
 			isFunded,
 			currentStep,
-			aaWalletAddress,
+			omniAccountAddress,
 		});
-	}, [ethBalance, isFunded, currentStep, aaWalletAddress]);
+	}, [ethBalance, isFunded, currentStep, omniAccountAddress]);
 
 	// Update current step based on completion status
 	useEffect(() => {
+		if (authorizedSigners.length > 0) {
+			setIsAuthorized(true);
+		}
+
 		if (!evmAddress) {
 			setCurrentStep(1);
+		} else if (!omniAccountAddress) {
+			// Stay on step 1 until we have the omni account address
+			setCurrentStep(1);
 		} else if (!isFunded) {
-			setCurrentStep(3);
+			setCurrentStep(2);
 		} else if (!isAuthorized) {
+			setCurrentStep(3);
+		} else if (!isTeeWorkerAuthorized) {
 			setCurrentStep(4);
 		} else {
 			setCurrentStep(5);
 		}
-	}, [evmAddress, isFunded, isAuthorized]);
+	}, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, isTeeWorkerAuthorized]);
 
 	const steps = [
 		{
@@ -126,29 +233,32 @@ function HomeContent() {
 		},
 		{
 			id: 2,
-			title: "View AA Wallet",
-			description: "See your pre-calculated Omni Account address",
-			completed: !!evmAddress,
-		},
-		{
-			id: 3,
-			title: "Fund Wallet",
-			description: "Send ETH to your Omni Account",
+			title: "Fund with ETH",
+			description: "Send ETH to your Omni Account for gas",
 			completed: !!isFunded,
 		},
 		{
-			id: 4,
-			title: "Authorize Root Key",
-			description: "Set up delegated access permissions",
+			id: 3,
+			title: "Create Omni Account",
+			description: "Deploy your smart account contract",
 			completed: isAuthorized,
 		},
 		{
+			id: 4,
+			title: "Authorize TEE Worker",
+			description: "Add TEE worker as authorized signer",
+			completed: isTeeWorkerAuthorized,
+		},
+		{
 			id: 5,
-			title: "Ready to Swap",
-			description: "Send swap requests to the worker",
+			title: "Send Token Transfer",
+			description: "Transfer tokens through the TEE worker",
 			completed: false,
 		},
 	];
+
+	// For the progress sidebar, we want to show all steps
+	const allSteps = steps;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -165,7 +275,7 @@ function HomeContent() {
 							</p>
 						</div>
 						<div className="text-sm text-gray-500">
-							Step {currentStep} of {steps.length}
+							Step {currentStep} of {allSteps.length}
 						</div>
 					</div>
 				</div>
@@ -178,7 +288,7 @@ function HomeContent() {
 						<div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
 							<h2 className="text-lg font-semibold mb-6">Setup Progress</h2>
 							<div className="space-y-4">
-								{steps.map((step, index) => (
+								{allSteps.map((step) => (
 									<div
 										key={step.id}
 										className={`flex items-start space-x-3 p-3 rounded-lg transition-colors ${
@@ -230,9 +340,12 @@ function HomeContent() {
 								</h3>
 								<ul className="text-sm text-purple-700 space-y-1">
 									<li>• Multi-chain wallet support</li>
-									<li>• Omni Account calculation</li>
+									<li>• ERC20 token support (USDC, USDT)</li>
+									<li>• Multiple signer management</li>
+									<li>• View authorized signers list</li>
+									<li>• Test token minting</li>
+									<li>• Token balance monitoring</li>
 									<li>• Root key delegation</li>
-									<li>• EIP-7702 research notes</li>
 									<li>• Worker integration ready</li>
 								</ul>
 							</div>
@@ -256,34 +369,67 @@ function HomeContent() {
 								</div>
 							)}
 
-							{currentStep >= 2 && (
+							{/* Show Omni Account details when wallet is connected */}
+							{isConnected && evmAddress && (
+								<div className="mb-8">
+									<AccountsDashboard
+										onAddressCalculated={setOmniAccountAddress}
+										onOmniAccountCalculated={setOmniAccountHash}
+										ethBalance={ethBalance}
+										isAccountCreated={isAuthorized}
+									/>
+								</div>
+							)}
+
+							{currentStep >= 2 && currentStep <= 2 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 2: View Your Omni Account
+										Step 2: Fund Your Omni Account with ETH
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Your Omni Account address is pre-calculated using your
-										wallet address and client ID.
+										Send ETH to your Omni Account address to pay for gas fees.
 									</p>
-									<AAWalletInfo onAddressCalculated={setAAWalletAddress} />
+									<FundingGuide
+										omniAccountAddress={omniAccountAddress}
+										ethBalance={ethBalance}
+										fetchEthBalance={fetchEthBalance}
+										onFundingComplete={() => {
+											console.log("ETH funding complete callback triggered");
+											fetchEthBalance();
+										}}
+									/>
 								</div>
 							)}
 
 							{currentStep >= 3 && currentStep <= 3 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 3: Fund Your Omni Account
+										Step 3: Create Your Omni Account
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Send some ETH to your Omni Account address to enable
-										Account Abstraction features.
+										Deploy your smart account contract on the blockchain.
 									</p>
-									<FundingGuide
-										aaWalletAddress={aaWalletAddress}
-										onFundingComplete={() => {
-											console.log("Funding complete callback triggered");
-											fetchEthBalance();
+									<CreateOmniAccount
+										omniAccountAddress={omniAccountAddress}
+										isFunded={!!isFunded}
+										onAccountCreated={() => {
+											setIsAuthorized(true);
+											fetchSigners();
 										}}
+									/>
+								</div>
+							)}
+
+							{/* Show authorized signers only after account is funded and deployed */}
+							{isFunded && hasContract && omniAccountAddress && (
+								<div className="mt-8">
+									<AuthorizedSigners
+										omniAccountAddress={omniAccountAddress}
+										isDeployed={hasContract}
+										signers={authorizedSigners}
+										isLoading={isLoadingSigners}
+										refreshSigners={fetchSigners}
+										teeWorkerAddress={teeWorkerAddress}
 									/>
 								</div>
 							)}
@@ -291,32 +437,43 @@ function HomeContent() {
 							{currentStep >= 4 && currentStep <= 4 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 4: Authorize Root Key
+										Step 4: Authorize TEE Worker
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Set up a root signer that can create sessions and delegate
-										access to your Omni Account.
+										Authorize the TEE worker to execute transactions on behalf of your Omni Account.
 									</p>
-									<RootKeyAuthorization
-										aaWalletAddress={aaWalletAddress}
-										isFunded={!!isFunded}
-										onAuthorizationComplete={() => setIsAuthorized(true)}
+									<AuthorizeTEEWorker
+										omniAccountAddress={omniAccountAddress}
+										omniAccountHash={omniAccountHash}
+										isDeployed={hasContract}
+										onWorkerAuthorized={(address) => {
+											setTeeWorkerAddress(address);
+											setIsTeeWorkerAuthorized(true);
+										}}
+										onComplete={() => {
+											fetchSigners();
+										}}
 									/>
 								</div>
 							)}
 
-							{currentStep >= 5 && (
+							{currentStep >= 5 && currentStep <= 5 && (
 								<div>
 									<h2 className="text-xl font-semibold mb-4">
-										Step 5: Start Swapping
+										Step 5: Send Token Transfer
 									</h2>
 									<p className="text-gray-600 mb-6">
-										Your Omni Account is ready! Send swap requests to the TEE
-										worker service.
+										Transfer USDC or USDT through the TEE worker using UserOperations.
 									</p>
-									{/* TODO */}
+									<TEETokenTransfer
+										omniAccountAddress={omniAccountAddress}
+										omniAccountHash={omniAccountHash}
+										isDeployed={hasContract}
+										teeWorkerAddress={teeWorkerAddress}
+									/>
 								</div>
 							)}
+
 
 							{/* Always show completed steps in collapsed form */}
 							<div className="space-y-4">
@@ -339,7 +496,7 @@ function HomeContent() {
 									</div>
 								)}
 
-								{currentStep > 3 && isFunded && (
+								{currentStep > 2 && isFunded && (
 									<div className="bg-white rounded-lg shadow p-4">
 										<div className="flex items-center justify-between">
 											<div className="flex items-center space-x-3">
@@ -365,15 +522,34 @@ function HomeContent() {
 													<Check className="w-4 h-4 text-white" />
 												</div>
 												<span className="font-medium text-green-700">
-													Root Key Authorized
+													Omni Account Created
 												</span>
 											</div>
 											<span className="text-sm text-gray-500">
-												Ready for swaps
+												Account deployed
 											</span>
 										</div>
 									</div>
 								)}
+
+								{isTeeWorkerAuthorized && (
+									<div className="bg-white rounded-lg shadow p-4">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center space-x-3">
+												<div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+													<Check className="w-4 h-4 text-white" />
+												</div>
+												<span className="font-medium text-green-700">
+													TEE Worker Authorized
+												</span>
+											</div>
+											<span className="text-sm text-gray-500">
+												{teeWorkerAddress && `${teeWorkerAddress.slice(0, 6)}...${teeWorkerAddress.slice(-4)}`}
+											</span>
+										</div>
+									</div>
+								)}
+
 							</div>
 						</div>
 					</div>
@@ -390,4 +566,3 @@ export default function Home() {
 		</ClientOnly>
 	);
 }
-
