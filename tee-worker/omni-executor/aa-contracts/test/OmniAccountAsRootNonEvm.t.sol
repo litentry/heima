@@ -2,9 +2,9 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {OmniAccount} from "../src/accounts/OmniAccount.sol";
+import {OmniAccountV1 as OmniAccount} from "../src/accounts/OmniAccountV1.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {EntryPointV1 as EntryPoint} from "../src/core/EntryPointV1.sol";
 import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
 import {OwnerType} from "../src/interfaces/OwnerType.sol";
 import {Counter} from "../src/Counter.sol";
