@@ -33,6 +33,22 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::log::error;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Eip1559FeeEstimate {
+	pub max_fee_per_gas: u128,
+	pub max_priority_fee_per_gas: u128,
+}
+
+impl Eip1559FeeEstimate {
+	pub fn new(max_fee_per_gas: u128, max_priority_fee_per_gas: u128) -> Self {
+		Self { max_fee_per_gas, max_priority_fee_per_gas }
+	}
+
+	pub fn base_fee(&self) -> u128 {
+		self.max_fee_per_gas.saturating_sub(self.max_priority_fee_per_gas)
+	}
+}
+
 pub trait RpcProviderFactory {
 	type Provider;
 	type Context;
@@ -68,6 +84,7 @@ pub trait RpcProvider: Send + Sync {
 	) -> Result<String, ()>;
 	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()>;
 	async fn get_gas_price(&self) -> Result<u128, ()>;
+	async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, ()>;
 
 	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()>;
 
@@ -140,10 +157,8 @@ impl RpcProvider for AlloyRpcProvider {
 
 		let signer_address = wallet.default_signer().address();
 		let mut tx = raw_tx.from(signer_address);
-		// Bump the gas by 10%
-		// TODO: Set gas fees via CLI
+		// Add a 10% buffer to gas to make it safer
 		tx.gas = Some(self.estimate_gas(tx.clone()).await? * 110 / 100);
-		tx.gas_price = Some(self.get_gas_price().await?);
 
 		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
 			error!("Could not send transaction: {:?}", e);
@@ -180,6 +195,22 @@ impl RpcProvider for AlloyRpcProvider {
 			.get_gas_price()
 			.await
 			.map_err(|e| error!("Could not get gas price: {:?}", e))
+	}
+
+	async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, ()> {
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
+
+		let estimation = provider
+			.estimate_eip1559_fees()
+			.await
+			.map_err(|e| error!("Could not estimate EIP-1559 fees: {:?}", e))?;
+
+		Ok(Eip1559FeeEstimate {
+			max_fee_per_gas: estimation.max_fee_per_gas,
+			max_priority_fee_per_gas: estimation.max_priority_fee_per_gas,
+		})
 	}
 
 	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()> {
@@ -297,6 +328,7 @@ impl WalletBalanceFetcher for AlloyRpcProvider {
 
 #[cfg(feature = "mocks")]
 pub mod mocks {
+	use crate::Eip1559FeeEstimate;
 	use crate::RpcProvider as RpcProviderTrait;
 	use crate::RpcProviderFactory;
 	use alloy::network::EthereumWallet;
@@ -323,6 +355,7 @@ pub mod mocks {
 			async fn send_transaction_with_wallet(&self, wallet: &EthereumWallet, tx: TransactionRequest) -> Result<String, ()>;
 			async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, ()>;
 			async fn get_gas_price(&self) -> Result<u128, ()>;
+			async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, ()>;
 			async fn get_code_at(&self, address: Address) -> Result<Vec<u8>, ()>;
 			async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, Option<Vec<u8>>>;
 			async fn call_with_state_override(&self, tx: TransactionRequest, state_override: HashMap<Address, AccountOverride>) -> Result<Vec<u8>, Option<Vec<u8>>>;

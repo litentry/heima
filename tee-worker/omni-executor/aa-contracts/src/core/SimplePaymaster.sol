@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
+/*
+ * Based on SimplePaymaster.sol from https://github.com/eth-infinitism/account-abstraction
+ * Licensed under GNU General Public License v3.0
+ */
 pragma solidity ^0.8.28;
 
 import "./BasePaymaster.sol";
@@ -24,8 +28,9 @@ contract SimplePaymaster is BasePaymaster {
      * Validate a user operation.
      * Only sponsor operations submitted by authorized bundlers.
      */
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32, /* userOpHash */ uint256 maxCost)
         internal
+        view
         override
         returns (bytes memory context, uint256 validationData)
     {
@@ -51,10 +56,12 @@ contract SimplePaymaster is BasePaymaster {
      * Post-operation handler.
      * Log the sponsored operation.
      */
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost, uint256 actualUserOpFeePerGas)
-        internal
-        override
-    {
+    function _postOp(
+        PostOpMode, /* mode */
+        bytes calldata context,
+        uint256 actualGasCost,
+        uint256 /* actualUserOpFeePerGas */
+    ) internal override {
         // Decode sender from context
         address sender = abi.decode(context, (address));
 

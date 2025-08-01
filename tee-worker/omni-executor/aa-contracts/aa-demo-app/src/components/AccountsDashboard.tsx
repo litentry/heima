@@ -4,7 +4,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { Copy, Wallet, RefreshCw } from "lucide-react";
 import { formatUnits } from "viem";
 import { calculateOmniAccount, stringToBytes } from "@/lib/aa-utils";
-import { DEFAULT_CLIENT_ID, CONTRACTS, ERC20_TOKENS } from "@/lib/constants";
+import { DEFAULT_CLIENT_ID, CONTRACTS, ERC20_TOKENS, OwnerType } from "@/lib/constants";
 import type { Address } from "viem";
 
 interface TokenBalance {
@@ -58,7 +58,7 @@ export function AccountsDashboard({
         address: CONTRACTS.OmniAccountFactory.address,
         abi: CONTRACTS.OmniAccountFactory.abi,
         functionName: "getAddress",
-        args: [omniAccount, clientIdBytes, rootSigner],
+        args: [omniAccount, OwnerType.Evm, clientIdBytes, rootSigner],
         query: {
             enabled: !!evmAddress && omniAccount !== "0x",
         },

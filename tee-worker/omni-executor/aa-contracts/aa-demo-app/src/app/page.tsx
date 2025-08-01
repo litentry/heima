@@ -99,6 +99,7 @@ function HomeContent() {
 					inputs: [
 						{ name: "entryPoint", type: "address", indexed: true },
 						{ name: "owner", type: "bytes32", indexed: true },
+						{ name: "ownerType", type: "uint8", indexed: false },
 						{ name: "clientId", type: "bytes", indexed: false },
 						{ name: "root", type: "address", indexed: true },
 					],
