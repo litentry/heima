@@ -968,16 +968,16 @@ async fn handle_native_task<
 				},
 			}
 
-			// Submit all UserOperations via EntryPoint.handleOps()
+			// Submit all UserOperations via EntryPoint.handleOps() with retry logic
 			let transaction_hash =
-				match entry_point_client.handle_ops(&aa_user_ops, beneficiary).await {
+				match entry_point_client.handle_ops_with_retry(&aa_user_ops, beneficiary).await {
 					Ok(tx_hash) => {
 						// Return the actual transaction hash from handle_ops
 						Some(tx_hash)
 					},
 					Err(_) => {
 						send_error(
-							"Failed to submit UserOperations to EntryPoint via handleOps"
+							"Failed to submit UserOperations to EntryPoint via handleOps after retries"
 								.to_string(),
 							response_sender,
 							NativeTaskError::InternalError,

@@ -21,6 +21,7 @@ dependencies = [
  "ethereum-rpc",
  "heima-primitives",
  "mockall",
+ "rand 0.8.5",
  "sha2 0.10.9",
  "test-log",
  "tokio",
