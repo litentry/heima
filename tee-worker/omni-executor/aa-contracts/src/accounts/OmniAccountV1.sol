@@ -210,11 +210,7 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return isRootSigner(sessionProofSigner) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validatePasskey(bytes32 userOpHash, bytes calldata sig)
-        internal
-        view
-        returns (uint256 validationData)
-    {
+    function _validatePasskey(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
         // Decode signature data
         (
             Passkey.PublicKey memory publicKey,
@@ -330,7 +326,7 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return false;
     }
 
-    function version() public pure returns (string memory) {
+    function version() public pure virtual returns (string memory) {
         return "1.0.0";
     }
 }
