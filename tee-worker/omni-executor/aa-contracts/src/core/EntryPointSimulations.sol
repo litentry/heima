@@ -8,7 +8,7 @@ pragma solidity ^0.8.28;
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
 
-import "./EntryPoint.sol";
+import "./EntryPointV1.sol";
 import "../interfaces/IEntryPointSimulations.sol";
 
 /*
@@ -16,7 +16,7 @@ import "../interfaces/IEntryPointSimulations.sol";
  * the bundler in order to check UserOperation validity and estimate its gas consumption.
  * This contract should never be deployed on-chain and is only used as a parameter for the "eth_call" request.
  */
-contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
+contract EntryPointSimulations is EntryPointV1, IEntryPointSimulations {
     SenderCreator private _senderCreator;
 
     bytes32 private __domainSeparatorV4;
@@ -29,7 +29,7 @@ contract EntryPointSimulations is EntryPoint, IEntryPointSimulations {
         _initDomainSeparator();
     }
 
-    function senderCreator() public view virtual override(EntryPoint, IEntryPoint) returns (ISenderCreator) {
+    function senderCreator() public view virtual override(EntryPointV1, IEntryPoint) returns (ISenderCreator) {
         // return the same senderCreator as real EntryPoint.
         // this call is slightly (100) more expensive than EntryPoint's access to immutable member
         return _senderCreator;
