@@ -51,19 +51,40 @@ for (const deploymentFile of deploymentFiles) {
         const deployment = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
 
         // Update each contract with its ABI
-        for (const [contractName, contractData] of Object.entries(deployment.contracts)) {
+        for (const [contractName, contractDataOrAddress] of Object.entries(deployment.contracts)) {
             try {
+                // Handle both old format (address string) and new format (object)
+                let contractData;
+                if (typeof contractDataOrAddress === 'string') {
+                    // Convert old format to new format
+                    contractData = { address: contractDataOrAddress };
+                    deployment.contracts[contractName] = contractData;
+                } else {
+                    contractData = contractDataOrAddress;
+                }
                 // Determine the artifact path based on contract name
                 let artifactPath;
                 if (contractName === 'TestToken') {
                     // TestToken might have multiple instances, use the generic path
                     artifactPath = path.join(__dirname, 'out', 'TestToken.sol', 'TestToken.json');
                 } else {
+                    // Map contract names to their file locations
+                    const contractMappings = {
+                        'EntryPoint': 'EntryPointV1',
+                        'EntryPointV1': 'EntryPointV1',
+                        'OmniAccountFactory': 'OmniAccountFactoryV1', 
+                        'OmniAccountFactoryV1': 'OmniAccountFactoryV1',
+                        'OmniAccount': 'OmniAccountV1',
+                        'OmniAccountV1': 'OmniAccountV1'
+                    };
+                    
+                    const mappedName = contractMappings[contractName] || contractName;
+                    
                     // Try different possible locations
                     const possiblePaths = [
-                        path.join(__dirname, 'out', `${contractName}.sol`, `${contractName}.json`),
-                        path.join(__dirname, 'out', 'src', 'core', `${contractName}.sol`, `${contractName}.json`),
-                        path.join(__dirname, 'out', 'src', 'accounts', `${contractName}.sol`, `${contractName}.json`),
+                        path.join(__dirname, 'out', `${mappedName}.sol`, `${mappedName}.json`),
+                        path.join(__dirname, 'out', 'src', 'core', `${mappedName}.sol`, `${mappedName}.json`),
+                        path.join(__dirname, 'out', 'src', 'accounts', `${mappedName}.sol`, `${mappedName}.json`),
                     ];
                     
                     artifactPath = possiblePaths.find(p => fs.existsSync(p));
