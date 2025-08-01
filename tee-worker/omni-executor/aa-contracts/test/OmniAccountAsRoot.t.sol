@@ -33,7 +33,7 @@ contract OmniAccountAsRoot is Test {
         OmniAccountTestUtils.performExecuteBatchTestAs(vm, rootAddress, account, counter);
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
@@ -51,7 +51,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
-    function test_validateOpFailsWithWrongSigner() public {
+    function test_ValidateOpFailsWithWrongSigner() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
 
@@ -69,7 +69,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 
-    function test_validateOpSessionKey() public {
+    function test_ValidateOpSessionKey() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 2;
@@ -91,7 +91,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
-    function test_validateOpExpiredSessionKey() public {
+    function test_ValidateOpExpiredSessionKey() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
         uint256 sessionExpiration = 0;
@@ -114,7 +114,7 @@ contract OmniAccountAsRoot is Test {
         assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 
-    function test_validateOpSessionKeyFailsIfProofNotSignedByRoot() public {
+    function test_ValidateOpSessionKeyFailsIfProofNotSignedByRoot() public {
         (, uint256 alicePk) = makeAddrAndKey("alice");
         (address root,) = makeAddrAndKey("root");
         (address session, uint256 sessionPk) = makeAddrAndKey("session");
@@ -146,6 +146,7 @@ contract OmniAccountAsRoot is Test {
         vm.expectRevert("only owner");
         account.removeRootSigner(0x0000000000000000000000000000000000000000);
     }
+
 
     function prepareSession(address session, uint256 expiration, uint256 proofSigner)
         internal
