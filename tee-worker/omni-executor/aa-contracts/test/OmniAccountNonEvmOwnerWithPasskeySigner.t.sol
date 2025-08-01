@@ -154,12 +154,10 @@ contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
         bytes memory passkeySignature = abi.encodePacked("passkey_signature_placeholder");
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Passkey), passkeySignature);
 
-        // For non-EVM accounts with passkey signers, validation should pass for passkeys
-        // (though _validatePasskey currently returns FAILED - will be implemented by colleague)
         vm.prank(address(entryPoint));
-        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        // Currently returns FAILED because _validatePasskey is not implemented
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        // TODO: use a legit passkey signature
+        vm.expectRevert();
+        account.validateUserOp(packedOp, packedOpHash, 0);
     }
 
     function test_PasskeyValidationForRemoveRootSignerWhenPasskeyExists() public {
@@ -184,9 +182,9 @@ contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Passkey), passkeySignature);
 
         vm.prank(address(entryPoint));
-        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        // Currently returns FAILED because _validatePasskey is not implemented
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        // TODO: use a legit passkey signature
+        vm.expectRevert();
+        account.validateUserOp(packedOp, packedOpHash, 0);
     }
 
     function test_PasskeyValidationForAddPasskeySignerWhenPasskeyExists() public {
@@ -212,9 +210,9 @@ contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Passkey), passkeySignature);
 
         vm.prank(address(entryPoint));
-        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        // Currently returns FAILED because _validatePasskey is not implemented
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        // TODO: use a legit passkey signature
+        vm.expectRevert();
+        account.validateUserOp(packedOp, packedOpHash, 0);
     }
 
     function test_PasskeyValidationForRemovePasskeySignerWhenPasskeyExists() public {
@@ -239,9 +237,9 @@ contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Passkey), passkeySignature);
 
         vm.prank(address(entryPoint));
-        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        // Currently returns FAILED because _validatePasskey is not implemented
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        // TODO: use a legit passkey signature
+        vm.expectRevert();
+        account.validateUserOp(packedOp, packedOpHash, 0);
     }
 
     function test_PasskeyValidationForWithdrawDepositWhenPasskeyExists() public {
@@ -274,8 +272,8 @@ contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Passkey), passkeySignature);
 
         vm.prank(address(entryPoint));
-        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        // Currently returns FAILED because _validatePasskey is not implemented
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        // TODO: use a legit passkey signature
+        vm.expectRevert();
+        account.validateUserOp(packedOp, packedOpHash, 0);
     }
 }
