@@ -55,6 +55,8 @@ deploy_contracts() {
     export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"  # Anvil's first private key
     export OMNI_EXECUTOR_SIGNER=$OMNI_EXECUTOR_SIGNER
     export PAYMASTER_TYPE=$PAYMASTER_TYPE
+    export SAVE_DEPLOYMENT_FILE=true  # Enable saving enhanced deployment artifacts
+    export DEPLOYMENT_ENV=local  # Use local environment subdirectory
     
     # Show which paymaster is being deployed
     if [ "$PAYMASTER_TYPE" = "demo" ]; then
@@ -152,6 +154,13 @@ forge compile
 
 # Deploy contracts
 deploy_contracts
+
+# Enrich deployment artifacts with ABIs if Node.js is available
+if command -v node &> /dev/null && [ -f "$SCRIPT_DIR/extract-abis.js" ]; then
+    echo ""
+    echo "📝 Enriching deployment artifacts with ABIs..."
+    node "$SCRIPT_DIR/extract-abis.js" || echo "⚠️  Failed to enrich ABIs, but deployment was successful"
+fi
 
 # Keep Anvil running if we started it
 if [ "$ANVIL_RUNNING" = false ]; then

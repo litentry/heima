@@ -5,8 +5,8 @@ This guide provides comprehensive instructions for deploying Account Abstraction
 ## 📋 Overview
 
 The deployment script deploys three core contracts:
-- **EntryPoint**: The main entry point for ERC-4337 user operations
-- **OmniAccountFactory**: Factory contract for creating OmniAccount smart wallets
+- **EntryPointV1**: The main entry point for ERC-4337 user operations
+- **OmniAccountFactoryV1**: Factory contract for creating OmniAccount smart wallets
 - **SimplePaymaster**: Paymaster contract for sponsoring transactions
 
 ## 🔧 Prerequisites
@@ -30,13 +30,17 @@ The script automatically detects and configures for these networks:
 
 | Network | Chain ID |  Filename |
 |---------|----------|----------|
-| Ethereum Mainnet | 1 | `mainnet.json` |
-| Ethereum Sepolia | 11155111 | `sepolia.json` |
+| Ethereum Mainnet | 1 | `ethereum.json` |
+| Ethereum Sepolia | 11155111 | `ethereum-sepolia.json` |
+| Arbitrum Mainnet | 42161 | `arbitrum.json` |
+| Arbitrum Sepolia | 421614 | `arbitrum-sepolia.json` |
 | BSC Mainnet | 56 | `bsc.json` |
 | BSC Testnet | 97 | `bsc-testnet.json` |
 | Polygon Mainnet | 137 | `polygon.json` |
-| Polygon Mumbai | 80001 | `mumbai.json` |
-| Local Anvil | 1337 | `local.json` |
+| Polygon Mumbai | 80001 | `polygon-mumbai.json` |
+| HyperEVM Mainnet | 999 | `hyperevm.json` |
+| HyperEVM Testnet | 998 | `hyperevm-testnet.json` |
+| Local Anvil | 1337/31337 | `local.json` |
 
 ## ⚙️ Configuration
 
@@ -54,6 +58,7 @@ PAYMASTER_INITIAL_DEPOSIT=1000000000000000000  # 1 ETH in wei (default: 1 ETH)
 INITIALIZE_PAYMASTER=true                      # Whether to initialize paymaster (default: true)
 INITIAL_BUNDLER=0x1234567890abcdef...          # Initial bundler address (default: deployer)
 SAVE_DEPLOYMENT_FILE=true                      # Save deployment file (default: false, set true for official deployments)
+DEPLOYMENT_ENV=staging                         # Environment subdirectory (e.g., staging, production)
 ETHERSCAN_API_KEY=ABC123                       # For contract verification
 ```
 
@@ -72,6 +77,24 @@ forge script script/Deploy.s.sol:Deploy \
     --broadcast \
     -vvv
 ```
+
+### Using Remote Deployment Script (Recommended)
+
+The `deploy-remote.sh` script handles deployment and automatic ABI enrichment:
+
+```bash
+# Set environment variables in .env
+DEPLOYMENT_ENV=staging  # Optional: staging, production, etc.
+
+# Run the deployment script
+./deploy-remote.sh
+```
+
+This script will:
+1. Deploy all contracts to the specified network
+2. Save enhanced artifacts with addresses and bytecode
+3. Automatically enrich artifacts with ABIs from Foundry build outputs
+4. Save to `deployments/[environment]/[network].json`
 
 
 ### Ethereum Mainnet with Verification
@@ -98,11 +121,11 @@ Chain ID: 97
 Deployer address: 0x...
 Deployer balance: 1.5 ETH
 
-🚀 Deploying EntryPoint...
-✅ EntryPoint deployed at: 0x...
+🚀 Deploying EntryPointV1...
+✅ EntryPointV1 deployed at: 0x...
 
-🚀 Deploying OmniAccountFactory...
-✅ OmniAccountFactory deployed at: 0x...
+🚀 Deploying OmniAccountFactoryV1...
+✅ OmniAccountFactoryV1 deployed at: 0x...
 
 🚀 Deploying SimplePaymaster...
 ✅ SimplePaymaster deployed at: 0x...
@@ -112,32 +135,72 @@ Deployer balance: 1.5 ETH
 
 === DEPLOYMENT COMPLETE ===
 📋 Contract Addresses:
-EntryPoint:          0x...
-OmniAccountFactory:  0x...
-SimplePaymaster:     0x...
+EntryPointV1:          0x...
+OmniAccountFactoryV1:  0x...
+SimplePaymaster:       0x...
 ```
 
-### JSON File
-Location: `deployments/bsc-testnet.json`
+### JSON File (Enhanced Artifacts)
+Location: `deployments/[environment]/[network].json` (e.g., `deployments/staging/bsc-testnet.json`)
+
 ```json
 {
   "network": "BSC Testnet",
   "chainId": 97,
   "timestamp": 1703001234,
+  "blockNumber": 123456,
   "deployer": "0x...",
   "contracts": {
-    "EntryPoint": "0x...",
-    "OmniAccountFactory": "0x...",
-    "SimplePaymaster": "0x..."
+    "EntryPointV1": {
+      "address": "0x...",
+      "abi": [...],  // Full contract ABI
+      "bytecode": "0x608060...",  // Deployed bytecode
+      "metadata": {}
+    },
+    "OmniAccountFactoryV1": {
+      "address": "0x...",
+      "abi": [...],
+      "bytecode": "0x608060...",
+      "metadata": {}
+    },
+    "SimplePaymaster": {
+      "address": "0x...",
+      "abi": [...],
+      "bytecode": "0x608060...",
+      "metadata": {
+        "initialBundler": "0x..."
+      }
+    }
   }
 }
 ```
+
+The artifacts are saved in environment-based subdirectories:
+- **Local**: `deployments/local/`
+- **Staging**: `deployments/staging/`
+- **Production**: `deployments/production/`
+- **No environment**: `deployments/` (backward compatible)
 
 ### Broadcast Files
 Foundry creates detailed transaction logs in:
 ```
 broadcast/Deploy.s.sol/[CHAIN_ID]/run-latest.json
 ```
+
+## 📝 ABI Enrichment
+
+The deployment scripts automatically enrich artifacts with contract ABIs after deployment. If this fails or you need to manually enrich:
+
+```bash
+# Run the ABI enrichment script
+node extract-abis.js
+```
+
+This script:
+- Reads all deployment files from `deployments/`
+- Extracts ABIs from Foundry build artifacts
+- Updates deployment files with full contract ABIs
+- Handles both old (address-only) and new (enhanced) formats
 
 ## 🔍 Contract Verification
 
@@ -157,12 +220,12 @@ forge script script/Deploy.s.sol:Deploy \
 If automatic verification fails:
 
 ```bash
-# Verify EntryPoint
+# Verify EntryPointV1
 forge verify-contract \
     --chain-id [CHAIN_ID] \
     --constructor-args $(cast abi-encode "constructor()") \
     [ENTRYPOINT_ADDRESS] \
-    src/core/EntryPoint.sol:EntryPoint \
+    src/core/EntryPointV1.sol:EntryPointV1 \
     --etherscan-api-key $ETHERSCAN_API_KEY
 
 # Verify Factory
@@ -170,7 +233,7 @@ forge verify-contract \
     --chain-id [CHAIN_ID] \
     --constructor-args $(cast abi-encode "constructor(address)" [ENTRYPOINT_ADDRESS]) \
     [FACTORY_ADDRESS] \
-    src/accounts/OmniAccountFactory.sol:OmniAccountFactory \
+    src/accounts/OmniAccountFactoryV1.sol:OmniAccountFactoryV1 \
     --etherscan-api-key $ETHERSCAN_API_KEY
 
 # Verify Paymaster
@@ -186,18 +249,32 @@ forge verify-contract \
 
 ### Deployment Files Management
 
-The script can optionally create deployment files in `deployments/` folder when `SAVE_DEPLOYMENT_FILE=true`. For official deployments:
+The script creates enhanced deployment files when `SAVE_DEPLOYMENT_FILE=true`. For official deployments:
 
 ```bash
 # After successful deployment, commit only official deployment files
-git add deployments/mainnet.json     # For Ethereum mainnet
-git add deployments/bsc.json         # For BSC mainnet  
-git add deployments/bsc-testnet.json # For BSC testnet (if official)
+git add deployments/production/ethereum.json     # For Ethereum mainnet
+git add deployments/production/arbitrum.json     # For Arbitrum mainnet
+git add deployments/staging/bsc-testnet.json     # For BSC testnet staging
 git commit -m "Deploy AA contracts to mainnet"
 
 # Tag official releases
 git tag v1.0.0-mainnet
 git push origin v1.0.0-mainnet
+```
+
+### Using Deployment Artifacts
+
+```javascript
+// Load deployment artifacts in your application
+const deployment = require('./deployments/staging/arbitrum-sepolia.json');
+
+// Access contract addresses and ABIs
+const entryPointAddress = deployment.contracts.EntryPointV1.address;
+const entryPointABI = deployment.contracts.EntryPointV1.abi;
+
+// Create contract instance (ethers.js example)
+const entryPoint = new ethers.Contract(entryPointAddress, entryPointABI, provider);
 ```
 
 **Note**: The `broadcast/` folder is in `.gitignore` and should not be committed as it contains transaction details that change with each deployment run.
