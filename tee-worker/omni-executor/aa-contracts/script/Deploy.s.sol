@@ -3,14 +3,14 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "../src/core/EntryPoint.sol";
-import "../src/accounts/OmniAccountFactory.sol";
+import "../src/core/EntryPointV1.sol";
+import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
 
 /**
  * @title Deploy
  * @notice Universal deployment script for Account Abstraction contracts
- * @dev This script deploys EntryPoint, OmniAccountFactory, and SimplePaymaster contracts on any EVM network
+ * @dev This script deploys EntryPointV1, OmniAccountFactoryV1, and SimplePaymaster contracts on any EVM network
  */
 contract Deploy is Script {
     // Configuration - can be overridden via environment variables
@@ -144,22 +144,22 @@ contract Deploy is Script {
     }
 
     function deployEntryPoint() internal {
-        console.log("Deploying EntryPoint...");
+        console.log("Deploying EntryPointV1...");
 
-        EntryPoint entryPoint = new EntryPoint();
+        EntryPointV1 entryPoint = new EntryPointV1();
         entryPointAddress = address(entryPoint);
 
-        console.log("EntryPoint deployed at:", entryPointAddress);
+        console.log("EntryPointV1 deployed at:", entryPointAddress);
         console.log("");
     }
 
     function deployFactory() internal {
-        console.log("Deploying OmniAccountFactory...");
+        console.log("Deploying OmniAccountFactoryV1...");
 
-        OmniAccountFactory factory = new OmniAccountFactory(IEntryPoint(entryPointAddress));
+        OmniAccountFactoryV1 factory = new OmniAccountFactoryV1(IEntryPoint(entryPointAddress));
         factoryAddress = address(factory);
 
-        console.log("OmniAccountFactory deployed at:", factoryAddress);
+        console.log("OmniAccountFactoryV1 deployed at:", factoryAddress);
         console.log("EntryPoint reference:", entryPointAddress);
         console.log("");
     }
@@ -203,8 +203,8 @@ contract Deploy is Script {
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("");
         console.log("Contract Addresses:");
-        console.log("EntryPoint:         ", entryPointAddress);
-        console.log("OmniAccountFactory: ", factoryAddress);
+        console.log("EntryPointV1:       ", entryPointAddress);
+        console.log("OmniAccountFactoryV1: ", factoryAddress);
         console.log("SimplePaymaster:    ", paymasterAddress);
         console.log("");
         console.log("Network:", networkConfig.name);
@@ -244,10 +244,10 @@ contract Deploy is Script {
                 vm.toString(msg.sender),
                 '",\n',
                 '  "contracts": {\n',
-                '    "EntryPoint": "',
+                '    "EntryPointV1": "',
                 vm.toString(entryPointAddress),
                 '",\n',
-                '    "OmniAccountFactory": "',
+                '    "OmniAccountFactoryV1": "',
                 vm.toString(factoryAddress),
                 '",\n',
                 '    "SimplePaymaster": "',
@@ -264,14 +264,14 @@ contract Deploy is Script {
         } catch Error(string memory reason) {
             console.log("Failed to save deployment file:", reason);
             console.log("Contract addresses (save manually if needed):");
-            console.log("EntryPoint:         ", entryPointAddress);
-            console.log("OmniAccountFactory: ", factoryAddress);
+            console.log("EntryPointV1:       ", entryPointAddress);
+            console.log("OmniAccountFactoryV1: ", factoryAddress);
             console.log("SimplePaymaster:    ", paymasterAddress);
         } catch {
             console.log("Failed to save deployment file (unknown error)");
             console.log("Contract addresses (save manually if needed):");
-            console.log("EntryPoint:         ", entryPointAddress);
-            console.log("OmniAccountFactory: ", factoryAddress);
+            console.log("EntryPointV1:       ", entryPointAddress);
+            console.log("OmniAccountFactoryV1: ", factoryAddress);
             console.log("SimplePaymaster:    ", paymasterAddress);
         }
     }
