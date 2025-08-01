@@ -210,13 +210,27 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         return isRootSigner(sessionProofSigner) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validatePasskey(bytes32, /* userOpHash */ bytes calldata /* sig */ )
+    function _validatePasskey(bytes32 userOpHash, bytes calldata sig)
         internal
-        pure
+        view
         returns (uint256 validationData)
     {
-        // TODO
-        return SIG_VALIDATION_FAILED;
+        // Decode signature data
+        (
+            Passkey.PublicKey memory publicKey,
+            Passkey.Signature memory passkeySignature,
+            Passkey.Metadata memory metadata
+        ) = abi.decode(sig, (Passkey.PublicKey, Passkey.Signature, Passkey.Metadata));
+
+        // Check if this passkey is authorized
+        if (!passkeySigners[publicKey.toKey()]) {
+            return SIG_VALIDATION_FAILED;
+        }
+
+        // Verify the passkey signature
+        bool isValid = Passkey.verify(userOpHash, metadata, passkeySignature, publicKey);
+
+        return isValid ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
     /**

@@ -44,7 +44,7 @@ contract OmniAccountAsOwner is Test {
         assert(!account.rootSigners(root));
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(alice, clientId, rootAddress);
 

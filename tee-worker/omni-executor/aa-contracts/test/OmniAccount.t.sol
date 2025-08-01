@@ -62,7 +62,7 @@ contract OmniAccountTest is Test {
         account.removeRootSigner(0x0000000000000000000000000000000000000000);
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (, uint256 bobPk) = makeAddrAndKey("bob");
 
