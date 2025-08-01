@@ -2,24 +2,24 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {EntryPointV1} from "../src/core/EntryPointV1.sol";
 import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
-import {OmniAccountFactory} from "../src/accounts/OmniAccountFactory.sol";
+import {OmniAccountFactoryV1} from "../src/accounts/OmniAccountFactoryV1.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {OwnerType} from "../src/interfaces/OwnerType.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 contract EntryPointTest is Test {
-    EntryPoint public entryPoint;
-    OmniAccountFactory public omniAccountFactory;
+    EntryPointV1 public entryPoint;
+    OmniAccountFactoryV1 public omniAccountFactory;
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
     bytes clientId = bytes("test_client");
     bytes32 oa;
 
     function setUp() public {
-        entryPoint = new EntryPoint();
-        omniAccountFactory = new OmniAccountFactory(entryPoint);
+        entryPoint = new EntryPointV1();
+        omniAccountFactory = new OmniAccountFactoryV1(entryPoint);
         oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
     }
 
@@ -60,7 +60,7 @@ contract EntryPointTest is Test {
         entryPoint.handleOps(ops, beneficiary);
     }
 
-    function fundAccountOnEntryPoint(address to, EntryPoint ep) internal {
+    function fundAccountOnEntryPoint(address to, EntryPointV1 ep) internal {
         (bool callSuccess,) = address(ep).call{value: 10000000000000000}(abi.encodeCall(ep.depositTo, (to)));
         require(callSuccess, "call failed");
     }

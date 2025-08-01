@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
+/*
+ * Based on EntryPoint.sol from https://github.com/eth-infinitism/account-abstraction
+ * Licensed under GNU General Public License v3.0
+ */
 pragma solidity ^0.8.28;
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
@@ -23,9 +27,10 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 /**
  * Account-Abstraction (EIP-4337) singleton EntryPoint v0.8 implementation.
  * Only one instance required on each chain.
+ *
  * @custom:security-contact https://bounty.ethereum.org
  */
-contract EntryPoint is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardTransient, ERC165, EIP712 {
+contract EntryPointV1 is IEntryPoint, StakeManager, NonceManager, ReentrancyGuardTransient, ERC165, EIP712 {
     using UserOperationLib for PackedUserOperation;
 
     /**
