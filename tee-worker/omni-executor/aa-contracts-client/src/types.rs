@@ -51,6 +51,12 @@ sol! {
 		bytes32 paymasterAndData;
 	}
 
+	// Passkey public key
+	struct PasskeyPublicKey {
+		bytes32 x;
+		bytes32 y;
+	}
+
 	// entry point
 	function handleOps(PackedUserOperation[] calldata ops, address payable beneficiary) external;
 	function getSenderAddress(bytes calldata initCode) external;
@@ -68,6 +74,10 @@ sol! {
 	function removeRootSigner(address root) public;
 	function initialize(bytes32 oa, bytes memory clientId, address root) public;
 	function getOwner() public view returns (bytes32);
+
+	// passkey signer management
+	function addPasskeySigner(PasskeyPublicKey memory pk) public;
+	function removePasskeySigner(PasskeyPublicKey memory pk) public;
 
 	// paymaster
 	function deposit() public payable;
