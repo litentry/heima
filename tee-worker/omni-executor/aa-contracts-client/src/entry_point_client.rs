@@ -214,27 +214,49 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 	/// Calculate dynamic gas fees based on current network conditions
 	async fn calculate_gas_fees(&self) -> Result<(U256, U256), ()> {
-		// Get current gas price from network
-		let current_gas_price = self
-			.rpc_client
-			.get_gas_price()
-			.await
-			.map_err(|_| error!("Failed to fetch gas price"))?;
+		// Try EIP-1559 estimation first
+		match self.rpc_client.estimate_eip1559_fees().await {
+			Ok(eip1559_estimate) => {
+				// Use EIP-1559 fees with buffer
+				let buffer_multiplier = 100 + self.gas_config.gas_price_buffer_percent;
 
-		// Apply buffer to current gas price for max_fee_per_gas
-		let buffer_multiplier = 100 + self.gas_config.gas_price_buffer_percent;
-		let max_fee_per_gas = U256::from(current_gas_price)
-			.saturating_mul(U256::from(buffer_multiplier))
-			.checked_div(U256::from(100))
-			.unwrap_or(U256::from(current_gas_price));
+				let max_fee_per_gas = U256::from(eip1559_estimate.max_fee_per_gas)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
 
-		// Calculate priority fee (tip) with bounds
-		// Use 10% of current gas price as priority fee, bounded by min/max
-		let priority_fee = U256::from(current_gas_price / 10)
-			.max(U256::from(self.gas_config.min_priority_fee))
-			.min(U256::from(self.gas_config.max_priority_fee));
+				// Use the EIP-1559 priority fee with bounds
+				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
 
-		Ok((max_fee_per_gas, priority_fee))
+				Ok((max_fee_per_gas, priority_fee))
+			},
+			Err(_) => {
+				// Fallback to legacy gas price calculation
+				// Get current gas price from network
+				let current_gas_price = self
+					.rpc_client
+					.get_gas_price()
+					.await
+					.map_err(|_| error!("Failed to fetch gas price"))?;
+
+				// Apply buffer to current gas price for max_fee_per_gas
+				let buffer_multiplier = 100 + self.gas_config.gas_price_buffer_percent;
+				let max_fee_per_gas = U256::from(current_gas_price)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(current_gas_price));
+
+				// Calculate priority fee (tip) with bounds
+				// Use 10% of current gas price as priority fee, bounded by min/max
+				let priority_fee = U256::from(current_gas_price / 10)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+		}
 	}
 
 	/// Simulate user operation validation using EntryPointSimulations contract
@@ -404,28 +426,52 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		additional_buffer_percent: u64,
 	) -> Result<(U256, U256), ()> {
-		// Get current gas price from network
-		let current_gas_price = self
-			.rpc_client
-			.get_gas_price()
-			.await
-			.map_err(|_| error!("Failed to fetch gas price"))?;
+		// Try EIP-1559 estimation first
+		match self.rpc_client.estimate_eip1559_fees().await {
+			Ok(eip1559_estimate) => {
+				// Use EIP-1559 fees with buffer
+				let total_buffer =
+					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
+				let buffer_multiplier = 100 + total_buffer;
 
-		// Apply base buffer plus additional retry buffer
-		let total_buffer = self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
-		let buffer_multiplier = 100 + total_buffer;
+				let max_fee_per_gas = U256::from(eip1559_estimate.max_fee_per_gas)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
 
-		let max_fee_per_gas = U256::from(current_gas_price)
-			.saturating_mul(U256::from(buffer_multiplier))
-			.checked_div(U256::from(100))
-			.unwrap_or(U256::from(current_gas_price));
+				// Use the EIP-1559 priority fee with bounds
+				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
 
-		// Calculate priority fee (tip) with bounds
-		let priority_fee = U256::from(current_gas_price / 10)
-			.max(U256::from(self.gas_config.min_priority_fee))
-			.min(U256::from(self.gas_config.max_priority_fee));
+				Ok((max_fee_per_gas, priority_fee))
+			},
+			Err(_) => {
+				// Fallback to legacy gas price calculation
+				let current_gas_price = self
+					.rpc_client
+					.get_gas_price()
+					.await
+					.map_err(|_| error!("Failed to fetch gas price"))?;
 
-		Ok((max_fee_per_gas, priority_fee))
+				// Apply base buffer plus additional retry buffer
+				let total_buffer =
+					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
+				let buffer_multiplier = 100 + total_buffer;
+
+				let max_fee_per_gas = U256::from(current_gas_price)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(current_gas_price));
+
+				// Calculate priority fee (tip) with bounds
+				let priority_fee = U256::from(current_gas_price / 10)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee));
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+		}
 	}
 
 	/// Calculate exponential backoff delay with jitter
@@ -1006,6 +1052,8 @@ pub mod test {
 		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
 		let mut rpc_client = MockRpcProvider::new();
 
+		// Mock EIP-1559 to fail, forcing legacy fallback
+		rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
 		// Mock gas price at 30 gwei
 		let mock_gas_price = 30_000_000_000u128;
 		rpc_client.expect_get_gas_price().times(1).returning(move || Ok(mock_gas_price));
@@ -1021,6 +1069,7 @@ pub mod test {
 
 		// Test with mainnet config
 		let mut mainnet_rpc_client = MockRpcProvider::new();
+		mainnet_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
 		mainnet_rpc_client
 			.expect_get_gas_price()
 			.times(1)
@@ -1043,6 +1092,7 @@ pub mod test {
 		// Test with L2 config and lower gas price
 		let mut l2_rpc_client = MockRpcProvider::new();
 		let l2_gas_price = 1_000_000_000u128; // 1 gwei
+		l2_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
 		l2_rpc_client
 			.expect_get_gas_price()
 			.times(1)
@@ -1130,6 +1180,8 @@ pub mod test {
 		let counter = Arc::new(AtomicU8::new(0));
 		let counter_clone = counter.clone();
 
+		// Set up EIP-1559 to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| Err(()));
 		// Set up gas price expectation
 		mock_client.expect_get_gas_price().times(3).returning(|| Ok(30_000_000_000u128)); // 30 gwei
 
@@ -1167,6 +1219,8 @@ pub mod test {
 	async fn test_handle_ops_with_retry_max_attempts() {
 		let mut mock_client = MockRpcProvider::new();
 
+		// Set up EIP-1559 to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| Err(()));
 		// Set up gas price expectation
 		mock_client.expect_get_gas_price().times(3).returning(|| Ok(30_000_000_000u128)); // 30 gwei
 
@@ -1195,6 +1249,9 @@ pub mod test {
 	async fn test_calculate_gas_fees_with_buffer() {
 		let mut mock_client = MockRpcProvider::new();
 
+		// Set up EIP-1559 to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+
 		// Set up gas price expectation
 		mock_client.expect_get_gas_price().times(1).returning(|| Ok(20_000_000_000u128)); // 20 gwei
 
@@ -1216,5 +1273,65 @@ pub mod test {
 		assert_eq!(max_fee, U256::from(32_000_000_000u128));
 		// Priority fee: 20 gwei / 10 = 2 gwei (within bounds)
 		assert_eq!(priority_fee, U256::from(2_000_000_000u128));
+	}
+
+	#[test(tokio::test)]
+	async fn test_calculate_gas_fees_with_eip1559_support() {
+		use ethereum_rpc::Eip1559FeeEstimate;
+		let mut mock_client = MockRpcProvider::new();
+
+		// Set up EIP-1559 fee estimation to succeed
+		mock_client
+			.expect_estimate_eip1559_fees()
+			.times(1)
+			.returning(|| Ok(Eip1559FeeEstimate::new(40_000_000_000, 2_000_000_000))); // 40 gwei max, 2 gwei priority
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig {
+				gas_price_buffer_percent: 50,
+				min_priority_fee: 1_000_000_000,
+				max_priority_fee: 50_000_000_000,
+			},
+			crate::RetryConfig::default(),
+		);
+
+		// Test calculate_gas_fees
+		let (max_fee, priority_fee) = client.calculate_gas_fees().await.unwrap();
+
+		// Expected: 40 gwei * 1.5 = 60 gwei
+		assert_eq!(max_fee, U256::from(60_000_000_000u128));
+		// Priority fee: 2 gwei (within bounds)
+		assert_eq!(priority_fee, U256::from(2_000_000_000u128));
+	}
+
+	#[test(tokio::test)]
+	async fn test_calculate_gas_fees_eip1559_fallback() {
+		let mut mock_client = MockRpcProvider::new();
+
+		// Set up EIP-1559 to fail, fallback to legacy
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+
+		mock_client.expect_get_gas_price().times(1).returning(|| Ok(30_000_000_000u128)); // 30 gwei
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig {
+				gas_price_buffer_percent: 50,
+				min_priority_fee: 1_000_000_000,
+				max_priority_fee: 50_000_000_000,
+			},
+			crate::RetryConfig::default(),
+		);
+
+		// Test calculate_gas_fees with fallback
+		let (max_fee, priority_fee) = client.calculate_gas_fees().await.unwrap();
+
+		// Expected: 30 gwei * 1.5 = 45 gwei
+		assert_eq!(max_fee, U256::from(45_000_000_000u128));
+		// Priority fee: 30 gwei / 10 = 3 gwei (within bounds)
+		assert_eq!(priority_fee, U256::from(3_000_000_000u128));
 	}
 }
