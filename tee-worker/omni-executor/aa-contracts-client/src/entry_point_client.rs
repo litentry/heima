@@ -16,7 +16,7 @@
 
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, SenderAddressResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, OwnerType, SenderAddressResult,
 	ValidationResult,
 };
 use crate::utils::{
@@ -683,6 +683,7 @@ pub fn prepare_factory_init_code(
 	let mut call = createAccountCall {
 		//safe to unwrap
 		oa: oa.into(),
+		oaType: OwnerType::Evm,
 		//safe to unwrap
 		clientId: client_id.to_owned().into(),
 		root,
@@ -1338,12 +1339,12 @@ pub mod test {
 
 	#[tokio::test]
 	async fn print_init_code_and_sender() {
-		let entrypoint_address = address!("0xf1646af389deE47DC7d45E6616A1bCdc9F2b0140");
+		let entrypoint_address = address!("0xe6042188857a822DDfcFE5fd9E17118049Ab539a");
 		let rpc_client =
 			Arc::new(AlloyRpcProvider::new("https://arbitrum-sepolia.api.onfinality.io/public"));
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 
-		let factory = address!("0xca470c1990B1E3DBF24676D8ACDF4B5867CD410e");
+		let factory = address!("0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e");
 		let oa: [u8; 32] =
 			decode_hex("0x31e80de15f426f2e353810d57aff3a6ab44e1a79c44e8bbc5b17fa189ee47d8f")
 				.unwrap()
@@ -1364,7 +1365,7 @@ pub mod test {
 
 		// 1 GWEI = 1000000000
 		let paymaster_and_data = crate::entry_point_client::create_paymaster_and_data(
-			address!("0xb529aca1d832be817bd8b30c2f2a51490792fcff"),
+			address!("0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912"),
 			U256::from(100_000u64),
 			U256::from(300_000u64),
 		);
