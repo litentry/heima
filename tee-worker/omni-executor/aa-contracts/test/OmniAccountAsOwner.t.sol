@@ -11,6 +11,7 @@ import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {SIG_VALIDATION_SUCCESS} from "../src//core/Helpers.sol";
+import {Passkey} from "../src/interfaces/Passkey.sol";
 
 contract OmniAccountAsOwner is Test {
     OmniAccountV1 public account;
@@ -317,5 +318,123 @@ contract OmniAccountAsOwner is Test {
 
         // Verify the withdrawal actually happened
         assertEq(withdrawTo.balance, balanceBefore + withdrawAmount);
+    }
+
+    function test_OwnerCanCallAddPasskeySignerViaUserOp() public {
+        (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+
+        // Prepare UserOp that calls addPasskeySigner directly
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSelector(account.addPasskeySigner.selector, pk);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with owner key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
+
+        // Validation should succeed for owner
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
+
+        // Execute and verify
+        vm.prank(address(entryPoint));
+        (bool success,) = address(account).call(callData);
+        assertTrue(success);
+
+        // Verify the passkey signer was actually added
+        bytes32 key = Passkey.toKey(pk);
+        assertTrue(account.passkeySigners(key));
+    }
+
+    function test_OwnerCanCallRemovePasskeySignerViaUserOp() public {
+        (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+
+        // First add a passkey signer directly
+        vm.prank(owner);
+        account.addPasskeySigner(pk);
+        bytes32 key = Passkey.toKey(pk);
+        assertTrue(account.passkeySigners(key));
+
+        // Prepare UserOp that calls removePasskeySigner
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSelector(account.removePasskeySigner.selector, pk);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with owner key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
+
+        // Validation should succeed
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
+
+        // Execute and verify
+        vm.prank(address(entryPoint));
+        (bool success,) = address(account).call(callData);
+        assertTrue(success);
+
+        // Verify the passkey signer was actually removed
+        assertFalse(account.passkeySigners(key));
+    }
+
+    function test_OwnerCanCallUpgradeToAndCallViaUserOp() public {
+        (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+
+        address newImplementation = address(0x1234567890123456789012345678901234567890);
+        bytes memory data = "";
+
+        // Prepare UserOp that calls upgradeToAndCall
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("upgradeToAndCall(address,bytes)", newImplementation, data);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with owner key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
+
+        // Validation should succeed for owner
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
+
+        // Note: Actual execution would fail with "ERC1967: new implementation is not a contract"
+        // but validation passes, which is what we're testing
+    }
+
+    function test_AddRemovePasskeySigner() public {
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+        bytes32 key = Passkey.toKey(pk);
+
+        vm.prank(ownerAddress);
+        account.addPasskeySigner(pk);
+        assert(account.passkeySigners(key));
+
+        vm.prank(ownerAddress);
+        account.removePasskeySigner(pk);
+        assert(!account.passkeySigners(key));
     }
 }

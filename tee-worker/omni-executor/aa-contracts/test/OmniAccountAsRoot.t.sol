@@ -11,6 +11,7 @@ import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
+import {Passkey} from "../src/interfaces/Passkey.sol";
 
 contract OmniAccountAsRoot is Test {
     OmniAccountV1 public account;
@@ -331,5 +332,139 @@ contract OmniAccountAsRoot is Test {
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
         assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotCallAddPasskeySignerViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+
+        // Prepare UserOp that calls addPasskeySigner
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSelector(account.addPasskeySigner.selector, pk);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotCallRemovePasskeySignerViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+
+        // Prepare UserOp that calls removePasskeySigner
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSelector(account.removePasskeySigner.selector, pk);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotCallWithdrawDepositToViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        // Add some deposit first
+        vm.deal(address(account), 1 ether);
+        vm.prank(address(account));
+        account.addDeposit{value: 0.5 ether}();
+
+        address payable withdrawTo = payable(0x0000000000000000000000000000000000000003);
+        uint256 withdrawAmount = 0.1 ether;
+
+        // Prepare UserOp that calls withdrawDepositTo
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData =
+            abi.encodeWithSignature("withdrawDepositTo(address,uint256)", withdrawTo, withdrawAmount);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_RootCannotCallUpgradeToAndCallViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+
+        address newImplementation = address(0x1234567890123456789012345678901234567890);
+        bytes memory data = "";
+
+        // Prepare UserOp that calls upgradeToAndCall
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("upgradeToAndCall(address,bytes)", newImplementation, data);
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        // Sign with root key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_AddPasskeySigner_As_Not_Allowed() public {
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+        vm.expectRevert("only owner");
+        account.addPasskeySigner(pk);
+    }
+
+    function test_RemovePasskeySigner_As_Not_Allowed() public {
+        Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
+        vm.expectRevert("only owner");
+        account.removePasskeySigner(pk);
+    }
+
+    function test_WithdrawDepositTo_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        account.withdrawDepositTo(payable(address(0x1)), 100);
+    }
+
+    function test_UpgradeToAndCall_As_Not_Allowed() public {
+        vm.expectRevert("only owner");
+        account.upgradeToAndCall(address(0x1), "");
     }
 }

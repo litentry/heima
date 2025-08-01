@@ -42,7 +42,6 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     bytes4 private constant ADD_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("addPasskeySigner((uint256,uint256))"));
     bytes4 private constant REMOVE_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("removePasskeySigner((uint256,uint256))"));
     bytes4 private constant WITHDRAW_DEPOSIT_SELECTOR = bytes4(keccak256("withdrawDepositTo(address,uint256)"));
-    bytes4 private constant UPGRADE_TO_SELECTOR = bytes4(keccak256("upgradeTo(address)"));
     bytes4 private constant UPGRADE_TO_AND_CALL_SELECTOR = bytes4(keccak256("upgradeToAndCall(address,bytes)"));
 
     event AccountInitialized(
@@ -289,8 +288,8 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         // Check against all restricted selectors
         return selector == ADD_ROOT_SIGNER_SELECTOR || selector == REMOVE_ROOT_SIGNER_SELECTOR
             || selector == ADD_PASSKEY_SIGNER_SELECTOR || selector == REMOVE_PASSKEY_SIGNER_SELECTOR
-            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_SELECTOR
-            || selector == UPGRADE_TO_AND_CALL_SELECTOR || _isExecuteWithRestrictedCall(selector, callData);
+            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_AND_CALL_SELECTOR
+            || _isExecuteWithRestrictedCall(selector, callData);
     }
 
     /// Check if execute/executeBatch contains calls to restricted functions
