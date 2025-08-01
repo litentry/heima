@@ -92,30 +92,11 @@ export function AuthorizeTEEWorker({
             // Step 2: Add the TEE worker as an authorized signer
             setIsAddingSigner(true);
 
-            // First encode the addRootSigner call
-            const addSignerData = encodeFunctionData({
+            // Directly encode the addRootSigner call (no execute wrapper needed)
+            const callData = encodeFunctionData({
                 abi: CONTRACTS.OmniAccountImplementation.abi,
                 functionName: "addRootSigner",
                 args: [teeWorkerAddress as `0x${string}`],
-            });
-
-            // Then wrap it in an execute call (the account calls itself)
-            const callData = encodeFunctionData({
-                abi: [
-                    {
-                        name: "execute",
-                        type: "function",
-                        inputs: [
-                            { name: "target", type: "address" },
-                            { name: "value", type: "uint256" },
-                            { name: "data", type: "bytes" },
-                        ],
-                        outputs: [],
-                        stateMutability: "nonpayable",
-                    },
-                ],
-                functionName: "execute",
-                args: [omniAccountAddress as `0x${string}`, BigInt(0), addSignerData],
             });
 
             // Get current nonce for the account
@@ -145,14 +126,14 @@ export function AuthorizeTEEWorker({
                     : undefined,
             });
 
-            // Sign UserOperation with RootKey signer type
+            // Sign UserOperation with Owner signer type (required for restricted functions)
             const signature = await signUserOperation(
                 walletClient,
                 evmAddress,
                 userOp as UserOperation,
                 CONTRACTS.EntryPoint.address,
                 BigInt(await publicClient.getChainId()),
-                UserOpSigner.RootKey,
+                UserOpSigner.Owner,
             );
 
             userOp.signature = signature;
