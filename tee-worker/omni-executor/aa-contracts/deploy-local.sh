@@ -80,8 +80,8 @@ deploy_contracts() {
     BROADCAST_FILE="$SCRIPT_DIR/broadcast/DeployLocalWithPaymaster.s.sol/$CHAIN_ID/run-latest.json"
     
     if [ -f "$BROADCAST_FILE" ]; then
-        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPointV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactoryV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         # Try to find DemoPaymaster first, fall back to SimplePaymaster
         PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         if [ -z "$PAYMASTER_ADDRESS" ]; then
