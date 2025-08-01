@@ -72,13 +72,12 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     function _onlyOwner() internal view {
-        // Directly from EOA owner, through the account itself (which gets redirected through execute()),
-        // or from EntryPoint (safe because _validateSignature ensures only owner-signed UserOps can call restricted functions)
+        // Directly from EOA owner, or from EntryPoint (safe because _validateSignature ensures only owner-signed UserOps can call restricted functions)
         // For non-EVM owner types:
         // - If passkey signers exist, they have priority (root signers cannot call onlyOwner)
         // - If no passkey signers exist, root signers can call onlyOwner
         require(
-            _determineOa(msg.sender) == owner || msg.sender == address(this) || msg.sender == address(entryPoint())
+            _determineOa(msg.sender) == owner || msg.sender == address(entryPoint())
                 || (ownerType != OwnerType.Evm && passkeySignerCount == 0 && isRootSigner(msg.sender)),
             "only owner"
         );
@@ -112,7 +111,8 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     // Require the function call went through EntryPoint or be signed by owner
     function _requireForExecute() internal view virtual override {
         require(
-            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner, "account: not Owner or EntryPoint"
+            msg.sender == address(entryPoint()) || msg.sender == address(this) || _determineOa(msg.sender) == owner,
+            "account: not Owner or EntryPoint"
         );
     }
 
