@@ -18,11 +18,11 @@ contract DeployLocalWithPaymaster is Script {
     address public testUSDCAddress;
     address public testUSDTAddress;
     string public deployedPaymasterType;
-    
+
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address omniExecutorSigner = vm.envAddress("OMNI_EXECUTOR_SIGNER");
-        
+
         // Check if we should save deployment file
         bool saveDeploymentFile = vm.envOr("SAVE_DEPLOYMENT_FILE", false);
 
@@ -53,10 +53,10 @@ contract DeployLocalWithPaymaster is Script {
             DemoPaymaster paymaster = new DemoPaymaster(entryPoint);
             paymasterAddress = address(paymaster);
             console.log("DemoPaymaster deployed at:", paymasterAddress);
-            
+
             // Fund the paymaster with 0.1 ETH for demo purposes
             // Note: The paymaster's receive function will automatically deposit to EntryPointV1
-            (bool success, ) = paymasterAddress.call{value: 0.1 ether}("");
+            (bool success,) = paymasterAddress.call{value: 0.1 ether}("");
             require(success, "Failed to fund paymaster");
             console.log("DemoPaymaster funded with 0.1 ETH");
         } else {
@@ -82,7 +82,7 @@ contract DeployLocalWithPaymaster is Script {
         console.log("Minted 1M tokens to deployer:", deployer);
 
         vm.stopBroadcast();
-        
+
         // Save deployment artifacts if enabled
         if (saveDeploymentFile) {
             saveDeploymentArtifacts();
@@ -90,7 +90,7 @@ contract DeployLocalWithPaymaster is Script {
             console.log("Deployment file saving disabled (set SAVE_DEPLOYMENT_FILE=true to enable)");
         }
     }
-    
+
     function saveDeploymentArtifacts() internal {
         // Get deployment environment (default to "local" for local deployments)
         string memory environment = "local";
@@ -99,65 +99,44 @@ contract DeployLocalWithPaymaster is Script {
         } catch {
             // Default to local
         }
-        
+
         // Determine number of contracts based on paymaster type
         uint256 numContracts = keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo")) ? 5 : 5;
-        DeploymentHelper.ContractDeployment[] memory deployments = new DeploymentHelper.ContractDeployment[](numContracts);
-        
+        DeploymentHelper.ContractDeployment[] memory deployments =
+            new DeploymentHelper.ContractDeployment[](numContracts);
+
         // Core contracts
-        deployments[0] = DeploymentHelper.createContractDeployment(
-            vm,
-            "EntryPointV1",
-            entryPointAddress,
-            ""
-        );
-        
-        deployments[1] = DeploymentHelper.createContractDeployment(
-            vm,
-            "OmniAccountFactoryV1",
-            factoryAddress,
-            ""
-        );
-        
+        deployments[0] = DeploymentHelper.createContractDeployment(vm, "EntryPointV1", entryPointAddress, "");
+
+        deployments[1] = DeploymentHelper.createContractDeployment(vm, "OmniAccountFactoryV1", factoryAddress, "");
+
         // Paymaster (with metadata about type and config)
-        string memory paymasterName = keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo")) 
-            ? "DemoPaymaster" 
-            : "SimplePaymaster";
-            
+        string memory paymasterName =
+            keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo")) ? "DemoPaymaster" : "SimplePaymaster";
+
         string memory paymasterMetadata = keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo"))
             ? '{"type": "demo", "initialFunding": "0.1 ETH"}'
-            : string(abi.encodePacked('{"type": "simple", "bundler": "', vm.toString(vm.envAddress("OMNI_EXECUTOR_SIGNER")), '"}'));
-            
-        deployments[2] = DeploymentHelper.createContractDeployment(
-            vm,
-            paymasterName,
-            paymasterAddress,
-            paymasterMetadata
-        );
-        
+            : string(
+                abi.encodePacked(
+                    '{"type": "simple", "bundler": "', vm.toString(vm.envAddress("OMNI_EXECUTOR_SIGNER")), '"}'
+                )
+            );
+
+        deployments[2] =
+            DeploymentHelper.createContractDeployment(vm, paymasterName, paymasterAddress, paymasterMetadata);
+
         // Test tokens
         deployments[3] = DeploymentHelper.createContractDeployment(
-            vm,
-            "TestToken",
-            testUSDCAddress,
-            '{"symbol": "USDC", "decimals": 6, "initialMint": "1000000"}'
+            vm, "TestToken", testUSDCAddress, '{"symbol": "USDC", "decimals": 6, "initialMint": "1000000"}'
         );
-        
+
         deployments[4] = DeploymentHelper.createContractDeployment(
-            vm,
-            "TestToken",
-            testUSDTAddress,
-            '{"symbol": "USDT", "decimals": 6, "initialMint": "1000000"}'
+            vm, "TestToken", testUSDTAddress, '{"symbol": "USDT", "decimals": 6, "initialMint": "1000000"}'
         );
-        
+
         // Save artifacts with environment support
         DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            "deployments",
-            environment,
-            "Local Network",
-            block.chainid,
-            deployments
+            vm, "deployments", environment, "Local Network", block.chainid, deployments
         );
     }
 }
