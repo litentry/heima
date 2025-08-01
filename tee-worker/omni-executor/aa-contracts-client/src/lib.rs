@@ -23,5 +23,5 @@ pub use entry_point_client::{
 	prepare_factory_init_code, EntryPointClient, GasPriceConfig, RetryConfig,
 };
 pub use omni_account_client::OmniAccountClient;
-pub use types::PackedUserOperation;
+pub use types::{OwnerType, PackedUserOperation};
 pub use utils::{calculate_omni_account_address, calculate_user_operation_hash};
