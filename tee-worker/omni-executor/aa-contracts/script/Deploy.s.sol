@@ -3,15 +3,15 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "../src/core/EntryPoint.sol";
-import "../src/accounts/OmniAccountFactory.sol";
+import "../src/core/EntryPointV1.sol";
+import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
 import "./DeploymentHelper.sol";
 
 /**
  * @title Deploy
  * @notice Universal deployment script for Account Abstraction contracts
- * @dev This script deploys EntryPoint, OmniAccountFactory, and SimplePaymaster contracts on any EVM network
+ * @dev This script deploys EntryPointV1, OmniAccountFactoryV1, and SimplePaymaster contracts on any EVM network
  */
 contract Deploy is Script {
     // Configuration - can be overridden via environment variables
@@ -125,6 +125,14 @@ contract Deploy is Script {
             return NetworkConfig("Polygon Mainnet", 137, 1 ether);
         } else if (chainId == 80001) {
             return NetworkConfig("Polygon Mumbai", 80001, 0.1 ether);
+        } else if (chainId == 42161) {
+            return NetworkConfig("Arbitrum Mainnet", 42161, 0.01 ether);
+        } else if (chainId == 421614) {
+            return NetworkConfig("Arbitrum Sepolia", 421614, 0.01 ether);
+        } else if (chainId == 999) {
+            return NetworkConfig("HyperEVM Mainnet", 999, 0.01 ether);
+        } else if (chainId == 998) {
+            return NetworkConfig("HyperEVM Testnet", 998, 0.01 ether);
         } else if (chainId == 1337) {
             return NetworkConfig("Local Anvil", 1337, 0.01 ether);
         } else if (chainId == 31337) {
@@ -137,22 +145,22 @@ contract Deploy is Script {
     }
 
     function deployEntryPoint() internal {
-        console.log("Deploying EntryPoint...");
+        console.log("Deploying EntryPointV1...");
 
-        EntryPoint entryPoint = new EntryPoint();
+        EntryPointV1 entryPoint = new EntryPointV1();
         entryPointAddress = address(entryPoint);
 
-        console.log("EntryPoint deployed at:", entryPointAddress);
+        console.log("EntryPointV1 deployed at:", entryPointAddress);
         console.log("");
     }
 
     function deployFactory() internal {
-        console.log("Deploying OmniAccountFactory...");
+        console.log("Deploying OmniAccountFactoryV1...");
 
-        OmniAccountFactory factory = new OmniAccountFactory(IEntryPoint(entryPointAddress));
+        OmniAccountFactoryV1 factory = new OmniAccountFactoryV1(IEntryPoint(entryPointAddress));
         factoryAddress = address(factory);
 
-        console.log("OmniAccountFactory deployed at:", factoryAddress);
+        console.log("OmniAccountFactoryV1 deployed at:", factoryAddress);
         console.log("EntryPoint reference:", entryPointAddress);
         console.log("");
     }
@@ -196,8 +204,8 @@ contract Deploy is Script {
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("");
         console.log("Contract Addresses:");
-        console.log("EntryPoint:         ", entryPointAddress);
-        console.log("OmniAccountFactory: ", factoryAddress);
+        console.log("EntryPointV1:       ", entryPointAddress);
+        console.log("OmniAccountFactoryV1: ", factoryAddress);
         console.log("SimplePaymaster:    ", paymasterAddress);
         console.log("");
         console.log("Network:", networkConfig.name);
@@ -224,7 +232,7 @@ contract Deploy is Script {
         // Add EntryPoint deployment with ABI and bytecode
         deployments[0] = DeploymentHelper.createContractDeployment(
             vm,
-            "EntryPoint",
+            "EntryPointV1",
             entryPointAddress,
             "" // No additional metadata for now
         );
@@ -232,7 +240,7 @@ contract Deploy is Script {
         // Add OmniAccountFactory deployment with ABI and bytecode
         deployments[1] = DeploymentHelper.createContractDeployment(
             vm,
-            "OmniAccountFactory",
+            "OmniAccountFactoryV1",
             factoryAddress,
             "" // No additional metadata for now
         );
@@ -255,5 +263,4 @@ contract Deploy is Script {
             deployments
         );
     }
-
 }

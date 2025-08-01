@@ -48,6 +48,36 @@ pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = war
 					});
 					build_success_response(response)
 				},
+				"eth_maxPriorityFeePerGas" => {
+					// Mock max priority fee per pas
+					let response = json!({
+						"jsonrpc": "2.0",
+						"result": "0x77359400", // 2 Gwei
+						"id": id
+					});
+					build_success_response(response)
+				},
+				"eth_feeHistory" => {
+					// Mock fee history response
+					let response = json!({
+						"jsonrpc": "2.0",
+						"id": id,
+						"result": {
+							"oldestBlock": "0x5bad55", // arbitrary block number
+							"baseFeePerGas": [
+								"0x3b9aca00", // 1 Gwei
+								"0x3b9aca00"  // next block's base fee (must be n+1 elements)
+							],
+							"gasUsedRatio": [
+								0.5 // 50% gas used in the block
+							],
+							"reward": [
+								[ "0x77359400" ] // priority fee rewards (2 Gwei)
+							]
+						}
+					});
+					build_success_response(response)
+				},
 				"eth_getTransactionCount" => {
 					// Mock transaction count (nonce)
 					let response = json!({

@@ -3,26 +3,15 @@ use clap::{Parser, Subcommand, ValueEnum};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::ChainId;
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use std::collections::HashMap;
 use tracing::{debug, info};
 
 #[derive(Debug, Clone, ValueEnum, Serialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all = "snake_case")]
 enum CliChainType {
 	Evm,
 	Solana,
 	Tron,
-}
-
-impl From<CliChainType> for ChainType {
-	fn from(cli_type: CliChainType) -> Self {
-		match cli_type {
-			CliChainType::Evm => ChainType::Evm,
-			CliChainType::Solana => ChainType::Solana,
-			CliChainType::Tron => ChainType::Tron,
-		}
-	}
 }
 
 #[derive(Debug, Serialize)]
@@ -114,7 +103,7 @@ struct RequestEmailVerificationCodeParams {
 #[derive(Debug, Serialize)]
 struct GetSmartWalletRootSignerParams {
 	omni_account: String,
-	chain_type: ChainType,
+	chain_type: CliChainType,
 	wallet_index: u32,
 }
 
@@ -556,11 +545,7 @@ async fn handle_get_smart_wallet_root_signer(
 	chain_type: CliChainType,
 	wallet_index: u32,
 ) -> Result<()> {
-	let params = GetSmartWalletRootSignerParams {
-		omni_account,
-		chain_type: chain_type.into(),
-		wallet_index,
-	};
+	let params = GetSmartWalletRootSignerParams { omni_account, chain_type, wallet_index };
 
 	info!("Getting smart wallet root signer with params: {:?}", params);
 

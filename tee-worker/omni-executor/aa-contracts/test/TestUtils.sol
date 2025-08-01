@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.28;
 
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 
@@ -17,7 +17,7 @@ library TestUtils {
     {
         uint256 nonce = 0;
         bytes memory callData = "";
-        bytes32 accountGasLimits = 0x0000000000000000000000000003d09000000000000000000000000000005b8d;
+        bytes32 accountGasLimits = 0x0000000000000000000000000004e20000000000000000000000000000005b8d;
         uint256 preVerificationGas = 21000;
         bytes32 gasFees = 0x0000000000000000000000003b9aca00000000000000000000000000b2d05e00;
         bytes memory paymasterAndData = "";

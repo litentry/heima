@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "../src/core/EntryPoint.sol";
-import "../src/accounts/OmniAccountFactory.sol";
+import "../src/core/EntryPointV1.sol";
+import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
 import "../src/core/DemoPaymaster.sol";
 import "../src/TestToken.sol";
@@ -37,15 +37,15 @@ contract DeployLocalWithPaymaster is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy EntryPoint
-        EntryPoint entryPoint = new EntryPoint();
+        // Deploy EntryPointV1
+        EntryPointV1 entryPoint = new EntryPointV1();
         entryPointAddress = address(entryPoint);
-        console.log("EntryPoint deployed at:", entryPointAddress);
+        console.log("EntryPointV1 deployed at:", entryPointAddress);
 
-        // Deploy OmniAccountFactory
-        OmniAccountFactory factory = new OmniAccountFactory(entryPoint);
+        // Deploy OmniAccountFactoryV1
+        OmniAccountFactoryV1 factory = new OmniAccountFactoryV1(entryPoint);
         factoryAddress = address(factory);
-        console.log("OmniAccountFactory deployed at:", factoryAddress);
+        console.log("OmniAccountFactoryV1 deployed at:", factoryAddress);
 
         // Deploy appropriate paymaster based on environment variable
         if (keccak256(bytes(paymasterType)) == keccak256(bytes("demo"))) {
@@ -55,7 +55,7 @@ contract DeployLocalWithPaymaster is Script {
             console.log("DemoPaymaster deployed at:", paymasterAddress);
             
             // Fund the paymaster with 0.1 ETH for demo purposes
-            // Note: The paymaster's receive function will automatically deposit to EntryPoint
+            // Note: The paymaster's receive function will automatically deposit to EntryPointV1
             (bool success, ) = paymasterAddress.call{value: 0.1 ether}("");
             require(success, "Failed to fund paymaster");
             console.log("DemoPaymaster funded with 0.1 ETH");
@@ -107,14 +107,14 @@ contract DeployLocalWithPaymaster is Script {
         // Core contracts
         deployments[0] = DeploymentHelper.createContractDeployment(
             vm,
-            "EntryPoint",
+            "EntryPointV1",
             entryPointAddress,
             ""
         );
         
         deployments[1] = DeploymentHelper.createContractDeployment(
             vm,
-            "OmniAccountFactory",
+            "OmniAccountFactoryV1",
             factoryAddress,
             ""
         );

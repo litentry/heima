@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
 import {SimplePaymaster} from "../src/core/SimplePaymaster.sol";
-import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {EntryPointV1} from "../src/core/EntryPointV1.sol";
 import {IPaymaster} from "../src/interfaces/IPaymaster.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 contract SimplePaymasterTest is Test {
     SimplePaymaster public paymaster;
-    EntryPoint public entryPoint;
+    EntryPointV1 public entryPoint;
 
     address bundler1 = makeAddr("bundler1");
     address bundler2 = makeAddr("bundler2");
@@ -22,7 +22,7 @@ contract SimplePaymasterTest is Test {
     event UserOpSponsored(address indexed account, uint256 actualGasCost);
 
     function setUp() public {
-        entryPoint = new EntryPoint();
+        entryPoint = new EntryPointV1();
 
         vm.prank(owner);
         paymaster = new SimplePaymaster(entryPoint, bundler1);

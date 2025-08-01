@@ -5,7 +5,8 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../interfaces/ISenderCreator.sol";
-import "./OmniAccount.sol";
+import "../interfaces/OwnerType.sol";
+import "./OmniAccountV1.sol";
 
 /**
  * A sample factory contract for Account
@@ -13,12 +14,12 @@ import "./OmniAccount.sol";
  * The factory's createAccount returns the target account address even if it is already installed.
  * This way, the entryPoint.getSenderAddress() can be called either before or after the account is created.
  */
-contract OmniAccountFactory {
-    OmniAccount public immutable accountImplementation;
+contract OmniAccountFactoryV1 {
+    OmniAccountV1 public immutable accountImplementation;
     ISenderCreator public immutable senderCreator;
 
     constructor(IEntryPoint _entryPoint) {
-        accountImplementation = new OmniAccount(_entryPoint);
+        accountImplementation = new OmniAccountV1(_entryPoint);
         senderCreator = _entryPoint.senderCreator();
     }
 
@@ -28,17 +29,21 @@ contract OmniAccountFactory {
      * Note that during UserOperation execution, this method is called only if the account is not deployed.
      * This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
      */
-    function createAccount(bytes32 oa, bytes memory clientId, address root) public returns (OmniAccount ret) {
+    function createAccount(bytes32 oa, OwnerType oaType, bytes memory clientId, address root)
+        public
+        returns (OmniAccountV1 ret)
+    {
         require(msg.sender == address(senderCreator), "only callable from SenderCreator");
-        address addr = getAddress(oa, clientId, root);
+        address addr = getAddress(oa, oaType, clientId, root);
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
-            return OmniAccount(payable(addr));
+            return OmniAccountV1(payable(addr));
         }
-        ret = OmniAccount(
+        ret = OmniAccountV1(
             payable(
                 new ERC1967Proxy{salt: oa}(
-                    address(accountImplementation), abi.encodeCall(OmniAccount.initialize, (oa, clientId, root))
+                    address(accountImplementation),
+                    abi.encodeCall(OmniAccountV1.initialize, (oa, oaType, clientId, root))
                 )
             )
         );
@@ -47,17 +52,26 @@ contract OmniAccountFactory {
     /**
      * calculate the counterfactual address of this account as it would be returned by createAccount()
      */
-    function getAddress(bytes32 oa, bytes memory clientId, address root) public view returns (address) {
+    function getAddress(bytes32 oa, OwnerType oaType, bytes memory clientId, address root)
+        public
+        view
+        returns (address)
+    {
         return Create2.computeAddress(
             oa,
             keccak256(
                 abi.encodePacked(
                     type(ERC1967Proxy).creationCode,
                     abi.encode(
-                        address(accountImplementation), abi.encodeCall(OmniAccount.initialize, (oa, clientId, root))
+                        address(accountImplementation),
+                        abi.encodeCall(OmniAccountV1.initialize, (oa, oaType, clientId, root))
                     )
                 )
             )
         );
+    }
+
+    function version() public pure returns (string memory) {
+        return "1.0.0";
     }
 }

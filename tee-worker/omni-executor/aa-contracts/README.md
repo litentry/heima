@@ -18,7 +18,7 @@ licensed under the GNU General Public License v3.0.
 Run the deployment script to start an Anvil node and deploy all contracts:
 
 ```bash
-./local-deploy.sh
+./deploy-local.sh
 ```
 
 This script will:
@@ -123,3 +123,5 @@ Each deployment artifact includes:
 ### Verification
 
 The included bytecode can be used to verify deployed contracts on block explorers or to ensure the deployed code matches the source.
+
+Also see [DEPLOYMENT.md](./DEPLOYMENT.md) for more information.

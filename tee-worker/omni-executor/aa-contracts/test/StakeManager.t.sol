@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {EntryPoint} from "../src/core/EntryPoint.sol";
+import {EntryPointV1} from "../src/core/EntryPointV1.sol";
 import {IStakeManager} from "../src/interfaces/IStakeManager.sol";
 
 contract StakeManagerTest is Test {
-    EntryPoint public entryPoint;
+    EntryPointV1 public entryPoint;
     address public alice;
     address public bob;
     address payable public withdrawAddress;
@@ -22,7 +22,7 @@ contract StakeManagerTest is Test {
     event StakeWithdrawn(address indexed account, address withdrawAddress, uint256 amount);
 
     function setUp() public {
-        entryPoint = new EntryPoint();
+        entryPoint = new EntryPointV1();
         alice = makeAddr("alice");
         bob = makeAddr("bob");
         withdrawAddress = payable(makeAddr("withdrawAddress"));
