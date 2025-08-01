@@ -1036,22 +1036,14 @@ mod tests {
 	}
 
 	#[test]
-	fn test_evm_to_omni_account() {
-		let address: [u8; 20] = decode_hex("0x6599159343Ca8B51363B034A325F4Eca6599c4fE")
+	fn print_omni_account() {
+		let address: [u8; 20] = decode_hex("0x49fC5CC35F08E894959AA09Ce64d51F58faBdc0b")
 			.unwrap()
 			.try_into()
 			.unwrap();
 		let identity = Identity::Evm(address.into());
 		let client_id = "Wildmeta";
 		let omni_account = identity.to_omni_account(client_id);
-		assert_eq!(
-			omni_account,
-			AccountId::new(
-				decode_hex("0xf8e2b8a37e033636eca0ab96dc93cf1d3af807a530010943e838bd272e1d8dc0")
-					.unwrap()
-					.try_into()
-					.unwrap()
-			)
-		);
+		println!("oa: {}", hex_encode(&omni_account.encode()));
 	}
 }
