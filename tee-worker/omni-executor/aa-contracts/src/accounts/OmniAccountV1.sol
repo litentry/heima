@@ -23,7 +23,7 @@ import "./callback/TokenCallbackHandler.sol";
  *  has list of root signers who can sign messages and generate sessions
  *  has execute, eth handling methods
  */
-contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using Passkey for Passkey.PublicKey;
 
     bytes32 public owner;
@@ -231,5 +231,9 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation);
         _onlyOwner();
+    }
+
+    function version() public pure returns (string memory) {
+        return "1.0.0";
     }
 }
