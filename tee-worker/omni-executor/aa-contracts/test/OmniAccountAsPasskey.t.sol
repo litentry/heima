@@ -30,10 +30,7 @@ contract OmniAccountAsPasskey is Test {
         uint256 passkeyPrivateKey = 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef;
         (uint256 publicKeyX, uint256 publicKeyY) = vm.publicKeyP256(passkeyPrivateKey);
 
-        Passkey.PublicKey memory passkeyPubKey = Passkey.PublicKey({
-            x: publicKeyX,
-            y: publicKeyY
-        });
+        Passkey.PublicKey memory passkeyPubKey = Passkey.PublicKey({x: publicKeyX, y: publicKeyY});
 
         // Add passkey as a signer (must be called by owner)
         vm.prank(ownerAddress);
@@ -67,15 +64,13 @@ contract OmniAccountAsPasskey is Test {
         // Sign the message hash with P256
         (bytes32 r, bytes32 s) = vm.signP256(passkeyPrivateKey, messageHash);
 
-        Passkey.Signature memory passkeySignature = Passkey.Signature({
-            r: uint256(r),
-            s: uint256(s)
-        });
+        Passkey.Signature memory passkeySignature = Passkey.Signature({r: uint256(r), s: uint256(s)});
 
         // Find the correct positions for type and challenge in clientDataJSON
         bytes memory clientDataJSONBytes = bytes(clientDataJSON);
         uint16 typeIndex = _findSubstring(clientDataJSONBytes, bytes('"type":"webauthn.get"'));
-        uint16 challengeIndex = _findSubstring(clientDataJSONBytes, bytes(string.concat('"challenge":"', challengeB64url, '"')));
+        uint16 challengeIndex =
+            _findSubstring(clientDataJSONBytes, bytes(string.concat('"challenge":"', challengeB64url, '"')));
 
         Passkey.Metadata memory metadata = Passkey.Metadata({
             authData: authData,

@@ -64,7 +64,7 @@ library DeploymentHelper {
     ) internal {
         // Ensure the deployments directory exists
         try vm.createDir(deploymentDir, false) {} catch {}
-        
+
         // Create environment subdirectory if specified
         string memory targetDir = deploymentDir;
         if (bytes(environment).length > 0) {
@@ -73,8 +73,7 @@ library DeploymentHelper {
         }
 
         // Create filename based on network
-        string memory filename =
-            string(abi.encodePacked(targetDir, "/", getNetworkFilename(chainId), ".json"));
+        string memory filename = string(abi.encodePacked(targetDir, "/", getNetworkFilename(chainId), ".json"));
 
         // Build JSON structure
         string memory json = buildDeploymentJson(vm, networkName, chainId, deployments);
@@ -105,12 +104,12 @@ library DeploymentHelper {
         ContractDeployment[] memory deployments
     ) internal view returns (string memory) {
         string memory contractsJson = "";
-        
+
         for (uint256 i = 0; i < deployments.length; i++) {
             if (i > 0) {
                 contractsJson = string(abi.encodePacked(contractsJson, ",\n"));
             }
-            
+
             contractsJson = string(
                 abi.encodePacked(
                     contractsJson,
@@ -122,49 +121,44 @@ library DeploymentHelper {
                     '",\n',
                     '      "abi": ',
                     deployments[i].abi,
-                    ',\n',
+                    ",\n",
                     '      "bytecode": "',
                     deployments[i].bytecode,
                     '"'
                 )
             );
-            
+
             // Add metadata if available
             if (bytes(deployments[i].metadata).length > 0) {
-                contractsJson = string(
-                    abi.encodePacked(
-                        contractsJson,
-                        ',\n      "metadata": ',
-                        deployments[i].metadata
-                    )
-                );
+                contractsJson =
+                    string(abi.encodePacked(contractsJson, ',\n      "metadata": ', deployments[i].metadata));
             }
-            
-            contractsJson = string(abi.encodePacked(contractsJson, '\n    }'));
+
+            contractsJson = string(abi.encodePacked(contractsJson, "\n    }"));
         }
 
         return string(
             abi.encodePacked(
-                '{\n',
+                "{\n",
                 '  "network": "',
                 networkName,
                 '",\n',
                 '  "chainId": ',
                 vm.toString(chainId),
-                ',\n',
+                ",\n",
                 '  "timestamp": ',
                 vm.toString(block.timestamp),
-                ',\n',
+                ",\n",
                 '  "blockNumber": ',
                 vm.toString(block.number),
-                ',\n',
+                ",\n",
                 '  "deployer": "',
                 vm.toString(msg.sender),
                 '",\n',
                 '  "contracts": {\n',
                 contractsJson,
-                '\n  }\n',
-                '}'
+                "\n  }\n",
+                "}"
             )
         );
     }
@@ -176,10 +170,7 @@ library DeploymentHelper {
     function logContractAddresses(ContractDeployment[] memory deployments) internal view {
         console.log("Contract addresses (save manually if needed):");
         for (uint256 i = 0; i < deployments.length; i++) {
-            console.log(
-                string(abi.encodePacked(deployments[i].name, ": ")),
-                deployments[i].addr
-            );
+            console.log(string(abi.encodePacked(deployments[i].name, ": ")), deployments[i].addr);
         }
     }
 
@@ -192,40 +183,40 @@ library DeploymentHelper {
         // Ethereum networks
         if (chainId == 1) return "ethereum";
         if (chainId == 11155111) return "ethereum-sepolia";
-        
+
         // Arbitrum networks
         if (chainId == 42161) return "arbitrum";
         if (chainId == 421614) return "arbitrum-sepolia";
-        
+
         // Polygon networks
         if (chainId == 137) return "polygon";
         if (chainId == 80001) return "polygon-mumbai";
         if (chainId == 80002) return "polygon-amoy";
-        
+
         // BSC networks
         if (chainId == 56) return "bsc";
         if (chainId == 97) return "bsc-testnet";
-        
+
         // Optimism networks
         if (chainId == 10) return "optimism";
         if (chainId == 11155420) return "optimism-sepolia";
-        
+
         // Base networks
         if (chainId == 8453) return "base";
         if (chainId == 84532) return "base-sepolia";
-        
+
         // HyperEVM networks
         if (chainId == 999) return "hyperevm";
         if (chainId == 998) return "hyperevm-testnet";
-        
+
         // Local networks
         if (chainId == 1337) return "local";
         if (chainId == 31337) return "local";
-        
+
         // Fallback for unknown networks
         return string(abi.encodePacked("chain-", uint2str(chainId)));
     }
-    
+
     /**
      * @notice Converts uint to string
      * @param value The uint value to convert
@@ -284,12 +275,12 @@ library DeploymentHelper {
         bytes memory result = new bytes(2 + data.length * 2);
         result[0] = "0";
         result[1] = "x";
-        
+
         for (uint256 i = 0; i < data.length; i++) {
             result[2 + i * 2] = hexChars[uint8(data[i] >> 4)];
             result[3 + i * 2] = hexChars[uint8(data[i] & 0x0f)];
         }
-        
+
         return string(result);
     }
 
@@ -301,12 +292,11 @@ library DeploymentHelper {
      * @param metadata Optional metadata JSON string
      * @return The ContractDeployment struct
      */
-    function createContractDeployment(
-        Vm vm,
-        string memory name,
-        address addr,
-        string memory metadata
-    ) internal view returns (ContractDeployment memory) {
+    function createContractDeployment(Vm vm, string memory name, address addr, string memory metadata)
+        internal
+        view
+        returns (ContractDeployment memory)
+    {
         return ContractDeployment({
             name: name,
             addr: addr,

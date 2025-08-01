@@ -26,12 +26,15 @@ contract OmniAccountAsOwner is Test {
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
-    function test_Execute() public {
-        OmniAccountTestUtils.performExecuteTestAs(vm, ownerAddress, account, counter);
+    function test_Execute_As_Not_Allowed() public {
+        vm.expectRevert("account: not from EntryPoint");
+        account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
-    function test_ExecuteBatch() public {
-        OmniAccountTestUtils.performExecuteBatchTestAs(vm, ownerAddress, account, counter);
+    function test_ExecuteBatch_As_Not_Allowed() public {
+        vm.expectRevert("account: not from EntryPoint");
+        BaseAccount.Call[] memory calls = new BaseAccount.Call[](0);
+        account.executeBatch(calls);
     }
 
     function test_AddRemoveRootSigner() public {

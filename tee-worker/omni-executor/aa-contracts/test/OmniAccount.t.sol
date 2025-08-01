@@ -42,12 +42,12 @@ contract OmniAccountTest is Test {
     }
 
     function test_Execute_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint");
+        vm.expectRevert("account: not from EntryPoint");
         account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
     function test_ExecuteBatch_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint");
+        vm.expectRevert("account: not from EntryPoint");
         BaseAccount.Call[] memory calls = new BaseAccount.Call[](0);
         account.executeBatch(calls);
     }

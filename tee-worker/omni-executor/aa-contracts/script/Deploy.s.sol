@@ -225,10 +225,10 @@ contract Deploy is Script {
         } catch {
             // No environment specified, use flat structure
         }
-        
+
         // Create array of deployments with enhanced artifact data
         DeploymentHelper.ContractDeployment[] memory deployments = new DeploymentHelper.ContractDeployment[](3);
-        
+
         // Add EntryPoint deployment with ABI and bytecode
         deployments[0] = DeploymentHelper.createContractDeployment(
             vm,
@@ -236,7 +236,7 @@ contract Deploy is Script {
             entryPointAddress,
             "" // No additional metadata for now
         );
-        
+
         // Add OmniAccountFactory deployment with ABI and bytecode
         deployments[1] = DeploymentHelper.createContractDeployment(
             vm,
@@ -244,7 +244,7 @@ contract Deploy is Script {
             factoryAddress,
             "" // No additional metadata for now
         );
-        
+
         // Add SimplePaymaster deployment with ABI and bytecode
         deployments[2] = DeploymentHelper.createContractDeployment(
             vm,
@@ -252,15 +252,10 @@ contract Deploy is Script {
             paymasterAddress,
             string(abi.encodePacked('{"initialBundler": "', vm.toString(initialBundler), '"}'))
         );
-        
+
         // Save enhanced deployment artifacts with environment support
         DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            "deployments",
-            environment,
-            networkConfig.name,
-            networkConfig.chainId,
-            deployments
+            vm, "deployments", environment, networkConfig.name, networkConfig.chainId, deployments
         );
     }
 }

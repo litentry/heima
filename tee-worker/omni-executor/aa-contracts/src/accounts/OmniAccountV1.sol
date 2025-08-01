@@ -107,18 +107,10 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         ownerType = anOwnerType;
         emit AccountInitialized(_entryPoint, owner, ownerType, clientId, aRoot);
     }
-
-    // Require the function call went through EntryPoint or be signed by owner
-    function _requireForExecute() internal view virtual override {
-        require(
-            msg.sender == address(entryPoint()) || msg.sender == address(this) || _determineOa(msg.sender) == owner,
-            "account: not Owner or EntryPoint"
-        );
-    }
-
     /**
      * convert sender to oa bytes
      */
+
     function _determineOa(address sender) internal view returns (bytes32) {
         // bytes("evm");
         bytes3 oaType = 0x65766d;
@@ -298,32 +290,7 @@ contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         // Check against all restricted selectors
         return selector == ADD_ROOT_SIGNER_SELECTOR || selector == REMOVE_ROOT_SIGNER_SELECTOR
             || selector == ADD_PASSKEY_SIGNER_SELECTOR || selector == REMOVE_PASSKEY_SIGNER_SELECTOR
-            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_AND_CALL_SELECTOR
-            || _isExecuteWithRestrictedCall(selector, callData);
-    }
-
-    /// Check if execute/executeBatch contains calls to restricted functions
-    function _isExecuteWithRestrictedCall(bytes4 selector, bytes calldata callData) internal pure returns (bool) {
-        // Check execute(address,uint256,bytes)
-        if (selector == bytes4(keccak256("execute(address,uint256,bytes)"))) {
-            if (callData.length < 100) return false; // Not enough data
-
-            // Extract the inner calldata from execute
-            // Skip 4 (selector) + 32 (address) + 32 (value) + 32 (offset) + 32 (length)
-            uint256 innerDataLength = abi.decode(callData[100:132], (uint256));
-            if (callData.length < 132 + innerDataLength) return false;
-
-            bytes calldata innerData = callData[132:132 + innerDataLength];
-            return _isRestrictedCall(innerData);
-        }
-
-        // Check executeBatch(Call[])
-        if (selector == bytes4(keccak256("executeBatch((address,uint256,bytes)[])"))) {
-            // This is more complex to parse, so for simplicity we could restrict all executeBatch from root
-            return true;
-        }
-
-        return false;
+            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_AND_CALL_SELECTOR;
     }
 
     function version() public pure virtual returns (string memory) {

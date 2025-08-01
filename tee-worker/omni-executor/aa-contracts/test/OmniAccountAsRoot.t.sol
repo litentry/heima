@@ -27,13 +27,13 @@ contract OmniAccountAsRoot is Test {
     }
 
     function test_Execute() public {
-        vm.expectRevert("account: not Owner or EntryPoint");
+        vm.expectRevert("account: not from EntryPoint");
         vm.prank(rootAddress);
         account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
     function test_ExecuteBatch() public {
-        vm.expectRevert("account: not Owner or EntryPoint");
+        vm.expectRevert("account: not from EntryPoint");
         vm.prank(rootAddress);
         BaseAccount.Call[] memory calls = new BaseAccount.Call[](1);
         calls[0] = BaseAccount.Call({target: address(counter), value: 0, data: abi.encodeWithSignature("increment()")});
@@ -154,7 +154,6 @@ contract OmniAccountAsRoot is Test {
         account.removeRootSigner(0x0000000000000000000000000000000000000000);
     }
 
-
     function prepareSession(address session, uint256 expiration, uint256 proofSigner)
         internal
         pure
@@ -268,10 +267,10 @@ contract OmniAccountAsRoot is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
 
-        // Validation should fail because root cannot use executeBatch
+        // Validation should succeed because root can use executeBatch
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
     function test_RootCannotCallAddRootSignerViaExecute() public {
@@ -296,10 +295,10 @@ contract OmniAccountAsRoot is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
 
-        // Validation should fail because root is trying to call a restricted function via execute
+        // Validation should succeed because root can call execute
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
     function test_SessionKeyCannotCallAddRootSignerViaExecute() public {
@@ -329,10 +328,10 @@ contract OmniAccountAsRoot is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
         packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
 
-        // Validation should fail because session key is trying to call a restricted function via execute
+        // Validation should succeed because session key can call execute
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
-        assertEq(SIG_VALIDATION_FAILED, validationData);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
     }
 
     function test_RootCannotCallAddPasskeySignerViaUserOp() public {
