@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
+/*
+ * Based on StakeManager.sol from https://github.com/eth-infinitism/account-abstraction
+ * Licensed under GNU General Public License v3.0
+ */
 pragma solidity ^0.8.28;
 
 import "../interfaces/IStakeManager.sol";

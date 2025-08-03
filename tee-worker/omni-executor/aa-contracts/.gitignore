@@ -15,4 +15,6 @@ docs/
 .env
 .env.*
 broadcast/
-deployments/local.json
+
+# Deployment artifacts
+deployments/local/
