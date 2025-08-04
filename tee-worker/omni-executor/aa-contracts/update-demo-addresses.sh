@@ -8,8 +8,39 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEMO_APP_DIR="$SCRIPT_DIR/aa-demo-app"
 ENV_FILE="$DEMO_APP_DIR/.env.local"
+DEPLOYMENT_ENV="${DEPLOYMENT_ENV:-local}"
+DEPLOYMENT_FILE="$SCRIPT_DIR/deployments/$DEPLOYMENT_ENV/$DEPLOYMENT_ENV.json"
 
 echo "🔍 Extracting deployed contract addresses..."
+
+# Function to extract addresses from deployment file (primary method)
+extract_from_deployment() {
+    if [ -f "$DEPLOYMENT_FILE" ] && command -v jq &> /dev/null; then
+        echo "📋 Using deployment artifacts from: $DEPLOYMENT_FILE"
+        
+        # Extract addresses using jq
+        ENTRYPOINT_ADDRESS=$(jq -r '.contracts.EntryPointV1.address // empty' "$DEPLOYMENT_FILE")
+        FACTORY_ADDRESS=$(jq -r '.contracts.OmniAccountFactoryV1.address // empty' "$DEPLOYMENT_FILE")
+        PAYMASTER_ADDRESS=$(jq -r '.contracts.SimplePaymaster.address // .contracts.DemoPaymaster.address // empty' "$DEPLOYMENT_FILE")
+        
+        # Extract test token addresses based on metadata
+        USDC_ADDRESS=$(jq -r '.contracts | to_entries[] | select(.value.metadata.symbol == "USDC") | .value.address // empty' "$DEPLOYMENT_FILE" | head -1)
+        USDT_ADDRESS=$(jq -r '.contracts | to_entries[] | select(.value.metadata.symbol == "USDT") | .value.address // empty' "$DEPLOYMENT_FILE" | head -1)
+        
+        # If only one TestToken exists, use it for both
+        if [ -z "$USDC_ADDRESS" ] || [ -z "$USDT_ADDRESS" ]; then
+            TEST_TOKEN=$(jq -r '.contracts.TestToken.address // empty' "$DEPLOYMENT_FILE")
+            USDC_ADDRESS=${USDC_ADDRESS:-$TEST_TOKEN}
+            USDT_ADDRESS=${USDT_ADDRESS:-$TEST_TOKEN}
+        fi
+        
+        if [ -n "$ENTRYPOINT_ADDRESS" ] && [ -n "$FACTORY_ADDRESS" ]; then
+            echo "✅ Successfully extracted addresses from deployment artifacts"
+            return 0
+        fi
+    fi
+    return 1
+}
 
 # Function to extract address from forge output or broadcast file
 extract_addresses() {
@@ -136,6 +167,18 @@ show_next_steps() {
 }
 
 # Main execution
-extract_addresses
+# Try deployment artifacts first, fall back to broadcast files
+if ! extract_from_deployment; then
+    echo "📂 Deployment artifacts not found, falling back to broadcast files..."
+    extract_addresses
+fi
+
+# Run ABI sync if the script exists
+if [ -f "$SCRIPT_DIR/sync-abis-from-deployment.sh" ]; then
+    echo ""
+    echo "🔄 Syncing ABIs from deployment artifacts..."
+    "$SCRIPT_DIR/sync-abis-from-deployment.sh"
+fi
+
 update_env_file
 show_next_steps

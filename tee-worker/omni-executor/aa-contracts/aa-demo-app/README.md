@@ -284,14 +284,16 @@ aa-demo-app/
 │   ├── app/              # Next.js app router pages
 │   ├── components/       # React components
 │   │   ├── AccountsDashboard.tsx    # Displays wallet and OmniAccount balances
-│   │   ├── AuthorizedSigners.tsx    # Manage authorized signers
-│   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow
+│   │   ├── AuthorizedSigners.tsx    # Manage authorized signers (direct calls, no execute wrapper)
+│   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow (uses Owner signer type)
 │   │   ├── FundingGuide.tsx         # ETH funding guide
 │   │   ├── TEETokenTransfer.tsx     # Token transfer through TEE worker
 │   │   ├── CreateOmniAccount.tsx    # Smart account creation flow with paymaster option
 │   │   └── WalletConnect.tsx        # Wallet connection component
-│   ├── contracts/        # Contract ABIs
-│   │   ├── ...existing ABIs
+│   ├── contracts/        # Contract ABIs (auto-synced from V1 contracts)
+│   │   ├── EntryPoint.json          # Synced from EntryPointV1
+│   │   ├── OmniAccount.json         # Synced from OmniAccountV1
+│   │   ├── OmniAccountFactory.json  # Synced from OmniAccountFactoryV1
 │   │   └── SimplePaymaster.json     # Paymaster contract ABI
 │   └── lib/             # Utilities and configuration
 │       ├── aa-utils.ts  # AA utilities including UserOp construction
@@ -299,6 +301,11 @@ aa-demo-app/
 │       ├── tee-worker-client.ts # TEE Worker RPC client with submitUserOpTest
 │       └── wagmi.ts     # Web3 configuration
 └── public/              # Static assets
+
+Parent directory scripts:
+├── sync-abis-from-deployment.sh  # Syncs V1 contract ABIs to demo app
+├── update-demo-addresses.sh      # Updates addresses and runs ABI sync
+└── deploy-local.sh              # Deploys contracts and auto-syncs ABIs
 ```
 
 ## Troubleshooting
@@ -335,6 +342,12 @@ You might see errors like `execution reverted` for `symbol()` or `decimals()` ca
 - **"Insufficient balance"**: The paymaster needs ETH deposited at the EntryPoint
 - **Transaction fails with paymaster**: Ensure the paymaster is properly configured
 - **DemoPaymaster vs SimplePaymaster**: DemoPaymaster accepts all operations (testing only), SimplePaymaster requires authorized bundlers
+
+### Signer Management Issues
+- **"Transaction reverted" when adding signers**: Ensure you're connected with the account owner (not a root signer)
+- **"Only owner" errors**: The connected wallet must be the original account creator
+- **Authorization failures**: Check that the UserOperation is signed with `UserOpSigner.Owner` type for restricted functions
+- **TEE Worker not added**: Verify the transaction succeeded and check the signer list
 
 ## Environment Variables
 
@@ -411,6 +424,23 @@ export const PAYMASTER_CONFIG = {
 
 ## Technical Details
 
+### Contract Versions and ABI Management
+
+The demo app works with V1 contracts (`OmniAccountV1`, `OmniAccountFactoryV1`, `EntryPointV1`) while maintaining backward-compatible naming:
+
+- **Automatic ABI Synchronization**: The `sync-abis-from-deployment.sh` script automatically maps V1 contract ABIs to expected names
+- **Deployment Integration**: Running `./deploy-local.sh` automatically syncs ABIs after deployment
+- **Version Support**: The contracts include a `version()` function returning "1.0.0"
+
+### Access Control and Signer Management
+
+Recent updates to the smart contracts have enhanced access control:
+
+- **Direct EntryPoint Calls**: The `onlyOwner` modifier now allows the EntryPoint to directly call restricted functions
+- **No Execute Wrapper Needed**: Functions like `addRootSigner` and `removeRootSigner` are called directly in UserOperations
+- **Signer Type Requirements**: Only `UserOpSigner.Owner` can call restricted functions (not `RootKey` or `SessionKey`)
+- **Signer Hierarchy**: For non-EVM owners, passkey signers have priority over root signers (when passkeys are present)
+
 ### Paymaster Integration
 
 The app integrates paymaster functionality for gas sponsorship:
@@ -419,12 +449,13 @@ The app integrates paymaster functionality for gas sponsorship:
 - **Balance Checking**: Verifies paymaster has sufficient deposit at EntryPoint
 - **Dynamic Toggle**: Users can enable/disable paymaster per transaction
 
-### New Utility Functions
+### Key Utility Functions
 
 - `buildTokenTransferUserOp()`: Creates UserOperation for ERC20 token transfers
 - `buildERC20TransferCallData()`: Encodes ERC20 transfer function call
 - `toSerializablePackedUserOperation()`: Converts PackedUserOperation to serializable format
 - `submitUserOpTest()`: Submits UserOperations through TEE worker RPC
+- `signUserOperation()`: Signs UserOperations with proper signer type validation
 
 ### RPC Method Updates
 
