@@ -51,6 +51,21 @@ sol! {
 		bytes32 paymasterAndData;
 	}
 
+	// Owner type
+	enum OwnerType {
+		Pumpx,
+		Email,
+		Twitter,
+		Discord,
+		Github,
+		Substrate,
+		Evm,
+		Bitcoin,
+		Solana,
+		Google,
+		Passkey
+	}
+
 	// Passkey public key
 	struct PasskeyPublicKey {
 		bytes32 x;
@@ -81,13 +96,13 @@ sol! {
 
 	// smart account factory
 	function createAccount(bytes32 oa, OwnerType oaType, bytes memory clientId, address root) public;
-	function getAddress(bytes32 oa, bytes memory clientId, address root) public view returns (address);
+	function getAddress(bytes32 oa, OwnerType oaType, bytes memory clientId, address root) public view returns (address);
 
 	// smart account
 	function getNonce() public view virtual returns (uint256);
 	function addRootSigner(address root) public;
 	function removeRootSigner(address root) public;
-	function initialize(bytes32 oa, bytes memory clientId, address root) public;
+	function initialize(bytes32 oa, OwnerType oaType, bytes memory clientId, address root) public;
 	function getOwner() public view returns (bytes32);
 
 	// passkey signer management
