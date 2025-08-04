@@ -99,6 +99,6 @@ echo "  EntryPoint: $TEST_ENTRY_POINT_ADDRESS"
 echo "  Factory: $TEST_FACTORY_ADDRESS"
 
 echo "Running SubmitUserOp tests"
-OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test submitUserOp.test.ts
+OMNI_WORKER_ENDPOINT=http://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test submitUserOp.test.ts
 
 echo "SubmitUserOp tests completed successfully"
