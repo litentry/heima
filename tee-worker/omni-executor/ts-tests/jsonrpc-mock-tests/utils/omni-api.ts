@@ -65,7 +65,9 @@ export class OmniApi {
     }
 
     async getWeb3SignInMessage(params: GetWeb3SignInMessageParams): Promise<GetWeb3SignInMessageResponse> {
-        const response = await this.client.call(JsonRpcMethods.OmniGetWeb3SignInMessage, params);
+        // Pass parameters as array for positional arguments (matching aa-demo-app)
+        const positionParams = [params.client_id, params.omni_account];
+        const response = await this.client.call(JsonRpcMethods.OmniGetWeb3SignInMessage, positionParams);
 
         return response;
     }

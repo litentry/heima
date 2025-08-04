@@ -340,6 +340,11 @@ describe('SubmitUserOp Integration Tests', function () {
 
     it('Step 4: Should add TEE Worker as authorized signer', async function () {
         // First authenticate with TEE worker to get its address
+        console.log('DEBUG: TEE Worker authentication');
+        console.log('  TEE Worker URL:', process.env.OMNI_WORKER_ENDPOINT);
+        console.log('  Client ID:', TEST_CONFIG.TEE_WORKER.CLIENT_ID);
+        console.log('  Omni Account:', omniAccount);
+        
         const messageResponse = await omniApi.getWeb3SignInMessage({
             client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
             omni_account: omniAccount,
