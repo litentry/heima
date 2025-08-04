@@ -117,6 +117,13 @@ deploy_contracts() {
         echo "NEXT_PUBLIC_PAYMASTER_ADDRESS=$PAYMASTER_ADDRESS"
         echo "NEXT_PUBLIC_TEST_USDC_ADDRESS=$USDC_ADDRESS"
         echo "NEXT_PUBLIC_TEST_USDT_ADDRESS=$USDT_ADDRESS"
+        
+        # Auto-sync ABIs if deployment artifacts were saved
+        if [ -f "$SCRIPT_DIR/deployments/$DEPLOYMENT_ENV/$DEPLOYMENT_ENV.json" ] && [ -f "$SCRIPT_DIR/sync-abis-from-deployment.sh" ]; then
+            echo ""
+            echo "🔄 Auto-syncing ABIs to demo app..."
+            "$SCRIPT_DIR/sync-abis-from-deployment.sh"
+        fi
     else
         echo "⚠️  Contracts deployed but broadcast file not found"
         echo "Check the output above for contract addresses"
