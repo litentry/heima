@@ -10,6 +10,21 @@ import {
 } from 'viem';
 import { TEST_CONFIG, type ContractAddress } from '../config';
 
+// OwnerType enum from the contract
+export const OWNER_TYPE = {
+    PUMPX: 0,
+    EMAIL: 1,
+    TWITTER: 2,
+    DISCORD: 3,
+    GITHUB: 4,
+    SUBSTRATE: 5,
+    EVM: 6,
+    BITCOIN: 7,
+    SOLANA: 8,
+    GOOGLE: 9,
+    PASSKEY: 10
+} as const;
+
 // Contract ABIs - simplified for testing
 export const CONTRACT_ABIS = {
     ENTRY_POINT: [
@@ -54,22 +69,24 @@ export const CONTRACT_ABIS = {
             name: 'createAccount',
             type: 'function',
             inputs: [
-                { name: 'omniAccount', type: 'bytes32' },
+                { name: 'oa', type: 'bytes32' },
+                { name: 'oaType', type: 'uint8' }, // OwnerType enum as uint8
                 { name: 'clientId', type: 'bytes' },
-                { name: 'rootSigner', type: 'address' },
+                { name: 'root', type: 'address' },
             ],
-            outputs: [{ name: 'account', type: 'address' }],
+            outputs: [{ name: 'ret', type: 'address' }],
             stateMutability: 'nonpayable',
         },
         {
             name: 'getAddress',
             type: 'function',
             inputs: [
-                { name: 'omniAccount', type: 'bytes32' },
+                { name: 'oa', type: 'bytes32' },
+                { name: 'oaType', type: 'uint8' }, // OwnerType enum as uint8
                 { name: 'clientId', type: 'bytes' },
-                { name: 'rootSigner', type: 'address' },
+                { name: 'root', type: 'address' },
             ],
-            outputs: [{ name: 'account', type: 'address' }],
+            outputs: [{ name: '', type: 'address' }],
             stateMutability: 'view',
         },
     ],
@@ -283,6 +300,7 @@ export async function signUserOperation(
 export function generateInitCode(
     factoryAddress: Address,
     omniAccount: `0x${string}`,
+    ownerType: number,
     clientId: `0x${string}`,
     rootSigner: Address
 ): `0x${string}` {
@@ -290,7 +308,7 @@ export function generateInitCode(
     const initCalldata = encodeFunctionData({
         abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
         functionName: 'createAccount',
-        args: [omniAccount, clientId, rootSigner],
+        args: [omniAccount, ownerType, clientId, rootSigner],
     });
 
     // Combine factory address and calldata

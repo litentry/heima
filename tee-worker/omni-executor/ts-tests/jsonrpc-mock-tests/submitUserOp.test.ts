@@ -9,6 +9,7 @@ import { TEST_CONFIG, validateTestEnvironment } from './config';
 import { promises as fs } from 'fs';
 import {
     CONTRACT_ABIS,
+    OWNER_TYPE,
     createUserOperation,
     signUserOperation,
     packUserOperation,
@@ -162,16 +163,55 @@ describe('SubmitUserOp Integration Tests', function () {
 
         // Get omni account contract address
         try {
+            console.log('DEBUG: Calling getAddress with:');
+            console.log('  Factory:', testEnv.contracts.OMNI_ACCOUNT_FACTORY);
+            console.log('  omniAccount:', omniAccount);
+            console.log('  ownerType (EVM):', OWNER_TYPE.EVM);
+            console.log('  clientId (bytes):', stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID));
+            console.log('  clientId (string):', TEST_CONFIG.TEE_WORKER.CLIENT_ID);
+            console.log('  rootSigner:', evmWallet.address);
+            
+            // First, let's check if the factory has the expected functions
+            console.log('DEBUG: Factory ABI functions:');
+            CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY.forEach(func => {
+                if (func.type === 'function') {
+                    console.log(`  - ${func.name}(${func.inputs?.map(i => `${i.type} ${i.name}`).join(', ')})`);
+                }
+            });
+            
             omniAccountAddress = await publicClient.readContract({
                 address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
                 abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
                 functionName: 'getAddress',
-                args: [omniAccount, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
+                args: [omniAccount, OWNER_TYPE.EVM, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
             });
         } catch (error) {
             console.error('Failed to get OmniAccount address from factory:', error);
             console.log('Factory address:', testEnv.contracts.OMNI_ACCOUNT_FACTORY);
-            console.log('Args:', [omniAccount, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address]);
+            console.log('Args:', [omniAccount, OWNER_TYPE.EVM, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address]);
+            
+            // Let's try to understand what's wrong by calling some other factory functions
+            console.log('DEBUG: Trying to get more info about the factory contract...');
+            try {
+                // Check if we can call any view functions
+                console.log('DEBUG: Checking factory code again...');
+                const code = await publicClient.getCode({
+                    address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
+                });
+                console.log(`DEBUG: Factory code length: ${code?.length || 0}`);
+                
+                // Try to get the current chain ID to ensure RPC is working
+                const chainId = await publicClient.getChainId();
+                console.log('DEBUG: Current chain ID:', chainId);
+                
+                // Try to get the latest block to ensure ethereum node is responsive
+                const block = await publicClient.getBlockNumber();
+                console.log('DEBUG: Latest block number:', block);
+                
+            } catch (debugError) {
+                console.error('DEBUG: Error during diagnostics:', debugError);
+            }
+            
             throw error;
         }
         console.log('OmniAccount contract address:', omniAccountAddress);
@@ -244,6 +284,7 @@ describe('SubmitUserOp Integration Tests', function () {
         const initCode = generateInitCode(
             testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
             omniAccount,
+            OWNER_TYPE.EVM,
             stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID),
             evmWallet.address
         );
