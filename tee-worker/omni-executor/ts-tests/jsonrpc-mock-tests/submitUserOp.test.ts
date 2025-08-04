@@ -6,6 +6,7 @@ import { anvil } from 'viem/chains';
 import { ClientId, omniApi, randomEvmWallet, calculateOmniAccount, UserLoginResponse } from './utils';
 import { signMessage } from 'viem/accounts';
 import { TEST_CONFIG, validateTestEnvironment } from './config';
+import { promises as fs } from 'fs';
 import {
     CONTRACT_ABIS,
     createUserOperation,
@@ -19,8 +20,48 @@ import {
     type UserOperation,
 } from './utils/aa-utils';
 
+// Function to wait for contract deployment in CI environment
+async function waitForContractDeployment(): Promise<void> {
+    const deployedAddressesPath = '/shared/deployed-addresses.json';
+    const maxWaitTime = 120000; // 2 minutes
+    const checkInterval = 2000; // 2 seconds
+    const startTime = Date.now();
+    
+    console.log('Waiting for contract deployment...');
+    
+    while (Date.now() - startTime < maxWaitTime) {
+        try {
+            // Check if deployed addresses file exists
+            await fs.access(deployedAddressesPath);
+            const content = await fs.readFile(deployedAddressesPath, 'utf8');
+            const addresses = JSON.parse(content);
+            
+            if (addresses.EntryPoint && addresses.OmniAccountFactory) {
+                console.log('✅ Contract deployment file found with addresses:');
+                console.log('  EntryPoint:', addresses.EntryPoint);
+                console.log('  OmniAccountFactory:', addresses.OmniAccountFactory);
+                
+                // Update environment variables with deployed addresses
+                process.env.TEST_ENTRY_POINT_ADDRESS = addresses.EntryPoint;
+                process.env.TEST_FACTORY_ADDRESS = addresses.OmniAccountFactory;
+                process.env.TEST_USDC_ADDRESS = addresses.TestUSDC;
+                process.env.TEST_USDT_ADDRESS = addresses.TestUSDT;
+                
+                return;
+            }
+        } catch (error) {
+            // File doesn't exist yet or is not valid JSON, continue waiting
+        }
+        
+        console.log(`⏳ Still waiting for contracts... (${Math.floor((Date.now() - startTime) / 1000)}s)`);
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+    }
+    
+    console.log('⚠️ Contract deployment timeout reached, using default addresses');
+}
+
 describe('SubmitUserOp Integration Tests', function () {
-    this.timeout(TEST_CONFIG.TIMEOUTS.DEFAULT);
+    this.timeout(180000); // 3 minutes for CI environment
 
     let publicClient: any;
     let deployerWalletClient: any;
@@ -34,7 +75,15 @@ describe('SubmitUserOp Integration Tests', function () {
     let testEnv: ReturnType<typeof validateTestEnvironment>;
 
     before(async function () {
+        this.timeout(180000); // 3 minutes for before hook
+        
         // Validate test environment
+        testEnv = validateTestEnvironment();
+        
+        // Wait for contract deployment in CI environment
+        await waitForContractDeployment();
+        
+        // Re-validate environment after potential address updates
         testEnv = validateTestEnvironment();
 
         // Custom chain configuration using test config
@@ -75,11 +124,39 @@ describe('SubmitUserOp Integration Tests', function () {
 
         // Verify factory contract is deployed
         console.log('Verifying factory contract deployment...');
+        const factoryAddress = testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address;
+        console.log('Factory address from config:', factoryAddress);
+        
         const factoryCode = await publicClient.getCode({
-            address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
+            address: factoryAddress,
         });
+        console.log('Factory code length:', factoryCode?.length || 0);
+        
         if (!factoryCode || factoryCode === '0x') {
-            throw new Error(`OmniAccountFactory not deployed at ${testEnv.contracts.OMNI_ACCOUNT_FACTORY}`);
+            console.error(`❌ OmniAccountFactory not deployed at ${factoryAddress}`);
+            console.log('Available contracts might be:');
+            
+            // Try to detect deployed contracts by checking common addresses
+            const commonAddresses = [
+                '0x5FbDB2315678afecb367f032d93F642f64180aa3', // Common first deployment
+                '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512', // Common second deployment  
+                '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0', // Common third deployment
+                '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9', // Common fourth deployment
+            ];
+            
+            for (const addr of commonAddresses) {
+                const code = await publicClient.getCode({ address: addr as Address });
+                if (code && code !== '0x') {
+                    console.log(`Found contract at ${addr} (code length: ${code.length})`);
+                }
+            }
+            
+            // Also check what's in the shared file
+            console.log('Environment variables:');
+            console.log('TEST_FACTORY_ADDRESS:', process.env.TEST_FACTORY_ADDRESS);
+            console.log('TEST_ENTRY_POINT_ADDRESS:', process.env.TEST_ENTRY_POINT_ADDRESS);
+            
+            throw new Error(`OmniAccountFactory not deployed at ${factoryAddress}. Check contract deployment.`);
         }
         console.log('✅ Factory contract is deployed');
 
