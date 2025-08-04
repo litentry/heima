@@ -267,6 +267,23 @@ describe('SubmitUserOp Integration Tests', function () {
 
         expect(finalBalance).to.equal(fundingAmount);
         console.log(`✅ Step 2 completed: OmniAccount funded with ${TEST_CONFIG.AMOUNTS.FUNDING_ETH} ETH`);
+        
+        // Also fund the EVM wallet for gas fees in token operations
+        const evmWalletFundingAmount = parseEther('0.1'); // 0.1 ETH for gas
+        const evmFundingHash = await deployerWalletClient.sendTransaction({
+            to: evmWallet.address,
+            value: evmWalletFundingAmount,
+        });
+
+        await publicClient.waitForTransactionReceipt({
+            hash: evmFundingHash,
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
+        });
+
+        const evmWalletBalance = await publicClient.getBalance({
+            address: evmWallet.address,
+        });
+        console.log(`EVM wallet funded with ${evmWalletBalance.toString()} wei (${evmWalletFundingAmount.toString()} wei expected)`);
     });
 
     it('Step 3: Should create OmniAccount contract (without Paymaster)', async function () {
