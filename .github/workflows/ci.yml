@@ -1050,7 +1050,7 @@ jobs:
       matrix:
         include:
           - test_name: omni-account-test
-          - test_name: jsonrpc_mock_test
+          - test_name: jsonrpc-mock-test
           - test_name: submit-user-op-tests
           # disable it during RPC method refactoring
           # - test_name: omni-client-sdk-test
