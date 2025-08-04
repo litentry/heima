@@ -97,7 +97,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
 			..Default::default()
 		};
 
-		self.provider.send_transaction(tx).await.map(|_| ())
+		let _ = self.provider.send_transaction(tx).await.map(|_| ())?;
+
+		Ok(())
 	}
 
 	async fn get_nonce(&self, user: Address) -> Result<U256, ()> {
@@ -108,8 +110,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
 			input: TransactionInput { data: Some(call.into()), ..Default::default() },
 			..Default::default()
 		};
-		self.provider.call(tx).await.map_or(Err(()), |nonce| {
-			let nonce = U256::abi_decode(&nonce).unwrap();
+		self.provider.call(tx).await.map_err(|_| ()).and_then(|nonce| {
+			let nonce = U256::abi_decode(&nonce).map_err(|_| ())?;
 			Ok(nonce)
 		})
 	}
@@ -122,8 +124,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
 			input: TransactionInput { data: Some(call.into()), ..Default::default() },
 			..Default::default()
 		};
-		self.provider.call(tx).await.map_or(Err(()), |balance| {
-			let balance = U256::abi_decode(&balance).unwrap();
+		self.provider.call(tx).await.map_err(|_| ()).and_then(|balance| {
+			let balance = U256::abi_decode(&balance).map_err(|_| ())?;
 			Ok(balance)
 		})
 	}

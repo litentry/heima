@@ -86,6 +86,7 @@ serde_json = "1"
 serde_repr = "0.1.20"
 serde_with = { version = "3.11", features = ["hex"] }
 sha2 = "0.10.8"
+thiserror = "2"
 solana-client = "2.2.1"
 solana-sdk = "2.2.1"
 sp-core = "35.0.0"

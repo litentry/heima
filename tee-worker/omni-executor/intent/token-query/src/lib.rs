@@ -90,7 +90,7 @@ pub async fn query_ethereum<
 	token: &EthereumToken,
 ) -> Result<U256, ()> {
 	match token {
-		EthereumToken::Native => provider.get_balance(account).await,
+		EthereumToken::Native => provider.get_balance(account).await.map_err(|_| ()),
 		EthereumToken::ERC20(address) => {
 			let address = address.as_ref().into();
 			let call = IERC20::balanceOfCall { account };
