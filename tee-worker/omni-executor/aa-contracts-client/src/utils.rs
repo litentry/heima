@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::types::PackedUserOperationForHashing;
+use crate::types::{OwnerType, PackedUserOperationForHashing};
 use crate::PackedUserOperation;
 use alloy::primitives::{keccak256, Address, Bytes, FixedBytes, TxKind, U256};
 use alloy::rpc::types::{TransactionInput, TransactionRequest};
@@ -49,12 +49,14 @@ pub fn calculate_omni_account_address(
 	factory_address: Address,
 	account_implementation: Address,
 	oa: FixedBytes<32>,
+	oa_type: OwnerType,
 	client_id: &[u8],
 	root: Address,
 ) -> Address {
 	use crate::types::initializeCall;
 
-	let initialize_call = initializeCall { oa, clientId: Bytes::from(client_id.to_vec()), root };
+	let initialize_call =
+		initializeCall { oa, oaType: oa_type, clientId: Bytes::from(client_id.to_vec()), root };
 	let initialize_data = initialize_call.abi_encode();
 
 	let mut constructor_params = Vec::new();
@@ -278,6 +280,7 @@ mod tests {
 			factory_address,
 			account_implementation,
 			oa,
+			OwnerType::Evm,
 			client_id,
 			root,
 		);
@@ -288,6 +291,7 @@ mod tests {
 			factory_address,
 			account_implementation,
 			oa,
+			OwnerType::Evm,
 			client_id,
 			root,
 		);
@@ -312,6 +316,7 @@ mod tests {
 			factory_address,
 			account_implementation,
 			oa,
+			OwnerType::Evm,
 			client_id_1,
 			root,
 		);
@@ -320,6 +325,7 @@ mod tests {
 			factory_address,
 			account_implementation,
 			oa,
+			OwnerType::Evm,
 			client_id_2,
 			root,
 		);

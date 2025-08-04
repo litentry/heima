@@ -16,7 +16,7 @@
 
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, SenderAddressResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, OwnerType, SenderAddressResult,
 	ValidationResult,
 };
 use crate::utils::{
@@ -511,10 +511,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		factory_address: Address,
 		account_implementation: Address,
 		oa: FixedBytes<32>,
+		oa_type: OwnerType,
 		client_id: &[u8],
 		root: Address,
 	) -> Address {
-		calculate_omni_account_address(factory_address, account_implementation, oa, client_id, root)
+		calculate_omni_account_address(
+			factory_address,
+			account_implementation,
+			oa,
+			oa_type,
+			client_id,
+			root,
+		)
 	}
 
 	pub async fn deposit_to(&self, account: Address, amount: U256) -> Result<String, ()> {
@@ -542,6 +550,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		factory_address: Address,
 		oa: [u8; 32],
+		oa_type: OwnerType,
 		client_id: &[u8],
 		root_address: Address,
 		call_data: Bytes,
@@ -549,7 +558,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	) -> Result<PackedUserOperation, ()> {
 		// Create init code using existing helper
 		let init_code_bytes =
-			prepare_factory_init_code(factory_address, oa, client_id, root_address);
+			prepare_factory_init_code(factory_address, oa, oa_type, client_id, root_address);
 		let init_code = Bytes::from(init_code_bytes);
 
 		// Get sender address from EntryPoint
@@ -560,6 +569,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			sender,
 			factory_address,
 			oa,
+			oa_type,
 			client_id,
 			root_address,
 			call_data,
@@ -576,6 +586,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		factory_address: Address,
 		account_implementation: Address,
 		oa: [u8; 32],
+		oa_type: OwnerType,
 		client_id: &[u8],
 		root_address: Address,
 		call_data: Bytes,
@@ -588,6 +599,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			factory_address,
 			account_implementation,
 			oa_fixed,
+			oa_type,
 			client_id,
 			root_address,
 		);
@@ -597,6 +609,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			sender,
 			factory_address,
 			oa,
+			oa_type,
 			client_id,
 			root_address,
 			call_data,
@@ -612,6 +625,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		sender: Address,
 		factory_address: Address,
 		oa: [u8; 32],
+		oa_type: OwnerType,
 		client_id: &[u8],
 		root_address: Address,
 		call_data: Bytes,
@@ -633,7 +647,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let init_code_to_use = if code.is_empty() {
 			// No code at address, include init code
 			let init_code_bytes =
-				prepare_factory_init_code(factory_address, oa, client_id, root_address);
+				prepare_factory_init_code(factory_address, oa, oa_type, client_id, root_address);
 			Bytes::from(init_code_bytes)
 		} else {
 			// Code already exists, no init code needed
@@ -675,6 +689,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 pub fn prepare_factory_init_code(
 	factory_address: Address,
 	oa: [u8; 32],
+	oa_type: OwnerType,
 	client_id: &[u8],
 	root: Address,
 ) -> Vec<u8> {
@@ -683,6 +698,7 @@ pub fn prepare_factory_init_code(
 	let mut call = createAccountCall {
 		//safe to unwrap
 		oa: oa.into(),
+		oaType: oa_type,
 		//safe to unwrap
 		clientId: client_id.to_owned().into(),
 		root,
@@ -729,7 +745,7 @@ pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) ->
 
 #[cfg(test)]
 pub mod test {
-	use crate::types::depositCall;
+	use crate::types::{depositCall, OwnerType};
 	use crate::utils::build_payable_transaction;
 	use crate::{prepare_factory_init_code, EntryPointClient, GasPriceConfig};
 	use alloy::hex;
@@ -772,6 +788,7 @@ pub mod test {
 		let init_code_bytes = prepare_factory_init_code(
 			factory_address,
 			oa_bytes.0,
+			OwnerType::Evm,
 			client_id_fixed_bytes.as_ref(),
 			root_address,
 		);
@@ -784,7 +801,7 @@ pub mod test {
 
 	#[test(test)]
 	pub fn test_prepare_init_code() {
-		let expected = "e7f1725e7734ce288f8367e1bb143e90bb3f05120db21afe6d659c2361df3754aa7d46d9f0c993ec0335e60508128c6e3843f7dd962113910000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000";
+		let expected = "e7f1725e7734ce288f8367e1bb143e90bb3f0512158b8ca56d659c2361df3754aa7d46d9f0c993ec0335e60508128c6e3843f7dd9621139100000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000";
 
 		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
 		let oa: [u8; 32] =
@@ -797,7 +814,13 @@ pub mod test {
 				.unwrap();
 		let root_address = address!("0x0000000000000000000000000000000000000001");
 
-		let init_code = prepare_factory_init_code(factory_address, oa, &client_id, root_address);
+		let init_code = prepare_factory_init_code(
+			factory_address,
+			oa,
+			OwnerType::Evm,
+			&client_id,
+			root_address,
+		);
 
 		assert_eq!(expected, hex::encode(init_code));
 	}
@@ -822,6 +845,7 @@ pub mod test {
 		let init_code_bytes = prepare_factory_init_code(
 			factory_address,
 			oa_bytes.0,
+			OwnerType::Evm,
 			&client_id_fixed_bytes,
 			root_address,
 		);
@@ -861,6 +885,7 @@ pub mod test {
 			.create_packed_user_operation(
 				factory_address,
 				oa_bytes.0,
+				OwnerType::Evm,
 				client_id_bytes,
 				root_address,
 				call_data1,
@@ -875,6 +900,7 @@ pub mod test {
 			.create_packed_user_operation(
 				factory_address,
 				oa_bytes.0,
+				OwnerType::Evm,
 				client_id_bytes,
 				root_address,
 				call_data2,
@@ -914,6 +940,7 @@ pub mod test {
 	#[test(tokio::test)]
 	#[ignore = "manual"]
 	pub async fn try_full_flow() {
+		let oa_type = OwnerType::Evm;
 		let user_signer = PrivateKeySigner::from_str(
 			"0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
 		)
@@ -945,6 +972,7 @@ pub mod test {
 		let init_code_bytes = prepare_factory_init_code(
 			factory_address,
 			oa_bytes.0,
+			oa_type,
 			&client_id_fixed_bytes,
 			root_address,
 		);
@@ -956,6 +984,7 @@ pub mod test {
 			.create_packed_user_operation(
 				factory_address,
 				oa_bytes.0,
+				oa_type,
 				&client_id_fixed_bytes,
 				root_address,
 				call_data.clone(),
@@ -1010,6 +1039,7 @@ pub mod test {
 	#[ignore = "manual"]
 	pub async fn test_local_vs_entrypoint_address_calculation() {
 		let client_id = "test_client";
+		let oa_type = OwnerType::Evm;
 		let user_address = address!("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720");
 		let entrypoint_address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
 		let factory_address = address!("0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512");
@@ -1026,8 +1056,13 @@ pub mod test {
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
 
 		// Calculate address using EntryPoint.getSenderAddress
-		let init_code_bytes =
-			prepare_factory_init_code(factory_address, oa_bytes.0, client_id_bytes, root_address);
+		let init_code_bytes = prepare_factory_init_code(
+			factory_address,
+			oa_bytes.0,
+			oa_type,
+			client_id_bytes,
+			root_address,
+		);
 		let init_code = Bytes::from(init_code_bytes);
 		let entrypoint_address_result = entrypoint_client
 			.get_sender_address(init_code)
@@ -1039,6 +1074,7 @@ pub mod test {
 			factory_address,
 			account_implementation,
 			oa_bytes,
+			oa_type,
 			client_id_bytes,
 			root_address,
 		);

@@ -75,9 +75,9 @@ extract_addresses() {
     fi
     
     # Extract addresses using grep and sed
-    ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPointV1"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     # Try both SmartAccountFactory (old) and OmniAccountFactory (new) names
-    FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactoryV1"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     if [ -z "$FACTORY_ADDRESS" ]; then
         FACTORY_ADDRESS=$(grep -A2 '"contractName": "SmartAccountFactory"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     fi
