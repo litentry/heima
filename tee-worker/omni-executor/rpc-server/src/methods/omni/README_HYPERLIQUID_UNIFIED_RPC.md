@@ -44,7 +44,7 @@ curl -X POST http://localhost:2100 \
       "user_auth": {"type": "email", "value": "123456"},
       "client_id": "heima",
       "action_type": {
-        "type": "withdraw",
+        "type": "withdraw3",
         "amount": "100.0",
         "destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
       },
@@ -105,7 +105,7 @@ curl -X POST http://localhost:2100 \
 
 ### Common Parameters
 - `user_id`: Email-based user identification
-- `user_auth`: Email verification code  
+- `user_auth`: Email verification code
 - `client_id`: Client identifier (`heima`, `pumpx`, `wildmeta`)
 - `chain_id`: Target blockchain network ID
 - `action_type`: Discriminated union for different operations
@@ -116,7 +116,7 @@ curl -X POST http://localhost:2100 \
 - `agent_address`: Agent's Ethereum address (required)
 - `agent_name`: Human-readable agent name (optional)
 
-#### `withdraw`
+#### `withdraw3`
 - `amount`: Withdrawal amount as string (required)
 - `destination`: Destination wallet address (required)
 
@@ -159,14 +159,14 @@ curl -X POST http://localhost:2100 \
 
 The generated signatures are ready for direct use with Hyperliquid's API endpoints:
 - **Approve Agent**: POST to `/exchange` with type `approveBuilderFee`
-- **Withdraw**: POST to `/exchange` with type `withdraw3`  
+- **Withdraw3**: POST to `/exchange` with type `withdraw3`
 - **Builder Fee**: POST to `/exchange` with type `approveBuilderFee`
 
 ## Advantages
 
-✅ **Single Endpoint**: One RPC method for all Hyperliquid operations  
-✅ **Code Reuse**: Shared logic reduces duplication  
-✅ **Extensibility**: Trait-based design for easy additions  
-✅ **Type Safety**: Discriminated unions ensure correct parameters  
-✅ **Maintainability**: Centralized error handling and validation  
+✅ **Single Endpoint**: One RPC method for all Hyperliquid operations
+✅ **Code Reuse**: Shared logic reduces duplication
+✅ **Extensibility**: Trait-based design for easy additions
+✅ **Type Safety**: Discriminated unions ensure correct parameters
+✅ **Maintainability**: Centralized error handling and validation
 ✅ **Security**: Same TEE-based signing model throughout

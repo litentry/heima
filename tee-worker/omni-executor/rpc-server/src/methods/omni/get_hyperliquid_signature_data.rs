@@ -28,7 +28,7 @@ pub struct GetHyperliquidSignatureDataParams {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidActionType {
 	ApproveAgent { agent_address: String, agent_name: Option<String> },
-	Withdraw { amount: String, destination: String },
+	Withdraw3 { amount: String, destination: String },
 	ApproveBuilderFee { max_fee_rate: String, builder: String },
 }
 
@@ -49,7 +49,7 @@ pub struct HyperliquidSignatureData {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidAction {
 	ApproveAgent(ApproveAgentAction),
-	Withdraw(WithdrawAction),
+	Withdraw3(Withdraw3Action),
 	ApproveBuilderFee(ApproveBuilderFeeAction),
 }
 
@@ -66,7 +66,7 @@ pub struct ApproveAgentAction {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct WithdrawAction {
+pub struct Withdraw3Action {
 	#[serde(serialize_with = "serialize_hex")]
 	pub signature_chain_id: u64,
 	pub hyperliquid_chain: String,
@@ -144,7 +144,7 @@ impl HyperliquidEip712Signature for ApproveAgentAction {
 	}
 }
 
-impl HyperliquidEip712Signature for WithdrawAction {
+impl HyperliquidEip712Signature for Withdraw3Action {
 	fn domain(&self) -> Eip712Domain {
 		eip712_domain! {
 			name: "HyperliquidSignTransaction",
@@ -262,8 +262,8 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
-				HyperliquidActionType::Withdraw { amount, destination } => {
-					let action = WithdrawAction {
+				HyperliquidActionType::Withdraw3 { amount, destination } => {
+					let action = Withdraw3Action {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						amount,
@@ -275,7 +275,7 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 					};
 					let signature =
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
-					(HyperliquidAction::Withdraw(action), signature)
+					(HyperliquidAction::Withdraw3(action), signature)
 				},
 				HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder } => {
 					let action = ApproveBuilderFeeAction {
@@ -360,7 +360,7 @@ mod tests {
 
 	#[test]
 	fn test_withdraw_action_signature() {
-		let action = WithdrawAction {
+		let action = Withdraw3Action {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			amount: "100.0".to_string(),
@@ -445,7 +445,7 @@ mod tests {
 		"user_auth": {"type": "email", "value": "123456"},
 		"client_id": "test_client",
 		"action_type": {
-			"type": "withdraw",
+			"type": "withdraw3",
 			"amount": "100.0",
 			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
 		},
@@ -456,7 +456,7 @@ mod tests {
 
 		assert!(matches!(
 			params.action_type,
-			HyperliquidActionType::Withdraw { amount, destination }
+			HyperliquidActionType::Withdraw3 { amount, destination }
 			if amount == "100.0" && destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
 		));
 	}
