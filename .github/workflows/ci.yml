@@ -610,6 +610,7 @@ jobs:
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Install anchor
+        run: |
           cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
           anchor -V
           solana -V
