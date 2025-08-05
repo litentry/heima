@@ -1,6 +1,6 @@
 import { describe, it, before } from 'mocha';
 import { expect } from 'chai';
-import { createPublicClient, createWalletClient, http, parseEther, parseUnits, type Address } from 'viem';
+import { createPublicClient, createWalletClient, http, parseEther, parseUnits, type Address, isAddress, isHex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { anvil } from 'viem/chains';
 import { ClientId, omniApi, randomEvmWallet, calculateOmniAccount, UserLoginResponse } from './utils';
@@ -61,6 +61,24 @@ async function waitForContractDeployment(): Promise<void> {
     console.log('⚠️ Contract deployment timeout reached, using default addresses');
 }
 
+// Helper functions for validation using viem utilities
+function expectValidEthereumAddress(address: string, description: string = 'address') {
+    expect(address, `${description} should be a string`).to.be.a('string');
+    expect(isAddress(address), `${description} should be a valid Ethereum address`).to.be.true;
+}
+
+function expectValidPrivateKey(privateKey: string, description: string = 'private key') {
+    expect(privateKey, `${description} should be a string`).to.be.a('string');
+    expect(privateKey, `${description} should be 66 characters long`).to.have.lengthOf(66);
+    expect(isHex(privateKey), `${description} should be a valid hex string`).to.be.true;
+}
+
+function expectValidBytes32(bytes32: string, description: string = 'bytes32') {
+    expect(bytes32, `${description} should be a string`).to.be.a('string');
+    expect(bytes32, `${description} should be 66 characters long (32 bytes)`).to.have.lengthOf(66);
+    expect(isHex(bytes32), `${description} should be a valid hex string`).to.be.true;
+}
+
 describe('SubmitUserOp Integration Tests', function () {
     this.timeout(180000); // 3 minutes for CI environment
 
@@ -115,111 +133,32 @@ describe('SubmitUserOp Integration Tests', function () {
             account: privateKeyToAccount(TEST_CONFIG.ACCOUNTS.USER.privateKey),
         });
 
-        // Generate test wallet
+        // Generate test wallet and calculate omni account
         evmWallet = randomEvmWallet();
-        console.log('Generated EVM wallet:', evmWallet.address);
-
-        // Calculate omni account
         omniAccount = calculateOmniAccount(evmWallet.address, TEST_CONFIG.TEE_WORKER.CLIENT_ID, 'evm');
-        console.log('Calculated OmniAccount:', omniAccount);
 
         // Verify factory contract is deployed
-        console.log('Verifying factory contract deployment...');
         const factoryAddress = testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address;
-        console.log('Factory address from config:', factoryAddress);
-        
         const factoryCode = await publicClient.getCode({
             address: factoryAddress,
         });
-        console.log('Factory code length:', factoryCode?.length || 0);
         
         if (!factoryCode || factoryCode === '0x') {
-            console.error(`❌ OmniAccountFactory not deployed at ${factoryAddress}`);
-            console.log('Available contracts might be:');
-            
-            // Try to detect deployed contracts by checking common addresses
-            const commonAddresses = [
-                '0x5FbDB2315678afecb367f032d93F642f64180aa3', // Common first deployment
-                '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512', // Common second deployment  
-                '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0', // Common third deployment
-                '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9', // Common fourth deployment
-            ];
-            
-            for (const addr of commonAddresses) {
-                const code = await publicClient.getCode({ address: addr as Address });
-                if (code && code !== '0x') {
-                    console.log(`Found contract at ${addr} (code length: ${code.length})`);
-                }
-            }
-            
-            // Also check what's in the shared file
-            console.log('Environment variables:');
-            console.log('TEST_FACTORY_ADDRESS:', process.env.TEST_FACTORY_ADDRESS);
-            console.log('TEST_ENTRY_POINT_ADDRESS:', process.env.TEST_ENTRY_POINT_ADDRESS);
-            
             throw new Error(`OmniAccountFactory not deployed at ${factoryAddress}. Check contract deployment.`);
         }
-        console.log('✅ Factory contract is deployed');
 
         // Get omni account contract address
-        try {
-            console.log('DEBUG: Calling getAddress with:');
-            console.log('  Factory:', testEnv.contracts.OMNI_ACCOUNT_FACTORY);
-            console.log('  omniAccount:', omniAccount);
-            console.log('  ownerType (EVM):', OWNER_TYPE.EVM);
-            console.log('  clientId (bytes):', stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID));
-            console.log('  clientId (string):', TEST_CONFIG.TEE_WORKER.CLIENT_ID);
-            console.log('  rootSigner:', evmWallet.address);
-            
-            // First, let's check if the factory has the expected functions
-            console.log('DEBUG: Factory ABI functions:');
-            CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY.forEach(func => {
-                if (func.type === 'function') {
-                    console.log(`  - ${func.name}(${func.inputs?.map(i => `${i.type} ${i.name}`).join(', ')})`);
-                }
-            });
-            
-            omniAccountAddress = await publicClient.readContract({
-                address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
-                abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
-                functionName: 'getAddress',
-                args: [omniAccount, OWNER_TYPE.EVM, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
-            });
-        } catch (error) {
-            console.error('Failed to get OmniAccount address from factory:', error);
-            console.log('Factory address:', testEnv.contracts.OMNI_ACCOUNT_FACTORY);
-            console.log('Args:', [omniAccount, OWNER_TYPE.EVM, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address]);
-            
-            // Let's try to understand what's wrong by calling some other factory functions
-            console.log('DEBUG: Trying to get more info about the factory contract...');
-            try {
-                // Check if we can call any view functions
-                console.log('DEBUG: Checking factory code again...');
-                const code = await publicClient.getCode({
-                    address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
-                });
-                console.log(`DEBUG: Factory code length: ${code?.length || 0}`);
-                
-                // Try to get the current chain ID to ensure RPC is working
-                const chainId = await publicClient.getChainId();
-                console.log('DEBUG: Current chain ID:', chainId);
-                
-                // Try to get the latest block to ensure ethereum node is responsive
-                const block = await publicClient.getBlockNumber();
-                console.log('DEBUG: Latest block number:', block);
-                
-            } catch (debugError) {
-                console.error('DEBUG: Error during diagnostics:', debugError);
-            }
-            
-            throw error;
-        }
-        console.log('OmniAccount contract address:', omniAccountAddress);
+        omniAccountAddress = await publicClient.readContract({
+            address: testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
+            abi: CONTRACT_ABIS.OMNI_ACCOUNT_FACTORY,
+            functionName: 'getAddress',
+            args: [omniAccount, OWNER_TYPE.EVM, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), evmWallet.address],
+        });
 
         // Set test token address
         testTokenAddress = testEnv.contracts.TEST_USDC as Address;
 
-        // Check if test token is deployed
+        // Verify test token is deployed
         try {
             await publicClient.readContract({
                 address: testTokenAddress,
@@ -227,17 +166,18 @@ describe('SubmitUserOp Integration Tests', function () {
                 functionName: 'balanceOf',
                 args: [evmWallet.address],
             });
-            console.log('Test token deployed at:', testTokenAddress);
         } catch (error) {
             console.log('⚠️ Test token not found at:', testTokenAddress);
         }
     });
 
     it('Step 1: Should create EVM wallet and generate OmniAccount', async function () {
-        expect(evmWallet.address).to.match(/^0x[a-fA-F0-9]{40}$/);
-        expect(evmWallet.privateKey).to.match(/^0x[a-fA-F0-9]{64}$/);
-        expect(omniAccount).to.match(/^0x[a-fA-F0-9]{64}$/);
-        expect(omniAccountAddress).to.match(/^0x[a-fA-F0-9]{40}$/);
+        // Validate generated values using helper functions
+        expectValidEthereumAddress(evmWallet.address, 'EVM wallet address');
+        expectValidPrivateKey(evmWallet.privateKey, 'EVM wallet private key');
+        expectValidBytes32(omniAccount, 'OmniAccount ID');
+        expectValidEthereumAddress(omniAccountAddress, 'OmniAccount contract address');
+        
         console.log('✅ Step 1 completed: EVM wallet and OmniAccount generated');
     });
 
@@ -246,7 +186,6 @@ describe('SubmitUserOp Integration Tests', function () {
         const initialBalance = await publicClient.getBalance({
             address: omniAccountAddress,
         });
-        console.log('Initial OmniAccount balance:', initialBalance.toString());
 
         // Send ETH from deployer to OmniAccount
         const fundingAmount = parseEther(TEST_CONFIG.AMOUNTS.FUNDING_ETH);
@@ -283,7 +222,7 @@ describe('SubmitUserOp Integration Tests', function () {
         const evmWalletBalance = await publicClient.getBalance({
             address: evmWallet.address,
         });
-        console.log(`EVM wallet funded with ${evmWalletBalance.toString()} wei (${evmWalletFundingAmount.toString()} wei expected)`);
+        expect(evmWalletBalance).to.equal(evmWalletFundingAmount);
     });
 
     it('Step 3: Should create OmniAccount contract (without Paymaster)', async function () {
@@ -356,11 +295,7 @@ describe('SubmitUserOp Integration Tests', function () {
     });
 
     it('Step 4: Should add TEE Worker as authorized signer', async function () {
-        // First authenticate with TEE worker to get its address
-        console.log('DEBUG: TEE Worker authentication');
-        console.log('  TEE Worker URL:', process.env.OMNI_WORKER_ENDPOINT);
-        console.log('  Client ID:', TEST_CONFIG.TEE_WORKER.CLIENT_ID);
-        console.log('  Omni Account:', omniAccount);
+        // Authenticate with TEE worker
         
         const messageResponse = await omniApi.getWeb3SignInMessage({
             client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
@@ -394,9 +329,8 @@ describe('SubmitUserOp Integration Tests', function () {
 
         idToken = loginResponse.id_token;
 
-        // For testing, use a mock TEE worker address
-        teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address; // Mock TEE worker address
-        console.log('Mock TEE worker address:', teeWorkerAddress);
+        // Use mock TEE worker address for testing
+        teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address;
 
         // Create calldata for adding TEE worker as root signer
         const addSignerCalldata = createAddSignerCalldata(teeWorkerAddress);
@@ -506,9 +440,8 @@ describe('SubmitUserOp Integration Tests', function () {
             });
 
             expect(balance).to.equal(transferAmount);
-            console.log(`✅ Test tokens (${TEST_CONFIG.AMOUNTS.TRANSFER_TOKENS}) transferred to OmniAccount`);
         } catch (error) {
-            console.log('⚠️ Test token operations failed, using mock transfer:', error);
+            console.log('⚠️ Test token operations failed, continuing with mock transfer');
         }
 
         // Create token transfer via UserOperation
@@ -568,8 +501,6 @@ describe('SubmitUserOp Integration Tests', function () {
             timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
         expect(receipt.status).to.equal('success');
-        console.log(
-            `✅ Step 5 completed: Token transfer (${TEST_CONFIG.AMOUNTS.SEND_TOKENS} tokens) via UserOperation executed`
-        );
+        console.log('✅ Step 5 completed: Token transfer via UserOperation executed');
     });
 });
