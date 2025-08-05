@@ -3,24 +3,24 @@ use crate::{
 	middlewares::{HttpMiddleware, RpcMiddleware},
 	ShieldingKey,
 };
+use aa_contracts_client::EntryPointClient;
 use config_loader::ConfigLoader;
+use ethereum_rpc::AlloyRpcProvider;
+use executor_core::intent_executor::IntentExecutor;
+use executor_crypto::aes256::Aes256Key;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use heima_identity_verification::web2::email::mailer::MailerTrait;
 use jsonrpsee::{server::Server, RpcModule};
-use pumpx::PumpxApi;
-use signer_client::SignerClient;
-use std::{env, net::SocketAddr, sync::Arc};
-use std::collections::HashMap;
-use tracing::info;
-use wildmeta_api::WildmetaApi;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::aes256::Aes256Key;
 use native_task_handler::{NativeTaskSender, ParentchainTxSigner, TaskHandlerContext};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use pumpx::PumpxApi;
+use signer_client::SignerClient;
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::marker::{Send, Sync};
-use aa_contracts_client::EntryPointClient;
-use ethereum_rpc::AlloyRpcProvider;
+use std::{env, net::SocketAddr, sync::Arc};
+use tracing::info;
+use wildmeta_api::WildmetaApi;
 
 pub(crate) struct RpcContext<
 	Header: Send + Sync + 'static,
@@ -52,25 +52,24 @@ pub(crate) struct RpcContext<
 	pub aes256_key: Aes256Key,
 	pub transaction_signer: Arc<ParentchainTxSigner>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
-
 }
 
 impl<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->
-RpcContext<
-	Header,
-	RpcClient,
-	RpcClientFactory,
-	EthereumIntentExecutor,
-	SolanaIntentExecutor,
-	CrossChainIntentExecutor,
->
+		Header: Send + Sync + 'static,
+		RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+		EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+		SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+		CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	>
+	RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -113,18 +112,22 @@ RpcContext<
 			phantom_rpc_client: PhantomData,
 			aes256_key,
 			transaction_signer,
-			entry_point_clients
+			entry_point_clients,
 		}
 	}
-	
-	pub fn to_task_handler_context(&self) -> Arc<TaskHandlerContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>{
+
+	pub fn to_task_handler_context(
+		&self,
+	) -> Arc<
+		TaskHandlerContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	> {
 		Arc::new(TaskHandlerContext::new(
 			self.parentchain_rpc_client_factory.clone(),
 			self.transaction_signer.clone(),
@@ -187,7 +190,7 @@ pub async fn start_server<
 		parentchain_rpc_client_factory,
 		aes256_key,
 		transaction_signer,
-		entry_point_clients
+		entry_point_clients,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

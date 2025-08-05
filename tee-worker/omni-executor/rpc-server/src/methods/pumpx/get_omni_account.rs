@@ -16,14 +16,14 @@
 
 use crate::ErrorCode;
 use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::{Deserialize, Serialize};
 use tracing::error;
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
@@ -38,7 +38,18 @@ pub fn register_get_omni_account<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("pumpx_getOmniAccount", |params, _, _| async move {
 			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {

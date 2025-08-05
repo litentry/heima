@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use super::common::handle_pumpx_native_task;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::pumpx::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::verify_auth::verify_auth_token_authentication;
 use crate::ErrorCode;
 use ethers::types::Bytes;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::NativeTask;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
@@ -31,12 +33,10 @@ use heima_primitives::Address32;
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use super::common::handle_pumpx_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct SignLimitOrderParams {
@@ -63,7 +63,18 @@ pub fn register_sign_limit_order_params<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("pumpx_signLimitOrder", |params, ctx, _| async move {
 			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {

@@ -16,14 +16,14 @@
 
 use crate::server::RpcContext;
 use crate::ErrorCode;
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::log::error;
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct GetNextIntentIdParams {
@@ -38,7 +38,18 @@ pub fn register_get_next_intent_id<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_getNextIntentId", |params, ctx, _| async move {
 			let params = params.parse::<GetNextIntentIdParams>()?;

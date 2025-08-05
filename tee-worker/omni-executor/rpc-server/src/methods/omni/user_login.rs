@@ -4,6 +4,7 @@ use crate::{
 };
 
 use chrono::{Days, Utc};
+use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::jwt;
 use executor_primitives::{utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserAuth, UserId};
 use executor_storage::{HeimaJwtStorage, Storage};
@@ -15,10 +16,9 @@ use heima_authentication::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct UserLoginParams {
@@ -113,7 +113,18 @@ pub fn register_user_login<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {
 			let params = params.parse::<UserLoginParams>().map_err(|e| {

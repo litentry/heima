@@ -1,7 +1,7 @@
 use crate::server::RpcContext;
+use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey, SerdeRsa3072PubKey};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use executor_core::intent_executor::IntentExecutor;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 // example output:
@@ -13,7 +13,18 @@ pub fn register_get_shielding_key<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_getShieldingKey", |_params, ctx, _| async move {
 			let pubkey = ctx.shielding_key.public_key();

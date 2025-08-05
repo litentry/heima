@@ -5,6 +5,7 @@ use crate::{
 	server::RpcContext,
 	Decode, Deserialize, ErrorCode,
 };
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
@@ -16,14 +17,13 @@ use heima_primitives::{
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use std::str::FromStr;
 use tracing::{debug, error};
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -112,7 +112,18 @@ pub fn register_submit_swap_order<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

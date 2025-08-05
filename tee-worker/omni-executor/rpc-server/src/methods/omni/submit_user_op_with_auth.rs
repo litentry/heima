@@ -4,6 +4,7 @@ use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::ErrorCode;
 use alloy::primitives::Address;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::utils::hex::decode_hex;
@@ -16,13 +17,12 @@ use executor_storage::{Storage, WildmetaTimestampStorage};
 use heima_primitives::Address20;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error};
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpWithAuthParams {
@@ -47,7 +47,18 @@ pub fn register_submit_user_op_with_auth<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_submitUserOpWithAuth", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpWithAuthParams>().map_err(|e| {

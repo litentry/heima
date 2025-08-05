@@ -1,7 +1,7 @@
 use crate::methods::omni::common::check_auth;
 use crate::server::RpcContext;
-use jsonrpsee::{types::ErrorObject, RpcModule};
 use executor_core::intent_executor::IntentExecutor;
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[cfg(test)]
@@ -12,7 +12,18 @@ pub fn register_test_protected_method<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
 			if let Ok(user) = check_auth(ext) {
@@ -49,7 +60,7 @@ pub fn register_test_protected_method<
 // 	use tempfile::tempdir;
 // 	use tokio::sync::mpsc;
 // 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
-// 
+//
 // 	#[tokio::test]
 // 	pub async fn test_protected_method() {
 // 		let tmp_dir = tempdir().unwrap();
@@ -57,7 +68,7 @@ pub fn register_test_protected_method<
 // 		let shielding_key = ShieldingKey::new();
 // 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 // 		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-// 
+//
 // 		let mut rng = rand::thread_rng();
 // 		let rsa_private_key =
 // 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
@@ -65,13 +76,13 @@ pub fn register_test_protected_method<
 // 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 // 		let config_loader = ConfigLoader::from_env();
 // 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-// 
+//
 // 		// Create console mailer for test
 // 		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
-// 
+//
 // 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 // 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
-// 
+//
 // 		start_server(
 // 			port,
 // 			shielding_key.clone(),
@@ -87,10 +98,10 @@ pub fn register_test_protected_method<
 // 		)
 // 		.await
 // 		.unwrap();
-// 
+//
 // 		let url = format!("ws://127.0.0.1:{}", port);
 // 		let mut headers = http::HeaderMap::new();
-// 
+//
 // 		let expires_at = Utc::now()
 // 			.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 // 			.expect("Failed to calculate expiration")
@@ -98,7 +109,7 @@ pub fn register_test_protected_method<
 // 		let auth_options = AuthOptions { expires_at };
 // 		let omni_account = Identity::from_web2_account("test@test.com", Web2IdentityType::Email)
 // 			.to_omni_account(CLIENT_ID_HEIMA);
-// 
+//
 // 		let access_token_claims = AuthTokenClaims::new(
 // 			omni_account.to_hex(),
 // 			AUTH_TOKEN_ID_TYPE.to_string(),
@@ -107,13 +118,13 @@ pub fn register_test_protected_method<
 // 		);
 // 		let token = jwt::create(&access_token_claims, jwt_private_key.as_bytes())
 // 			.expect("Failed to create access token");
-// 
+//
 // 		headers.insert("Authorization", format!("Bearer {}", token).parse().unwrap());
-// 
+//
 // 		let client = WsClientBuilder::default().set_headers(headers).build(&url).await.unwrap();
 // 		let response: String =
 // 			client.request("omni_testProtectedMethod", rpc_params![]).await.unwrap();
-// 
+//
 // 		assert_eq!(response, omni_account.to_hex());
 // 	}
 // }

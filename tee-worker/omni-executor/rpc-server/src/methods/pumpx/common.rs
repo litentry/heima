@@ -1,13 +1,13 @@
 use crate::{error_code::*, oneshot, server::RpcContext, Decode};
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
 use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
 use tracing::error;
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Serialize, Debug)]
 pub struct PumpxRpcError {
@@ -71,20 +71,24 @@ pub async fn handle_pumpx_native_task<
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	F,
-	R
+	R,
 >(
-	ctx: &RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	ctx: &RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 	task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
-	let native_task_response = handle_native_task(
-		ctx.to_task_handler_context(),
-		wrapper
-	).await;
-	
+	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
+
 	// Process response
 	match native_task_response {
 		Ok(task_ok) => task_ok_handler(task_ok),

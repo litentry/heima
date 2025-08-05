@@ -174,7 +174,7 @@ pub async fn run_native_task_handler<
 				tokio::spawn(async move {
 					let span = span!(Level::INFO, "native-task", id = wrapper.id);
 					let _permit = permit; // dropped when task finishes
-					// handle_native_task(ctx_cloned, wrapper, sender).instrument(span).await.unwrap()
+					       // handle_native_task(ctx_cloned, wrapper, sender).instrument(span).await.unwrap()
 				});
 			}
 		}
@@ -224,7 +224,7 @@ pub async fn handle_native_task<
 				Identity::Email(ref identity_string) => {
 					let Ok(email) = std::str::from_utf8(identity_string.inner_ref()) else {
 						error!("Invalid email identity");
-						return Err(NativeTaskError::InvalidMemberIdentity)
+						return Err(NativeTaskError::InvalidMemberIdentity);
 					};
 					AuthTokenClaims::new(
 						email.to_string(),
@@ -277,7 +277,11 @@ pub async fn handle_native_task<
 					return Err(NativeTaskError::InternalError);
 				}
 			} else {
-				error!("Intent id different than expected, expected: {:?}, got: {:?}", stored_intent_id + 1, intent_id);
+				error!(
+					"Intent id different than expected, expected: {:?}, got: {:?}",
+					stored_intent_id + 1,
+					intent_id
+				);
 				return Err(NativeTaskError::IntentNonceMismatch);
 			}
 
@@ -301,7 +305,11 @@ pub async fn handle_native_task<
 						auth_type,
 					)
 					.await;
-					(IntentCompletedDetail::Success, true, Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }))
+					(
+						IntentCompletedDetail::Success,
+						true,
+						Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }),
+					)
 				},
 				Intent::TransferNative(transfer) => {
 					let transfer_call = BalancesCall::transfer_allow_death {
@@ -316,7 +324,11 @@ pub async fn handle_native_task<
 						auth_type,
 					)
 					.await;
-					(IntentCompletedDetail::Success, true, Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }))
+					(
+						IntentCompletedDetail::Success,
+						true,
+						Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }),
+					)
 				},
 				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
 					// if let Err(e) = ctx
@@ -377,9 +389,17 @@ pub async fn handle_native_task<
 						},
 					};
 					if let Some(response) = response {
-						(execution_result, should_notify_parentchain, Ok(NativeTaskOk::IntentSwapResponse(response)))
+						(
+							execution_result,
+							should_notify_parentchain,
+							Ok(NativeTaskOk::IntentSwapResponse(response)),
+						)
 					} else {
-						(execution_result, should_notify_parentchain, Err(NativeTaskError::InternalError))
+						(
+							execution_result,
+							should_notify_parentchain,
+							Err(NativeTaskError::InternalError),
+						)
 					}
 				},
 			};
@@ -409,7 +429,9 @@ pub async fn handle_native_task<
 				Ok(res) => res,
 				Err(e) => {
 					error!("Failed to get_account_user_id for email {}: {:?}", email, e);
-					return Err(NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed));
+					return Err(NativeTaskError::PumpxApiError(
+						PumpxApiError::GetAccountUserIdFailed,
+					));
 				},
 			};
 			debug!("Response pumpx get_account_user_id: {:?}", res);
@@ -456,7 +478,9 @@ pub async fn handle_native_task<
 			// check google auth value
 			if !backend_response.data.google_auth_check.unwrap_or(false) {
 				error!("Google code verification failed from user_connect");
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed));
+				return Err(NativeTaskError::PumpxApiError(
+					PumpxApiError::GoogleCodeVerificationFailed,
+				));
 			}
 
 			let id_token_claims = AuthTokenClaims::new(
@@ -508,7 +532,9 @@ pub async fn handle_native_task<
 			.await;
 			if !verify_success {
 				error!("Failed to verify google code within NativeTask::PumpxExportWallet");
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed));
+				return Err(NativeTaskError::PumpxApiError(
+					PumpxApiError::GoogleCodeVerificationFailed,
+				));
 			}
 
 			let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
@@ -617,7 +643,9 @@ pub async fn handle_native_task<
 			.await;
 			if !verify_success {
 				error!("Failed to verify google code within NativeTask::PumpxTransferWidthdraw");
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed));
+				return Err(NativeTaskError::PumpxApiError(
+					PumpxApiError::GoogleCodeVerificationFailed,
+				));
 			}
 
 			// 3. Create a transfer tx and send to backend
@@ -632,9 +660,7 @@ pub async fn handle_native_task<
 
 			debug!("Calling pumpx create_transfer_tx, body {:?}", body);
 			match ctx.pumpx_api.create_transfer_tx(&access_token, body, language.clone()).await {
-				Ok(res) => {
-					Ok(NativeTaskOk::PumpxTransferWithdraw(res))
-				},
+				Ok(res) => Ok(NativeTaskOk::PumpxTransferWithdraw(res)),
 				Err(e) => {
 					error!("Failed to create transfer tx: {}", e);
 					Err(NativeTaskError::PumpxApiError(PumpxApiError::CreateTransferTxFailed))
@@ -745,7 +771,9 @@ pub async fn handle_native_task<
 						Ok(sig) => substrate_to_ethereum_signature(&sig).unwrap().to_vec(),
 						Err(_) => {
 							error!("Failed to sign user operation {}", index);
-							return Err(NativeTaskError::PumpxSignerError(PumpxSignerError::RequestSignatureFailed));
+							return Err(NativeTaskError::PumpxSignerError(
+								PumpxSignerError::RequestSignatureFailed,
+							));
 						},
 					};
 

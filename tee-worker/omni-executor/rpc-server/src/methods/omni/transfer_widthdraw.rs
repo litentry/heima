@@ -1,20 +1,20 @@
+use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
 	Deserialize, ErrorCode,
 };
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
 use tracing::{debug, error};
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use super::common::{check_omni_api_response, handle_omni_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct TransferWithdrawParams {
@@ -65,7 +65,18 @@ pub fn register_transfer_withdraw<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

@@ -1,6 +1,6 @@
 use crate::server::RpcContext;
-use jsonrpsee::RpcModule;
 use executor_core::intent_executor::IntentExecutor;
+use jsonrpsee::RpcModule;
 
 mod pumpx;
 use pumpx::*;
@@ -27,7 +27,18 @@ pub fn register_methods<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	register_omni(module);
 	register_pumpx(module);
 }

@@ -44,7 +44,10 @@ use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMaile
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use native_task_handler::{run_native_task_handler, Aes256KeyStore, NativeTaskChannelType, TaskHandlerContext, MAX_CONCURRENT_TASKS};
+use native_task_handler::{
+	run_native_task_handler, Aes256KeyStore, NativeTaskChannelType, TaskHandlerContext,
+	MAX_CONCURRENT_TASKS,
+};
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
@@ -506,7 +509,6 @@ async fn main() -> Result<(), ()> {
 			// TODO: Needs to be wiped out after the new architecture is running
 			let (native_task_sender, mut receiver) = mpsc::channel::<NativeTaskChannelType>(100);
 
-
 			let worker_url =
 				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
 
@@ -580,7 +582,7 @@ async fn main() -> Result<(), ()> {
 				parentchain_rpc_client_factory.clone(),
 				aes256_key,
 				tx_signer,
-				entry_point_clients
+				entry_point_clients,
 			)
 			.await
 			.map_err(|e| {

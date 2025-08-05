@@ -1,3 +1,4 @@
+use super::common::handle_omni_native_task;
 use crate::{
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
@@ -5,18 +6,17 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use ethers::types::Bytes;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
 use tracing::{debug, error};
-use executor_core::intent_executor::IntentExecutor;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use super::common::handle_omni_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
@@ -55,7 +55,18 @@ pub fn register_export_wallet<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

@@ -6,18 +6,18 @@ use crate::{
 	verify_auth::*,
 	FromHexPrefixed,
 };
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject, Params},
 	RpcModule,
 };
+use native_task_handler::handle_native_task;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 use tracing::error;
-use executor_core::intent_executor::IntentExecutor;
-use native_task_handler::handle_native_task;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub fn register_submit_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -26,7 +26,18 @@ pub fn register_submit_native_task<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
 			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
@@ -35,10 +46,7 @@ pub fn register_submit_native_task<
 			})?;
 
 			// We are directly handling the native task
-			let native_response = handle_native_task(
-				ctx.to_task_handler_context(),
-				wrapper,
-			).await;
+			let native_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
 			let response = if let Some(aes_key) = maybe_aes_key {
 				aes_encrypt_default(&aes_key, &native_response.encode()).encode()
@@ -60,7 +68,19 @@ async fn parse<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
->(params: Params<'static>, ctx: Arc<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) -> ParseResult<'static> {
+>(
+	params: Params<'static>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) -> ParseResult<'static> {
 	let Ok(hex_request) = params.one::<String>() else {
 		error!("Failed to parse params: {:?}", params);
 		return Err(ErrorCode::ParseError.into());
