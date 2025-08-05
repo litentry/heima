@@ -343,11 +343,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-
-      - name: Install rust toolchain
-        working-directory: ./tee-worker/omni-executor
-        run: rustup show
+          sudo apt-get install -yq protobuf-compiler
 
       - name: Cargo clippy
         working-directory: ./tee-worker/omni-executor
@@ -712,6 +708,11 @@ jobs:
     if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && \
+          sudo apt-get install -yq protobuf-compiler
 
       - name: Run cargo clippy check
         run: make clippy
