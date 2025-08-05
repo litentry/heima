@@ -7,9 +7,9 @@ edition.workspace = true
 alloy = { workspace = true, features = ["contract", "rpc-types"] }
 ciborium = { workspace = true }
 heima-primitives = { workspace = true }
-tracing = { workspace = true }
-tokio = { workspace = true, features = ["time"] }
 rand = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
 
 ethereum-rpc = { workspace = true }
 
