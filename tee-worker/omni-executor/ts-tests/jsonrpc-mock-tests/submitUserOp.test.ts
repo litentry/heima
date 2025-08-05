@@ -338,8 +338,23 @@ describe('SubmitUserOp Integration Tests', function () {
 
         idToken = loginResponse.id_token;
 
-        // Use mock TEE worker address for testing
-        teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address;
+        // Get the actual TEE Worker root signer address from the running TEE Worker
+        try {
+            const rootSignerResponse = await omniApi.getSmartWalletRootSigner(
+                {
+                    omni_account: omniAccount,
+                    chain_type: 'Evm', 
+                    wallet_index: 0,
+                } as any, // Type assertion due to interface mismatch
+                idToken
+            );
+            teeWorkerAddress = rootSignerResponse as Address;
+            console.log('Using TEE Worker root signer address:', teeWorkerAddress);
+        } catch (error) {
+            console.log('⚠️ Failed to get TEE Worker root signer, using fallback address:', TEST_CONFIG.ACCOUNTS.TEE_WORKER.address);
+            console.log('Error:', error);
+            teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address;
+        }
 
         // Create calldata for adding TEE worker as root signer
         const addSignerCalldata = createAddSignerCalldata(teeWorkerAddress);
@@ -392,6 +407,7 @@ describe('SubmitUserOp Integration Tests', function () {
             timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
         expect(receipt.status).to.equal('success');
+        console.log('UserOperation transaction executed, checking signer status...');
 
         // Verify signer was added
         const isRootSigner = await publicClient.readContract({
