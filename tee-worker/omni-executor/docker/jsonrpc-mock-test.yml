@@ -1,7 +1,7 @@
 services:
   jsonrpc-mock-tests:
     image: litentry/omni-executor:latest
-    container_name: litentry-jsonrpc-mock-tests
+    container_name: litentry-jsonrpc-mock-test
     volumes:
       - ../ts-tests:/ts-tests
       - ../../client-api:/client-api
