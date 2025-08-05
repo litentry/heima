@@ -606,7 +606,8 @@ jobs:
 
       - name: Install solana sdk
         run: |
-          curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
+          sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
           anchor -V
           solana -V
 
