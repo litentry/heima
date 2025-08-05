@@ -64,6 +64,15 @@ use user_login::*;
 mod get_approve_agent_wallet_data;
 use get_approve_agent_wallet_data::*;
 
+mod get_initiate_withdrawal_data;
+use get_initiate_withdrawal_data::*;
+
+mod get_approve_builder_fee_data;
+use get_approve_builder_fee_data::*;
+
+mod get_hyperliquid_signature_data;
+use get_hyperliquid_signature_data::*;
+
 #[cfg(test)]
 mod test_protected_method;
 
@@ -92,6 +101,9 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_submit_user_op(module);
 	register_submit_user_op_with_auth(module);
 	register_get_approve_agent_wallet_data(module);
+	register_get_initiate_withdrawal_data(module);
+	register_get_approve_builder_fee_data(module);
+	register_get_hyperliquid_signature_data(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
