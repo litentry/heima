@@ -27,18 +27,9 @@ pub struct GetHyperliquidSignatureDataParams {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidActionType {
-	ApproveAgent {
-		agent_address: String,
-		agent_name: Option<String>,
-	},
-	Withdraw {
-		amount: String,
-		destination: String,
-	},
-	ApproveBuilderFee {
-		max_fee_rate: String,
-		builder: String,
-	},
+	ApproveAgent { agent_address: String, agent_name: Option<String> },
+	Withdraw { amount: String, destination: String },
+	ApproveBuilderFee { max_fee_rate: String, builder: String },
 }
 
 #[derive(Serialize, Clone)]
@@ -267,7 +258,8 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 						agent_name,
 						nonce,
 					};
-					let signature = generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
 				HyperliquidActionType::Withdraw { amount, destination } => {
@@ -281,7 +273,8 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 							ErrorObject::from(ErrorCode::ParseError)
 						})?,
 					};
-					let signature = generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::Withdraw(action), signature)
 				},
 				HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder } => {
@@ -295,7 +288,8 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 						})?,
 						nonce,
 					};
-					let signature = generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::ApproveBuilderFee(action), signature)
 				},
 			};
