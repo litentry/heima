@@ -607,7 +607,8 @@ jobs:
 
       - name: Install anchor
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --force
+          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+          anchor -V
 
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
