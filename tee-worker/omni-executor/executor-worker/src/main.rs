@@ -44,10 +44,7 @@ use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMaile
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use native_task_handler::{
-	run_native_task_handler, Aes256KeyStore, NativeTaskChannelType, TaskHandlerContext,
-	MAX_CONCURRENT_TASKS,
-};
+use native_task_handler::Aes256KeyStore;
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
@@ -70,7 +67,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::oneshot;
 use tracing::info;
 use tracing::log::error;
 use tracing_subscriber::EnvFilter;
@@ -506,9 +503,6 @@ async fn main() -> Result<(), ()> {
 			// let native_task_sender =
 			// 	run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
 
-			// TODO: Needs to be wiped out after the new architecture is running
-			let (native_task_sender, mut receiver) = mpsc::channel::<NativeTaskChannelType>(100);
-
 			let worker_url =
 				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
 
@@ -567,7 +561,6 @@ async fn main() -> Result<(), ()> {
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
-				Arc::new(native_task_sender),
 				pumpx_api,
 				storage_db.clone(),
 				jwt_rsa_private_key,

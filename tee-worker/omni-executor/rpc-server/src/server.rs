@@ -11,7 +11,7 @@ use executor_crypto::aes256::Aes256Key;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use heima_identity_verification::web2::email::mailer::MailerTrait;
 use jsonrpsee::{server::Server, RpcModule};
-use native_task_handler::{NativeTaskSender, ParentchainTxSigner, TaskHandlerContext};
+use native_task_handler::{ParentchainTxSigner, TaskHandlerContext};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
@@ -31,7 +31,6 @@ pub(crate) struct RpcContext<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 > {
 	pub shielding_key: ShieldingKey,
-	pub native_task_sender: Arc<NativeTaskSender>,
 	pub storage_db: Arc<StorageDB>,
 	pub mailer: Box<dyn MailerTrait + Send + Sync>,
 	pub jwt_rsa_private_key: Vec<u8>,
@@ -74,7 +73,6 @@ impl<
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		shielding_key: ShieldingKey,
-		native_task_sender: Arc<NativeTaskSender>,
 		storage_db: Arc<StorageDB>,
 		mailer: Box<dyn MailerTrait + Send + Sync>,
 		jwt_rsa_private_key: Vec<u8>,
@@ -94,7 +92,6 @@ impl<
 	) -> Self {
 		Self {
 			shielding_key,
-			native_task_sender,
 			storage_db,
 			mailer,
 			jwt_rsa_private_key,
@@ -155,7 +152,6 @@ pub async fn start_server<
 >(
 	port: u16,
 	shielding_key: ShieldingKey,
-	native_task_sender: Arc<NativeTaskSender>,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
 	storage_db: Arc<StorageDB>,
 	jwt_rsa_private_key: Vec<u8>,
@@ -174,7 +170,6 @@ pub async fn start_server<
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let ctx = RpcContext::new(
 		shielding_key,
-		native_task_sender,
 		storage_db,
 		mailer,
 		jwt_rsa_private_key.clone(),

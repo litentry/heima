@@ -1,6 +1,6 @@
 use crate::{
 	error_code::*,
-	hex_encode, oneshot,
+	hex_encode,
 	server::RpcContext,
 	task::{DecryptableTask, RawTask},
 	verify_auth::*,
