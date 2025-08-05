@@ -381,11 +381,10 @@ jobs:
         if: needs.set-condition.outputs.rebuild_parachain == 'false'
         run: |
           docker pull litentry/heima:latest
-          docker pull litentry/heima-aio:latest
 
       - name: Save docker image
         run: |
-          docker save litentry/heima:latest litentry/heima-aio:latest | gzip > heima.tar.gz
+          docker save litentry/heima:latest | gzip > heima.tar.gz
 
       - name: Upload parachain docker image
         uses: actions/upload-artifact@v4
@@ -605,10 +604,11 @@ jobs:
       - name: Install foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Install anchor
+      - name: Install solana sdk
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+          curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
           anchor -V
+          solana -V
 
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
@@ -1047,7 +1047,6 @@ jobs:
         run: |
           docker load < heima.tar.gz
           docker push litentry/heima
-          docker push litentry/heima-aio
 
       - name: Push tee-worker image
         if: needs.set-condition.outputs.rebuild_identity == 'true'
