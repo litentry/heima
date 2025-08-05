@@ -608,10 +608,11 @@ jobs:
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-          ls -l "$HOME/.local/share/solana/install/active_release/bin"
-          solana -V
+
+      - name: Install anchor
           cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
           anchor -V
+          solana -V
 
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
