@@ -23,7 +23,7 @@ import "./callback/TokenCallbackHandler.sol";
  *  has list of root signers who can sign messages and generate sessions
  *  has execute, eth handling methods
  */
-contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+contract OmniAccountV1 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using Passkey for Passkey.PublicKey;
 
     bytes32 public owner;
@@ -32,8 +32,17 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
 
     mapping(address => bool) public rootSigners;
     mapping(bytes32 => bool) public passkeySigners;
+    uint256 public passkeySignerCount;
 
     IEntryPoint private immutable _entryPoint;
+
+    // Selectors for restricted functions that only owner should call
+    bytes4 private constant ADD_ROOT_SIGNER_SELECTOR = bytes4(keccak256("addRootSigner(address)"));
+    bytes4 private constant REMOVE_ROOT_SIGNER_SELECTOR = bytes4(keccak256("removeRootSigner(address)"));
+    bytes4 private constant ADD_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("addPasskeySigner((uint256,uint256))"));
+    bytes4 private constant REMOVE_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("removePasskeySigner((uint256,uint256))"));
+    bytes4 private constant WITHDRAW_DEPOSIT_SELECTOR = bytes4(keccak256("withdrawDepositTo(address,uint256)"));
+    bytes4 private constant UPGRADE_TO_AND_CALL_SELECTOR = bytes4(keccak256("upgradeToAndCall(address,bytes)"));
 
     event AccountInitialized(
         IEntryPoint indexed entryPoint, bytes32 indexed owner, OwnerType ownerType, bytes clientId, address indexed root
@@ -63,8 +72,15 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     }
 
     function _onlyOwner() internal view {
-        // Directly from EOA owner, or through the account itself (which gets redirected through execute())
-        require(_determineOa(msg.sender) == owner || msg.sender == address(this), "only owner");
+        // Directly from EOA owner, or from EntryPoint (safe because _validateSignature ensures only owner-signed UserOps can call restricted functions)
+        // For non-EVM owner types:
+        // - If passkey signers exist, they have priority (root signers cannot call onlyOwner)
+        // - If no passkey signers exist, root signers can call onlyOwner
+        require(
+            _determineOa(msg.sender) == owner || msg.sender == address(entryPoint())
+                || (ownerType != OwnerType.Evm && passkeySignerCount == 0 && isRootSigner(msg.sender)),
+            "only owner"
+        );
     }
 
     /**
@@ -91,18 +107,10 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         ownerType = anOwnerType;
         emit AccountInitialized(_entryPoint, owner, ownerType, clientId, aRoot);
     }
-
-    // Require the function call went through EntryPoint or be signed by [owner|root]
-    function _requireForExecute() internal view virtual override {
-        require(
-            msg.sender == address(entryPoint()) || _determineOa(msg.sender) == owner || isRootSigner(msg.sender),
-            "account: not Owner or EntryPoint or root"
-        );
-    }
-
     /**
      * convert sender to oa bytes
      */
+
     function _determineOa(address sender) internal view returns (bytes32) {
         // bytes("evm");
         bytes3 oaType = 0x65766d;
@@ -128,10 +136,32 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         if (signer == UserOpSigner.Owner) {
             return _validateOwner(userOpHash, sig);
         } else if (signer == UserOpSigner.RootKey) {
+            // For non-EVM owner types, allow root signers to call restricted functions only if no passkey signers exist
+            if (ownerType != OwnerType.Evm && passkeySignerCount == 0) {
+                // Root signers can act as owners for non-EVM accounts without passkey signers
+                return _validateRootKey(userOpHash, sig);
+            }
+            // Otherwise, check if the UserOp is trying to call a restricted function
+            if (_isRestrictedCall(userOp.callData)) {
+                return SIG_VALIDATION_FAILED;
+            }
             return _validateRootKey(userOpHash, sig);
         } else if (signer == UserOpSigner.SessionKey) {
+            // Session keys should also be restricted from sensitive operations
+            if (_isRestrictedCall(userOp.callData)) {
+                return SIG_VALIDATION_FAILED;
+            }
             return _validateSessionKey(userOpHash, sig);
         } else if (signer == UserOpSigner.Passkey) {
+            // For non-EVM owner types with passkey signers, allow passkeys to call restricted functions
+            if (ownerType != OwnerType.Evm && passkeySignerCount > 0) {
+                // Passkey signers can act as owners for non-EVM accounts
+                return _validatePasskey(userOpHash, sig);
+            }
+            // Otherwise, check if the UserOp is trying to call a restricted function
+            if (_isRestrictedCall(userOp.callData)) {
+                return SIG_VALIDATION_FAILED;
+            }
             return _validatePasskey(userOpHash, sig);
         } else {
             revert("unsupported signer type");
@@ -172,13 +202,23 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         return isRootSigner(sessionProofSigner) ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
-    function _validatePasskey(bytes32, /* userOpHash */ bytes calldata /* sig */ )
-        internal
-        pure
-        returns (uint256 validationData)
-    {
-        // TODO
-        return SIG_VALIDATION_FAILED;
+    function _validatePasskey(bytes32 userOpHash, bytes calldata sig) internal view returns (uint256 validationData) {
+        // Decode signature data
+        (
+            Passkey.PublicKey memory publicKey,
+            Passkey.Signature memory passkeySignature,
+            Passkey.Metadata memory metadata
+        ) = abi.decode(sig, (Passkey.PublicKey, Passkey.Signature, Passkey.Metadata));
+
+        // Check if this passkey is authorized
+        if (!passkeySigners[publicKey.toKey()]) {
+            return SIG_VALIDATION_FAILED;
+        }
+
+        // Verify the passkey signature
+        bool isValid = Passkey.verify(userOpHash, metadata, passkeySignature, publicKey);
+
+        return isValid ? SIG_VALIDATION_SUCCESS : SIG_VALIDATION_FAILED;
     }
 
     /**
@@ -219,17 +259,41 @@ contract OmniAccount is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     }
 
     function addPasskeySigner(Passkey.PublicKey memory pk) public onlyOwner {
-        passkeySigners[pk.toKey()] = true;
-        emit PasskeySignerAdded(pk);
+        bytes32 key = pk.toKey();
+        if (!passkeySigners[key]) {
+            passkeySigners[key] = true;
+            passkeySignerCount++;
+            emit PasskeySignerAdded(pk);
+        }
     }
 
     function removePasskeySigner(Passkey.PublicKey memory pk) public onlyOwner {
-        passkeySigners[pk.toKey()] = false;
-        emit PasskeySignerRemoved(pk);
+        bytes32 key = pk.toKey();
+        if (passkeySigners[key]) {
+            passkeySigners[key] = false;
+            passkeySignerCount--;
+            emit PasskeySignerRemoved(pk);
+        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation);
         _onlyOwner();
+    }
+
+    /// Check if the callData contains a call to a restricted function
+    function _isRestrictedCall(bytes calldata callData) internal pure returns (bool) {
+        if (callData.length < 4) return false;
+
+        bytes4 selector = bytes4(callData[0:4]);
+
+        // Check against all restricted selectors
+        return selector == ADD_ROOT_SIGNER_SELECTOR || selector == REMOVE_ROOT_SIGNER_SELECTOR
+            || selector == ADD_PASSKEY_SIGNER_SELECTOR || selector == REMOVE_PASSKEY_SIGNER_SELECTOR
+            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_AND_CALL_SELECTOR;
+    }
+
+    function version() public pure virtual returns (string memory) {
+        return "1.0.0";
     }
 }

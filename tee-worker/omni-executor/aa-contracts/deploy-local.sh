@@ -55,6 +55,8 @@ deploy_contracts() {
     export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"  # Anvil's first private key
     export OMNI_EXECUTOR_SIGNER=$OMNI_EXECUTOR_SIGNER
     export PAYMASTER_TYPE=$PAYMASTER_TYPE
+    export SAVE_DEPLOYMENT_FILE=true  # Enable saving enhanced deployment artifacts
+    export DEPLOYMENT_ENV=local  # Use local environment subdirectory
     
     # Show which paymaster is being deployed
     if [ "$PAYMASTER_TYPE" = "demo" ]; then
@@ -78,8 +80,8 @@ deploy_contracts() {
     BROADCAST_FILE="$SCRIPT_DIR/broadcast/DeployLocalWithPaymaster.s.sol/$CHAIN_ID/run-latest.json"
     
     if [ -f "$BROADCAST_FILE" ]; then
-        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPointV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactoryV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         # Try to find DemoPaymaster first, fall back to SimplePaymaster
         PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         if [ -z "$PAYMASTER_ADDRESS" ]; then
@@ -115,6 +117,13 @@ deploy_contracts() {
         echo "NEXT_PUBLIC_PAYMASTER_ADDRESS=$PAYMASTER_ADDRESS"
         echo "NEXT_PUBLIC_TEST_USDC_ADDRESS=$USDC_ADDRESS"
         echo "NEXT_PUBLIC_TEST_USDT_ADDRESS=$USDT_ADDRESS"
+        
+        # Auto-sync ABIs if deployment artifacts were saved
+        if [ -f "$SCRIPT_DIR/deployments/$DEPLOYMENT_ENV/$DEPLOYMENT_ENV.json" ] && [ -f "$SCRIPT_DIR/sync-abis-from-deployment.sh" ]; then
+            echo ""
+            echo "🔄 Auto-syncing ABIs to demo app..."
+            "$SCRIPT_DIR/sync-abis-from-deployment.sh"
+        fi
     else
         echo "⚠️  Contracts deployed but broadcast file not found"
         echo "Check the output above for contract addresses"
@@ -152,6 +161,13 @@ forge compile
 
 # Deploy contracts
 deploy_contracts
+
+# Enrich deployment artifacts with ABIs if Node.js is available
+if command -v node &> /dev/null && [ -f "$SCRIPT_DIR/extract-abis.js" ]; then
+    echo ""
+    echo "📝 Enriching deployment artifacts with ABIs..."
+    node "$SCRIPT_DIR/extract-abis.js" || echo "⚠️  Failed to enrich ABIs, but deployment was successful"
+fi
 
 # Keep Anvil running if we started it
 if [ "$ANVIL_RUNNING" = false ]; then
