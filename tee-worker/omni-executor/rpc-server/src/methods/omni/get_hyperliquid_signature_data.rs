@@ -134,12 +134,12 @@ impl HyperliquidEip712Signature for ApproveAgentAction {
 
 	fn struct_hash(&self) -> B256 {
 		let items = (
-            keccak256("HyperliquidTransaction:ApproveAgent(string hyperliquidChain,address agentAddress,string agentName,uint64 nonce)"),
-            keccak256(&self.hyperliquid_chain),
-            &self.agent_address,
-            keccak256(self.agent_name.as_deref().unwrap_or("")),
-            &self.nonce
-        );
+		keccak256("HyperliquidTransaction:ApproveAgent(string hyperliquidChain,address agentAddress,string agentName,uint64 nonce)"),
+		keccak256(&self.hyperliquid_chain),
+		&self.agent_address,
+		keccak256(self.agent_name.as_deref().unwrap_or("")),
+		&self.nonce
+	);
 		keccak256(items.abi_encode())
 	}
 }
@@ -156,12 +156,12 @@ impl HyperliquidEip712Signature for WithdrawAction {
 
 	fn struct_hash(&self) -> B256 {
 		let items = (
-            keccak256("HyperliquidTransaction:Withdraw3(string hyperliquidChain,string amount,uint64 time,address destination)"),
-            keccak256(&self.hyperliquid_chain),
-            keccak256(&self.amount),
-            &self.time,
-            &self.destination
-        );
+		keccak256("HyperliquidTransaction:Withdraw3(string hyperliquidChain,string amount,uint64 time,address destination)"),
+		keccak256(&self.hyperliquid_chain),
+		keccak256(&self.amount),
+		&self.time,
+		&self.destination
+	);
 		keccak256(items.abi_encode())
 	}
 }
@@ -178,12 +178,12 @@ impl HyperliquidEip712Signature for ApproveBuilderFeeAction {
 
 	fn struct_hash(&self) -> B256 {
 		let items = (
-            keccak256("HyperliquidTransaction:ApproveBuilderFee(string hyperliquidChain,string maxFeeRate,address builder,uint64 nonce)"),
-            keccak256(&self.hyperliquid_chain),
-            keccak256(&self.max_fee_rate),
-            &self.builder,
-            &self.nonce
-        );
+		keccak256("HyperliquidTransaction:ApproveBuilderFee(string hyperliquidChain,string maxFeeRate,address builder,uint64 nonce)"),
+		keccak256(&self.hyperliquid_chain),
+		keccak256(&self.max_fee_rate),
+		&self.builder,
+		&self.nonce
+	);
 		keccak256(items.abi_encode())
 	}
 }
@@ -411,16 +411,16 @@ mod tests {
 	#[test]
 	fn test_params_deserialization_approve_agent() {
 		let json = r#"{
-			"user_id": {"type": "email", "value": "test@example.com"},
-			"user_auth": {"type": "email", "value": "123456"},
-			"client_id": "test_client",
-			"action_type": {
-				"type": "approve_agent",
-				"agent_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
-				"agent_name": "My Trading Bot"
-			},
-			"chain_id": 42161
-		}"#;
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "approve_agent",
+			"agent_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"agent_name": "My Trading Bot"
+		},
+		"chain_id": 42161
+	}"#;
 
 		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
 
@@ -441,16 +441,16 @@ mod tests {
 	#[test]
 	fn test_params_deserialization_withdraw() {
 		let json = r#"{
-			"user_id": {"type": "email", "value": "test@example.com"},
-			"user_auth": {"type": "email", "value": "123456"},
-			"client_id": "test_client",
-			"action_type": {
-				"type": "withdraw",
-				"amount": "100.0",
-				"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
-			},
-			"chain_id": 42161
-		}"#;
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "withdraw",
+			"amount": "100.0",
+			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+		},
+		"chain_id": 42161
+	}"#;
 
 		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
 
@@ -464,16 +464,16 @@ mod tests {
 	#[test]
 	fn test_params_deserialization_approve_builder_fee() {
 		let json = r#"{
-			"user_id": {"type": "email", "value": "test@example.com"},
-			"user_auth": {"type": "email", "value": "123456"},
-			"client_id": "test_client",
-			"action_type": {
-				"type": "approve_builder_fee",
-				"max_fee_rate": "0.01",
-				"builder": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
-			},
-			"chain_id": 42161
-		}"#;
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "approve_builder_fee",
+			"max_fee_rate": "0.01",
+			"builder": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+		},
+		"chain_id": 42161
+	}"#;
 
 		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
 
