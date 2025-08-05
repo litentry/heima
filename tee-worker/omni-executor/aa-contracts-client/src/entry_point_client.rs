@@ -714,7 +714,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		}
 	}
 
-	/// Classify RPC errors into our error taxonomy
 	fn classify_rpc_error(&self, rpc_error: ethereum_rpc::RpcProviderError) -> AaContractError {
 		match rpc_error {
 			ethereum_rpc::RpcProviderError::InvalidUrl(url) => {
@@ -1683,8 +1682,6 @@ pub mod test {
 			.handle_ops_with_retry(&[], address!("0x0000000000000000000000000000000000000000"))
 			.await;
 
-		// With current implementation using unit errors, this will still retry
-		// In real implementation with typed errors, non-retryable errors would fail immediately
 		assert!(result.is_err());
 	}
 }
