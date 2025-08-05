@@ -97,7 +97,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest> + Send + Sync>
 			..Default::default()
 		};
 
-		let _ = self.provider.send_transaction(tx).await.map(|_| ())?;
+		self.provider.send_transaction(tx).await.map_err(|_| ())?;
 
 		Ok(())
 	}
