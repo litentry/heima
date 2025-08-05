@@ -49,25 +49,25 @@ on:
         type: boolean
         description: rebuild-parachain
         required: true
-        default: true
-      rebuild-identity:
-        type: boolean
-        description: rebuild-identity
-        required: true
-        default: true
+        default: false
       rebuild-omni-executor:
         type: boolean
         description: rebuild-omni-executor
-        required: true
-        default: true
-      run-multi-worker-test:
-        type: boolean
-        description: run-multi-worker-test
         required: true
         default: false
       rebuild-contract:
         type: boolean
         description: rebuild-contract
+        required: true
+        default: false
+      rebuild-identity:
+        type: boolean
+        description: rebuild-identity
+        required: true
+        default: false
+      run-multi-worker-test:
+        type: boolean
+        description: run-multi-worker-test
         required: true
         default: false
       push-docker:
@@ -606,9 +606,11 @@ jobs:
 
       - name: Install solana sdk
         run: |
-          curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash
-          anchor -V
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
           solana -V
+          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+          anchor -V
 
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
