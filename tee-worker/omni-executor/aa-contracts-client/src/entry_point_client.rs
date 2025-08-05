@@ -341,11 +341,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				})
 			},
 			Err(err) => {
-				// Check if this is an execution reverted error with data
 				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					// Try to extract revert data from the reason string
 					if reason.contains("0x") {
-						// Extract hex data after "0x"
 						if let Some(start) = reason.find("0x") {
 							let hex_data = &reason[start..];
 							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
@@ -419,7 +416,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				Err(rpc_error) => {
 					let error = self.classify_rpc_error(rpc_error);
 
-					// Check if the error is retryable
 					if !error.is_retryable() {
 						error!("Non-retryable error encountered: {:?}", error);
 						return Err(());
@@ -431,10 +427,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 						return Err(());
 					}
 
-					// Calculate backoff delay
 					let delay = self.calculate_backoff_delay(attempt);
 
-					// Increase gas buffer for next attempt
 					gas_buffer_adjustment += self.retry_config.gas_increase_percent as u64;
 
 					warn!(
@@ -469,11 +463,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				// Check if this is an execution reverted error with data
 				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					// Try to extract revert data from the reason string
 					if reason.contains("0x") {
-						// Extract hex data after "0x"
 						if let Some(start) = reason.find("0x") {
 							let hex_data = &reason[start..];
 							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
