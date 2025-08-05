@@ -1374,24 +1374,29 @@ pub mod test {
 
 	#[tokio::test]
 	async fn print_init_code_and_sender() {
-		let entrypoint_address = address!("0xe6042188857a822DDfcFE5fd9E17118049Ab539a");
+		let entrypoint_address = address!("0x332058832970B17D9fF657ad03bab074c49443aa");
 		let rpc_client =
 			Arc::new(AlloyRpcProvider::new("https://arbitrum-sepolia.api.onfinality.io/public"));
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 
-		let factory = address!("0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e");
+		let factory = address!("0xe374D687f02008aB497D4A5f106445388a2831b7");
 		let oa: [u8; 32] =
 			decode_hex("0x31e80de15f426f2e353810d57aff3a6ab44e1a79c44e8bbc5b17fa189ee47d8f")
 				.unwrap()
 				.try_into()
 				.unwrap();
 		let client_id = "Wildmeta";
-		let root_signer = address!("0x2EfD25B2AE9F6f4918D25629d003120E3112B430");
+		let root_signer = address!("0xEb79fD35765b83534Cc76E43D5E514a07dCb0180");
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
-		let init_code_bytes =
-			prepare_factory_init_code(factory, oa, &client_id_fixed_bytes.as_ref(), root_signer);
+		let init_code_bytes = prepare_factory_init_code(
+			factory,
+			oa,
+			OwnerType::Evm,
+			&client_id_fixed_bytes.as_ref(),
+			root_signer,
+		);
 		let init_code = Bytes::from(init_code_bytes);
 		println!("initCode: {}", format!("{init_code}"));
 
@@ -1400,7 +1405,7 @@ pub mod test {
 
 		// 1 GWEI = 1000000000
 		let paymaster_and_data = crate::entry_point_client::create_paymaster_and_data(
-			address!("0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912"),
+			address!("0xD4dCB31763CBA7295bA4023E9411CB6db607DE07"),
 			U256::from(100_000u64),
 			U256::from(300_000u64),
 		);

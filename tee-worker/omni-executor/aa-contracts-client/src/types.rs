@@ -72,21 +72,6 @@ sol! {
 		bytes32 y;
 	}
 
-	// Owner type
-	enum OwnerType {
-		Pumpx, // 0x00
-		Email, // 0x01
-		Twitter, // 0x02
-		Discord, // 0x03
-		Github, // 0x04
-		Substrate, // 0x05
-		Evm, // 0x06
-		Bitcoin, // 0x07
-		Solana, // 0x08
-		Google, // 0x09
-		Passkey // 0x0a
-	}
-
 	// entry point
 	function handleOps(PackedUserOperation[] calldata ops, address payable beneficiary) external;
 	function getSenderAddress(bytes calldata initCode) external;
