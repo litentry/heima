@@ -179,13 +179,14 @@ mod tests {
 	#[test]
 	fn test_new_error_patterns_retryability() {
 		// Test "max fee per gas less than block base fee" - should be retryable
-		let error1 = RpcProviderError::Transaction("max fee per gas less than block base fee".to_string());
+		let error1 =
+			RpcProviderError::Transaction("max fee per gas less than block base fee".to_string());
 		assert!(error1.is_retryable());
 
-		let error2 = RpcProviderError::JsonRpc { 
-			code: -32000, 
+		let error2 = RpcProviderError::JsonRpc {
+			code: -32000,
 			message: "max fee per gas less than block base fee".to_string(),
-			data: None
+			data: None,
 		};
 		assert!(error2.is_retryable());
 
@@ -200,7 +201,7 @@ mod tests {
 		let error5 = RpcProviderError::JsonRpc {
 			code: -32000,
 			message: "intrinsic gas too low".to_string(),
-			data: None
+			data: None,
 		};
 		assert!(!error5.is_retryable());
 
@@ -212,9 +213,8 @@ mod tests {
 		let error7 = RpcProviderError::JsonRpc {
 			code: -32000,
 			message: "gas price too low for the network".to_string(),
-			data: None
+			data: None,
 		};
 		assert!(error7.is_retryable());
 	}
 }
-
