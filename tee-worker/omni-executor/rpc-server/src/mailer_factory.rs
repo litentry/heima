@@ -20,10 +20,8 @@ use heima_identity_verification::web2::email::{ConsoleMailer, Mailer};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// A factory for creating mailers based on client configurations
 pub struct MailerFactory {
 	config_loader: Arc<ConfigLoader>,
-	// Cache of created mailers to avoid recreation
 	mailer_cache: std::sync::RwLock<HashMap<String, Arc<dyn MailerTrait + Send + Sync>>>,
 }
 
@@ -32,23 +30,18 @@ impl MailerFactory {
 		Self { config_loader, mailer_cache: std::sync::RwLock::new(HashMap::new()) }
 	}
 
-	/// Get or create a mailer for the specified client
 	pub fn get_mailer_for_client(
 		&self,
 		client_id: &str,
 	) -> Result<Arc<dyn MailerTrait + Send + Sync>, Box<dyn std::error::Error>> {
 		let client_key = client_id.to_lowercase();
 
-		// Try to get from cache first
-		{
-			let cache =
-				self.mailer_cache.read().map_err(|e| format!("Failed to read cache: {}", e))?;
-			if let Some(mailer) = cache.get(&client_key) {
-				return Ok(mailer.clone());
-			}
+		let cache =
+			self.mailer_cache.read().map_err(|e| format!("Failed to read cache: {}", e))?;
+		if let Some(mailer) = cache.get(&client_key) {
+			return Ok(mailer.clone());
 		}
 
-		// Get client-specific configuration
 		let config = self
 			.config_loader
 			.get_mailer_config(client_id)
@@ -56,17 +49,13 @@ impl MailerFactory {
 
 		let mailer = Self::create_mailer(config)?;
 
-		// Cache the mailer
-		{
-			let mut cache =
-				self.mailer_cache.write().map_err(|e| format!("Failed to write cache: {}", e))?;
-			cache.insert(client_key.clone(), mailer.clone());
-		}
+		let mut cache =
+			self.mailer_cache.write().map_err(|e| format!("Failed to write cache: {}", e))?;
+		cache.insert(client_key.clone(), mailer.clone());
 
 		Ok(mailer)
 	}
 
-	/// Create a mailer instance from configuration
 	fn create_mailer(
 		config: MailerConfig,
 	) -> Result<Arc<dyn MailerTrait + Send + Sync>, Box<dyn std::error::Error>> {
@@ -102,19 +91,16 @@ mod tests {
 
 	#[test]
 	fn test_mailer_factory_caching() {
-		// Set up test environment variables
 		std::env::set_var("OE_MAILER_TYPE_CONSOLE", "console");
 		std::env::set_var("OE_MAILER_FROM_EMAIL_CONSOLE", "test@example.com");
 		std::env::set_var("OE_MAILER_FROM_NAME_CONSOLE", "Console Test Mailer");
 
-		// Test that mailers are cached properly
 		let config = ConfigLoader::from_env();
 		let factory = MailerFactory::new(Arc::new(config));
 
 		let mailer1 = factory.get_mailer_for_client("console").expect("Should create mailer");
 		let mailer2 = factory.get_mailer_for_client("console").expect("Should get cached mailer");
 
-		// Should be the same instance (Arc points to same object)
 		assert!(Arc::ptr_eq(&mailer1, &mailer2));
 	}
 }
