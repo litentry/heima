@@ -110,8 +110,18 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 }
 
 trait HyperliquidEip712Signature {
-	fn domain(&self) -> Eip712Domain;
+	fn signature_chain_id(&self) -> u64;
 	fn struct_hash(&self) -> B256;
+
+	fn domain(&self) -> Eip712Domain {
+		eip712_domain! {
+			name: "HyperliquidSignTransaction",
+			version: "1",
+			chain_id: self.signature_chain_id(),
+			verifying_contract: Address::ZERO,
+		}
+	}
+
 	fn eip712_signing_hash(&self) -> B256 {
 		let mut digest_input = [0u8; 2 + 32 + 32];
 		digest_input[0] = 0x19;
@@ -123,67 +133,52 @@ trait HyperliquidEip712Signature {
 }
 
 impl HyperliquidEip712Signature for ApproveAgentAction {
-	fn domain(&self) -> Eip712Domain {
-		eip712_domain! {
-			name: "HyperliquidSignTransaction",
-			version: "1",
-			chain_id: self.signature_chain_id,
-			verifying_contract: Address::ZERO,
-		}
+	fn signature_chain_id(&self) -> u64 {
+		self.signature_chain_id
 	}
 
 	fn struct_hash(&self) -> B256 {
 		let items = (
-		keccak256("HyperliquidTransaction:ApproveAgent(string hyperliquidChain,address agentAddress,string agentName,uint64 nonce)"),
-		keccak256(&self.hyperliquid_chain),
-		&self.agent_address,
-		keccak256(self.agent_name.as_deref().unwrap_or("")),
-		&self.nonce
-	);
+			keccak256("HyperliquidTransaction:ApproveAgent(string hyperliquidChain,address agentAddress,string agentName,uint64 nonce)"),
+			keccak256(&self.hyperliquid_chain),
+			&self.agent_address,
+			keccak256(self.agent_name.as_deref().unwrap_or("")),
+			&self.nonce
+		);
 		keccak256(items.abi_encode())
 	}
 }
 
 impl HyperliquidEip712Signature for Withdraw3Action {
-	fn domain(&self) -> Eip712Domain {
-		eip712_domain! {
-			name: "HyperliquidSignTransaction",
-			version: "1",
-			chain_id: self.signature_chain_id,
-			verifying_contract: Address::ZERO,
-		}
+	fn signature_chain_id(&self) -> u64 {
+		self.signature_chain_id
 	}
 
 	fn struct_hash(&self) -> B256 {
 		let items = (
-		keccak256("HyperliquidTransaction:Withdraw3(string hyperliquidChain,string amount,uint64 time,address destination)"),
-		keccak256(&self.hyperliquid_chain),
-		keccak256(&self.amount),
-		&self.time,
-		&self.destination
-	);
+			keccak256("HyperliquidTransaction:Withdraw3(string hyperliquidChain,string amount,uint64 time,address destination)"),
+			keccak256(&self.hyperliquid_chain),
+			keccak256(&self.amount),
+			&self.time,
+			&self.destination
+		);
 		keccak256(items.abi_encode())
 	}
 }
 
 impl HyperliquidEip712Signature for ApproveBuilderFeeAction {
-	fn domain(&self) -> Eip712Domain {
-		eip712_domain! {
-			name: "HyperliquidSignTransaction",
-			version: "1",
-			chain_id: self.signature_chain_id,
-			verifying_contract: Address::ZERO,
-		}
+	fn signature_chain_id(&self) -> u64 {
+		self.signature_chain_id
 	}
 
 	fn struct_hash(&self) -> B256 {
 		let items = (
-		keccak256("HyperliquidTransaction:ApproveBuilderFee(string hyperliquidChain,string maxFeeRate,address builder,uint64 nonce)"),
-		keccak256(&self.hyperliquid_chain),
-		keccak256(&self.max_fee_rate),
-		&self.builder,
-		&self.nonce
-	);
+			keccak256("HyperliquidTransaction:ApproveBuilderFee(string hyperliquidChain,string maxFeeRate,address builder,uint64 nonce)"),
+			keccak256(&self.hyperliquid_chain),
+			keccak256(&self.max_fee_rate),
+			&self.builder,
+			&self.nonce
+		);
 		keccak256(items.abi_encode())
 	}
 }
