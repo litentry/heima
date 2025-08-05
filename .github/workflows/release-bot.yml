@@ -12,7 +12,7 @@ jobs:
       - name: Post discord message
         env:
           DISCORD_WEBHOOK: ${{ secrets.RELEASE_BOT_DISCORD_WEBHOOK }}
-        uses: Ilshidur/action-discord@0.3.2
+        uses: Ilshidur/action-discord@0.4.0
         continue-on-error: true
         with:
           args: |
