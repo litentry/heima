@@ -1,6 +1,15 @@
 import { describe, it, before } from 'mocha';
 import { expect } from 'chai';
-import { createPublicClient, createWalletClient, http, parseEther, parseUnits, type Address, isAddress, isHex } from 'viem';
+import {
+    createPublicClient,
+    createWalletClient,
+    http,
+    parseEther,
+    parseUnits,
+    type Address,
+    isAddress,
+    isHex,
+} from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { anvil } from 'viem/chains';
 import { ClientId, omniApi, randomEvmWallet, calculateOmniAccount, UserLoginResponse } from './utils';
@@ -27,37 +36,37 @@ async function waitForContractDeployment(): Promise<void> {
     const maxWaitTime = 120000; // 2 minutes
     const checkInterval = 2000; // 2 seconds
     const startTime = Date.now();
-    
+
     console.log('Waiting for contract deployment...');
-    
+
     while (Date.now() - startTime < maxWaitTime) {
         try {
             // Check if deployed addresses file exists
             await fs.access(deployedAddressesPath);
             const content = await fs.readFile(deployedAddressesPath, 'utf8');
             const addresses = JSON.parse(content);
-            
+
             if (addresses.EntryPoint && addresses.OmniAccountFactory) {
                 console.log('✅ Contract deployment file found with addresses:');
                 console.log('  EntryPoint:', addresses.EntryPoint);
                 console.log('  OmniAccountFactory:', addresses.OmniAccountFactory);
-                
+
                 // Update environment variables with deployed addresses
                 process.env.TEST_ENTRY_POINT_ADDRESS = addresses.EntryPoint;
                 process.env.TEST_FACTORY_ADDRESS = addresses.OmniAccountFactory;
                 process.env.TEST_USDC_ADDRESS = addresses.TestUSDC;
                 process.env.TEST_USDT_ADDRESS = addresses.TestUSDT;
-                
+
                 return;
             }
         } catch (error) {
             // File doesn't exist yet or is not valid JSON, continue waiting
         }
-        
+
         console.log(`⏳ Still waiting for contracts... (${Math.floor((Date.now() - startTime) / 1000)}s)`);
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        await new Promise((resolve) => setTimeout(resolve, checkInterval));
     }
-    
+
     console.log('⚠️ Contract deployment timeout reached, using default addresses');
 }
 
@@ -95,13 +104,13 @@ describe('SubmitUserOp Integration Tests', function () {
 
     before(async function () {
         this.timeout(180000); // 3 minutes for before hook
-        
+
         // Validate test environment
         testEnv = validateTestEnvironment();
-        
+
         // Wait for contract deployment in CI environment
         await waitForContractDeployment();
-        
+
         // Re-validate environment after potential address updates
         testEnv = validateTestEnvironment();
 
@@ -142,7 +151,7 @@ describe('SubmitUserOp Integration Tests', function () {
         const factoryCode = await publicClient.getCode({
             address: factoryAddress,
         });
-        
+
         if (!factoryCode || factoryCode === '0x') {
             throw new Error(`OmniAccountFactory not deployed at ${factoryAddress}. Check contract deployment.`);
         }
@@ -177,7 +186,7 @@ describe('SubmitUserOp Integration Tests', function () {
         expectValidPrivateKey(evmWallet.privateKey, 'EVM wallet private key');
         expectValidBytes32(omniAccount, 'OmniAccount ID');
         expectValidEthereumAddress(omniAccountAddress, 'OmniAccount contract address');
-        
+
         console.log('✅ Step 1 completed: EVM wallet and OmniAccount generated');
     });
 
@@ -206,7 +215,7 @@ describe('SubmitUserOp Integration Tests', function () {
 
         expect(finalBalance).to.equal(fundingAmount);
         console.log(`✅ Step 2 completed: OmniAccount funded with ${TEST_CONFIG.AMOUNTS.FUNDING_ETH} ETH`);
-        
+
         // Also fund the EVM wallet for gas fees in token operations
         const evmWalletFundingAmount = parseEther('0.1'); // 0.1 ETH for gas
         const evmFundingHash = await deployerWalletClient.sendTransaction({
@@ -296,7 +305,7 @@ describe('SubmitUserOp Integration Tests', function () {
 
     it('Step 4: Should add TEE Worker as authorized signer', async function () {
         // Authenticate with TEE worker
-        
+
         const messageResponse = await omniApi.getWeb3SignInMessage({
             client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
             omni_account: omniAccount,

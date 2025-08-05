@@ -22,7 +22,7 @@ export const OWNER_TYPE = {
     BITCOIN: 7,
     SOLANA: 8,
     GOOGLE: 9,
-    PASSKEY: 10
+    PASSKEY: 10,
 } as const;
 
 // Contract ABIs - simplified for testing

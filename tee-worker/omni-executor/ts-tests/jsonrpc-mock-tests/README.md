@@ -57,7 +57,3 @@ All contracts are automatically deployed and configured. To view deployed addres
 ```bash
 docker compose logs aa-contracts-deploy
 ```
-
-## CI Integration
-
-These tests are automatically run in CI via the `jsonrpc-mock-tests` job in `.github/workflows/ci.yml`.
