@@ -27,6 +27,8 @@ use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpTestParams {
@@ -42,7 +44,14 @@ pub struct SubmitUserOpTestResponse {
 	pub transaction_hash: Option<String>,
 }
 
-pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_user_op_test<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_submitUserOpTest", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpTestParams>().map_err(|e| {

@@ -10,7 +10,8 @@ use native_task_handler::NativeTaskOk;
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
 use tracing::{debug, error};
-
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 
 #[derive(Debug, Deserialize)]
@@ -47,7 +48,14 @@ impl RequestJwtParams {
 	}
 }
 
-pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
+pub fn register_request_jwt<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("pumpx_requestJwt", |params, ctx, _ext| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {

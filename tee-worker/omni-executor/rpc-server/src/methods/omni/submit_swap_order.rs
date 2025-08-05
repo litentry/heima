@@ -22,6 +22,8 @@ use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use std::str::FromStr;
 use tracing::{debug, error};
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -103,7 +105,14 @@ struct BackendResponse {
 	pub market_order_response: Option<SendOrderTxResponse>,
 }
 
-pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_swap_order<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

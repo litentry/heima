@@ -33,6 +33,8 @@ use native_task_handler::NativeTaskOk;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct SignLimitOrderParams {
@@ -51,7 +53,14 @@ pub struct SignLimitOrderResponse {
 	pub signed_tx: Vec<Bytes>,
 }
 
-pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
+pub fn register_sign_limit_order_params<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

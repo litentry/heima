@@ -9,6 +9,8 @@ use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::error;
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Deserialize)]
 pub struct GetWeb3SignInMessageParams {
@@ -16,7 +18,14 @@ pub struct GetWeb3SignInMessageParams {
 	pub omni_account: String,
 }
 
-pub fn register_get_web3_sign_in_message(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_web3_sign_in_message<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_getWeb3SignInMessage", |params, ctx, _| async move {
 			let params = params.parse::<GetWeb3SignInMessageParams>()?;

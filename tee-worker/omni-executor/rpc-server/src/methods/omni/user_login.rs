@@ -17,6 +17,8 @@ use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct UserLoginParams {
@@ -104,7 +106,14 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 	}
 }
 
-pub fn register_user_login(module: &mut RpcModule<RpcContext>) {
+pub fn register_user_login<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {
 			let params = params.parse::<UserLoginParams>().map_err(|e| {

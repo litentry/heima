@@ -21,6 +21,8 @@ use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error};
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpWithAuthParams {
@@ -38,7 +40,14 @@ pub struct SubmitUserOpWithAuthResponse {
 	pub transaction_hash: Option<String>,
 }
 
-pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_user_op_with_auth<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_submitUserOpWithAuth", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpWithAuthParams>().map_err(|e| {

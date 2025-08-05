@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize, Serializer};
 use signer_client::ChainType;
 use std::{convert::TryFrom, str::FromStr};
 use tracing::error;
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct GetApproveAgentWalletDataParams {
@@ -103,7 +105,14 @@ impl ApproveAgentAction {
 	}
 }
 
-pub fn register_get_approve_agent_wallet_data(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_approve_agent_wallet_data<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_getApproveAgentWalletData", |params, ctx, _| async move {
 			let params = params.parse::<GetApproveAgentWalletDataParams>().map_err(|e| {
@@ -189,8 +198,15 @@ where
 	s.serialize_str(&format!("0x{val:x}"))
 }
 
-async fn generate_eip712_signature(
-	ctx: &RpcContext,
+async fn generate_eip712_signature<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	ctx: &RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	action: &ApproveAgentAction,
 	omni_account: &[u8; 32],
 ) -> Result<String, ErrorObject<'static>> {

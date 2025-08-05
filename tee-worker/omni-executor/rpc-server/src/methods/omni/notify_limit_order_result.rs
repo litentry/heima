@@ -7,6 +7,8 @@ use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use tracing::{debug, error};
+use executor_core::intent_executor::IntentExecutor;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[derive(Debug, Deserialize)]
 pub struct NotifyLimitOrderResultParams {
@@ -15,7 +17,14 @@ pub struct NotifyLimitOrderResultParams {
 	pub message: Option<String>,
 }
 
-pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
+pub fn register_notify_limit_order_result<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(module: &mut RpcModule<RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>) {
 	module
 		.register_async_method("omni_notifyLimitOrderResult", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
