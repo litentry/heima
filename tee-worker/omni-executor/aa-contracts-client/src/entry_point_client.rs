@@ -392,7 +392,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		loop {
 			// Calculate gas fees with increasing buffer on retries
 			let (base_max_fee, base_priority_fee) =
-				self.calculate_gas_fees_with_buffer(gas_buffer_adjustment).await?;
+				self.calculate_gas_fees_with_buffer(gas_buffer_adjustment).await.map_err(|_| {
+					error!("Failed to calculate gas fees");
+				})?;
 
 			// Build transaction with adjusted gas
 			let ops = user_ops.to_vec();

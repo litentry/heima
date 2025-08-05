@@ -132,18 +132,6 @@ impl AaContractError {
 	}
 }
 
-// Conversion from unit type for backward compatibility
-impl From<()> for AaContractError {
-	fn from(_: ()) -> Self {
-		AaContractError::Generic("Operation failed".to_string())
-	}
-}
-
-// Allow converting back to unit type for gradual migration
-impl From<AaContractError> for () {
-	fn from(_: AaContractError) -> Self {}
-}
-
 // Conversion from RpcProviderError
 impl From<ethereum_rpc::RpcProviderError> for AaContractError {
 	fn from(err: ethereum_rpc::RpcProviderError) -> Self {
