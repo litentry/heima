@@ -36,8 +36,7 @@ impl MailerFactory {
 	) -> Result<Arc<dyn MailerTrait + Send + Sync>, Box<dyn std::error::Error>> {
 		let client_key = client_id.to_lowercase();
 
-		let cache =
-			self.mailer_cache.read().map_err(|e| format!("Failed to read cache: {}", e))?;
+		let cache = self.mailer_cache.read().map_err(|e| format!("Failed to read cache: {}", e))?;
 		if let Some(mailer) = cache.get(&client_key) {
 			return Ok(mailer.clone());
 		}
