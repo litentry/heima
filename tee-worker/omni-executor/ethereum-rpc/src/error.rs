@@ -160,14 +160,12 @@ impl RpcProviderError {
 	}
 }
 
-// Conversion from unit type for backward compatibility
 impl From<()> for RpcProviderError {
 	fn from(_: ()) -> Self {
 		RpcProviderError::Generic("Unknown error".to_string())
 	}
 }
 
-// Allow converting to unit type for gradual migration
 impl From<RpcProviderError> for () {
 	fn from(_: RpcProviderError) -> Self {}
 }
