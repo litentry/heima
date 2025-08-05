@@ -20,7 +20,7 @@ name: General CI
 # jobs that will always be executed:
 # - fmt
 # - set-condition
-# - parachain-build-dev
+# - parachain-build
 # - identity-worker-build
 #
 # [4] please note that job-level if `env` is not supported:
@@ -65,19 +65,9 @@ on:
         description: run-multi-worker-test
         required: true
         default: false
-      rebuild-evm-accounting-contracts:
+      rebuild-contract:
         type: boolean
-        description: rebuild-evm-accounting-contracts
-        required: true
-        default: false
-      rebuild-evm-aa-contracts:
-        type: boolean
-        description: rebuild-evm-aa-contracts
-        required: true
-        default: false
-      rebuild-solana-accounting-contracts:
-        type: boolean
-        description: rebuild-solana-accounting-contracts
+        description: rebuild-contract
         required: true
         default: false
       push-docker:
@@ -110,9 +100,7 @@ jobs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
       rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
-      rebuild_evm_accounting_contracts: ${{ steps.env.outputs.rebuild_evm_accounting_contracts }}
-      rebuild_evm_aa_contracts: ${{ steps.env.outputs.rebuild_evm_aa_contracts }}
-      rebuild_solana_accounting_contracts: ${{ steps.env.outputs.rebuild_solana_accounting_contracts }}
+      rebuild_contract: ${{ steps.env.outputs.rebuild_contract }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
@@ -136,8 +124,7 @@ jobs:
           rebuild_parachain=false
           rebuild_identity=false
           rebuild_omni_executor=false
-          rebuild_evm_accounting_contracts=false
-          rebuild_evm_aa_contracts=false
+          rebuild_contract=false
           push_docker=false
           run_parachain_test=false
           run_identity_test=false
@@ -151,14 +138,8 @@ jobs:
           if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
             rebuild_omni_executor=true
           fi
-          if [ "${{ github.event.inputs.rebuild-evm-accounting-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_accounting_contracts_src }}" = "true" ]; then
-            rebuild_evm_accounting_contracts=true
-          fi
-          if [ "${{ github.event.inputs.rebuild-evm-aa-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.evm_aa_contracts_src }}" = "true" ]; then
-            rebuild_evm_aa_contracts=true
-          fi
-          if [ "${{ github.event.inputs.rebuild-solana-accounting-contracts }}" = "true" ] || [ "${{ steps.filter.outputs.solana_contracts_src }}" = "true" ]; then
-            rebuild_solana_accounting_contracts=true
+          if [ "${{ github.event.inputs.rebuild-contract }}" = "true" ] || [ "${{ steps.filter.outputs.contract_src }}" = "true" ]; then
+            rebuild_contract=true
           fi
           if [ "${{ github.event.inputs.push-docker }}" = "true" ]; then
             push_docker=true
@@ -178,9 +159,7 @@ jobs:
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
           echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_evm_accounting_contracts=$rebuild_evm_accounting_contracts" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_evm_aa_contracts=$rebuild_evm_aa_contracts" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_solana_accounting_contracts=$rebuild_solana_accounting_contracts" | tee -a $GITHUB_OUTPUT
+          echo "rebuild_contract=$rebuild_contract" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
           echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
@@ -263,31 +242,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           interval: 300
           branch: dev
-
-  parachain-clippy:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install rust toolchain
-        run: rustup show
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
-
-      - name: Run cargo clippy check
-        run: make clippy
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
 
   identity-worker-check:
     runs-on: ubuntu-22.04
@@ -403,7 +357,7 @@ jobs:
         working-directory: ./tee-worker/omni-executor
         run: cargo test
 
-  parachain-build-dev:
+  parachain-build:
     runs-on: ubuntu-22.04
     needs:
       - fmt
@@ -639,13 +593,13 @@ jobs:
           path: litentry-omni.tar.gz
           if-no-files-found: error
 
-  evm-accounting-contracts-build-test:
+  contract-check:
     runs-on: ubuntu-22.04
     needs:
       - fmt
       - set-condition
       - sequentialise
-    if: needs.set-condition.outputs.rebuild_evm_accounting_contracts == 'true'
+    if: needs.set-condition.outputs.rebuild_contract == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -655,64 +609,33 @@ jobs:
       - name: Install foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Build contracts
+      - name: Install anchor
         run: |
-          cd tee-worker/omni-executor/accounting-contract/bsc  && forge build
+          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked --force
 
-      - name: Test contracts
+      - name: Check AA contracts
+        working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
-          cd tee-worker/omni-executor/accounting-contract/bsc && forge test
+          forge b
+          forge t
 
-  evm-aa-contracts-build-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_evm_aa_contracts == 'true'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Install foundry
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Build contracts
+      - name: Check bsc accounting contracts
+        working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
         run: |
-          cd tee-worker/omni-executor/aa-contracts && forge build
+          forge b
+          forge t
 
-      - name: Test contracts
+      - name: Check solana accounting contracts
+        working-directory: ./tee-worker/omni-executor/accounting-contract/solana
         run: |
-          cd tee-worker/omni-executor/aa-contracts && forge test
-
-  solana-accounting-contracts-build-test:
-      runs-on: ubuntu-22.04
-      needs:
-        - fmt
-        - set-condition
-        - sequentialise
-      if: needs.set-condition.outputs.rebuild_solana_accounting_contracts == 'true'
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            submodules: recursive
-            fetch-depth: 0
-
-        - name: Build contract image
-          run: |
-            cd tee-worker/omni-executor/accounting-contract/solana && docker build -t solana-contracts .
-
-        - name: Test contract
-          run: |
-            cd tee-worker/omni-executor/accounting-contract/solana && docker run --rm -v "$(pwd)":/project -w /project solana-contracts bash -c 'export PATH="/root/.local/share/solana/install/active_release/bin:${PATH}" && anchor build'
+          anchor b
+          anchor t -- --features test-skip-auth
 
   parachain-ts-test:
     runs-on: ubuntu-22.04
     needs:
       - set-condition
-      - parachain-build-dev
+      - parachain-build
     strategy:
       matrix:
         chain:
@@ -779,7 +702,7 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  parachain-unit-test:
+  parachain-check:
     runs-on: ubuntu-22.04
     needs:
       - fmt
@@ -789,6 +712,9 @@ jobs:
     if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Run cargo clippy check
+        run: make clippy
 
       - name: Run all unittests
         working-directory: ./parachain
@@ -802,33 +728,6 @@ jobs:
           echo "::group::all pallets unittest with runtime-benchmarks feature"
           cargo test --locked -p pallet-* --lib --features=runtime-benchmarks
           echo "::endgroup::"
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  parachain-runtime-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_parachain == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Install toolchain
-        working-directory: ./parachain
-        run: rustup show
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && \
-          sudo apt-get install -yq openssl clang libclang-dev cmake protobuf-compiler
 
       # We could have used matrix but the runtime tests are executed sequentially for a cleaner GHA visualisation graph.
       # It won't take much longer as we run them back to back.
@@ -850,18 +749,18 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - set-condition
-      - parachain-build-dev
+      - parachain-build
       - identity-worker-build
     strategy:
       fail-fast: false
       matrix:
         include:
-          - test_name: lit-di-identity-test
           - test_name: lit-dr-vc-test
-          - test_name: lit-parentchain-nonce
-          - test_name: lit-test-failed-parentchain-extrinsic
-          # TODO: enable these tests once we use polkadot-sdk branch stable2412
-          # - test_name: lit-omni-account-test
+          # disabled, as identity-worker isn't actively maintained
+          #
+          # - test_name: lit-di-identity-test
+          # - test_name: lit-parentchain-nonce
+          # - test_name: lit-test-failed-parentchain-extrinsic
           # - test_name: lit-native-request-vc-test
     name: ${{ matrix.test_name }}
     steps:
@@ -948,18 +847,19 @@ jobs:
     if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
     needs:
       - set-condition
-      - parachain-build-dev
+      - parachain-build
       - identity-worker-build
     strategy:
       fail-fast: false
       matrix:
         include:
-          - test_name: lit-di-identity-multiworker-test
           - test_name: lit-dr-vc-multiworker-test
-          - test_name: lit-resume-worker
-          # TODO: enable these tests once we use polkadot-sdk branch stable2412
+          # disabled, as identity-worker isn't actively maintained
+          #
+          # - test_name: lit-di-identity-multiworker-test
           # - test_name: lit-omni-account-multiworker-test
           # - test_name: lit-native-request-vc-multiworker-test
+          # - test_name: lit-resume-worker
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v4
@@ -1043,7 +943,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - set-condition
-      - parachain-build-dev
+      - parachain-build
       - omni-executor-build
     strategy:
       fail-fast: false
