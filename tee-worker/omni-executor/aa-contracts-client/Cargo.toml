@@ -10,6 +10,8 @@ heima-primitives = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 rand = { workspace = true }
+thiserror = { workspace = true }
+regex = { workspace = true }
 
 ethereum-rpc = { workspace = true }
 
