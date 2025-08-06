@@ -22,8 +22,10 @@ dependencies = [
  "heima-primitives",
  "mockall",
  "rand 0.8.5",
+ "regex",
  "sha2 0.10.9",
  "test-log",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
 ]
@@ -1020,9 +1022,9 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.19"
+version = "0.6.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "301af1932e46185686725e0fad2f8f2aa7da69dd70bf6ecc44d6b703844a3933"
+checksum = "3ae563653d1938f79b1ab1b5e668c87c76a9930414574a6583a7b7e11a8e6192"
 dependencies = [
  "anstyle",
  "anstyle-parse",
@@ -1050,22 +1052,22 @@ dependencies = [
 
 [[package]]
 name = "anstyle-query"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8bdeb6047d8983be085bab0ba1472e6dc604e7041dbf6fcd5e71523014fae9"
+checksum = "9e231f6134f61b71076a3eab506c379d4f36122f2af15a9ff04415ea4c3339e2"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
 name = "anstyle-wincon"
-version = "3.0.9"
+version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "403f75924867bb1033c59fbf0797484329750cfbe3c4325cd33127941fabc882"
+checksum = "3e0633414522a32ffaac8ac6cc8f748e090c5717661fddeea04219e2344f5f2a"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1463,11 +1465,11 @@ dependencies = [
 
 [[package]]
 name = "async-lock"
-version = "3.4.0"
+version = "3.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff6e472cdea888a4bd64f342f09b3f50e1886d32afe8df3d663c01140b811b18"
+checksum = "5fd03604047cee9b6ce9de9f70c6cd540a0520c813cbd49bae61f33ab80ed1dc"
 dependencies = [
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "event-listener-strategy",
  "pin-project-lite",
 ]
@@ -1496,7 +1498,7 @@ dependencies = [
  "async-task",
  "blocking",
  "cfg-if",
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "futures-lite",
  "rustix 1.0.8",
 ]
@@ -1842,9 +1844,9 @@ checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
 
 [[package]]
 name = "bitcoin"
-version = "0.32.6"
+version = "0.32.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad8929a18b8e33ea6b3c09297b687baaa71fb1b97353243a3f1029fad5c59c5b"
+checksum = "0fda569d741b895131a88ee5589a467e73e9c4718e958ac9308e4f7dc44b6945"
 dependencies = [
  "base58ck",
  "bech32 0.11.0",
@@ -3663,8 +3665,10 @@ dependencies = [
  "serde_json",
  "signer-client",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3955,9 +3959,9 @@ checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
 name = "event-listener"
-version = "5.4.0"
+version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3492acde4c3fc54c845eaab3eed8bd00c7a7d881f78bfc801e43a93dec1331ae"
+checksum = "e13b66accf52311f30a0db42147dadea9850cb48cd070028831ae5f5d4b856ab"
 dependencies = [
  "concurrent-queue",
  "parking",
@@ -3970,7 +3974,7 @@ version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "pin-project-lite",
 ]
 
@@ -4714,9 +4718,9 @@ checksum = "9e5c1b78ca4aae1ac06c48a526a655760685149f0d465d21f37abfe57ce075c6"
 
 [[package]]
 name = "futures-lite"
-version = "2.6.0"
+version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5edaec856126859abb19ed65f39e90fea3a9574b9707f13539acf4abf7eb532"
+checksum = "f78e10609fe0e0b3f4157ffab1876319b5b0db102a2c60dc4626306dc46b44ad"
 dependencies = [
  "fastrand",
  "futures-core",
@@ -7774,9 +7778,9 @@ dependencies = [
 
 [[package]]
 name = "polling"
-version = "3.9.0"
+version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ee9b2fa7a4517d2c91ff5bc6c297a427a96749d15f98fcdbb22c05571a4d4b7"
+checksum = "b5bd19146350fe804f7cb2669c851c03d69da628803dab0d98018142aaa5d829"
 dependencies = [
  "cfg-if",
  "concurrent-queue",
@@ -8742,9 +8746,9 @@ dependencies = [
 
 [[package]]
 name = "ruint"
-version = "1.15.0"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11256b5fe8c68f56ac6f39ef0720e592f33d2367a4782740d9c9142e889c7fb4"
+checksum = "9ecb38f82477f20c5c3d62ef52d7c4e536e38ea9b73fb570a20c5cae0e14bcf6"
 dependencies = [
  "alloy-rlp",
  "ark-ff 0.3.0",
@@ -9658,9 +9662,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.5"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9203b8055f63a2a00e2f593bb0510367fe707d7ff1e5c872de2f537b339e5410"
+checksum = "b2a4719bff48cee6b39d12c020eeb490953ad2443b7055bd0b21fca26bd8c28b"
 dependencies = [
  "libc",
 ]
@@ -9796,7 +9800,7 @@ dependencies = [
  "derive_more 2.0.1",
  "ed25519-zebra",
  "either",
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "fnv",
  "futures-lite",
  "futures-util",
@@ -9845,7 +9849,7 @@ dependencies = [
  "bs58",
  "derive_more 2.0.1",
  "either",
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "fnv",
  "futures-channel",
  "futures-lite",
@@ -14213,9 +14217,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.15"
+version = "0.7.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66a539a9ad6d5d281510d5bd368c973d636c02dbf8a67300bfb6b950696ad7df"
+checksum = "14307c986784f72ef81c89db7d9e28d6ac26d16213b109ea501696195e6e3ce5"
 dependencies = [
  "bytes",
  "futures-core",
@@ -15658,9 +15662,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.2"
+version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a05eb080e015ba39cc9e23bbe5e7fb04d5fb040350f99f34e338d5fdd294428"
+checksum = "e7aa2bd55086f1ab526693ecbe444205da57e25f4489879da80635a46d90e73b"
 dependencies = [
  "yoke",
  "zerofrom",

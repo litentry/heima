@@ -106,6 +106,7 @@ fmt-cargo:
 	@cd tee-worker/identity && cargo fmt
 	@cd tee-worker/identity/enclave-runtime && cargo fmt
 	@cd tee-worker/omni-executor && cargo fmt
+	@cd tee-worker/omni-executor/accounting-contract/solana && cargo fmt
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:
