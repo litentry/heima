@@ -240,7 +240,7 @@ pub fn to_omni_auth(
 			if !identity.is_solana() {
 				return Err("User ID must be a Solana identity for Solana authentication");
 			}
-			OmniAuth::Web3(client_id.to_string(), identity, signature.clone().into())
+			OmniAuth::Web3(client_id.to_string(), identity, (*signature).into())
 		},
 		UserAuth::Bitcoin(signature) => {
 			let identity =
