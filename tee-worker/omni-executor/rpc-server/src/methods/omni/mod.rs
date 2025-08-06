@@ -61,8 +61,6 @@ use submit_user_op_with_auth::*;
 mod user_login;
 use user_login::*;
 
-mod get_approve_agent_wallet_data;
-use get_approve_agent_wallet_data::*;
 
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
@@ -94,7 +92,6 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_smart_wallet_root_signer(module);
 	register_submit_user_op(module);
 	register_submit_user_op_with_auth(module);
-	register_get_approve_agent_wallet_data(module);
 	register_get_hyperliquid_signature_data(module);
 
 	#[cfg(test)]
