@@ -142,46 +142,6 @@ impl<
 	}
 }
 
-// pub async fn run_native_task_handler<
-// 	Header: Send + Sync + 'static,
-// 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-// 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
-// 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-// 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-// 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-// >(
-// 	buffer: usize,
-// 	ctx: Arc<
-// 		TaskHandlerContext<
-// 			Header,
-// 			RpcClient,
-// 			RpcClientFactory,
-// 			EthereumIntentExecutor,
-// 			SolanaIntentExecutor,
-// 			CrossChainIntentExecutor,
-// 		>,
-// 	>,
-// ) -> NativeTaskSender {
-// 	// TODO: maybe not using a handler at all is better/simpler, jsonrpsee handles the method async already
-// 	let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_TASKS));
-// 	let (sender, mut receiver) = mpsc::channel::<NativeTaskChannelType>(buffer);
-//
-// 	tokio::spawn(async move {
-// 		while let Some((wrapper, sender)) = receiver.recv().await {
-// 			if let Ok(permit) = semaphore.clone().acquire_owned().await {
-// 				let ctx_cloned = ctx.clone();
-// 				tokio::spawn(async move {
-// 					// let span = span!(Level::INFO, "native-task", id = wrapper.id);
-// 					let _permit = permit; // dropped when task finishes
-// 					       // handle_native_task(ctx_cloned, wrapper, sender).instrument(span).await.unwrap()
-// 				});
-// 			}
-// 		}
-// 	});
-//
-// 	sender
-// }
-
 pub async fn handle_native_task<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,

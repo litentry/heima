@@ -485,24 +485,6 @@ async fn main() -> Result<(), ()> {
 
 			let entry_point_clients = Arc::new(entry_point_clients);
 
-			// TODO: Should be removed completely once we have the new architecture running
-			// let task_handler_context = TaskHandlerContext::new(
-			// 	parentchain_rpc_client_factory.clone(),
-			// 	tx_signer.clone(),
-			// 	storage_db.clone(),
-			// 	jwt_rsa_private_key.clone(),
-			// 	aes256_key,
-			// 	Arc::new(ethereum_intent_executor),
-			// 	Arc::new(solana_intent_executor),
-			// 	Arc::new(cross_chain_intent_executor),
-			// 	pumpx_api.clone(),
-			// 	pumpx_signer_client.clone(),
-			// 	entry_point_clients,
-			// );
-			// // TODO: make buffer size configurable
-			// let native_task_sender =
-			// 	run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
-
 			let worker_url =
 				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
 
