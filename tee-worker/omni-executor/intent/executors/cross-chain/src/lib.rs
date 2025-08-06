@@ -25,7 +25,7 @@ use ::pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsigned
 use ::pumpx::methods::cross_fail::CrossFailBody;
 use ::pumpx::methods::send_order_tx::SendOrderTxBody;
 use ::pumpx::signer_client::PumpxChainId;
-use aa_contracts_client::calculate_omni_account_address;
+use aa_contracts_client::{calculate_omni_account_address, OwnerType};
 use accounting_contract_client::AccountingContractApi;
 use alloy::consensus::{SignableTransaction, TxLegacy};
 use alloy::network::TxSigner as AlloyTxSigner;
@@ -160,6 +160,7 @@ impl<
 	fn generate_omni_account_address(
 		&self,
 		omni_account: [u8; 32],
+		oa_type: OwnerType,
 		client_id: &[u8],
 		root_address: Address,
 	) -> Address {
@@ -167,6 +168,7 @@ impl<
 			self.omni_account_factory_address,
 			self.omni_account_implementation_address,
 			omni_account.into(),
+			oa_type,
 			client_id,
 			root_address,
 		)
@@ -366,6 +368,7 @@ impl<
 						// Generate from and to addresses using AA contracts
 						let from_address_addr = self.generate_omni_account_address(
 							omni_account,
+							OwnerType::Evm, // TODO: match user_id
 							CLIENT_ID_HEIMA.as_bytes(),
 							root_address,
 						);

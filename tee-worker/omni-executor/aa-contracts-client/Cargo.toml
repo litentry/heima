@@ -5,13 +5,17 @@ edition.workspace = true
 
 [dependencies]
 alloy = { workspace = true, features = ["contract", "rpc-types"] }
+ciborium = { workspace = true }
 heima-primitives = { workspace = true }
+rand = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 
 ethereum-rpc = { workspace = true }
 
 [dev-dependencies]
-tokio = "1.45.1"
 test-log = { workspace = true }
 ethereum-rpc = { workspace = true, features = ["mocks"] }
 mockall = { workspace = true }

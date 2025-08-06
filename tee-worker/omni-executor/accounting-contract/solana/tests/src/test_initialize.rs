@@ -6,6 +6,7 @@ use accounting_contract::accounting_contract::set_worker;
 use anchor_client::anchor_lang::AnchorDeserialize;
 use anchor_client::solana_sdk::instruction::InstructionError::Custom;
 use anchor_client::solana_sdk::program_error::ProgramError;
+use anchor_client::solana_sdk::rent::Rent;
 use anchor_client::solana_sdk::signature::SeedDerivable;
 use anchor_client::solana_sdk::transaction::TransactionError;
 use anchor_client::solana_sdk::transaction::TransactionError::InstructionError;
@@ -20,7 +21,6 @@ use anchor_client::{
 	},
 	Client, ClientError, Cluster, Program,
 };
-use anchor_client::solana_sdk::rent::Rent;
 
 // PK - 8QQds7P14EL1ZFjPLsTg2AHZaQHfNGH1EDW8wMhJmxaX
 pub fn setup_program<'a>(payer: &'a Keypair) -> Program<&'a Keypair> {
@@ -197,7 +197,10 @@ fn test_deposit_funds() {
 		.unwrap();
 
 	let size_of_treasury_account = accounting_contract::TreasuryAccount::INIT_SPACE + 8;
-	let rent_exempt_amount = program.rpc().get_minimum_balance_for_rent_exemption(size_of_treasury_account).unwrap();
+	let rent_exempt_amount = program
+		.rpc()
+		.get_minimum_balance_for_rent_exemption(size_of_treasury_account)
+		.unwrap();
 
 	assert_eq!(treasury_account.lamports, rent_exempt_amount + 1_000_000_000);
 }
@@ -231,12 +234,12 @@ fn test_create_pay_request() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -280,12 +283,12 @@ fn test_create_pay_request_invalid_nonce() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -306,12 +309,12 @@ fn test_create_pay_request_invalid_nonce() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -357,12 +360,12 @@ fn create_pay_request_out_of_balance() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -417,12 +420,12 @@ fn create_pay_request_unauthorized() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
@@ -665,12 +668,12 @@ fn test_full_workerflow() {
 				&[keypair.pubkey().to_bytes().as_ref(), &nonce.to_le_bytes(), b"payout_request"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			account_nonce: Pubkey::find_program_address(
 				&[keypair.pubkey().to_bytes().as_ref(), b"nonce"],
 				&program.id(),
 			)
-				.0,
+			.0,
 			signer: payer.pubkey(),
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,

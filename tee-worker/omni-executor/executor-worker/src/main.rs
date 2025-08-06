@@ -405,6 +405,7 @@ async fn main() -> Result<(), ()> {
 				entry_point_address,
 				bsc_rpc,
 				aa_contracts_client::GasPriceConfig::bsc(),
+				aa_contracts_client::RetryConfig::bsc(),
 			));
 			entry_point_clients.insert(56, bsc_entry_point);
 
@@ -415,6 +416,7 @@ async fn main() -> Result<(), ()> {
 						entry_point_address,
 						bsc_testnet_rpc,
 						aa_contracts_client::GasPriceConfig::bsc(),
+						aa_contracts_client::RetryConfig::bsc(),
 					));
 				entry_point_clients.insert(97, bsc_testnet_entry_point);
 			}
@@ -425,6 +427,7 @@ async fn main() -> Result<(), ()> {
 					entry_point_address,
 					ethereum_rpc,
 					aa_contracts_client::GasPriceConfig::mainnet(),
+					aa_contracts_client::RetryConfig::mainnet(),
 				));
 			entry_point_clients.insert(1, ethereum_entry_point);
 
@@ -434,6 +437,7 @@ async fn main() -> Result<(), ()> {
 					entry_point_address,
 					local_rpc,
 					aa_contracts_client::GasPriceConfig::default(),
+					aa_contracts_client::RetryConfig::default(),
 				));
 			entry_point_clients.insert(31337, local_entry_point);
 
@@ -443,6 +447,7 @@ async fn main() -> Result<(), ()> {
 					entry_point_address,
 					arbitrum_rpc,
 					aa_contracts_client::GasPriceConfig::l2(),
+					aa_contracts_client::RetryConfig::l2(),
 				));
 			entry_point_clients.insert(42161, arbitrum_entry_point);
 
@@ -453,6 +458,7 @@ async fn main() -> Result<(), ()> {
 						entry_point_address,
 						arbitrum_testnet_rpc,
 						aa_contracts_client::GasPriceConfig::l2(),
+						aa_contracts_client::RetryConfig::l2(),
 					));
 				entry_point_clients.insert(421614, arbitrum_testnet_entry_point);
 			}
@@ -463,6 +469,7 @@ async fn main() -> Result<(), ()> {
 					entry_point_address,
 					hyperevm_rpc,
 					aa_contracts_client::GasPriceConfig::hyperevm(),
+					aa_contracts_client::RetryConfig::hyperevm(),
 				));
 			entry_point_clients.insert(999, hyperevm_entry_point);
 
@@ -473,6 +480,7 @@ async fn main() -> Result<(), ()> {
 						entry_point_address,
 						hyperevm_testnet_rpc,
 						aa_contracts_client::GasPriceConfig::hyperevm(),
+						aa_contracts_client::RetryConfig::hyperevm(),
 					));
 				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}

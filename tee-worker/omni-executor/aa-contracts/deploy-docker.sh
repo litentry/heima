@@ -69,8 +69,8 @@ deploy_contracts() {
     BROADCAST_FILE="$SCRIPT_DIR/broadcast/DeployLocal.s.sol/$CHAIN_ID/run-latest.json"
 
     if [ -f "$BROADCAST_FILE" ]; then
-        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPoint"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactory"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPointV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactoryV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
 
         # Extract test token addresses

@@ -1,4 +1,5 @@
 use super::common::handle_omni_native_task;
+use crate::auth_utils::{verify_payload_timestamp, verify_wildmeta_signature};
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
@@ -6,14 +7,8 @@ use crate::ErrorCode;
 use alloy::primitives::Address;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::utils::hex::decode_hex;
-use executor_primitives::{
-	signature::{EthereumSignature, HeimaMultiSignature},
-	utils::hex::FromHexPrefixed,
-	ChainId, ClientAuth, Identity, UserAuth, UserId,
-};
-use executor_storage::{Storage, WildmetaTimestampStorage};
-use heima_primitives::Address20;
+use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
+use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use pumpx::pubkey_to_address;
@@ -56,7 +51,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 					signature,
 					login_type,
 				} => {
-					verify_wildmeta_signature(agent_address, business_json, signature)?;
+					verify_wildmeta_signature_wrapper(agent_address, business_json, signature)?;
 
 					let business_data: serde_json::Value = serde_json::from_str(business_json)
 						.map_err(|e| {
@@ -72,7 +67,7 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 							PumpxRpcError::from_error_code(ErrorCode::ParseError)
 						})?;
 
-					verify_payload_timestamp(
+					verify_payload_timestamp_wrapper(
 						&ctx.wildmeta_timestamp_storage,
 						main_address,
 						timestamp,
@@ -179,67 +174,23 @@ pub fn register_submit_user_op_with_auth(module: &mut RpcModule<RpcContext>) {
 		.expect("Failed to register omni_submitUserOpWithAuth method");
 }
 
-fn verify_wildmeta_signature(
+// Wrapper functions to convert shared function return types to PumpxRpcError
+fn verify_wildmeta_signature_wrapper(
 	agent_address: &str,
 	business_json: &str,
 	signature: &str,
 ) -> Result<(), PumpxRpcError> {
-	let message = business_json.as_bytes();
-
-	let signature_bytes = decode_hex(signature).map_err(|e| {
-		error!("Failed to decode signature: {:?}", e);
-		PumpxRpcError::from_error_code(ErrorCode::ParseError)
-	})?;
-	let ethereum_signature =
-		EthereumSignature::try_from(signature_bytes.as_slice()).map_err(|e| {
-			error!("Failed to convert signature to EthereumSignature: {:?}", e);
-			PumpxRpcError::from_error_code(ErrorCode::ParseError)
-		})?;
-	let heima_sig = HeimaMultiSignature::Ethereum(ethereum_signature);
-
-	let agent_address = Address20::from_hex(agent_address).map_err(|e| {
-		error!("Failed to parse agent address: {:?}", e);
-		PumpxRpcError::from_error_code(ErrorCode::ParseError)
-	})?;
-
-	let agent_identity = Identity::Evm(agent_address);
-
-	if !heima_sig.verify(message, &agent_identity) {
-		error!("Signature verification failed");
-		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-			AUTH_VERIFICATION_FAILED_CODE,
-		)));
-	}
-
-	Ok(())
+	verify_wildmeta_signature(agent_address, business_json, signature)
+		.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
 }
 
-fn verify_payload_timestamp(
+fn verify_payload_timestamp_wrapper(
 	storage: &Arc<WildmetaTimestampStorage>,
 	main_address: &str,
 	new_timestamp: u64,
 ) -> Result<(), PumpxRpcError> {
-	let last_timestamp = storage
-		.get(&main_address.to_string())
-		.map_err(|_| {
-			error!("Failed to get last timestamp");
-			PumpxRpcError::from_error_code(ErrorCode::InternalError)
-		})?
-		.unwrap_or(0);
-
-	if new_timestamp <= last_timestamp {
-		error!("Invalid payload timestamp: {} <= {}", new_timestamp, last_timestamp);
-		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-			AUTH_VERIFICATION_FAILED_CODE,
-		)));
-	}
-
-	storage.insert(&main_address.to_string(), new_timestamp).map_err(|_| {
-		error!("Failed to store timestamp");
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?;
-
-	Ok(())
+	verify_payload_timestamp(storage, main_address, new_timestamp)
+		.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
 }
 
 #[cfg(test)]
@@ -254,7 +205,7 @@ mod tests {
 		let signature = "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		let result = verify_wildmeta_signature(agent_address, business_json, signature);
+		let result = verify_wildmeta_signature_wrapper(agent_address, business_json, signature);
 		assert!(result.is_ok(), "Signature verification should succeed");
 	}
 
@@ -264,7 +215,7 @@ mod tests {
 		let signature = "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		let result = verify_wildmeta_signature(agent_address, business_json, signature);
+		let result = verify_wildmeta_signature_wrapper(agent_address, business_json, signature);
 		assert!(result.is_err(), "Should fail with invalid signature");
 	}
 
@@ -286,7 +237,7 @@ mod tests {
 		let signature = "invalid_hex";
 		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
 
-		let result = verify_wildmeta_signature(agent_address, business_json, signature);
+		let result = verify_wildmeta_signature_wrapper(agent_address, business_json, signature);
 		assert!(result.is_err(), "Should fail with invalid hex signature");
 	}
 
@@ -319,11 +270,11 @@ mod tests {
 		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
 
 		// First timestamp should succeed
-		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
 		assert!(result.is_ok(), "First timestamp should succeed");
 
 		// Higher timestamp should succeed
-		let result = verify_payload_timestamp(&storage, main_address, 2000);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 2000);
 		assert!(result.is_ok(), "Higher timestamp should succeed");
 	}
 
@@ -336,15 +287,15 @@ mod tests {
 		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
 
 		// Store initial timestamp
-		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
 		assert!(result.is_ok());
 
 		// Same timestamp should fail
-		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
 		assert!(result.is_err(), "Same timestamp should fail");
 
 		// Lower timestamp should fail
-		let result = verify_payload_timestamp(&storage, main_address, 500);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 500);
 		assert!(result.is_err(), "Lower timestamp should fail");
 	}
 
@@ -357,7 +308,7 @@ mod tests {
 		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
 
 		// Any timestamp should succeed for first time
-		let result = verify_payload_timestamp(&storage, main_address, 1);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1);
 		assert!(result.is_ok(), "First timestamp should succeed even if it's 1");
 	}
 
@@ -370,18 +321,18 @@ mod tests {
 		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
 
 		// Store timestamp
-		verify_payload_timestamp(&storage, main_address, 1000).unwrap();
+		verify_payload_timestamp_wrapper(&storage, main_address, 1000).unwrap();
 
 		// Verify it's persisted by checking that lower timestamp fails
-		let result = verify_payload_timestamp(&storage, main_address, 999);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 999);
 		assert!(result.is_err(), "Timestamp should be persisted");
 
 		// Verify exact stored value fails
-		let result = verify_payload_timestamp(&storage, main_address, 1000);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
 		assert!(result.is_err(), "Exact stored timestamp should fail");
 
 		// Higher should succeed
-		let result = verify_payload_timestamp(&storage, main_address, 1001);
+		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1001);
 		assert!(result.is_ok(), "Higher timestamp should succeed");
 	}
 }
