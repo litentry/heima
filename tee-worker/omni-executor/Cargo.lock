@@ -22,8 +22,10 @@ dependencies = [
  "heima-primitives",
  "mockall",
  "rand 0.8.5",
+ "regex",
  "sha2 0.10.9",
  "test-log",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
 ]
@@ -3663,8 +3665,10 @@ dependencies = [
  "serde_json",
  "signer-client",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.12",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
