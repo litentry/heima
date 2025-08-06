@@ -5,7 +5,6 @@ use anchor_client::solana_sdk::commitment_config::CommitmentConfig;
 use anchor_client::solana_sdk::signature::{read_keypair_file, Keypair, Signer};
 use anchor_client::{Client, Cluster, Program};
 use clap::{Parser, Subcommand};
-use std::env;
 use std::str::FromStr;
 
 #[derive(Parser)]
@@ -227,7 +226,7 @@ fn main() {
 				&program,
 				&[beneficiary.to_bytes().as_ref(), b"nonce"],
 			)
-			.unwrap_or_else(|e| accounting_contract::Nonce { nonce: 0 });
+			.unwrap_or_else(|_e| accounting_contract::Nonce { nonce: 0 });
 			let nonce = nonce_account.nonce + 1;
 
 			let tx = program
