@@ -42,12 +42,12 @@ contract OmniAccountTest is Test {
     }
 
     function test_Execute_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint or root");
+        vm.expectRevert("account: not from EntryPoint");
         account.execute(address(counter), 0, abi.encodeWithSignature("increment()"));
     }
 
     function test_ExecuteBatch_As_Not_Allowed() public {
-        vm.expectRevert("account: not Owner or EntryPoint or root");
+        vm.expectRevert("account: not from EntryPoint");
         BaseAccount.Call[] memory calls = new BaseAccount.Call[](0);
         account.executeBatch(calls);
     }
@@ -62,7 +62,7 @@ contract OmniAccountTest is Test {
         account.removeRootSigner(0x0000000000000000000000000000000000000000);
     }
 
-    function test_validateOp() public {
+    function test_ValidateOp() public {
         (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
         (, uint256 bobPk) = makeAddrAndKey("bob");
 
