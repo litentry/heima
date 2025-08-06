@@ -1,5 +1,9 @@
 use crate::{
-	error_code::*, server::RpcContext, verify_auth::verify_email_authentication, ErrorCode,
+	auth_utils::{verify_payload_timestamp, verify_wildmeta_signature},
+	error_code::*,
+	server::RpcContext,
+	verify_auth::verify_auth,
+	ErrorCode,
 };
 use alloy::{
 	dyn_abi::Eip712Domain,
@@ -7,19 +11,22 @@ use alloy::{
 	sol_types::{eip712_domain, SolValue},
 };
 use chrono::Utc;
-use executor_primitives::{utils::hex::hex_encode, ChainId, Identity, UserAuth, UserId};
+use executor_primitives::{
+	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
+};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize, Serializer};
 use signer_client::ChainType;
 use std::{convert::TryFrom, str::FromStr};
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct GetHyperliquidSignatureDataParams {
 	pub user_id: UserId,
-	pub user_auth: UserAuth,
+	pub user_auth: Option<UserAuth>,
 	pub client_id: String,
+	pub client_auth: Option<ClientAuth>,
 	pub action_type: HyperliquidActionType,
 	pub chain_id: ChainId,
 }
@@ -191,47 +198,107 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 				ErrorCode::ParseError
 			})?;
 
-			let verification_code = match &params.user_auth {
-				UserAuth::Email(code) => code.clone(),
-				_ => {
-					error!("Only email authentication is supported for this method");
-					return Err(ErrorObject::from(ErrorCode::InvalidParams));
-				},
-			};
+			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
 
-			let email = match &params.user_id {
-				UserId::Email(email) => email.clone(),
-				_ => {
-					error!("User ID must be an email for this method");
-					return Err(ErrorObject::from(ErrorCode::ParseError));
-				},
-			};
+			// Unified authentication logic
+			let main_address = if let Some(user_auth) = &params.user_auth {
+				// User authentication provided
+				let auth =
+					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
+						error!("Failed to convert to OmniAuth: {:?}", e);
+						ErrorObject::from(ErrorCode::ParseError)
+					})?;
 
-			verify_email_authentication(ctx.clone(), &params.client_id, &email, &verification_code)
-				.map_err(|_| {
-					error!("Failed to verify email authentication");
+				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
+					error!("Failed to verify user authentication: {:?}", e);
 					ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
 				})?;
 
+				// Get main address from derived wallet
+				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
+					error!("Failed to convert user ID to identity: {}", e);
+					ErrorObject::from(ErrorCode::ParseError)
+				})?;
+				let omni_account = identity.to_omni_account(&params.client_id);
+
+				let derived_pubkey = ctx
+					.signer_client
+					.request_wallet(ChainType::Evm, 0, *omni_account.as_ref())
+					.await
+					.map_err(|_| {
+						error!("Failed to derive EVM address");
+						ErrorObject::from(ErrorCode::InternalError)
+					})?;
+				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
+					error!("Failed to convert derived pubkey to address");
+					ErrorObject::from(ErrorCode::InternalError)
+				})?
+			} else if let Some(client_auth) = &params.client_auth {
+				// Client authentication provided (WildMeta)
+				match client_auth {
+					ClientAuth::WildmetaHl {
+						agent_address,
+						business_json,
+						main_address,
+						signature,
+						login_type,
+					} => {
+						verify_wildmeta_signature(agent_address, business_json, signature)?;
+
+						let business_data: serde_json::Value = serde_json::from_str(business_json)
+							.map_err(|e| {
+								error!("Failed to parse business_json: {:?}", e);
+								ErrorObject::from(ErrorCode::ParseError)
+							})?;
+
+						let timestamp = business_data
+							.get("timestamp")
+							.and_then(|v| v.as_u64())
+							.ok_or_else(|| {
+								error!("Missing timestamp in business_json");
+								ErrorObject::from(ErrorCode::ParseError)
+							})?;
+
+						verify_payload_timestamp(
+							&ctx.wildmeta_timestamp_storage,
+							main_address,
+							timestamp,
+						)?;
+
+						let linked = ctx
+							.wildmeta_api
+							.verify_hyperliquid_link(agent_address, main_address, *login_type)
+							.await
+							.map_err(|_| {
+								error!("Failed to verify hyperliquid link");
+								ErrorObject::from(ErrorCode::InternalError)
+							})?;
+
+						if !linked {
+							error!("Agent and main addresses are not linked");
+							return Err(ErrorObject::from(ErrorCode::ServerError(
+								AUTH_VERIFICATION_FAILED_CODE,
+							)));
+						}
+
+						main_address.clone()
+					},
+					_ => {
+						error!("Invalid client auth type");
+						return Err(ErrorObject::from(ErrorCode::ParseError));
+					},
+				}
+			} else {
+				error!("Either user_auth or client_auth must be provided");
+				return Err(ErrorObject::from(ErrorCode::InvalidParams));
+			};
+
+			// Derive omni_account for signing (works for both auth methods)
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
 				error!("Failed to convert user ID to identity: {}", e);
 				ErrorObject::from(ErrorCode::ParseError)
 			})?;
 			let omni_account = identity.to_omni_account(&params.client_id);
-
-			let derived_pubkey = ctx
-				.signer_client
-				.request_wallet(ChainType::Evm, 0, *omni_account.as_ref())
-				.await
-				.map_err(|_| {
-					error!("Failed to derive EVM address");
-					ErrorObject::from(ErrorCode::InternalError)
-				})?;
-			let main_address =
-				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
-					error!("Failed to convert derived pubkey to address");
-					ErrorObject::from(ErrorCode::InternalError)
-				})?;
 
 			let nonce = Utc::now().timestamp_millis() as u64;
 
@@ -422,7 +489,7 @@ mod tests {
 		assert!(matches!(params.user_id, UserId::Email(email) if email == "test@example.com"));
 		let expected_verification_code = VerificationCode::from("123456");
 		assert!(
-			matches!(params.user_auth, UserAuth::Email(code) if code == expected_verification_code)
+			matches!(params.user_auth, Some(UserAuth::Email(code)) if code == expected_verification_code)
 		);
 		assert_eq!(params.client_id, "test_client");
 		assert!(matches!(

@@ -8,7 +8,7 @@ A single endpoint that handles all Hyperliquid operations through discriminated 
 
 ### Usage Examples
 
-#### 1. Approve Agent Wallet
+#### 1a. Approve Agent Wallet (Email Authentication)
 
 ```bash
 curl -X POST http://localhost:2100 \
@@ -19,6 +19,59 @@ curl -X POST http://localhost:2100 \
     "params": {
       "user_id": {"type": "email", "value": "user@example.com"},
       "user_auth": {"type": "email", "value": "123456"},
+      "client_id": "heima",
+      "action_type": {
+        "type": "approve_agent",
+        "agent_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+        "agent_name": "My Trading Bot"
+      },
+      "chain_id": 42161
+    },
+    "id": 1
+  }'
+```
+
+#### 1b. Approve Agent Wallet (WildMeta Client Authentication)
+
+```bash
+curl -X POST http://localhost:2100 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "omni_getHyperliquidSignatureData",
+    "params": {
+      "user_id": {"type": "evm", "value": "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e"},
+      "client_id": "wildmeta",
+      "client_auth": {
+        "type": "wildmeta_hl",
+        "agent_address": "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd",
+        "business_json": "{\"action\":\"approve_agent\",\"agent_address\":\"0x742d35Cc6634C0532925a3b844Bc9e7595f02A10\",\"timestamp\":1752573555}",
+        "main_address": "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e",
+        "signature": "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c",
+        "login_type": 0
+      },
+      "action_type": {
+        "type": "approve_agent",
+        "agent_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+        "agent_name": "My Trading Bot"
+      },
+      "chain_id": 42161
+    },
+    "id": 1
+  }'
+```
+
+#### 1c. Approve Agent Wallet (EVM Web3 Authentication)
+
+```bash
+curl -X POST http://localhost:2100 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "omni_getHyperliquidSignatureData",
+    "params": {
+      "user_id": {"type": "evm", "value": "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e"},
+      "user_auth": {"type": "evm", "value": "0x1234567890abcdef..."},
       "client_id": "heima",
       "action_type": {
         "type": "approve_agent",
@@ -104,11 +157,29 @@ curl -X POST http://localhost:2100 \
 ## Parameters
 
 ### Common Parameters
-- `user_id`: Email-based user identification
-- `user_auth`: Email verification code
+- `user_id`: User identification (email, EVM address, etc.)
+- `user_auth`: **Optional** - User authentication (email verification, Web3 signature, auth token, OAuth2, passkey)
 - `client_id`: Client identifier (`heima`, `pumpx`, `wildmeta`)
+- `client_auth`: **Optional** - Client authentication (WildMeta signature-based auth)
 - `chain_id`: Target blockchain network ID
 - `action_type`: Discriminated union for different operations
+
+### Authentication Flow
+The RPC method now supports **dual authentication modes**:
+
+1. **User Authentication** (`user_auth` provided):
+   - Email verification codes
+   - Web3 signatures (EVM, Substrate, Solana, Bitcoin)
+   - Auth tokens (JWT)
+   - OAuth2 (Google)
+   - Passkey authentication
+
+2. **Client Authentication** (`client_auth` provided):
+   - WildMeta signature-based authentication
+   - Agent-to-main address linking verification
+   - Timestamp-based replay protection
+
+**Note**: At least one of `user_auth` OR `client_auth` must be provided. `user_auth` takes a privileged role.
 
 ### Action Types
 
