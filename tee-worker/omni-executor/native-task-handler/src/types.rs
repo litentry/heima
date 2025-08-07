@@ -44,7 +44,7 @@ pub enum NativeTaskOk {
 pub enum NativeTaskError {
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
-	InternalError,
+	InternalError(Option<String>),
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,

@@ -94,9 +94,15 @@ where
 	// Process response
 	match native_task_response {
 		Ok(task_ok) => task_ok_handler(task_ok),
-		Err(NativeTaskError::InternalError) => {
+		Err(NativeTaskError::InternalError(message)) => {
 			error!("Internal error in native task");
-			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+			match message {
+				Some(msg) => Err(PumpxRpcError::from_code_and_message(
+					get_native_task_error_code(&NativeTaskError::InternalError(Some(msg.clone()))),
+					msg,
+				)),
+				None => Err(PumpxRpcError::from_error_code(ErrorCode::InternalError)),
+			}
 		},
 		Err(native_task_error) => {
 			error!("Failed to execute native task: {:?}", native_task_error);

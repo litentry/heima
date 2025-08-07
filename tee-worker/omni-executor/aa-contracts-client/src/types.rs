@@ -134,6 +134,8 @@ sol! {
 		bytes targetResult;
 	}
 
+	error FailedOp(uint256 opIndex, string reason);
+
 	// simulation functions
 	function simulateValidation(PackedUserOperation calldata userOp) external returns (ValidationResult memory);
 	function simulateHandleOp(PackedUserOperation calldata op, address target, bytes calldata targetCallData) external returns (ExecutionResult memory);
