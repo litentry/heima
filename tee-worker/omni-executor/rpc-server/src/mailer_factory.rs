@@ -41,10 +41,22 @@ impl MailerFactory {
 			return Ok(mailer.clone());
 		}
 
-		let config = self
-			.config_loader
-			.get_mailer_config(client_id)
-			.ok_or_else(|| format!("No mailer configuration found for client '{}'", client_id))?;
+		// Drop the cache read lock to avoid deadlock
+		drop(cache);
+
+		let config = self.config_loader.get_mailer_config(client_id).ok_or_else(|| {
+			let available_clients = self.config_loader.list_available_clients();
+			format!(
+				"No mailer configuration found for client '{}'. Available clients: {:?}",
+				client_id, available_clients
+			)
+		})?;
+
+		tracing::info!(
+			"Creating mailer for client '{}' with type: {:?}",
+			client_id,
+			config.mailer_type
+		);
 
 		let mailer = Self::create_mailer(config)?;
 

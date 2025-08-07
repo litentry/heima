@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MailerType {
@@ -367,9 +367,26 @@ impl ConfigLoader {
 			if key.starts_with("OE_MAILER_TYPE_") {
 				// Extract client name from OE_MAILER_TYPE_{CLIENT}
 				if let Some(client) = key.strip_prefix("OE_MAILER_TYPE_") {
+					info!("Found mailer type configuration for client: {}", client);
 					clients.insert(client.to_lowercase());
 				}
 			}
+		}
+
+		info!("Total discovered clients: {:?}", clients);
+
+		// If no clients are configured via environment variables, provide default console fallback
+		if clients.is_empty() {
+			warn!("No mailer configurations found in environment variables. Adding default console mailer.");
+			let default_config = MailerConfig {
+				mailer_type: MailerType::Console,
+				mailer_api_host: None,
+				mailer_api_key: String::new(),
+				mailer_from_email: "test@example.com".to_string(),
+				mailer_from_name: "Default Console Mailer".to_string(),
+			};
+			configs.insert("console".to_string(), default_config);
+			return configs;
 		}
 
 		// Load configuration for each client
