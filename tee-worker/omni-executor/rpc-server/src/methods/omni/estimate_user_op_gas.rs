@@ -21,11 +21,13 @@ use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::ErrorCode;
 use alloy::primitives::Address;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
@@ -49,7 +51,25 @@ pub struct EstimateUserOpGasResponse {
 	pub paymaster_post_op_gas_limit: String,
 }
 
-pub fn register_estimate_user_op_gas(module: &mut RpcModule<RpcContext>) {
+pub fn register_estimate_user_op_gas<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

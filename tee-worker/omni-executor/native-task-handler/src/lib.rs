@@ -690,12 +690,8 @@ pub async fn handle_native_task<
 			let entry_point_client = match ctx.get_entry_point_client(chain_id) {
 				Some(client) => client,
 				None => {
-					send_error(
-						format!("No EntryPoint client configured for chain_id: {}", chain_id),
-						response_sender,
-						NativeTaskError::UnsupportedChain,
-					);
-					return;
+					error!("No EntryPoint client configured for chain_id: {}", chain_id);
+					return Err(NativeTaskError::UnsupportedChain);
 				},
 			};
 
@@ -703,12 +699,8 @@ pub async fn handle_native_task<
 			let packed_user_op = match convert_to_packed_user_op(serializable_user_op.clone()) {
 				Ok(user_op) => user_op,
 				Err(e) => {
-					send_error(
-						format!("Failed to convert UserOperation: {}", e),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
-					return;
+					error!("Failed to convert UserOperation: {}", e);
+					return Err(NativeTaskError::InternalError);
 				},
 			};
 
@@ -718,16 +710,11 @@ pub async fn handle_native_task<
 			{
 				Ok(gas_estimates) => {
 					info!("Gas estimation successful: {:?}", gas_estimates);
-					if let Err(e) = response_sender.send(gas_estimates.encode()) {
-						error!("Failed to send gas estimation response: {:?}", e);
-					}
+					Ok(gas_estimates)
 				},
 				Err(e) => {
-					send_error(
-						format!("Gas estimation failed: {}", e),
-						response_sender,
-						NativeTaskError::InternalError,
-					);
+					error!("Gas estimation failed: {}", e);
+					Err(NativeTaskError::InternalError)
 				},
 			}
 		},
