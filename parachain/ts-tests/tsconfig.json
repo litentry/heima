@@ -3,11 +3,12 @@
     "compilerOptions": {
         "esModuleInterop": true,
         "resolveJsonModule": true,
-        "target": "es5",
-        "lib": ["es2019"],
+        "target": "ES2020",
+        "lib": ["es2020"],
         "rootDir": ".",
-        "outDir": "build"
+        "outDir": "build",
+        "skipLibCheck": true
     },
-    "include": ["ts-tests/**/*.ts", "ts-tests/**/*.d.ts"],
+    "include": ["**/*.ts", "**/*.d.ts", "**/*.json"],
     "exclude": ["node_modules"]
 }

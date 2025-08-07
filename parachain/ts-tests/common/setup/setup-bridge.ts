@@ -1,7 +1,7 @@
 import 'mocha';
 
 import '@polkadot/api-augment';
-import { Contract, ethers, Wallet } from 'ethers';
+import { Contract, ethers, Wallet, hexlify, zeroPadValue } from 'ethers';
 import { BN } from '@polkadot/util';
 import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
 import type { ISubmittableResult } from '@polkadot/types/types';
@@ -85,19 +85,19 @@ async function deployBridgeContracts(wallet: Wallet) {
     // deploy contracts
     const bridge = await BridgeFactory.deploy(evmChainID, initialRelayers, threshold, fee, expiry);
     const erc20Handler = await ERC20HandlerFactory.deploy(
-        bridge.address,
+        await bridge.getAddress(),
         initialResourceIDs,
         initialContractAddresses,
         burnableContractAddresses
     );
     const erc721Handler = await ERC721HandlerFactory.deploy(
-        bridge.address,
+        await bridge.getAddress(),
         initialResourceIDs,
         initialContractAddresses,
         burnableContractAddresses
     );
     const genericHandler = await GenericHandlerFactory.deploy(
-        bridge.address,
+        await bridge.getAddress(),
         initialResourceIDs,
         initialContractAddresses,
         initialDepositFunctionSignatures,
@@ -105,11 +105,11 @@ async function deployBridgeContracts(wallet: Wallet) {
     );
     const erc20 = await ERC20Factory.deploy(tokenName, symbol, initialSupply, owner);
 
-    console.log('Bridge:         ', bridge.address);
-    console.log('ERC20Handler:   ', erc20Handler.address);
-    console.log('ERC721Handler:  ', erc721Handler.address);
-    console.log('GenericHandler: ', genericHandler.address);
-    console.log('ERC20:          ', erc20.address);
+    console.log('Bridge:         ', await bridge.getAddress());
+    console.log('ERC20Handler:   ', await erc20Handler.getAddress());
+    console.log('ERC721Handler:  ', await erc721Handler.getAddress());
+    console.log('GenericHandler: ', await genericHandler.getAddress());
+    console.log('ERC20:          ', await erc20.getAddress());
 
     await sleep(10);
     return { bridge, erc20Handler, erc721Handler, genericHandler, erc20 };
@@ -132,14 +132,18 @@ async function setupCrossChainTransfer(
     await eConfig.erc20.mint(eConfig.wallets.charlie.address, toWei('100000', 'ether'));
     await eConfig.erc20.mint(eConfig.wallets.dave.address, toWei('100000', 'ether'));
     await eConfig.erc20.mint(eConfig.wallets.eve.address, toWei('100000', 'ether'));
-    await eConfig.erc20.mint(eConfig.erc20Handler.address, toWei('300', 'ether'));
-    await eConfig.bridge.adminSetResource(eConfig.erc20Handler.address, destResourceId, eConfig.erc20.address);
+    await eConfig.erc20.mint(await eConfig.erc20Handler.getAddress(), toWei('300', 'ether'));
+    await eConfig.bridge.adminSetResource(
+        await eConfig.erc20Handler.getAddress(),
+        destResourceId,
+        await eConfig.erc20.getAddress()
+    );
 
     for (let i = 0; i < ethRelayers.length; i++) {
         await eConfig.bridge.adminAddRelayer(ethRelayers[i]);
     }
     const MINTER_ROLE = await eConfig.erc20.MINTER_ROLE();
-    await eConfig.erc20.grantRole(MINTER_ROLE, eConfig.erc20Handler.address);
+    await eConfig.erc20.grantRole(MINTER_ROLE, await eConfig.erc20Handler.getAddress());
 
     // parachain setup
     let extrinsic: SubmittableExtrinsic<'promise', ISubmittableResult>[] = [];
@@ -184,7 +188,7 @@ async function setupCrossChainTransfer(
     expect(AfterAssetInfo).not.to.be.empty;
 }
 
-function generateBridgeConfig(
+async function generateBridgeConfig(
     eConfig: EthConfig,
     ethRelayer: string,
     parachainRelayer: string,
@@ -204,10 +208,10 @@ function generateBridgeConfig(
                 endpoint: 'ws://localhost:8546',
                 from: ethRelayer,
                 opts: {
-                    bridge: eConfig.bridge.address,
-                    erc20Handler: eConfig.erc20Handler.address,
-                    erc721Handler: eConfig.erc721Handler.address,
-                    genericHandler: eConfig.genericHandler.address,
+                    bridge: await eConfig.bridge.getAddress(),
+                    erc20Handler: await eConfig.erc20Handler.getAddress(),
+                    erc721Handler: await eConfig.erc721Handler.getAddress(),
+                    genericHandler: await eConfig.genericHandler.getAddress(),
                     gasLimit: '8000000',
                     startBlock: `${ethStartFrom}`,
                     maxGasPrice: '3000000000',
@@ -253,11 +257,11 @@ async function startChainBridge(
         fs.mkdirSync(dataDir, { recursive: true });
     }
     emptyDir(dataDir);
-    const ethBlock = await ethConfig.wallets.bob.provider.getBlockNumber();
+    const ethBlock = await ethConfig.wallets.bob.provider!.getBlockNumber();
     const subBlock = await parachainConfig.api.rpc.chain.getHeader();
     const parachainChainID = parseInt(parachainConfig.api.consts.chainBridge.bridgeChainId.toString()); //parachain
 
-    generateBridgeConfig(
+    await generateBridgeConfig(
         ethConfig,
         ethRelayer,
         parachainRelayer,
@@ -285,13 +289,13 @@ async function startChainBridge(
 
 export function createERCDepositData(tokenAmountOrID: string, lenRecipientAddress: number, recipientAddress: string) {
     const toHex = (covertThis: string | number, padding: number) => {
-        return ethers.utils.hexZeroPad(ethers.utils.hexlify(covertThis), padding);
+        return zeroPadValue(hexlify(covertThis.toString()), padding);
     };
     return (
         '0x' +
-        ethers.utils.hexZeroPad(tokenAmountOrID, 32).substr(2) + // Token amount or ID to deposit (32 bytes)
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(lenRecipientAddress), 32).substr(2) + // len(recipientAddress)          (32 bytes)
-        recipientAddress.substr(2)
+        zeroPadValue(tokenAmountOrID, 32).substring(2) + // Token amount or ID to deposit (32 bytes)
+        zeroPadValue(hexlify(lenRecipientAddress.toString()), 32).substring(2) + // len(recipientAddress)          (32 bytes)
+        recipientAddress.substring(2)
     ); // recipientAddress               (?? bytes)
 }
 
@@ -312,7 +316,7 @@ export function describeCrossChainTransfer(
             const config = loadConfig();
             const parachainConfig = await initApiPromise(config);
 
-            const provider = new ethers.providers.JsonRpcProvider(config.eth_endpoint);
+            const provider = new ethers.JsonRpcProvider(config.eth_endpoint);
 
             const wallets = {
                 alice: new ethers.Wallet(generateTestKeys().alice, provider),
@@ -327,11 +331,11 @@ export function describeCrossChainTransfer(
             );
 
             const ethConfig: EthConfig = {
-                bridge,
-                erc20,
-                erc20Handler,
-                erc721Handler,
-                genericHandler,
+                bridge: bridge as any as Contract,
+                erc20: erc20 as any as Contract,
+                erc20Handler: erc20Handler as any as Contract,
+                erc721Handler: erc721Handler as any as Contract,
+                genericHandler: genericHandler as any as Contract,
                 wallets,
             };
 

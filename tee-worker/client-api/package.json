@@ -70,7 +70,7 @@
     "build-publish": "pnpm generate && pnpm build && npm publish",
     "format": "pnpm exec prettier --write .",
     "check-format": "pnpm exec prettier --check .",
-    "lint": "tsc --noEmit --pretty",
+    "lint": "tsc --noEmit",
     "build-skip-sidechain": "pnpm generate:defs:identity && pnpm generate:defs:omni && pnpm generate:meta:identity && pnpm generate:meta:omni && SKIP_SIDECHAIN=true tsup"
   },
   "dependencies": {
@@ -78,7 +78,7 @@
     "@polkadot/api-augment": "*",
     "@polkadot/api-base": "*",
     "@polkadot/api-derive": "*",
-    "@polkadot/keyring": "^13.4.3",
+    "@polkadot/keyring": "^13.5.4",
     "@polkadot/rpc-core": "*",
     "@polkadot/types": "*",
     "@polkadot/types-augment": "*",
@@ -87,17 +87,17 @@
     "@polkadot/types-known": "*",
     "@polkadot/types-support": "*",
     "@polkadot/typegen": "*",
-    "@types/node": "^20.4.4",
-    "prettier": "^2.8.3",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.1.0",
-    "tsx": "^4.19.3",
-    "@polkadot/util": "^13.4.3",
-    "@polkadot/util-crypto": "^13.4.3",
-    "tsup": "^8.4.0"
+    "@types/node": "^24.2.0",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "tsx": "^4.20.3",
+    "@polkadot/util": "^13.5.4",
+    "@polkadot/util-crypto": "^13.5.4",
+    "tsup": "^8.5.0"
   },
   "publishConfig": {
     "access": "public"
   },
-  "packageManager": "pnpm@9.15.2"
+  "packageManager": "pnpm@10.14.0"
 }

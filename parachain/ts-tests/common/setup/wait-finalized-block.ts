@@ -1,5 +1,6 @@
 import '@polkadot/api-augment';
-import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
+import { ApiPromise, WsProvider } from '@polkadot/api';
+
 import type { VoidFn } from '@polkadot/api/types';
 import type { ISubmittableResult } from '@polkadot/types/types';
 import { loadConfig } from '../utils';
@@ -25,7 +26,7 @@ const TIMEOUT_MIN = 5;
 
     console.log(`Connecting to parachain ${config.parachain_ws}`);
 
-    timeout = global.setTimeout(
+    timeout = setTimeout(
         async () => {
             if (typeof unsub === 'function') unsub();
 
@@ -51,7 +52,7 @@ const TIMEOUT_MIN = 5;
 
         if (blockNumber >= 1 && count >= FINALIZED_BLOCKS_COUNT) {
             unsub();
-            if (timeout) global.clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
 
             await api.disconnect();
             provider.on('disconnected', () => {

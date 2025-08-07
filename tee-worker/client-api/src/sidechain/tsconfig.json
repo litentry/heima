@@ -1,16 +1,8 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "baseUrl": "./",
-    "outDir": "../../dist/sidechain",
-    "declarationDir": "../../dist/sidechain",
-    "declarationMap": true,
-    "paths": {
-      "@heima-network/api-augment/sidechain/interfaces/*": ["interfaces/*"],
-      "@polkadot/api/augment": ["interfaces/augment-api.ts"],
-      "@polkadot/types/augment": ["interfaces/augment-types.ts"],
-      "@polkadot/types/lookup": ["interfaces/types-lookup.ts"]
-    }
-  }
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "outDir": "../../dist/sidechain",
+        "composite": true
+    },
+    "include": ["./**/*"]
 }

@@ -51,4 +51,4 @@ if (!skipSidechain) {
   });
 }
 
-export default defineConfig(configs);
+export default defineConfig(configs as any);
