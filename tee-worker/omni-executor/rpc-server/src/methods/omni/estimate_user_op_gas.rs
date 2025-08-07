@@ -24,7 +24,6 @@ use alloy::primitives::Address;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
-// use jsonrpsee::types::ErrorObject;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Decode;
