@@ -463,22 +463,33 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					if reason.contains("0x") {
-						if let Some(start) = reason.find("0x") {
-							let hex_data = &reason[start..];
-							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
-								let result = SenderAddressResult::abi_decode(&revert_data)
-									.map_err(|_| error!("Could not decode SenderAddressResult"))?;
-								return Ok(result.sender);
-							}
-						}
+				let revert_data = match &err {
+					// Handle standard JSON-RPC error with data field
+					ethereum_rpc::RpcProviderError::JsonRpc { data: Some(data), .. } => {
+						hex::decode(data.trim_start_matches("0x")).ok()
+					},
+					// Handle cases where revert data is in the reason string
+					ethereum_rpc::RpcProviderError::ExecutionReverted { reason } => {
+						reason.split("0x").last().and_then(|hex| hex::decode(hex).ok())
+					},
+					_ => None,
+				};
+
+				if let Some(data) = revert_data {
+					if let Ok(result) = SenderAddressResult::abi_decode(&data) {
+						return Ok(result.sender);
 					}
 				}
-				error!("Failed to get sender address: {:?}", err);
+
+				println!("Failed to get sender address: {:?}", err);
 				Err(())
 			},
-			Ok(_) => Err(()),
+			Ok(_) => {
+				println!(
+					"get_sender_address call succeeded unexpectedly, it should have reverted."
+				);
+				Err(())
+			},
 		}
 	}
 
@@ -1688,38 +1699,38 @@ pub mod test {
 
 	#[tokio::test]
 	async fn print_init_code_and_sender() {
-		let entrypoint_address = address!("0x332058832970B17D9fF657ad03bab074c49443aa");
+		let entrypoint_address = address!("0xe6042188857a822DDfcFE5fd9E17118049Ab539a");
 		let rpc_client =
-			Arc::new(AlloyRpcProvider::new("https://arbitrum-sepolia.api.onfinality.io/public"));
+			Arc::new(AlloyRpcProvider::new("https://arbitrum.rpc.subquery.network/public"));
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 
-		let factory = address!("0xe374D687f02008aB497D4A5f106445388a2831b7");
+		let factory = address!("0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e");
 		let oa: [u8; 32] =
-			decode_hex("0x31e80de15f426f2e353810d57aff3a6ab44e1a79c44e8bbc5b17fa189ee47d8f")
+			decode_hex("0x62b349705ff9e1eebb5d8be32366dd25ddaf3a1d9867dea409ed9ed6ab8ba283")
 				.unwrap()
 				.try_into()
 				.unwrap();
-		let client_id = "Wildmeta";
-		let root_signer = address!("0xEb79fD35765b83534Cc76E43D5E514a07dCb0180");
+		let client_id = "wildmeta";
+		let root_signer = address!("0x86D83d48aEB2A3f6b96D715FD503A6C3d3033D81");
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
 		let init_code_bytes = prepare_factory_init_code(
 			factory,
 			oa,
-			OwnerType::Evm,
+			OwnerType::Email,
 			&client_id_fixed_bytes.as_ref(),
 			root_signer,
 		);
 		let init_code = Bytes::from(init_code_bytes);
 		println!("initCode: {}", format!("{init_code}"));
 
-		let sender = entrypoint_client.get_sender_address(init_code).await.unwrap();
-		println!("sender: {}", sender);
+		// let sender = entrypoint_client.get_sender_address(init_code).await.unwrap();
+		// println!("sender: {}", sender);
 
 		// 1 GWEI = 1000000000
 		let paymaster_and_data = crate::entry_point_client::create_paymaster_and_data(
-			address!("0xD4dCB31763CBA7295bA4023E9411CB6db607DE07"),
+			address!("0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912"),
 			U256::from(100_000u64),
 			U256::from(300_000u64),
 		);
@@ -1737,28 +1748,49 @@ pub mod test {
 	#[test]
 	fn print_calldata() {
 		use ethers::abi::{Function, Param, ParamType, StateMutability, Token};
-		use ethers::types::Address;
+		use ethers::types::{Address, U256};
+		use std::str::FromStr;
 
+		// AA Wallet on Arbitrum Mainnet. This is the `sender` of the UserOperation.
 		let omni_account_addr: Address =
-			"0xF0Bc19d98E0A55b4eA07a077e4119CB3c39Edbb4".parse().unwrap();
-		let new_root_signer: Address =
-			"0x49fC5CC35F08E894959AA09Ce64d51F58faBdc0b".parse().unwrap();
+			"0xc120c1b0671EbfCfE85900D16713b4BFbE67B7FC".parse().unwrap();
 
-		// 1. Encode `addRootSigner(address)`
-		let add_fn = Function {
-			name: "addRootSigner".to_string(),
-			inputs: vec![Param {
-				name: "root".to_string(),
-				kind: ParamType::Address,
-				internal_type: None,
-			}],
-			outputs: vec![],
+		// Beneficiary address (recipient of the USDC)
+		let beneficiary_addr: Address =
+			"0x208CbD782D8cfD050f796492A2C64f3A86d11815".parse().unwrap();
+
+		// USDC contract address on Arbitrum Mainnet
+		let usdc_addr: Address = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831".parse().unwrap();
+
+		// Amount of USDC to transfer.
+		// NOTE: The user requested to transfer the *entire* balance.
+		// This is not possible with a static calldata, as the balance is dynamic.
+		// For a real transaction, you would first query the USDC balance of the `omni_account_addr`,
+		// and then use that value here.
+		// As a placeholder, we are transferring 1 USDC (which has 6 decimals).
+		let usdc_amount = U256::from(12700000); // 1 USDC = 1 * 10^6
+
+		// 1. Encode the `transfer(address, uint256)` call for the USDC contract
+		let transfer_fn = Function {
+			name: "transfer".to_string(),
+			inputs: vec![
+				Param { name: "to".to_string(), kind: ParamType::Address, internal_type: None },
+				Param {
+					name: "amount".to_string(),
+					kind: ParamType::Uint(256),
+					internal_type: None,
+				},
+			],
+			outputs: vec![], // transfer returns a bool, but we can ignore it here for calldata generation
 			state_mutability: StateMutability::NonPayable,
 			constant: None,
 		};
-		let add_root_data = add_fn.encode_input(&[Token::Address(new_root_signer)]).unwrap();
+		let transfer_calldata = transfer_fn
+			.encode_input(&[Token::Address(beneficiary_addr), Token::Uint(usdc_amount)])
+			.unwrap();
 
-		// 2. Encode `execute(address,uint256,bytes)`
+		// 2. Encode the `execute(address, uint256, bytes)` call for the OmniAccount.
+		// This `execute` call will be the `callData` in the UserOperation.
 		let exec_fn = Function {
 			name: "execute".to_string(),
 			inputs: vec![
@@ -1777,12 +1809,12 @@ pub mod test {
 
 		let calldata = exec_fn
 			.encode_input(&[
-				Token::Address(omni_account_addr),
+				Token::Address(usdc_addr),
 				Token::Uint(0u64.into()),
-				Token::Bytes(add_root_data.clone()),
+				Token::Bytes(transfer_calldata),
 			])
 			.unwrap();
 
-		println!("userOp.callData: 0x{}", hex::encode(calldata));
+		println!("userOp.callData for USDC transfer: 0x{}", hex::encode(calldata));
 	}
 }

@@ -17,6 +17,7 @@ name = "aa-contracts-client"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-sol-types",
  "ciborium",
  "ethereum-rpc",
  "ethers",

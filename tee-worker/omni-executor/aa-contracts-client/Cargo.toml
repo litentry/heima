@@ -16,6 +16,7 @@ tracing = { workspace = true }
 ethereum-rpc = { workspace = true }
 
 [dev-dependencies]
+alloy-sol-types = { workspace = true }
 test-log = { workspace = true }
 ethereum-rpc = { workspace = true, features = ["mocks"] }
 mockall = { workspace = true }
