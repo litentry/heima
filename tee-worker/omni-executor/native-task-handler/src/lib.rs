@@ -842,10 +842,6 @@ async fn handle_native_task<
 				omni_account, wallet_index, chain_id
 			);
 
-			// Validate that the sender in the UserOperation matches the expected format
-			// This helps ensure the user is estimating for their own account
-			debug!("Validating UserOperation for omni_account: {:?}", omni_account);
-
 			// Get EntryPoint client for this chain
 			let entry_point_client = match ctx.get_entry_point_client(chain_id) {
 				Some(client) => client,
