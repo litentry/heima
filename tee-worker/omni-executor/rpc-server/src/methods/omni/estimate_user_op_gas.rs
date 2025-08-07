@@ -136,3 +136,165 @@ fn validate_sender_address(sender: &str) -> Result<Address, ErrorCode> {
 		ErrorCode::ParseError
 	})
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_decode_account_id_valid() {
+		// Valid 32-byte hex string
+		let hex_str = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+		let result = decode_account_id(hex_str);
+		assert!(result.is_ok(), "Should decode valid 32-byte hex");
+
+		let _account_id = result.unwrap();
+		// AccountId is decoded successfully - internal structure is opaque
+	}
+
+	#[test]
+	fn test_decode_account_id_with_0x_prefix() {
+		// Test with 0x prefix
+		let with_prefix = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+		let without_prefix = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+		let result1 = decode_account_id(with_prefix);
+		let result2 = decode_account_id(without_prefix);
+
+		assert!(result1.is_ok(), "Should handle 0x prefix");
+		assert!(result2.is_ok(), "Should handle without 0x prefix");
+		assert_eq!(result1.unwrap(), result2.unwrap(), "Results should be identical");
+	}
+
+	#[test]
+	fn test_decode_account_id_invalid_hex() {
+		// Invalid hex characters
+		let invalid_hex = "0xgggggggg90abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+		let result = decode_account_id(invalid_hex);
+
+		assert!(result.is_err(), "Should reject invalid hex");
+		assert_eq!(result.unwrap_err(), ErrorCode::ParseError);
+	}
+
+	#[test]
+	fn test_decode_account_id_wrong_length() {
+		// Too short (31 bytes)
+		let too_short = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd";
+		let result_short = decode_account_id(too_short);
+		assert!(result_short.is_err(), "Should reject too short");
+
+		// Too long (33 bytes)
+		let too_long = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef00";
+		let result_long = decode_account_id(too_long);
+		assert!(result_long.is_err(), "Should reject too long");
+
+		// Empty
+		let empty = "";
+		let result_empty = decode_account_id(empty);
+		assert!(result_empty.is_err(), "Should reject empty string");
+	}
+
+	#[test]
+	fn test_validate_sender_address_valid() {
+		// Valid Ethereum addresses
+		let addresses = vec![
+			"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9",
+			"0x0000000000000000000000000000000000000000",
+			"0xffffffffffffffffffffffffffffffffffffffff",
+			"0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
+		];
+
+		for addr in addresses {
+			let result = validate_sender_address(addr);
+			assert!(result.is_ok(), "Should accept valid address: {}", addr);
+		}
+	}
+
+	#[test]
+	fn test_validate_sender_address_checksummed() {
+		// Checksummed addresses should work
+		let checksummed = "0x5aAeb6053f3E94C9b9A09f33669435E7Ef1BeAed";
+		let result = validate_sender_address(checksummed);
+		assert!(result.is_ok(), "Should accept checksummed address");
+	}
+
+	#[test]
+	fn test_validate_sender_address_invalid_format() {
+		// Invalid formats
+		let invalid_addresses = vec![
+			"not_an_address",
+			"0x",
+			"0xZZZZ35Cc6634C0532925a3b844Bc9e7595f0bEb9", // Invalid hex
+			// Note: Address without 0x prefix is actually valid in alloy
+			"",
+		];
+
+		for addr in invalid_addresses {
+			let result = validate_sender_address(addr);
+			assert!(result.is_err(), "Should reject invalid address: {}", addr);
+			assert_eq!(result.unwrap_err(), ErrorCode::ParseError);
+		}
+	}
+
+	#[test]
+	fn test_validate_sender_address_wrong_length() {
+		// Wrong length addresses
+		let too_short = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bE"; // 39 chars
+		let too_long = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb900"; // 43 chars
+
+		let result_short = validate_sender_address(too_short);
+		assert!(result_short.is_err(), "Should reject too short address");
+
+		let result_long = validate_sender_address(too_long);
+		assert!(result_long.is_err(), "Should reject too long address");
+	}
+
+	#[test]
+	fn test_parse_estimate_params_valid() {
+		// Valid params JSON
+		let json = serde_json::json!({
+			"user_operation": {
+				"sender": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9",
+				"nonce": 42,
+				"init_code": "0xdeadbeef",
+				"call_data": "0xcafebabe",
+				"account_gas_limits": "0x0000000000000000000000000030d4000000000000000000000000000000c350",
+				"pre_verification_gas": 21000,
+				"gas_fees": "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0",
+				"paymaster_and_data": "0x",
+				"signature": "0x1234"
+			},
+			"chain_id": 1,
+			"wallet_index": 0
+		});
+
+		let params: EstimateUserOpGasParams = serde_json::from_value(json).unwrap();
+		assert_eq!(params.chain_id, 1);
+		assert_eq!(params.wallet_index, 0);
+		assert_eq!(params.user_operation.sender, "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9");
+		assert_eq!(params.user_operation.nonce, 42);
+	}
+
+	#[test]
+	fn test_parse_estimate_params_missing_fields() {
+		// Missing required field
+		let json_missing_chain = serde_json::json!({
+			"user_operation": {
+				"sender": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9",
+				"nonce": 42,
+				"init_code": "0x",
+				"call_data": "0x",
+				"account_gas_limits": "0x0000000000000000000000000030d4000000000000000000000000000000c350",
+				"pre_verification_gas": 21000,
+				"gas_fees": "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0",
+				"paymaster_and_data": "0x",
+				"signature": null
+			},
+			"wallet_index": 0
+			// Missing chain_id
+		});
+
+		let result: Result<EstimateUserOpGasParams, _> = serde_json::from_value(json_missing_chain);
+		assert!(result.is_err(), "Should fail when missing required fields");
+	}
+}
