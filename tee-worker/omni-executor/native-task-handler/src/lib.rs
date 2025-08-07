@@ -1204,6 +1204,26 @@ async fn verify_google_code(
 	)
 }
 
+// Helper functions for gas limit packing/unpacking
+fn pack_account_gas_limits(verification_gas: u128, call_gas: u128) -> FixedBytes<32> {
+	let packed: U256 = (U256::from(verification_gas) << 128) | U256::from(call_gas);
+	FixedBytes::from(packed.to_be_bytes())
+}
+
+#[cfg(test)]
+fn unpack_verification_gas_limit(packed: FixedBytes<32>) -> u128 {
+	let value = U256::from_be_bytes(packed.0);
+	let result: U256 = (value >> 128) & U256::from(u128::MAX);
+	result.to::<u128>()
+}
+
+#[cfg(test)]
+fn unpack_call_gas_limit(packed: FixedBytes<32>) -> u128 {
+	let value = U256::from_be_bytes(packed.0);
+	let result: U256 = value & U256::from(u128::MAX);
+	result.to::<u128>()
+}
+
 /// Convert Substrate signature to Ethereum ECDSA format
 /// Returns signature in format: [r (32 bytes), s (32 bytes), v (1 byte)]
 pub fn substrate_to_ethereum_signature(substrate_sig: &[u8]) -> Result<[u8; 65], &'static str> {
@@ -1373,8 +1393,8 @@ async fn estimate_call_gas_limit(
 	// Step 1: Initial simulation at maximum to get baseline gas usage
 	let mut test_user_op = user_op.clone();
 	let verification_gas = U256::from(DEFAULT_VERIFICATION_GAS_FOR_TESTING);
-	let packed_gas_limits: U256 = (verification_gas << 128) | max_gas;
-	test_user_op.accountGasLimits = FixedBytes::from(packed_gas_limits.to_be_bytes());
+	test_user_op.accountGasLimits =
+		pack_account_gas_limits(verification_gas.to::<u128>(), max_gas.to::<u128>());
 
 	let initial_result = entry_point_client
 		.simulate_handle_ops(&vec![test_user_op], Address::ZERO)
@@ -1419,8 +1439,8 @@ async fn estimate_call_gas_limit(
 
 		// Test if this gas limit works
 		let mut test_user_op = user_op.clone();
-		let packed_gas_limits: U256 = (verification_gas << 128) | mid_gas;
-		test_user_op.accountGasLimits = FixedBytes::from(packed_gas_limits.to_be_bytes());
+		test_user_op.accountGasLimits =
+			pack_account_gas_limits(verification_gas.to::<u128>(), mid_gas.to::<u128>());
 
 		let test_result =
 			entry_point_client.simulate_handle_ops(&vec![test_user_op], Address::ZERO).await;
@@ -1587,6 +1607,7 @@ fn extract_paymaster_gas_limits(paymaster_and_data: &Bytes) -> (u128, u128) {
 	// [20:36] - paymaster verification gas limit (uint128)
 	// [36:52] - paymaster post-op gas limit (uint128)
 	// [52:] - paymaster data
+	// check UserOperationLib.sol
 
 	if paymaster_and_data.len() >= 52 {
 		// Extract verification gas limit (bytes 20-36)
@@ -1639,11 +1660,13 @@ fn extract_paymaster_gas_limits(paymaster_and_data: &Bytes) -> (u128, u128) {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use aa_contracts_client::PackedUserOperation;
 	use alloy::{
 		hex,
-		primitives::{Bytes, U256},
+		primitives::{Bytes, FixedBytes, U256},
 	};
 	use executor_core::types::SerializablePackedUserOperation;
+	use executor_primitives::ChainId;
 
 	#[test]
 	fn test_convert_to_packed_user_op() {
@@ -1749,5 +1772,261 @@ mod tests {
 		assert!(packed_user_op.initCode.is_empty());
 		assert_eq!(packed_user_op.sender.to_string(), "0x1234567890123456789012345678901234567890");
 		assert_eq!(packed_user_op.nonce, U256::from(42));
+	}
+
+	#[test]
+	fn test_pack_account_gas_limits() {
+		let verification_gas = 500_000u128;
+		let call_gas = 300_000u128;
+
+		let packed = pack_account_gas_limits(verification_gas, call_gas);
+
+		// Verify the packed format
+		let expected: U256 = (U256::from(verification_gas) << 128) | U256::from(call_gas);
+		assert_eq!(packed.0, expected.to_be_bytes());
+	}
+
+	#[test]
+	fn test_unpack_verification_gas_limit() {
+		// Create a packed value with verification gas = 500000, call gas = 300000
+		let verification_gas = 500_000u128;
+		let call_gas = 300_000u128;
+		let packed_value: U256 = (U256::from(verification_gas) << 128) | U256::from(call_gas);
+		let packed_bytes = FixedBytes::from(packed_value.to_be_bytes());
+
+		let unpacked = unpack_verification_gas_limit(packed_bytes);
+		assert_eq!(unpacked, verification_gas);
+	}
+
+	#[test]
+	fn test_unpack_call_gas_limit() {
+		// Create a packed value with verification gas = 500000, call gas = 300000
+		let verification_gas = 500_000u128;
+		let call_gas = 300_000u128;
+		let packed_value: U256 = (U256::from(verification_gas) << 128) | U256::from(call_gas);
+		let packed_bytes = FixedBytes::from(packed_value.to_be_bytes());
+
+		let unpacked = unpack_call_gas_limit(packed_bytes);
+		assert_eq!(unpacked, call_gas);
+	}
+
+	#[test]
+	fn test_pack_unpack_roundtrip() {
+		let test_cases = vec![
+			(0u128, 0u128),
+			(1u128, 1u128),
+			(u128::MAX, u128::MAX),
+			(1_000_000u128, 500_000u128),
+			(3_000_000u128, 10_000_000u128),
+		];
+
+		for (verification, call) in test_cases {
+			let packed = pack_account_gas_limits(verification, call);
+			let unpacked_verification = unpack_verification_gas_limit(packed);
+			let unpacked_call = unpack_call_gas_limit(packed);
+
+			assert_eq!(
+				unpacked_verification,
+				verification,
+				"Verification gas mismatch for {:?}",
+				(verification, call)
+			);
+			assert_eq!(unpacked_call, call, "Call gas mismatch for {:?}", (verification, call));
+		}
+	}
+
+	#[test]
+	fn test_calculate_pre_verification_gas_mainnet() {
+		// Test with a simple UserOp for mainnet (no L2 costs)
+		let user_op = PackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".parse().unwrap(),
+			nonce: U256::from(1),
+			initCode: Bytes::from(vec![]),
+			callData: Bytes::from(vec![0x00, 0x01, 0x02, 0x03]), // 4 bytes
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(0),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: Bytes::from(vec![]),
+			signature: Bytes::from(vec![0xff; 65]), // 65 bytes signature
+		};
+
+		let chain_id: ChainId = 1; // Ethereum mainnet
+		let (static_pvg, dynamic_pvg) = calculate_pre_verification_gas(&user_op, chain_id);
+
+		// Static PVG should include base costs + calldata
+		// Base: 21000 + 5000 = 26000
+		// Calldata: sender(20) + nonce(~3) + initCode(0) + callData(4) + signature(65) + other fields
+		// This is approximate since we need to calculate exact calldata costs
+		assert!(static_pvg > U256::from(26_000), "Static PVG should be at least base costs");
+
+		// Dynamic PVG should be 0 for mainnet
+		assert_eq!(dynamic_pvg, U256::ZERO, "Dynamic PVG should be 0 for mainnet");
+	}
+
+	#[test]
+	fn test_calculate_pre_verification_gas_arbitrum() {
+		// Test with UserOp for Arbitrum (includes L2 data costs)
+		let user_op = PackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".parse().unwrap(),
+			nonce: U256::from(1),
+			initCode: Bytes::from(vec![]),
+			callData: Bytes::from(vec![0x00; 100]), // 100 zero bytes
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(0),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: Bytes::from(vec![]),
+			signature: Bytes::from(vec![0xff; 65]),
+		};
+
+		let chain_id: ChainId = 42161; // Arbitrum One
+		let (static_pvg, dynamic_pvg) = calculate_pre_verification_gas(&user_op, chain_id);
+
+		// Static PVG should include base costs
+		assert!(static_pvg > U256::from(26_000), "Static PVG should include base costs");
+
+		// Dynamic PVG should be non-zero for Arbitrum (140 gas per byte)
+		assert!(dynamic_pvg > U256::ZERO, "Dynamic PVG should be non-zero for Arbitrum");
+
+		// Verify L2 multiplier is applied (140 gas per byte for Arbitrum)
+		let total_bytes = user_op.sender.len() + 100 + 65; // Approximate total bytes
+		let expected_min_dynamic = U256::from(total_bytes * 140);
+		assert!(
+			dynamic_pvg >= expected_min_dynamic,
+			"Dynamic PVG should apply Arbitrum multiplier"
+		);
+	}
+
+	#[test]
+	fn test_calculate_pre_verification_gas_optimism() {
+		// Test with UserOp for Optimism
+		let user_op = PackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".parse().unwrap(),
+			nonce: U256::from(1),
+			initCode: Bytes::from(vec![]),
+			callData: Bytes::from(vec![0x01; 50]), // 50 non-zero bytes
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(0),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: Bytes::from(vec![]),
+			signature: Bytes::from(vec![0xff; 65]),
+		};
+
+		let chain_id: ChainId = 10; // Optimism
+		let (_, dynamic_pvg) = calculate_pre_verification_gas(&user_op, chain_id);
+
+		// Dynamic PVG should use Optimism multiplier (160 gas per byte)
+		assert!(dynamic_pvg > U256::ZERO, "Dynamic PVG should be non-zero for Optimism");
+
+		// Should be higher than Arbitrum for same data
+		let arbitrum_chain: ChainId = 42161; // Arbitrum One
+		let (_, arbitrum_dynamic) = calculate_pre_verification_gas(&user_op, arbitrum_chain);
+		assert!(
+			dynamic_pvg > arbitrum_dynamic,
+			"Optimism should have higher dynamic PVG than Arbitrum"
+		);
+	}
+
+	#[test]
+	fn test_calculate_pre_verification_gas_with_deployment() {
+		// Test with initCode present (deployment scenario)
+		let user_op = PackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".parse().unwrap(),
+			nonce: U256::from(0),                   // First transaction
+			initCode: Bytes::from(vec![0x60; 200]), // 200 bytes of deployment code
+			callData: Bytes::from(vec![]),
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(0),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: Bytes::from(vec![]),
+			signature: Bytes::from(vec![0xff; 65]),
+		};
+
+		let chain_id: ChainId = 1; // Ethereum mainnet
+		let (static_pvg, _) = calculate_pre_verification_gas(&user_op, chain_id);
+
+		// Should include CREATE2 overhead (32000 gas)
+		// Base (26000) + CREATE2 (32000) + calldata costs
+		assert!(static_pvg > U256::from(58_000), "Static PVG should include CREATE2 overhead");
+	}
+
+	#[test]
+	fn test_calculate_pre_verification_gas_zero_bytes() {
+		// Test calldata gas calculation with all zero bytes
+		let user_op = PackedUserOperation {
+			sender: "0x0000000000000000000000000000000000000000".parse().unwrap(),
+			nonce: U256::from(0),
+			initCode: Bytes::from(vec![]),
+			callData: Bytes::from(vec![0x00; 1000]), // 1000 zero bytes
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(0),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: Bytes::from(vec![]),
+			signature: Bytes::from(vec![0x00; 65]), // All zero signature
+		};
+
+		let chain_id: ChainId = 1; // Ethereum mainnet
+		let (static_pvg, _) = calculate_pre_verification_gas(&user_op, chain_id);
+
+		// Zero bytes cost 4 gas each (EIP-2028)
+		// Should be significantly lower than non-zero bytes
+		let non_zero_op = PackedUserOperation {
+			callData: Bytes::from(vec![0xff; 1000]), // 1000 non-zero bytes
+			..user_op.clone()
+		};
+		let (non_zero_static, _) = calculate_pre_verification_gas(&non_zero_op, chain_id);
+
+		assert!(
+			static_pvg < non_zero_static,
+			"Zero bytes should cost less gas than non-zero bytes"
+		);
+	}
+
+	#[test]
+	fn test_extract_paymaster_gas_limits_valid() {
+		// Valid paymasterAndData with gas limits at bytes 20-52
+		let mut paymaster_data = vec![0x11; 20]; // 20 bytes of paymaster address
+
+		// Add verification gas limit (16 bytes, u128)
+		let verification_gas = 150_000u128;
+		paymaster_data.extend_from_slice(&verification_gas.to_be_bytes());
+
+		// Add post-op gas limit (16 bytes, u128)
+		let post_op_gas = 50_000u128;
+		paymaster_data.extend_from_slice(&post_op_gas.to_be_bytes());
+
+		// Add some extra data
+		paymaster_data.extend_from_slice(&[0xff; 20]);
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+		let (extracted_verification, extracted_post_op) =
+			extract_paymaster_gas_limits(&paymaster_and_data);
+
+		assert_eq!(extracted_verification, verification_gas, "Verification gas should match");
+		assert_eq!(extracted_post_op, post_op_gas, "Post-op gas should match");
+	}
+
+	#[test]
+	fn test_extract_paymaster_gas_limits_short_data() {
+		// Data shorter than 52 bytes
+		let paymaster_data = vec![0x11; 30]; // Only 30 bytes
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		let (verification, post_op) = extract_paymaster_gas_limits(&paymaster_and_data);
+
+		// Should return defaults
+		assert_eq!(verification, DEFAULT_PAYMASTER_VERIFICATION_GAS);
+		assert_eq!(post_op, DEFAULT_PAYMASTER_POST_OP_GAS);
+	}
+
+	#[test]
+	fn test_extract_paymaster_gas_limits_empty() {
+		// Empty paymasterAndData
+		let paymaster_and_data = Bytes::from(vec![]);
+
+		let (verification, post_op) = extract_paymaster_gas_limits(&paymaster_and_data);
+
+		// Should return zeros for no paymaster
+		assert_eq!(verification, 0);
+		assert_eq!(post_op, 0);
 	}
 }
