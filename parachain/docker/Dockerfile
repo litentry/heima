@@ -19,7 +19,7 @@ RUN rustup toolchain install
 RUN cargo build --locked --profile $PROFILE $BUILD_ARGS
 
 # ==========================
-# stage 2.1: packaging parachain image
+# stage 2: packaging parachain image
 # ==========================
 FROM ubuntu:22.04 AS parachain
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
@@ -49,66 +49,3 @@ VOLUME ["/data"]
 
 ENTRYPOINT ["/usr/local/bin/heima-node"]
 CMD ["--help"]
-
-# ==========================
-# stage 2.2: packaging aio image
-# ==========================
-
-FROM ubuntu:22.04 AS chain-aio
-LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
-
-ARG PROFILE
-ENV NVM_DIR=/opt/nvm
-ENV ZOMBIENET_VERSION=v1.3.109
-
-# install netcat for healthcheck
-RUN apt-get update && \
-    apt install -yq build-essential ocaml ocamlbuild automake autoconf libtool wget \
-    python-is-python3 libssl-dev git cmake perl python3 dkms pip python3-click clang-13 \
-    lldb-13 lld-13 clangd net-tools libssl-dev libcurl4-openssl-dev protobuf-compiler \
-    libprotobuf-dev debhelper cmake reprepro unzip pkgconf libboost-dev libboost-system-dev \
-    libboost-thread-dev lsb-release libsystemd0 pkgconf jq python3-pip curl && \
-    apt-get install -yq ca-certificates && \
-    update-ca-certificates && \
-    curl -fsSL https://deb.nodesource.com/setup_21.x | sudo -E bash - && \
-    apt-get update && apt-get install -y nodejs && \
-    npm install -g pnpm && \
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-    apt-key del 23E7166788B63E1E && \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-    apt update && apt install -y yarn  && \
-    mkdir -p $NVM_DIR && \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash && \
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
-    nvm install 18 && \
-    nvm use 18 && \
-    apt-get clean && \
-    rm -rf /var/cache/apt/lists
-
-RUN echo "downloading zombienet-linux-x64 ..." && \
-    curl -L -s -O "https://github.com/paritytech/zombienet/releases/download/$ZOMBIENET_VERSION/zombienet-linux-x64" && \
-    chmod +x zombienet-linux-x64 && \
-    cp zombienet-linux-x64 /usr/local/bin/zombienet && \
-    zombienet version
-
-RUN useradd -m -u 1000 -U -s /bin/sh -d /heima heima && \
-	mkdir -p /opt/heima/parachain /code && \
-	chown -R heima:heima /opt/heima
-
-COPY --from=local-builder:latest /heima/parachain/target/$PROFILE/heima-node /usr/local/bin/
-RUN chmod +x /usr/local/bin/heima-node && \
-    # check if executable works in this container
-    /usr/local/bin/heima-node --version
-
-COPY ./parachain /code/parachain
-COPY ./parachain/docker/entrypoint.sh /usr/local/bin/
-RUN chown -R heima:heima /code
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-USER heima
-
-EXPOSE 9615 9944 9946 9947 30332 30333 30336 30337
-VOLUME ["/opt/heima"]
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

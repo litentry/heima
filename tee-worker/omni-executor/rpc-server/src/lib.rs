@@ -1,4 +1,5 @@
 mod auth_token_key_store;
+mod auth_utils;
 mod error_code;
 mod methods;
 mod middlewares;
