@@ -15,8 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::common::handle_omni_native_task;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
-use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::ErrorCode;
@@ -37,6 +35,8 @@ pub struct EstimateUserOpGasParams {
 	pub user_operation: SerializablePackedUserOperation,
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
+	pub omni_account: String,
+	pub client_id: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -51,14 +51,7 @@ pub struct EstimateUserOpGasResponse {
 
 pub fn register_estimate_user_op_gas(module: &mut RpcModule<RpcContext>) {
 	module
-		.register_async_method("omni_estimateUserOpGas", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
-			})?;
-
+		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
 			let params = params.parse::<EstimateUserOpGasParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
@@ -67,7 +60,7 @@ pub fn register_estimate_user_op_gas(module: &mut RpcModule<RpcContext>) {
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
 			let account_id =
-				decode_account_id(&user.omni_account).map_err(PumpxRpcError::from_error_code)?;
+				decode_account_id(&params.omni_account).map_err(PumpxRpcError::from_error_code)?;
 
 			validate_sender_address(&params.user_operation.sender)
 				.map_err(PumpxRpcError::from_error_code)?;
@@ -81,7 +74,7 @@ pub fn register_estimate_user_op_gas(module: &mut RpcModule<RpcContext>) {
 				),
 				None,
 				None,
-				user.client_id,
+				params.client_id,
 			);
 
 			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
@@ -264,12 +257,16 @@ mod tests {
 				"signature": "0x1234"
 			},
 			"chain_id": 1,
-			"wallet_index": 0
+			"wallet_index": 0,
+			"omni_account": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"client_id": "test-client-123"
 		});
 
 		let params: EstimateUserOpGasParams = serde_json::from_value(json).unwrap();
 		assert_eq!(params.chain_id, 1);
 		assert_eq!(params.wallet_index, 0);
+		assert_eq!(params.omni_account, "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+		assert_eq!(params.client_id, "test-client-123");
 		assert_eq!(params.user_operation.sender, "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9");
 		assert_eq!(params.user_operation.nonce, 42);
 	}
@@ -289,7 +286,9 @@ mod tests {
 				"paymaster_and_data": "0x",
 				"signature": null
 			},
-			"wallet_index": 0
+			"wallet_index": 0,
+			"omni_account": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"client_id": "test-client-123"
 			// Missing chain_id
 		});
 
