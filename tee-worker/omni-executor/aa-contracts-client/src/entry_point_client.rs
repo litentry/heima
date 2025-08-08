@@ -277,7 +277,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	}
 
 	pub async fn get_wallet_address(&self) -> Result<Address, ()> {
-		error!("");
 		self.rpc_client.get_wallet_address().await.map_err(|_| ())
 	}
 
