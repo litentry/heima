@@ -1042,7 +1042,7 @@ mod tests {
 			.try_into()
 			.unwrap();
 		let identity = Identity::Evm(address.into());
-		let client_id = "Wildmeta";
+		let client_id = "wildmeta";
 		let omni_account = identity.to_omni_account(client_id);
 		println!("oa: {}", hex_encode(&omni_account.encode()));
 	}

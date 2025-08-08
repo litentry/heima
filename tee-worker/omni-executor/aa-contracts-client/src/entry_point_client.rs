@@ -1828,49 +1828,52 @@ pub mod test {
 
 	#[tokio::test]
 	async fn print_init_code_and_sender() {
-		let entrypoint_address = address!("0xe6042188857a822DDfcFE5fd9E17118049Ab539a");
-		let rpc_client =
-			Arc::new(AlloyRpcProvider::new("https://arbitrum.rpc.subquery.network/public"));
+		let entrypoint_address = address!("0x332058832970B17D9fF657ad03bab074c49443aa");
+		let rpc_client = Arc::new(AlloyRpcProvider::new("https://eth.llamarpc.com"));
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 
-		let factory = address!("0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e");
+		let factory = address!("0xe374D687f02008aB497D4A5f106445388a2831b7");
 		let oa: [u8; 32] =
-			decode_hex("0x62b349705ff9e1eebb5d8be32366dd25ddaf3a1d9867dea409ed9ed6ab8ba283")
+			decode_hex("0x516077ae8b538b7520b061092c96da7399e55dd80edc5b28056c066636d7fba3")
 				.unwrap()
 				.try_into()
 				.unwrap();
 		let client_id = "wildmeta";
-		let root_signer = address!("0x86D83d48aEB2A3f6b96D715FD503A6C3d3033D81");
+		let root_signer = address!("0xbb3F0c921ADAdf41Bd925aae8B82aaF6D803DA69");
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
+		println!("client_id_bytes: 0x{}", hex::encode(client_id_bytes));
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
 		let init_code_bytes = prepare_factory_init_code(
 			factory,
 			oa,
-			OwnerType::Email,
+			OwnerType::Evm,
 			&client_id_fixed_bytes.as_ref(),
 			root_signer,
 		);
 		let init_code = Bytes::from(init_code_bytes);
 		println!("initCode: {}", format!("{init_code}"));
 
+		// sender: 0x97E73D84C335D7b44C1675f2CeA5917b6B7DF16F
 		// let sender = entrypoint_client.get_sender_address(init_code).await.unwrap();
 		// println!("sender: {}", sender);
 
 		// 1 GWEI = 1000000000
 		let paymaster_and_data = crate::entry_point_client::create_paymaster_and_data(
-			address!("0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912"),
+			address!("0xD4dCB31763CBA7295bA4023E9411CB6db607DE07"),
 			U256::from(100_000u64),
 			U256::from(300_000u64),
 		);
 		println!("paymaster_and_data: {}", paymaster_and_data);
 		let account_gas_limits = crate::entry_point_client::create_account_gas_limits(
-			U256::from(300_000u64),
 			U256::from(500_000u64),
+			U256::from(600_000u64),
 		);
 		println!("account_gas_limits: {}", account_gas_limits);
-		let gas_fees =
-			crate::entry_point_client::create_gas_fees(U256::from(100_000_000u64), U256::ZERO);
+		let gas_fees = crate::entry_point_client::create_gas_fees(
+			U256::from(300_000_000u64),
+			U256::from(1_000_000_000u64),
+		);
 		println!("gas_fees: {}", gas_fees);
 	}
 
