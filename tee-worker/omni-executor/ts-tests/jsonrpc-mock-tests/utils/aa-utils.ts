@@ -255,7 +255,7 @@ export async function signUserOperation(
     const domain = {
         name: 'ERC4337',
         version: '1',
-        chainId,
+        chainId: Number(chainId),
         verifyingContract: entryPointAddress,
     };
 
@@ -285,16 +285,32 @@ export async function signUserOperation(
         paymasterAndData: packedOp.paymasterAndData,
     };
 
-    const signature = await walletClient.signTypedData({
-        account: walletClient.account,
-        domain,
-        types,
-        primaryType: 'PackedUserOperation',
-        message,
-    });
-
-    // Add signer type prefix
-    return addSignaturePrefix(signature, signerType);
+    try {
+        console.log('Signing PackedUserOperation with EIP-712...');
+        const signature = await walletClient.signTypedData({
+            account: walletClient.account,
+            domain,
+            types,
+            primaryType: 'PackedUserOperation',
+            message,
+        });
+        console.log('Successfully signed with EIP-712');
+        // Add signer type prefix
+        return addSignaturePrefix(signature, signerType);
+    } catch (e) {
+        console.error('EIP-712 signing failed:', e);
+        
+        // Fallback: Use personal_sign (adds message prefix)
+        const userOpHash = getUserOpHash(userOp, entryPointAddress, chainId);
+        const signature = await walletClient.signMessage({
+            account: walletClient.account,
+            message: { raw: userOpHash },
+        });
+        
+        console.warn('WARNING: Using personal_sign which adds message prefix');
+        // Add signer type prefix
+        return addSignaturePrefix(signature, signerType);
+    }
 }
 
 export function generateInitCode(
@@ -337,4 +353,100 @@ export function createAddSignerCalldata(signer: Address): `0x${string}` {
         functionName: 'addRootSigner',
         args: [signer],
     });
+}
+
+// Add getUserOpHash function for signature compatibility
+export function getUserOpHash(
+    userOp: UserOperation,
+    entryPointAddress: Address,
+    chainId: number
+): Hash {
+    const packedOp = packUserOperation(userOp);
+    
+    const PACKED_USEROP_TYPEHASH = keccak256(
+        toHex('PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)')
+    );
+    
+    const encoded = encodeAbiParameters(
+        [
+            { name: 'typehash', type: 'bytes32' },
+            { name: 'sender', type: 'address' },
+            { name: 'nonce', type: 'uint256' },
+            { name: 'hashInitCode', type: 'bytes32' },
+            { name: 'hashCallData', type: 'bytes32' },
+            { name: 'accountGasLimits', type: 'bytes32' },
+            { name: 'preVerificationGas', type: 'uint256' },
+            { name: 'gasFees', type: 'bytes32' },
+            { name: 'hashPaymasterAndData', type: 'bytes32' },
+        ],
+        [
+            PACKED_USEROP_TYPEHASH,
+            packedOp.sender,
+            packedOp.nonce,
+            keccak256(packedOp.initCode),
+            keccak256(packedOp.callData),
+            packedOp.accountGasLimits,
+            packedOp.preVerificationGas,
+            packedOp.gasFees,
+            keccak256(packedOp.paymasterAndData),
+        ]
+    );
+    
+    const userOpHashInner = keccak256(encoded);
+    
+    const domainSeparator = keccak256(
+        encodeAbiParameters(
+            [
+                { name: 'typeHash', type: 'bytes32' },
+                { name: 'name', type: 'bytes32' },
+                { name: 'version', type: 'bytes32' },
+                { name: 'chainId', type: 'uint256' },
+                { name: 'verifyingContract', type: 'address' },
+            ],
+            [
+                keccak256(toHex('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)')),
+                keccak256(toHex('ERC4337')),
+                keccak256(toHex('1')),
+                BigInt(chainId),
+                entryPointAddress,
+            ]
+        )
+    );
+    
+    return keccak256(
+        encodePacked(
+            ['bytes1', 'bytes1', 'bytes32', 'bytes32'],
+            ['0x19', '0x01', domainSeparator, userOpHashInner]
+        )
+    );
+}
+
+// SerializablePackedUserOperation interface matching Rust struct
+export interface SerializablePackedUserOperation {
+    sender: string;
+    nonce: number;
+    init_code: string;
+    call_data: string;
+    account_gas_limits: string;
+    pre_verification_gas: number;
+    gas_fees: string;
+    paymaster_and_data: string;
+    signature?: string;
+}
+
+// Convert PackedUserOperation to SerializablePackedUserOperation
+export function toSerializablePackedUserOperation(
+    packedOp: PackedUserOperation
+): SerializablePackedUserOperation {
+    return {
+        sender: packedOp.sender,
+        nonce: Number(packedOp.nonce),
+        init_code: packedOp.initCode,
+        call_data: packedOp.callData,
+        account_gas_limits: packedOp.accountGasLimits,
+        pre_verification_gas: Number(packedOp.preVerificationGas),
+        gas_fees: packedOp.gasFees,
+        paymaster_and_data: packedOp.paymasterAndData,
+        signature: packedOp.signature === '0x' ? undefined : packedOp.signature,
+    };
 }

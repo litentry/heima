@@ -88,4 +88,9 @@ export interface SignLimitOrderResponse {
 }
 
 export type NotifyLimitOrderResultResponse = null;
+
+export interface SubmitUserOpTestResponse {
+    transaction_hash: string | null;
+}
+
 // todo: add other types

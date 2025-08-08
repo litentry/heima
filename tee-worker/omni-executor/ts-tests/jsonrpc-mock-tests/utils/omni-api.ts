@@ -7,6 +7,7 @@ import {
     GetNextIntentIdParams,
     ExportWalletParams,
     SubmitUserOpParams,
+    SubmitUserOpTestParams,
     GetSmartWalletRootSignerParams,
     TransferWithdrawParams,
     SubmitSwapOrderParams,
@@ -22,6 +23,7 @@ import {
     ExportWalletResponse,
     AddWalletResponse,
     SubmitUserOpResponse,
+    SubmitUserOpTestResponse,
     GetSmartWalletRootSignerResponse,
     TransferWithdrawResponse,
     SubmitSwapOrderResponse,
@@ -124,9 +126,15 @@ export class OmniApi {
 
     async getSmartWalletRootSigner(
         params: GetSmartWalletRootSignerParams,
-        token: string
+        token?: string
     ): Promise<GetSmartWalletRootSignerResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniGetSmartWalletRootSigner, params, token);
+
+        return response;
+    }
+
+    async submitUserOpTest(params: SubmitUserOpTestParams): Promise<SubmitUserOpTestResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSubmitUserOpTest, params);
 
         return response;
     }
