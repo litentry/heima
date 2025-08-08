@@ -265,7 +265,10 @@ mod tests {
 		let params: EstimateUserOpGasParams = serde_json::from_value(json).unwrap();
 		assert_eq!(params.chain_id, 1);
 		assert_eq!(params.wallet_index, 0);
-		assert_eq!(params.omni_account, "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+		assert_eq!(
+			params.omni_account,
+			"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+		);
 		assert_eq!(params.client_id, "test-client-123");
 		assert_eq!(params.user_operation.sender, "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9");
 		assert_eq!(params.user_operation.nonce, 42);
