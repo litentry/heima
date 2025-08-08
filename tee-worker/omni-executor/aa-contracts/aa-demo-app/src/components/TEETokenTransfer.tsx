@@ -9,6 +9,7 @@ import {
     packUserOperation,
     toSerializablePackedUserOperation,
     estimateUserOperationGas,
+    estimateUserOpGasFromWorker,
 } from "@/lib/aa-utils";
 
 interface TEETokenTransferProps {
@@ -139,10 +140,34 @@ export function TEETokenTransfer({
         setIsSubmitting(true);
 
         try {
-            // Estimate gas parameters for token transfer
-            const gasParams = await estimateUserOperationGas(publicClient!, false);
+            // Build the initial UserOperation for token transfer (without gas estimates)
+            const userOpWithoutGas = buildTokenTransferUserOp({
+                omniAccountAddress: omniAccountAddress as `0x${string}`,
+                tokenAddress: token.address,
+                recipient: recipient as `0x${string}`,
+                amount: amountBigInt,
+                nonce,
+            });
 
-            // Build the UserOperation for token transfer
+            // Try to estimate gas using the TEE worker first, with fallback to local estimation
+            let gasParams;
+            try {
+                console.log("Attempting to estimate gas using TEE worker...");
+                gasParams = await estimateUserOpGasFromWorker(
+                    userOpWithoutGas,
+                    chainId,
+                    0, // wallet_index
+                    publicClient
+                );
+                console.log("Successfully estimated gas using TEE worker");
+            } catch (workerError) {
+                console.warn("TEE worker gas estimation failed, using local estimation:", workerError);
+                // Fallback to local estimation
+                gasParams = await estimateUserOperationGas(publicClient!, false);
+                console.log("Using local gas estimation as fallback");
+            }
+
+            // Build the final UserOperation with gas estimates
             const userOp = buildTokenTransferUserOp({
                 omniAccountAddress: omniAccountAddress as `0x${string}`,
                 tokenAddress: token.address,
