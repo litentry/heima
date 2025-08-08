@@ -56,10 +56,17 @@ pub fn register_request_email_verification_code<
 				.insert(&omni_account.hash(), verification_code.clone())
 				.map_err(|_| ErrorCode::InternalError)?;
 
-			send_verification_email(&*ctx.mailer, params.user_email, verification_code)
+			// Get the appropriate mailer for this client
+			let mailer =
+				ctx.mailer_factory.get_mailer_for_client(&params.client_id).map_err(|e| {
+					error!("Failed to get mailer for client '{}': {}", params.client_id, e);
+					ErrorCode::InternalError
+				})?;
+
+			send_verification_email(&*mailer, params.user_email, verification_code)
 				.await
 				.map_err(|_| {
-					error!("Failed to send verification email");
+					error!("Failed to send verification email for client '{}'", params.client_id);
 					ErrorCode::InternalError
 				})?;
 

@@ -35,14 +35,12 @@ pub fn register_get_shielding_key<
 		.expect("Failed to register omni_getShieldingKey method");
 }
 
-// TODO: Will fix this once the new architecture is ready
 // #[cfg(test)]
 // mod test {
 // 	use super::*;
 // 	use crate::{start_server, ShieldingKey};
 // 	use config_loader::ConfigLoader;
 // 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
-// 	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 // 	use jsonrpsee::core::client::ClientT;
 // 	use jsonrpsee::rpc_params;
 // 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -54,7 +52,7 @@ pub fn register_get_shielding_key<
 // 	use tempfile::tempdir;
 // 	use tokio::sync::mpsc;
 // 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
-//
+// 
 // 	#[tokio::test]
 // 	pub async fn get_shielding_key_works() {
 // 		let tmp_dir = tempdir().unwrap();
@@ -69,13 +67,10 @@ pub fn register_get_shielding_key<
 // 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 // 		let config_loader = ConfigLoader::from_env();
 // 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-//
-// 		// Create console mailer for test
-// 		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
-//
+// 
 // 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 // 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
-//
+// 
 // 		start_server(
 // 			port,
 // 			shielding_key.clone(),
@@ -87,17 +82,16 @@ pub fn register_get_shielding_key<
 // 			signer_client,
 // 			wildmeta_api,
 // 			wildmeta_timestamp_storage,
-// 			mailer,
 // 		)
 // 		.await
 // 		.unwrap();
-//
+// 
 // 		let url = format!("ws://127.0.0.1:{}", port);
 // 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 // 		let response: serde_json::Value =
 // 			client.request("omni_getShieldingKey", rpc_params![]).await.unwrap();
 // 		let pubkey: SerdeRsa3072PubKey = serde_json::from_value(response).unwrap();
-//
+// 
 // 		assert_eq!(pubkey.n, shielding_key.public_key().n().to_bytes_le());
 // 		assert_eq!(pubkey.e, shielding_key.public_key().e().to_bytes_le());
 // 	}

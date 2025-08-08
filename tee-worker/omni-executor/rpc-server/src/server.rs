@@ -1,3 +1,4 @@
+use crate::mailer_factory::MailerFactory;
 use crate::{
 	methods::register_methods,
 	middlewares::{HttpMiddleware, RpcMiddleware},
@@ -9,7 +10,6 @@ use ethereum_rpc::AlloyRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::aes256::Aes256Key;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
-use heima_identity_verification::web2::email::mailer::MailerTrait;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::{ParentchainTxSigner, TaskHandlerContext};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
@@ -32,7 +32,7 @@ pub(crate) struct RpcContext<
 > {
 	pub shielding_key: ShieldingKey,
 	pub storage_db: Arc<StorageDB>,
-	pub mailer: Box<dyn MailerTrait + Send + Sync>,
+	pub mailer_factory: Arc<MailerFactory>,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
@@ -74,7 +74,7 @@ impl<
 	pub fn new(
 		shielding_key: ShieldingKey,
 		storage_db: Arc<StorageDB>,
-		mailer: Box<dyn MailerTrait + Send + Sync>,
+		mailer_factory: Arc<MailerFactory>,
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
@@ -93,7 +93,7 @@ impl<
 		Self {
 			shielding_key,
 			storage_db,
-			mailer,
+			mailer_factory,
 			jwt_rsa_private_key,
 			google_client_id,
 			google_client_secret,
@@ -159,7 +159,6 @@ pub async fn start_server<
 	signer_client: Arc<Box<dyn SignerClient>>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
-	mailer: Box<dyn MailerTrait + Send + Sync>,
 	ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	solana_intent_executor: Arc<SolanaIntentExecutor>,
 	cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
@@ -168,10 +167,13 @@ pub async fn start_server<
 	transaction_signer: Arc<ParentchainTxSigner>,
 	entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+	// Create mailer factory
+	let mailer_factory = Arc::new(MailerFactory::new(Arc::new(config_loader.clone())));
+
 	let ctx = RpcContext::new(
 		shielding_key,
 		storage_db,
-		mailer,
+		mailer_factory,
 		jwt_rsa_private_key.clone(),
 		config_loader.google_client_id.clone(),
 		config_loader.google_client_secret.clone(),
