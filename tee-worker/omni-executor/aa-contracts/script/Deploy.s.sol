@@ -114,9 +114,9 @@ contract Deploy is Script {
         uint256 chainId = block.chainid;
 
         if (chainId == 1) {
-            return NetworkConfig("Ethereum Mainnet", 1, 0.5 ether);
+            return NetworkConfig("Ethereum Mainnet", 1, 0.01 ether);
         } else if (chainId == 11155111) {
-            return NetworkConfig("Ethereum Sepolia", 11155111, 0.1 ether);
+            return NetworkConfig("Ethereum Sepolia", 11155111, 0.01 ether);
         } else if (chainId == 56) {
             return NetworkConfig("BSC Mainnet", 56, 0.1 ether);
         } else if (chainId == 97) {
