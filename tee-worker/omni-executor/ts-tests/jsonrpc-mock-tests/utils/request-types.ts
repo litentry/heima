@@ -54,6 +54,7 @@ export interface SubmitUserOpParams {
 }
 
 export interface GetSmartWalletRootSignerParams {
+    omni_account: string;
     chain_type: string;
     wallet_index: number;
 }
