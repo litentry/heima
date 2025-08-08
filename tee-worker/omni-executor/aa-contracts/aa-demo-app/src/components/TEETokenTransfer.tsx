@@ -149,7 +149,7 @@ export function TEETokenTransfer({
                 nonce,
             });
 
-            // Try to estimate gas using the TEE worker first, with fallback to local estimation
+            // Try to estimate gas using the TEE worker
             let gasParams;
             try {
                 console.log("Attempting to estimate gas using TEE worker...");
@@ -157,14 +157,17 @@ export function TEETokenTransfer({
                     userOpWithoutGas,
                     chainId,
                     0, // wallet_index
+                    omniAccountHash,
+                    DEFAULT_CLIENT_ID,
                     publicClient
                 );
                 console.log("Successfully estimated gas using TEE worker");
             } catch (workerError) {
-                console.warn("TEE worker gas estimation failed, using local estimation:", workerError);
-                // Fallback to local estimation
-                gasParams = await estimateUserOperationGas(publicClient!, false);
-                console.log("Using local gas estimation as fallback");
+                console.error("TEE worker gas estimation failed:", workerError);
+                // Fallback disabled for debugging
+                // gasParams = await estimateUserOperationGas(publicClient!, false);
+                // console.log("Using local gas estimation as fallback");
+                throw workerError; // Re-throw to see the actual error
             }
 
             // Build the final UserOperation with gas estimates

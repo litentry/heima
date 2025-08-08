@@ -796,8 +796,9 @@ export async function estimateUserOpGasFromWorker(
     userOp: UserOperation,
     chainId: number,
     walletIndex: number = 0,
+    omniAccount: string,
+    clientId: string,
     publicClient?: PublicClient,
-    authToken?: string,
 ): Promise<{
     callGasLimit: bigint;
     verificationGasLimit: bigint;
@@ -822,7 +823,8 @@ export async function estimateUserOpGasFromWorker(
             serializableOp,
             chainId,
             walletIndex,
-            authToken
+            omniAccount,
+            clientId
         );
 
         console.log("[Gas Estimation] Worker response:", workerEstimate);

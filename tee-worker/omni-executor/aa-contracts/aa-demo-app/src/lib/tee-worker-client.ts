@@ -234,6 +234,8 @@ interface EstimateUserOpGasParams {
     user_operation: SerializablePackedUserOperation;
     chain_id: number;
     wallet_index: number;
+    omni_account: string;
+    client_id: string;
 }
 
 interface EstimateUserOpGasResponse {
@@ -249,12 +251,15 @@ export async function estimateUserOpGas(
     userOperation: SerializablePackedUserOperation,
     chainId: number,
     walletIndex: number,
-    authToken?: string
+    omniAccount: string,
+    clientId: string
 ): Promise<EstimateUserOpGasResponse> {
     const params: EstimateUserOpGasParams = {
         user_operation: userOperation,
         chain_id: chainId,
         wallet_index: walletIndex,
+        omni_account: omniAccount,
+        client_id: clientId,
     };
 
     console.log("[TEE Worker] Estimating gas for user operation", params);
@@ -262,8 +267,7 @@ export async function estimateUserOpGas(
     try {
         const response = await makeRpcRequest<EstimateUserOpGasResponse>(
             "omni_estimateUserOpGas",
-            params,
-            authToken
+            params
         );
 
         console.log("[TEE Worker] Gas estimation response:", response);
