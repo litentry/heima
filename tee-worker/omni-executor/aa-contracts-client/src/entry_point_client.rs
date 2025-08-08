@@ -49,6 +49,36 @@ pub struct GasPriceConfig {
 	pub max_priority_fee: u128,
 }
 
+impl GasPriceConfig {
+	/// Validate that the configuration values are reasonable
+	pub fn validate(&self) -> Result<(), String> {
+		if self.min_priority_fee > self.max_priority_fee {
+			return Err("min_priority_fee cannot be greater than max_priority_fee".to_string());
+		}
+
+		if self.gas_price_buffer_percent > 500 {
+			return Err(
+				"gas_price_buffer_percent should not exceed 500% to prevent excessive fees"
+					.to_string(),
+			);
+		}
+
+		// Warn about very high max priority fees (>500 gwei)
+		if self.max_priority_fee > 500_000_000_000 {
+			tracing::warn!("max_priority_fee is very high ({} gwei), this may result in expensive transactions", self.max_priority_fee / 1_000_000_000);
+		}
+
+		// Ensure minimum priority fee is not zero (could cause stuck transactions)
+		if self.min_priority_fee == 0 {
+			return Err(
+				"min_priority_fee should not be zero to prevent stuck transactions".to_string()
+			);
+		}
+
+		Ok(())
+	}
+}
+
 impl Default for GasPriceConfig {
 	fn default() -> Self {
 		Self {
@@ -93,6 +123,37 @@ impl GasPriceConfig {
 			gas_price_buffer_percent: 20,    // Lower buffer due to stable, low fees
 			min_priority_fee: 10_000_000,    // 0.01 gwei
 			max_priority_fee: 1_000_000_000, // 1 gwei
+		}
+	}
+
+	/// Chain-specific gas price configuration
+	pub fn for_chain(chain_id: u64) -> Self {
+		match chain_id {
+			1 => Self::mainnet(),    // Ethereum mainnet
+			137 => Self::l2(),       // Polygon
+			42161 => Self::l2(),     // Arbitrum One
+			421614 => Self::l2(),    // Arbitrum Sepolia
+			10 => Self::l2(),        // Optimism
+			8453 => Self::l2(),      // Base
+			84532 => Self::l2(),     // Base Sepolia
+			56 => Self::bsc(),       // BSC
+			97 => Self::bsc(),       // BSC Testnet
+			999 => Self::hyperevm(), // HyperEVM
+			998 => Self::hyperevm(), // HyperEVM Testnet
+			// Ethereum testnets use mainnet config but with lower values
+			11155111 => Self {
+				// Sepolia
+				gas_price_buffer_percent: 30,
+				min_priority_fee: 1_000_000_000,  // 1 gwei
+				max_priority_fee: 20_000_000_000, // 20 gwei
+			},
+			17000 => Self {
+				// Holesky
+				gas_price_buffer_percent: 30,
+				min_priority_fee: 1_000_000_000,  // 1 gwei
+				max_priority_fee: 20_000_000_000, // 20 gwei
+			},
+			_ => Self::default(),
 		}
 	}
 }
@@ -202,6 +263,12 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		gas_config: GasPriceConfig,
 		retry_config: RetryConfig,
 	) -> Self {
+		// Validate gas configuration
+		if let Err(e) = gas_config.validate() {
+			tracing::error!("Invalid gas configuration: {}", e);
+			panic!("Invalid gas configuration: {}", e);
+		}
+
 		Self { entry_point_address, rpc_client, gas_config, retry_config }
 	}
 
@@ -227,9 +294,28 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
 
 				// Use the EIP-1559 priority fee with bounds
-				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+				let mut priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
 					.max(U256::from(self.gas_config.min_priority_fee))
 					.min(U256::from(self.gas_config.max_priority_fee));
+
+				// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+				if priority_fee > max_fee_per_gas {
+					tracing::warn!(
+						"Priority fee ({} gwei) exceeds max fee per gas ({} gwei), capping to max fee",
+						priority_fee / U256::from(1_000_000_000),
+						max_fee_per_gas / U256::from(1_000_000_000)
+					);
+					priority_fee = max_fee_per_gas;
+				}
+
+				tracing::debug!(
+					"EIP-1559 gas fees calculated: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), buffer={}%",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					self.gas_config.gas_price_buffer_percent
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -251,9 +337,29 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 				// Calculate priority fee (tip) with bounds
 				// Use 10% of current gas price as priority fee, bounded by min/max
-				let priority_fee = U256::from(current_gas_price / 10)
+				let mut priority_fee = U256::from(current_gas_price / 10)
 					.max(U256::from(self.gas_config.min_priority_fee))
 					.min(U256::from(self.gas_config.max_priority_fee));
+
+				// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+				if priority_fee > max_fee_per_gas {
+					tracing::warn!(
+						"Priority fee ({} gwei) exceeds max fee per gas ({} gwei), capping to max fee",
+						priority_fee / U256::from(1_000_000_000),
+						max_fee_per_gas / U256::from(1_000_000_000)
+					);
+					priority_fee = max_fee_per_gas;
+				}
+
+				tracing::debug!(
+					"Legacy gas fees calculated: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), buffer={}%, base_price={} gwei",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					self.gas_config.gas_price_buffer_percent,
+					current_gas_price / 1_000_000_000
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -683,7 +789,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				// Use the EIP-1559 priority fee with bounds
 				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
 					.max(U256::from(self.gas_config.min_priority_fee))
-					.min(U256::from(self.gas_config.max_priority_fee));
+					.min(U256::from(self.gas_config.max_priority_fee))
+					// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+					.min(max_fee_per_gas);
+
+				tracing::debug!(
+					"EIP-1559 gas fees with buffer: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), total_buffer={}%",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					total_buffer
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -707,7 +824,19 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				// Calculate priority fee (tip) with bounds
 				let priority_fee = U256::from(current_gas_price / 10)
 					.max(U256::from(self.gas_config.min_priority_fee))
-					.min(U256::from(self.gas_config.max_priority_fee));
+					.min(U256::from(self.gas_config.max_priority_fee))
+					// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+					.min(max_fee_per_gas);
+
+				tracing::debug!(
+					"Legacy gas fees with buffer: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), total_buffer={}%, base_price={} gwei",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					total_buffer,
+					current_gas_price / 1_000_000_000
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -874,10 +1003,10 @@ pub fn create_account_gas_limits(
 
 pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) -> FixedBytes<32> {
 	let mut gas_fees = [0u8; 32];
-	// First 16 bytes: max priority fee per gas
-	gas_fees[0..16].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
-	// Last 16 bytes: max fee per gas
-	gas_fees[16..32].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// First 16 bytes: max fee per gas (EIP-4337 specification)
+	gas_fees[0..16].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// Last 16 bytes: max priority fee per gas (EIP-4337 specification)
+	gas_fees[16..32].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
 	FixedBytes::from(gas_fees)
 }
 
