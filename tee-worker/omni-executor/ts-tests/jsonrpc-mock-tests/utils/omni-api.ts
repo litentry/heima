@@ -125,11 +125,17 @@ export class OmniApi {
     }
 
     async getSmartWalletRootSigner(
-        params: GetSmartWalletRootSignerParams,
-        token?: string
+        omniAccount: string,
+        chainType: string = 'evm',
+        walletIndex: number = 0
     ): Promise<GetSmartWalletRootSignerResponse> {
-        const response = await this.client.call(JsonRpcMethods.OmniGetSmartWalletRootSigner, params, token);
-
+        const params = {
+            omni_account: omniAccount,
+            chain_type: chainType,
+            wallet_index: walletIndex,
+        };
+        
+        const response = await this.client.call(JsonRpcMethods.OmniGetSmartWalletRootSigner, params);
         return response;
     }
 

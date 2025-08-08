@@ -341,21 +341,18 @@ describe('SubmitUserOp Integration Tests', function () {
         idToken = loginResponse.id_token;
 
         // Get the actual TEE Worker root signer address from the running TEE Worker
-        try {
-            const rootSignerResponse = await omniApi.getSmartWalletRootSigner(
-                {
-                    omni_account: omniAccount,
-                    chain_type: 'Evm', 
-                    wallet_index: 0,
-                }
-            );
-            teeWorkerAddress = rootSignerResponse as Address;
-            console.log('Using TEE Worker root signer address:', teeWorkerAddress);
-        } catch (error) {
-            console.log('⚠️ Failed to get TEE Worker root signer, using fallback address:', TEST_CONFIG.ACCOUNTS.TEE_WORKER.address);
-            console.log('Error:', error);
-            teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address;
-        }
+        console.log('🔍 Debug: Calling getSmartWalletRootSigner with:');
+        console.log('  omniAccount:', omniAccount);
+        console.log('  chainType: evm');
+        console.log('  walletIndex: 0');
+        
+        const rootSignerResponse = await omniApi.getSmartWalletRootSigner(
+            omniAccount,
+            'evm',
+            0
+        );
+        teeWorkerAddress = rootSignerResponse as Address;
+        console.log('✅ Using TEE Worker root signer address:', teeWorkerAddress);
 
         // Create calldata for adding TEE worker as root signer
         const addSignerCalldata = createAddSignerCalldata(teeWorkerAddress);
@@ -418,38 +415,36 @@ describe('SubmitUserOp Integration Tests', function () {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Verify signer was added
-        try {
-            const isRootSigner = await publicClient.readContract({
+        console.log('🔍 Debug: Checking if TEE worker was added as root signer');
+        console.log('  Contract address:', omniAccountAddress);
+        console.log('  TEE worker address:', teeWorkerAddress);
+        
+        const isRootSigner = await publicClient.readContract({
+            address: omniAccountAddress,
+            abi: CONTRACT_ABIS.OMNI_ACCOUNT,
+            functionName: 'isRootSigner',
+            args: [teeWorkerAddress],
+        });
+
+        console.log('✅ isRootSigner result:', isRootSigner);
+        
+        if (!isRootSigner) {
+            // If the TEE worker address failed, try checking if the original EVM address is now a root signer
+            console.log('🔍 Debug: TEE worker not found as root signer, checking original EVM address...');
+            const isEvmRootSigner = await publicClient.readContract({
                 address: omniAccountAddress,
                 abi: CONTRACT_ABIS.OMNI_ACCOUNT,
                 functionName: 'isRootSigner',
-                args: [teeWorkerAddress],
+                args: [evmWallet.address],
             });
-
-            console.log('isRootSigner result:', isRootSigner);
+            console.log('✅ Original EVM address as root signer:', isEvmRootSigner);
             
-            if (!isRootSigner) {
-                // If the TEE worker address failed, try checking if the original EVM address is now a root signer
-                console.log('TEE worker not found as root signer, checking original EVM address...');
-                const isEvmRootSigner = await publicClient.readContract({
-                    address: omniAccountAddress,
-                    abi: CONTRACT_ABIS.OMNI_ACCOUNT,
-                    functionName: 'isRootSigner',
-                    args: [evmWallet.address],
-                });
-                console.log('Original EVM address as root signer:', isEvmRootSigner);
-                
-                // In CI environment, we'll accept that either worked
-                expect(isEvmRootSigner || isRootSigner).to.be.true;
-                console.log('✅ Step 4 completed: Root signer verification passed');
-            } else {
-                expect(isRootSigner).to.be.true;
-                console.log('✅ Step 4 completed: TEE Worker added as authorized signer');
-            }
-        } catch (contractError) {
-            console.log('⚠️ Contract call failed, likely due to contract not being properly deployed in CI');
-            console.log('Contract error:', contractError);
-            console.log('✅ Step 4 completed: UserOperation executed (contract verification skipped in CI)');
+            // In CI environment, we'll accept that either worked
+            expect(isEvmRootSigner || isRootSigner).to.be.true;
+            console.log('✅ Step 4 completed: Root signer verification passed');
+        } else {
+            expect(isRootSigner).to.be.true;
+            console.log('✅ Step 4 completed: TEE Worker added as authorized signer');
         }
     });
 
@@ -608,32 +603,34 @@ describe('SubmitUserOp Integration Tests', function () {
         const packedUserOp = packUserOperation(userOp);
         const serializedUserOp = toSerializablePackedUserOperation(packedUserOp);
 
-        try {
-            // Submit through TEE Worker
-            const result = await omniApi.submitUserOpTest({
-                user_operations: [serializedUserOp],
-                chain_id: testEnv.chainId,
-                wallet_index: 0,
-                omni_account: omniAccount,
-                client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
+        // Submit through TEE Worker
+        console.log('🔍 Debug: Calling submitUserOpTest with:');
+        console.log('  user_operations:', [serializedUserOp]);
+        console.log('  chain_id:', testEnv.chainId);
+        console.log('  wallet_index: 0');
+        console.log('  omni_account:', omniAccount);
+        console.log('  client_id:', TEST_CONFIG.TEE_WORKER.CLIENT_ID);
+        
+        const result = await omniApi.submitUserOpTest({
+            user_operations: [serializedUserOp],
+            chain_id: testEnv.chainId,
+            wallet_index: 0,
+            omni_account: omniAccount,
+            client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
+        });
+
+        console.log('✅ Step 6 completed: UserOp submitted through TEE Worker');
+        console.log('✅ Result:', result);
+        console.log('✅ Transaction hash:', result.transaction_hash);
+
+        if (result.transaction_hash) {
+            // Wait for the transaction to be mined
+            const receipt = await publicClient.waitForTransactionReceipt({
+                hash: result.transaction_hash as `0x${string}`,
+                timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
             });
-
-            console.log('✅ Step 6 completed: UserOp submitted through TEE Worker');
-            console.log('Transaction hash:', result.transaction_hash);
-
-            if (result.transaction_hash) {
-                // Wait for the transaction to be mined
-                const receipt = await publicClient.waitForTransactionReceipt({
-                    hash: result.transaction_hash as `0x${string}`,
-                    timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
-                });
-                expect(receipt.status).to.equal('success');
-                console.log('✅ Transaction confirmed on-chain');
-            }
-        } catch (error) {
-            console.log('⚠️ submitUserOpTest failed (expected in CI without TEE Worker):', error);
-            // In CI, we might not have the TEE Worker running, so we just test the interface
-            console.log('✅ Step 6 completed: submitUserOpTest interface tested');
+            expect(receipt.status).to.equal('success');
+            console.log('✅ Transaction confirmed on-chain');
         }
     });
 });
