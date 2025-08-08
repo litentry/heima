@@ -90,7 +90,7 @@ pub async fn query_ethereum<
 	token: &EthereumToken,
 ) -> Result<U256, ()> {
 	match token {
-		EthereumToken::Native => provider.get_balance(account).await,
+		EthereumToken::Native => provider.get_balance(account).await.map_err(|_| ()),
 		EthereumToken::ERC20(address) => {
 			let address = address.as_ref().into();
 			let call = IERC20::balanceOfCall { account };
@@ -380,7 +380,9 @@ pub mod tests {
 				.expect_get_balance()
 				.with(mockall::predicate::eq(address))
 				.times(1)
-				.returning(|_| Err(()));
+				.returning(|_| {
+					Err(ethereum_rpc::error::RpcProviderError::Network("Test error".to_string()))
+				});
 
 			let result = query_ethereum(&mock_provider, address, &EthereumToken::Native).await;
 
@@ -414,7 +416,9 @@ pub mod tests {
 			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
 			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
 
-			mock_provider.expect_call().times(1).returning(|_| Err(None));
+			mock_provider.expect_call().times(1).returning(|_| {
+				Err(ethereum_rpc::error::RpcProviderError::Transaction("Test error".to_string()))
+			});
 
 			let result = query_ethereum(&mock_provider, account, &token).await;
 
