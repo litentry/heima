@@ -24,7 +24,7 @@ use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::{Cli, Commands, RunArgs};
-use config_loader::{ConfigLoader, MailerType};
+use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
@@ -40,7 +40,6 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
-use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer, Mailer};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
@@ -542,23 +541,6 @@ async fn main() -> Result<(), ()> {
 			let wildmeta_timestamp_storage =
 				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
 
-			// Create mailer instance based on config_loader only
-			let mailer: Box<dyn MailerTrait + Send + Sync> = match config_loader.mailer_type {
-				MailerType::Console => {
-					info!("Using Console Mailer - verification codes will be printed to logs");
-					Box::new(ConsoleMailer::new())
-				},
-				MailerType::Sendgrid => {
-					info!("Using SendGrid Mailer - verification codes will be sent via email");
-					Box::new(Mailer::new(
-						config_loader.mailer_api_host.clone(),
-						config_loader.mailer_api_key.clone(),
-						config_loader.mailer_from_email.clone(),
-						config_loader.mailer_from_name.clone(),
-					))
-				},
-			};
-
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -570,7 +552,6 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
-				mailer,
 			)
 			.await
 			.map_err(|e| {
