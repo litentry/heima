@@ -1,3 +1,4 @@
+use crate::mailer_factory::MailerFactory;
 use crate::{
 	methods::register_methods,
 	middlewares::{HttpMiddleware, RpcMiddleware},
@@ -5,7 +6,6 @@ use crate::{
 };
 use config_loader::ConfigLoader;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
-use heima_identity_verification::web2::email::mailer::MailerTrait;
 use jsonrpsee::{server::Server, RpcModule};
 use native_task_handler::NativeTaskSender;
 use pumpx::PumpxApi;
@@ -18,7 +18,7 @@ pub(crate) struct RpcContext {
 	pub shielding_key: ShieldingKey,
 	pub native_task_sender: Arc<NativeTaskSender>,
 	pub storage_db: Arc<StorageDB>,
-	pub mailer: Box<dyn MailerTrait + Send + Sync>,
+	pub mailer_factory: Arc<MailerFactory>,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
@@ -36,7 +36,7 @@ impl RpcContext {
 		shielding_key: ShieldingKey,
 		native_task_sender: Arc<NativeTaskSender>,
 		storage_db: Arc<StorageDB>,
-		mailer: Box<dyn MailerTrait + Send + Sync>,
+		mailer_factory: Arc<MailerFactory>,
 		jwt_rsa_private_key: Vec<u8>,
 		google_client_id: String,
 		google_client_secret: String,
@@ -49,7 +49,7 @@ impl RpcContext {
 			shielding_key,
 			native_task_sender,
 			storage_db,
-			mailer,
+			mailer_factory,
 			jwt_rsa_private_key,
 			google_client_id,
 			google_client_secret,
@@ -73,13 +73,15 @@ pub async fn start_server(
 	signer_client: Arc<Box<dyn SignerClient>>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
-	mailer: Box<dyn MailerTrait + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+	// Create mailer factory
+	let mailer_factory = Arc::new(MailerFactory::new(Arc::new(config_loader.clone())));
+
 	let ctx = RpcContext::new(
 		shielding_key,
 		native_task_sender,
 		storage_db,
-		mailer,
+		mailer_factory,
 		jwt_rsa_private_key.clone(),
 		config_loader.google_client_id.clone(),
 		config_loader.google_client_secret.clone(),
