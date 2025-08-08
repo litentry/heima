@@ -34,91 +34,135 @@ pub fn register_test_protected_method<
 		.expect("Failed to register test method");
 }
 
-// #[cfg(test)]
-// mod test {
-// 	use crate::{start_server, ShieldingKey};
-// 	use chrono::{Days, Utc};
-// 	use config_loader::ConfigLoader;
-// 	use executor_crypto::jwt;
-// 	use executor_primitives::utils::hex::ToHexPrefixed;
-// 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
-// 	use heima_authentication::{
-// 		auth_token::{AuthOptions, AuthTokenClaims},
-// 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
-// 	};
-// 	use heima_primitives::{Identity, Web2IdentityType};
-// 	use jsonrpsee::core::client::ClientT;
-// 	use jsonrpsee::rpc_params;
-// 	use jsonrpsee::ws_client::WsClientBuilder;
-// 	use native_task_handler::NativeTaskChannelType;
-// 	use pumpx::PumpxApiClient;
-// 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-// 	use signer_client::{mocks::MockSignerClient, SignerClient};
-// 	use std::sync::Arc;
-// 	use tempfile::tempdir;
-// 	use tokio::sync::mpsc;
-// 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
-// 
-// 	#[tokio::test]
-// 	pub async fn test_protected_method() {
-// 		let tmp_dir = tempdir().unwrap();
-// 		let port = 2004;
-// 		let shielding_key = ShieldingKey::new();
-// 		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
-// 		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-// 
-// 		let mut rng = rand::thread_rng();
-// 		let rsa_private_key =
-// 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
-// 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-// 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
-// 		let config_loader = ConfigLoader::from_env();
-// 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-// 
-// 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
-// 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
-// 
-// 		start_server(
-// 			port,
-// 			shielding_key.clone(),
-// 			Arc::new(sender),
-// 			Arc::new(Box::new(pumpx_api)),
-// 			db,
-// 			jwt_private_key.as_bytes().to_vec(),
-// 			&config_loader,
-// 			signer_client,
-// 			wildmeta_api,
-// 			wildmeta_timestamp_storage,
-// 		)
-// 		.await
-// 		.unwrap();
-// 
-// 		let url = format!("ws://127.0.0.1:{}", port);
-// 		let mut headers = http::HeaderMap::new();
-// 
-// 		let expires_at = Utc::now()
-// 			.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
-// 			.expect("Failed to calculate expiration")
-// 			.timestamp();
-// 		let auth_options = AuthOptions { expires_at };
-// 		let omni_account = Identity::from_web2_account("test@test.com", Web2IdentityType::Email)
-// 			.to_omni_account(CLIENT_ID_HEIMA);
-// 
-// 		let access_token_claims = AuthTokenClaims::new(
-// 			omni_account.to_hex(),
-// 			AUTH_TOKEN_ID_TYPE.to_string(),
-// 			CLIENT_ID_HEIMA.to_string(),
-// 			auth_options.clone(),
-// 		);
-// 		let token = jwt::create(&access_token_claims, jwt_private_key.as_bytes())
-// 			.expect("Failed to create access token");
-// 
-// 		headers.insert("Authorization", format!("Bearer {}", token).parse().unwrap());
-// 
-// 		let client = WsClientBuilder::default().set_headers(headers).build(&url).await.unwrap();
-// 		let response: String =
-// 			client.request("omni_testProtectedMethod", rpc_params![]).await.unwrap();
-// 
-// 		assert_eq!(response, omni_account.to_hex());
-// 	}
-// }
+#[cfg(test)]
+mod test {
+	use crate::{start_server, ShieldingKey};
+	use chrono::{Days, Utc};
+	use config_loader::ConfigLoader;
+	use executor_core::intent_executor::MockedIntentExecutor;
+	use executor_crypto::jwt;
+	use executor_primitives::utils::hex::ToHexPrefixed;
+	use executor_storage::{StorageDB, WildmetaTimestampStorage};
+	use heima_authentication::{
+		auth_token::{AuthOptions, AuthTokenClaims},
+		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
+	};
+	use heima_primitives::{Identity, Web2IdentityType};
+	use jsonrpsee::core::client::ClientT;
+	use jsonrpsee::rpc_params;
+	use jsonrpsee::ws_client::WsClientBuilder;
+	use native_task_handler::NativeTaskChannelType;
+	use parentchain_rpc_client::metadata::SubxtMetadataProvider;
+	use parentchain_rpc_client::{CustomConfig, MockedRpcClient, SubxtClientFactory};
+	use parentchain_signer::key_store::SubstrateKeyStore;
+	use parentchain_signer::TxSigner;
+	use pumpx::PumpxApiClient;
+	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+	use signer_client::{mocks::MockSignerClient, SignerClient};
+	use std::collections::HashMap;
+	use std::marker::PhantomData;
+	use std::path::Path;
+	use std::sync::Arc;
+	use tempfile::tempdir;
+	use tokio::sync::mpsc;
+	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
+
+	#[tokio::test]
+	pub async fn test_protected_method() {
+		let tmp_dir = tempdir().unwrap();
+		let port = 2004;
+		let shielding_key = ShieldingKey::new();
+		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let mut rng = rand::thread_rng();
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
+		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
+		let config_loader = ConfigLoader::from_env();
+		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
+
+		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
+		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+
+		let (solana_intent_executor, solana_mock_recv) = MockedIntentExecutor::new();
+		let (ethereum_intent_executor, ethereum_mock_recv) = MockedIntentExecutor::new();
+		let (cross_chain_intent_executor, cross_chain_mock_recv) = MockedIntentExecutor::new();
+
+		let client_factory =
+			SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
+		let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
+		let parentchain_rpc_client_factory = Arc::new(client_factory);
+
+		let aes_key = [0u8; 32];
+		let entry_point_clients = HashMap::new();
+
+		let substrate_key_store = Arc::new(SubstrateKeyStore::new(
+			Path::new("./")
+				.join("keystore/substrate_key.bin")
+				.into_os_string()
+				.into_string()
+				.unwrap(),
+		));
+
+		let signer_account_nonce = 0;
+		let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
+
+		let tx_signer = Arc::new(TxSigner::new(
+			metadata_provider,
+			parentchain_rpc_client_factory.clone(),
+			parentchain_signer.clone(),
+			signer_account_nonce,
+		));
+
+		start_server(
+			port,
+			shielding_key.clone(),
+			Arc::new(Box::new(pumpx_api)),
+			db,
+			jwt_private_key.as_bytes().to_vec(),
+			&config_loader,
+			signer_client,
+			wildmeta_api,
+			wildmeta_timestamp_storage,
+			Arc::new(ethereum_intent_executor),
+			Arc::new(solana_intent_executor),
+			Arc::new(cross_chain_intent_executor),
+			parentchain_rpc_client_factory,
+			aes_key,
+			tx_signer,
+			Arc::new(entry_point_clients),
+		)
+		.await
+		.unwrap();
+
+		let url = format!("ws://127.0.0.1:{}", port);
+		let mut headers = http::HeaderMap::new();
+
+		let expires_at = Utc::now()
+			.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+			.expect("Failed to calculate expiration")
+			.timestamp();
+		let auth_options = AuthOptions { expires_at };
+		let omni_account = Identity::from_web2_account("test@test.com", Web2IdentityType::Email)
+			.to_omni_account(CLIENT_ID_HEIMA);
+
+		let access_token_claims = AuthTokenClaims::new(
+			omni_account.to_hex(),
+			AUTH_TOKEN_ID_TYPE.to_string(),
+			CLIENT_ID_HEIMA.to_string(),
+			auth_options.clone(),
+		);
+		let token = jwt::create(&access_token_claims, jwt_private_key.as_bytes())
+			.expect("Failed to create access token");
+
+		headers.insert("Authorization", format!("Bearer {}", token).parse().unwrap());
+
+		let client = WsClientBuilder::default().set_headers(headers).build(&url).await.unwrap();
+		let response: String =
+			client.request("omni_testProtectedMethod", rpc_params![]).await.unwrap();
+
+		assert_eq!(response, omni_account.to_hex());
+	}
+}
