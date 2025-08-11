@@ -874,9 +874,7 @@ async fn handle_native_task<
 			{
 				Ok(gas_estimates) => {
 					info!("Gas estimation successful: {:?}", gas_estimates);
-					if let Err(e) = response_sender.send(gas_estimates.encode()) {
-						error!("Failed to send gas estimation response: {:?}", e);
-					}
+					send_ok(response_sender, gas_estimates);
 				},
 				Err(e) => {
 					send_error(
