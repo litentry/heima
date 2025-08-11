@@ -173,13 +173,8 @@ impl RpcProvider for AlloyRpcProvider {
 			.await
 			.map_err(RpcProviderError::from_alloy_error)?;
 
-		// Get transaction hash before waiting for receipt
+		// Get transaction hash and return immediately without waiting for confirmation
 		let tx_hash = pending_tx.tx_hash().to_string();
-
-		// wait for transaction to be included
-		let _ = pending_tx.get_receipt().await.map_err(|e| {
-			RpcProviderError::Transaction(format!("Failed to get transaction receipt: {}", e))
-		})?;
 
 		Ok(tx_hash)
 	}
