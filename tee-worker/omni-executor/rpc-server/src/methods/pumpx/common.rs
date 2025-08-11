@@ -1,7 +1,9 @@
-use crate::{error_code::*, oneshot, server::RpcContext, Decode};
+use crate::{error_code::*, server::RpcContext};
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
-use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
@@ -61,35 +63,31 @@ impl From<PumpxRpcError> for ErrorObjectOwned {
 }
 
 /// Process native task and handle response
-pub async fn handle_pumpx_native_task<F, R>(
-	ctx: &RpcContext,
+pub async fn handle_pumpx_native_task<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	F,
+	R,
+>(
+	ctx: &RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 	task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
-	// Create channel for response
-	let (response_sender, response_receiver) = oneshot::channel();
-
-	// Send task to executor
-	ctx.native_task_sender.send((wrapper, response_sender)).await.map_err(|_| {
-		error!("Failed to send request to native call executor");
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?;
-
-	// Receive response
-	let response = response_receiver.await.map_err(|e| {
-		error!("Failed to receive response from native call handler: {:?}", e);
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?;
-
-	// Decode response
-	let native_task_response: NativeTaskResponse = Decode::decode(&mut response.as_slice())
-		.map_err(|_| {
-			error!("Failed to decode native task response");
-			PumpxRpcError::from_error_code(ErrorCode::InternalError)
-		})?;
+	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
 	// Process response
 	match native_task_response {

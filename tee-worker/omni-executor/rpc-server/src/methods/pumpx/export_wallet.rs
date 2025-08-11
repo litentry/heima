@@ -1,3 +1,4 @@
+use super::common::handle_pumpx_native_task;
 use crate::{
 	error_code::*,
 	methods::pumpx::{common::check_and_get_option_response_data, PumpxRpcError},
@@ -6,17 +7,17 @@ use crate::{
 	Deserialize, ErrorCode,
 };
 use ethers::types::Bytes;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
 use tracing::{debug, error};
-
-use super::common::handle_pumpx_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
@@ -51,7 +52,25 @@ impl ExportWalletParams {
 	}
 }
 
-pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
+pub fn register_export_wallet<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module        .register_async_method("pumpx_exportWallet", |params, ctx, _ext| async move {
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);

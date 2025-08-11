@@ -1,15 +1,16 @@
+use super::common::handle_pumpx_native_task;
 use crate::methods::pumpx::PumpxRpcError;
 use crate::verify_auth::verify_auth_token_authentication;
 use crate::{error_code::*, server::RpcContext, Deserialize, ErrorCode};
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId, OmniAuth};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::{debug, error};
-
-use super::common::handle_pumpx_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct NotifyLimitOrderResultParams {
@@ -19,7 +20,25 @@ pub struct NotifyLimitOrderResultParams {
 	pub auth_token: String,
 }
 
-pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
+pub fn register_notify_limit_order_result<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("pumpx_notifyLimitOrderResult", |params, ctx, _| async move {
 			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {

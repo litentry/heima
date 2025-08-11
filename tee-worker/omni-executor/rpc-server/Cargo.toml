@@ -47,6 +47,8 @@ wildmeta-api = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
+parentchain-signer = { workspace = true }
+subxt = { workspace = true }
 signer-client = { workspace = true, features = ["mocks"] }
 wildmeta-api = { workspace = true, features = ["mocks"] }
 executor-storage = { workspace = true }
