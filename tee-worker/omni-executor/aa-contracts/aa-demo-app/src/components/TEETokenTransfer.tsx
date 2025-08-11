@@ -140,35 +140,35 @@ export function TEETokenTransfer({
         setIsSubmitting(true);
 
         try {
-            // Build the initial UserOperation for token transfer (without gas estimates)
+            // Build the initial UserOperation for token transfer with minimal gas for estimation
             const userOpWithoutGas = buildTokenTransferUserOp({
                 omniAccountAddress: omniAccountAddress as `0x${string}`,
                 tokenAddress: token.address,
                 recipient: recipient as `0x${string}`,
                 amount: amountBigInt,
                 nonce,
+                forGasEstimation: true,  // Use dummy signature for gas estimation
+                gasParams: {
+                    // Use minimal gas values for estimation to avoid prefund issues
+                    callGasLimit: BigInt(100000),        // Minimal for simulation
+                    verificationGasLimit: BigInt(150000), // Enough for signature validation
+                    preVerificationGas: BigInt(21000),    // Base transaction cost
+                    maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
+                    maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
+                }
             });
 
-            // Try to estimate gas using the TEE worker
-            let gasParams;
-            try {
-                console.log("Attempting to estimate gas using TEE worker...");
-                gasParams = await estimateUserOpGasFromWorker(
-                    userOpWithoutGas,
-                    chainId,
-                    0, // wallet_index
-                    omniAccountHash,
-                    DEFAULT_CLIENT_ID,
-                    publicClient
-                );
-                console.log("Successfully estimated gas using TEE worker");
-            } catch (workerError) {
-                console.error("TEE worker gas estimation failed:", workerError);
-                // Fallback disabled for debugging
-                // gasParams = await estimateUserOperationGas(publicClient!, false);
-                // console.log("Using local gas estimation as fallback");
-                throw workerError; // Re-throw to see the actual error
-            }
+            // Estimate gas using the TEE worker
+            console.log("Attempting to estimate gas using TEE worker...");
+            const gasParams = await estimateUserOpGasFromWorker(
+                userOpWithoutGas,
+                chainId,
+                0, // wallet_index
+                omniAccountHash,
+                DEFAULT_CLIENT_ID,
+                publicClient
+            );
+            console.log("Successfully estimated gas using TEE worker:", gasParams);
 
             // Build the final UserOperation with gas estimates
             const userOp = buildTokenTransferUserOp({

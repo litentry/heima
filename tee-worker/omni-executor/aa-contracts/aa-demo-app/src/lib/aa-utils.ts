@@ -12,6 +12,10 @@ import {
 } from "viem";
 import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
 
+// Dummy signature for gas estimation (66 bytes total for OmniAccount)
+// This is a standard practice in ERC-4337 for gas estimation
+const DUMMY_SIGNATURE = "0x017c4deefde7150b2176eb266f1b1d34cf9df0913944cfb0bccb939a66692c49407f7dc4a4d867bc74b3d0c5a9be72b311148c849fa404db959d156774bd48c22d1b" as `0x${string}`;
+
 /**
  * UserOpSigner enum - matches the contract enum
  */
@@ -251,6 +255,7 @@ export function createUserOperation(params: {
         postOpGasLimit?: bigint;
         data?: `0x${string}`;
     };
+    forGasEstimation?: boolean;
 }): UserOperation {
     // Encode paymasterAndData if paymaster is provided
     let paymasterAndData: `0x${string}` = "0x";
@@ -283,7 +288,8 @@ export function createUserOperation(params: {
         maxFeePerGas: gasParams.maxFeePerGas,
         maxPriorityFeePerGas: gasParams.maxPriorityFeePerGas,
         paymasterAndData,
-        signature: "0x",
+        // Use dummy signature for gas estimation, empty otherwise
+        signature: params.forGasEstimation ? DUMMY_SIGNATURE : "0x",
     };
 }
 
@@ -763,6 +769,7 @@ export function buildTokenTransferUserOp(params: {
         postOpGasLimit?: bigint;
         data?: `0x${string}`;
     };
+    forGasEstimation?: boolean;
 }): UserOperation {
     // Build the ERC20 transfer calldata
     const erc20TransferData = buildERC20TransferCallData(params.recipient, params.amount);
@@ -785,6 +792,7 @@ export function buildTokenTransferUserOp(params: {
         callData: executeCallData,
         gasParams: params.gasParams,
         paymaster: params.paymaster,
+        forGasEstimation: params.forGasEstimation,
     });
 }
 
@@ -864,24 +872,9 @@ export async function estimateUserOpGasFromWorker(
         return gasParams;
 
     } catch (error) {
-        console.warn("[Gas Estimation] Worker gas estimation failed, falling back to local estimation:", error);
-
-        // Fall back to local estimation
-        if (publicClient) {
-            const localEstimate = await estimateUserOperationGas(publicClient, false);
-            console.log("[Gas Estimation] Using local gas estimates:", localEstimate);
-            return localEstimate;
-        } else {
-            // Return default values if both worker and local estimation fail
-            console.log("[Gas Estimation] Using default gas values");
-            return {
-                callGasLimit: BigInt(500000),
-                verificationGasLimit: BigInt(1000000),
-                preVerificationGas: BigInt(100000),
-                maxFeePerGas: BigInt(30000000000),
-                maxPriorityFeePerGas: BigInt(1500000000),
-            };
-        }
+        console.error("[Gas Estimation] Worker gas estimation failed:", error);
+        // Re-throw error - no fallback for now as we're testing worker estimation
+        throw error;
     }
 }
 
