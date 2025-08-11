@@ -6,6 +6,7 @@ import {
     http,
     parseEther,
     parseUnits,
+    encodeFunctionData,
     type Address,
     isAddress,
     isHex,
@@ -306,59 +307,28 @@ describe('SubmitUserOp Integration Tests', function () {
     });
 
     it('Step 4: Should add TEE Worker as authorized signer', async function () {
-        // Authenticate with TEE worker
-
-        const messageResponse = await omniApi.getWeb3SignInMessage({
-            client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
-            omni_account: omniAccount,
-        });
-
-        const messageString = JSON.stringify(messageResponse);
-        const signature = await signMessage({
-            message: messageString,
-            privateKey: evmWallet.privateKey,
-        });
-
-        const loginResponse: UserLoginResponse = await omniApi.userLogin({
-            user_id: {
-                type: 'evm',
-                value: evmWallet.address,
-            },
-            user_auth: {
-                type: 'evm',
-                value: signature,
-            },
-            client_id: TEST_CONFIG.TEE_WORKER.CLIENT_ID,
-            client_auth: {
-                type: 'wildmeta',
-                value: {
-                    google_code: '',
-                    invite_code: '',
-                },
-            },
-        });
-
-        idToken = loginResponse.id_token;
-
-        // Get the actual TEE Worker root signer address from the running TEE Worker
-        console.log('🔍 Debug: Calling getSmartWalletRootSigner with:');
-        console.log('  omniAccount:', omniAccount);
-        console.log('  chainType: evm');
-        console.log('  walletIndex: 0');
+        // Step 1: Get TEE Worker address
+        console.log('🔍 Getting TEE Worker address for omniAccount:', omniAccount);
         
-        const rootSignerResponse = await omniApi.getSmartWalletRootSigner(
+        const workerAddress = await omniApi.getSmartWalletRootSigner(
             omniAccount,
             'evm',
             0
         );
-        teeWorkerAddress = rootSignerResponse as Address;
-        console.log('✅ Using TEE Worker root signer address:', teeWorkerAddress);
+        teeWorkerAddress = workerAddress as Address;
+        console.log('✅ Got TEE Worker address:', teeWorkerAddress);
 
-        // Create calldata for adding TEE worker as root signer
-        const addSignerCalldata = createAddSignerCalldata(teeWorkerAddress);
-        const executeCalldata = createExecuteCalldata(omniAccountAddress, BigInt(0), addSignerCalldata);
+        // Step 2: Add the TEE worker as an authorized signer
+        console.log('🔄 Adding TEE Worker as authorized signer...');
 
-        // Get current nonce
+        // Directly encode the addRootSigner call (no execute wrapper needed)
+        const callData = encodeFunctionData({
+            abi: CONTRACT_ABIS.OMNI_ACCOUNT,
+            functionName: "addRootSigner",
+            args: [teeWorkerAddress as `0x${string}`],
+        });
+
+        // Get current nonce for the account
         const nonce = await publicClient.readContract({
             address: testEnv.contracts.ENTRY_POINT as Address,
             abi: CONTRACT_ABIS.ENTRY_POINT,
@@ -371,7 +341,7 @@ describe('SubmitUserOp Integration Tests', function () {
             sender: omniAccountAddress,
             nonce,
             initCode: '0x',
-            callData: executeCalldata,
+            callData,
         });
 
         // Create wallet client for signing
@@ -382,31 +352,35 @@ describe('SubmitUserOp Integration Tests', function () {
             account: privateKeyToAccount(evmWallet.privateKey),
         });
 
-        // Sign with root key signer type
+        // Sign with Owner signer type (required for restricted functions)
         userOp.signature = await signUserOperation(
             walletClient,
             userOp,
             testEnv.contracts.ENTRY_POINT as Address,
             testEnv.chainId,
-            TEST_CONFIG.SIGNER_TYPES.ROOT_KEY
+            TEST_CONFIG.SIGNER_TYPES.OWNER
         );
 
+        // Convert to PackedUserOperation for EntryPoint v0.7
         const packedUserOp = packUserOperation(userOp);
 
-        const hash = await deployerWalletClient.writeContract({
+        // Send UserOperation via EntryPoint
+        const hash = await walletClient.writeContract({
             address: testEnv.contracts.ENTRY_POINT as Address,
             abi: CONTRACT_ABIS.ENTRY_POINT,
             functionName: 'handleOps',
-            args: [[packedUserOp], TEST_CONFIG.ACCOUNTS.DEPLOYER.address],
+            args: [[packedUserOp], evmWallet.address] as const,
         });
 
-        const receipt = await publicClient.waitForTransactionReceipt({
+        // Wait for transaction
+        const receipt = await publicClient.waitForTransactionReceipt({ 
             hash,
             timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
-        expect(receipt.status).to.equal('success');
-        console.log('UserOperation transaction executed successfully');
-        console.log('Transaction hash:', hash);
+        console.log("Transaction receipt:", receipt);
+
+        // Check if transaction was successful
+        expect(receipt.status).to.equal("success");
         console.log('Checking if TEE worker was added as root signer...');
         console.log('TEE worker address being checked:', teeWorkerAddress);
         console.log('OmniAccount address:', omniAccountAddress);
@@ -557,14 +531,36 @@ describe('SubmitUserOp Integration Tests', function () {
     });
 
     it('Step 6: Should submit UserOp through TEE Worker using submitUserOpTest', async function () {
-        // Create a simple ETH transfer UserOperation for testing
-        const transferAmount = parseEther('0.01'); // 0.01 ETH
+        // First, mint test tokens to the OmniAccount for testing
+        const mintAmount = parseUnits('100', 18); // 100 tokens
+        const mintHash = await deployerWalletClient.writeContract({
+            address: testTokenAddress,
+            abi: CONTRACT_ABIS.TEST_TOKEN,
+            functionName: 'mint',
+            args: [omniAccountAddress, mintAmount],
+        });
+        await publicClient.waitForTransactionReceipt({
+            hash: mintHash,
+            timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
+        });
+        console.log('✅ Minted test tokens to OmniAccount');
 
-        // Create execute calldata for ETH transfer
+        // Create token transfer UserOperation using aa-demo-app approach
+        const recipientAddress = TEST_CONFIG.ACCOUNTS.RECIPIENT.address as Address;
+        const transferAmount = parseUnits('10', 18); // 10 tokens
+
+        // Build token transfer calldata
+        const transferCalldata = createTokenTransferCalldata(
+            testTokenAddress,
+            recipientAddress,
+            transferAmount
+        );
+
+        // Create execute calldata for OmniAccount (calling token contract)
         const executeCalldata = createExecuteCalldata(
-            TEST_CONFIG.ACCOUNTS.DEPLOYER.address, 
-            transferAmount, 
-            '0x'
+            testTokenAddress,
+            BigInt(0), // No ETH value for token transfer
+            transferCalldata
         );
 
         // Get current nonce
@@ -583,34 +579,21 @@ describe('SubmitUserOp Integration Tests', function () {
             callData: executeCalldata,
         });
 
-        // Sign the UserOperation
-        const testChain = { ...anvil, id: testEnv.chainId };
-        const walletClient = createWalletClient({
-            chain: testChain,
-            transport: http(testEnv.rpcUrl),
-            account: privateKeyToAccount(evmWallet.privateKey),
-        });
-
-        userOp.signature = await signUserOperation(
-            walletClient,
-            userOp,
-            testEnv.contracts.ENTRY_POINT as Address,
-            testEnv.chainId,
-            TEST_CONFIG.SIGNER_TYPES.ROOT_KEY
-        );
+        // Don't sign the UserOperation - TEE worker will sign it with its own key
+        // Leave signature empty so TEE worker knows to sign it
 
         // Convert to packed and serializable format
         const packedUserOp = packUserOperation(userOp);
         const serializedUserOp = toSerializablePackedUserOperation(packedUserOp);
 
-        // Submit through TEE Worker
-        console.log('🔍 Debug: Calling submitUserOpTest with:');
-        console.log('  user_operations:', [serializedUserOp]);
-        console.log('  chain_id:', testEnv.chainId);
-        console.log('  wallet_index: 0');
-        console.log('  omni_account:', omniAccount);
-        console.log('  client_id:', TEST_CONFIG.TEE_WORKER.CLIENT_ID);
-        
+        console.log('🔍 Submitting unsigned UserOp to TEE Worker for signing and execution');
+        console.log('  Chain ID:', testEnv.chainId);
+        console.log('  Wallet Index: 0');
+        console.log('  Transfer Amount:', transferAmount.toString());
+        console.log('  Recipient:', recipientAddress);
+        console.log('  Token Contract:', testTokenAddress);
+
+        // Submit through TEE Worker - it will sign with its own key and execute
         const result = await omniApi.submitUserOpTest({
             user_operations: [serializedUserOp],
             chain_id: testEnv.chainId,
@@ -620,7 +603,6 @@ describe('SubmitUserOp Integration Tests', function () {
         });
 
         console.log('✅ Step 6 completed: UserOp submitted through TEE Worker');
-        console.log('✅ Result:', result);
         console.log('✅ Transaction hash:', result.transaction_hash);
 
         if (result.transaction_hash) {
@@ -630,7 +612,18 @@ describe('SubmitUserOp Integration Tests', function () {
                 timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
             });
             expect(receipt.status).to.equal('success');
-            console.log('✅ Transaction confirmed on-chain');
+
+            // Verify the token transfer
+            const recipientBalance = await publicClient.readContract({
+                address: testTokenAddress,
+                abi: CONTRACT_ABIS.TEST_TOKEN,
+                functionName: 'balanceOf',
+                args: [recipientAddress],
+            });
+            expect(recipientBalance).to.be.greaterThanOrEqual(transferAmount);
+            console.log('✅ Token transfer successful, recipient balance:', recipientBalance.toString());
+        } else {
+            console.log('⚠️ No transaction hash returned, but UserOp submission completed');
         }
     });
 });
