@@ -1,11 +1,13 @@
 use crate::server::RpcContext;
 use crate::ErrorCode;
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::ToHexPrefixed;
 use executor_storage::{Storage, VerificationCodeStorage};
 use heima_authentication::web3::HeimaMessagePayload;
 use heima_identity_verification::helpers::generate_otp;
 use heima_primitives::{AccountId, Hashable};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::error;
@@ -16,7 +18,25 @@ pub struct GetWeb3SignInMessageParams {
 	pub omni_account: String,
 }
 
-pub fn register_get_web3_sign_in_message(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_web3_sign_in_message<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_getWeb3SignInMessage", |params, ctx, _| async move {
 			let params = params.parse::<GetWeb3SignInMessageParams>()?;

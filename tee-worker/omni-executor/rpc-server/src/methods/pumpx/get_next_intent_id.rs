@@ -16,10 +16,12 @@
 
 use crate::ErrorCode;
 use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
+use executor_core::intent_executor::IntentExecutor;
 use executor_storage::{IntentIdStorage, Storage};
 use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use tracing::error;
 
@@ -28,7 +30,25 @@ pub struct GetNextIntentIdParams {
 	pub user_id: String,
 }
 
-pub fn register_get_next_intent_id(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_next_intent_id<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("pumpx_getNextIntentId", |params, ctx, _| async move {
 			let params = params.parse::<GetNextIntentIdParams>().map_err(|e| {
