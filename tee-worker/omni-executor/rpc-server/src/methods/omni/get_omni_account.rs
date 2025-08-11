@@ -16,9 +16,11 @@
 
 use crate::ErrorCode;
 use crate::{methods::omni::common::PumpxRpcError, server::RpcContext};
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -29,7 +31,25 @@ pub struct GetOmniAccountParams {
 }
 
 // Directly converts Identity to OmniAccount using 1:1 mapping
-pub fn register_get_omni_account(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_omni_account<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_getOmniAccount", |params, _, _| async move {
 			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {

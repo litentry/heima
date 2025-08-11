@@ -1,7 +1,9 @@
 use crate::{error_code::*, methods::omni::PumpxRpcError, server::RpcContext, ErrorCode};
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::FromHexPrefixed;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
 use serde::Deserialize;
 use signer_client::ChainType;
@@ -33,7 +35,25 @@ pub struct GetSmartWalletRootSignerParams {
 	pub wallet_index: u32,
 }
 
-pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_smart_wallet_root_signer<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
 			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
