@@ -48,19 +48,12 @@ async function waitForContractDeployment(): Promise<void> {
     const checkInterval = 2000; // 2 seconds
     const startTime = Date.now();
 
-    console.log('🔍 Looking for deployed contract addresses...');
-
-    // First, check if addresses are already set in environment variables
+    // Check if addresses are already set in environment variables
     if (process.env.TEST_ENTRY_POINT_ADDRESS && 
         process.env.TEST_FACTORY_ADDRESS &&
         process.env.TEST_ENTRY_POINT_ADDRESS !== TEST_CONFIG.CONTRACTS.ENTRY_POINT &&
         process.env.TEST_FACTORY_ADDRESS !== TEST_CONFIG.CONTRACTS.OMNI_ACCOUNT_FACTORY) {
-        console.log('✅ Using contract addresses from environment variables:');
-        console.log('  EntryPoint:', process.env.TEST_ENTRY_POINT_ADDRESS);
-        console.log('  OmniAccountFactory:', process.env.TEST_FACTORY_ADDRESS);
-        console.log('  SimplePaymaster:', process.env.TEST_PAYMASTER_ADDRESS || 'using default');
-        console.log('  TestUSDC:', process.env.TEST_USDC_ADDRESS || 'using default');
-        console.log('  TestUSDT:', process.env.TEST_USDT_ADDRESS || 'using default');
+        console.log('✅ Using contract addresses from environment variables');
         return;
     }
 
@@ -72,12 +65,7 @@ async function waitForContractDeployment(): Promise<void> {
             const addresses = JSON.parse(content);
 
             if (addresses.EntryPoint && addresses.OmniAccountFactory) {
-                console.log(`✅ Found deployed addresses at ${path}:`);
-                console.log('  EntryPoint:', addresses.EntryPoint);
-                console.log('  OmniAccountFactory:', addresses.OmniAccountFactory);
-                console.log('  SimplePaymaster:', addresses.SimplePaymaster || 'not deployed');
-                console.log('  TestUSDC:', addresses.TestUSDC || 'not deployed');
-                console.log('  TestUSDT:', addresses.TestUSDT || 'not deployed');
+                console.log(`✅ Found deployed addresses at ${path}`);
 
                 // Update environment variables with deployed addresses
                 process.env.TEST_ENTRY_POINT_ADDRESS = addresses.EntryPoint;
@@ -106,9 +94,7 @@ async function waitForContractDeployment(): Promise<void> {
                 const addresses = JSON.parse(content);
 
                 if (addresses.EntryPoint && addresses.OmniAccountFactory) {
-                    console.log(`✅ Contract deployment completed! Found at ${path}:`);
-                    console.log('  EntryPoint:', addresses.EntryPoint);
-                    console.log('  OmniAccountFactory:', addresses.OmniAccountFactory);
+                    console.log(`✅ Contract deployment completed! Found at ${path}`);
 
                     // Update environment variables with deployed addresses
                     process.env.TEST_ENTRY_POINT_ADDRESS = addresses.EntryPoint;
@@ -124,12 +110,11 @@ async function waitForContractDeployment(): Promise<void> {
             }
         }
 
-        console.log(`⏳ Still waiting for contracts... (${Math.floor((Date.now() - startTime) / 1000)}s)`);
+        // Wait interval
         await new Promise((resolve) => setTimeout(resolve, checkInterval));
     }
 
-    console.log('⚠️ Contract deployment timeout reached, using configured default addresses');
-    console.log('   This is normal for local development if contracts are pre-deployed');
+    console.log('⚠️ Contract deployment timeout reached, using configured addresses');
 }
 
 // Helper functions for validation using viem utilities
@@ -166,7 +151,7 @@ describe('OmniAccount Integration Tests', function () {
     before(async function () {
         this.timeout(180000); // 3 minutes for before hook
 
-        console.log('🚀 Setting up OmniAccount integration test environment...');
+        // Setting up test environment
 
         // Validate test environment
         testEnv = validateTestEnvironment();
@@ -209,9 +194,6 @@ describe('OmniAccount Integration Tests', function () {
         testWallet = randomEvmWallet();
         omniAccount = calculateOmniAccount(testWallet.address, TEST_CONFIG.TEE_WORKER.CLIENT_ID, 'evm');
 
-        console.log(`👛 Test wallet generated: ${testWallet.address}`);
-        console.log(`🆔 OmniAccount ID: ${omniAccount}`);
-
         // Verify factory contract is deployed
         const factoryAddress = testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address;
         const factoryCode = await publicClient.getCode({
@@ -230,7 +212,7 @@ describe('OmniAccount Integration Tests', function () {
             args: [omniAccount, OWNER_TYPE.EVM, stringToBytes(TEST_CONFIG.TEE_WORKER.CLIENT_ID), testWallet.address],
         });
 
-        console.log(`📍 OmniAccount address: ${omniAccountAddress}`);
+        // Got OmniAccount address
 
         // Set test token address
         testTokenAddress = testEnv.contracts.TEST_USDT as Address;
@@ -243,12 +225,10 @@ describe('OmniAccount Integration Tests', function () {
                 functionName: 'balanceOf',
                 args: [testWallet.address],
             });
-            console.log(`💰 Test token available at: ${testTokenAddress}`);
+            // Test token available
         } catch (error) {
             console.log('⚠️ Test token not found, token tests will be skipped');
         }
-
-        console.log('✅ Test environment setup completed');
     });
 
     it('Step 1: Should initialize EVM wallet and calculate OmniAccount', async function () {
@@ -258,12 +238,11 @@ describe('OmniAccount Integration Tests', function () {
         expectValidBytes32(omniAccount, 'OmniAccount ID');
         expectValidEthereumAddress(omniAccountAddress, 'OmniAccount contract address');
 
-        console.log('✅ Step 1 completed: EVM wallet and OmniAccount initialized');
+        // Step 1 completed
     });
 
     it('Step 2: Should fund test wallet with ETH from deployer account', async function () {
         // Fund the test wallet for gas fees
-        console.log('💰 Funding test wallet with ETH for gas fees...');
         
         const fundingAmount = parseEther('0.5'); // 0.5 ETH for gas
         const hash = await deployerWalletClient.sendTransaction({
@@ -282,7 +261,7 @@ describe('OmniAccount Integration Tests', function () {
         });
 
         expect(balance).to.equal(fundingAmount);
-        console.log('✅ Step 2 completed: Test wallet funded with ETH for gas');
+        // Step 2 completed
     });
 
     it('Step 3: Should fund OmniAccount with ETH from deployer account', async function () {
@@ -291,7 +270,7 @@ describe('OmniAccount Integration Tests', function () {
             address: omniAccountAddress,
         });
 
-        console.log('💰 Funding OmniAccount with ETH...');
+        // Funding OmniAccount with ETH
 
         // Send ETH from deployer to OmniAccount
         const fundingAmount = parseEther(TEST_CONFIG.AMOUNTS.FUNDING_ETH);
@@ -311,7 +290,7 @@ describe('OmniAccount Integration Tests', function () {
         });
 
         expect(finalBalance).to.equal(fundingAmount);
-        console.log(`✅ Step 3 completed: OmniAccount funded with ${TEST_CONFIG.AMOUNTS.FUNDING_ETH} ETH`);
+        // Step 3 completed
     });
 
     it('Step 4: Should create OmniAccount contract (Account Abstraction deployment)', async function () {
@@ -325,8 +304,6 @@ describe('OmniAccount Integration Tests', function () {
             return;
         }
 
-        console.log('🚀 Creating OmniAccount contract using UserOperation...');
-
         // Generate init code for deployment (following aa-demo-app pattern)
         const initCode = generateInitCode(
             testEnv.contracts.OMNI_ACCOUNT_FACTORY as Address,
@@ -336,7 +313,7 @@ describe('OmniAccount Integration Tests', function () {
             testWallet.address
         );
 
-        console.log('📦 InitCode generated:', initCode.slice(0, 66) + '...');
+        // InitCode generated
 
         // Create UserOperation for deployment
         const userOp = createUserOperation({
@@ -366,7 +343,7 @@ describe('OmniAccount Integration Tests', function () {
         // Pack and execute
         const packedUserOp = packUserOperation(userOp);
 
-        console.log('📤 Submitting account creation transaction...');
+        // Submitting account creation transaction
 
         const hash = await walletClient.writeContract({
             address: testEnv.contracts.ENTRY_POINT as Address,
@@ -386,11 +363,11 @@ describe('OmniAccount Integration Tests', function () {
             address: omniAccountAddress,
         });
         expect(finalCode).to.not.equal('0x');
-        console.log('✅ Step 4 completed: OmniAccount contract created successfully');
+        // Step 4 completed
     });
 
     it('Step 5: Should add TEE Worker as authorized root signer', async function () {
-        console.log('🔍 Getting TEE Worker address...');
+        // Getting TEE Worker address
         
         // Try to get TEE Worker address (following aa-demo-app pattern)
         try {
@@ -400,15 +377,14 @@ describe('OmniAccount Integration Tests', function () {
                 0
             );
             teeWorkerAddress = workerAddress as Address;
-            console.log('✅ Got TEE Worker address from API:', teeWorkerAddress);
+            // Got TEE Worker address from API
         } catch (error) {
             // Fallback: use predefined TEE_WORKER account from config
             teeWorkerAddress = TEST_CONFIG.ACCOUNTS.TEE_WORKER.address as Address;
-            console.log('⚠️ TEE Worker API not available, using configured address:', teeWorkerAddress);
-            console.log('   (This is expected in local development environment)');
+            console.log('⚠️ TEE Worker API not available, using configured address');
         }
 
-        console.log('🔐 Adding TEE Worker as authorized root signer...');
+        // Adding TEE Worker as authorized root signer
 
         // Create calldata for addRootSigner (following aa-demo-app pattern)
         const callData = encodeFunctionData({
@@ -453,7 +429,7 @@ describe('OmniAccount Integration Tests', function () {
         // Convert to PackedUserOperation for EntryPoint v0.7
         const packedUserOp = packUserOperation(userOp);
 
-        console.log('📤 Submitting addRootSigner transaction...');
+        // Submitting addRootSigner transaction
 
         // Send UserOperation via EntryPoint
         const hash = await walletClient.writeContract({
@@ -475,7 +451,6 @@ describe('OmniAccount Integration Tests', function () {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Verify the signer was added
-        console.log('🔍 Verifying TEE Worker was added as root signer...');
         const isRootSigner = await publicClient.readContract({
             address: omniAccountAddress,
             abi: CONTRACT_ABIS.OMNI_ACCOUNT,
@@ -484,7 +459,7 @@ describe('OmniAccount Integration Tests', function () {
         });
 
         expect(isRootSigner).to.be.true;
-        console.log('✅ Step 5 completed: TEE Worker added as authorized root signer');
+        // Step 5 completed
     });
 
     it('Step 6: Should mint test tokens to OmniAccount', async function () {
@@ -494,7 +469,7 @@ describe('OmniAccount Integration Tests', function () {
             return;
         }
 
-        console.log('🪙 Minting test tokens to OmniAccount...');
+        // Minting test tokens to OmniAccount
 
         try {
             const mintAmount = parseUnits(TEST_CONFIG.AMOUNTS.MINT_TOKENS, 18);
@@ -519,7 +494,7 @@ describe('OmniAccount Integration Tests', function () {
             });
 
             expect(balance).to.equal(mintAmount);
-            console.log(`✅ Step 6 completed: ${TEST_CONFIG.AMOUNTS.MINT_TOKENS} test tokens minted to OmniAccount`);
+            // Step 6 completed
             
         } catch (error) {
             console.log('⚠️ Token minting failed, continuing with test');
@@ -537,7 +512,7 @@ describe('OmniAccount Integration Tests', function () {
         const recipientAddress = TEST_CONFIG.ACCOUNTS.USER.address as Address;
         const transferAmount = parseUnits(TEST_CONFIG.AMOUNTS.SEND_TOKENS, 18);
 
-        console.log(`💸 Transferring ${TEST_CONFIG.AMOUNTS.SEND_TOKENS} tokens to ${recipientAddress}...`);
+        // Transferring tokens
 
         // Create token transfer calldata (following aa-demo-app pattern)
         const transferCalldata = createTokenTransferCalldata(
@@ -573,7 +548,7 @@ describe('OmniAccount Integration Tests', function () {
         const packedUserOp = packUserOperation(userOp);
         const serializedUserOp = toSerializablePackedUserOperation(packedUserOp);
 
-        console.log('🔄 Attempting to submit UserOp through TEE Worker...');
+        // Attempting to submit UserOp through TEE Worker
 
         let transactionHash: string | null = null;
 
@@ -588,7 +563,7 @@ describe('OmniAccount Integration Tests', function () {
             });
 
             transactionHash = result.transaction_hash;
-            console.log('✅ UserOp submitted through TEE Worker');
+            // UserOp submitted through TEE Worker
 
         } catch (error) {
             console.log('⚠️ TEE Worker submission failed, using fallback method');
@@ -622,7 +597,7 @@ describe('OmniAccount Integration Tests', function () {
             });
 
             transactionHash = hash;
-            console.log('✅ UserOp submitted via fallback method');
+            // UserOp submitted via fallback method
         }
 
         if (transactionHash) {
@@ -642,13 +617,10 @@ describe('OmniAccount Integration Tests', function () {
                     args: [recipientAddress],
                 });
                 expect(recipientBalance).to.be.greaterThanOrEqual(transferAmount);
-                console.log('✅ Step 7 completed: Token transfer successful');
-                console.log(`   Recipient balance: ${recipientBalance.toString()}`);
+                // Step 7 completed: Token transfer successful
             } catch (error) {
                 console.log('⚠️ Could not verify token balance, but transaction succeeded');
             }
-        } else {
-            console.log('⚠️ No transaction hash available, but UserOp processing completed');
         }
     });
 });
