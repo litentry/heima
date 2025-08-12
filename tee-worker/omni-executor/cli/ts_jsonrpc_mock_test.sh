@@ -29,6 +29,6 @@ cd /ts-tests
 pnpm install --force
 
 echo "Running JSON-RPC tests"
-OMNI_WORKER_ENDPOINT=http://omni-executor:2100 pnpm --filter jsonrpc-mock-tests test jsonrpc.test.ts
+OMNI_WORKER_ENDPOINT=http://omni-executor:2100 pnpm --filter jsonrpc-mock-tests test jsonrpc_mock_test.test.ts
 
-echo "JSON-RPC tests completed successfully" 
+echo "JSON-RPC tests completed successfully"
