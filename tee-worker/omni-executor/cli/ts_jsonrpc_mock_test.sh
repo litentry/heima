@@ -29,6 +29,6 @@ cd /ts-tests
 pnpm install --force
 
 echo "Running JSON-RPC tests"
-OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test jsonrpc.test.ts
+OMNI_WORKER_ENDPOINT=ws://omni-executor:2100 PARACHAIN_ENDPOINT=ws://heima-node:9944 pnpm --filter jsonrpc-mock-tests test jsonrpc_mock_test.test.ts
 
 echo "JSON-RPC tests completed successfully"
