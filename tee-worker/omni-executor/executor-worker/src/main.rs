@@ -43,9 +43,7 @@ use executor_storage::{init_storage, StorageDB};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use native_task_handler::{
-	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
-};
+use native_task_handler::Aes256KeyStore;
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
@@ -486,23 +484,6 @@ async fn main() -> Result<(), ()> {
 
 			let entry_point_clients = Arc::new(entry_point_clients);
 
-			let task_handler_context = TaskHandlerContext::new(
-				parentchain_rpc_client_factory.clone(),
-				tx_signer.clone(),
-				storage_db.clone(),
-				jwt_rsa_private_key.clone(),
-				aes256_key,
-				Arc::new(ethereum_intent_executor),
-				Arc::new(solana_intent_executor),
-				Arc::new(cross_chain_intent_executor),
-				pumpx_api.clone(),
-				pumpx_signer_client.clone(),
-				entry_point_clients,
-			);
-			// TODO: make buffer size configurable
-			let native_task_sender =
-				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
-
 			let worker_url =
 				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
 
@@ -523,7 +504,7 @@ async fn main() -> Result<(), ()> {
 			.expect("Could not serialize shielding public key");
 
 			let _ = perform_attestation(
-				parentchain_rpc_client_factory,
+				parentchain_rpc_client_factory.clone(),
 				parentchain_signer,
 				tx_signer.clone(),
 				worker_url.as_str(),
@@ -544,7 +525,6 @@ async fn main() -> Result<(), ()> {
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
-				Arc::new(native_task_sender),
 				pumpx_api,
 				storage_db.clone(),
 				jwt_rsa_private_key,
@@ -552,6 +532,13 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
+				Arc::new(ethereum_intent_executor),
+				Arc::new(solana_intent_executor),
+				Arc::new(cross_chain_intent_executor),
+				parentchain_rpc_client_factory.clone(),
+				aes256_key,
+				tx_signer,
+				entry_point_clients,
 			)
 			.await
 			.map_err(|e| {
