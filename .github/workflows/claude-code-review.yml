@@ -16,12 +16,6 @@ concurrency:
 
 jobs:
   claude-review:
-    if: |
-      !contains(github.event.pull_request.title, '[skip-review]') &&
-      !contains(github.event.pull_request.title, '[WIP]') &&
-      !endsWith(github.actor, '[bot]') &&
-      github.actor != 'dependabot'
-    
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,6 +31,11 @@ jobs:
           fetch-depth: 0
 
       - name: Run Claude Code Review
+        if: |
+          !contains(github.event.pull_request.title, '[skip-review]') &&
+          !contains(github.event.pull_request.title, '[WIP]') &&
+          !endsWith(github.actor, '[bot]') &&
+          github.actor != 'dependabot'
         id: claude-review
         uses: anthropics/claude-code-action@beta
         with:
