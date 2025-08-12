@@ -33,7 +33,7 @@ describe('Omni JsonRpc Mock Tests', function () {
 
     it('should request email verification code successfully', async function () {
         const result: RequestEmailVerificationCodeResponse = await omniApi.requestEmailVerificationCode({
-            client_id: ClientId.Wildmeta,
+            client_id: ClientId.Console,
             user_email: 'test@gmail.com',
         });
 

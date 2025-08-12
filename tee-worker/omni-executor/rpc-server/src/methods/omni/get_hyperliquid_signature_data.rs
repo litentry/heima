@@ -11,10 +11,12 @@ use alloy::{
 	sol_types::{eip712_domain, SolValue},
 };
 use chrono::Utc;
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize, Serializer};
 use signer_client::ChainType;
@@ -190,7 +192,25 @@ impl HyperliquidEip712Signature for ApproveBuilderFeeAction {
 	}
 }
 
-pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_hyperliquid_signature_data<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
 			let params = params.parse::<GetHyperliquidSignatureDataParams>().map_err(|e| {
@@ -371,8 +391,23 @@ where
 	s.serialize_str(&format!("0x{val:x}"))
 }
 
-async fn generate_eip712_signature<T: HyperliquidEip712Signature>(
-	ctx: &RpcContext,
+async fn generate_eip712_signature<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	T: HyperliquidEip712Signature,
+>(
+	ctx: &RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>,
 	action: &T,
 	omni_account: &[u8; 32],
 ) -> Result<String, ErrorObject<'static>> {

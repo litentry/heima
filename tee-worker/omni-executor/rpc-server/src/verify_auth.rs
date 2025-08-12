@@ -1,4 +1,5 @@
 use crate::server::RpcContext;
+use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
@@ -11,6 +12,7 @@ use heima_authentication::{
 };
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(Debug, PartialEq)]
@@ -44,7 +46,26 @@ impl Display for AuthenticationError {
 	}
 }
 
-pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), AuthenticationError> {
+pub async fn verify_auth<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+	auth: &OmniAuth,
+) -> Result<(), AuthenticationError> {
 	match auth {
 		OmniAuth::Web3(ref client_id, ref signer, ref signature) => {
 			verify_web3_authentication(ctx.storage_db.clone(), client_id, signer, signature)
@@ -97,8 +118,24 @@ pub fn verify_web3_authentication(
 	}
 }
 
-pub fn verify_email_authentication(
-	ctx: Arc<RpcContext>,
+pub fn verify_email_authentication<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 	client_id: &str,
 	email: &str,
 	verification_code: &VerificationCode,
@@ -130,8 +167,24 @@ pub fn verify_auth_token_authentication(
 		.map_err(AuthenticationError::AuthTokenError)
 }
 
-pub async fn verify_oauth2_authentication(
-	ctx: Arc<RpcContext>,
+pub async fn verify_oauth2_authentication<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
@@ -140,8 +193,24 @@ pub async fn verify_oauth2_authentication(
 	}
 }
 
-async fn verify_google_oauth2(
-	ctx: Arc<RpcContext>,
+async fn verify_google_oauth2<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {

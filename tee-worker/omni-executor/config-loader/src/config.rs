@@ -16,7 +16,7 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MailerType {
@@ -37,7 +37,6 @@ impl FromStr for MailerType {
 }
 
 const DEFAULT_MAILER_TYPE: &str = "sendgrid";
-const DEFAULT_MAILER_API_HOST: &str = ""; // Optional
 const DEFAULT_MAILER_API_KEY: &str = "";
 const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
 const DEFAULT_MAILER_FROM_NAME: &str = "Heima Verify";
@@ -63,12 +62,29 @@ const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026
 const DEFAULT_WILDMETA_API_URL: &str = "https://test-dex-api.heima.network";
 
 #[derive(Debug, Clone)]
-pub struct ConfigLoader {
+pub struct MailerConfig {
 	pub mailer_type: MailerType,
 	pub mailer_api_host: Option<String>,
 	pub mailer_api_key: String,
 	pub mailer_from_email: String,
 	pub mailer_from_name: String,
+}
+
+impl Default for MailerConfig {
+	fn default() -> Self {
+		Self {
+			mailer_type: MailerType::from_str(DEFAULT_MAILER_TYPE).unwrap_or(MailerType::Sendgrid),
+			mailer_api_host: None,
+			mailer_api_key: DEFAULT_MAILER_API_KEY.to_string(),
+			mailer_from_email: DEFAULT_MAILER_FROM_EMAIL.to_string(),
+			mailer_from_name: DEFAULT_MAILER_FROM_NAME.to_string(),
+		}
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfigLoader {
+	pub mailer_configs: HashMap<String, MailerConfig>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
 	pub parentchain_url: String,
@@ -115,51 +131,6 @@ impl ConfigLoader {
 		info!("Executing: {}", std::env::args().collect::<Vec<_>>().join(" "));
 
 		let vars: HashMap<&str, EnvVar> = HashMap::from([
-			(
-				"mailer_type",
-				EnvVar {
-					env_key: "OE_MAILER_TYPE",
-					default: DEFAULT_MAILER_TYPE,
-					sensitive: false,
-					optional: false,
-				},
-			),
-			(
-				"mailer_api_host",
-				EnvVar {
-					env_key: "OE_SENDGRID_API_HOST",
-					default: DEFAULT_MAILER_API_HOST,
-					sensitive: false,
-					optional: true,
-				},
-			),
-			(
-				"mailer_api_key",
-				EnvVar {
-					env_key: "OE_SENDGRID_API_KEY",
-					default: DEFAULT_MAILER_API_KEY,
-					sensitive: true,
-					optional: false,
-				},
-			),
-			(
-				"mailer_from_email",
-				EnvVar {
-					env_key: "OE_SENDGRID_FROM_EMAIL",
-					default: DEFAULT_MAILER_FROM_EMAIL,
-					sensitive: false,
-					optional: false,
-				},
-			),
-			(
-				"mailer_from_name",
-				EnvVar {
-					env_key: "OE_SENDGRID_FROM_NAME",
-					default: DEFAULT_MAILER_FROM_NAME,
-					sensitive: false,
-					optional: false,
-				},
-			),
 			(
 				"google_client_id",
 				EnvVar {
@@ -354,12 +325,10 @@ impl ConfigLoader {
 		let get = |key: &str| get_env_value(&vars[key]).unwrap_or_default();
 		let get_opt = |key: &str| get_env_value(&vars[key]);
 
+		let mailer_configs = Self::load_mailer_configs();
+
 		ConfigLoader {
-			mailer_type: MailerType::from_str(&get("mailer_type")).unwrap_or(MailerType::Sendgrid),
-			mailer_api_host: get_opt("mailer_api_host"),
-			mailer_api_key: get("mailer_api_key"),
-			mailer_from_email: get("mailer_from_email"),
-			mailer_from_name: get("mailer_from_name"),
+			mailer_configs,
 			google_client_id: get("google_client_id"),
 			google_client_secret: get("google_client_secret"),
 			parentchain_url: get("parentchain_url"),
@@ -381,5 +350,94 @@ impl ConfigLoader {
 			entry_point_address: get("entry_point_address"),
 			wildmeta_api_url: get("wildmeta_api_url"),
 		}
+	}
+
+	/// Load mailer configurations for multiple clients from environment variables
+	/// Format: OE_MAILER_TYPE_{CLIENT}, OE_MAILER_API_HOST_{CLIENT}, etc.
+	/// CLIENT can be HEIMA, WILDMETA, CONSOLE, etc.
+	fn load_mailer_configs() -> HashMap<String, MailerConfig> {
+		let mut configs = HashMap::new();
+
+		// Get all environment variables
+		let env_vars: HashMap<String, String> = std::env::vars().collect();
+
+		// Find all unique client suffixes
+		let mut clients = std::collections::HashSet::new();
+		for key in env_vars.keys() {
+			if key.starts_with("OE_MAILER_TYPE_") {
+				// Extract client name from OE_MAILER_TYPE_{CLIENT}
+				if let Some(client) = key.strip_prefix("OE_MAILER_TYPE_") {
+					info!("Found mailer type configuration for client: {}", client);
+					clients.insert(client.to_lowercase());
+				}
+			}
+		}
+
+		info!("Total discovered clients: {:?}", clients);
+
+		// If no clients are configured via environment variables, provide default console fallback
+		if clients.is_empty() {
+			warn!("No mailer configurations found in environment variables. Adding default console mailer.");
+			let default_config = MailerConfig {
+				mailer_type: MailerType::Console,
+				mailer_api_host: None,
+				mailer_api_key: String::new(),
+				mailer_from_email: "test@example.com".to_string(),
+				mailer_from_name: "Default Console Mailer".to_string(),
+			};
+			configs.insert("console".to_string(), default_config);
+			return configs;
+		}
+
+		// Load configuration for each client
+		for client in clients {
+			let client_upper = client.to_uppercase();
+			let mut config = MailerConfig::default();
+
+			// Load client-specific values, falling back to defaults
+			if let Ok(mailer_type) = std::env::var(format!("OE_MAILER_TYPE_{}", client_upper)) {
+				config.mailer_type =
+					MailerType::from_str(&mailer_type).unwrap_or(config.mailer_type);
+			}
+
+			if let Ok(api_host) = std::env::var(format!("OE_MAILER_API_HOST_{}", client_upper)) {
+				config.mailer_api_host = if api_host.is_empty() { None } else { Some(api_host) };
+			}
+
+			if let Ok(api_key) = std::env::var(format!("OE_MAILER_API_KEY_{}", client_upper)) {
+				config.mailer_api_key = api_key;
+			}
+
+			if let Ok(from_email) = std::env::var(format!("OE_MAILER_FROM_EMAIL_{}", client_upper))
+			{
+				config.mailer_from_email = from_email;
+			}
+
+			if let Ok(from_name) = std::env::var(format!("OE_MAILER_FROM_NAME_{}", client_upper)) {
+				config.mailer_from_name = from_name;
+			}
+
+			info!(
+				"Loaded mailer config for client '{}': type={:?}, from_email={}",
+				client, config.mailer_type, config.mailer_from_email
+			);
+
+			configs.insert(client.clone(), config);
+		}
+
+		configs
+	}
+
+	/// Get mailer configuration for a specific client
+	pub fn get_mailer_config(&self, client_id: &str) -> Option<MailerConfig> {
+		let client_key = client_id.to_lowercase();
+		self.mailer_configs.get(&client_key).cloned()
+	}
+
+	/// Get all available client configurations
+	pub fn list_available_clients(&self) -> Vec<String> {
+		let mut clients: Vec<String> = self.mailer_configs.keys().cloned().collect();
+		clients.sort();
+		clients
 	}
 }

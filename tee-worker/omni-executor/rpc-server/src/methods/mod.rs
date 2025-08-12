@@ -1,4 +1,5 @@
 use crate::server::RpcContext;
+use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
 
 mod pumpx;
@@ -6,6 +7,7 @@ use pumpx::*;
 
 mod omni;
 use omni::*;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",
@@ -18,7 +20,25 @@ pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_exportWallet",
 ];
 
-pub fn register_methods(module: &mut RpcModule<RpcContext>) {
+pub fn register_methods<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	register_omni(module);
 	register_pumpx(module);
 }
