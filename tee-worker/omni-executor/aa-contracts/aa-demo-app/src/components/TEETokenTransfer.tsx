@@ -55,7 +55,7 @@ export function TEETokenTransfer({
         if (!omniAccountAddress || !publicClient) return;
 
         const balances: TokenBalance[] = [];
-        
+
         // Fetch ETH balance first
         try {
             const ethBalance = await publicClient.getBalance({
@@ -76,7 +76,7 @@ export function TEETokenTransfer({
                 address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
             });
         }
-        
+
         // Fetch ERC20 balances
         for (const token of [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT]) {
             try {
@@ -156,9 +156,9 @@ export function TEETokenTransfer({
             return;
         }
 
-        const decimals = selectedToken === "ETH" ? 18 : 
-                        selectedToken === "USDC" ? ERC20_TOKENS.USDC.decimals : 
-                        ERC20_TOKENS.USDT.decimals;
+        const decimals = selectedToken === "ETH" ? 18 :
+            selectedToken === "USDC" ? ERC20_TOKENS.USDC.decimals :
+                ERC20_TOKENS.USDT.decimals;
         const amountBigInt = parseUnits(amount, decimals);
 
         if (amountBigInt > tokenBalance.balance) {
@@ -170,7 +170,7 @@ export function TEETokenTransfer({
 
         try {
             // Build the initial UserOperation for transfer with minimal gas for estimation
-            const userOpWithoutGas = selectedToken === "ETH" ?
+            const userOpForEstimation = selectedToken === "ETH" ?
                 buildNativeTransferUserOp({
                     omniAccountAddress: omniAccountAddress as `0x${string}`,
                     recipient: recipient as `0x${string}`,
@@ -206,7 +206,7 @@ export function TEETokenTransfer({
             // Estimate gas using the TEE worker
             console.log("Attempting to estimate gas using TEE worker...");
             const gasParams = await estimateUserOpGasFromWorker(
-                userOpWithoutGas,
+                userOpForEstimation,
                 chainId,
                 0, // wallet_index
                 omniAccountHash,
@@ -326,13 +326,13 @@ export function TEETokenTransfer({
                                 ? tb.symbol === "ETH"
                                     ? "bg-purple-100 border-2 border-purple-500"
                                     : tb.symbol === "USDC"
-                                    ? "bg-blue-100 border-2 border-blue-500"
-                                    : "bg-green-100 border-2 border-green-500"
+                                        ? "bg-blue-100 border-2 border-blue-500"
+                                        : "bg-green-100 border-2 border-green-500"
                                 : tb.symbol === "ETH"
                                     ? "bg-purple-50 hover:bg-purple-100"
                                     : tb.symbol === "USDC"
-                                    ? "bg-blue-50 hover:bg-blue-100"
-                                    : "bg-green-50 hover:bg-green-100"
+                                        ? "bg-blue-50 hover:bg-blue-100"
+                                        : "bg-green-50 hover:bg-green-100"
                                 }`}
                             onClick={() => setSelectedToken(tb.symbol as "ETH" | "USDC" | "USDT")}
                         >
