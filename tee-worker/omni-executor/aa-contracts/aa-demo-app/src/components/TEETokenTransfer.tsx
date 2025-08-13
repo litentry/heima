@@ -6,9 +6,9 @@ import { ERC20_TOKENS, CONTRACTS, DEFAULT_CLIENT_ID } from "@/lib/constants";
 import { submitUserOpTest } from "@/lib/tee-worker-client";
 import {
     buildTokenTransferUserOp,
+    buildNativeTransferUserOp,
     packUserOperation,
     toSerializablePackedUserOperation,
-    estimateUserOperationGas,
     estimateUserOpGasFromWorker,
 } from "@/lib/aa-utils";
 
@@ -34,7 +34,7 @@ export function TEETokenTransfer({
 }: TEETokenTransferProps) {
     const publicClient = usePublicClient();
     const chainId = useChainId();
-    const [selectedToken, setSelectedToken] = useState<"USDC" | "USDT">("USDC");
+    const [selectedToken, setSelectedToken] = useState<"ETH" | "USDC" | "USDT">("ETH");
     const [recipient, setRecipient] = useState("");
     const [amount, setAmount] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,15 +43,42 @@ export function TEETokenTransfer({
     const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
     const [nonce, setNonce] = useState<bigint>(BigInt(0));
 
-    // Available tokens
-    const availableTokens = [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT];
+    // Available tokens including ETH
+    const availableTokens = [
+        { symbol: "ETH", decimals: 18, address: "0x0000000000000000000000000000000000000000" as `0x${string}`, isNative: true },
+        ERC20_TOKENS.USDC,
+        ERC20_TOKENS.USDT
+    ];
 
     // Fetch token balances
     const fetchBalances = async () => {
         if (!omniAccountAddress || !publicClient) return;
 
         const balances: TokenBalance[] = [];
-        for (const token of availableTokens) {
+        
+        // Fetch ETH balance first
+        try {
+            const ethBalance = await publicClient.getBalance({
+                address: omniAccountAddress as `0x${string}`,
+            });
+            balances.push({
+                symbol: "ETH",
+                balance: ethBalance,
+                decimals: 18,
+                address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+            });
+        } catch (error) {
+            console.error("Error fetching ETH balance:", error);
+            balances.push({
+                symbol: "ETH",
+                balance: BigInt(0),
+                decimals: 18,
+                address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+            });
+        }
+        
+        // Fetch ERC20 balances
+        for (const token of [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT]) {
             try {
                 const balance = (await publicClient.readContract({
                     address: token.address,
@@ -122,7 +149,6 @@ export function TEETokenTransfer({
             return;
         }
 
-        const token = selectedToken === "USDC" ? ERC20_TOKENS.USDC : ERC20_TOKENS.USDT;
         const tokenBalance = tokenBalances.find(tb => tb.symbol === selectedToken);
 
         if (!tokenBalance) {
@@ -130,33 +156,52 @@ export function TEETokenTransfer({
             return;
         }
 
-        const amountBigInt = parseUnits(amount, token.decimals);
+        const decimals = selectedToken === "ETH" ? 18 : 
+                        selectedToken === "USDC" ? ERC20_TOKENS.USDC.decimals : 
+                        ERC20_TOKENS.USDT.decimals;
+        const amountBigInt = parseUnits(amount, decimals);
 
         if (amountBigInt > tokenBalance.balance) {
-            setError("Insufficient token balance");
+            setError("Insufficient balance");
             return;
         }
 
         setIsSubmitting(true);
 
         try {
-            // Build the initial UserOperation for token transfer with minimal gas for estimation
-            const userOpWithoutGas = buildTokenTransferUserOp({
-                omniAccountAddress: omniAccountAddress as `0x${string}`,
-                tokenAddress: token.address,
-                recipient: recipient as `0x${string}`,
-                amount: amountBigInt,
-                nonce,
-                forGasEstimation: true,  // Use dummy signature for gas estimation
-                gasParams: {
-                    // Use minimal gas values for estimation to avoid prefund issues
-                    callGasLimit: BigInt(100000),        // Minimal for simulation
-                    verificationGasLimit: BigInt(150000), // Enough for signature validation
-                    preVerificationGas: BigInt(21000),    // Base transaction cost
-                    maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
-                    maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
-                }
-            });
+            // Build the initial UserOperation for transfer with minimal gas for estimation
+            const userOpWithoutGas = selectedToken === "ETH" ?
+                buildNativeTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce,
+                    forGasEstimation: true,  // Use dummy signature for gas estimation
+                    gasParams: {
+                        // Use minimal gas values for estimation to avoid prefund issues
+                        callGasLimit: BigInt(100000),        // Minimal for simulation
+                        verificationGasLimit: BigInt(150000), // Enough for signature validation
+                        preVerificationGas: BigInt(21000),    // Base transaction cost
+                        maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
+                        maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
+                    }
+                }) :
+                buildTokenTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    tokenAddress: selectedToken === "USDC" ? ERC20_TOKENS.USDC.address : ERC20_TOKENS.USDT.address,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce,
+                    forGasEstimation: true,  // Use dummy signature for gas estimation
+                    gasParams: {
+                        // Use minimal gas values for estimation to avoid prefund issues
+                        callGasLimit: BigInt(100000),        // Minimal for simulation
+                        verificationGasLimit: BigInt(150000), // Enough for signature validation
+                        preVerificationGas: BigInt(21000),    // Base transaction cost
+                        maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
+                        maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
+                    }
+                });
 
             // Estimate gas using the TEE worker
             console.log("Attempting to estimate gas using TEE worker...");
@@ -171,14 +216,22 @@ export function TEETokenTransfer({
             console.log("Successfully estimated gas using TEE worker:", gasParams);
 
             // Build the final UserOperation with gas estimates
-            const userOp = buildTokenTransferUserOp({
-                omniAccountAddress: omniAccountAddress as `0x${string}`,
-                tokenAddress: token.address,
-                recipient: recipient as `0x${string}`,
-                amount: amountBigInt,
-                nonce,
-                gasParams,
-            });
+            const userOp = selectedToken === "ETH" ?
+                buildNativeTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce,
+                    gasParams,
+                }) :
+                buildTokenTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    tokenAddress: selectedToken === "USDC" ? ERC20_TOKENS.USDC.address : ERC20_TOKENS.USDT.address,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce,
+                    gasParams,
+                });
 
             // Pack the UserOperation
             const packedOp = packUserOperation(userOp);
@@ -258,7 +311,7 @@ export function TEETokenTransfer({
                 <Send className="mx-auto h-12 w-12 text-blue-500 mb-4" />
                 <h2 className="text-2xl font-bold">Send Token Transfer</h2>
                 <p className="text-gray-600 mt-2">
-                    Transfer USDC or USDT through the TEE worker
+                    Transfer ETH, USDC, or USDT through the TEE worker
                 </p>
             </div>
 
@@ -270,14 +323,18 @@ export function TEETokenTransfer({
                         <div
                             key={tb.symbol}
                             className={`p-3 rounded-lg flex justify-between items-center cursor-pointer transition-colors ${selectedToken === tb.symbol
-                                ? tb.symbol === "USDC"
+                                ? tb.symbol === "ETH"
+                                    ? "bg-purple-100 border-2 border-purple-500"
+                                    : tb.symbol === "USDC"
                                     ? "bg-blue-100 border-2 border-blue-500"
                                     : "bg-green-100 border-2 border-green-500"
-                                : tb.symbol === "USDC"
+                                : tb.symbol === "ETH"
+                                    ? "bg-purple-50 hover:bg-purple-100"
+                                    : tb.symbol === "USDC"
                                     ? "bg-blue-50 hover:bg-blue-100"
                                     : "bg-green-50 hover:bg-green-100"
                                 }`}
-                            onClick={() => setSelectedToken(tb.symbol as "USDC" | "USDT")}
+                            onClick={() => setSelectedToken(tb.symbol as "ETH" | "USDC" | "USDT")}
                         >
                             <span className="font-medium">{tb.symbol}</span>
                             <span className="font-mono text-sm">
@@ -369,9 +426,9 @@ export function TEETokenTransfer({
                     <div className="text-sm text-blue-700">
                         <p className="font-medium mb-1">How it works:</p>
                         <ul className="list-disc list-inside space-y-1">
-                            <li>This creates a UserOperation for an ERC20 transfer</li>
+                            <li>This creates a UserOperation for {selectedToken === "ETH" ? "a native ETH" : "an ERC20"} transfer</li>
                             <li>The TEE worker signs and submits the operation</li>
-                            <li>Your Omni Account executes the token transfer</li>
+                            <li>Your Omni Account executes the transfer</li>
                         </ul>
                     </div>
                 </div>
