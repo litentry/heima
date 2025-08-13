@@ -106,7 +106,7 @@ jobs:
       run_identity_test: ${{ steps.env.outputs.run_identity_test }}
       run_omni_executor_test: ${{ steps.env.outputs.run_omni_executor_test }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -168,7 +168,7 @@ jobs:
   fmt:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install rust toolchain
         run: rustup show
@@ -251,7 +251,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_identity == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -334,7 +334,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -360,7 +360,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -404,7 +404,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -545,7 +545,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -596,7 +596,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_contract == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
           fetch-depth: 0
@@ -646,7 +646,7 @@ jobs:
           - paseo
     name: ${{ matrix.chain }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v5
         with:
@@ -714,7 +714,7 @@ jobs:
     # run_parachain_test is related to ts-tests only
     if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: |
@@ -772,7 +772,7 @@ jobs:
           # - test_name: lit-native-request-vc-test
     name: ${{ matrix.test_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v5
         with:
@@ -870,7 +870,7 @@ jobs:
           # - test_name: lit-resume-worker
     name: ${{ matrix.test_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v5
         with:
@@ -964,7 +964,7 @@ jobs:
           # - test_name: omni-client-sdk-test
     name: ${{ matrix.test_name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v5
         with:
