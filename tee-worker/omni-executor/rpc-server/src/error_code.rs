@@ -38,6 +38,11 @@ pub const PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE: i32 = -32052;
 const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32060;
 const UNSUPPORTED_CHAIN_ERROR_CODE: i32 = -32061;
 
+const CHAIN_NOT_SUPPORTED_ERROR_CODE: i32 = -32200;
+const INVALID_USER_OPERATION_ERROR_CODE: i32 = -32201;
+const GAS_ESTIMATION_FAILED_ERROR_CODE: i32 = -32202;
+const SIGNATURE_SERVICE_UNAVAILABLE_ERROR_CODE: i32 = -32203;
+
 pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 	match error {
 		NativeTaskError::UnauthorizedSender => UNAUTHORIZED_SENDER_CODE,
@@ -66,7 +71,6 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 			PumpxSignerError::RequestSignatureFailed => PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE,
 			PumpxSignerError::RequestWalletFailed => PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
 		},
-
 		NativeTaskError::InternalError => {
 			error!("Internal error: {:?}", error);
 			// This should not happen, we return the generic interal error code already from the api
@@ -74,5 +78,10 @@ pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
 		},
 		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
 		NativeTaskError::UnsupportedChain => UNSUPPORTED_CHAIN_ERROR_CODE,
+
+		NativeTaskError::ChainNotSupported(_) => CHAIN_NOT_SUPPORTED_ERROR_CODE,
+		NativeTaskError::InvalidUserOperation(_) => INVALID_USER_OPERATION_ERROR_CODE,
+		NativeTaskError::GasEstimationFailed => GAS_ESTIMATION_FAILED_ERROR_CODE,
+		NativeTaskError::SignatureServiceUnavailable => SIGNATURE_SERVICE_UNAVAILABLE_ERROR_CODE,
 	}
 }
