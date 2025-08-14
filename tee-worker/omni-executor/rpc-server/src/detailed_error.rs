@@ -1,6 +1,5 @@
 use jsonrpsee::types::ErrorObject;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetailedError {
@@ -19,7 +18,6 @@ pub struct ErrorDetails {
 	pub received: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub suggestion: Option<String>,
-	pub request_id: String,
 }
 
 impl DetailedError {
@@ -27,13 +25,7 @@ impl DetailedError {
 		Self {
 			code,
 			message: message.into(),
-			details: ErrorDetails {
-				field: None,
-				expected: None,
-				received: None,
-				suggestion: None,
-				request_id: generate_request_id(),
-			},
+			details: ErrorDetails { field: None, expected: None, received: None, suggestion: None },
 		}
 	}
 
@@ -60,10 +52,6 @@ impl DetailedError {
 	pub fn to_error_object(&self) -> ErrorObject<'static> {
 		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
 	}
-}
-
-pub fn generate_request_id() -> String {
-	Uuid::new_v4().to_string()
 }
 
 // Input Validation Error Codes (-32100 to -32119)
