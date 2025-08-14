@@ -1044,7 +1044,7 @@ pub fn substrate_to_ethereum_signature(substrate_sig: &[u8]) -> Result<[u8; 65],
 }
 
 /// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
-fn convert_to_packed_user_op(
+pub fn convert_to_packed_user_op(
 	user_op: SerializablePackedUserOperation,
 ) -> Result<aa_contracts_client::PackedUserOperation, String> {
 	use std::str::FromStr;

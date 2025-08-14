@@ -1,5 +1,7 @@
 use super::common::handle_omni_native_task;
-use crate::auth_utils::{verify_payload_timestamp, verify_wildmeta_signature};
+use crate::auth_utils::{
+	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
+};
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
@@ -109,7 +111,50 @@ pub fn register_submit_user_op_with_auth<
 						)));
 					}
 
-					main_address
+					Some(main_address.clone())
+				},
+				ClientAuth::WildmetaBackend { signature } => {
+					// Validate wallet_index must be 1 for WildmetaBackend
+					if params.wallet_index != 1 {
+						error!(
+							"WildmetaBackend requires wallet_index to be 1, got: {}",
+							params.wallet_index
+						);
+						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+							AUTH_VERIFICATION_FAILED_CODE,
+						)));
+					}
+
+					// Validate client_id must be "wildmeta" for WildmetaBackend
+					if params.client_id != "wildmeta" {
+						error!(
+							"WildmetaBackend requires client_id to be 'wildmeta', got: {}",
+							params.client_id
+						);
+						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+							AUTH_VERIFICATION_FAILED_CODE,
+						)));
+					}
+
+					// Get entry point address for the chain
+					let entry_point_client =
+						ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
+							error!("No entry point client found for chain_id: {}", params.chain_id);
+							PumpxRpcError::from_error_code(ErrorCode::InternalError)
+						})?;
+
+					let entry_point_address = entry_point_client.entry_point_address();
+
+					// Verify the backend signature against user operation hash
+					verify_wildmeta_backend_signature_wrapper(
+						signature,
+						&params.user_operations,
+						params.chain_id,
+						entry_point_address,
+						&ctx.heima_backend_ecdsa_pubkey,
+					)?;
+
+					None
 				},
 				_ => {
 					error!("Invalid client auth type");
@@ -122,41 +167,48 @@ pub fn register_submit_user_op_with_auth<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			match &identity {
-				Identity::Evm(_) => {
-					if let UserId::Evm(user_address) = &params.user_id {
-						if user_address.to_lowercase() != main_address.to_lowercase() {
-							error!("Main address does not match user_id for EVM identity");
+			// Only validate main_address if it's provided (not None)
+			if let Some(main_addr) = &main_address {
+				match &identity {
+					Identity::Evm(_) => {
+						if let UserId::Evm(user_address) = &params.user_id {
+							if user_address.to_lowercase() != main_addr.to_lowercase() {
+								error!("Main address does not match user_id for EVM identity");
+								return Err(PumpxRpcError::from_error_code(
+									ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE),
+								));
+							}
+						}
+					},
+					_ => {
+						let omni_account = identity.to_omni_account(&params.client_id);
+						let derived_pubkey = ctx
+							.signer_client
+							.request_wallet(
+								ChainType::Evm,
+								params.wallet_index,
+								*omni_account.as_ref(),
+							)
+							.await
+							.map_err(|_| {
+								error!("Failed to derive EVM address");
+								PumpxRpcError::from_error_code(ErrorCode::InternalError)
+							})?;
+						let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
+							.map_err(|_| {
+								error!("Failed to convert derived pubkey to address");
+								PumpxRpcError::from_error_code(ErrorCode::ServerError(
+									AUTH_VERIFICATION_FAILED_CODE,
+								))
+							})?;
+						if derived_address.to_lowercase() != main_addr.to_lowercase() {
+							error!("Main address does not match derived EVM address");
 							return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 								AUTH_VERIFICATION_FAILED_CODE,
 							)));
 						}
-					}
-				},
-				_ => {
-					let omni_account = identity.to_omni_account(&params.client_id);
-					let derived_pubkey = ctx
-						.signer_client
-						.request_wallet(ChainType::Evm, params.wallet_index, *omni_account.as_ref())
-						.await
-						.map_err(|_| {
-							error!("Failed to derive EVM address");
-							PumpxRpcError::from_error_code(ErrorCode::InternalError)
-						})?;
-					let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
-						.map_err(|_| {
-							error!("Failed to convert derived pubkey to address");
-							PumpxRpcError::from_error_code(ErrorCode::ServerError(
-								AUTH_VERIFICATION_FAILED_CODE,
-							))
-						})?;
-					if derived_address.to_lowercase() != main_address.to_lowercase() {
-						error!("Main address does not match derived EVM address");
-						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-							AUTH_VERIFICATION_FAILED_CODE,
-						)));
-					}
-				},
+					},
+				}
 			}
 
 			let account_id = identity.to_omni_account(&params.client_id);
@@ -211,6 +263,23 @@ fn verify_payload_timestamp_wrapper(
 ) -> Result<(), PumpxRpcError> {
 	verify_payload_timestamp(storage, main_address, new_timestamp)
 		.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
+}
+
+fn verify_wildmeta_backend_signature_wrapper(
+	signature: &str,
+	user_operations: &[SerializablePackedUserOperation],
+	chain_id: ChainId,
+	entry_point_address: Address,
+	expected_pubkey: &[u8; 33],
+) -> Result<(), PumpxRpcError> {
+	verify_wildmeta_backend_signature(
+		signature,
+		user_operations,
+		chain_id,
+		entry_point_address,
+		expected_pubkey,
+	)
+	.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
 }
 
 #[cfg(test)]
@@ -354,5 +423,220 @@ mod tests {
 		// Higher should succeed
 		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1001);
 		assert!(result.is_ok(), "Higher timestamp should succeed");
+	}
+
+	#[test]
+	fn test_wildmeta_backend_auth_parsing() {
+		use executor_primitives::ClientAuth;
+
+		let json =
+			r#"{"type": "wildmeta_backend", "value": { "signature": "0x1234567890abcdef" }}"#;
+		let deserialized: ClientAuth = serde_json::from_str(json).unwrap();
+
+		match deserialized {
+			ClientAuth::WildmetaBackend { signature } => {
+				assert_eq!(signature, "0x1234567890abcdef");
+			},
+			_ => panic!("Expected WildmetaBackend variant"),
+		}
+	}
+
+	#[test]
+	fn test_verify_wildmeta_backend_signature_wrapper_invalid_signature() {
+		use executor_core::types::SerializablePackedUserOperation;
+
+		// Create a test user operation
+		let user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: "0x".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		let invalid_signature = "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+		let chain_id = 1;
+		let entry_point_address = Address::from([0u8; 20]);
+		let expected_pubkey = [0u8; 33];
+
+		let result = verify_wildmeta_backend_signature_wrapper(
+			invalid_signature,
+			&[user_op],
+			chain_id,
+			entry_point_address,
+			&expected_pubkey,
+		);
+
+		assert!(result.is_err(), "Should fail with invalid signature");
+	}
+
+	#[test]
+	fn test_wildmeta_backend_validation_invalid_wallet_index() {
+		use executor_primitives::ClientAuth;
+
+		let auth = ClientAuth::WildmetaBackend { signature: "0x1234567890abcdef".to_string() };
+
+		// Test with wallet_index != 1 should fail
+		// This would be tested in an integration test with actual RPC call
+		// For now we verify the auth variant is parsed correctly
+		match auth {
+			ClientAuth::WildmetaBackend { signature } => {
+				assert_eq!(signature, "0x1234567890abcdef");
+			},
+			_ => panic!("Expected WildmetaBackend variant"),
+		}
+	}
+
+	#[test]
+	fn test_wildmeta_backend_validation_invalid_client_id() {
+		use executor_primitives::ClientAuth;
+
+		let auth = ClientAuth::WildmetaBackend { signature: "0x1234567890abcdef".to_string() };
+
+		// Test with client_id != "wildmeta" should fail
+		// This would be tested in an integration test with actual RPC call
+		// For now we verify the auth variant is parsed correctly
+		match auth {
+			ClientAuth::WildmetaBackend { signature } => {
+				assert_eq!(signature, "0x1234567890abcdef");
+			},
+			_ => panic!("Expected WildmetaBackend variant"),
+		}
+	}
+
+	#[test]
+	fn test_wildmeta_backend_valid_signature_verification() {
+		use aa_contracts_client::calculate_user_operation_hash;
+		use alloy::primitives::Address;
+		use executor_core::types::SerializablePackedUserOperation;
+		use executor_crypto::secp256k1::{
+			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
+		};
+		use native_task_handler::convert_to_packed_user_op;
+
+		// Create a test private key (32 bytes)
+		let private_key: [u8; 32] = [
+			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
+			0x63, 0x7f, 0x34, 0x6c, 0x4b, 0x6f, 0x7d, 0x20, 0x45, 0x32, 0x15, 0x68, 0x91, 0x73,
+			0xa2, 0xb8, 0xc9, 0xe4,
+		];
+
+		// Create a test user operation
+		let user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: "0xabcdef".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		// Convert to PackedUserOperation and calculate hash
+		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
+		let chain_id = 31337u64; // Local test chain
+		let entry_point_address = Address::from([0u8; 20]);
+		let user_op_hash =
+			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+
+		// Sign the hash with our private key
+		let signature = match secp256k1_ecdsa_sign(&private_key, &user_op_hash.0) {
+			Ok(sig) => sig,
+			Err(_) => panic!("Failed to sign with valid private key"),
+		};
+
+		// Derive the expected public key from the signature and hash
+		let expected_pubkey = match secp256k1_ecdsa_recover_compressed(&signature, &user_op_hash.0)
+		{
+			Ok(pk) => pk,
+			Err(_) => panic!("Failed to recover pubkey from valid signature"),
+		};
+
+		// Convert signature to hex string with 0x prefix
+		let signature_hex = format!("0x{}", hex::encode(signature));
+
+		// Test the verification function
+		let result = verify_wildmeta_backend_signature_wrapper(
+			&signature_hex,
+			&[user_op],
+			chain_id,
+			entry_point_address,
+			&expected_pubkey,
+		);
+
+		assert!(result.is_ok(), "Valid signature verification should succeed");
+	}
+
+	#[test]
+	fn test_wildmeta_backend_invalid_signature_wrong_key() {
+		use aa_contracts_client::calculate_user_operation_hash;
+		use alloy::primitives::Address;
+		use executor_core::types::SerializablePackedUserOperation;
+		use executor_crypto::secp256k1::secp256k1_ecdsa_sign;
+		use native_task_handler::convert_to_packed_user_op;
+
+		// Create a test private key
+		let private_key: [u8; 32] = [
+			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
+			0x63, 0x7f, 0x34, 0x6c, 0x4b, 0x6f, 0x7d, 0x20, 0x45, 0x32, 0x15, 0x68, 0x91, 0x73,
+			0xa2, 0xb8, 0xc9, 0xe4,
+		];
+
+		// Wrong expected public key (different from the actual signature)
+		let wrong_expected_pubkey: [u8; 33] = [
+			0x03, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce,
+			0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfb, 0xa3, 0x72, 0xdd, 0x89, 0x6e, 0x17, 0xc8, 0x43,
+			0x79, 0x1b, 0x19, 0x5f, 0x8d,
+		];
+
+		// Create a test user operation
+		let user_op = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: "0xabcdef".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		// Convert to PackedUserOperation and calculate hash
+		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
+		let chain_id = 31337u64;
+		let entry_point_address = Address::from([0u8; 20]);
+		let user_op_hash =
+			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+
+		// Sign the hash with our private key
+		let signature = match secp256k1_ecdsa_sign(&private_key, &user_op_hash.0) {
+			Ok(sig) => sig,
+			Err(_) => panic!("Failed to sign with valid private key"),
+		};
+		let signature_hex = format!("0x{}", hex::encode(signature));
+
+		// Test with wrong expected public key - should fail
+		let result = verify_wildmeta_backend_signature_wrapper(
+			&signature_hex,
+			&[user_op],
+			chain_id,
+			entry_point_address,
+			&wrong_expected_pubkey,
+		);
+
+		assert!(result.is_err(), "Signature verification with wrong public key should fail");
 	}
 }

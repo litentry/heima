@@ -1,11 +1,17 @@
 use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
+use aa_contracts_client::calculate_user_operation_hash;
+use alloy::primitives::Address;
+use executor_core::types::SerializablePackedUserOperation;
+use executor_crypto::secp256k1::{secp256k1_ecdsa_recover_compressed, EcdsaVerifyError};
 use executor_primitives::{
 	signature::{EthereumSignature, HeimaMultiSignature},
 	utils::hex::{decode_hex, FromHexPrefixed},
+	ChainId,
 };
 use executor_storage::{Storage, WildmetaTimestampStorage};
 use heima_primitives::{Address20, Identity};
 use jsonrpsee::types::ErrorObject;
+use native_task_handler::convert_to_packed_user_op;
 use std::sync::Arc;
 use tracing::error;
 
@@ -37,6 +43,69 @@ pub fn verify_wildmeta_signature(
 
 	if !heima_sig.verify(message, &agent_identity) {
 		error!("Signature verification failed");
+		return Err(ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)));
+	}
+
+	Ok(())
+}
+
+/// Verify WildmetaBackend signature against user operation hash
+pub fn verify_wildmeta_backend_signature(
+	signature: &str,
+	user_operations: &[SerializablePackedUserOperation],
+	chain_id: ChainId,
+	entry_point_address: Address,
+	expected_pubkey: &[u8; 33],
+) -> Result<(), ErrorObject<'static>> {
+	if user_operations.is_empty() {
+		error!("No user operations provided for signature verification");
+		return Err(ErrorObject::from(ErrorCode::ParseError));
+	}
+
+	// Decode signature from hex
+	let signature_bytes = decode_hex(signature).map_err(|e| {
+		error!("Failed to decode signature: {:?}", e);
+		ErrorObject::from(ErrorCode::ParseError)
+	})?;
+
+	if signature_bytes.len() != 65 {
+		error!("Invalid signature length: expected 65 bytes, got {}", signature_bytes.len());
+		return Err(ErrorObject::from(ErrorCode::ParseError));
+	}
+
+	let signature_array: [u8; 65] = signature_bytes
+		.try_into()
+		.map_err(|_| ErrorObject::from(ErrorCode::ParseError))?;
+
+	// Convert first user operation to PackedUserOperation for hashing
+	let first_user_op = convert_to_packed_user_op(user_operations[0].clone()).map_err(|e| {
+		error!("Failed to convert user operation: {}", e);
+		ErrorObject::from(ErrorCode::ParseError)
+	})?;
+
+	// Calculate user operation hash
+	let user_op_hash = calculate_user_operation_hash(&first_user_op, entry_point_address, chain_id);
+
+	// Convert user op hash to 32-byte array
+	let user_op_hash_array: [u8; 32] = user_op_hash.0;
+
+	// Recover public key from signature
+	let recovered_pubkey =
+		secp256k1_ecdsa_recover_compressed(&signature_array, &user_op_hash_array).map_err(|e| {
+			error!(
+				"Failed to recover public key from signature: {}",
+				match e {
+					EcdsaVerifyError::BadRS => "Bad R or S value",
+					EcdsaVerifyError::BadV => "Bad V value",
+					EcdsaVerifyError::BadSignature => "Invalid signature",
+				}
+			);
+			ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
+		})?;
+
+	// Compare recovered public key with expected public key
+	if recovered_pubkey != *expected_pubkey {
+		error!("Signature verification failed: recovered public key does not match expected");
 		return Err(ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)));
 	}
 
