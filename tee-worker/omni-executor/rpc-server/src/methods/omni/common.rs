@@ -5,11 +5,10 @@ use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
 
 use crate::{
-	detailed_error::{
-		DetailedError, INTENT_NONCE_MISMATCH_ERROR_CODE, UNAUTHORIZED_SENDER_CODE,
-		UNSUPPORTED_CHAIN_ERROR_CODE,
+	detailed_error::DetailedError,
+	error_code::{
+		INTENT_NONCE_MISMATCH_ERROR_CODE, UNAUTHORIZED_SENDER_CODE, UNSUPPORTED_CHAIN_ERROR_CODE, *,
 	},
-	error_code::*,
 	middlewares::RpcExtensions,
 	server::RpcContext,
 };

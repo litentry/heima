@@ -63,56 +63,27 @@ pub const INVALID_TOKEN_ADDRESS_CODE: i32 = -32104;
 pub const MISSING_REQUIRED_FIELD_CODE: i32 = -32105;
 pub const INVALID_HEX_FORMAT_CODE: i32 = -32106;
 pub const INVALID_EMAIL_FORMAT_CODE: i32 = -32107;
-#[allow(dead_code)]
-pub const INVALID_SIGNATURE_FORMAT_CODE: i32 = -32108;
-
 // Account/Identity Error Codes (-32120 to -32139)
-#[allow(dead_code)]
-pub const ACCOUNT_NOT_FOUND_CODE: i32 = -32120;
 pub const ACCOUNT_PARSE_ERROR_CODE: i32 = -32121;
-#[allow(dead_code)]
-pub const IDENTITY_MISMATCH_CODE: i32 = -32122;
-#[allow(dead_code)]
-pub const ACCOUNT_ALREADY_EXISTS_CODE: i32 = -32123;
 pub const INVALID_ACCOUNT_LENGTH_CODE: i32 = -32124;
 
 // Operation Error Codes (-32140 to -32159)
-#[allow(dead_code)]
-pub const INSUFFICIENT_BALANCE_CODE: i32 = -32140;
-#[allow(dead_code)]
-pub const OPERATION_TIMEOUT_CODE: i32 = -32141;
-#[allow(dead_code)]
-pub const NONCE_MISMATCH_CODE: i32 = -32142;
-#[allow(dead_code)]
-pub const TRANSACTION_FAILED_CODE: i32 = -32144;
-#[allow(dead_code)]
-pub const OPERATION_NOT_SUPPORTED_CODE: i32 = -32145;
-#[allow(dead_code)]
-pub const RATE_LIMIT_EXCEEDED_CODE: i32 = -32146;
+// Note: Currently no operation error codes are in use
 
 // External Service Error Codes (-32160 to -32179)
 pub const SIGNER_SERVICE_ERROR_CODE: i32 = -32160;
-#[allow(dead_code)]
-pub const BLOCKCHAIN_RPC_ERROR_CODE: i32 = -32161;
 pub const EMAIL_SERVICE_ERROR_CODE: i32 = -32162;
 pub const STORAGE_SERVICE_ERROR_CODE: i32 = -32163;
 pub const EXTERNAL_API_ERROR_CODE: i32 = -32164;
 
 // Response Processing Error Codes (-32180 to -32199)
 pub const UNEXPECTED_RESPONSE_TYPE_CODE: i32 = -32180;
-#[allow(dead_code)]
-pub const RESPONSE_DECODE_ERROR_CODE: i32 = -32181;
-#[allow(dead_code)]
-pub const RESPONSE_VALIDATION_ERROR_CODE: i32 = -32182;
 
 // Native Task Error Codes (-32200 to -32219)
 pub const UNSUPPORTED_CHAIN_CODE: i32 = -32200;
 pub const INVALID_USER_OPERATION_CODE: i32 = -32201;
 pub const GAS_ESTIMATION_FAILED_CODE: i32 = -32202;
 pub const SIGNATURE_SERVICE_UNAVAILABLE_CODE: i32 = -32203;
-pub const UNAUTHORIZED_SENDER_CODE: i32 = -32205;
-pub const UNSUPPORTED_CHAIN_ERROR_CODE: i32 = -32206;
-pub const INTENT_NONCE_MISMATCH_ERROR_CODE: i32 = -32207;
 
 impl DetailedError {
 	pub fn invalid_chain_id(chain_id: u64, supported_chains: &[u64]) -> Self {
