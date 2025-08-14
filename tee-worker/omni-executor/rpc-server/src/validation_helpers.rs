@@ -220,24 +220,40 @@ mod tests {
 
 	#[test]
 	fn test_validate_chain_id_evm_valid() {
-		// Valid EVM chain IDs
+		// Valid EVM chain IDs - Mainnets
 		assert!(validate_chain_id(1, Some("evm")).is_ok());
 		assert!(validate_chain_id(137, Some("evm")).is_ok());
 		assert!(validate_chain_id(42161, Some("evm")).is_ok());
+		assert!(validate_chain_id(10, Some("evm")).is_ok());
+		assert!(validate_chain_id(8453, Some("evm")).is_ok());
+
+		// Valid EVM chain IDs - Testnets
+		assert!(validate_chain_id(11155111, Some("evm")).is_ok());
+		assert!(validate_chain_id(421614, Some("evm")).is_ok());
+		assert!(validate_chain_id(11155420, Some("evm")).is_ok());
+		assert!(validate_chain_id(80001, Some("evm")).is_ok());
+		assert!(validate_chain_id(84532, Some("evm")).is_ok());
+		assert!(validate_chain_id(1337, Some("evm")).is_ok());
 	}
 
 	#[test]
 	fn test_validate_chain_id_evm_invalid() {
-		// Invalid EVM chain ID
-		let result = validate_chain_id(999, Some("evm"));
-		assert!(result.is_err());
+		// Invalid EVM chain IDs
+		assert!(validate_chain_id(999, Some("evm")).is_err());
+		assert!(validate_chain_id(5, Some("evm")).is_err());
+		assert!(validate_chain_id(421613, Some("evm")).is_err());
+		assert!(validate_chain_id(84531, Some("evm")).is_err());
+		assert!(validate_chain_id(56, Some("evm")).is_err());
 	}
 
 	#[test]
 	fn test_validate_chain_id_any_type() {
 		// Any type should check EVM chains
-		assert!(validate_chain_id(1, None).is_ok()); // EVM chain
+		assert!(validate_chain_id(1, None).is_ok()); // Ethereum Mainnet
+		assert!(validate_chain_id(11155111, None).is_ok()); // Sepolia
+		assert!(validate_chain_id(1337, None).is_ok()); // Local Anvil
 		assert!(validate_chain_id(999, None).is_err()); // Invalid chain
+		assert!(validate_chain_id(5, None).is_err());
 	}
 
 	#[test]
