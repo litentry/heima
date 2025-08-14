@@ -49,6 +49,8 @@ pub enum RpcProviderError {
 	ExecutionReverted {
 		/// Revert reason or data
 		reason: String,
+		/// Revert data
+		data: Option<Vec<u8>>,
 	},
 
 	/// No wallet configured for signing
@@ -81,7 +83,10 @@ impl RpcProviderError {
 					   data_str.contains("execution reverted") ||
 					   resp.message.contains("execution reverted")
 					{
-						return Self::ExecutionReverted { reason: resp.message.to_string() };
+						return Self::ExecutionReverted {
+							reason: resp.message.to_string(),
+							data: None,
+						};
 					}
 				}
 
