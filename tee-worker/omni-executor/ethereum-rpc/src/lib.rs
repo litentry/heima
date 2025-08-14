@@ -247,9 +247,17 @@ impl RpcProvider for AlloyRpcProvider {
 					// Try to extract revert data
 					if let Ok(value) = serde_json::from_str::<String>(data.get()) {
 						if value.starts_with("0x") {
+							let decoded = match hex::decode(value) {
+								Ok(bytes) => Some(bytes),
+								Err(e) => {
+									error!("Could not decode rpc response: {:?}", e);
+									None
+								},
+							};
 							// This is likely revert data, return as execution reverted
 							return RpcProviderError::ExecutionReverted {
 								reason: resp.message.to_string(),
+								data: decoded,
 							};
 						}
 					}
@@ -285,9 +293,17 @@ impl RpcProvider for AlloyRpcProvider {
 							// Try to extract revert data
 							if let Ok(value) = serde_json::from_str::<String>(data.get()) {
 								if value.starts_with("0x") {
+									let decoded = match hex::decode(value) {
+										Ok(bytes) => Some(bytes),
+										Err(e) => {
+											error!("Could not decode rpc response: {:?}", e);
+											None
+										},
+									};
 									// This is likely revert data, return as execution reverted
 									return RpcProviderError::ExecutionReverted {
 										reason: resp.message.to_string(),
+										data: decoded,
 									};
 								}
 							}

@@ -29,7 +29,7 @@ use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
-use ethereum_rpc::RpcProvider;
+use ethereum_rpc::{RpcProvider, RpcProviderError};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{error, info, warn};
@@ -380,8 +380,10 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				code: Some(
 					hex::decode(SIMULATION_BYTECODE.trim())
 						.map_err(|e| {
-							error!("Could not decode simulation bytecode: {:?}", e);
-							format!("Could not decode simulation bytecode: {:?}", e)
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
 						})?
 						.into(),
 				),
@@ -399,28 +401,47 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			Ok(result) => {
 				// Decode the ValidationResult from the successful response
 				ValidationResult::abi_decode(&result).map_err(|e| {
-					error!("Could not decode ValidationResult from response: {:?}", e);
-					format!("Could not decode ValidationResult from response: {:?}", e)
+					let error_msg =
+						format!("Could not decode ValidationResult from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(Some(revert_data)) => {
-				// In some cases, the simulation might revert with FailedOp data
-				let failed_op: FailedOp = FailedOp::abi_decode(&revert_data).map_err(|e| {
-					error!("Could not decode FailedOp from revert data: {:?}", e);
-					format!("Could not decode FailedOp from revert data: {:?}", e)
-				})?;
-				error!(
-					"simulate_validation failed, opIndex: {}, reason: {}",
-					failed_op.opIndex, failed_op.reason
-				);
-				Err(format!(
-					"simulate_validation failed, opIndex: {}, reason: {}",
-					failed_op.opIndex, failed_op.reason
-				))
-			},
-			Err(None) => {
-				error!("Simulation failed with no data");
-				Err("Simulation failed with no data".to_string())
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Decode FailedOp from revert data
+								let failed_op: FailedOp =
+									FailedOp::abi_decode(&data).map_err(|e| {
+										let error_msg = format!(
+											"Could not decode FailedOp from revert data: {:?}",
+											e
+										);
+										error!("{}", error_msg);
+										error_msg
+									})?;
+								let error_msg = format!(
+									"Simulation failed, opIndex: {}, reason: {}",
+									failed_op.opIndex, failed_op.reason
+								);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+						}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
+				}
 			},
 		}
 	}
@@ -438,8 +459,10 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				code: Some(
 					hex::decode(SIMULATION_BYTECODE.trim())
 						.map_err(|e| {
-							error!("Could not decode simulation bytecode: {:?}", e);
-							format!("Could not decode simulation bytecode: {:?}", e)
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
 						})?
 						.into(),
 				),
@@ -458,28 +481,47 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			Ok(result) => {
 				// Decode the ExecutionResult[] from the successful response
 				Vec::<ExecutionResult>::abi_decode(&result).map_err(|e| {
-					error!("Could not decode ExecutionResult[] from response: {:?}", e);
-					format!("Could not decode ExecutionResult[] from response: {:?}", e)
+					let error_msg =
+						format!("Could not decode ExecutionResult[] from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(Some(revert_data)) => {
-				// In some cases, the simulation might revert with FailedOp data
-				let failed_op: FailedOp = FailedOp::abi_decode(&revert_data).map_err(|e| {
-					error!("Could not decode FailedOp from revert data: {:?}", e);
-					format!("Could not decode FailedOp from revert data: {:?}", e)
-				})?;
-				error!(
-					"simulate_handle_ops failed, opIndex: {}, reason: {}",
-					failed_op.opIndex, failed_op.reason
-				);
-				Err(format!(
-					"simulate_handle_ops failed, opIndex: {}, reason: {}",
-					failed_op.opIndex, failed_op.reason
-				))
-			},
-			Err(None) => {
-				error!("Simulation failed with no data");
-				Err("Simulation failed with no data".to_string())
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Decode FailedOp from revert data
+								let failed_op: FailedOp =
+									FailedOp::abi_decode(&data).map_err(|e| {
+										let error_msg = format!(
+											"Could not decode FailedOp from revert data: {:?}",
+											e
+										);
+										error!("{}", error_msg);
+										error_msg
+									})?;
+								let error_msg = format!(
+									"Simulation failed, opIndex: {}, reason: {}",
+									failed_op.opIndex, failed_op.reason
+								);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+						}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
+				}
 			},
 		}
 	}
@@ -584,7 +626,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
+				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } = &err {
 					if reason.contains("0x") {
 						if let Some(start) = reason.find("0x") {
 							let hex_data = &reason[start..];
@@ -869,7 +911,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			ethereum_rpc::RpcProviderError::NoWallet => {
 				AaContractError::Validation("No wallet configured for signing".to_string())
 			},
-			ethereum_rpc::RpcProviderError::ExecutionReverted { reason } => {
+			ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } => {
 				AaContractError::Contract(ContractError::ExecutionReverted { reason })
 			},
 			ethereum_rpc::RpcProviderError::JsonRpc { code, message, data } => {
@@ -1063,7 +1105,7 @@ pub mod test {
 				)
 				.unwrap();
 				let reason = format!("execution reverted: 0x{}", hex::encode(&revert_data));
-				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason })
+				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data: None })
 			});
 
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
@@ -1806,6 +1848,7 @@ pub mod test {
 		mock_client.expect_send_transaction().times(1).returning(|_| {
 			Err(ethereum_rpc::RpcProviderError::ExecutionReverted {
 				reason: "Contract error".to_string(),
+				data: None,
 			})
 		});
 

@@ -387,7 +387,7 @@ pub async fn handle_native_task<
 						(
 							execution_result,
 							should_notify_parentchain,
-							Err(NativeTaskError::InternalError),
+							Err(NativeTaskError::InternalError(None)),
 						)
 					}
 				},
@@ -708,7 +708,7 @@ pub async fn handle_native_task<
 				Ok(user_op) => user_op,
 				Err(e) => {
 					error!("Failed to convert UserOperation: {}", e);
-					return Err(NativeTaskError::InternalError);
+					return Err(NativeTaskError::InternalError(None));
 				},
 			};
 
@@ -722,7 +722,7 @@ pub async fn handle_native_task<
 				},
 				Err(e) => {
 					error!("Gas estimation failed: {}", e);
-					Err(NativeTaskError::InternalError)
+					Err(NativeTaskError::InternalError(None))
 				},
 			}
 		},
