@@ -9,6 +9,7 @@ import {
     packUserOperation,
     toSerializablePackedUserOperation,
     estimateUserOperationGas,
+    estimateUserOpGasFromWorker,
 } from "@/lib/aa-utils";
 
 interface TEETokenTransferProps {
@@ -139,10 +140,37 @@ export function TEETokenTransfer({
         setIsSubmitting(true);
 
         try {
-            // Estimate gas parameters for token transfer
-            const gasParams = await estimateUserOperationGas(publicClient!, false);
+            // Build the initial UserOperation for token transfer with minimal gas for estimation
+            const userOpWithoutGas = buildTokenTransferUserOp({
+                omniAccountAddress: omniAccountAddress as `0x${string}`,
+                tokenAddress: token.address,
+                recipient: recipient as `0x${string}`,
+                amount: amountBigInt,
+                nonce,
+                forGasEstimation: true,  // Use dummy signature for gas estimation
+                gasParams: {
+                    // Use minimal gas values for estimation to avoid prefund issues
+                    callGasLimit: BigInt(100000),        // Minimal for simulation
+                    verificationGasLimit: BigInt(150000), // Enough for signature validation
+                    preVerificationGas: BigInt(21000),    // Base transaction cost
+                    maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
+                    maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
+                }
+            });
 
-            // Build the UserOperation for token transfer
+            // Estimate gas using the TEE worker
+            console.log("Attempting to estimate gas using TEE worker...");
+            const gasParams = await estimateUserOpGasFromWorker(
+                userOpWithoutGas,
+                chainId,
+                0, // wallet_index
+                omniAccountHash,
+                DEFAULT_CLIENT_ID,
+                publicClient
+            );
+            console.log("Successfully estimated gas using TEE worker:", gasParams);
+
+            // Build the final UserOperation with gas estimates
             const userOp = buildTokenTransferUserOp({
                 omniAccountAddress: omniAccountAddress as `0x${string}`,
                 tokenAddress: token.address,
