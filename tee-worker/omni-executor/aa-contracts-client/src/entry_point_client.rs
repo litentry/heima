@@ -17,8 +17,8 @@
 use crate::error::{AaContractError, ContractError, RpcError};
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, OwnerType, SenderAddressResult,
-	ValidationResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, FailedOp, OwnerType,
+	SenderAddressResult, ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
@@ -29,7 +29,7 @@ use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
-use ethereum_rpc::RpcProvider;
+use ethereum_rpc::{RpcProvider, RpcProviderError};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{error, info, warn};
@@ -371,13 +371,22 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	pub async fn simulate_validation(
 		&self,
 		user_op: PackedUserOperation,
-	) -> Result<ValidationResult, ()> {
+	) -> Result<ValidationResult, String> {
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				code: Some(
+					hex::decode(SIMULATION_BYTECODE.trim())
+						.map_err(|e| {
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
+						})?
+						.into(),
+				),
 				..Default::default()
 			},
 		);
@@ -391,28 +400,48 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		match self.rpc_client.call_with_state_override(tx, state_override).await {
 			Ok(result) => {
 				// Decode the ValidationResult from the successful response
-				ValidationResult::abi_decode(&result).map_err(|_| {
-					error!("Could not decode ValidationResult from response");
+				ValidationResult::abi_decode(&result).map_err(|e| {
+					let error_msg =
+						format!("Could not decode ValidationResult from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(err) => {
-				// Check if this is an execution reverted error with data
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					// Try to extract revert data from the reason string
-					if reason.contains("0x") {
-						// Extract hex data after "0x"
-						if let Some(start) = reason.find("0x") {
-							let hex_data = &reason[start..];
-							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
-								return ValidationResult::abi_decode(&revert_data).map_err(|_| {
-									error!("Could not decode ValidationResult from revert data");
-								});
-							}
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Decode FailedOp from revert data
+								let failed_op: FailedOp =
+									FailedOp::abi_decode(&data).map_err(|e| {
+										let error_msg = format!(
+											"Could not decode FailedOp from revert data: {:?}",
+											e
+										);
+										error!("{}", error_msg);
+										error_msg
+									})?;
+								let error_msg = format!(
+									"Simulation failed, opIndex: {}, reason: {}",
+									failed_op.opIndex, failed_op.reason
+								);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
 						}
-					}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
 				}
-				error!("Simulation failed: {:?}", err);
-				Err(())
 			},
 		}
 	}
@@ -421,13 +450,22 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		user_ops: &[PackedUserOperation],
 		beneficiary: Address,
-	) -> Result<Vec<ExecutionResult>, ()> {
+	) -> Result<Vec<ExecutionResult>, String> {
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				code: Some(
+					hex::decode(SIMULATION_BYTECODE.trim())
+						.map_err(|e| {
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
+						})?
+						.into(),
+				),
 				..Default::default()
 			},
 		);
@@ -442,29 +480,48 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		match self.rpc_client.call_with_state_override(tx, state_override).await {
 			Ok(result) => {
 				// Decode the ExecutionResult[] from the successful response
-				Vec::<ExecutionResult>::abi_decode(&result).map_err(|_| {
-					error!("Could not decode ExecutionResult[] from response");
+				Vec::<ExecutionResult>::abi_decode(&result).map_err(|e| {
+					let error_msg =
+						format!("Could not decode ExecutionResult[] from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					if reason.contains("0x") {
-						if let Some(start) = reason.find("0x") {
-							let hex_data = &reason[start..];
-							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
-								return Vec::<ExecutionResult>::abi_decode(&revert_data).map_err(
-									|_| {
-										error!(
-											"Could not decode ExecutionResult[] from revert data"
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Decode FailedOp from revert data
+								let failed_op: FailedOp =
+									FailedOp::abi_decode(&data).map_err(|e| {
+										let error_msg = format!(
+											"Could not decode FailedOp from revert data: {:?}",
+											e
 										);
-									},
+										error!("{}", error_msg);
+										error_msg
+									})?;
+								let error_msg = format!(
+									"Simulation failed, opIndex: {}, reason: {}",
+									failed_op.opIndex, failed_op.reason
 								);
-							}
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
 						}
-					}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
 				}
-				error!("Simulation failed: {:?}", err);
-				Err(())
 			},
 		}
 	}
@@ -569,7 +626,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
+				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } = &err {
 					if reason.contains("0x") {
 						if let Some(start) = reason.find("0x") {
 							let hex_data = &reason[start..];
@@ -854,7 +911,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			ethereum_rpc::RpcProviderError::NoWallet => {
 				AaContractError::Validation("No wallet configured for signing".to_string())
 			},
-			ethereum_rpc::RpcProviderError::ExecutionReverted { reason } => {
+			ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } => {
 				AaContractError::Contract(ContractError::ExecutionReverted { reason })
 			},
 			ethereum_rpc::RpcProviderError::JsonRpc { code, message, data } => {
@@ -1048,7 +1105,7 @@ pub mod test {
 				)
 				.unwrap();
 				let reason = format!("execution reverted: 0x{}", hex::encode(&revert_data));
-				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason })
+				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data: None })
 			});
 
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
@@ -1791,6 +1848,7 @@ pub mod test {
 		mock_client.expect_send_transaction().times(1).returning(|_| {
 			Err(ethereum_rpc::RpcProviderError::ExecutionReverted {
 				reason: "Contract error".to_string(),
+				data: None,
 			})
 		});
 

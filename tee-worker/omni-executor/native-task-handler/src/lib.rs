@@ -186,7 +186,7 @@ pub async fn handle_native_task<
 ) -> NativeTaskResponse {
 	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
 		error!("Failed to create rpc client");
-		return Err(NativeTaskError::InternalError);
+		return Err(NativeTaskError::InternalError(None));
 	};
 
 	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
@@ -234,7 +234,7 @@ pub async fn handle_native_task<
 			if rpc_client.submit_tx(&tx).await.is_err() {
 				ctx.transaction_signer.update_nonce().await;
 				error!("Failed to submit tx");
-				return Err(NativeTaskError::InternalError);
+				return Err(NativeTaskError::InternalError(None));
 			}
 
 			Ok(NativeTaskOk::AuthToken(token))
@@ -248,14 +248,14 @@ pub async fn handle_native_task<
 				Ok(id) => id.unwrap_or_default(),
 				Err(_) => {
 					error!("Failed to read intent from store");
-					return Err(NativeTaskError::InternalError);
+					return Err(NativeTaskError::InternalError(None));
 				},
 			};
 
 			if intent_id == stored_intent_id + 1 {
 				if intent_id_storage.insert(&omni_account, intent_id).is_err() {
 					error!("Failed to save intent id");
-					return Err(NativeTaskError::InternalError);
+					return Err(NativeTaskError::InternalError(None));
 				}
 			} else {
 				error!(
@@ -331,7 +331,11 @@ pub async fn handle_native_task<
 					// 	(IntentCompletedDetail::Success, true)
 					// }
 					info!("Intent rejected");
-					(IntentCompletedDetail::Failure, true, Err(NativeTaskError::InternalError))
+					(
+						IntentCompletedDetail::Failure,
+						true,
+						Err(NativeTaskError::InternalError(None)),
+					)
 				},
 				Intent::TransferSolana(_) => {
 					// if let Err(e) = ctx
@@ -352,7 +356,11 @@ pub async fn handle_native_task<
 					// 	);
 					// 	(IntentCompletedDetail::Success, true)
 					// }
-					(IntentCompletedDetail::Failure, true, Err(NativeTaskError::InternalError))
+					(
+						IntentCompletedDetail::Failure,
+						true,
+						Err(NativeTaskError::InternalError(None)),
+					)
 				},
 				Intent::Swap(..) => {
 					let (execution_result, should_notify_parentchain, response) = match ctx
@@ -379,7 +387,7 @@ pub async fn handle_native_task<
 						(
 							execution_result,
 							should_notify_parentchain,
-							Err(NativeTaskError::InternalError),
+							Err(NativeTaskError::InternalError(None)),
 						)
 					}
 				},
@@ -501,7 +509,7 @@ pub async fn handle_native_task<
 				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				return Err(NativeTaskError::InternalError);
+				return Err(NativeTaskError::InternalError(None));
 			};
 
 			let verify_success = verify_google_code(
@@ -541,7 +549,7 @@ pub async fn handle_native_task<
 			};
 			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
 				error!("Failed to decrypt wallet");
-				return Err(NativeTaskError::InternalError);
+				return Err(NativeTaskError::InternalError(None));
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
@@ -554,11 +562,11 @@ pub async fn handle_native_task<
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
 				if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
 					error!("Failed to update pumpx account profile: {:?}", e);
-					return Err(NativeTaskError::InternalError);
+					return Err(NativeTaskError::InternalError(None));
 				};
 			} else {
 				error!("Failed to get pumpx account profile");
-				return Err(NativeTaskError::InternalError);
+				return Err(NativeTaskError::InternalError(None));
 			}
 			Ok(NativeTaskOk::PumpxExportWallet(decrypted_wallet))
 		},
@@ -567,7 +575,7 @@ pub async fn handle_native_task<
 			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				return Err(NativeTaskError::InternalError);
+				return Err(NativeTaskError::InternalError(None));
 			};
 
 			// Call Pumpx API to add wallet
@@ -611,7 +619,7 @@ pub async fn handle_native_task<
 				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access_token within NativeTask::PumpxTransferWidthdraw");
-				return Err(NativeTaskError::InternalError);
+				return Err(NativeTaskError::InternalError(None));
 			};
 
 			// 2. Verify google code in every case
@@ -828,8 +836,9 @@ pub async fn handle_native_task<
 			let beneficiary = match entry_point_client.get_wallet_address().await {
 				Ok(address) => address,
 				Err(_) => {
-					error!("Failed to get wallet address from EntryPoint client");
-					return Err(NativeTaskError::InternalError);
+					let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
+					error!("{}", err_msg.clone());
+					return Err(NativeTaskError::InternalError(Some(err_msg)));
 				},
 			};
 
@@ -852,11 +861,10 @@ pub async fn handle_native_task<
 						aa_user_ops.len()
 					);
 				},
-				Err(_) => {
-					error!("Batch UserOperation simulation failed");
-					return Err(NativeTaskError::InvalidUserOperation(
-						"User operation simulation failed".to_string(),
-					));
+				Err(e) => {
+					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
+					error!("{}", err_msg.clone());
+					return Err(NativeTaskError::InvalidUserOperation(err_msg));
 				},
 			}
 
@@ -868,8 +876,10 @@ pub async fn handle_native_task<
 						Some(tx_hash)
 					},
 					Err(_) => {
-						error!("Failed to submit UserOperations to EntryPoint via handleOps after retries");
-						return Err(NativeTaskError::InternalError);
+						let err_msg = "Failed to submit UserOperations to EntryPoint via handleOps after retries"
+								.to_string();
+						error!("{}", err_msg.clone());
+						return Err(NativeTaskError::InternalError(Some(err_msg)));
 					},
 				};
 

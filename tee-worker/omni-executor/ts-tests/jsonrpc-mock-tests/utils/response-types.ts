@@ -44,6 +44,11 @@ export interface ExportWalletResponse {
     nonce: string;
 }
 
+export interface SubmitUserOpResponse {
+    user_op_hash: string;
+}
+
+export type GetSmartWalletRootSignerResponse = string;
 export interface TransferWithdrawResponse {
     backend_response: {
         code: number;
@@ -83,4 +88,9 @@ export interface SignLimitOrderResponse {
 }
 
 export type NotifyLimitOrderResultResponse = null;
+
+export interface SubmitUserOpTestResponse {
+    transaction_hash: string | null;
+}
+
 // todo: add other types

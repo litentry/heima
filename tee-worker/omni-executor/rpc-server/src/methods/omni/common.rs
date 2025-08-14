@@ -123,6 +123,16 @@ where
 	// Process response
 	match native_task_response {
 		Ok(task_ok) => task_ok_handler(task_ok),
+		Err(NativeTaskError::InternalError(message)) => {
+			error!("Internal error in native task");
+			match message {
+				Some(msg) => Err(PumpxRpcError::from_code_and_message(
+					get_native_task_error_code(&NativeTaskError::InternalError(Some(msg.clone()))),
+					msg,
+				)),
+				None => Err(PumpxRpcError::from_error_code(ErrorCode::InternalError)),
+			}
+		},
 		Err(native_task_error) => {
 			error!("Native task error: {:?}", native_task_error);
 
@@ -137,7 +147,7 @@ where
 				NativeTaskError::SignatureServiceUnavailable => {
 					DetailedError::signature_service_unavailable()
 				},
-				NativeTaskError::InternalError => DetailedError::new(-32603, "Internal error")
+				NativeTaskError::InternalError(_) => DetailedError::new(-32603, "Internal error")
 					.with_suggestion("An internal error occurred. Please try again later."),
 				NativeTaskError::UnauthorizedSender => {
 					DetailedError::new(UNAUTHORIZED_SENDER_CODE, "Unauthorized sender")
