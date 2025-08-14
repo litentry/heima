@@ -52,6 +52,10 @@ pub enum NativeTaskError {
 	PumpxSignerError(PumpxSignerError),
 	IntentNonceMismatch,
 	UnsupportedChain,
+	ChainNotSupported(u64),
+	InvalidUserOperation(String),
+	GasEstimationFailed,
+	SignatureServiceUnavailable,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
