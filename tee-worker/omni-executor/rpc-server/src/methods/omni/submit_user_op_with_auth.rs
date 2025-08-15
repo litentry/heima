@@ -513,7 +513,7 @@ mod tests {
 	#[test]
 	fn test_wildmeta_backend_valid_signature_verification() {
 		use aa_contracts_client::calculate_user_operation_hash;
-		use alloy::primitives::Address;
+		use alloy::primitives::{keccak256, Address};
 		use executor_core::types::SerializablePackedUserOperation;
 		use executor_crypto::secp256k1::{
 			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
@@ -542,21 +542,24 @@ mod tests {
 			signature: None,
 		};
 
-		// Convert to PackedUserOperation and calculate hash
-		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
 		let chain_id = 31337u64; // Local test chain
 		let entry_point_address = Address::from([0u8; 20]);
+
+		let mut combined_hash_data = Vec::new();
+		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
 		let user_op_hash =
 			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+		combined_hash_data.extend_from_slice(&user_op_hash.0);
+		let combined_hash = keccak256(&combined_hash_data);
 
-		// Sign the hash with our private key
-		let signature = match secp256k1_ecdsa_sign(&private_key, &user_op_hash.0) {
+		// Sign the combined hash with our private key
+		let signature = match secp256k1_ecdsa_sign(&private_key, &combined_hash.0) {
 			Ok(sig) => sig,
 			Err(_) => panic!("Failed to sign with valid private key"),
 		};
 
 		// Derive the expected public key from the signature and hash
-		let expected_pubkey = match secp256k1_ecdsa_recover_compressed(&signature, &user_op_hash.0)
+		let expected_pubkey = match secp256k1_ecdsa_recover_compressed(&signature, &combined_hash.0)
 		{
 			Ok(pk) => pk,
 			Err(_) => panic!("Failed to recover pubkey from valid signature"),
@@ -578,9 +581,103 @@ mod tests {
 	}
 
 	#[test]
+	fn test_wildmeta_backend_multiple_operations_signature_verification() {
+		use aa_contracts_client::calculate_user_operation_hash;
+		use alloy::primitives::{keccak256, Address};
+		use executor_core::types::SerializablePackedUserOperation;
+		use executor_crypto::secp256k1::{
+			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
+		};
+		use native_task_handler::convert_to_packed_user_op;
+
+		let private_key: [u8; 32] = [
+			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
+			0x63, 0x7f, 0x34, 0x6c, 0x4b, 0x6f, 0x7d, 0x20, 0x45, 0x32, 0x15, 0x68, 0x91, 0x73,
+			0xa2, 0xb8, 0xc9, 0xe4,
+		];
+
+		// Create multiple test user operations
+		let user_op1 = SerializablePackedUserOperation {
+			sender: "0x1234567890123456789012345678901234567890".to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: "0xabcdef".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		let user_op2 = SerializablePackedUserOperation {
+			sender: "0x9876543210987654321098765432109876543210".to_string(),
+			nonce: 43,
+			init_code: "0x".to_string(),
+			call_data: "0x123456".to_string(),
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 22000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		let user_operations = vec![user_op1.clone(), user_op2.clone()];
+		let chain_id = 31337u64;
+		let entry_point_address = Address::from([0u8; 20]);
+
+		// Calculate combined hash for all operations (mimic the new implementation)
+		let mut combined_hash_data = Vec::new();
+		for user_op in &user_operations {
+			let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
+			let user_op_hash =
+				calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+			combined_hash_data.extend_from_slice(&user_op_hash.0);
+		}
+		let combined_hash = keccak256(&combined_hash_data);
+
+		// Sign the combined hash
+		let signature = match secp256k1_ecdsa_sign(&private_key, &combined_hash.0) {
+			Ok(sig) => sig,
+			Err(_) => panic!("Failed to sign"),
+		};
+		let expected_pubkey = match secp256k1_ecdsa_recover_compressed(&signature, &combined_hash.0)
+		{
+			Ok(pk) => pk,
+			Err(_) => panic!("Failed to recover pubkey"),
+		};
+		let signature_hex = format!("0x{}", hex::encode(signature));
+
+		// Test with multiple operations
+		let result = verify_wildmeta_backend_signature_wrapper(
+			&signature_hex,
+			&user_operations,
+			chain_id,
+			entry_point_address,
+			&expected_pubkey,
+		);
+
+		assert!(result.is_ok(), "Multiple operations signature verification should succeed");
+
+		// Test that single operation would fail with same signature (different hash)
+		let single_op_result = verify_wildmeta_backend_signature_wrapper(
+			&signature_hex,
+			&[user_op1],
+			chain_id,
+			entry_point_address,
+			&expected_pubkey,
+		);
+
+		assert!(single_op_result.is_err(), "Single operation should fail with multi-op signature");
+	}
+
+	#[test]
 	fn test_wildmeta_backend_invalid_signature_wrong_key() {
 		use aa_contracts_client::calculate_user_operation_hash;
-		use alloy::primitives::Address;
+		use alloy::primitives::{keccak256, Address};
 		use executor_core::types::SerializablePackedUserOperation;
 		use executor_crypto::secp256k1::secp256k1_ecdsa_sign;
 		use native_task_handler::convert_to_packed_user_op;
@@ -614,15 +711,19 @@ mod tests {
 			signature: None,
 		};
 
-		// Convert to PackedUserOperation and calculate hash
-		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
 		let chain_id = 31337u64;
 		let entry_point_address = Address::from([0u8; 20]);
+
+		// Calculate combined hash (mimic the new implementation)
+		let mut combined_hash_data = Vec::new();
+		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
 		let user_op_hash =
 			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+		combined_hash_data.extend_from_slice(&user_op_hash.0);
+		let combined_hash = keccak256(&combined_hash_data);
 
-		// Sign the hash with our private key
-		let signature = match secp256k1_ecdsa_sign(&private_key, &user_op_hash.0) {
+		// Sign the combined hash with our private key
+		let signature = match secp256k1_ecdsa_sign(&private_key, &combined_hash.0) {
 			Ok(sig) => sig,
 			Err(_) => panic!("Failed to sign with valid private key"),
 		};

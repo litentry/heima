@@ -77,14 +77,23 @@ pub fn verify_wildmeta_backend_signature(
 		.try_into()
 		.map_err(|_| ErrorObject::from(ErrorCode::ParseError))?;
 
-	// Convert first user operation to PackedUserOperation for hashing
-	let first_user_op = convert_to_packed_user_op(user_operations[0].clone()).map_err(|e| {
-		error!("Failed to convert user operation: {}", e);
-		ErrorObject::from(ErrorCode::ParseError)
-	})?;
+	// Convert all user operations to PackedUserOperations and calculate their combined hash
+	let mut combined_hash_data = Vec::new();
 
-	// Calculate user operation hash
-	let user_op_hash = calculate_user_operation_hash(&first_user_op, entry_point_address, chain_id);
+	for user_op in user_operations {
+		let packed_user_op = convert_to_packed_user_op(user_op.clone()).map_err(|e| {
+			error!("Failed to convert user operation: {}", e);
+			ErrorObject::from(ErrorCode::ParseError)
+		})?;
+
+		let user_op_hash =
+			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+		combined_hash_data.extend_from_slice(&user_op_hash.0);
+	}
+
+	// Hash the combined data using keccak256 to create a single 32-byte hash
+	use alloy::primitives::keccak256;
+	let user_op_hash = keccak256(&combined_hash_data);
 
 	// Convert user op hash to 32-byte array
 	let user_op_hash_array: [u8; 32] = user_op_hash.0;
