@@ -151,7 +151,7 @@ pub fn register_submit_user_op_with_auth<
 						&params.user_operations,
 						params.chain_id,
 						entry_point_address,
-						&ctx.heima_backend_ecdsa_pubkey,
+						&ctx.wildmeta_backend_ecdsa_pubkey,
 					)?;
 
 					None
