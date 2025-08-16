@@ -2,7 +2,7 @@ use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
 use aa_contracts_client::calculate_user_operation_hash;
 use alloy::primitives::Address;
 use executor_core::types::SerializablePackedUserOperation;
-use executor_crypto::secp256k1::{secp256k1_ecdsa_recover_compressed, EcdsaVerifyError};
+use executor_crypto::ecdsa;
 use executor_primitives::{
 	signature::{EthereumSignature, HeimaMultiSignature},
 	utils::hex::{decode_hex, FromHexPrefixed},
@@ -98,23 +98,14 @@ pub fn verify_wildmeta_backend_signature(
 	// Convert user op hash to 32-byte array
 	let user_op_hash_array: [u8; 32] = user_op_hash.0;
 
-	// Recover public key from signature
-	let recovered_pubkey =
-		secp256k1_ecdsa_recover_compressed(&signature_array, &user_op_hash_array).map_err(|e| {
-			error!(
-				"Failed to recover public key from signature: {}",
-				match e {
-					EcdsaVerifyError::BadRS => "Bad R or S value",
-					EcdsaVerifyError::BadV => "Bad V value",
-					EcdsaVerifyError::BadSignature => "Invalid signature",
-				}
-			);
-			ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
-		})?;
+	// Convert expected public key to ecdsa::Public
+	let public_key = ecdsa::Public::from_raw(*expected_pubkey);
 
-	// Compare recovered public key with expected public key
-	if recovered_pubkey != *expected_pubkey {
-		error!("Signature verification failed: recovered public key does not match expected");
+	let signature = ecdsa::Signature::from_raw(signature_array);
+
+	// Verify signature directly using verify_prehashed
+	if !ecdsa::Pair::verify_prehashed(&signature, &user_op_hash_array, &public_key) {
+		error!("Signature verification failed");
 		return Err(ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)));
 	}
 
