@@ -15,7 +15,7 @@ jobs:
     outputs:
       coverage_src: ${{ steps.filter.outputs.coverage_src }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -36,7 +36,7 @@ jobs:
       needs.check-file-change.outputs.coverage_src == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install toolchain
         run: rustup show

@@ -16,12 +16,6 @@ concurrency:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-    
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,7 +25,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
           fetch-depth: 0
@@ -39,7 +33,9 @@ jobs:
       - name: Run Claude Code Review
         if: |
           !contains(github.event.pull_request.title, '[skip-review]') &&
-          !contains(github.event.pull_request.title, '[WIP]')
+          !contains(github.event.pull_request.title, '[WIP]') &&
+          !endsWith(github.actor, '[bot]') &&
+          github.actor != 'dependabot'
         id: claude-review
         uses: anthropics/claude-code-action@beta
         with:
