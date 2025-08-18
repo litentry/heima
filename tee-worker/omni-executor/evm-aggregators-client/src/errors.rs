@@ -57,6 +57,12 @@ pub enum ClientError {
     #[error("Unsupported chain ID: {chain_id}")]
     UnsupportedChainId { chain_id: u64 },
 
+    #[error("Unsupported trade pool: {pool_name} for chain {chain_id}")]
+    UnsupportedTradePool { pool_name: String, chain_id: u64 },
+
+    #[error("Unsupported DEX: {dex_name} for trade pool {pool_name}")]
+    UnsupportedDex { dex_name: String, pool_name: String },
+
     #[error("Amount overflow or underflow")]
     AmountOverflow,
 

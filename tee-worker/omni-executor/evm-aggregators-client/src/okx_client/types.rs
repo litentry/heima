@@ -301,6 +301,16 @@ impl SwapRequestBuilder {
 		self
 	}
 
+	pub fn from_token_referrer_wallet_address(mut self, address: impl Into<String>) -> Self {
+		self.from_token_referrer_wallet_address = Some(address.into());
+		self
+	}
+
+	pub fn to_token_referrer_wallet_address(mut self, address: impl Into<String>) -> Self {
+		self.to_token_referrer_wallet_address = Some(address.into());
+		self
+	}
+
 	pub fn build(self) -> ClientResult<SwapRequest> {
 		let chain_id = self.chain_id
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "chain_id".to_string() })?;

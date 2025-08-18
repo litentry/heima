@@ -20,8 +20,9 @@ use crate::common::{
 	KYBER_SWAP_DEX_ID_MAP, NATIVE_ADDRESS, OKX_DEX_IDS_MAP, OKX_SWAP_APPROVE_ADDRESS,
 	SERVICE_FEE_BPS, SERVICE_FEE_PERCENT,
 };
+use crate::errors::{ClientError, ClientResult};
 use crate::inch_client::client::InchSwap;
-use crate::inch_client::types::{convert_slippage_to_inch, SwapRequest};
+use crate::inch_client::types::{convert_slippage_to_inch, SwapRequestBuilder};
 use crate::kyber_client::client::KyberSwap;
 use crate::okx_client::client::OkxSwap;
 use ethereum_rpc::RpcProvider;
@@ -29,8 +30,8 @@ use rust_decimal::prelude::{Decimal, ToPrimitive};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::kyber_client::types::GetSwapRouteRequest;
-use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level};
+use crate::kyber_client::types::{GetSwapRouteRequest, SwapRequestBuilder as KyberSwapRequestBuilder};
+use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level, SwapRequestBuilder as OkxSwapRequestBuilder};
 use alloy::primitives::Uint;
 use alloy::{
 	primitives::{Address, TxKind},
@@ -62,19 +63,19 @@ pub trait ConstructEvmTx: Send + Sync {
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
 		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()>;
+	) -> ClientResult<TransactionRequest>;
 	async fn construct_okx_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
 		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()>;
+	) -> ClientResult<TransactionRequest>;
 	async fn construct_kyber_tx(
 		&self,
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
 		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()>;
+	) -> ClientResult<TransactionRequest>;
 }
 
 #[async_trait]
@@ -91,47 +92,68 @@ where
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
 		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()> {
+	) -> ClientResult<TransactionRequest> {
 		let chain_id = create_market_tx.chain_id;
 
-		let mut swap_request = SwapRequest {
-			chain_id,
-			amount: amount_decimal.to_string(),
-			from_token_address: create_market_tx.in_token_ca.clone(),
-			to_token_address: create_market_tx.out_token_ca.clone(),
-			slippage: convert_slippage_to_inch(create_market_tx.slippage),
-			user_wallet_address: create_market_tx.user_wallet_address.clone(),
-			fee_percent: SERVICE_FEE_PERCENT.to_string(),
-			dex_ids: INCH_DEX_IDS_MAP[&chain_id][&create_market_tx.trade_pool_name].to_string(),
-			referrer: self.fee_receiver.clone(),
-			..Default::default()
+		// Safely access INCH_DEX_IDS_MAP to prevent panics
+		let chain_map = INCH_DEX_IDS_MAP.get(&chain_id)
+			.ok_or_else(|| ClientError::UnsupportedChainId { chain_id })?;
+		
+		let dex_id = chain_map.get(&create_market_tx.trade_pool_name)
+			.ok_or_else(|| ClientError::UnsupportedTradePool { 
+				pool_name: create_market_tx.trade_pool_name.clone(),
+				chain_id 
+			})?;
+
+		// Determine token addresses based on native token handling
+		let (from_token_address, to_token_address) = if is_native_token(create_market_tx.in_token_ca.as_bytes()) {
+			// Case 1: Selling native token (ETH → USDC)
+			(NATIVE_ADDRESS.to_string(), create_market_tx.out_token_ca.clone())
+		} else {
+			// Case 2: Buying native token (USDC → ETH)
+			(create_market_tx.in_token_ca.clone(), NATIVE_ADDRESS.to_string())
 		};
 
-		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
-			swap_request.from_token_address = NATIVE_ADDRESS.to_string();
-		} else {
-			swap_request.to_token_address = NATIVE_ADDRESS.to_string();
-		}
+		// Use SwapRequestBuilder with validation
+		let swap_request = SwapRequestBuilder::new()
+			.chain_id(chain_id)
+			.amount(amount_decimal.to_string())
+			.from_token_address(from_token_address)
+			.to_token_address(to_token_address)
+			.slippage(convert_slippage_to_inch(create_market_tx.slippage))
+			.user_wallet_address(create_market_tx.user_wallet_address.clone())
+			.fee_percent(SERVICE_FEE_PERCENT.to_string())
+			.referrer(self.fee_receiver.clone())
+			.dex_ids(dex_id.to_string())
+			.build()?;
 
 		let swap_response = self
 			.inch_client
 			.swap(chain_id, swap_request)
 			.await
-			.map_err(|e| error!("Failed to get swap response from 1inch due to: {:?}", e))?;
+			.map_err(|e| {
+				error!("Failed to get swap response from 1inch due to: {:?}", e);
+				ClientError::Network { message: format!("1inch API error: {}", e) }
+			})?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|_| {
-			error!("Failed to extract transaction details from swap response");
-		})?;
+		let (data, to, value, gas) = swap_response.get_transaction_data()
+			.map_err(|e| {
+				error!("Failed to extract transaction details from swap response: {:?}", e);
+				e
+			})?;
 
 		let gas_price = self
 			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
 			.await
-			.map_err(|_| {
-				error!("Failed to get gas gas price by level");
+			.map_err(|e| {
+				error!("Failed to get gas price by level: {:?}", e);
+				e
 			})?;
-		let gas_price = gas_price.to_u128().ok_or_else(|| {
-			error!("Failed to convert gas price to u128");
-		})?;
+		let gas_price = gas_price.to_u128()
+			.ok_or_else(|| {
+				error!("Failed to convert gas price to u128");
+				ClientError::GasCalculation { reason: "Gas price conversion overflow".to_string() }
+			})?;
 
 		let tx = TransactionRequest {
 			nonce: Some(nonce),
@@ -150,51 +172,78 @@ where
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
 		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()> {
+	) -> ClientResult<TransactionRequest> {
 		let chain_id = create_market_tx.chain_id;
 		let mut fee_bps = SERVICE_FEE_PERCENT.to_string();
 		if create_market_tx.is_pre_cross {
 			fee_bps = CROSS_SERVICE_FEE_PERCENT.to_string();
 		}
 
-		let mut swap_request = crate::okx_client::types::SwapRequest {
-			chain_id: chain_id.to_string(),
-			amount: amount_decimal.to_string(),
-			from_token_address: create_market_tx.in_token_ca.clone(),
-			to_token_address: create_market_tx.out_token_ca.clone(),
-			slippage: convert_slippage_to_okx(create_market_tx.slippage).to_string(),
-			user_wallet_address: create_market_tx.user_wallet_address,
-			fee_percent: fee_bps,
-			gas_level: get_okx_gas_level(create_market_tx.gas_type).to_string(),
-			dex_ids: OKX_DEX_IDS_MAP[&create_market_tx.trade_pool_name].to_string(),
-			..Default::default()
-		};
+		// Safely access OKX_DEX_IDS_MAP to prevent panics
+		let dex_id = OKX_DEX_IDS_MAP.get(&create_market_tx.trade_pool_name)
+			.ok_or_else(|| ClientError::UnsupportedDex { 
+				dex_name: "OKX".to_string(),
+				pool_name: create_market_tx.trade_pool_name.clone()
+			})?;
 
-		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
-			swap_request.from_token_referrer_wallet_address = self.fee_receiver.clone();
-			swap_request.from_token_address = NATIVE_ADDRESS.to_string();
-		} else {
-			swap_request.to_token_referrer_wallet_address = self.fee_receiver.clone();
-			swap_request.to_token_address = NATIVE_ADDRESS.to_string();
+		// Determine token addresses and referrer setup based on native token handling
+		let (from_token_address, to_token_address, from_referrer, to_referrer) = 
+			if is_native_token(create_market_tx.in_token_ca.as_bytes()) {
+				// Case 1: Selling native token (ETH → USDC)
+				(NATIVE_ADDRESS.to_string(), create_market_tx.out_token_ca.clone(), 
+				 Some(self.fee_receiver.clone()), None)
+			} else {
+				// Case 2: Buying native token (USDC → ETH)
+				(create_market_tx.in_token_ca.clone(), NATIVE_ADDRESS.to_string(), 
+				 None, Some(self.fee_receiver.clone()))
+			};
+
+		// Use OkxSwapRequestBuilder with validation
+		let mut builder = OkxSwapRequestBuilder::new()
+			.chain_id(chain_id.to_string())
+			.amount(amount_decimal.to_string())
+			.from_token_address(from_token_address)
+			.to_token_address(to_token_address)
+			.slippage(convert_slippage_to_okx(create_market_tx.slippage).to_string())
+			.user_wallet_address(create_market_tx.user_wallet_address)
+			.fee_percent(fee_bps)
+			.gas_level(get_okx_gas_level(create_market_tx.gas_type).to_string())
+			.dex_ids(dex_id.to_string());
+
+		// Set referrer addresses based on native token handling
+		if let Some(from_ref) = from_referrer {
+			builder = builder.from_token_referrer_wallet_address(from_ref);
+		}
+		if let Some(to_ref) = to_referrer {
+			builder = builder.to_token_referrer_wallet_address(to_ref);
 		}
 
-		let swap_response = self.okx_client.swap(swap_request).await.map_err(|_| {
-			error!("Failed to get swap response from okx");
-		})?;
+		let swap_request = builder.build()?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|_| {
-			error!("Failed to extract transaction details from swap response");
-		})?;
+		let swap_response = self.okx_client.swap(swap_request).await
+			.map_err(|e| {
+				error!("Failed to get swap response from OKX: {:?}", e);
+				ClientError::Network { message: format!("OKX API error: {}", e) }
+			})?;
+
+		let (data, to, value, gas) = swap_response.get_transaction_data()
+			.map_err(|e| {
+				error!("Failed to extract transaction details from swap response: {:?}", e);
+				e
+			})?;
 
 		let gas_price = self
 			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
 			.await
-			.map_err(|_| {
-				error!("Failed to get gas gas price by level");
+			.map_err(|e| {
+				error!("Failed to get gas price by level: {:?}", e);
+				e
 			})?;
-		let gas_price = gas_price.to_u128().ok_or_else(|| {
-			error!("Failed to convert gas price to u128");
-		})?;
+		let gas_price = gas_price.to_u128()
+			.ok_or_else(|| {
+				error!("Failed to convert gas price to u128");
+				ClientError::GasCalculation { reason: "Gas price conversion overflow".to_string() }
+			})?;
 
 		let tx = TransactionRequest {
 			nonce: Some(nonce),
@@ -213,12 +262,19 @@ where
 		create_market_tx: CreateMarketTx,
 		nonce: u64,
 		amount_decimal: Decimal,
-	) -> Result<TransactionRequest, ()> {
+	) -> ClientResult<TransactionRequest> {
 		let chain_id = create_market_tx.chain_id;
 		let mut fee_bps = SERVICE_FEE_BPS.to_string();
 		if create_market_tx.is_pre_cross {
 			fee_bps = CROSS_SERVICE_FEE_BPS.to_string();
 		}
+
+		// Safely access KYBER_SWAP_DEX_ID_MAP to prevent panics
+		let dex_id = KYBER_SWAP_DEX_ID_MAP.get(create_market_tx.trade_pool_name.as_str())
+			.ok_or_else(|| ClientError::UnsupportedDex { 
+				dex_name: "Kyber".to_string(),
+				pool_name: create_market_tx.trade_pool_name.clone()
+			})?;
 
 		let mut swap_route_request = GetSwapRouteRequest {
 			chain_id,
@@ -227,7 +283,7 @@ where
 			to_token_address: create_market_tx.out_token_ca.clone(),
 			fee_bps,
 			referrer: self.fee_receiver.clone(),
-			dex_ids: KYBER_SWAP_DEX_ID_MAP[create_market_tx.trade_pool_name.as_str()].to_string(),
+			dex_ids: dex_id.to_string(),
 			is_from_token_referrer: false,
 		};
 
@@ -238,7 +294,7 @@ where
 		// Two scenarios:
 		// 1. Selling native token (ETH → USDC): Use NATIVE_ADDRESS for from_token and collect fees from input
 		// 2. Buying native token (USDC → ETH): Use NATIVE_ADDRESS for to_token and collect fees from output
-		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
+		if is_native_token(create_market_tx.in_token_ca.as_bytes()) {
 			// Case 1: User is selling native token (e.g., ETH → USDC)
 			// Replace wrapped token address (e.g., WETH) with native marker
 			swap_route_request.from_token_address = NATIVE_ADDRESS.to_string();
@@ -256,44 +312,54 @@ where
 			.get_swap_route(chain_id, swap_route_request)
 			.await
 			.map_err(|e| {
-				error!("Failed to get swap route response from kyber: {}", e);
+				error!("Failed to get swap route response from Kyber: {}", e);
+				ClientError::Network { message: format!("Kyber route API error: {}", e) }
 			})?;
 
-		let swap_request = crate::kyber_client::types::SwapRequest {
-			route_summary: swap_route_response.route_summary,
-			sender: Some(create_market_tx.user_wallet_address.clone()),
-			recipient: Some(create_market_tx.user_wallet_address.clone()),
-			deadline: Some(
-				(std::time::SystemTime::now()
-					.duration_since(std::time::UNIX_EPOCH)
-					.map_err(|e| {
-					log::error!("System time error: {}", e);
-				})?
-					.as_secs() + 60) as i64,
-			),
-			slippage_bps: create_market_tx.slippage.to_i64(),
-			enable_gas_estimation: Some(true),
-			ignore_capped_slippage: Some(true),
-			..Default::default()
-		};
+		// Calculate deadline (current time + 60 seconds)
+		let deadline = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.map_err(|e| {
+				log::error!("System time error: {}", e);
+				ClientError::SystemTime { message: e.to_string() }
+			})?
+			.as_secs() + 60;
 
-		let swap_response = self.kyber_client.swap(chain_id, swap_request).await.map_err(|e| {
-			error!("Failed to get swap response from kyber: {}", e);
-		})?;
+		// Use KyberSwapRequestBuilder with validation
+		let swap_request = KyberSwapRequestBuilder::new()
+			.route_summary(swap_route_response.route_summary)
+			.sender(create_market_tx.user_wallet_address.clone())
+			.recipient(create_market_tx.user_wallet_address.clone())
+			.deadline(deadline as i64)
+			.slippage_bps(create_market_tx.slippage as i64)
+			.enable_gas_estimation(true)
+			.ignore_capped_slippage(true)
+			.build()?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data().map_err(|_| {
-			error!("Failed to extract transaction details from swap response");
-		})?;
+		let swap_response = self.kyber_client.swap(chain_id, swap_request).await
+			.map_err(|e| {
+				error!("Failed to get swap response from Kyber: {}", e);
+				ClientError::Network { message: format!("Kyber swap API error: {}", e) }
+			})?;
+
+		let (data, to, value, gas) = swap_response.get_transaction_data()
+			.map_err(|e| {
+				error!("Failed to extract transaction details from swap response: {:?}", e);
+				e
+			})?;
 
 		let gas_price = self
 			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
 			.await
-			.map_err(|_| {
-				error!("Failed to get gas gas price by level");
+			.map_err(|e| {
+				error!("Failed to get gas price by level: {:?}", e);
+				e
 			})?;
-		let gas_price = gas_price.to_u128().ok_or_else(|| {
-			error!("Failed to convert gas price to u128");
-		})?;
+		let gas_price = gas_price.to_u128()
+			.ok_or_else(|| {
+				error!("Failed to convert gas price to u128");
+				ClientError::GasCalculation { reason: "Gas price conversion overflow".to_string() }
+			})?;
 
 		let tx = TransactionRequest {
 			nonce: Some(nonce),
@@ -317,23 +383,35 @@ where
 	KyberClient: KyberSwap + ?Sized,
 	OkxClient: OkxSwap + ?Sized,
 {
-	pub async fn get_gas_price_by_level(&self, chain_id: u64, level: i32) -> Result<Decimal, ()> {
+	pub async fn get_gas_price_by_level(&self, chain_id: u64, level: i32) -> ClientResult<Decimal> {
 		let gas_price = self
 			.okx_client
 			.get_gas_price(chain_id)
 			.await
-			.map_err(|e| error!("Failed to get price by level due to: {:?}", e))?;
+			.map_err(|e| {
+				error!("Failed to get gas price due to: {:?}", e);
+				ClientError::Network { message: format!("OKX gas price API error: {}", e) }
+			})?;
 
 		match level {
 			1_i32 => Decimal::from_str(&gas_price.min)
-				.map_err(|_| error!("Failed to get price by level")),
+				.map_err(|e| {
+					error!("Failed to parse min gas price: {}", e);
+					ClientError::InvalidDecimal { value: gas_price.min.clone() }
+				}),
 			2_i32 => Decimal::from_str(&gas_price.normal)
-				.map_err(|_| error!("Failed to get price by level")),
+				.map_err(|e| {
+					error!("Failed to parse normal gas price: {}", e);
+					ClientError::InvalidDecimal { value: gas_price.normal.clone() }
+				}),
 			3_i32 => Decimal::from_str(&gas_price.max)
-				.map_err(|_| error!("Failed to get price by level")),
+				.map_err(|e| {
+					error!("Failed to parse max gas price: {}", e);
+					ClientError::InvalidDecimal { value: gas_price.max.clone() }
+				}),
 			_ => {
-				error!("Level {} not found", level);
-				Err(())
+				error!("Invalid gas level: {}", level);
+				Err(ClientError::InvalidGasLevel { level: level.to_string() })
 			},
 		}
 	}
