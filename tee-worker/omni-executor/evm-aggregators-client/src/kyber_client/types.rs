@@ -14,16 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::common::GAS_LIMIT;
 use alloy::primitives::{Address, U256};
-use hex::FromHex;
-use log::error;
-use rust_decimal::prelude::ToPrimitive;
-use rust_decimal::Decimal;
+use crate::errors::{ClientError, ClientResult};
+use crate::transaction_extractor::{TransactionDataExtractor, TransactionGas, extract_transaction_data};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::ops::Mul;
-use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BasicResp {
@@ -170,30 +165,27 @@ pub struct SwapResponse {
 	pub transaction_value: String,
 }
 
+impl TransactionDataExtractor for SwapResponse {
+	fn get_data(&self) -> &str {
+		&self.data
+	}
+
+	fn get_value(&self) -> &str {
+		&self.transaction_value
+	}
+
+	fn get_to_address(&self) -> &str {
+		&self.router_address
+	}
+
+	fn get_gas(&self) -> TransactionGas {
+		TransactionGas::AsString(self.gas.clone())
+	}
+}
+
 impl SwapResponse {
-	pub fn get_transaction_data(self) -> Result<(Vec<u8>, Address, U256, u64), ()> {
-		let data = hex::decode(&self.data).map_err(|e| {
-			error!("Failed to decode transaction data: {}", e);
-		})?;
-		let value: U256 = U256::from_str(&self.transaction_value).map_err(|e| {
-			error!("Failed to deserialize to u256: {}", e);
-		})?;
-		let to = Address::from_hex(&self.router_address)
-			.map_err(|e| error!("Failed to decode hex to address: {}", e))?;
-
-		let gas = Decimal::from_str(&self.gas).map_err(|e| {
-			error!("Failed to deserialize to decimal: {}", e);
-		})?;
-
-		let adjusted_gas = gas.mul(Decimal::new(1, 5)).to_u64().ok_or_else(|| {
-			error!("Failed to convert gas to u128: {}", self.gas);
-		})?;
-		let mut final_gas = adjusted_gas;
-		if final_gas > *GAS_LIMIT {
-			final_gas = *GAS_LIMIT;
-		}
-
-		Ok((data, to, value, final_gas))
+	pub fn get_transaction_data(self) -> ClientResult<(Vec<u8>, Address, U256, u64)> {
+		extract_transaction_data(self)
 	}
 }
 
@@ -202,4 +194,81 @@ pub struct OutputChange {
 	pub amount: String,
 	pub percent: i32,
 	pub level: i32,
+}
+
+pub struct SwapRequestBuilder {
+	route_summary: Option<RouteSummary>,
+	sender: Option<String>,
+	recipient: Option<String>,
+	deadline: Option<i64>,
+	slippage_bps: Option<i64>,
+	enable_gas_estimation: Option<bool>,
+	ignore_capped_slippage: Option<bool>,
+}
+
+impl SwapRequestBuilder {
+	pub fn new() -> Self {
+		Self {
+			route_summary: None,
+			sender: None,
+			recipient: None,
+			deadline: None,
+			slippage_bps: None,
+			enable_gas_estimation: None,
+			ignore_capped_slippage: None,
+		}
+	}
+
+	pub fn route_summary(mut self, route_summary: RouteSummary) -> Self {
+		self.route_summary = Some(route_summary);
+		self
+	}
+
+	pub fn sender(mut self, sender: impl Into<String>) -> Self {
+		self.sender = Some(sender.into());
+		self
+	}
+
+	pub fn recipient(mut self, recipient: impl Into<String>) -> Self {
+		self.recipient = Some(recipient.into());
+		self
+	}
+
+	pub fn deadline(mut self, deadline: i64) -> Self {
+		self.deadline = Some(deadline);
+		self
+	}
+
+	pub fn slippage_bps(mut self, slippage_bps: i64) -> Self {
+		self.slippage_bps = Some(slippage_bps);
+		self
+	}
+
+	pub fn enable_gas_estimation(mut self, enable: bool) -> Self {
+		self.enable_gas_estimation = Some(enable);
+		self
+	}
+
+	pub fn ignore_capped_slippage(mut self, ignore: bool) -> Self {
+		self.ignore_capped_slippage = Some(ignore);
+		self
+	}
+
+	pub fn build(self) -> ClientResult<SwapRequest> {
+		let route_summary = self.route_summary
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "route_summary".to_string() })?;
+
+		Ok(SwapRequest {
+			route_summary,
+			sender: self.sender,
+			recipient: self.recipient,
+			deadline: self.deadline,
+			slippage_bps: self.slippage_bps,
+			referral: None,
+			source: None,
+			enable_gas_estimation: self.enable_gas_estimation,
+			permit: None,
+			ignore_capped_slippage: self.ignore_capped_slippage,
+		})
+	}
 }

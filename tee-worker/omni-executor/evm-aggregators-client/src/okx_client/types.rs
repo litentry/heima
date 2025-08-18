@@ -14,14 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::common::GAS_LIMIT;
 use alloy::primitives::{Address, U256};
-use hex::FromHex;
-use log::error;
-use rust_decimal::prelude::{Decimal, ToPrimitive};
+use crate::errors::{ClientError, ClientResult};
+use crate::transaction_extractor::{TransactionDataExtractor, TransactionGas, extract_transaction_data};
+use rust_decimal::prelude::Decimal;
 use serde::{Deserialize, Serialize};
-use std::ops::Mul;
-use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SwapRequest {
@@ -85,30 +82,27 @@ pub struct SwapResponse {
 	pub tx: Tx,
 }
 
+impl TransactionDataExtractor for SwapResponse {
+	fn get_data(&self) -> &str {
+		&self.tx.data
+	}
+
+	fn get_value(&self) -> &str {
+		&self.tx.value
+	}
+
+	fn get_to_address(&self) -> &str {
+		&self.tx.to
+	}
+
+	fn get_gas(&self) -> TransactionGas {
+		TransactionGas::AsString(self.tx.gas.clone())
+	}
+}
+
 impl SwapResponse {
-	pub fn get_transaction_data(self) -> Result<(Vec<u8>, Address, U256, u64), ()> {
-		let data = hex::decode(&self.tx.data).map_err(|e| {
-			error!("Failed to decode transaction data: {}", e);
-		})?;
-		let value: U256 = U256::from_str(&self.tx.value).map_err(|e| {
-			error!("Failed to deserialize to u256: {}", e);
-		})?;
-		let to = Address::from_hex(&self.tx.to)
-			.map_err(|e| error!("Failed to decode hex to address: {}", e))?;
-
-		let gas = Decimal::from_str(&self.tx.gas).map_err(|e| {
-			error!("Failed to deserialize to decimal: {}", e);
-		})?;
-
-		let adjusted_gas = gas.mul(Decimal::new(1, 5)).to_u64().ok_or_else(|| {
-			error!("Failed to convert gas to u128");
-		})?;
-		let mut final_gas = adjusted_gas;
-		if final_gas > *GAS_LIMIT {
-			final_gas = *GAS_LIMIT;
-		}
-
-		Ok((data, to, value, final_gas))
+	pub fn get_transaction_data(self) -> ClientResult<(Vec<u8>, Address, U256, u64)> {
+		extract_transaction_data(self)
 	}
 }
 
@@ -209,7 +203,9 @@ pub struct Erc1599Protocol {
 pub fn convert_slippage_to_okx(slippage: u32) -> String {
 	let slippage_decimal = Decimal::from(slippage);
 	let all_bp_decimal = Decimal::from(10000u32);
-	(slippage_decimal / all_bp_decimal).to_string()
+	slippage_decimal.checked_div(all_bp_decimal)
+		.unwrap_or(Decimal::ZERO)
+		.to_string()
 }
 
 /// Maps an integer gas_type to OKX gas level string.
@@ -219,5 +215,127 @@ pub fn get_okx_gas_level(gas_type: i32) -> &'static str {
 		2 => "average",
 		3 => "fast",
 		_ => "average",
+	}
+}
+
+pub struct SwapRequestBuilder {
+	chain_id: Option<String>,
+	amount: Option<String>,
+	from_token_address: Option<String>,
+	to_token_address: Option<String>,
+	slippage: Option<String>,
+	user_wallet_address: Option<String>,
+	fee_percent: Option<String>,
+	from_token_referrer_wallet_address: Option<String>,
+	to_token_referrer_wallet_address: Option<String>,
+	gas_level: Option<String>,
+	dex_ids: Option<String>,
+	auto_slippage: Option<bool>,
+}
+
+impl SwapRequestBuilder {
+	pub fn new() -> Self {
+		Self {
+			chain_id: None,
+			amount: None,
+			from_token_address: None,
+			to_token_address: None,
+			slippage: None,
+			user_wallet_address: None,
+			fee_percent: None,
+			from_token_referrer_wallet_address: None,
+			to_token_referrer_wallet_address: None,
+			gas_level: None,
+			dex_ids: None,
+			auto_slippage: None,
+		}
+	}
+
+	pub fn chain_id(mut self, chain_id: impl Into<String>) -> Self {
+		self.chain_id = Some(chain_id.into());
+		self
+	}
+
+	pub fn amount(mut self, amount: impl Into<String>) -> Self {
+		self.amount = Some(amount.into());
+		self
+	}
+
+	pub fn from_token_address(mut self, address: impl Into<String>) -> Self {
+		self.from_token_address = Some(address.into());
+		self
+	}
+
+	pub fn to_token_address(mut self, address: impl Into<String>) -> Self {
+		self.to_token_address = Some(address.into());
+		self
+	}
+
+	pub fn slippage(mut self, slippage: impl Into<String>) -> Self {
+		self.slippage = Some(slippage.into());
+		self
+	}
+
+	pub fn user_wallet_address(mut self, address: impl Into<String>) -> Self {
+		self.user_wallet_address = Some(address.into());
+		self
+	}
+
+	pub fn fee_percent(mut self, fee: impl Into<String>) -> Self {
+		self.fee_percent = Some(fee.into());
+		self
+	}
+
+	pub fn gas_level(mut self, level: impl Into<String>) -> Self {
+		self.gas_level = Some(level.into());
+		self
+	}
+
+	pub fn dex_ids(mut self, ids: impl Into<String>) -> Self {
+		self.dex_ids = Some(ids.into());
+		self
+	}
+
+	pub fn auto_slippage(mut self, auto: bool) -> Self {
+		self.auto_slippage = Some(auto);
+		self
+	}
+
+	pub fn build(self) -> ClientResult<SwapRequest> {
+		let chain_id = self.chain_id
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "chain_id".to_string() })?;
+		
+		let amount = self.amount
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "amount".to_string() })?;
+		
+		let from_token_address = self.from_token_address
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "from_token_address".to_string() })?;
+		
+		let to_token_address = self.to_token_address
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "to_token_address".to_string() })?;
+		
+		let slippage = self.slippage
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "slippage".to_string() })?;
+		
+		let user_wallet_address = self.user_wallet_address
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "user_wallet_address".to_string() })?;
+		
+		let fee_percent = self.fee_percent
+			.ok_or_else(|| ClientError::MissingRequiredField { field: "fee_percent".to_string() })?;
+
+		Ok(SwapRequest {
+			chain_id,
+			amount,
+			from_token_address,
+			to_token_address,
+			slippage,
+			user_wallet_address,
+			fee_percent,
+			from_token_referrer_wallet_address: self.from_token_referrer_wallet_address.unwrap_or_default(),
+			to_token_referrer_wallet_address: self.to_token_referrer_wallet_address.unwrap_or_default(),
+			gas_level: self.gas_level.unwrap_or_default(),
+			dex_ids: self.dex_ids.unwrap_or_default(),
+			auto_slippage: self.auto_slippage.unwrap_or(false),
+		})
 	}
 }

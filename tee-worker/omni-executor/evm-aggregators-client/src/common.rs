@@ -19,36 +19,51 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub const WRAPPED_MAINNET_ETH: &[u8] = b"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-pub const WRAPPPED_BASE_ETH: &[u8] = b"0x4200000000000000000000000000000000000006";
-pub const GOERLI_WETH: &[u8] = b"0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6";
-pub const WRAPPED_BNB: &[u8] = b"0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
-pub const NATIVE_TOKEN: &[u8] = b"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-
+// ================================
+// Token Addresses
+// ================================
+pub const WRAPPED_MAINNET_ETH: &str = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+pub const WRAPPED_BASE_ETH: &str = "0x4200000000000000000000000000000000000006";
+pub const GOERLI_WETH: &str = "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6";
+pub const WRAPPED_BNB: &str = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+pub const NATIVE_TOKEN: &str = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 pub const NATIVE_ADDRESS: &str = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
+// ================================
+// Fee Configuration
+// ================================
 pub const SERVICE_FEE_PERCENT: &str = "1";
 pub const CROSS_SERVICE_FEE_PERCENT: &str = "1.1";
 pub const SERVICE_FEE_BPS: &str = "100";
 pub const CROSS_SERVICE_FEE_BPS: &str = "110";
 
+// ================================
+// DEX Approve Addresses
+// ================================
 pub const KYBER_SWAP_APPROVE_ADDRESS: &str = "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5";
 pub const INCH_SWAP_APPROVE_ADDRESS: &str = "0x111111125421cA6dc452d289314280a0f8842A65";
 pub const OKX_SWAP_APPROVE_ADDRESS: &str = "0x2c34A2Fb1d0b4f55de51E1d0bDEfaDDce6b7cDD6";
 
+// ================================
+// Gas and Token Configuration
+// ================================
+pub const GAS_LIMIT: u64 = 450_000;
+
 lazy_static! {
-	pub static ref GAS_LIMIT: u64 = 450_000u64;
 	pub static ref GWEI_DECIMAL: Decimal = Decimal::from(1_000_000_000u64);
 	pub static ref WEI_DECIMAL: Decimal = Decimal::from(1_000_000_000_000_000_000u128);
 }
 
+// ================================
+// DEX ID Mappings
+// ================================
 lazy_static! {
-	pub static ref KYBER_SWAP_DEX_ID_MAP: HashMap<String, String> = {
+	pub static ref KYBER_SWAP_DEX_ID_MAP: HashMap<&'static str, &'static str> = {
 		let mut map = HashMap::new();
-		map.insert(SWAP_NAME_UNIV2.to_string(), "uniswap".to_string());
-		map.insert(SWAP_NAME_UNIV3.to_string(), "uniswapv3".to_string());
-		map.insert(SWAP_NAME_PANCAKE_V2.to_string(), "pancake".to_string());
-		map.insert(SWAP_NAME_PANCAKE_V3.to_string(), "pancake-v3".to_string());
+		map.insert(SWAP_NAME_UNIV2, "uniswap");
+		map.insert(SWAP_NAME_UNIV3, "uniswapv3");
+		map.insert(SWAP_NAME_PANCAKE_V2, "pancake");
+		map.insert(SWAP_NAME_PANCAKE_V3, "pancake-v3");
 		map
 	};
 	pub static ref INCH_DEX_IDS_MAP: HashMap<u64, HashMap<String, String>> = {
@@ -137,13 +152,10 @@ pub struct CreateMarketTx {
 }
 
 pub fn is_native_token(token: &[u8]) -> bool {
-	if token == WRAPPED_MAINNET_ETH
-		|| token == WRAPPED_BNB
-		|| token == WRAPPPED_BASE_ETH
-		|| token == GOERLI_WETH
-		|| token == NATIVE_TOKEN
-	{
-		return true;
-	}
-	false
+	let token_str = String::from_utf8_lossy(token);
+	token_str == WRAPPED_MAINNET_ETH
+		|| token_str == WRAPPED_BNB
+		|| token_str == WRAPPED_BASE_ETH
+		|| token_str == GOERLI_WETH
+		|| token_str == NATIVE_TOKEN
 }

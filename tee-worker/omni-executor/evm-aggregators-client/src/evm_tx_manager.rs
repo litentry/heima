@@ -158,7 +158,7 @@ where
 		}
 
 		let mut swap_request = crate::okx_client::types::SwapRequest {
-			chain_id: chain_id.clone().to_string(),
+			chain_id: chain_id.to_string(),
 			amount: amount_decimal.to_string(),
 			from_token_address: create_market_tx.in_token_ca.clone(),
 			to_token_address: create_market_tx.out_token_ca.clone(),
@@ -227,15 +227,28 @@ where
 			to_token_address: create_market_tx.out_token_ca.clone(),
 			fee_bps,
 			referrer: self.fee_receiver.clone(),
-			dex_ids: KYBER_SWAP_DEX_ID_MAP[&create_market_tx.trade_pool_name].to_string(),
+			dex_ids: KYBER_SWAP_DEX_ID_MAP[create_market_tx.trade_pool_name.as_str()].to_string(),
 			is_from_token_referrer: false,
 		};
 
+		// Handle native token swaps: Native tokens (ETH, BNB, MATIC) require special handling
+		// because they are not ERC-20 contracts and need to be represented using the special
+		// NATIVE_ADDRESS marker (0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee) for DEX APIs.
+		//
+		// Two scenarios:
+		// 1. Selling native token (ETH → USDC): Use NATIVE_ADDRESS for from_token and collect fees from input
+		// 2. Buying native token (USDC → ETH): Use NATIVE_ADDRESS for to_token and collect fees from output
 		if is_native_token(&create_market_tx.in_token_ca.into_bytes()) {
+			// Case 1: User is selling native token (e.g., ETH → USDC)
+			// Replace wrapped token address (e.g., WETH) with native marker
 			swap_route_request.from_token_address = NATIVE_ADDRESS.to_string();
+			// Set fee collection from the native token being sold (more gas efficient)
 			swap_route_request.is_from_token_referrer = true;
 		} else {
+			// Case 2: User is buying native token (e.g., USDC → ETH)  
+			// Set the output token to use the native marker
 			swap_route_request.to_token_address = NATIVE_ADDRESS.to_string();
+			// Keep default fee collection behavior (from output token)
 		}
 
 		let swap_route_response = self
@@ -253,7 +266,9 @@ where
 			deadline: Some(
 				(std::time::SystemTime::now()
 					.duration_since(std::time::UNIX_EPOCH)
-					.expect("Time went backwards")
+					.map_err(|e| {
+					log::error!("System time error: {}", e);
+				})?
 					.as_secs() + 60) as i64,
 			),
 			slippage_bps: create_market_tx.slippage.to_i64(),
@@ -337,12 +352,15 @@ where
 		&self,
 		tx: CreateMarketTx,
 	) -> Result<Vec<TransactionRequest>, ()> {
-		let amount_decimal = Decimal::from_str(&tx.amount_in).unwrap();
+		let amount_decimal = Decimal::from_str(&tx.amount_in).map_err(|e| {
+			log::error!("Failed to parse amount '{}': {}", tx.amount_in, e);
+		})?;
 		let multiplier = DECIMALS_TO_VALUE.get(&tx.in_decimal).cloned().unwrap_or(1);
 		let amount_decimal = amount_decimal * Decimal::from(multiplier);
 
-		let from = Address::from_hex(&tx.user_wallet_address)
-			.map_err(|e| error!("Failed to convert user wallet to address: {}", e))?;
+		let from = Address::from_hex(&tx.user_wallet_address).map_err(|e| {
+			log::error!("Failed to parse user wallet address '{}': {}", tx.user_wallet_address, e);
+		})?;
 
 		let mut balance = self.eth_client.get_balance(from).await.map_err(|_| {
 			error!("Couldn't get balance");
@@ -352,7 +370,7 @@ where
 			error!("Couldn't get pending nonce");
 		})?;
 
-		let is_buy = is_native_token(&tx.in_token_ca.clone().into_bytes());
+		let is_buy = is_native_token(tx.in_token_ca.as_bytes());
 		let platform = Platform::KyberSwap;
 
 		let amount_u128 = amount_decimal.to_u128().ok_or_else(|| {
@@ -390,7 +408,9 @@ where
 				.construct_approve_erc20_tx(
 					approve_addr,
 					amount,
-					Address::from_hex(tx.in_token_ca.clone()).unwrap(),
+					Address::from_hex(&tx.in_token_ca).map_err(|e| {
+						log::error!("Failed to parse token address '{}': {}", tx.in_token_ca, e);
+					})?,
 					nonce,
 				)
 				.await
@@ -456,4 +476,180 @@ pub enum Platform {
 	Inch,
 	Okx,
 	KyberSwap,
+}
+
+/// Helper function to create the native token swap route request logic.
+/// This function encapsulates the native token handling logic for testing purposes.
+/// 
+/// # Arguments
+/// * `in_token_ca` - Input token contract address
+/// * `base_request` - Base swap route request to modify
+/// 
+/// # Returns
+/// Modified swap route request with proper native token handling
+pub fn configure_native_token_swap(
+	in_token_ca: &str,
+	mut base_request: GetSwapRouteRequest,
+) -> GetSwapRouteRequest {
+	if is_native_token(in_token_ca.as_bytes()) {
+		// Case 1: User is selling native token (e.g., ETH → USDC)
+		base_request.from_token_address = NATIVE_ADDRESS.to_string();
+		base_request.is_from_token_referrer = true;
+	} else {
+		// Case 2: User is buying native token (e.g., USDC → ETH)
+		base_request.to_token_address = NATIVE_ADDRESS.to_string();
+	}
+	base_request
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn create_test_swap_route_request() -> GetSwapRouteRequest {
+		GetSwapRouteRequest {
+			chain_id: 1,
+			amount: "1000000000000000000".to_string(), // 1 ETH in wei
+			from_token_address: "".to_string(), // Will be set by test
+			to_token_address: "".to_string(),   // Will be set by test
+			fee_bps: "100".to_string(),
+			referrer: "0x742d35Cc6641b4Fc7b05cC38f69Cc8D7C2B6B444".to_string(),
+			dex_ids: "uniswap".to_string(),
+			is_from_token_referrer: false,
+		}
+	}
+
+	#[test]
+	fn test_native_token_swap_selling_eth() {
+		// Test Case 1: Selling ETH for USDC (ETH → USDC)
+		let weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH on Ethereum
+		let usdc_address = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
+		
+		let mut base_request = create_test_swap_route_request();
+		base_request.from_token_address = weth_address.to_string();
+		base_request.to_token_address = usdc_address.to_string();
+		
+		let result = configure_native_token_swap(weth_address, base_request);
+		
+		// Assertions for selling native token
+		assert_eq!(result.from_token_address, NATIVE_ADDRESS, 
+			"When selling native token, from_token_address should be NATIVE_ADDRESS");
+		assert_eq!(result.to_token_address, usdc_address,
+			"When selling native token, to_token_address should remain unchanged");
+		assert_eq!(result.is_from_token_referrer, true,
+			"When selling native token, fees should be collected from input token");
+	}
+
+	#[test]
+	fn test_native_token_swap_buying_eth() {
+		// Test Case 2: Buying ETH with USDC (USDC → ETH)
+		let usdc_address = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
+		let weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH on Ethereum
+		
+		let mut base_request = create_test_swap_route_request();
+		base_request.from_token_address = usdc_address.to_string();
+		base_request.to_token_address = weth_address.to_string();
+		
+		let result = configure_native_token_swap(usdc_address, base_request);
+		
+		// Assertions for buying native token
+		assert_eq!(result.from_token_address, usdc_address,
+			"When buying native token, from_token_address should remain unchanged");
+		assert_eq!(result.to_token_address, NATIVE_ADDRESS,
+			"When buying native token, to_token_address should be NATIVE_ADDRESS");
+		assert_eq!(result.is_from_token_referrer, false,
+			"When buying native token, fees should be collected from output token");
+	}
+
+	#[test]
+	fn test_native_token_swap_bsc_selling_bnb() {
+		// Test BSC: Selling BNB for BUSD (BNB → BUSD)
+		let wbnb_address = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"; // WBNB on BSC
+		let busd_address = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"; // BUSD
+		
+		let mut base_request = create_test_swap_route_request();
+		base_request.chain_id = 56; // BSC chain ID
+		base_request.from_token_address = wbnb_address.to_string();
+		base_request.to_token_address = busd_address.to_string();
+		
+		let result = configure_native_token_swap(wbnb_address, base_request);
+		
+		// Assertions for BSC native token
+		assert_eq!(result.from_token_address, NATIVE_ADDRESS,
+			"When selling BNB, from_token_address should be NATIVE_ADDRESS");
+		assert_eq!(result.to_token_address, busd_address,
+			"When selling BNB, to_token_address should remain unchanged");
+		assert_eq!(result.is_from_token_referrer, true,
+			"When selling BNB, fees should be collected from input token");
+	}
+
+	#[test]
+	fn test_native_token_swap_base_chain() {
+		// Test Base Chain: Selling ETH for USDC (ETH → USDC)
+		let base_weth = "0x4200000000000000000000000000000000000006"; // WETH on Base
+		let base_usdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
+		
+		let mut base_request = create_test_swap_route_request();
+		base_request.chain_id = 8453; // Base chain ID
+		base_request.from_token_address = base_weth.to_string();
+		base_request.to_token_address = base_usdc.to_string();
+		
+		let result = configure_native_token_swap(base_weth, base_request);
+		
+		// Assertions for Base chain native token
+		assert_eq!(result.from_token_address, NATIVE_ADDRESS,
+			"When selling ETH on Base, from_token_address should be NATIVE_ADDRESS");
+		assert_eq!(result.to_token_address, base_usdc,
+			"When selling ETH on Base, to_token_address should remain unchanged");
+		assert_eq!(result.is_from_token_referrer, true,
+			"When selling ETH on Base, fees should be collected from input token");
+	}
+
+	#[test] 
+	fn test_erc20_to_erc20_swap() {
+		// Test ERC-20 to ERC-20 swap (no native tokens involved)
+		let usdc_address = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
+		let usdt_address = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // USDT
+		
+		let mut base_request = create_test_swap_route_request();
+		base_request.from_token_address = usdc_address.to_string();
+		base_request.to_token_address = usdt_address.to_string();
+		
+		let result = configure_native_token_swap(usdc_address, base_request);
+		
+		// When no native tokens are involved, only to_token should be set to NATIVE_ADDRESS
+		// This is because the function assumes at least one token must be native
+		assert_eq!(result.from_token_address, usdc_address,
+			"For ERC-20 to ERC-20, from_token_address should remain unchanged");
+		assert_eq!(result.to_token_address, NATIVE_ADDRESS,
+			"For ERC-20 to ERC-20, to_token_address gets set to NATIVE_ADDRESS (function assumption)");
+		assert_eq!(result.is_from_token_referrer, false,
+			"For ERC-20 to ERC-20, should use default fee collection");
+	}
+
+	#[test]
+	fn test_native_token_detection_edge_cases() {
+		// Test with various native token formats
+		let native_token_variants = vec![
+			"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // NATIVE_TOKEN constant
+			"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+			"0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB  
+			"0x4200000000000000000000000000000000000006", // Base WETH
+		];
+		
+		let non_native_token = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
+		
+		for native_variant in native_token_variants {
+			let mut base_request = create_test_swap_route_request();
+			base_request.from_token_address = native_variant.to_string();
+			base_request.to_token_address = non_native_token.to_string();
+			
+			let result = configure_native_token_swap(native_variant, base_request);
+			
+			assert_eq!(result.from_token_address, NATIVE_ADDRESS,
+				"Native token variant {} should be converted to NATIVE_ADDRESS", native_variant);
+			assert_eq!(result.is_from_token_referrer, true,
+				"Native token variant {} should set is_from_token_referrer to true", native_variant);
+		}
+	}
 }
