@@ -88,17 +88,17 @@ impl OkxSwap for OkxClient {
 			.send()
 			.await
 			.map_err(|e| {
-				error!("Failed to send add_wallet request: {:?}", e);
+				error!("Failed to send get_gas_price request: {:?}", e);
 				e
 			})?;
 
 		let status = response.status();
 		let response = response.error_for_status().map_err(|e| {
-			error!("okx_swap request failed with status: {}, error: {:?}", status, e);
+			error!("okx_get_gas_price request failed with status: {}, error: {:?}", status, e);
 			e
 		})?;
 		response.json().await.map_err(|e| {
-			error!("Failed to parse 1inch swap response: {:?}", e);
+			error!("Failed to parse okx gas price response: {:?}", e);
 			e
 		})
 	}
