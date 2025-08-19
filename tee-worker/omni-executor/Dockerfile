@@ -45,6 +45,9 @@ CMD ["$BIN_DIR/executor-worker"]
 ##################################################
 FROM gramineproject/gramine:stable-jammy AS sgx-builder
 
+ARG WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV WILDMETA_BACKEND_ECDSA_PUBKEY=$WILDMETA_BACKEND_ECDSA_PUBKEY
+
 RUN apt-get update
 
 RUN apt-get install -y \

@@ -118,6 +118,7 @@ mod test {
 			signer_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
+			[0u8; 33], // Test ECDSA public key
 			Arc::new(ethereum_intent_executor),
 			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
