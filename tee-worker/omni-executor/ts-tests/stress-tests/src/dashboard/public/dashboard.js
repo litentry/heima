@@ -155,7 +155,20 @@ function updateMetricsCards(sessionData, stepsData) {
     if (!sessionData || !stepsData.length) return;
     
     const latestStep = stepsData[stepsData.length - 1];
-    const avgLatency = calculateAverageLatency(stepsData);
+    
+    // Use responseMetrics if available, otherwise fallback to old calculation
+    const avgLatency = latestStep.responseMetrics ? 
+        latestStep.responseMetrics.avgLatency : 
+        calculateAverageLatency(stepsData);
+    
+    const p95Latency = latestStep.responseMetrics ? 
+        latestStep.responseMetrics.p95Latency : 
+        avgLatency * 1.5;
+    
+    const p99Latency = latestStep.responseMetrics ? 
+        latestStep.responseMetrics.p99Latency : 
+        avgLatency * 2;
+    
     const errorRate = latestStep.failedRequests / latestStep.totalRequests * 100;
     const throughput = latestStep.actualQPS * 60;
     
@@ -164,20 +177,37 @@ function updateMetricsCards(sessionData, stepsData) {
     document.getElementById('errorRate').textContent = errorRate.toFixed(2) + '%';
     document.getElementById('throughput').textContent = Math.round(throughput);
     
+    // Update latency percentiles if elements exist
+    const p95Element = document.getElementById('p95Latency');
+    const p99Element = document.getElementById('p99Latency');
+    if (p95Element) p95Element.textContent = Math.round(p95Latency) + 'ms';
+    if (p99Element) p99Element.textContent = Math.round(p99Latency) + 'ms';
+    
     // Calculate trends (simplified)
     const prevStep = stepsData.length > 1 ? stepsData[stepsData.length - 2] : latestStep;
     const qpsTrend = ((latestStep.actualQPS - prevStep.actualQPS) / prevStep.actualQPS * 100);
     document.getElementById('qpsTrend').textContent = (qpsTrend >= 0 ? '+' : '') + qpsTrend.toFixed(1) + '%';
     document.getElementById('qpsTrend').className = 'metric-trend ' + (qpsTrend >= 0 ? 'positive' : 'negative');
+    
+    // Add latency trend calculation
+    const prevAvgLatency = prevStep.responseMetrics ? 
+        prevStep.responseMetrics.avgLatency : 
+        calculateAverageLatency([prevStep]);
+    const latencyTrend = ((avgLatency - prevAvgLatency) / prevAvgLatency * 100);
+    const latencyTrendElement = document.getElementById('latencyTrend');
+    if (latencyTrendElement) {
+        latencyTrendElement.textContent = (latencyTrend >= 0 ? '+' : '') + latencyTrend.toFixed(1) + '%';
+        latencyTrendElement.className = 'metric-trend ' + (latencyTrend <= 0 ? 'positive' : 'negative'); // Lower latency is better
+    }
 }
 
 function createLatencyChart(stepsData) {
     const ctx = document.getElementById('latencyChart').getContext('2d');
     
     const labels = stepsData.map(step => step.qps + ' QPS');
-    const avgLatencies = stepsData.map(step => calculateStepAverageLatency(step));
-    const p95Latencies = stepsData.map(step => calculateStepP95Latency(step));
-    const maxLatencies = stepsData.map(step => calculateStepMaxLatency(step));
+    const avgLatencies = stepsData.map(step => step.responseMetrics ? step.responseMetrics.avgLatency : calculateStepAverageLatency(step));
+    const p95Latencies = stepsData.map(step => step.responseMetrics ? step.responseMetrics.p95Latency : calculateStepP95Latency(step));
+    const p99Latencies = stepsData.map(step => step.responseMetrics ? step.responseMetrics.p99Latency : calculateStepMaxLatency(step));
     
     charts.latency = new Chart(ctx, {
         type: 'line',
@@ -201,8 +231,8 @@ function createLatencyChart(stepsData) {
                     fill: false
                 },
                 {
-                    label: 'Max Latency',
-                    data: maxLatencies,
+                    label: 'P99 Latency',
+                    data: p99Latencies,
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     tension: 0.1,

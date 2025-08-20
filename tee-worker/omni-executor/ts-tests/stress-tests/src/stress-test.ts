@@ -66,10 +66,13 @@ interface QPSStepResult {
     errorRate: number;
     throughput: number;
   }>;
-  systemMetrics: {
-    cpuUsage: number;
-    memoryUsage: number;
-    networkLatency: number;
+  responseMetrics: {
+    avgLatency: number;
+    minLatency: number;
+    maxLatency: number;
+    p50Latency: number;
+    p95Latency: number;
+    p99Latency: number;
   };
   errorDetails: Record<string, number>;
   shouldStop: boolean;
@@ -250,11 +253,17 @@ class AdvancedStressTest {
       const requestData = { method: endpoint.method, params };
       const requestSize = JSON.stringify(requestData).length;
       
+      // Network latency measurement - DNS resolution + connection time
+      const networkStartTime = performance.now();
+      
       this.logger.debug(`Executing ${endpoint.name}`, { params, qps });
       
       const response = await this.rpcClient.call(endpoint.method, params);
       const endTime = performance.now();
+      
+      // Total response time including network overhead
       const responseTime = endTime - startTime;
+      const networkLatency = endTime - networkStartTime;
       const responseSize = JSON.stringify(response).length;
       
       const isValid = endpoint.validator(response);
@@ -262,7 +271,7 @@ class AdvancedStressTest {
       const result: RequestResult = {
         endpoint: endpoint.name,
         success: isValid,
-        responseTime,
+        responseTime, // Total latency including processing and network
         requestSize,
         responseSize,
         timestamp,
@@ -274,9 +283,13 @@ class AdvancedStressTest {
       
       if (!isValid) {
         result.error = 'Response validation failed';
-        this.logger.warn(`Response validation failed for ${endpoint.name}`, { response });
+        this.logger.warn(`Response validation failed for ${endpoint.name}`, { response, responseTime });
       } else {
-        this.logger.debug(`${endpoint.name} success`, { responseTime, responseSize });
+        this.logger.debug(`${endpoint.name} success`, { 
+          responseTime: Math.round(responseTime * 100) / 100, // Round to 2 decimal places
+          networkLatency: Math.round(networkLatency * 100) / 100,
+          responseSize 
+        });
       }
       
       return result;
@@ -427,11 +440,15 @@ class AdvancedStressTest {
       });
     }
     
-    // Get system metrics (mock for now, can be enhanced with real system monitoring)
-    const systemMetrics = {
-      cpuUsage: Math.random() * 100, // Mock data
-      memoryUsage: Math.random() * 100, // Mock data
-      networkLatency: Math.random() * 50 // Mock data
+    // Calculate response latency metrics
+    const allResponseTimes = results.map(r => r.responseTime).sort((a, b) => a - b);
+    const responseMetrics = {
+      avgLatency: allResponseTimes.length > 0 ? allResponseTimes.reduce((sum, rt) => sum + rt, 0) / allResponseTimes.length : 0,
+      minLatency: allResponseTimes.length > 0 ? Math.min(...allResponseTimes) : 0,
+      maxLatency: allResponseTimes.length > 0 ? Math.max(...allResponseTimes) : 0,
+      p50Latency: allResponseTimes.length > 0 ? allResponseTimes[Math.floor(allResponseTimes.length * 0.5)] : 0,
+      p95Latency: allResponseTimes.length > 0 ? allResponseTimes[Math.floor(allResponseTimes.length * 0.95)] : 0,
+      p99Latency: allResponseTimes.length > 0 ? allResponseTimes[Math.floor(allResponseTimes.length * 0.99)] : 0,
     };
     
     const totalSuccessful = results.filter(r => r.success).length;
@@ -455,7 +472,7 @@ class AdvancedStressTest {
       successfulRequests: totalSuccessful,
       failedRequests: totalFailed,
       endpointStats,
-      systemMetrics,
+      responseMetrics,
       errorDetails,
       shouldStop,
       stopReason

@@ -32,10 +32,13 @@ interface QPSStepResult {
     errorRate: number;
     throughput: number;
   }>;
-  systemMetrics: {
-    cpuUsage: number;
-    memoryUsage: number;
-    networkLatency: number;
+  responseMetrics: {
+    avgLatency: number;
+    minLatency: number;
+    maxLatency: number;
+    p50Latency: number;
+    p95Latency: number;
+    p99Latency: number;
   };
   errorDetails: Record<string, number>;
   shouldStop: boolean;
