@@ -226,6 +226,7 @@ mod tests {
 		assert!(validate_chain_id(42161, Some("evm")).is_ok());
 		assert!(validate_chain_id(10, Some("evm")).is_ok());
 		assert!(validate_chain_id(8453, Some("evm")).is_ok());
+		assert!(validate_chain_id(56, Some("evm")).is_ok());
 
 		// Valid EVM chain IDs - Testnets
 		assert!(validate_chain_id(11155111, Some("evm")).is_ok());
@@ -233,6 +234,7 @@ mod tests {
 		assert!(validate_chain_id(11155420, Some("evm")).is_ok());
 		assert!(validate_chain_id(80001, Some("evm")).is_ok());
 		assert!(validate_chain_id(84532, Some("evm")).is_ok());
+		assert!(validate_chain_id(97, Some("evm")).is_ok());
 		assert!(validate_chain_id(1337, Some("evm")).is_ok());
 	}
 
@@ -243,7 +245,6 @@ mod tests {
 		assert!(validate_chain_id(5, Some("evm")).is_err());
 		assert!(validate_chain_id(421613, Some("evm")).is_err());
 		assert!(validate_chain_id(84531, Some("evm")).is_err());
-		assert!(validate_chain_id(56, Some("evm")).is_err());
 	}
 
 	#[test]
